@@ -18,6 +18,15 @@
 package au.csiro.pathling.fhirpath.column;
 
 import static au.csiro.pathling.utilities.Functions.maybeCast;
+import static org.apache.spark.sql.functions.array;
+import static org.apache.spark.sql.functions.callUDF;
+import static org.apache.spark.sql.functions.coalesce;
+import static org.apache.spark.sql.functions.concat;
+import static org.apache.spark.sql.functions.element_at;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.raise_error;
+import static org.apache.spark.sql.functions.size;
+import static org.apache.spark.sql.functions.when;
 
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -52,7 +61,7 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public static ColumnRepresentation literal(@Nonnull final Object value) {
-    return new DefaultRepresentation(functions.lit(value));
+    return new DefaultRepresentation(lit(value));
   }
 
   /**
@@ -163,7 +172,7 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation toArray() {
     return vectorize(
         Function.identity(),
-        c -> functions.when(c.isNotNull(), functions.array(c))
+        c -> when(c.isNotNull(), array(c))
     );
   }
 
@@ -176,7 +185,7 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation combine(@Nonnull final ColumnRepresentation other) {
-    return copyOf(functions.concat(toArray().getValue(), other.toArray().getValue()));
+    return copyOf(concat(toArray().getValue(), other.toArray().getValue()));
   }
 
   /**
@@ -189,7 +198,7 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation orElse(@Nonnull final Object value) {
-    return copyOf(functions.coalesce(getValue(), functions.lit(value)));
+    return copyOf(coalesce(getValue(), lit(value)));
   }
 
   /**
@@ -200,9 +209,8 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation singular() {
     return vectorize(
-        c -> functions.when(functions.size(c).leq(1), c.getItem(0))
-            .otherwise(functions.raise_error(
-                functions.lit("Expected a single value, but found multiple values"))),
+        c -> when(size(c).leq(1), c.getItem(0))
+            .otherwise(raise_error(lit("Expected a single value, but found multiple values"))),
         Function.identity()
     );
   }
@@ -217,7 +225,7 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation filter(@Nonnull final Function<Column, Column> lambda) {
     return vectorize(
         c -> functions.filter(c, lambda::apply),
-        c -> functions.when(c.isNotNull(), functions.when(lambda.apply(c), c))
+        c -> when(c.isNotNull(), when(lambda.apply(c), c))
     );
   }
 
@@ -256,7 +264,7 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation transform(final Function<Column, Column> lambda) {
     return vectorize(
         c -> functions.transform(c, lambda::apply),
-        c -> functions.when(c.isNotNull(), lambda.apply(c))
+        c -> when(c.isNotNull(), lambda.apply(c))
     );
   }
 
@@ -273,9 +281,9 @@ public abstract class ColumnRepresentation {
       final BiFunction<Column, Column, Column> aggregator) {
 
     return vectorize(
-        c -> functions.when(c.isNull(), zeroValue)
-            .otherwise(functions.aggregate(c, functions.lit(zeroValue), aggregator::apply)),
-        c -> functions.when(c.isNull(), zeroValue).otherwise(c)
+        c -> when(c.isNull(), zeroValue)
+            .otherwise(functions.aggregate(c, lit(zeroValue), aggregator::apply)),
+        c -> when(c.isNull(), zeroValue).otherwise(c)
     );
     // This is OK because: aggregator(zero, x) == x
   }
@@ -300,8 +308,8 @@ public abstract class ColumnRepresentation {
     // we need to use `element_at()` here are `getItem()` does not support column arguments
     // NOTE: `element_at()` is 1-indexed as opposed to `getItem()` which is 0-indexed
     return vectorize(
-        c -> functions.when(c.isNull().or(functions.size(c).equalTo(0)), null)
-            .otherwise(functions.element_at(c, functions.size(c))),
+        c -> when(c.isNull().or(size(c).equalTo(0)), null)
+            .otherwise(element_at(c, size(c))),
         Function.identity()
     );
   }
@@ -314,8 +322,8 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation count() {
     return vectorize(
-        c -> functions.when(c.isNull(), 0).otherwise(functions.size(c)),
-        c -> functions.when(c.isNull(), 0).otherwise(1)
+        c -> when(c.isNull(), 0).otherwise(size(c)),
+        c -> when(c.isNull(), 0).otherwise(1)
     );
   }
 
@@ -327,7 +335,7 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation empty() {
     return vectorize(
-        c -> functions.when(c.isNotNull(), functions.size(c).equalTo(0)).otherwise(true),
+        c -> when(c.isNotNull(), size(c).equalTo(0)).otherwise(true),
         Column::isNull);
   }
 
@@ -434,7 +442,7 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation transformWithUdf(@Nonnull final String udfName,
       @Nonnull final ColumnRepresentation... args) {
-    return transform(c -> functions.callUDF(udfName,
+    return transform(c -> callUDF(udfName,
         Stream.concat(Stream.of(c), Stream.of(args).map(ColumnRepresentation::getValue))
             .toArray(Column[]::new)));
 
@@ -451,7 +459,7 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation callUdf(@Nonnull final String udfName,
       @Nonnull final ColumnRepresentation... args) {
-    return copyOf(functions.callUDF(udfName,
+    return copyOf(callUDF(udfName,
         Stream.concat(Stream.of(getValue()), Stream.of(args).map(ColumnRepresentation::getValue))
             .toArray(Column[]::new)));
   }

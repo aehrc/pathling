@@ -22,7 +22,6 @@ import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Reference;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
@@ -222,21 +221,7 @@ public class StandardFunctions {
   public static ResourceCollection reverseResolve(@Nonnull final ResourceCollection input,
       @Nonnull final FhirPath referencePath,
       @Nonnull final EvaluationContext evaluationContext) {
-    // TODO: add all valdation etx.
-
-    // resolve the reference to the foreign resource (can it be a join to itself?)
-    // somewhere I need to make sure that the surrogate resource collection is being use for validation
-    final Reference reference = referencePath.apply(input, evaluationContext)
-        .asReference(evaluationContext).orElseThrow();
-
-    System.out.println(reference);
-
-    return evaluationContext.resolveReverseJoin(input.getResourceType(),
-        referencePath.toExpression());
-
-    //throw new UnsupportedOperationException("reverseResolve() is not yet implemented");
-    // return evaluationContext.resolveReverseReference(input.getResourceType(),
-    //     reference.toExpression());
+    throw new UnsupportedOperationException();
   }
 
 }

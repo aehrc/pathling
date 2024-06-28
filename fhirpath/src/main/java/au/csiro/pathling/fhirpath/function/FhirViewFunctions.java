@@ -61,4 +61,5 @@ public class FhirViewFunctions {
         .map(input::filter).orElse(input)
         .traverse(REFERENCE_ELEMENT_NAME).orElse(Collection.nullCollection());
   }
+
 }

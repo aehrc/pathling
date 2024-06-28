@@ -22,10 +22,8 @@ import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
-import au.csiro.pathling.fhirpath.Reference;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
@@ -36,7 +34,6 @@ import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import au.csiro.pathling.fhirpath.definition.ReferenceDefinition;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -47,10 +44,8 @@ import javax.annotation.Nonnull;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Represents a collection of nodes that are the result of evaluating a FHIRPath expression.
@@ -304,13 +299,6 @@ public class Collection implements Comparable, Numeric {
     return column.traverse(ExtensionSupport.FID_FIELD_NAME(), Optional.empty());
   }
 
-  /**
-   * @return whether the order of the collection returned by this expression has any meaning
-   */
-  public boolean isOrderable() {
-    return true;
-  }
-
   @Nonnull
   @Override
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
@@ -353,11 +341,26 @@ public class Collection implements Comparable, Numeric {
         Optional.empty());
   }
 
+  /**
+   * Returns a new {@link Collection} with the specified {@link ColumnRepresentation}.
+   *
+   * @param newValue The new {@link ColumnRepresentation} to use
+   * @return A new {@link Collection} with the specified {@link ColumnRepresentation}
+   */
   @Nonnull
   public Collection copyWith(@Nonnull final ColumnRepresentation newValue) {
+    definition.ifPresent(def -> check(def instanceof ElementDefinition,
+        "Cannot copy a Collection with a non-ElementDefinition definition"));
+    //noinspection unchecked
     return getInstance(newValue, getFhirType(), (Optional<ElementDefinition>) definition);
   }
 
+  /**
+   * Filters the elements of this collection using the specified lambda.
+   *
+   * @param lambda The lambda to use for filtering
+   * @return A new collection representing the filtered elements
+   */
   @Nonnull
   public Collection filter(
       @Nonnull final Function<ColumnRepresentation, ColumnRepresentation> lambda) {
@@ -365,17 +368,36 @@ public class Collection implements Comparable, Numeric {
         ctx -> ctx.filter(col -> lambda.apply(new DefaultRepresentation(col)).getValue()));
   }
 
+  /**
+   * Returns a new collection representing the elements of this collection as a singular value.
+   *
+   * @return A new collection representing the elements of this collection as a singular value
+   */
   @Nonnull
   public Collection asSingular() {
     return map(ColumnRepresentation::singular);
   }
 
+  /**
+   * Returns a new collection with new values determined by the specified lambda.
+   *
+   * @param mapper The lambda to use for mapping
+   * @return A new collection with new values determined by the specified lambda
+   */
   @Nonnull
   public Collection map(
       @Nonnull final Function<ColumnRepresentation, ColumnRepresentation> mapper) {
     return copyWith(mapper.apply(getColumn()));
   }
 
+  /**
+   * Returns a new collection with new values determined by the specified lambda.
+   *
+   * @param mapper The lambda to use for mapping
+   * @param constructor The constructor to use for the new collection
+   * @param <C> The type of collection to return
+   * @return A new collection with new values determined by the specified lambda
+   */
   @Nonnull
   public <C extends Collection> C map(
       @Nonnull final Function<ColumnRepresentation, ColumnRepresentation> mapper,
@@ -383,26 +405,11 @@ public class Collection implements Comparable, Numeric {
     return constructor.apply(mapper.apply(getColumn()));
   }
 
-
-  @Nonnull
-  public <C extends Collection> C flatMap(@Nonnull final Function<ColumnRepresentation, C> mapper) {
-    return mapper.apply(getColumn());
-  }
-
-  @Nonnull
-  public Optional<Reference> asReference(@Nonnull final EvaluationContext context) {
-    return getFhirType()
-        .filter(FHIRDefinedType.REFERENCE::equals)
-        .map(__ -> new ReferenceImpl(this, context));
-  }
-
-  @Nonnull
-  public Optional<CodingCollection> asCoding() {
-    return getFhirType()
-        .filter(FHIRDefinedType.CODEABLECONCEPT::equals)
-        .map(__ -> (CodingCollection) traverse("coding").get());
-  }
-
+  /**
+   * Returns the {@link Column} value of this collection.
+   *
+   * @return The {@link Column} value of this collection
+   */
   @Nonnull
   public Column getColumnValue() {
     return column.getValue();
@@ -421,72 +428,25 @@ public class Collection implements Comparable, Numeric {
     return Collection.nullCollection();
   }
 
-  @Value
-  private static class ReferenceImpl implements Reference {
-
-    @Nonnull
-    Collection referenceCollection;
-
-    @Nonnull
-    EvaluationContext context;
-
-    @Nonnull
-    @Override
-    public ReferenceDefinition getDefinition() {
-      return (ReferenceDefinition) referenceCollection.getDefinition().get();
-    }
-
-    @Nonnull
-    @Override
-    public ResourceCollection reverseResolve(@Nonnull final ResourceCollection masterCollection,
-        @Nonnull final ResourceType foreignResourceType) {
-
-      // final ReferenceDefinition referenceDefinition = getDefinition();
-      //
-      // checkUserInput(
-      //     referenceDefinition.getReferenceTypes().contains(masterCollection.getResourceType()),
-      //     "Reference in argument to reverseResolve does not support input resource type: "
-      //         + masterCollection.getResourceType());
-      // // TODO: Finish
-      // final ColumnCtx referenceCtx = referenceCollection.traverse("reference")
-      //     .map(Collection::asSingular)
-      //     .map(Collection::getCtx)
-      //     .orElseThrow();
-      //
-      // return ResourceCollection.build(
-      //     referenceCtx.reverseResolve(masterCollection.getResourceType(), foreignResourceType),
-      //     context.getFhirContext(),
-      //     foreignResourceType);
-      throw new UnsupportedOperationException();
-    }
-
-    @Nonnull
-    @Override
-    public ResourceCollection resolve(@Nonnull final ResourceType foreignResourceType) {
-
-      // final ColumnCtx referenceCtx = referenceCollection.traverse(
-      //         "reference")
-      //     .map(Collection::getCtx)
-      //     .orElseThrow();
-      //
-      // return ResourceCollection.build(
-      //     referenceCtx.resolve(foreignResourceType),
-      //     context.getFhirContext(),
-      //     foreignResourceType);
-      throw new UnsupportedOperationException();
-    }
-  }
-
+  // TODO: Remove this after removing usages.
   @Deprecated
   @Nonnull
   public String getExpression() {
     return "??";
   }
 
+  // TODO: Remove this after removing usages.
   @Deprecated
   public boolean isSingular() {
     return true;
   }
 
+  @Nonnull
+  public Optional<CodingCollection> asCoding() {
+    // TODO: This can potentially be removed after reviewing whether we need WrappedFunction.
+    return getFhirType()
+        .filter(FHIRDefinedType.CODEABLECONCEPT::equals)
+        .map(__ -> (CodingCollection) traverse("coding").get());
+  }
 
 }
