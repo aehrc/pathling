@@ -21,12 +21,6 @@
  * limitations under the License.
  */
 
-/*
- * This is a backport of encoder functionality targeted for Spark 2.4.
- *
- * See https://issues.apache.org/jira/browse/SPARK-22739 for details.
- */
-
 package au.csiro.pathling.encoders
 
 import org.apache.spark.sql.Column
