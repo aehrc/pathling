@@ -29,8 +29,8 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.QuantitySqlComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
@@ -58,6 +58,12 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   private static final Column NO_UNIT_LITERAL = lit(Ucum.NO_UNIT_CODE);
   private static final Pattern UCUM_PATTERN = Pattern.compile("([0-9.]+) ('[^']+')");
 
+  /**
+   * @param columnRepresentation The column representation to use
+   * @param type The FHIRPath type
+   * @param fhirType The FHIR type
+   * @param definition The FHIR definition
+   */
   public QuantityCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
@@ -134,9 +140,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
    */
   @Nonnull
   public static QuantityCollection fromCalendarDurationString(@Nonnull final String fhirPath) {
-
     final Column column = QuantityEncoding.encodeLiteral(parseCalendarDuration(fhirPath));
-    // TODO: complex literal handling
     return QuantityCollection.build(new DefaultRepresentation(column));
   }
 
@@ -220,8 +224,6 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
     quantity.setSystem(Ucum.SYSTEM_URI);
     quantity.setCode(unit);
     display.ifPresent(quantity::setUnit);
-
-    // TODO: literal handling
     return QuantityCollection.build(
         new DefaultRepresentation(QuantityEncoding.encodeLiteral(quantity)));
   }
