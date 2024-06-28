@@ -42,7 +42,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @ToString
 @EqualsAndHashCode(callSuper = true)
 @AllArgsConstructor
-public class ArrayOrSingularRepresentation extends ColumnRepresentation {
+public class DefaultRepresentation extends ColumnRepresentation {
 
   Column value;
 
@@ -59,38 +59,38 @@ public class ArrayOrSingularRepresentation extends ColumnRepresentation {
       return new DecimalRepresentation(lit(value));
     }
     // Otherwise use the default representation.
-    return new ArrayOrSingularRepresentation(lit(value));
+    return new DefaultRepresentation(lit(value));
   }
 
   @Override
   protected ColumnRepresentation copyOf(@Nonnull final Column newValue) {
-    return new ArrayOrSingularRepresentation(newValue);
+    return new DefaultRepresentation(newValue);
   }
 
   @Override
   @Nonnull
-  public ArrayOrSingularRepresentation vectorize(
+  public DefaultRepresentation vectorize(
       @Nonnull final Function<Column, Column> arrayExpression,
       @Nonnull final Function<Column, Column> singularExpression) {
-    return new ArrayOrSingularRepresentation(
+    return new DefaultRepresentation(
         ValueFunctions.ifArray(value, arrayExpression::apply, singularExpression::apply));
   }
 
   @Override
   @Nonnull
-  public ArrayOrSingularRepresentation flatten() {
-    return new ArrayOrSingularRepresentation(ValueFunctions.unnest(value));
+  public DefaultRepresentation flatten() {
+    return new DefaultRepresentation(ValueFunctions.unnest(value));
   }
 
   @Nonnull
   @Override
-  public ArrayOrSingularRepresentation traverse(@Nonnull final String fieldName) {
-    return new ArrayOrSingularRepresentation(traverseColumn(fieldName));
+  public DefaultRepresentation traverse(@Nonnull final String fieldName) {
+    return new DefaultRepresentation(traverseColumn(fieldName));
   }
 
   @Override
   @Nonnull
-  public ArrayOrSingularRepresentation traverse(@Nonnull final String fieldName,
+  public DefaultRepresentation traverse(@Nonnull final String fieldName,
       @Nonnull final Optional<FHIRDefinedType> fhirType) {
     @Nullable final FHIRDefinedType resolvedFhirType = fhirType.orElse(null);
     if (FHIRDefinedType.DECIMAL.equals(resolvedFhirType)) {

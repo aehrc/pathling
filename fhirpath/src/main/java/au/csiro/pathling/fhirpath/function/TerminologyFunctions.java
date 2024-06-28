@@ -23,7 +23,7 @@ import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.NullRepresentation;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
@@ -150,7 +150,7 @@ public abstract class TerminologyFunctions {
       @Nonnull final CodingCollection codes) {
     return input.map(ctx ->
             ctx.callUdf("subsumes", codes.getColumn(),
-                ArrayOrSingularRepresentation.literal(false)),
+                DefaultRepresentation.literal(false)),
         BooleanCollection::build);
   }
 
@@ -168,7 +168,7 @@ public abstract class TerminologyFunctions {
       @Nonnull final CodingCollection codes) {
     return input.map(ctx ->
             ctx.callUdf("subsumes", codes.getColumn(),
-                ArrayOrSingularRepresentation.literal(true)),
+                DefaultRepresentation.literal(true)),
         BooleanCollection::build);
   }
 
@@ -198,10 +198,10 @@ public abstract class TerminologyFunctions {
             conceptMapUrl.getColumn().singular(),
             Optional.ofNullable(reverse).map(BooleanCollection::getColumn)
                 .map(ColumnRepresentation::singular)
-                .orElse(ArrayOrSingularRepresentation.literal(false)),
+                .orElse(DefaultRepresentation.literal(false)),
             Optional.ofNullable(equivalence).map(StringCollection::getColumn).map(
                     ColumnRepresentation::singular)
-                .orElse(ArrayOrSingularRepresentation.literal("equivalent"))
+                .orElse(DefaultRepresentation.literal("equivalent"))
                 .transform(c -> functions.split(c, ",")),
             Optional.ofNullable(target).map(StringCollection::getColumn)
                 .map(ColumnRepresentation::singular)

@@ -52,7 +52,7 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public static ColumnRepresentation literal(@Nonnull final Object value) {
-    return new ArrayOrSingularRepresentation(functions.lit(value));
+    return new DefaultRepresentation(functions.lit(value));
   }
 
   /**
@@ -68,7 +68,7 @@ public abstract class ColumnRepresentation {
   public static ColumnRepresentation binaryOperator(@Nonnull final ColumnRepresentation left,
       @Nonnull final ColumnRepresentation right,
       @Nonnull final BiFunction<Column, Column, Column> operator) {
-    return new ArrayOrSingularRepresentation(operator.apply(left.getValue(), right.getValue()));
+    return new DefaultRepresentation(operator.apply(left.getValue(), right.getValue()));
   }
 
   /**

@@ -25,7 +25,7 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DecimalRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
@@ -96,18 +96,19 @@ public class DecimalCollection extends Collection implements Materializable<Deci
       throws NumberFormatException {
     final BigDecimal value = parseLiteral(literal);
     return DecimalCollection.build(
-        (DecimalRepresentation) ArrayOrSingularRepresentation.literal(value));
+        (DecimalRepresentation) DefaultRepresentation.literal(value));
   }
 
   /**
    * Returns a new instance based upon a {@link DecimalType}.
-   * 
+   *
    * @param value The value to use
    * @return A new instance of {@link DecimalCollection}
    */
   @Nonnull
   public static DecimalCollection fromValue(@Nonnull final DecimalType value) {
-    return DecimalCollection.build((DecimalRepresentation) ArrayOrSingularRepresentation.literal(value.getValue()));
+    return DecimalCollection.build(
+        (DecimalRepresentation) DefaultRepresentation.literal(value.getValue()));
   }
 
   @Nonnull
@@ -158,7 +159,7 @@ public class DecimalCollection extends Collection implements Materializable<Deci
           return DecimalCollection.build(new DecimalRepresentation(result));
         case MODULUS:
           result = result.cast(DataTypes.LongType);
-          return IntegerCollection.build(new ArrayOrSingularRepresentation(result));
+          return IntegerCollection.build(new DefaultRepresentation(result));
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }

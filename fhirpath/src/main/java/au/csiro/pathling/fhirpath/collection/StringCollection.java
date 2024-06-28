@@ -23,7 +23,7 @@ import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import java.util.Optional;
@@ -111,7 +111,7 @@ public class StringCollection extends Collection implements Materializable<Primi
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final String value) {
-    return StringCollection.build(ArrayOrSingularRepresentation.literal(value));
+    return StringCollection.build(DefaultRepresentation.literal(value));
   }
 
   /**

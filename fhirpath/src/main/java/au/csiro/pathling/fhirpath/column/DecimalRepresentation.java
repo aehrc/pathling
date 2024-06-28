@@ -19,14 +19,14 @@ import org.apache.spark.sql.Column;
 @Getter
 @ToString
 @EqualsAndHashCode(callSuper = true)
-public class DecimalRepresentation extends ArrayOrSingularRepresentation {
+public class DecimalRepresentation extends DefaultRepresentation {
 
   public static final String SCALE_SUFFIX = "_scale";
   private final Optional<Column> scaleValue;
 
   @Nonnull
   public static DecimalRepresentation fromTraversal(
-      @Nonnull final ArrayOrSingularRepresentation column, @Nonnull final String fieldName) {
+      @Nonnull final DefaultRepresentation column, @Nonnull final String fieldName) {
     return new DecimalRepresentation(column.traverseColumn(fieldName),
         column.traverseColumn(fieldName + SCALE_SUFFIX));
   }

@@ -29,7 +29,7 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
-import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.comparison.QuantitySqlComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
@@ -137,7 +137,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
 
     final Column column = QuantityEncoding.encodeLiteral(parseCalendarDuration(fhirPath));
     // TODO: complex literal handling
-    return QuantityCollection.build(new ArrayOrSingularRepresentation(column));
+    return QuantityCollection.build(new DefaultRepresentation(column));
   }
 
   @Nonnull
@@ -223,7 +223,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
 
     // TODO: literal handling
     return QuantityCollection.build(
-        new ArrayOrSingularRepresentation(QuantityEncoding.encodeLiteral(quantity)));
+        new DefaultRepresentation(QuantityEncoding.encodeLiteral(quantity)));
   }
 
   @Nonnull
@@ -283,7 +283,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
       final Column resultQuantityColumn = when(sourceContext.isNull().or(targetContext.isNull()),
           null).otherwise(validResult);
 
-      return QuantityCollection.build(new ArrayOrSingularRepresentation(resultQuantityColumn));
+      return QuantityCollection.build(new DefaultRepresentation(resultQuantityColumn));
     };
   }
 

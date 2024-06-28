@@ -24,7 +24,7 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.comparison.CodingSqlComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
@@ -96,7 +96,7 @@ public class CodingCollection extends Collection implements Materializable<Codin
     // given that this is a struct of literals
     // probably yes on the ColumnCtx level provided that there is also a way to encode Codings there
     // (so it should be moved entirely into the Column Ctx)
-    return CodingCollection.build(new ArrayOrSingularRepresentation(column));
+    return CodingCollection.build(new DefaultRepresentation(column));
   }
 
   @Nonnull

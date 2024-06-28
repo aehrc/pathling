@@ -27,7 +27,7 @@ import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.Reference;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
-import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.NullRepresentation;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
@@ -357,7 +357,7 @@ public class Collection implements Comparable, Numeric {
   public Collection filter(
       @Nonnull final Function<ColumnRepresentation, ColumnRepresentation> lambda) {
     return map(
-        ctx -> ctx.filter(col -> lambda.apply(new ArrayOrSingularRepresentation(col)).getValue()));
+        ctx -> ctx.filter(col -> lambda.apply(new DefaultRepresentation(col)).getValue()));
   }
 
   @Nonnull

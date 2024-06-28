@@ -20,7 +20,7 @@ package au.csiro.pathling.fhirpath.collection;
 import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
@@ -91,7 +91,7 @@ public class ResourceCollection extends Collection {
 
     // We use a literal column as the resource value - the actual value is not important.
     // But the non-null value indicates that the resource should be included in any result.
-    return new ResourceCollection(new ArrayOrSingularRepresentation(functions.lit(true)),
+    return new ResourceCollection(new DefaultRepresentation(functions.lit(true)),
         Optional.empty(),
         getFhirType(resourceType), Optional.of(definition), definition);
   }
@@ -140,7 +140,7 @@ public class ResourceCollection extends Collection {
   @Nonnull
   public Optional<ColumnRepresentation> getElementColumn(@Nonnull final String elementName) {
     return Optional.of(functions.col(elementName))
-        .map(ArrayOrSingularRepresentation::new);
+        .map(DefaultRepresentation::new);
   }
 
   @Nonnull

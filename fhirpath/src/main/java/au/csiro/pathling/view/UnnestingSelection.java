@@ -25,7 +25,7 @@ import static org.apache.spark.sql.functions.transform;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.NullRepresentation;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -89,7 +89,7 @@ public class UnnestingSelection implements ProjectionClause {
       @Nonnull final Collection unnestingCollection, @Nonnull final ProjectionContext context) {
     // Create a new projection context based upon the unnesting collection.
     final ProjectionContext projectionContext = context.withInputContext(
-        unnestingCollection.map(__ -> new ArrayOrSingularRepresentation(unnestingColumn)));
+        unnestingCollection.map(__ -> new DefaultRepresentation(unnestingColumn)));
 
     // Evaluate each of the components of the unnesting selection, and get the result
     // columns.

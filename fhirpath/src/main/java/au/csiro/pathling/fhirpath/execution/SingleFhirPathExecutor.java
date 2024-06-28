@@ -21,7 +21,7 @@ import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.context.FhirPathContext;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.fhirpath.context.ViewEvaluationContext;
@@ -111,7 +111,7 @@ public class SingleFhirPathExecutor implements FhirPathExecutor {
 
   ResourceCollection resolveResource(@Nonnull final ResourceType resourceType) {
     return ResourceCollection.build(
-        new ArrayOrSingularRepresentation(functions.col(resourceType.toCode())),
+        new DefaultRepresentation(functions.col(resourceType.toCode())),
         fhirContext, resourceType);
   }
 

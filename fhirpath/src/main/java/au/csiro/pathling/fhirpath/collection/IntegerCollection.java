@@ -25,7 +25,7 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DecimalRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
@@ -103,7 +103,7 @@ public class IntegerCollection extends Collection implements
    */
   @Nonnull
   public static IntegerCollection fromValue(final int value) {
-    return IntegerCollection.build(ArrayOrSingularRepresentation.literal(value));
+    return IntegerCollection.build(DefaultRepresentation.literal(value));
   }
 
   /**
@@ -226,7 +226,7 @@ public class IntegerCollection extends Collection implements
           if (target instanceof DecimalCollection) {
             valueColumn = valueColumn.cast(DataTypes.LongType);
           }
-          return IntegerCollection.build(new ArrayOrSingularRepresentation(valueColumn));
+          return IntegerCollection.build(new DefaultRepresentation(valueColumn));
         case DIVISION:
           final Column numerator = source.getColumn().cast(DecimalCollection.getDecimalType())
               .getValue();

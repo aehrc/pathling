@@ -21,7 +21,7 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import java.util.Optional;
@@ -80,7 +80,7 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
   @Nonnull
   public static TimeCollection fromLiteral(@Nonnull final String literal) {
     final String timeString = literal.replaceFirst("^@T", "");
-    return TimeCollection.build(ArrayOrSingularRepresentation.literal(timeString));
+    return TimeCollection.build(DefaultRepresentation.literal(timeString));
   }
 
   /**
@@ -91,7 +91,7 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
    */
   @Nonnull
   public static TimeCollection fromValue(@Nonnull final TimeType value) {
-    return TimeCollection.build(ArrayOrSingularRepresentation.literal(value.getValueAsString()));
+    return TimeCollection.build(DefaultRepresentation.literal(value.getValueAsString()));
   }
 
   @Nonnull

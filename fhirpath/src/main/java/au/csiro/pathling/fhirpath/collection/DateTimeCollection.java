@@ -25,7 +25,7 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.Temporal;
-import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.comparison.DateTimeSqlComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
@@ -92,7 +92,7 @@ public class DateTimeCollection extends Collection implements
   public static DateTimeCollection fromLiteral(@Nonnull final String fhirPath)
       throws ParseException {
     final String dateString = fhirPath.replaceFirst("^@", "");
-    return DateTimeCollection.build(ArrayOrSingularRepresentation.literal(dateString));
+    return DateTimeCollection.build(DefaultRepresentation.literal(dateString));
   }
 
   /**
@@ -104,7 +104,7 @@ public class DateTimeCollection extends Collection implements
   @Nonnull
   public static DateTimeCollection fromValue(@Nonnull final DateTimeType value) {
     return DateTimeCollection.build(
-        ArrayOrSingularRepresentation.literal(value.getValueAsString()));
+        DefaultRepresentation.literal(value.getValueAsString()));
   }
 
   /**
@@ -116,7 +116,7 @@ public class DateTimeCollection extends Collection implements
   @Nonnull
   public static DateTimeCollection fromValue(@Nonnull final InstantType value) {
     return DateTimeCollection.build(
-        ArrayOrSingularRepresentation.literal(value.getValueAsString()));
+        DefaultRepresentation.literal(value.getValueAsString()));
   }
 
   @Nonnull

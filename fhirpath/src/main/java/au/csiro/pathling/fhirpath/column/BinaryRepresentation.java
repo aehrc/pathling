@@ -16,7 +16,7 @@ import org.apache.spark.sql.Column;
 @Getter
 @ToString
 @EqualsAndHashCode(callSuper = true)
-public class BinaryRepresentation extends ArrayOrSingularRepresentation {
+public class BinaryRepresentation extends DefaultRepresentation {
 
   public BinaryRepresentation(final Column value) {
     super(value);

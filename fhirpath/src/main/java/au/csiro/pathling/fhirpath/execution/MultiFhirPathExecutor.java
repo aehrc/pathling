@@ -23,7 +23,7 @@ import au.csiro.pathling.fhirpath.FhirPathStreamVisitor;
 import au.csiro.pathling.fhirpath.FhirPathVisitor;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.context.FhirPathContext;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.fhirpath.context.ViewEvaluationContext;
@@ -128,7 +128,7 @@ public class MultiFhirPathExecutor implements FhirPathExecutor {
     @Override
     public ResourceCollection resolveResource(@Nonnull final ResourceType resourceType) {
       return ResourceCollection.build(
-          new ArrayOrSingularRepresentation(functions.col(resourceType.toCode())),
+          new DefaultRepresentation(functions.col(resourceType.toCode())),
           fhirContext, resourceType);
     }
 
@@ -141,7 +141,7 @@ public class MultiFhirPathExecutor implements FhirPathExecutor {
       final String resourceName = expression.split("\\.")[0];
       final ResourceType foreignResourceType = ResourceType.fromCode(resourceName);
 
-      return ResourceCollection.build(new ArrayOrSingularRepresentation(
+      return ResourceCollection.build(new DefaultRepresentation(
               functions.col(resourceType.toCode() + "@" + expression.replace('.', '_'))),
           fhirContext, foreignResourceType);
     }

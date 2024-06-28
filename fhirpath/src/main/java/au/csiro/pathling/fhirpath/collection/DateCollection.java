@@ -24,7 +24,7 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.Temporal;
-import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.comparison.DateTimeSqlComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
@@ -85,7 +85,7 @@ public class DateCollection extends Collection implements Materializable<DateTyp
   @Nonnull
   public static DateCollection fromLiteral(@Nonnull final String fhirPath) throws ParseException {
     final String dateString = fhirPath.replaceFirst("^@", "");
-    return DateCollection.build(ArrayOrSingularRepresentation.literal(dateString));
+    return DateCollection.build(DefaultRepresentation.literal(dateString));
   }
 
   /**
@@ -96,7 +96,7 @@ public class DateCollection extends Collection implements Materializable<DateTyp
    */
   @Nonnull
   public static DateCollection fromValue(@Nonnull final DateType value) {
-    return DateCollection.build(ArrayOrSingularRepresentation.literal(value.getValueAsString()));
+    return DateCollection.build(DefaultRepresentation.literal(value.getValueAsString()));
   }
 
   @Nonnull

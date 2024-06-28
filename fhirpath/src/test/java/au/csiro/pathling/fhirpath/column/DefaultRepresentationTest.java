@@ -34,7 +34,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 
 @SpringBootUnitTest
-class ArrayOrSingularRepresentationTest {
+class DefaultRepresentationTest {
 
   // TODO: improve to check the actual values returned.
   class ColumnAsserts {
@@ -74,36 +74,36 @@ class ArrayOrSingularRepresentationTest {
   SparkSession spark;
 
   @Nonnull
-  public static ArrayOrSingularRepresentation nullValue() {
-    return new ArrayOrSingularRepresentation(functions.lit(null));
+  public static DefaultRepresentation nullValue() {
+    return new DefaultRepresentation(functions.lit(null));
   }
 
   @Nonnull
-  public static ArrayOrSingularRepresentation valueOf(@Nonnull final Object value) {
-    return new ArrayOrSingularRepresentation(functions.lit(value));
+  public static DefaultRepresentation valueOf(@Nonnull final Object value) {
+    return new DefaultRepresentation(functions.lit(value));
   }
 
 
   @Nonnull
-  public static ArrayOrSingularRepresentation nullArray() {
-    return new ArrayOrSingularRepresentation(
+  public static DefaultRepresentation nullArray() {
+    return new DefaultRepresentation(
         functions.lit(null).cast(DataTypes.createArrayType(DataTypes.NullType)));
   }
 
   @Nonnull
-  public static ArrayOrSingularRepresentation emptyArray() {
-    return new ArrayOrSingularRepresentation(functions.array());
+  public static DefaultRepresentation emptyArray() {
+    return new DefaultRepresentation(functions.array());
   }
 
   @Nonnull
-  public static ArrayOrSingularRepresentation arrayOf(@Nonnull final Object... values) {
-    return new ArrayOrSingularRepresentation(functions.array(
+  public static DefaultRepresentation arrayOf(@Nonnull final Object... values) {
+    return new DefaultRepresentation(functions.array(
         Stream.of(values).map(v -> valueOf(v).getValue()).toArray(Column[]::new)));
   }
 
   @Nonnull
-  public static ArrayOrSingularRepresentation arrayOfOne(@Nonnull final Object value) {
-    return new ArrayOrSingularRepresentation(functions.array(valueOf(value).getValue()));
+  public static DefaultRepresentation arrayOfOne(@Nonnull final Object value) {
+    return new DefaultRepresentation(functions.array(valueOf(value).getValue()));
   }
 
 
