@@ -24,8 +24,8 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.CodingSqlComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
@@ -92,10 +92,6 @@ public class CodingCollection extends Collection implements Materializable<Codin
       throws IllegalArgumentException {
     final Coding coding = CodingLiteral.fromString(fhirPath);
     final Column column = buildColumn(coding);
-    // TODO: I am not sure if this should actually be a literal or not 
-    // given that this is a struct of literals
-    // probably yes on the ColumnCtx level provided that there is also a way to encode Codings there
-    // (so it should be moved entirely into the Column Ctx)
     return CodingCollection.build(new DefaultRepresentation(column));
   }
 
