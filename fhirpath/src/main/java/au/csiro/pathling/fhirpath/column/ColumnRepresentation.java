@@ -246,14 +246,14 @@ public abstract class ColumnRepresentation {
   }
 
   /**
-   * Transforms the current {@link ColumnRepresentation} using a lambda function.
+   * Transforms the current {@link ColumnRepresentation} in a way that only affects a singular value
+   * if it is not null.
    *
    * @param lambda The lambda function to use for transformation
    * @return A new {@link ColumnRepresentation} that is transformed
    */
   @Nonnull
   public ColumnRepresentation transform(final Function<Column, Column> lambda) {
-    // TODO: Can this method and vectorize be rationalised?
     return vectorize(
         c -> functions.transform(c, lambda::apply),
         c -> functions.when(c.isNotNull(), lambda.apply(c))
