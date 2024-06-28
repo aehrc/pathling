@@ -335,10 +335,18 @@ case class UnresolvedUnnest(value: Expression)
 
 
 object ValueFunctions {
-  def ifArray(value: Column, arrayExpressions: Column => Column,
+  /**
+   * Applies an expression to an an array value, or an else expression if the value is not an array.
+   *
+   * @param value           The value to check
+   * @param arrayExpression The expression to apply to the array value
+   * @param elseExpression  The expression to apply if the value is not an array
+   * @return
+   */
+  def ifArray(value: Column, arrayExpression: Column => Column,
               elseExpression: Column => Column): Column = {
     val expr = UnresolvedIfArray(value.expr,
-      e => arrayExpressions(new Column(e)).expr, e => elseExpression(new Column(e)).expr)
+      e => arrayExpression(new Column(e)).expr, e => elseExpression(new Column(e)).expr)
     new Column(expr)
   }
 
@@ -350,6 +358,13 @@ object ValueFunctions {
 }
 
 
+/**
+ * An expression which takes a number of columns that contain arrays of structs and produces
+ * an array of structs where each element is a product of the elements of the input arrays.
+ *
+ * @param children The input columns
+ * @param outer    If true, the output array will contain nulls for missing elements in the input
+ */
 case class StructProduct(children: Seq[Expression], outer: Boolean = false)
   extends Expression with NonSQLExpression {
 
@@ -380,11 +395,11 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
     children.map(_.dataType.asInstanceOf[ArrayType].elementType)
 
 
-  @transient private lazy val arritiesOfChildren = children
+  @transient private lazy val aritiesOfChildren = children
     .map(_.dataType.asInstanceOf[ArrayType].elementType.asInstanceOf[StructType].fields.length)
     .toArray
-  @transient private lazy val sizeOfOutput = arritiesOfChildren.sum
-  @transient private lazy val offsetsScala = arritiesOfChildren.scanLeft(0)(_ + _).init
+  @transient private lazy val sizeOfOutput = aritiesOfChildren.sum
+  @transient private lazy val offsetsScala = aritiesOfChildren.scanLeft(0)(_ + _).init
 
   private def emptyInputGenCode(ev: ExprCode): ExprCode = {
     ev.copy(
@@ -491,9 +506,9 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
             |  for (int $i = 0; $i < $productSize; $i++) {
             |    int productBase = $i;
             |    for (int childIndex = 0; childIndex < ${children.length}; childIndex++) {
-            |      int childArrity = $arrVals[childIndex].numElements();
-            |      $prodIdxs[childIndex] = productBase % childArrity;
-            |      productBase /= childArrity;;       
+            |      int childArity = $arrVals[childIndex].numElements();
+            |      $prodIdxs[childIndex] = productBase % childArity;
+            |      productBase /= childArity;;       
             |    }
             |    Object[] $currentRow = new Object[$sizeOfOutput];
             |    $getValueForTypeSplitted
@@ -563,9 +578,24 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
 
 
 object ColumnFunctions {
+  /**
+   * An expression which takes a number of columns that contain arrays of structs and produces
+   * an array of structs where each element is a product of the elements of the input arrays.
+   *
+   * @param e The input columns
+   */
   @scala.annotation.varargs
   def structProduct(e: Column*): Column = new Column(StructProduct(e.map(_.expr)))
 
+  /**
+   * An expression which takes a number of columns that contain arrays of structs and produces
+   * an array of structs where each element is a product of the elements of the input arrays.
+   *
+   * If the input arrays are of different lengths, the output array will contain nulls for missing
+   * elements in the input.
+   *
+   * @param e The input columns
+   */
   @scala.annotation.varargs
   def structProduct_outer(e: Column*): Column = new Column(
     StructProduct(e.map(_.expr), outer = true))
