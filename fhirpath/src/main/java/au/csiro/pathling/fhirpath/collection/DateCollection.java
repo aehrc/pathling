@@ -24,8 +24,8 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.Temporal;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.DateTimeSqlComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.sql.dates.date.DateAddDurationFunction;
@@ -71,7 +71,7 @@ public class DateCollection extends Collection implements Materializable<DateTyp
   }
 
   @Nonnull
-  public static DateCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
+  private static DateCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
     return DateCollection.build(columnRepresentation, Optional.empty());
   }
 
