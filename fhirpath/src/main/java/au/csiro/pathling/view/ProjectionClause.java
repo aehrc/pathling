@@ -24,6 +24,12 @@ import javax.annotation.Nonnull;
  */
 public interface ProjectionClause {
 
+  /**
+   * Converts this clause into a result using the supplied context.
+   *
+   * @param context The context in which to evaluate this clause
+   * @return The result of evaluating this clause
+   */
   @Nonnull
   ProjectionResult evaluate(@Nonnull final ProjectionContext context);
 
