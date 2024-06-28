@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
+import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.Comparable;
@@ -27,8 +28,8 @@ import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.Reference;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.NullRepresentation;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
@@ -48,7 +49,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
@@ -131,6 +131,17 @@ public class Collection implements Comparable, Numeric {
     return new Collection(columnRepresentation, fhirPathType, fhirType, definition);
   }
 
+  /**
+   * Builds the appropriate subtype of {@link Collection} based upon the supplied
+   * {@link ElementDefinition}.
+   * <p>
+   * Use this builder when the path may need to be traversable.
+   *
+   * @param columnRepresentation a {@link Column} containing the result of the expression
+   * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
+   * @param definition the {@link ElementDefinition} that this path should be based upon
+   * @return a new {@link Collection}
+   */
   @Nonnull
   public static Collection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final FHIRDefinedType fhirType,
@@ -281,8 +292,9 @@ public class Collection implements Comparable, Numeric {
   @Nonnull
   protected Optional<Collection> traverseExtension(
       @Nonnull final ElementDefinition extensionDefinition) {
-    return getExtensionMap().map(em ->
-        Collection.build(
+    final Column extensionColumn = col(ExtensionSupport.EXTENSIONS_FIELD_NAME());
+    return Optional.of(extensionColumn)
+        .map(em -> Collection.build(
             // We need here to deal with the situation where _fid is an array of element ids
             getFid().transform(em::apply).flatten(), extensionDefinition));
   }
@@ -290,13 +302,6 @@ public class Collection implements Comparable, Numeric {
   @Nonnull
   protected ColumnRepresentation getFid() {
     return column.traverse(ExtensionSupport.FID_FIELD_NAME(), Optional.empty());
-  }
-
-  @Nonnull
-  protected Optional<Column> getExtensionMap() {
-    // TODO: This most likely needs to be implemented a
-    // as a member column propagated from the parent resource/collection
-    return Optional.of(functions.col(ExtensionSupport.EXTENSIONS_FIELD_NAME()));
   }
 
   /**
