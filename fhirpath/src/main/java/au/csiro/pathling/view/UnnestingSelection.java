@@ -33,6 +33,13 @@ import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 
+/**
+ * Represents a selection that unnests a nested data structure, with either inner or outer join
+ * semantics.
+ *
+ * @author John Grimes
+ * @author Piotr Szul
+ */
 @Value
 public class UnnestingSelection implements ProjectionClause {
 
