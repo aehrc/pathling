@@ -20,8 +20,8 @@ package au.csiro.pathling.fhirpath.collection;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
@@ -40,7 +40,6 @@ public class BooleanCollection extends Collection implements Materializable<Bool
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(BooleanCollection.class);
-  private static final BooleanCollection FALSE_COLLECTION = BooleanCollection.fromValue(false);
 
   protected BooleanCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
@@ -63,6 +62,12 @@ public class BooleanCollection extends Collection implements Materializable<Bool
         Optional.of(FHIRDefinedType.BOOLEAN), definition);
   }
 
+  /**
+   * Returns a new instance with the specified column and no definition.
+   *
+   * @param value The column to use
+   * @return A new instance of {@link BooleanCollection}
+   */
   @Nonnull
   public static BooleanCollection build(@Nonnull final ColumnRepresentation value) {
     return BooleanCollection.build(value, Optional.empty());
@@ -106,11 +111,6 @@ public class BooleanCollection extends Collection implements Materializable<Bool
   }
 
   @Nonnull
-  public static BooleanCollection falseCollection() {
-    return FALSE_COLLECTION;
-  }
-
-  @Nonnull
   @Override
   public Optional<BooleanType> getFhirValueFromRow(@Nonnull final Row row, final int columnNumber) {
     if (row.isNullAt(columnNumber)) {
@@ -123,4 +123,5 @@ public class BooleanCollection extends Collection implements Materializable<Bool
   public boolean isComparableTo(@Nonnull final Collection path) {
     return COMPARABLE_TYPES.contains(path.getClass());
   }
+
 }

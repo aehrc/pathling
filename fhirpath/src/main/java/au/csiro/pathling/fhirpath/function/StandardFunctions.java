@@ -125,7 +125,7 @@ public class StandardFunctions {
         where(extensionCollection, c -> c.traverse(URL_ELEMENT_NAME).map(
                 urlCollection -> urlCollection.getComparison(EQUALS).apply(url))
             .map(col -> BooleanCollection.build(new DefaultRepresentation(col)))
-            .orElse(BooleanCollection.falseCollection()))
+            .orElse(BooleanCollection.fromValue(false)))
     ).orElse(Collection.nullCollection());
   }
 
