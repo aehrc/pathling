@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.FunctionInput;
@@ -28,9 +27,10 @@ import javax.annotation.Nonnull;
 /**
  * Represents a function in FHIRPath.
  *
+ * @param <T> The type of {@link Collection} that this function returns
  * @author John Grimes
  */
-public interface NamedFunction<O extends Collection> {
+public interface NamedFunction<T extends Collection> {
 
   /**
    * @return the name of this function
@@ -47,20 +47,8 @@ public interface NamedFunction<O extends Collection> {
    * @return a {@link Collection} object representing the resulting expression
    */
   @Nonnull
-  default O invoke(@Nonnull final FunctionInput input) {
+  default T invoke(@Nonnull final FunctionInput input) {
     throw new UnsupportedOperationException("Not implemented: " + getName());
-  }
-
-  /**
-   * Check that no arguments have been passed within the supplied {@link FunctionInput}.
-   *
-   * @param functionName The name of the function, used for error reporting purposes
-   * @param input The {@link FunctionInput} to check for arguments
-   */
-  static void checkNoArguments(@Nonnull final String functionName,
-      @Nonnull final FunctionInput input) {
-    checkUserInput(input.getArguments().isEmpty(),
-        "Arguments can not be passed to " + functionName + " function");
   }
 
 }
