@@ -23,8 +23,8 @@ import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -48,7 +48,7 @@ import org.hl7.fhir.r4.model.UuidType;
 public class StringCollection extends Collection implements Materializable<PrimitiveType>,
     StringCoercible {
 
-  public StringCollection(@Nonnull final ColumnRepresentation columnRepresentation,
+  protected StringCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
@@ -70,7 +70,10 @@ public class StringCollection extends Collection implements Materializable<Primi
   }
 
   /**
-   * Returns a new instance with the specified column.
+   * Returns a new instance with the specified column representation and no definition.
+   *
+   * @param columnRepresentation The column representation to use
+   * @return A new instance with the specified column
    */
   @Nonnull
   public static StringCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
@@ -85,7 +88,6 @@ public class StringCollection extends Collection implements Materializable<Primi
    */
   @Nonnull
   public static StringCollection fromLiteral(@Nonnull final String stringLiteral) {
-    // TODO: Rationalise this with fromValue.
     return fromValue(parseStringLiteral(stringLiteral));
   }
 
@@ -159,7 +161,7 @@ public class StringCollection extends Collection implements Materializable<Primi
   }
 
   /**
-   * Returns a new instance based upon a {@link UriType).
+   * Returns a new instance based upon a {@link UriType}.
    *
    * @param value The value to use
    * @return A new instance of {@link StringCollection}
@@ -191,6 +193,12 @@ public class StringCollection extends Collection implements Materializable<Primi
     return StringCollection.fromValue(value.getValueAsString());
   }
 
+  /**
+   * Parses a FHIRPath string literal into a {@link String}.
+   *
+   * @param fhirPath The FHIRPath representation of the literal
+   * @return The parsed {@link String}
+   */
   @Nonnull
   public static String parseStringLiteral(final @Nonnull String fhirPath) {
     // Remove the surrounding single quotes and unescape the string according to the rules within
@@ -200,6 +208,11 @@ public class StringCollection extends Collection implements Materializable<Primi
     return value;
   }
 
+  /**
+   * Cast the column value of this collection to a literal.
+   *
+   * @return The column value as a literal
+   */
   @Nonnull
   public String toLiteralValue() {
     return getColumn().asStringValue()
