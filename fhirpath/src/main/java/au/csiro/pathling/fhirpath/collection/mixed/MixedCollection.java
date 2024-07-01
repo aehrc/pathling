@@ -1,6 +1,5 @@
 package au.csiro.pathling.fhirpath.collection.mixed;
 
-import au.csiro.pathling.fhirpath.Reference;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.NullRepresentation;
 import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
@@ -23,6 +22,7 @@ public abstract class MixedCollection extends Collection {
   /**
    * Returns a new instance with the specified column and definition.
    *
+   * @param parent The parent collection
    * @param definition The definition to use
    * @return A new instance of {@link MixedCollection}
    */
@@ -30,12 +30,6 @@ public abstract class MixedCollection extends Collection {
   public static MixedCollection buildElement(@Nonnull final Collection parent,
       @Nonnull final ChoiceChildDefinition definition) {
     return new ChoiceElementCollection(definition, parent);
-  }
-
-
-  @Nonnull
-  public static MixedCollection buildResource(@Nonnull final Reference reference) {
-    return new MixedResourceCollection(reference);
   }
 
 
