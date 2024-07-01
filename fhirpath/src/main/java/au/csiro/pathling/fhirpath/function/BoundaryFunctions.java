@@ -12,7 +12,7 @@ import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DecimalRepresentation;
-import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
+import au.csiro.pathling.fhirpath.validation.FhirPathFunction;
 import au.csiro.pathling.utilities.Preconditions;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -39,7 +39,7 @@ public abstract class BoundaryFunctions {
    * @see <a
    * href="https://build.fhir.org/ig/HL7/FHIRPath/#lowboundaryprecision-integer-decimal--date--datetime--time">lowBoundary</a>
    */
-  @FhirpathFunction
+  @FhirPathFunction
   @Nonnull
   public static Collection lowBoundary(@Nonnull final Collection input,
       @Nullable final IntegerCollection precision) {
@@ -69,7 +69,7 @@ public abstract class BoundaryFunctions {
    * @see <a
    * href="https://build.fhir.org/ig/HL7/FHIRPath/#highboundaryprecision-integer-decimal--date--datetime--time">highBoundary</a>
    */
-  @FhirpathFunction
+  @FhirPathFunction
   @Nonnull
   public static Collection highBoundary(@Nonnull final Collection input,
       @Nullable final IntegerCollection precision) {

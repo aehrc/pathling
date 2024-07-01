@@ -21,7 +21,7 @@ import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
+import au.csiro.pathling.fhirpath.validation.FhirPathFunction;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -43,7 +43,7 @@ public class JoinKeyFunctions {
    * @see <a
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html#getresourcekey--keytype">getResourceKey</a>
    */
-  @FhirpathFunction
+  @FhirPathFunction
   @Nonnull
   public static Collection getResourceKey(@Nonnull final ResourceCollection input) {
     return input.getKeyCollection();
@@ -58,7 +58,7 @@ public class JoinKeyFunctions {
    * @see <a
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html#getreferencekeyresource-type-specifier--keytype">getReferenceKey</a>
    */
-  @FhirpathFunction
+  @FhirPathFunction
   @Nonnull
   public static Collection getReferenceKey(@Nonnull final ReferenceCollection input,
       @Nullable final TypeSpecifier typeSpecifier) {

@@ -27,7 +27,7 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.EmptyRepresentation;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
-import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
+import au.csiro.pathling.fhirpath.validation.FhirPathFunction;
 import au.csiro.pathling.sql.udf.PropertyUdf;
 import au.csiro.pathling.utilities.Functions;
 import java.util.Optional;
@@ -46,7 +46,7 @@ public abstract class TerminologyFunctions {
    * @author Piotr Szul
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#display">display</a>
    */
-  @FhirpathFunction
+  @FhirPathFunction
   public static StringCollection display(@Nonnull final CodingCollection input,
       @Nullable final StringCollection language) {
 
@@ -65,7 +65,7 @@ public abstract class TerminologyFunctions {
    * @author Piotr Szul
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#property">property</a>
    */
-  @FhirpathFunction
+  @FhirPathFunction
   public static Collection property(@Nonnull final CodingCollection input,
       @Nonnull final StringCollection code,
       @Nullable final StringCollection type,
@@ -99,7 +99,7 @@ public abstract class TerminologyFunctions {
    * @see <a
    * href="https://pathling.csiro.au/docs/fhirpath/functions.html#designation">designation</a>
    */
-  @FhirpathFunction
+  @FhirPathFunction
   public static StringCollection designation(@Nonnull final CodingCollection input,
       @Nullable final CodingCollection use,
       @Nullable final StringCollection language) {
@@ -127,7 +127,7 @@ public abstract class TerminologyFunctions {
    * @author John Grimes
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#memberof">memberOf</a>
    */
-  @FhirpathFunction
+  @FhirPathFunction
   public static BooleanCollection memberOf(@Nonnull final CodingCollection input,
       @Nonnull final StringCollection valueSetURL) {
     return BooleanCollection.build(
@@ -145,7 +145,7 @@ public abstract class TerminologyFunctions {
    * @author Piotr Szul
    * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#functions">Additional functions</a>
    */
-  @FhirpathFunction
+  @FhirPathFunction
   public static BooleanCollection subsumes(@Nonnull final CodingCollection input,
       @Nonnull final CodingCollection codes) {
     return input.map(ctx ->
@@ -163,7 +163,7 @@ public abstract class TerminologyFunctions {
    * @author Piotr Szul
    * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#functions">Additional functions</a>
    */
-  @FhirpathFunction
+  @FhirPathFunction
   public static BooleanCollection subsumedBy(@Nonnull final CodingCollection input,
       @Nonnull final CodingCollection codes) {
     return input.map(ctx ->
@@ -188,7 +188,7 @@ public abstract class TerminologyFunctions {
    * @author Piotr Szul
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#translate">translate</a>
    */
-  @FhirpathFunction
+  @FhirPathFunction
   public static CodingCollection translate(@Nonnull final CodingCollection input,
       @Nonnull final StringCollection conceptMapUrl,
       @Nullable final BooleanCollection reverse, @Nullable final StringCollection equivalence,

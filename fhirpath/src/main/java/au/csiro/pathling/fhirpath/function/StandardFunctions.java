@@ -28,7 +28,7 @@ import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
+import au.csiro.pathling.fhirpath.validation.FhirPathFunction;
 import au.csiro.pathling.utilities.Preconditions;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -55,7 +55,7 @@ public class StandardFunctions {
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#where">where</a>
    */
   @Nonnull
-  @FhirpathFunction
+  @FhirPathFunction
   public static Collection where(@Nonnull final Collection input,
       @Nonnull final CollectionTransform expression) {
     return input.filter(expression.requireBoolean().toColumnTransformation(input));
@@ -63,7 +63,7 @@ public class StandardFunctions {
 
 
   // Maybe these too can be implemented as colum functions????
-  @FhirpathFunction
+  @FhirPathFunction
   public static Collection iif(@Nonnull final Collection input,
       @Nonnull CollectionTransform expression, @Nonnull final Collection thenValue,
       @Nonnull final Collection otherwiseValue) {
@@ -83,7 +83,7 @@ public class StandardFunctions {
    * @param input the input collection
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#first">first</a>
    */
-  @FhirpathFunction
+  @FhirPathFunction
   public static Collection first(@Nonnull final Collection input) {
     return input.copyWith(input.getColumn().first());
   }
@@ -94,7 +94,7 @@ public class StandardFunctions {
    * @param input the input collection
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#empty">empty</a>
    */
-  @FhirpathFunction
+  @FhirPathFunction
   public static BooleanCollection empty(@Nonnull final Collection input) {
     return BooleanCollection.build(input.getColumn().empty());
   }
@@ -105,7 +105,7 @@ public class StandardFunctions {
    * @param input the input collection
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#count">count</a>
    */
-  @FhirpathFunction
+  @FhirPathFunction
   public static IntegerCollection count(@Nonnull final Collection input) {
     return IntegerCollection.build(input.getColumn().count());
   }
@@ -116,7 +116,7 @@ public class StandardFunctions {
    * @author Piotr Szul
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#extension">extension</a>
    */
-  @FhirpathFunction
+  @FhirPathFunction
   public static Collection extension(@Nonnull final Collection input,
       @Nonnull final StringCollection url) {
     return input.traverse(EXTENSION_ELEMENT_NAME).map(extensionCollection ->
@@ -134,13 +134,13 @@ public class StandardFunctions {
    * @param typeSpecifier the type specifier
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#oftype">ofType</a>
    */
-  @FhirpathFunction
+  @FhirPathFunction
   public static Collection ofType(@Nonnull final Collection input,
       @Nonnull final TypeSpecifier typeSpecifier) {
     return input.filterByType(typeSpecifier);
   }
 
-  @FhirpathFunction
+  @FhirPathFunction
   public static StringCollection join(@Nonnull final StringCollection input,
       @Nullable final StringCollection separator) {
     return StringCollection.build(input.getColumn().join(
@@ -158,7 +158,7 @@ public class StandardFunctions {
    * @param criteria the criteria to apply to the input collection
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#exists">exists</a>
    */
-  @FhirpathFunction
+  @FhirPathFunction
   public static BooleanCollection exists(@Nonnull final Collection input,
       @Nullable final CollectionTransform criteria) {
     return not(empty(nonNull(criteria)
@@ -174,27 +174,27 @@ public class StandardFunctions {
    * @param input the input collection
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#not">not</a>
    */
-  @FhirpathFunction
+  @FhirPathFunction
   public static BooleanCollection not(@Nonnull final BooleanCollection input) {
     return BooleanCollection.build(input.getColumn().not());
   }
 
-  @FhirpathFunction
+  @FhirPathFunction
   public static BooleanCollection allTrue(@Nonnull final BooleanCollection input) {
     return BooleanCollection.build(input.getColumn().allTrue());
   }
 
-  @FhirpathFunction
+  @FhirPathFunction
   public static BooleanCollection allFalse(@Nonnull final BooleanCollection input) {
     return BooleanCollection.build(input.getColumn().allFalse());
   }
 
-  @FhirpathFunction
+  @FhirPathFunction
   public static BooleanCollection anyTrue(@Nonnull final BooleanCollection input) {
     return BooleanCollection.build(input.getColumn().anyTrue());
   }
 
-  @FhirpathFunction
+  @FhirPathFunction
   public static BooleanCollection anyFalse(@Nonnull final BooleanCollection input) {
     return BooleanCollection.build(input.getColumn().anyFalse());
   }
@@ -204,7 +204,7 @@ public class StandardFunctions {
   }
 
   // TODO: This should be a string collection with a StringCoercible argument
-  @FhirpathFunction
+  @FhirPathFunction
   public static Collection toString(@Nonnull final Collection input) {
     Preconditions.checkUserInput(input instanceof StringCoercible,
         "toString() can only be applied to a StringCoercible path");

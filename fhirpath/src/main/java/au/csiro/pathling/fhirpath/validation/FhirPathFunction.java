@@ -17,12 +17,17 @@
 
 package au.csiro.pathling.fhirpath.validation;
 
-import javax.annotation.Nonnull;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import javax.annotation.Nonnull;
 
+/**
+ * Indicates that a method represents the implementation of a FHIRPath function.
+ *
+ * @author Piotr Szul
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Nonnull
-public @interface FhirpathFunction {
+public @interface FhirPathFunction {
 
 }
