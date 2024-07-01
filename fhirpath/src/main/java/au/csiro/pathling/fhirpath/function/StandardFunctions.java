@@ -161,42 +161,10 @@ public class StandardFunctions {
   @FhirPathFunction
   public static BooleanCollection exists(@Nonnull final Collection input,
       @Nullable final CollectionTransform criteria) {
-    return not(empty(nonNull(criteria)
-                     ? where(input, criteria)
-                     : input));
+    return BooleanLogicFunctions.not(empty(nonNull(criteria)
+                                           ? where(input, criteria)
+                                           : input));
 
-  }
-
-  /**
-   * Returns {@code true} if the input collection evaluates to {@code false}, and {@code false} if
-   * it evaluates to {@code true}. Otherwise, the result is empty.
-   *
-   * @param input the input collection
-   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#not">not</a>
-   */
-  @FhirPathFunction
-  public static BooleanCollection not(@Nonnull final BooleanCollection input) {
-    return BooleanCollection.build(input.getColumn().not());
-  }
-
-  @FhirPathFunction
-  public static BooleanCollection allTrue(@Nonnull final BooleanCollection input) {
-    return BooleanCollection.build(input.getColumn().allTrue());
-  }
-
-  @FhirPathFunction
-  public static BooleanCollection allFalse(@Nonnull final BooleanCollection input) {
-    return BooleanCollection.build(input.getColumn().allFalse());
-  }
-
-  @FhirPathFunction
-  public static BooleanCollection anyTrue(@Nonnull final BooleanCollection input) {
-    return BooleanCollection.build(input.getColumn().anyTrue());
-  }
-
-  @FhirPathFunction
-  public static BooleanCollection anyFalse(@Nonnull final BooleanCollection input) {
-    return BooleanCollection.build(input.getColumn().anyFalse());
   }
 
   public static boolean isTypeSpecifierFunction(@Nonnull final String functionName) {
