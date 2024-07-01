@@ -19,9 +19,9 @@ package au.csiro.pathling.fhirpath.function;
 
 import static java.util.Objects.isNull;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FunctionInput;
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -80,9 +80,9 @@ public class WrappedFunction implements NamedFunction<Collection> {
       } else if (Collection.class.isAssignableFrom(parameter.getType())) {
         // evaluate collection types 
         return resolveCollection(argument.apply(input, evaluationContext), parameter);
-      } else if (CollectionExpression.class.isAssignableFrom(parameter.getType())) {
+      } else if (CollectionTransform.class.isAssignableFrom(parameter.getType())) {
         // bind with context
-        return (CollectionExpression) (c -> argument.apply(c, evaluationContext));
+        return (CollectionTransform) (c -> argument.apply(c, evaluationContext));
       } else if (TypeSpecifier.class.isAssignableFrom(parameter.getType())) {
         // bind type specifier
         return ((Paths.TypeSpecifierPath) argument).getTypeSpecifier();

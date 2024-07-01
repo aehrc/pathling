@@ -17,19 +17,14 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.utilities.Preconditions.checkArgument;
-
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
 import java.util.Optional;
-import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * FHIRPath functions for generating keys for joining between resources.
@@ -39,29 +34,35 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @SuppressWarnings("unused")
 public class JoinKeyFunctions {
 
-  public static final String REFERENCE_ELEMENT_NAME = "reference";
 
+  /**
+   * Returns a {@link Collection} of keys for the input {@link ResourceCollection}.
+   *
+   * @param input The input {@link ResourceCollection}
+   * @return A {@link Collection} of keys
+   * @see <a
+   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html#getresourcekey--keytype">getResourceKey</a>
+   */
   @FhirpathFunction
-  public static StringCollection getResourceKey(@Nonnull final ResourceCollection input) {
-    return StringCollection.build(input.getKeyColumn());
+  @Nonnull
+  public static Collection getResourceKey(@Nonnull final ResourceCollection input) {
+    return input.getKeyCollection();
   }
 
+  /**
+   * Returns a {@link Collection} of keys for the input {@link ReferenceCollection}.
+   *
+   * @param input The input {@link ReferenceCollection}
+   * @param typeSpecifier An optional {@link TypeSpecifier} to filter the reference keys by
+   * @return A {@link Collection} of keys
+   * @see <a
+   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html#getreferencekeyresource-type-specifier--keytype">getReferenceKey</a>
+   */
   @FhirpathFunction
-  // TODO: This needs to be somehow constrained to the collections of References
-  public static Collection getReferenceKey(@Nonnull final Collection input,
+  @Nonnull
+  public static Collection getReferenceKey(@Nonnull final ReferenceCollection input,
       @Nullable final TypeSpecifier typeSpecifier) {
-    checkArgument(input.getFhirType().map(FHIRDefinedType.REFERENCE::equals).orElse(false),
-        "getReferenceKey can only be applied to a REFERENCE collection");
-    // TODO: How to deal with exceptions here?
-    // TODO: add filtering on 'type' but that requies changes in the Encoder (as 'type' is not encoded)
-    // TODO: add support for other types of references
-    return Optional.ofNullable(typeSpecifier)
-        .map(ts -> ts.toFhirType().toCode() + "/.+")
-        .<Function<ColumnRepresentation, ColumnRepresentation>>map(
-            regex -> (c -> c.traverse(REFERENCE_ELEMENT_NAME, Optional.of(FHIRDefinedType.STRING))
-                .like(regex)))
-        .map(input::filter).orElse(input)
-        .traverse(REFERENCE_ELEMENT_NAME).orElse(Collection.nullCollection());
+    return input.getKeyCollection(Optional.ofNullable(typeSpecifier));
   }
 
 }

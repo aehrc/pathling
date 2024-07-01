@@ -23,7 +23,6 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Row;
@@ -37,9 +36,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class BooleanCollection extends Collection implements Materializable<BooleanType>,
     Comparable {
-
-  private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
-      .of(BooleanCollection.class);
 
   protected BooleanCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
@@ -121,7 +117,7 @@ public class BooleanCollection extends Collection implements Materializable<Bool
 
   @Override
   public boolean isComparableTo(@Nonnull final Collection path) {
-    return COMPARABLE_TYPES.contains(path.getClass());
+    return path instanceof BooleanCollection || super.isComparableTo(path);
   }
 
 }

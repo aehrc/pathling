@@ -145,7 +145,8 @@ public class DecimalCollection extends Collection implements Materializable<Deci
 
   @Override
   public boolean isComparableTo(@Nonnull final Collection path) {
-    return IntegerCollection.getComparableTypes().contains(path.getClass());
+    return IntegerCollection.getComparableTypes().contains(path.getClass()) ||
+        super.isComparableTo(path);
   }
 
   @Nonnull

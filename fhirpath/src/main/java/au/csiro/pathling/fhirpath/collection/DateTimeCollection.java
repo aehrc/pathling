@@ -159,7 +159,7 @@ public class DateTimeCollection extends Collection implements
 
   @Override
   public boolean isComparableTo(@Nonnull final Collection path) {
-    return COMPARABLE_TYPES.contains(path.getClass());
+    return COMPARABLE_TYPES.contains(path.getClass()) || super.isComparableTo(path);
   }
 
   @Nonnull

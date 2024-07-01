@@ -136,6 +136,11 @@ public class CodingCollection extends Collection implements Materializable<Codin
   }
 
   @Override
+  public boolean isComparableTo(@Nonnull final Collection path) {
+    return path instanceof CodingCollection || super.isComparableTo(path);
+  }
+
+  @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
     return CodingSqlComparator.buildComparison(this, operation);

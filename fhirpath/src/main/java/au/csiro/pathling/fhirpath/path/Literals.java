@@ -19,11 +19,12 @@ package au.csiro.pathling.fhirpath.path;
 
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.EvaluationContext;
+import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import javax.annotation.Nonnull;
@@ -42,7 +43,7 @@ public final class Literals {
     @Override
     public Collection apply(@Nonnull final Collection input,
         @Nonnull final EvaluationContext context) {
-      return Collection.nullCollection();
+      return EmptyCollection.getInstance();
     }
 
     @Nonnull

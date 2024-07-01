@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
@@ -59,15 +60,15 @@ public class StandardFunctions {
   @Nonnull
   @FhirpathFunction
   public static Collection where(@Nonnull final Collection input,
-      @Nonnull final CollectionExpression expression) {
-    return input.filter(expression.requireBoolean().toColumnFunction(input));
+      @Nonnull final CollectionTransform expression) {
+    return input.filter(expression.requireBoolean().toColumnTransformation(input));
   }
 
 
   // Maybe these too can be implemented as colum functions????
   @FhirpathFunction
   public static Collection iif(@Nonnull final Collection input,
-      @Nonnull CollectionExpression expression, @Nonnull final Collection thenValue,
+      @Nonnull CollectionTransform expression, @Nonnull final Collection thenValue,
       @Nonnull final Collection otherwiseValue) {
 
     // we need to pre-evaluate both expressions to determine that they have the same type
@@ -76,7 +77,7 @@ public class StandardFunctions {
     // functions.when(requireBoolean(expression).apply(input).getSingleton(), thenValue.getColumn())
     //     .otherwise(otherwiseValue.getColumn());
 
-    return Collection.nullCollection();
+    return EmptyCollection.getInstance();
   }
 
   /**
@@ -126,7 +127,7 @@ public class StandardFunctions {
                 urlCollection -> urlCollection.getComparison(EQUALS).apply(url))
             .map(col -> BooleanCollection.build(new DefaultRepresentation(col)))
             .orElse(BooleanCollection.fromValue(false)))
-    ).orElse(Collection.nullCollection());
+    ).orElse(EmptyCollection.getInstance());
   }
 
   /**
@@ -162,7 +163,7 @@ public class StandardFunctions {
    */
   @FhirpathFunction
   public static BooleanCollection exists(@Nonnull final Collection input,
-      @Nullable final CollectionExpression criteria) {
+      @Nullable final CollectionTransform criteria) {
     return not(empty(nonNull(criteria)
                      ? where(input, criteria)
                      : input));

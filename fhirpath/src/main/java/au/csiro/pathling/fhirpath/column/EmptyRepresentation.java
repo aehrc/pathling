@@ -14,13 +14,13 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author Piotr Szul
  * @author John Grimes
  */
-public class NullRepresentation extends ColumnRepresentation {
+public class EmptyRepresentation extends ColumnRepresentation {
 
-  static final ColumnRepresentation INSTANCE = new NullRepresentation();
+  static final ColumnRepresentation INSTANCE = new EmptyRepresentation();
   static final Column NULL_LITERAL = lit(null);
 
   /**
-   * @return a singleton instance of this class
+   * @return A singleton instance of this class
    */
   @Nonnull
   public static ColumnRepresentation getInstance() {
@@ -52,13 +52,13 @@ public class NullRepresentation extends ColumnRepresentation {
 
   @Nonnull
   @Override
-  public NullRepresentation traverse(@Nonnull final String fieldName) {
+  public EmptyRepresentation traverse(@Nonnull final String fieldName) {
     return this;
   }
 
   @Nonnull
   @Override
-  public NullRepresentation traverse(@Nonnull final String fieldName,
+  public EmptyRepresentation traverse(@Nonnull final String fieldName,
       final Optional<FHIRDefinedType> fhirType) {
     return traverse(fieldName);
   }

@@ -228,6 +228,11 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
         new DefaultRepresentation(QuantityEncoding.encodeLiteral(quantity)));
   }
 
+  @Override
+  public boolean isComparableTo(@Nonnull final Collection path) {
+    return path instanceof QuantityCollection || super.isComparableTo(path);
+  }
+
   @Nonnull
   @Override
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
@@ -268,8 +273,9 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
       final Column resultStruct = QuantityEncoding.toStruct(
           sourceContext.getField("id"),
           FlexiDecimal.toDecimal(resultColumn),
-          // NOTE: This (setting value_scale to null) works because we never decode this struct to a Quantity.
-          // The only Quantities that are decoded are calendar duration quantities parsed from literals.
+          // NOTE: This (setting value_scale to null) works because we never decode this struct to a 
+          // Quantity. The only Quantities that are decoded are calendar duration quantities parsed 
+          // from literals.
           lit(null),
           sourceContext.getField("comparator"),
           resultCode,

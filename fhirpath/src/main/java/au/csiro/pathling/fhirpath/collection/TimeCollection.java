@@ -109,4 +109,9 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
     return map(ColumnRepresentation::asString, StringCollection::build);
   }
 
+  @Override
+  public boolean isComparableTo(@Nonnull final Collection path) {
+    return path instanceof TimeCollection || super.isComparableTo(path);
+  }
+
 }

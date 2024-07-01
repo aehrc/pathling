@@ -28,12 +28,12 @@ import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.column.NullRepresentation;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -82,6 +82,7 @@ public class Collection implements Comparable, Numeric {
           .put(FHIRDefinedType.CODING, CodingCollection.class)
           .put(FHIRDefinedType.QUANTITY, QuantityCollection.class)
           .put(FHIRDefinedType.SIMPLEQUANTITY, QuantityCollection.class)
+          .put(FHIRDefinedType.REFERENCE, ReferenceCollection.class)
           .build();
 
   /**
@@ -191,8 +192,8 @@ public class Collection implements Comparable, Numeric {
     final FHIRDefinedType resolvedType = fhirType
         .or(() -> definition.flatMap(ElementDefinition::getFhirType))
         .orElseThrow(() -> new IllegalArgumentException("Must have a fhirType or a definition"));
-    final Class<? extends Collection> elementPathClass = classForType(resolvedType).orElse(
-        Collection.class);
+    final Class<? extends Collection> elementPathClass = classForType(resolvedType)
+        .orElse(Collection.class);
     final Optional<FhirPathType> fhirPathType = FhirPathType.forFhirType(resolvedType);
 
     try {
@@ -307,7 +308,7 @@ public class Collection implements Comparable, Numeric {
 
   @Override
   public boolean isComparableTo(@Nonnull final Collection path) {
-    return path.getClass().equals(this.getClass()) || path.getClass().equals(Collection.class);
+    return path instanceof EmptyCollection;
   }
 
   @Nonnull
@@ -326,19 +327,6 @@ public class Collection implements Comparable, Numeric {
   @Override
   public Optional<Column> getNumericContext() {
     return Optional.empty();
-  }
-
-
-  /**
-   * Creates a null {@link Collection}.
-   *
-   * @return the null collection.
-   */
-  @Nonnull
-  public static Collection nullCollection() {
-    return new Collection(NullRepresentation.getInstance(), Optional.empty(),
-        Optional.of(FHIRDefinedType.NULL),
-        Optional.empty());
   }
 
   /**
@@ -363,7 +351,7 @@ public class Collection implements Comparable, Numeric {
    */
   @Nonnull
   public Collection filter(
-      @Nonnull final Function<ColumnRepresentation, ColumnRepresentation> lambda) {
+      @Nonnull final ColumnTransform lambda) {
     return map(
         ctx -> ctx.filter(col -> lambda.apply(new DefaultRepresentation(col)).getValue()));
   }
@@ -386,7 +374,7 @@ public class Collection implements Comparable, Numeric {
    */
   @Nonnull
   public Collection map(
-      @Nonnull final Function<ColumnRepresentation, ColumnRepresentation> mapper) {
+      @Nonnull final ColumnTransform mapper) {
     return copyWith(mapper.apply(getColumn()));
   }
 
@@ -400,7 +388,7 @@ public class Collection implements Comparable, Numeric {
    */
   @Nonnull
   public <C extends Collection> C map(
-      @Nonnull final Function<ColumnRepresentation, ColumnRepresentation> mapper,
+      @Nonnull final ColumnTransform mapper,
       @Nonnull final Function<ColumnRepresentation, C> constructor) {
     return constructor.apply(mapper.apply(getColumn()));
   }
@@ -425,7 +413,7 @@ public class Collection implements Comparable, Numeric {
    */
   @Nonnull
   public Collection filterByType(@Nonnull final TypeSpecifier type) {
-    return Collection.nullCollection();
+    return EmptyCollection.getInstance();
   }
 
   // TODO: Remove this after removing usages.

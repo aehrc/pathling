@@ -174,8 +174,10 @@ public class ResourceCollection extends Collection {
    * @return A column that can be used as a key for joining to this resource type
    */
   @Nonnull
-  public ColumnRepresentation getKeyColumn() {
-    return getColumn().traverse("id_versioned", Optional.of(FHIRDefinedType.STRING));
+  public Collection getKeyCollection() {
+    return StringCollection.build(
+        getColumn().traverse("id_versioned", Optional.of(FHIRDefinedType.STRING))
+    );
   }
 
 }

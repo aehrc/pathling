@@ -269,4 +269,10 @@ public class StringCollection extends Collection implements Materializable<Primi
   public StringCollection asStringPath() {
     return this;
   }
+
+  @Override
+  public boolean isComparableTo(@Nonnull final Collection path) {
+    return path instanceof StringCollection || super.isComparableTo(path);
+  }
+  
 }

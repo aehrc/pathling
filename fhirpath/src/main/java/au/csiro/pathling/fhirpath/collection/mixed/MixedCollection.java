@@ -1,7 +1,7 @@
 package au.csiro.pathling.fhirpath.collection.mixed;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.NullRepresentation;
+import au.csiro.pathling.fhirpath.column.EmptyRepresentation;
 import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -16,7 +16,7 @@ import lombok.Getter;
 public abstract class MixedCollection extends Collection {
 
   protected MixedCollection() {
-    super(NullRepresentation.getInstance(), Optional.empty(), Optional.empty(), Optional.empty());
+    super(EmptyRepresentation.getInstance(), Optional.empty(), Optional.empty(), Optional.empty());
   }
 
   /**

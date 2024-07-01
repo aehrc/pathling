@@ -19,7 +19,6 @@ package au.csiro.pathling.fhirpath.function;
 
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 
@@ -29,13 +28,13 @@ import javax.annotation.Nonnull;
  * @author Piotr Szul
  */
 @FunctionalInterface
-public interface CollectionExpression extends Function<Collection, Collection> {
+public interface CollectionTransform extends Function<Collection, Collection> {
 
   /**
    * @return the input collection if it returns a {@link BooleanCollection}, otherwise throws an
    * exception
    */
-  default CollectionExpression requireBoolean() {
+  default CollectionTransform requireBoolean() {
     return input -> {
       final Collection result = apply(input);
       if (result instanceof BooleanCollection) {
@@ -50,10 +49,10 @@ public interface CollectionExpression extends Function<Collection, Collection> {
    * @param input the input collection
    * @return a function that applies the transformation and returns the column representation
    */
-  default Function<ColumnRepresentation, ColumnRepresentation> toColumnFunction(
+  default ColumnTransform toColumnTransformation(
       @Nonnull final Collection input) {
     // The type of the element Collection needs to be the same as the input.
     return c -> apply(input.copyWith(c)).getColumn();
   }
- 
+
 }
