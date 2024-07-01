@@ -20,9 +20,9 @@ package au.csiro.pathling.fhirpath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry.NoSuchFunctionException;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
 import javax.annotation.Nonnull;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 public interface EvaluationContext {
 

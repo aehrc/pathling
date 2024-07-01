@@ -20,6 +20,9 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
 
   private static final StaticFunctionRegistry INSTANCE = new StaticFunctionRegistry();
 
+  /**
+   * Constructs a new instance of the registry, populating it with the standard set of functions.
+   */
   public StaticFunctionRegistry() {
     super(new Builder<String, NamedFunction>()
         .put("until", new UntilFunction())
@@ -30,7 +33,11 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
         .build());
   }
 
+  /**
+   * @return The singleton instance of the registry
+   */
   public static StaticFunctionRegistry getInstance() {
     return INSTANCE;
   }
+
 }

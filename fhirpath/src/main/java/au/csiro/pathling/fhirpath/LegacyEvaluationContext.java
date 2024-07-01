@@ -21,7 +21,7 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
-import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry.NoSuchFunctionException;
+import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
 import au.csiro.pathling.fhirpath.parser.ConstantReplacer;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -148,7 +148,8 @@ public class LegacyEvaluationContext implements EvaluationContext {
    */
   @Nonnull
   public LegacyEvaluationContext withInputContext(@Nonnull final Collection inputContext) {
-    return new LegacyEvaluationContext(inputContext, resource, fhirContext, sparkSession, dataSource,
+    return new LegacyEvaluationContext(inputContext, resource, fhirContext, sparkSession,
+        dataSource,
         dataset, functionRegistry, terminologyServiceFactory, constantReplacer);
   }
 

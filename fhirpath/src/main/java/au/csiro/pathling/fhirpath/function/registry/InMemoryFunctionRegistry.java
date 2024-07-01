@@ -15,6 +15,9 @@ public class InMemoryFunctionRegistry<T> implements FunctionRegistry<T> {
   @Nonnull
   private final Map<String, T> functions;
 
+  /**
+   * @param functions The map of functions to store
+   */
   public InMemoryFunctionRegistry(@Nonnull final Map<String, T> functions) {
     this.functions = functions;
   }

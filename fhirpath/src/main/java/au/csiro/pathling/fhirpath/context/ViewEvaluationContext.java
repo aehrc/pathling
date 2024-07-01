@@ -22,7 +22,7 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
-import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry.NoSuchFunctionException;
+import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
