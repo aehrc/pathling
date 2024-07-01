@@ -17,25 +17,11 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.validation.FhirPathFunction;
-import au.csiro.pathling.utilities.Preconditions;
-import javax.annotation.Nonnull;
-
 /**
  * Implementation of standard FHIRPath functions.
  */
 @SuppressWarnings("unused")
 public class StandardFunctions {
-
-  // TODO: This should be a string collection with a StringCoercible argument
-  @FhirPathFunction
-  public static Collection toString(@Nonnull final Collection input) {
-    Preconditions.checkUserInput(input instanceof StringCoercible,
-        "toString() can only be applied to a StringCoercible path");
-    return ((StringCoercible) input).asStringPath();
-  }
 
   private StandardFunctions() {
   }
