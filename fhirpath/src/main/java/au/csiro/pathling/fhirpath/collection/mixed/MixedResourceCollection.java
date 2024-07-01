@@ -7,6 +7,12 @@ import javax.annotation.Nonnull;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 
+/**
+ * Represents a polymorphic resource collection, which can be resolved to a single resource type.
+ *
+ * @author John Grimes
+ * @author Piotr Szul
+ */
 @Value
 @EqualsAndHashCode(callSuper = false)
 public class MixedResourceCollection extends MixedCollection {
