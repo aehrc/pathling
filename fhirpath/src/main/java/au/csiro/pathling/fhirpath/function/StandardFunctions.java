@@ -17,11 +17,9 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.fhirpath.Comparable.ComparisonOperation.EQUALS;
 import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
@@ -80,23 +78,6 @@ public class StandardFunctions {
   @FhirPathFunction
   public static IntegerCollection count(@Nonnull final Collection input) {
     return IntegerCollection.build(input.getColumn().count());
-  }
-
-  /**
-   * A function that returns the extensions of the current element that match a given URL.
-   *
-   * @author Piotr Szul
-   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#extension">extension</a>
-   */
-  @FhirPathFunction
-  public static Collection extension(@Nonnull final Collection input,
-      @Nonnull final StringCollection url) {
-    return input.traverse(EXTENSION_ELEMENT_NAME).map(extensionCollection ->
-        FilteringAndProjectionFunctions.where(extensionCollection, c -> c.traverse(URL_ELEMENT_NAME).map(
-                urlCollection -> urlCollection.getComparison(EQUALS).apply(url))
-            .map(col -> BooleanCollection.build(new DefaultRepresentation(col)))
-            .orElse(BooleanCollection.fromValue(false)))
-    ).orElse(EmptyCollection.getInstance());
   }
 
   @FhirPathFunction
