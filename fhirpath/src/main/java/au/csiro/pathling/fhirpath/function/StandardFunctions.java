@@ -29,10 +29,6 @@ import javax.annotation.Nonnull;
 @SuppressWarnings("unused")
 public class StandardFunctions {
 
-  public static boolean isTypeSpecifierFunction(@Nonnull final String functionName) {
-    return "ofType".equals(functionName) || "getReferenceKey".equals(functionName);
-  }
-
   // TODO: This should be a string collection with a StringCoercible argument
   @FhirPathFunction
   public static Collection toString(@Nonnull final Collection input) {

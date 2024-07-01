@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import static au.csiro.pathling.fhirpath.function.StandardFunctions.isTypeSpecifierFunction;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toList;
@@ -32,6 +31,10 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParamListConte
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ThisInvocationContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TotalInvocationContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathVisitor;
+import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
+import au.csiro.pathling.fhirpath.path.Paths.Resource;
+import au.csiro.pathling.fhirpath.path.Paths.This;
+import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -40,10 +43,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
-import au.csiro.pathling.fhirpath.path.Paths.Resource;
-import au.csiro.pathling.fhirpath.path.Paths.This;
-import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -69,6 +68,10 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   public InvocationVisitor() {
     this(false);
+  }
+
+  private static boolean isTypeSpecifierFunction(@Nonnull final String functionName) {
+    return "ofType".equals(functionName) || "getReferenceKey".equals(functionName);
   }
 
   /**
