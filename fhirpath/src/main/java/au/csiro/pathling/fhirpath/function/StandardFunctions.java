@@ -72,17 +72,6 @@ public class StandardFunctions {
   }
 
   /**
-   * This function returns true if the input collection is empty.
-   *
-   * @param input the input collection
-   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#empty">empty</a>
-   */
-  @FhirPathFunction
-  public static BooleanCollection empty(@Nonnull final Collection input) {
-    return BooleanCollection.build(input.getColumn().empty());
-  }
-
-  /**
    * A function for aggregating data based on counting the number of rows within the result.
    *
    * @param input the input collection
@@ -118,23 +107,6 @@ public class StandardFunctions {
         ? separator.asSingular().getColumn()
         : DefaultRepresentation.literal(JOIN_DEFAULT_SEPARATOR)
     ));
-  }
-
-  /**
-   * A function which is able to test whether the input collection is empty. It can also optionally
-   * accept an argument which can filter the input collection prior to applying the test.
-   *
-   * @param input the input collection
-   * @param criteria the criteria to apply to the input collection
-   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#exists">exists</a>
-   */
-  @FhirPathFunction
-  public static BooleanCollection exists(@Nonnull final Collection input,
-      @Nullable final CollectionTransform criteria) {
-    return BooleanLogicFunctions.not(empty(nonNull(criteria)
-                                           ? FilteringAndProjectionFunctions.where(input, criteria)
-                                           : input));
-
   }
 
   public static boolean isTypeSpecifierFunction(@Nonnull final String functionName) {
