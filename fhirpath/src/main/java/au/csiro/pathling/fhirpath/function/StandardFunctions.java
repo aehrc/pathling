@@ -20,15 +20,12 @@ package au.csiro.pathling.fhirpath.function;
 import static au.csiro.pathling.fhirpath.Comparable.ComparisonOperation.EQUALS;
 import static java.util.Objects.nonNull;
 
-import au.csiro.pathling.fhirpath.EvaluationContext;
-import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
-import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
@@ -215,14 +212,6 @@ public class StandardFunctions {
   }
 
   private StandardFunctions() {
-  }
-
-  // extended functions
-  @FhirpathFunction
-  public static ResourceCollection reverseResolve(@Nonnull final ResourceCollection input,
-      @Nonnull final FhirPath referencePath,
-      @Nonnull final EvaluationContext evaluationContext) {
-    throw new UnsupportedOperationException();
   }
 
 }
