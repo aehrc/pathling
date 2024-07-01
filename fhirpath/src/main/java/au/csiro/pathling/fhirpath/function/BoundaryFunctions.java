@@ -20,8 +20,25 @@ import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 
+/**
+ * Contains functions for calculating the low and high boundaries of a value.
+ *
+ * @see <a
+ * href="https://build.fhir.org/ig/HL7/FHIRPath/#lowboundaryprecision-integer-decimal--date--datetime--time">lowBoundary</a>
+ * @see <a
+ * href="https://build.fhir.org/ig/HL7/FHIRPath/#highboundaryprecision-integer-decimal--date--datetime--time">highBoundary</a>
+ */
 public abstract class BoundaryFunctions {
 
+  /**
+   * The least possible value of the input to the specified precision.
+   *
+   * @param input The input collection
+   * @param precision The precision to which the boundary should be calculated
+   * @return The low boundary of the input
+   * @see <a
+   * href="https://build.fhir.org/ig/HL7/FHIRPath/#lowboundaryprecision-integer-decimal--date--datetime--time">lowBoundary</a>
+   */
   @FhirpathFunction
   @Nonnull
   public static Collection lowBoundary(@Nonnull final Collection input,
@@ -43,6 +60,15 @@ public abstract class BoundaryFunctions {
     }
   }
 
+  /**
+   * The greatest possible value of the input to the specified precision.
+   *
+   * @param input The input collection
+   * @param precision The precision to which the boundary should be calculated
+   * @return The high boundary of the input
+   * @see <a
+   * href="https://build.fhir.org/ig/HL7/FHIRPath/#highboundaryprecision-integer-decimal--date--datetime--time">highBoundary</a>
+   */
   @FhirpathFunction
   @Nonnull
   public static Collection highBoundary(@Nonnull final Collection input,
