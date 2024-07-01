@@ -19,7 +19,6 @@ package au.csiro.pathling.fhirpath.function;
 
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.validation.FhirPathFunction;
 import au.csiro.pathling.utilities.Preconditions;
 import javax.annotation.Nonnull;
@@ -29,17 +28,6 @@ import javax.annotation.Nonnull;
  */
 @SuppressWarnings("unused")
 public class StandardFunctions {
-
-  /**
-   * A function for aggregating data based on counting the number of rows within the result.
-   *
-   * @param input the input collection
-   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#count">count</a>
-   */
-  @FhirPathFunction
-  public static IntegerCollection count(@Nonnull final Collection input) {
-    return IntegerCollection.build(input.getColumn().count());
-  }
 
   public static boolean isTypeSpecifierFunction(@Nonnull final String functionName) {
     return "ofType".equals(functionName) || "getReferenceKey".equals(functionName);

@@ -4,6 +4,7 @@ import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.validation.FhirPathFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -57,6 +58,21 @@ public class ExistenceFunctions {
   @Nonnull
   public static BooleanCollection empty(@Nonnull final Collection input) {
     return BooleanCollection.build(input.getColumn().empty());
+  }
+
+  /**
+   * Returns the integer count of the number of items in the input collection. Returns 0 when the
+   * input collection is empty.
+   *
+   * @param input The input collection
+   * @return An {@link IntegerCollection} containing the result
+   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#count--integer">FHIRPath Specification -
+   * count</a>
+   */
+  @FhirPathFunction
+  @Nonnull
+  public static IntegerCollection count(@Nonnull final Collection input) {
+    return IntegerCollection.build(input.getColumn().count());
   }
 
   /**
@@ -124,5 +140,4 @@ public class ExistenceFunctions {
   public static BooleanCollection anyFalse(@Nonnull final BooleanCollection input) {
     return BooleanCollection.build(input.getColumn().anyFalse());
   }
-
 }
