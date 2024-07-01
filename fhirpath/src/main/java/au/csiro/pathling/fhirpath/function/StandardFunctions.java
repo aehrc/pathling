@@ -21,7 +21,6 @@ import static au.csiro.pathling.fhirpath.Comparable.ComparisonOperation.EQUALS;
 import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
@@ -44,22 +43,6 @@ public class StandardFunctions {
   public static final String JOIN_DEFAULT_SEPARATOR = "";
 
   public static final String REFERENCE_ELEMENT_NAME = "reference";
-
-  /**
-   * Describes a function which can scope down the previous invocation within a FHIRPath expression,
-   * based upon an expression passed in as an argument. Supports the use of `$this` to reference the
-   * element currently in scope.
-   *
-   * @param input the input collection
-   * @param expression the expression to evaluate
-   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#where">where</a>
-   */
-  @Nonnull
-  @FhirPathFunction
-  public static Collection where(@Nonnull final Collection input,
-      @Nonnull final CollectionTransform expression) {
-    return input.filter(expression.requireBoolean().toColumnTransformation(input));
-  }
 
 
   // Maybe these too can be implemented as colum functions????
@@ -120,24 +103,11 @@ public class StandardFunctions {
   public static Collection extension(@Nonnull final Collection input,
       @Nonnull final StringCollection url) {
     return input.traverse(EXTENSION_ELEMENT_NAME).map(extensionCollection ->
-        where(extensionCollection, c -> c.traverse(URL_ELEMENT_NAME).map(
+        FilteringAndProjectionFunctions.where(extensionCollection, c -> c.traverse(URL_ELEMENT_NAME).map(
                 urlCollection -> urlCollection.getComparison(EQUALS).apply(url))
             .map(col -> BooleanCollection.build(new DefaultRepresentation(col)))
             .orElse(BooleanCollection.fromValue(false)))
     ).orElse(EmptyCollection.getInstance());
-  }
-
-  /**
-   * A function filters items in the input collection to only those that are of the given type.
-   *
-   * @param input the input collection
-   * @param typeSpecifier the type specifier
-   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#oftype">ofType</a>
-   */
-  @FhirPathFunction
-  public static Collection ofType(@Nonnull final Collection input,
-      @Nonnull final TypeSpecifier typeSpecifier) {
-    return input.filterByType(typeSpecifier);
   }
 
   @FhirPathFunction
@@ -162,7 +132,7 @@ public class StandardFunctions {
   public static BooleanCollection exists(@Nonnull final Collection input,
       @Nullable final CollectionTransform criteria) {
     return BooleanLogicFunctions.not(empty(nonNull(criteria)
-                                           ? where(input, criteria)
+                                           ? FilteringAndProjectionFunctions.where(input, criteria)
                                            : input));
 
   }
