@@ -21,8 +21,8 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -38,7 +38,7 @@ import org.hl7.fhir.r4.model.TimeType;
 public class TimeCollection extends Collection implements Materializable<TimeType>,
     Comparable, StringCoercible {
 
-  public TimeCollection(@Nonnull final ColumnRepresentation columnRepresentation,
+  protected TimeCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
