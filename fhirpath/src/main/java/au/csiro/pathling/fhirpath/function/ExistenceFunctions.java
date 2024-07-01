@@ -7,6 +7,8 @@ import javax.annotation.Nonnull;
 /**
  * Contains functions for evaluating the existence of elements in a collection.
  *
+ * @author Piotr Szul
+ * @author John Grimes
  * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#existence">FHIRPath Specification -
  * Existence</a>
  */

@@ -7,6 +7,8 @@ import javax.annotation.Nonnull;
 /**
  * Contains functions for boolean logic.
  *
+ * @author Piotr Szul
+ * @author John Grimes
  * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#boolean-logic">FHIRPath Specification -
  * Boolean logic</a>
  */
@@ -27,5 +29,5 @@ public class BooleanLogicFunctions {
   public static BooleanCollection not(@Nonnull final BooleanCollection input) {
     return BooleanCollection.build(input.getColumn().not());
   }
-  
+
 }

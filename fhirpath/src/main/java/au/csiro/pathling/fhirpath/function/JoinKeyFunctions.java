@@ -30,6 +30,9 @@ import javax.annotation.Nullable;
  * FHIRPath functions for generating keys for joining between resources.
  *
  * @author Piotr Szul
+ * @see <a
+ * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html#required-additional-functions">SQL
+ * on FHIR Specification - Required Additional Functions</a>
  */
 @SuppressWarnings("unused")
 public class JoinKeyFunctions {
@@ -41,7 +44,8 @@ public class JoinKeyFunctions {
    * @param input The input {@link ResourceCollection}
    * @return A {@link Collection} of keys
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html#getresourcekey--keytype">getResourceKey</a>
+   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html#getresourcekey--keytype">SQL
+   * on FHIR Specification - getResourceKey</a>
    */
   @FhirPathFunction
   @Nonnull
@@ -56,7 +60,8 @@ public class JoinKeyFunctions {
    * @param typeSpecifier An optional {@link TypeSpecifier} to filter the reference keys by
    * @return A {@link Collection} of keys
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html#getreferencekeyresource-type-specifier--keytype">getReferenceKey</a>
+   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html#getreferencekeyresource-type-specifier--keytype">SQL
+   * on FHIR Specification - getReferenceKey</a>
    */
   @FhirPathFunction
   @Nonnull

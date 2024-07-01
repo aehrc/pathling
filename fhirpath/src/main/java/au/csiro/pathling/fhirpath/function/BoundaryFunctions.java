@@ -23,6 +23,7 @@ import org.apache.spark.sql.functions;
 /**
  * Contains functions for calculating the low and high boundaries of a value.
  *
+ * @author John Grimes
  * @see <a
  * href="https://build.fhir.org/ig/HL7/FHIRPath/#lowboundaryprecision-integer-decimal--date--datetime--time">lowBoundary</a>
  * @see <a
