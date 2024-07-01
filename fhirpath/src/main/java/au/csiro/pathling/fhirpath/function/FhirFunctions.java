@@ -20,6 +20,9 @@ import javax.annotation.Nonnull;
  */
 public class FhirFunctions {
 
+  private static final String URL_ELEMENT_NAME = "url";
+  private static final String EXTENSION_ELEMENT_NAME = "extension";
+
   /**
    * Will filter the input collection for items named "extension" with the given url. This is a
    * syntactical shortcut for {@code .extension.where(url = string)}, but is simpler to write. Will
@@ -33,13 +36,13 @@ public class FhirFunctions {
   @Nonnull
   public static Collection extension(@Nonnull final Collection input,
       @Nonnull final StringCollection url) {
-    return input.traverse(StandardFunctions.EXTENSION_ELEMENT_NAME).map(extensionCollection ->
+    return input.traverse(EXTENSION_ELEMENT_NAME).map(extensionCollection ->
         FilteringAndProjectionFunctions.where(extensionCollection, c -> c.traverse(
-                StandardFunctions.URL_ELEMENT_NAME).map(
+                URL_ELEMENT_NAME).map(
                 urlCollection -> urlCollection.getComparison(EQUALS).apply(url))
             .map(col -> BooleanCollection.build(new DefaultRepresentation(col)))
             .orElse(BooleanCollection.fromValue(false)))
     ).orElse(EmptyCollection.getInstance());
   }
-  
+
 }

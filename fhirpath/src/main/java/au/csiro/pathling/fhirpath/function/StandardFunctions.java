@@ -21,7 +21,6 @@ import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -36,27 +35,7 @@ import javax.annotation.Nullable;
 @SuppressWarnings("unused")
 public class StandardFunctions {
 
-  public static final String EXTENSION_ELEMENT_NAME = "extension";
-  public static final String URL_ELEMENT_NAME = "url";
   public static final String JOIN_DEFAULT_SEPARATOR = "";
-
-  public static final String REFERENCE_ELEMENT_NAME = "reference";
-
-
-  // Maybe these too can be implemented as colum functions????
-  @FhirPathFunction
-  public static Collection iif(@Nonnull final Collection input,
-      @Nonnull CollectionTransform expression, @Nonnull final Collection thenValue,
-      @Nonnull final Collection otherwiseValue) {
-
-    // we need to pre-evaluate both expressions to determine that they have the same type
-    // this may however cause some issues because we only use one of them (and as such we only need to apply one side effect).
-
-    // functions.when(requireBoolean(expression).apply(input).getSingleton(), thenValue.getColumn())
-    //     .otherwise(otherwiseValue.getColumn());
-
-    return EmptyCollection.getInstance();
-  }
 
   /**
    * This function allows the selection of only the first element of a collection.
