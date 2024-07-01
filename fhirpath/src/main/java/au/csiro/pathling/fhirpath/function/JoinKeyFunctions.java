@@ -32,10 +32,12 @@ import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
- * Implementation of FHIRPath functions defined for FHIRViews.
+ * FHIRPath functions for generating keys for joining between resources.
+ *
+ * @author Piotr Szul
  */
 @SuppressWarnings("unused")
-public class FhirViewFunctions {
+public class JoinKeyFunctions {
 
   public static final String REFERENCE_ELEMENT_NAME = "reference";
 

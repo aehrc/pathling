@@ -1,7 +1,7 @@
 package au.csiro.pathling.fhirpath.function.registry;
 
 import au.csiro.pathling.fhirpath.function.BoundaryFunctions;
-import au.csiro.pathling.fhirpath.function.FhirViewFunctions;
+import au.csiro.pathling.fhirpath.function.JoinKeyFunctions;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.StandardFunctions;
 import au.csiro.pathling.fhirpath.function.TerminologyFunctions;
@@ -29,7 +29,7 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
         .putAll(WrappedFunction.mapOf(StandardFunctions.class))
         .putAll(WrappedFunction.mapOf(BoundaryFunctions.class))
         .putAll(WrappedFunction.mapOf(TerminologyFunctions.class))
-        .putAll(WrappedFunction.mapOf(FhirViewFunctions.class))
+        .putAll(WrappedFunction.mapOf(JoinKeyFunctions.class))
         .build());
   }
 
