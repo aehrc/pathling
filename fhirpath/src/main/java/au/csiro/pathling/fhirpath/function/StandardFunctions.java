@@ -31,17 +31,6 @@ import javax.annotation.Nonnull;
 public class StandardFunctions {
 
   /**
-   * This function allows the selection of only the first element of a collection.
-   *
-   * @param input the input collection
-   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#first">first</a>
-   */
-  @FhirPathFunction
-  public static Collection first(@Nonnull final Collection input) {
-    return input.copyWith(input.getColumn().first());
-  }
-
-  /**
    * A function for aggregating data based on counting the number of rows within the result.
    *
    * @param input the input collection
