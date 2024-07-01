@@ -17,25 +17,18 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static java.util.Objects.nonNull;
-
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
-import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.validation.FhirPathFunction;
 import au.csiro.pathling.utilities.Preconditions;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * Implementation of standard FHIRPath functions.
  */
 @SuppressWarnings("unused")
 public class StandardFunctions {
-
-  public static final String JOIN_DEFAULT_SEPARATOR = "";
 
   /**
    * This function allows the selection of only the first element of a collection.
@@ -57,16 +50,6 @@ public class StandardFunctions {
   @FhirPathFunction
   public static IntegerCollection count(@Nonnull final Collection input) {
     return IntegerCollection.build(input.getColumn().count());
-  }
-
-  @FhirPathFunction
-  public static StringCollection join(@Nonnull final StringCollection input,
-      @Nullable final StringCollection separator) {
-    return StringCollection.build(input.getColumn().join(
-        nonNull(separator)
-        ? separator.asSingular().getColumn()
-        : DefaultRepresentation.literal(JOIN_DEFAULT_SEPARATOR)
-    ));
   }
 
   public static boolean isTypeSpecifierFunction(@Nonnull final String functionName) {
