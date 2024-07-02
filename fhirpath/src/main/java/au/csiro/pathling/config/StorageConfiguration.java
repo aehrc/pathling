@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.config;
 
-import javax.annotation.Nonnull;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -40,6 +39,7 @@ public class StorageConfiguration {
 
   // Workaround the javadocs issue
   // See: https://www.miredot.com/docs/faq/q/cannot-find-symbol-during-javadoc-phase/
+  @SuppressWarnings({"unused", "MissingJavadoc"})
   public static class StorageConfigurationBuilder {
 
   }
@@ -80,8 +80,4 @@ public class StorageConfiguration {
   @Builder.Default
   private int compactionThreshold = 10;
 
-  public static StorageConfiguration forDatabase(@Nonnull final String warehouseUrl,
-      @Nonnull final String databaseName) {
-    return builder().warehouseUrl(warehouseUrl).databaseName(databaseName).build();
-  }
 }
