@@ -1,7 +1,6 @@
 package au.csiro.pathling.fhirpath.function;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.validation.FhirPathFunction;
 import javax.annotation.Nonnull;
 
 /**
@@ -29,5 +28,5 @@ public class SubsettingFunctions {
   public static Collection first(@Nonnull final Collection input) {
     return input.copyWith(input.getColumn().first());
   }
-  
+
 }

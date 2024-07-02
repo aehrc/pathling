@@ -15,11 +15,19 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.validation;
+package au.csiro.pathling.fhirpath.function;
 
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import javax.annotation.Nonnull;
 
-public @interface ReturnType {
+/**
+ * Indicates that a method represents the implementation of a FHIRPath function.
+ *
+ * @author Piotr Szul
+ */
+@Retention(RetentionPolicy.RUNTIME)
+@Nonnull
+public @interface FhirPathFunction {
 
-  FHIRDefinedType value();
 }

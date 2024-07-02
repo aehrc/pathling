@@ -21,7 +21,6 @@ import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.validation.FhirPathFunction;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

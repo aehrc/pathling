@@ -2,7 +2,6 @@ package au.csiro.pathling.fhirpath.function;
 
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.validation.FhirPathFunction;
 import javax.annotation.Nonnull;
 
 /**
@@ -58,5 +57,5 @@ public class FilteringAndProjectionFunctions {
       @Nonnull final TypeSpecifier typeSpecifier) {
     return input.filterByType(typeSpecifier);
   }
-  
+
 }

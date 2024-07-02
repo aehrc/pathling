@@ -12,7 +12,6 @@ import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DecimalRepresentation;
-import au.csiro.pathling.fhirpath.validation.FhirPathFunction;
 import au.csiro.pathling.utilities.Preconditions;
 import java.util.Optional;
 import javax.annotation.Nonnull;

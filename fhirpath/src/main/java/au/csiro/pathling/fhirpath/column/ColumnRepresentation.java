@@ -54,17 +54,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public abstract class ColumnRepresentation {
 
   /**
-   * Create a new {@link ColumnRepresentation} from a literal value.
-   *
-   * @param value The value to represent
-   * @return A new {@link ColumnRepresentation} representing the value
-   */
-  @Nonnull
-  public static ColumnRepresentation literal(@Nonnull final Object value) {
-    return new DefaultRepresentation(lit(value));
-  }
-
-  /**
    * Create a new {@link ColumnRepresentation} from the result of a function that takes two
    * {@link Column} operands and returns a single {@link Column} result.
    *

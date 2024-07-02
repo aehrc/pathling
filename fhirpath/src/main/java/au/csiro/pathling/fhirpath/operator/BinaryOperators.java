@@ -20,13 +20,12 @@ package au.csiro.pathling.fhirpath.operator;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
-import au.csiro.pathling.fhirpath.validation.FhirpathBinaryOperator;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.functions;
 
 public class BinaryOperators {
 
-  @FhirpathBinaryOperator
+  @FhirPathOperator
   public static BooleanCollection contains(@Nonnull final Collection collection,
       @Nonnull final Collection element) {
     return BooleanCollection.build(collection.getColumn().vectorize(
@@ -35,7 +34,7 @@ public class BinaryOperators {
     );
   }
 
-  @FhirpathBinaryOperator
+  @FhirPathOperator
   public static BooleanCollection in(@Nonnull final Collection element,
       @Nonnull final Collection collection) {
     return contains(collection, element);
@@ -49,7 +48,7 @@ public class BinaryOperators {
    * @return A singleton collection containing the element at the specified index
    * @see <a href="https://hl7.org/fhirpath/#index-integer-collection">Indexer operation</a>
    */
-  @FhirpathBinaryOperator
+  @FhirPathOperator
   @Nonnull
   public static Collection index(@Nonnull final Collection subject,
       @Nonnull final IntegerCollection index) {

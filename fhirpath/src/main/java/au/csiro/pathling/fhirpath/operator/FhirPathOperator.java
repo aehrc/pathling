@@ -15,18 +15,14 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.validation;
+package au.csiro.pathling.fhirpath.operator;
 
-import au.csiro.pathling.fhirpath.collection.Collection;
-import lombok.Value;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import javax.annotation.Nonnull;
 
-@Value
-public class FunctionConstraints {
+@Retention(RetentionPolicy.RUNTIME)
+@Nonnull
+public @interface FhirPathOperator {
 
-  Class<? extends Collection> inputType;
-
-  public void validate(@Nonnull final Collection input) {
-    assert (inputType.isAssignableFrom(input.getClass()));
-  }
 }

@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.validation.FhirpathBinaryOperator;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -55,7 +54,7 @@ public class WrappedBinaryOperator implements BinaryOperator {
   @Nonnull
   public static Map<String, BinaryOperator> mapOf(@Nonnull final Class<?> clazz) {
     return Stream.of(clazz.getDeclaredMethods())
-        .filter(m -> m.getAnnotation(FhirpathBinaryOperator.class) != null)
+        .filter(m -> m.getAnnotation(FhirPathOperator.class) != null)
         .collect(Collectors.toUnmodifiableMap(Method::getName, WrappedBinaryOperator::new));
 
   }

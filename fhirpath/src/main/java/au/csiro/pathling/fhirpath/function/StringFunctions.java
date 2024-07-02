@@ -4,7 +4,6 @@ import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.validation.FhirPathFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
