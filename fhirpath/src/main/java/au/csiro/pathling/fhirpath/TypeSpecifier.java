@@ -28,15 +28,17 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Represents a FHIRPath type specifier, which is a namespace and a type name.
+ *
+ * @author John Grimes
  */
 @Value
 public class TypeSpecifier {
 
-  public static final String SYSTEM_NAMESPACE = "System";
-  public static final String FHIR_NAMESPACE = "FHIR";
-  public static final List<String> NAMESPACE_SEARCH_ORDER = List.of(FHIR_NAMESPACE,
+  private static final String SYSTEM_NAMESPACE = "System";
+  private static final String FHIR_NAMESPACE = "FHIR";
+  private static final List<String> NAMESPACE_SEARCH_ORDER = List.of(FHIR_NAMESPACE,
       SYSTEM_NAMESPACE);
-  public static final Map<String, Predicate<String>> NAMESPACE_VALIDATORS = Map.of(
+  private static final Map<String, Predicate<String>> NAMESPACE_VALIDATORS = Map.of(
       FHIR_NAMESPACE, TypeSpecifier::isValidFhirType,
       SYSTEM_NAMESPACE, TypeSpecifier::isValidSystemType
   );
@@ -47,12 +49,25 @@ public class TypeSpecifier {
   @Nonnull
   String typeName;
 
+  /**
+   * Creates a new type specifier.
+   *
+   * @param namespace The namespace
+   * @param typeName The type name
+   * @throws IllegalArgumentException if the namespace or type name is invalid
+   */
   public TypeSpecifier(@Nonnull final String namespace, @Nonnull final String typeName)
       throws IllegalArgumentException {
     this.namespace = validateNamespace(namespace);
     this.typeName = validateTypeName(typeName, namespace);
   }
 
+  /**
+   * Creates a new type specifier with the namespace inferred from the type name.
+   *
+   * @param typeName The type name
+   * @throws IllegalArgumentException if the type name is invalid
+   */
   public TypeSpecifier(@Nonnull final String typeName) throws IllegalArgumentException {
     this.namespace = searchForTypeName(typeName);
     this.typeName = typeName;
@@ -91,6 +106,9 @@ public class TypeSpecifier {
     return FHIRDefinedType.fromCode(typeName);
   }
 
+  /**
+   * @return The FHIR resource type represented by this type specifier
+   */
   @Nonnull
   public ResourceType toResourceType() {
     if (!isFhirType()) {
