@@ -26,7 +26,7 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.comparison.CodingSqlComparator;
+import au.csiro.pathling.fhirpath.comparison.CodingComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
 import au.csiro.pathling.sql.misc.CodingToLiteral;
@@ -143,7 +143,7 @@ public class CodingCollection extends Collection implements Materializable<Codin
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return CodingSqlComparator.buildComparison(this, operation);
+    return CodingComparator.buildComparison(this, operation);
   }
 
   @Nonnull

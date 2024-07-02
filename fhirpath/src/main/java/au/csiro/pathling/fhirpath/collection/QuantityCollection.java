@@ -31,7 +31,7 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.comparison.QuantitySqlComparator;
+import au.csiro.pathling.fhirpath.comparison.QuantityComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.types.FlexiDecimal;
@@ -236,7 +236,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   @Nonnull
   @Override
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return QuantitySqlComparator.buildComparison(this, operation);
+    return QuantityComparator.buildComparison(this, operation);
   }
 
   @Nonnull

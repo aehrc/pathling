@@ -35,11 +35,11 @@ import org.apache.spark.sql.Column;
  *
  * @author Piotr Szul
  */
-public class QuantitySqlComparator implements ColumnComparator {
+public class QuantityComparator implements ColumnComparator {
 
-  private final static QuantitySqlComparator INSTANCE = new QuantitySqlComparator();
+  private final static QuantityComparator INSTANCE = new QuantityComparator();
 
-  public QuantitySqlComparator() {
+  public QuantityComparator() {
   }
 
   private static BiFunction<Column, Column, Column> wrap(

@@ -36,9 +36,9 @@ import org.apache.spark.sql.Column;
  *
  * @author Piotr Szul
  */
-public class DateTimeSqlComparator implements ColumnComparator {
+public class DateTimeComparator implements ColumnComparator {
 
-  private static final DateTimeSqlComparator INSTANCE = new DateTimeSqlComparator();
+  private static final DateTimeComparator INSTANCE = new DateTimeComparator();
 
   @Override
   public Column equalsTo(@Nonnull final Column left, @Nonnull final Column right) {

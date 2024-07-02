@@ -35,12 +35,12 @@ import org.apache.spark.sql.functions;
  *
  * @author Piotr Szul
  */
-public class CodingSqlComparator implements ColumnComparator {
+public class CodingComparator implements ColumnComparator {
 
   private static final List<String> EQUALITY_COLUMNS = Arrays
       .asList("system", "code", "version", "display", "userSelected");
 
-  private static final CodingSqlComparator INSTANCE = new CodingSqlComparator();
+  private static final CodingComparator INSTANCE = new CodingComparator();
 
   @Override
   public Column equalsTo(@Nonnull final Column left, @Nonnull final Column right) {
