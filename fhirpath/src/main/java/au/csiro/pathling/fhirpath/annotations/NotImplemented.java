@@ -20,6 +20,11 @@ package au.csiro.pathling.fhirpath.annotations;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
+/**
+ * Indicates that a FHIRPath function is not implemented.
+ *
+ * @author Piotr Szul
+ */
 @Retention(RetentionPolicy.SOURCE)
 public @interface NotImplemented {
 

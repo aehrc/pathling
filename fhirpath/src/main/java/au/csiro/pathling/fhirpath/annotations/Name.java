@@ -20,8 +20,17 @@ package au.csiro.pathling.fhirpath.annotations;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
+/**
+ * Used to override the name of a FHIRPath function.
+ *
+ * @author Piotr Szul
+ */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Name {
 
+  /**
+   * @return The name of the function
+   */
   String value();
+
 }
