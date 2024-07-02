@@ -32,7 +32,7 @@ import javax.annotation.Nullable;
  * @author Piotr Szul
  * @see <a
  * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html#required-additional-functions">SQL
- * on FHIR Specification - Required Additional Functions</a>
+ * on FHIR specification - Required Additional Functions</a>
  */
 @SuppressWarnings("unused")
 public class JoinKeyFunctions {
@@ -45,7 +45,7 @@ public class JoinKeyFunctions {
    * @return A {@link Collection} of keys
    * @see <a
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html#getresourcekey--keytype">SQL
-   * on FHIR Specification - getResourceKey</a>
+   * on FHIR specification - getResourceKey</a>
    */
   @FhirPathFunction
   @Nonnull
@@ -61,7 +61,7 @@ public class JoinKeyFunctions {
    * @return A {@link Collection} of keys
    * @see <a
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html#getreferencekeyresource-type-specifier--keytype">SQL
-   * on FHIR Specification - getReferenceKey</a>
+   * on FHIR specification - getReferenceKey</a>
    */
   @FhirPathFunction
   @Nonnull

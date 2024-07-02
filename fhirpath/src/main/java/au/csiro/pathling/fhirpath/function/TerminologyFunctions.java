@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
+import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -36,17 +37,31 @@ import javax.annotation.Nullable;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
+/**
+ * Functions for querying terminology from FHIRPath expressions.
+ *
+ * @author Piotr Szul
+ * @author John Grimes
+ */
 @SuppressWarnings("unused")
 public abstract class TerminologyFunctions {
 
-
   /**
-   * This function returns the display name for given Coding
+   * When invoked on a {@code Coding}, returns the preferred display term, according to the
+   * terminology server.
+   * <p>
+   * The optional {@code language} parameter can be used to specify the preferred language for the
+   * display name.
    *
-   * @author Piotr Szul
-   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#display">display</a>
+   * @param input The input collection of Codings
+   * @param language The preferred language for the display name
+   * @return A collection of display names
+   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#display">Pathling
+   * documentation - display</a>
+   * @see TerminologyConfiguration#getAcceptLanguage()
    */
   @FhirPathFunction
+  @Nonnull
   public static StringCollection display(@Nonnull final CodingCollection input,
       @Nullable final StringCollection language) {
 
@@ -60,12 +75,33 @@ public abstract class TerminologyFunctions {
   }
 
   /**
-   * This function returns the value of a property for a Coding.
+   * When invoked on a {@code Coding}, returns any matching property values, using the specified
+   * {@code name} and {@code type} parameters.
+   * <p>
+   * The {@code type} parameter has these possible values:
+   * <ul>
+   *     <li>string (default)</li>
+   *     <li>code</li>
+   *     <li>Coding</li>
+   *     <li>integer</li>
+   *     <li>boolean</li>
+   *     <li>DateTime</li>
+   * </ul>
+   * Both the {@code code} and the {@code type} of the property must be present within a lookup response in order for it to be returned by this function. If there are no matches, the function will return an empty collection.
+   * <p>
+   * The optional {@code language} parameter can be used to specify the preferred language for the returned property values. It overrides the default value set in the configuration.
    *
-   * @author Piotr Szul
-   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#property">property</a>
+   * @param input The input collection of Codings
+   * @param code The name of the property to retrieve
+   * @param type The type of the property to retrieve
+   * @param language The preferred language for the property values
+   * @return A collection of property values
+   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#property">Pathling
+   * documentation - property</a>
+   * @see TerminologyConfiguration#getAcceptLanguage()
    */
   @FhirPathFunction
+  @Nonnull
   public static Collection property(@Nonnull final CodingCollection input,
       @Nonnull final StringCollection code,
       @Nullable final StringCollection type,
@@ -93,13 +129,26 @@ public abstract class TerminologyFunctions {
   }
 
   /**
-   * This function returns the designations of a Coding.
+   * When invoked on a collection of {@code Coding} elements, returns a collection of designation
+   * values from the lookup operation. This can be used to retrieve synonyms, language translations
+   * and more from the underlying terminology.
+   * <p>
+   * If the {@code use} parameter is specified, designation values are filtered to only those with a
+   * matching use. If the {@code language} parameter is specified, designation values are filtered
+   * to only those with a matching language. If both are specified, designation values must match
+   * both the specified use and language.
    *
-   * @author Piotr Szul
-   * @see <a
-   * href="https://pathling.csiro.au/docs/fhirpath/functions.html#designation">designation</a>
+   * @param input The input collection of Codings
+   * @param use The optional use parameter
+   * @param language The optional language parameter
+   * @return A collection of designation values
+   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#designation">Pathling
+   * documentation - designation</a>
+   * @see <a href="https://www.hl7.org/fhir/codesystem.html#designations">FHIR specification -
+   * Display, Definition and Designations</a>
    */
   @FhirPathFunction
+  @Nonnull
   public static StringCollection designation(@Nonnull final CodingCollection input,
       @Nullable final CodingCollection use,
       @Nullable final StringCollection language) {
@@ -120,14 +169,21 @@ public abstract class TerminologyFunctions {
   }
 
   /**
-   * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set of
-   * boolean values, based upon whether each item is present within the ValueSet identified by the
-   * supplied URL.
+   * This function can be invoked on a collection of {@code Coding} or {@code CodeableConcept}
+   * values, returning a collection of {@code Boolean} values based on whether each concept is a
+   * member of the ValueSet with the specified url.
+   * <p>
+   * For a {@code CodeableConcept}, the function will return true if any of the codings are members
+   * of the value set.
    *
-   * @author John Grimes
-   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#memberof">memberOf</a>
+   * @param input The input collection of Codings or CodeableConcepts
+   * @param valueSetURL The URL of the ValueSet to check membership against
+   * @return A collection of boolean values
+   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#memberof">Pathling
+   * documentation - memberOf</a>
    */
   @FhirPathFunction
+  @Nonnull
   public static BooleanCollection memberOf(@Nonnull final CodingCollection input,
       @Nonnull final StringCollection valueSetURL) {
     return BooleanCollection.build(
@@ -135,17 +191,20 @@ public abstract class TerminologyFunctions {
     );
   }
 
-
   /**
-   * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set of
-   * boolean values whether based upon whether each item subsumes one or more Codings or
-   * CodeableConcepts in the argument set.
+   * This function takes a collection of {@code Coding} or {@code CodeableConcept} elements as
+   * input, and another collection as the argument. The result is a collection with a
+   * {@code Boolean} value for each source concept, each value being {@code true} if the concept
+   * subsumes any of the concepts within the argument collection, and {@code false} otherwise.
    *
-   * @author John Grimes
-   * @author Piotr Szul
-   * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#functions">Additional functions</a>
+   * @param input The input collection of Codings or CodeableConcepts
+   * @param codes The collection of Codings or CodeableConcepts to check against
+   * @return A collection of boolean values
+   * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#functions">FHIR specification - Additional
+   * functions</a>
    */
   @FhirPathFunction
+  @Nonnull
   public static BooleanCollection subsumes(@Nonnull final CodingCollection input,
       @Nonnull final CodingCollection codes) {
     return input.map(ctx ->
@@ -155,15 +214,17 @@ public abstract class TerminologyFunctions {
   }
 
   /**
-   * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set of
-   * boolean values whether based upon whether each item  is subsumedBy one or more Codings or
-   * CodeableConcepts in the argument set.
+   * This is the inverse of the {@link #subsumes} function, examining whether each input concept is
+   * subsumed by any of the argument concepts.
    *
-   * @author John Grimes
-   * @author Piotr Szul
-   * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#functions">Additional functions</a>
+   * @param input The input collection of Codings or CodeableConcepts
+   * @param codes The collection of Codings or CodeableConcepts to check against
+   * @return A collection of boolean values
+   * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#functions">FHIR specification - Additional
+   * functions</a>
    */
   @FhirPathFunction
+  @Nonnull
   public static BooleanCollection subsumedBy(@Nonnull final CodingCollection input,
       @Nonnull final CodingCollection codes) {
     return input.map(ctx ->
@@ -173,22 +234,30 @@ public abstract class TerminologyFunctions {
   }
 
   /**
-   * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set Codings
-   * translated using provided concept map URL.
+   * When invoked on a {@code Coding}, returns any matching concepts using the ConceptMap specified
+   * using {@code conceptMapUrl}.
    * <p>
-   * Signature:
-   * <pre>
-   * collection&lt;Coding|CodeableConcept&gt; -&gt; translate(conceptMapUrl: string, reverse = false,
-   * equivalence = 'equivalent') : collection&lt;Coding&gt;
-   * </pre>
+   * The {@code reverse} parameter controls the direction to traverse the map - {@code false}
+   * results in "source to target" mappings, while {@code true} results in "target to source".
    * <p>
-   * Uses: <a href="https://www.hl7.org/fhir/operation-conceptmap-translate.html">Translate
-   * Operation</a>
+   * The {@code equivalence} parameter is a comma-delimited set of values from the
+   * {@code ConceptMapEquivalence} ValueSet, and is used to filter the mappings returned to only
+   * those that have an equivalence value in this list.
+   * <p>
+   * The {@code target} parameter identifies the value set in which a translation is sought — a
+   * scope for the translation.
    *
-   * @author Piotr Szul
-   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#translate">translate</a>
+   * @param input The input collection of Codings
+   * @param conceptMapUrl The URL of the ConceptMap to use
+   * @param reverse The optional reverse parameter
+   * @param equivalence The optional equivalence parameter
+   * @param target The optional target parameter
+   * @return A collection of Codings
+   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#translate">Pathling
+   * documentation - translate</a>
    */
   @FhirPathFunction
+  @Nonnull
   public static CodingCollection translate(@Nonnull final CodingCollection input,
       @Nonnull final StringCollection conceptMapUrl,
       @Nullable final BooleanCollection reverse, @Nullable final StringCollection equivalence,

@@ -15,7 +15,7 @@ import javax.annotation.Nonnull;
  *
  * @author Piotr Szul
  * @author John Grimes
- * @see <a href="https://build.fhir.org/fhirpath.html#functions">FHIR Specification - Additional
+ * @see <a href="https://build.fhir.org/fhirpath.html#functions">FHIR specification - Additional
  * functions</a>
  */
 public class FhirFunctions {
