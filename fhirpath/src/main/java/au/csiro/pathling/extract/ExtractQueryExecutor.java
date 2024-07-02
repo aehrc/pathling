@@ -7,7 +7,6 @@ import static java.util.stream.Collectors.toList;
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.query.ExpressionWithLabel;
@@ -36,9 +35,10 @@ import org.apache.spark.sql.SparkSession;
  * Builds the overall query responsible for executing an extract request.
  *
  * @author John Grimes
+ * @see <a href="https://pathling.csiro.au/docs/libraries/fhirpath-query#extract">Pathling
+ * documentation - extract</a>
  */
 @Slf4j
-@NotImplemented
 public class ExtractQueryExecutor extends QueryExecutor {
 
   @Nonnull
@@ -53,6 +53,14 @@ public class ExtractQueryExecutor extends QueryExecutor {
   @Nonnull
   private final Parser parser;
 
+  /**
+   * @param configuration A {@link QueryConfiguration} that controls the behaviour of the query
+   * @param fhirContext A {@link FhirContext} for querying FHIR definitions
+   * @param sparkSession A {@link SparkSession} for executing the query
+   * @param dataSource A {@link DataSource} for reading data
+   * @param terminologyServiceFactory An optional {@link TerminologyServiceFactory} for resolving
+   * terminology queries
+   */
   public ExtractQueryExecutor(@Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final DataSource dataSource,
