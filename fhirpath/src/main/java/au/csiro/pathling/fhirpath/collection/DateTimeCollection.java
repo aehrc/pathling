@@ -20,7 +20,7 @@ package au.csiro.pathling.fhirpath.collection;
 import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
 import static org.apache.spark.sql.functions.date_format;
 
-import au.csiro.pathling.fhirpath.Comparable;
+import au.csiro.pathling.fhirpath.operator.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;

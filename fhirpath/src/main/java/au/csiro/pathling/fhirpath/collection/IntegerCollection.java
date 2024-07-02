@@ -20,7 +20,7 @@ package au.csiro.pathling.fhirpath.collection;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.Comparable;
+import au.csiro.pathling.fhirpath.operator.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric;

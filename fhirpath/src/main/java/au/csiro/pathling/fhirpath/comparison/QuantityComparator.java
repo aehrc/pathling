@@ -19,10 +19,10 @@ package au.csiro.pathling.fhirpath.comparison;
 
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.Comparable.ColumnComparator;
-import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
+import au.csiro.pathling.fhirpath.operator.ColumnComparator;
+import au.csiro.pathling.fhirpath.operator.Comparable;
+import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
 import au.csiro.pathling.sql.types.FlexiDecimal;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -30,8 +30,8 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
 /**
- * Implementation of comparator for the Quantity type. It uses canonicalized values and units for
- * comparison rather than the original values.
+ * Implementation of Spark SQL comparator for the Quantity type. It uses canonicalized values and
+ * units for comparison rather than the original values.
  *
  * @author Piotr Szul
  */
@@ -39,6 +39,7 @@ public class QuantityComparator implements ColumnComparator {
 
   private final static QuantityComparator INSTANCE = new QuantityComparator();
 
+  @SuppressWarnings("MissingJavadoc")
   public QuantityComparator() {
   }
 

@@ -26,7 +26,7 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.Comparable;
+import au.csiro.pathling.fhirpath.operator.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;

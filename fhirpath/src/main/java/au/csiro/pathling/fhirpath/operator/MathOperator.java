@@ -20,7 +20,6 @@ package au.csiro.pathling.fhirpath.operator;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.Temporal;
-import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.QuantityCollection;

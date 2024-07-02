@@ -15,15 +15,15 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath;
+package au.csiro.pathling.fhirpath.operator;
 
+import au.csiro.pathling.fhirpath.ColumnHelpers;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import org.apache.commons.lang3.function.TriFunction;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 
 /**
  * Describes a set of methods that can be used to compare {@link Collection} objects to other paths,
@@ -152,65 +152,4 @@ public interface Comparable {
 
   }
 
-  /**
-   * An interface that defines comparison operation on columns. The actual implementation and the
-   * implemented operation depend on the type of value in the column.
-   */
-  interface ColumnComparator {
-
-    Column equalsTo(Column left, Column right);
-
-    default Column notEqual(final Column left, final Column right) {
-      return functions.not(equalsTo(left, right));
-    }
-
-    Column lessThan(Column left, Column right);
-
-    default Column lessThanOrEqual(final Column left, final Column right) {
-      return lessThan(left, right).or(equalsTo(left, right));
-    }
-
-    Column greaterThan(Column left, Column right);
-
-    default Column greaterThanOrEqual(final Column left, final Column right) {
-      return greaterThan(left, right).or(equalsTo(left, right));
-    }
-  }
-
-  /**
-   * An implementation of {@link ColumnComparator} that uses the standard Spark SQL comparison
-   * operators.
-   */
-  class DefaultComparator implements ColumnComparator {
-
-    @Override
-    public Column equalsTo(@Nonnull final Column left, @Nonnull final Column right) {
-      return left.equalTo(right);
-    }
-
-    @Override
-    public Column notEqual(@Nonnull final Column left, @Nonnull final Column right) {
-      return left.notEqual(right);
-    }
-
-    @Override
-    public Column lessThan(@Nonnull final Column left, @Nonnull final Column right) {
-      return left.lt(right);
-    }
-
-    @Override
-    public Column lessThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
-      return left.leq(right);
-    }
-
-    @Override
-    public Column greaterThan(@Nonnull final Column left, @Nonnull final Column right) {
-      return left.gt(right);
-    }
-
-    @Override
-    public Column greaterThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
-      return left.geq(right);
-    }
-  }
 }

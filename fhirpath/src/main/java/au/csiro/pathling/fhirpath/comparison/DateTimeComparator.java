@@ -19,9 +19,9 @@ package au.csiro.pathling.fhirpath.comparison;
 
 import static org.apache.spark.sql.functions.callUDF;
 
-import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.Comparable.ColumnComparator;
-import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
+import au.csiro.pathling.fhirpath.operator.ColumnComparator;
+import au.csiro.pathling.fhirpath.operator.Comparable;
+import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
 import au.csiro.pathling.sql.dates.datetime.DateTimeEqualsFunction;
 import au.csiro.pathling.sql.dates.datetime.DateTimeGreaterThanFunction;
 import au.csiro.pathling.sql.dates.datetime.DateTimeGreaterThanOrEqualToFunction;
@@ -32,7 +32,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
 /**
- * Implementation of comparator for the DateTime type.
+ * Implementation of a Spark SQL comparator for the DateTime type.
  *
  * @author Piotr Szul
  */

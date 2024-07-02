@@ -19,7 +19,6 @@ package au.csiro.pathling.fhirpath.function;
 
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.fhirpath.FunctionInput;
 import au.csiro.pathling.fhirpath.annotations.Name;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import javax.annotation.Nonnull;

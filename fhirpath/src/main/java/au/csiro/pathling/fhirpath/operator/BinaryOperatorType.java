@@ -1,6 +1,6 @@
 package au.csiro.pathling.fhirpath.operator;
 
-import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
+import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.operator.BooleanOperator.BooleanOperatorType;
 import au.csiro.pathling.fhirpath.operator.MembershipOperator.MembershipOperatorType;

@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import au.csiro.pathling.fhirpath.Comparable;
+import au.csiro.pathling.fhirpath.operator.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
