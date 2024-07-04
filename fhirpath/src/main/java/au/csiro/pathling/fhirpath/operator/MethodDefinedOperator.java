@@ -26,36 +26,53 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import lombok.Value;
 
+/**
+ * A {@link BinaryOperator} that is defined using a static method.
+ *
+ * @author Piotr Szul
+ * @author John Grimes
+ */
 @Value
-public class WrappedBinaryOperator implements BinaryOperator {
+public class MethodDefinedOperator implements BinaryOperator {
 
   Method method;
 
+  @Override
   @Nonnull
   public Collection invoke(@Nonnull final BinaryOperatorInput operatorInput) {
-    // first arguemnt to the method is always the input collection
-
-    // eval arguments
+    // Create an array of arguments to pass to the method.
     final Object[] invocationArgs = Stream.of(operatorInput.getLeft(), operatorInput.getRight())
         .toArray(Object[]::new);
     try {
+      // Invoke the method.
       return (Collection) method.invoke(null, invocationArgs);
-    } catch (IllegalAccessException e) {
-      throw new RuntimeException(e);
-    } catch (InvocationTargetException e) {
-      throw new RuntimeException(e);
+    } catch (final IllegalAccessException | InvocationTargetException e) {
+      throw new RuntimeException("Error invoking method-defined operator", e);
     }
   }
 
-  public static WrappedBinaryOperator of(@Nonnull final Method method) {
-    return new WrappedBinaryOperator(method);
+  /**
+   * Builds a {@link MethodDefinedOperator} from a {@link Method}.
+   *
+   * @param method The method to build the operator from
+   * @return A {@link MethodDefinedOperator}
+   */
+  @Nonnull
+  public static MethodDefinedOperator build(@Nonnull final Method method) {
+    return new MethodDefinedOperator(method);
   }
 
+  /**
+   * Builds a map of {@link BinaryOperator}s from the methods defined within a class.
+   *
+   * @param clazz The class to build the operators from
+   * @return A map of {@link BinaryOperator}s
+   */
   @Nonnull
   public static Map<String, BinaryOperator> mapOf(@Nonnull final Class<?> clazz) {
     return Stream.of(clazz.getDeclaredMethods())
         .filter(m -> m.getAnnotation(FhirPathOperator.class) != null)
-        .collect(Collectors.toUnmodifiableMap(Method::getName, WrappedBinaryOperator::new));
+        .collect(Collectors.toUnmodifiableMap(Method::getName, MethodDefinedOperator::new));
 
   }
 

@@ -68,7 +68,7 @@ public class MethodDefinedFunction implements NamedFunction<Collection> {
       // Invoke the method and return the result.
       return (Collection) method.invoke(null, invocationArgs);
     } catch (final IllegalAccessException | InvocationTargetException e) {
-      throw new RuntimeException(e);
+      throw new RuntimeException("Error invoking method-defined function", e);
     }
   }
 
