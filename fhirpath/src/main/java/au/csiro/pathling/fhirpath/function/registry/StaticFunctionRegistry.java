@@ -7,10 +7,10 @@ import au.csiro.pathling.fhirpath.function.ExistenceFunctions;
 import au.csiro.pathling.fhirpath.function.FhirFunctions;
 import au.csiro.pathling.fhirpath.function.FilteringAndProjectionFunctions;
 import au.csiro.pathling.fhirpath.function.JoinKeyFunctions;
+import au.csiro.pathling.fhirpath.function.MethodDefinedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.StringFunctions;
 import au.csiro.pathling.fhirpath.function.SubsettingFunctions;
-import au.csiro.pathling.fhirpath.function.WrappedFunction;
 import au.csiro.pathling.terminology.TerminologyFunctions;
 import com.google.common.collect.ImmutableMap.Builder;
 
@@ -30,16 +30,16 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
    */
   public StaticFunctionRegistry() {
     super(new Builder<String, NamedFunction>()
-        .putAll(WrappedFunction.mapOf(BooleanLogicFunctions.class))
-        .putAll(WrappedFunction.mapOf(BoundaryFunctions.class))
-        .putAll(WrappedFunction.mapOf(ConversionFunctions.class))
-        .putAll(WrappedFunction.mapOf(ExistenceFunctions.class))
-        .putAll(WrappedFunction.mapOf(FhirFunctions.class))
-        .putAll(WrappedFunction.mapOf(FilteringAndProjectionFunctions.class))
-        .putAll(WrappedFunction.mapOf(JoinKeyFunctions.class))
-        .putAll(WrappedFunction.mapOf(StringFunctions.class))
-        .putAll(WrappedFunction.mapOf(SubsettingFunctions.class))
-        .putAll(WrappedFunction.mapOf(TerminologyFunctions.class))
+        .putAll(MethodDefinedFunction.mapOf(BooleanLogicFunctions.class))
+        .putAll(MethodDefinedFunction.mapOf(BoundaryFunctions.class))
+        .putAll(MethodDefinedFunction.mapOf(ConversionFunctions.class))
+        .putAll(MethodDefinedFunction.mapOf(ExistenceFunctions.class))
+        .putAll(MethodDefinedFunction.mapOf(FhirFunctions.class))
+        .putAll(MethodDefinedFunction.mapOf(FilteringAndProjectionFunctions.class))
+        .putAll(MethodDefinedFunction.mapOf(JoinKeyFunctions.class))
+        .putAll(MethodDefinedFunction.mapOf(StringFunctions.class))
+        .putAll(MethodDefinedFunction.mapOf(SubsettingFunctions.class))
+        .putAll(MethodDefinedFunction.mapOf(TerminologyFunctions.class))
         .build());
   }
 

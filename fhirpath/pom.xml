@@ -154,11 +154,6 @@
       <artifactId>awaitility</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.pitest</groupId>
-      <artifactId>pitest-junit5-plugin</artifactId>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
 
   <build>
@@ -258,27 +253,6 @@
             </goals>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.pitest</groupId>
-        <artifactId>pitest-maven</artifactId>
-        <configuration>
-          <targetClasses>
-            <param>au.csiro.pathling.fhirpath.*</param>
-          </targetClasses>
-          <targetTests>
-            <param>au.csiro.pathling.views.FhirViewComplianceTest</param>
-          </targetTests>
-          <excludedClasses>
-            <param>au.csiro.pathling.fhirpath.parser.generated.*</param>
-          </excludedClasses>
-          <excludedMethods>
-            <param>au.csiro.pathling.fhirpath.parser.generated.*</param>
-          </excludedMethods>
-          <outputFormats>
-            <outputFormat>HTML</outputFormat>
-          </outputFormats>
-        </configuration>
       </plugin>
     </plugins>
     <pluginManagement>
