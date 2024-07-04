@@ -34,9 +34,6 @@ public interface BinaryOperator {
    * @return A {@link Collection} object representing the resulting expression
    */
   @Nonnull
-  default Collection invoke(@Nonnull BinaryOperatorInput input) {
-    // TODO: revert to abstract method once all operators are implemented
-    throw new UnsupportedOperationException("Not implemented");
-  }
+  Collection invoke(@Nonnull BinaryOperatorInput input);
 
 }

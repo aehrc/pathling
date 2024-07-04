@@ -1,9 +1,8 @@
 package au.csiro.pathling.fhirpath.operator;
 
-import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.operator.BooleanOperator.BooleanOperatorType;
-import au.csiro.pathling.fhirpath.operator.MembershipOperator.MembershipOperatorType;
+import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import java.util.Map;
@@ -29,8 +28,6 @@ public enum BinaryOperatorType {
   GREATER_THAN_OR_EQUAL_TO(">=",
       new ComparisonOperator(ComparisonOperation.GREATER_THAN_OR_EQUAL_TO)),
   GREATER_THAN(">", new ComparisonOperator(ComparisonOperation.GREATER_THAN)),
-  IN("in", new MembershipOperator(MembershipOperatorType.IN)),
-  CONTAINS("contains", new MembershipOperator(MembershipOperatorType.CONTAINS)),
   ADDITION("+", new MathOperator(MathOperation.ADDITION)),
   SUBTRACTION("-", new MathOperator(MathOperation.SUBTRACTION)),
   MULTIPLICATION("*", new MathOperator(MathOperation.MULTIPLICATION)),
