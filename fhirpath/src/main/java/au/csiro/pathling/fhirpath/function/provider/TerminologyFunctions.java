@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.function;
+package au.csiro.pathling.fhirpath.function.provider;
 
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
@@ -28,6 +28,7 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.EmptyRepresentation;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
+import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import au.csiro.pathling.sql.udf.PropertyUdf;
 import au.csiro.pathling.utilities.Functions;
 import java.util.Optional;

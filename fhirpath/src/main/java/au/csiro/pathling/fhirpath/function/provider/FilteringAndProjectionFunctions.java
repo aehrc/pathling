@@ -1,7 +1,9 @@
-package au.csiro.pathling.fhirpath.function;
+package au.csiro.pathling.fhirpath.function.provider;
 
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.function.CollectionTransform;
+import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import javax.annotation.Nonnull;
 
 /**

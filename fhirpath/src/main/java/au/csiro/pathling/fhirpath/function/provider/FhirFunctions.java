@@ -1,4 +1,4 @@
-package au.csiro.pathling.fhirpath.function;
+package au.csiro.pathling.fhirpath.function.provider;
 
 import static au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation.EQUALS;
 
@@ -7,6 +7,7 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import javax.annotation.Nonnull;
 
 /**
