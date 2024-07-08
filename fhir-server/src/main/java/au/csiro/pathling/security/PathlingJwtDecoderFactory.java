@@ -21,7 +21,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import jakarta.annotation.Nonnull;
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;

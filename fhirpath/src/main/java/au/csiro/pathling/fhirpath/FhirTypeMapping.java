@@ -2,8 +2,8 @@ package au.csiro.pathling.fhirpath;
 
 import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Map;
-import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**

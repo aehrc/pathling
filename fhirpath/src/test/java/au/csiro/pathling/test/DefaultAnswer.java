@@ -19,9 +19,8 @@ package au.csiro.pathling.test;
 
 import static java.util.Objects.requireNonNull;
 
+import jakarta.annotation.Nullable;
 import java.util.Arrays;
-import java.util.Objects;
-import javax.annotation.Nullable;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 

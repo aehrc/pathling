@@ -1,8 +1,8 @@
 package au.csiro.pathling.sql.boundary;
 
+import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.Optional;
-import javax.annotation.Nullable;
 
 /**
  * Common functionality for boundary functions for decimals.

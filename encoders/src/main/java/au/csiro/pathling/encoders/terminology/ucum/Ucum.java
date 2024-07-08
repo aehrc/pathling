@@ -24,9 +24,9 @@
 package au.csiro.pathling.encoders.terminology.ucum;
 
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import javax.annotation.Nullable;
 import org.fhir.ucum.Decimal;
 import org.fhir.ucum.Pair;
 import org.fhir.ucum.UcumEssenceService;

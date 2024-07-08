@@ -21,10 +21,10 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.encoders.ValueFunctions;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.function.Function;
-import javax.annotation.Nullable;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;

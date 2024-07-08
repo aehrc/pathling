@@ -44,7 +44,7 @@ import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import jakarta.annotation.Nonnull;
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;

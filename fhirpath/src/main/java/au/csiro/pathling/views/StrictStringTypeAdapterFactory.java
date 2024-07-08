@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
 import com.google.gson.reflect.TypeToken;
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 
 /**
  * This adapter is used to serialize strings, but throw an error if a non-string is encountered.

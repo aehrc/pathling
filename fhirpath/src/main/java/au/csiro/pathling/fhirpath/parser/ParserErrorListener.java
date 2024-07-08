@@ -18,7 +18,7 @@
 package au.csiro.pathling.fhirpath.parser;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Recognizer;

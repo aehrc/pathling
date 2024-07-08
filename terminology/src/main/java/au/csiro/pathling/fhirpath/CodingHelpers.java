@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.fhirpath;
 
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 import org.hl7.fhir.r4.model.Coding;
 
 /**

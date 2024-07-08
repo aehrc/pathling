@@ -9,8 +9,8 @@ import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.path.Paths;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.lang.reflect.Parameter;
-import javax.annotation.Nullable;
 import lombok.Value;
 
 @Value

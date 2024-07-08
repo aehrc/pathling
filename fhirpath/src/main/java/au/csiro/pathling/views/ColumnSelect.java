@@ -1,9 +1,9 @@
 package au.csiro.pathling.views;
 
 import com.google.gson.annotations.SerializedName;
+import jakarta.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
-import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import lombok.Data;

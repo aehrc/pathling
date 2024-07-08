@@ -45,8 +45,8 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TypeExpression
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.UnionExpressionContext;
 import au.csiro.pathling.fhirpath.path.Paths.EvalOperator;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Map;
-import javax.annotation.Nullable;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 /**

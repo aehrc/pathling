@@ -18,8 +18,8 @@
 package au.csiro.pathling.sql.dates.time;
 
 import au.csiro.pathling.sql.dates.TemporalComparisonFunction;
+import jakarta.annotation.Nullable;
 import java.time.LocalTime;
-import javax.annotation.Nullable;
 
 /**
  * Base class for functions that compare times.

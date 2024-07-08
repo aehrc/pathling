@@ -20,9 +20,9 @@ package au.csiro.pathling.terminology;
 import static java.util.Objects.requireNonNull;
 
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.Serializable;
 import java.util.function.Function;
-import javax.annotation.Nullable;
 
 /**
  * Represents parameters that are passed to a terminology operation.

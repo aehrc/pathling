@@ -1,8 +1,8 @@
 package au.csiro.pathling.sql.boundary;
 
 import au.csiro.pathling.sql.udf.SqlFunction2;
+import jakarta.annotation.Nullable;
 import java.util.Objects;
-import javax.annotation.Nullable;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.utilities.Utilities;

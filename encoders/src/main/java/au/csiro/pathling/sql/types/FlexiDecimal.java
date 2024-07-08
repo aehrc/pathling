@@ -25,9 +25,9 @@ package au.csiro.pathling.sql.types;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;

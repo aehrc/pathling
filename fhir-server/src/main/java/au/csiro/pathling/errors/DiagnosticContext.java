@@ -24,9 +24,9 @@ import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import io.sentry.Sentry;
 import io.sentry.protocol.Request;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
-import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import org.slf4j.MDC;
 

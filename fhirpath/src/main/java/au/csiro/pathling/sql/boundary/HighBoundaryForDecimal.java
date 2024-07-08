@@ -2,8 +2,8 @@ package au.csiro.pathling.sql.boundary;
 
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.sql.udf.SqlFunction2;
+import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
-import javax.annotation.Nullable;
 import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.utilities.Utilities;
 

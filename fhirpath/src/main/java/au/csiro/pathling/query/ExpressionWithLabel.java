@@ -21,11 +21,11 @@ import static au.csiro.pathling.utilities.Preconditions.requireNonBlank;
 import static java.util.Objects.nonNull;
 
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.Nullable;
 import lombok.Value;
 
 @Value

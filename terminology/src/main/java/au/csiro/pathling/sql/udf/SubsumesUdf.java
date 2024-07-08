@@ -26,10 +26,10 @@ import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUM
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;

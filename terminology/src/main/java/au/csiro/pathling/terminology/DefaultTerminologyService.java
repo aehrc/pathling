@@ -32,10 +32,10 @@ import au.csiro.pathling.terminology.validatecode.ValidateCodeParameters;
 import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.Closeable;
 import java.util.List;
 import java.util.Optional;
-import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 

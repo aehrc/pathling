@@ -15,8 +15,8 @@ import au.csiro.pathling.fhirpath.column.DecimalRepresentation;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import au.csiro.pathling.utilities.Preconditions;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Optional;
-import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 

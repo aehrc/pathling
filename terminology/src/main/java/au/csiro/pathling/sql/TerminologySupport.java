@@ -22,10 +22,10 @@ import static java.util.function.Function.identity;
 
 import au.csiro.pathling.sql.udf.TranslateUdf;
 import au.csiro.pathling.utilities.Strings;
+import jakarta.annotation.Nullable;
 import java.util.Collection;
 import java.util.Set;
 import java.util.stream.Collectors;
-import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 
 /**

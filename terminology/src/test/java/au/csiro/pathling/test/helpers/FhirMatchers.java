@@ -20,8 +20,8 @@ package au.csiro.pathling.test.helpers;
 import static au.csiro.pathling.fhirpath.CodingHelpers.codingEquals;
 
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.Serializable;
-import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Base;
 import org.hl7.fhir.r4.model.Coding;
 import org.mockito.ArgumentMatcher;

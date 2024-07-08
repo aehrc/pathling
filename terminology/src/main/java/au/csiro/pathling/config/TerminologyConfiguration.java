@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.config;
 
+import jakarta.annotation.Nullable;
 import java.io.Serializable;
-import javax.annotation.Nullable;
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;

@@ -20,8 +20,8 @@ package au.csiro.pathling.test;
 import static java.util.Objects.requireNonNull;
 
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.lang.reflect.Method;
-import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
 import org.junit.jupiter.api.extension.BeforeTestExecutionCallback;

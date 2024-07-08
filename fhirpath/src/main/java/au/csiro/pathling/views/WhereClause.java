@@ -1,7 +1,7 @@
 package au.csiro.pathling.views;
 
 import com.google.gson.annotations.SerializedName;
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import lombok.Data;
 

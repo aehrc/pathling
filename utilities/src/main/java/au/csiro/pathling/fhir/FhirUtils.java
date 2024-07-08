@@ -1,6 +1,6 @@
 package au.csiro.pathling.fhir;
 
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 

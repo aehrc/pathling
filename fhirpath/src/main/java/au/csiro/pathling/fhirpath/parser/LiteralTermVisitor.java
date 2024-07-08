@@ -43,8 +43,8 @@ import au.csiro.pathling.fhirpath.path.Literals.NullLiteral;
 import au.csiro.pathling.fhirpath.path.Literals.StringLiteral;
 import au.csiro.pathling.fhirpath.path.Literals.UcumQuantityLiteral;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.text.ParseException;
-import javax.annotation.Nullable;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 /**

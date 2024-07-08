@@ -28,8 +28,8 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.LiteralTermCon
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParenthesizedTermContext;
 import au.csiro.pathling.fhirpath.path.Paths.ExternalConstantPath;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Optional;
-import javax.annotation.Nullable;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 /**

@@ -18,8 +18,8 @@
 package au.csiro.pathling.sql.dates.time;
 
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.time.LocalTime;
-import javax.annotation.Nullable;
 
 /**
  * Determines whether one time is after or at the same time as another.

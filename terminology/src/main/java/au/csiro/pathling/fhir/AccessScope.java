@@ -18,7 +18,7 @@
 package au.csiro.pathling.fhir;
 
 import jakarta.annotation.Nonnull;
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 import lombok.Value;
 
 @Value
