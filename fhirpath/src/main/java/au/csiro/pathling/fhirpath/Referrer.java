@@ -24,7 +24,7 @@ import static org.apache.spark.sql.functions.split;
 
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
 /**

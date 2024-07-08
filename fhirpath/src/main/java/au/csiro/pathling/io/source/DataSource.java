@@ -16,8 +16,8 @@
  */
 package au.csiro.pathling.io.source;
 
+import jakarta.annotation.Nonnull;
 import java.util.Set;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;

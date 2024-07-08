@@ -21,7 +21,7 @@ import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.ImportMode;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 /**
  * Represents a data sink that knows how to read data from a {@link DataSource} and write it to a

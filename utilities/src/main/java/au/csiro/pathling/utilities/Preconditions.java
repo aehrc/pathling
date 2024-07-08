@@ -8,10 +8,10 @@ package au.csiro.pathling.utilities;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.UnexpectedResponseException;
+import jakarta.annotation.Nonnull;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.exceptions.FHIRException;
 

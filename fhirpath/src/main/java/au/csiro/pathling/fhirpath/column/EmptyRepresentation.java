@@ -2,9 +2,9 @@ package au.csiro.pathling.fhirpath.column;
 
 import static org.apache.spark.sql.functions.lit;
 
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 

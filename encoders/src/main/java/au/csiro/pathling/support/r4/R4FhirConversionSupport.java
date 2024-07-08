@@ -24,9 +24,9 @@
 package au.csiro.pathling.support.r4;
 
 import au.csiro.pathling.support.FhirConversionSupport;
+import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;

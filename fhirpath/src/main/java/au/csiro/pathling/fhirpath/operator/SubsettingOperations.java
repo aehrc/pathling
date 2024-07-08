@@ -2,7 +2,7 @@ package au.csiro.pathling.fhirpath.operator;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.functions;
 
 public class SubsettingOperations {

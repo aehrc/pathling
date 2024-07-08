@@ -18,7 +18,7 @@
 package au.csiro.pathling.update;
 
 import ca.uhn.fhir.rest.server.exceptions.UnclassifiedServerFailureException;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;

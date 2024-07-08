@@ -19,7 +19,7 @@ package au.csiro.pathling.test.assertions;
 
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.execution.CollectionDataset;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 /**
  * @author John Grimes

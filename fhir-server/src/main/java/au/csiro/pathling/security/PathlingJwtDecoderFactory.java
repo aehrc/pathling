@@ -20,7 +20,7 @@ package au.csiro.pathling.security;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;

@@ -25,11 +25,11 @@ package au.csiro.pathling.support;
 
 import au.csiro.pathling.support.r4.R4FhirConversionSupport;
 import ca.uhn.fhir.context.FhirVersionEnum;
+import jakarta.annotation.Nonnull;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Nonnull;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;

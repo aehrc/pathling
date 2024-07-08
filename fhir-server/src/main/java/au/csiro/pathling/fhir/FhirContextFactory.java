@@ -20,8 +20,8 @@ package au.csiro.pathling.fhir;
 import au.csiro.pathling.encoders.FhirEncoders;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
+import jakarta.annotation.Nonnull;
 import java.io.Serializable;
-import javax.annotation.Nonnull;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 

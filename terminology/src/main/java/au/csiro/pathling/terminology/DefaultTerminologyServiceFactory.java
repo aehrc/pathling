@@ -28,7 +28,7 @@ import au.csiro.pathling.terminology.caching.PersistentCachingTerminologyService
 import au.csiro.pathling.utilities.ObjectHolder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -38,12 +38,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-
-import org.apache.http.message.BasicHeader;
-import org.apache.http.Header;
-import java.util.List;
-import java.util.ArrayList;
-import org.apache.http.HttpHeaders;
 
 /**
  * Default implementation of {@link TerminologyServiceFactory}, providing the appropriate

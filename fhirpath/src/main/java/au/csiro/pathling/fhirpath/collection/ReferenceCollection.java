@@ -5,8 +5,8 @@ import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**

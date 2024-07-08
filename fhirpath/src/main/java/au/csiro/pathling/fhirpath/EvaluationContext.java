@@ -21,7 +21,7 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 public interface EvaluationContext {

@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.sql.dates.datetime;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.DateTimeType;
 

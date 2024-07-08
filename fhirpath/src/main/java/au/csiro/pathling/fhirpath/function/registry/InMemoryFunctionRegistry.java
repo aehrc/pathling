@@ -1,7 +1,7 @@
 package au.csiro.pathling.fhirpath.function.registry;
 
+import jakarta.annotation.Nonnull;
 import java.util.Map;
-import javax.annotation.Nonnull;
 
 /**
  * An implementation of {@link FunctionRegistry} that stores function instances in an in-memory map

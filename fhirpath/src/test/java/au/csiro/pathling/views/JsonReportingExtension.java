@@ -21,6 +21,7 @@ import au.csiro.pathling.views.FhirViewTest.TestParameters;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import jakarta.annotation.Nonnull;
 import java.io.File;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -29,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
 import lombok.Value;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.Extension;
@@ -41,7 +41,7 @@ import org.junit.jupiter.api.extension.TestWatcher;
 
 class JsonReportingExtension implements Extension, TestWatcher, AfterAllCallback,
     InvocationInterceptor {
-  
+
   @Value
   static class TestResult {
 
@@ -49,10 +49,10 @@ class JsonReportingExtension implements Extension, TestWatcher, AfterAllCallback
     TestParameters parameters;
     String result;
   }
-  
+
   @Nonnull
   private final String outputFile;
-  
+
   @Nonnull
   private final List<TestResult> allResults = new ArrayList<>();
 

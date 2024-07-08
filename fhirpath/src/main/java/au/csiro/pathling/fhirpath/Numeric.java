@@ -18,11 +18,11 @@
 package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
-import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 

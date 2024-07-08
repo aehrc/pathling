@@ -30,13 +30,13 @@ import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
+import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -92,7 +92,8 @@ public class AsyncAspectTest {
     final ServerConfiguration serverConfiguration = createServerConfiguration(
         List.of("Accept", "Authorization"),
         List.of("Accept"));
-    final RequestTagFactory requestTagFactory = new RequestTagFactory(database, serverConfiguration);
+    final RequestTagFactory requestTagFactory = new RequestTagFactory(database,
+        serverConfiguration);
     jobRegistry = new JobRegistry();
     asyncAspect = new AsyncAspect(threadPoolTaskExecutor, requestTagFactory, jobRegistry, stageMap,
         spark);

@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import jakarta.annotation.Nonnull;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-import javax.annotation.Nonnull;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Nonnull

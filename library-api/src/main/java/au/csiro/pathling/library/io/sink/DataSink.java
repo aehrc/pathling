@@ -18,7 +18,7 @@
 package au.csiro.pathling.library.io.sink;
 
 import au.csiro.pathling.io.source.DataSource;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 /**
  * Represents a data sink that knows how to read data from a {@link DataSource} and write it to some

@@ -21,7 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.annotations.Name;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 /**
  * Represents a function in FHIRPath.

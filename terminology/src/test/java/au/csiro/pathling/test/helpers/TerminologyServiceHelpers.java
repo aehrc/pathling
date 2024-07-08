@@ -38,6 +38,7 @@ import au.csiro.pathling.terminology.TerminologyService.Designation;
 import au.csiro.pathling.terminology.TerminologyService.Property;
 import au.csiro.pathling.terminology.TerminologyService.PropertyOrDesignation;
 import au.csiro.pathling.terminology.TerminologyService.Translation;
+import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -46,7 +47,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
@@ -225,7 +225,7 @@ public class TerminologyServiceHelpers {
               Property.of("display", new StringType(displayName))));
       return this;
     }
-    
+
     @SafeVarargs
     @Nonnull
     public final <T extends Type> LookupExpectations withProperty(@Nonnull final Coding coding,
@@ -241,7 +241,8 @@ public class TerminologyServiceHelpers {
     @SafeVarargs
     @Nonnull
     public final <T extends Type> LookupExpectations withProperty(@Nonnull final Coding coding,
-        @Nonnull final String propertyCode, @Nullable final String displayLanguage, final T... values) {
+        @Nonnull final String propertyCode, @Nullable final String displayLanguage,
+        final T... values) {
       when(mockService.lookup(deepEq(coding), eq(propertyCode), eq(displayLanguage))).thenReturn(
           Stream.of(values)
               .map(v -> Property.of(propertyCode, v))

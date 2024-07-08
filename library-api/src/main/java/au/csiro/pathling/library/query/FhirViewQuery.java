@@ -21,7 +21,7 @@ import static au.csiro.pathling.validation.ValidationUtils.ensureValid;
 
 import au.csiro.pathling.views.FhirView;
 import com.google.gson.Gson;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;

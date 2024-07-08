@@ -18,11 +18,11 @@
 package au.csiro.pathling.async;
 
 import au.csiro.pathling.async.Job.JobTag;
+import jakarta.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

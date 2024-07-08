@@ -20,10 +20,10 @@ package au.csiro.pathling.fhirpath.column;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.test.SpringBootUnitTest;
+import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;

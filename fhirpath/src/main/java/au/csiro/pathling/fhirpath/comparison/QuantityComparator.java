@@ -24,9 +24,9 @@ import au.csiro.pathling.fhirpath.operator.ColumnComparator;
 import au.csiro.pathling.fhirpath.operator.Comparable;
 import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
 import au.csiro.pathling.sql.types.FlexiDecimal;
+import jakarta.annotation.Nonnull;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
 /**

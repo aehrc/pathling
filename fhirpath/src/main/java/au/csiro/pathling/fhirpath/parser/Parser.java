@@ -17,12 +17,12 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import au.csiro.pathling.fhirpath.LegacyEvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.LegacyEvaluationContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathLexer;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import lombok.Getter;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -41,8 +41,8 @@ public class Parser {
    * Evaluates a FHIRPath expression.
    *
    * @param expression The String representation of the FHIRPath expression
-   * @param context An {@link LegacyEvaluationContext} that provides dependencies and context for the *
-   * evaluation of the expression
+   * @param context An {@link LegacyEvaluationContext} that provides dependencies and context for
+   * the * evaluation of the expression
    * @return a new {@link Collection} object
    */
   @Nonnull

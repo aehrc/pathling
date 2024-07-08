@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.terminology;
 
+import jakarta.annotation.Nonnull;
 import java.io.Serializable;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Value;
 

@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.view;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 /**
  * Represents a component of an abstract query for projecting FHIR data.

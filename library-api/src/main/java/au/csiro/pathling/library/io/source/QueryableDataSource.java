@@ -21,7 +21,7 @@ import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.query.AggregateQuery;
 import au.csiro.pathling.library.query.ExtractQuery;
 import au.csiro.pathling.library.query.FhirViewQuery;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 

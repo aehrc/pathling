@@ -21,11 +21,10 @@ import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
-import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.stereotype.Component;
 

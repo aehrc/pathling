@@ -17,15 +17,15 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.QuantityCollection;
-import javax.annotation.Nonnull;
-
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import jakarta.annotation.Nonnull;
 
 /**
  * Provides the functionality of the family of math operators within FHIRPath, i.e. +, -, *, / and

@@ -19,9 +19,9 @@ package au.csiro.pathling.fhirpath.operator;
 
 import au.csiro.pathling.fhirpath.ColumnHelpers;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import java.util.function.Function;
-import javax.annotation.Nonnull;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import jakarta.annotation.Nonnull;
+import java.util.function.Function;
 import org.apache.commons.lang3.function.TriFunction;
 import org.apache.spark.sql.Column;
 

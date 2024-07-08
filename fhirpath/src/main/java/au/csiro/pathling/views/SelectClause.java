@@ -1,7 +1,7 @@
 package au.csiro.pathling.views;
 
+import jakarta.annotation.Nonnull;
 import java.util.List;
-import javax.annotation.Nonnull;
 
 /**
  * Defines the content of a column within the view.

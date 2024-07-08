@@ -1,8 +1,8 @@
 package au.csiro.pathling.fhirpath.variable;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 
 /**
  * Something that can resolve a variable name into a substitute value within a FHIRPath expression.

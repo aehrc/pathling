@@ -24,8 +24,8 @@ import static org.apache.spark.sql.functions.concat;
 import static org.apache.spark.sql.functions.isnull;
 import static org.apache.spark.sql.functions.when;
 
+import jakarta.annotation.Nonnull;
 import java.util.List;
-import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
@@ -68,5 +68,5 @@ public class UnionSelection implements ProjectionClause {
 
     return ProjectionResult.of(results.get(0).getResults(), combinedResult);
   }
-  
+
 }

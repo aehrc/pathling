@@ -17,10 +17,10 @@
 
 package au.csiro.pathling.sql.dates.time;
 
+import jakarta.annotation.Nonnull;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.regex.Pattern;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**

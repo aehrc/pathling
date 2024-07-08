@@ -17,13 +17,14 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
+import static au.csiro.pathling.fhirpath.execution.DataRoot.ResourceRoot;
+import static au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
+
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
 import au.csiro.pathling.fhirpath.path.Paths.Resource;
+import jakarta.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import javax.annotation.Nonnull;
-
-import static au.csiro.pathling.fhirpath.execution.DataRoot.*;
 
 public class ExecutorUtils {
 

@@ -66,7 +66,7 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.UnionExpressio
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.UnitContext;
 import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.path.Paths.TypeSpecifierPath;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 /**
  * A special visitor for the type specifiers arguments in the FHIRPath function invocations.

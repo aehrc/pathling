@@ -5,8 +5,8 @@ import au.csiro.pathling.fhirpath.operator.BooleanOperator.BooleanOperatorType;
 import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
+import jakarta.annotation.Nonnull;
 import java.util.Map;
-import javax.annotation.Nonnull;
 import lombok.Getter;
 
 /**

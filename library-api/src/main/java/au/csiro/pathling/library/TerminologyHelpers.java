@@ -20,9 +20,9 @@ package au.csiro.pathling.library;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
+import jakarta.annotation.Nonnull;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 

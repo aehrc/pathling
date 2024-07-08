@@ -7,8 +7,8 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.internal.Streams;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+import jakarta.annotation.Nonnull;
 import java.io.IOException;
-import javax.annotation.Nonnull;
 
 /**
  * This adapter is used to deserialize a {@link SelectClause} from JSON. It takes a look at the

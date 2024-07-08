@@ -7,10 +7,10 @@
 package au.csiro.pathling.utilities;
 
 
+import jakarta.annotation.Nonnull;
 import java.util.Iterator;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import javax.annotation.Nonnull;
 
 /**
  * Utility class containing some stream helper functions.

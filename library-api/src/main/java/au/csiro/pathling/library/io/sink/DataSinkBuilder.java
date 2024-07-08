@@ -22,8 +22,8 @@ import static java.util.Objects.requireNonNull;
 import au.csiro.pathling.io.ImportMode;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
+import jakarta.annotation.Nonnull;
 import java.util.function.UnaryOperator;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**

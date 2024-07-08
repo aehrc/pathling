@@ -19,11 +19,11 @@ package au.csiro.pathling.terminology;
 
 import au.csiro.pathling.fhir.ParametersUtils.DesignationPart;
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
+import jakarta.annotation.Nonnull;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Coding;
@@ -88,7 +88,8 @@ public interface TerminologyService {
 
   /**
    * Translates a code from one value set to another, based on the existing concept map. Abstracts
-   * the FHIR <a href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
+   * the FHIR <a
+   * href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
    * operation.
    *
    * @param coding the code to translate.
@@ -107,7 +108,8 @@ public interface TerminologyService {
 
   /**
    * Tests the subsumption relationship between two codings given the semantics of subsumption in
-   * the underlying code system. Abstracts the <a href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
+   * the underlying code system. Abstracts the <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
    * operation.
    *
    * @param codingA the left code to be tested.

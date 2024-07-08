@@ -33,7 +33,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 import org.fhir.ucum.UcumException;
 import org.fhir.ucum.UcumService;

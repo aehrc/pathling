@@ -21,8 +21,8 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.spark.sql.functions.lit;
 
+import jakarta.annotation.Nonnull;
 import java.util.List;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;

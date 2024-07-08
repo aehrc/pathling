@@ -21,7 +21,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.functions;
 
 /**

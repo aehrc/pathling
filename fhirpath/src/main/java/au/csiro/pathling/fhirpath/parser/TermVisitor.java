@@ -27,8 +27,8 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.InvocationTerm
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.LiteralTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParenthesizedTermContext;
 import au.csiro.pathling.fhirpath.path.Paths.ExternalConstantPath;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.antlr.v4.runtime.tree.ParseTree;
 

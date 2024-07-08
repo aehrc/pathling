@@ -28,9 +28,9 @@ import au.csiro.pathling.terminology.TerminologyOperation;
 import au.csiro.pathling.terminology.TerminologyService.Translation;
 import au.csiro.pathling.terminology.caching.CacheableListCollector;
 import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
+import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Parameters;
@@ -80,7 +80,7 @@ public class TranslateExecutor implements
     final ImmutableCoding coding = parameters.getCoding();
     final boolean reverse = parameters.isReverse();
     final String target = parameters.getTarget();
-   
+
     return terminologyClient.buildTranslate(
         required(UriType::new, conceptMapUrl),
         required(UriType::new, coding.getSystem()),

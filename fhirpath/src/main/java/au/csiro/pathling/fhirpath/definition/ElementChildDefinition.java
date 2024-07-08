@@ -19,9 +19,9 @@ package au.csiro.pathling.fhirpath.definition;
 
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
+import jakarta.annotation.Nonnull;
 import java.util.Objects;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 
 /**
  * Encapsulates the FHIR definitions for a child resolved to specific element.

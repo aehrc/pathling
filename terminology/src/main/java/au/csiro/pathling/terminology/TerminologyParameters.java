@@ -19,10 +19,9 @@ package au.csiro.pathling.terminology;
 
 import static java.util.Objects.requireNonNull;
 
+import jakarta.annotation.Nonnull;
 import java.io.Serializable;
-import java.util.Objects;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**

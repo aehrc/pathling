@@ -1,7 +1,7 @@
 package au.csiro.pathling.fhirpath.definition;
 
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 
 /**
  * Base abstractions for FHIR defintions.

@@ -26,7 +26,7 @@ import static java.util.Objects.nonNull;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Designation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Row;

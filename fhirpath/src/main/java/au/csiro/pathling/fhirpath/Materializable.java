@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.fhirpath;
 
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Type;
 

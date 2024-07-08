@@ -31,10 +31,10 @@ import au.csiro.pathling.terminology.TerminologyService.Property;
 import au.csiro.pathling.terminology.TerminologyService.PropertyOrDesignation;
 import au.csiro.pathling.terminology.caching.CacheableListCollector;
 import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
+import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Parameters;
@@ -45,7 +45,8 @@ import org.hl7.fhir.r4.model.UriType;
  * An implementation of {@link TerminologyOperation} for the lookup operation.
  *
  * @author John Grimes
- * @see <a href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+ * @see <a
+ * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
  */
 public class LookupExecutor implements
     TerminologyOperation<Parameters, ArrayList<PropertyOrDesignation>> {

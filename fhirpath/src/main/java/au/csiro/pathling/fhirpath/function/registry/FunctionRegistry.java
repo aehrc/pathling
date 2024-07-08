@@ -1,6 +1,6 @@
 package au.csiro.pathling.fhirpath.function.registry;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 /**
  * A registry of FHIRPath functions.

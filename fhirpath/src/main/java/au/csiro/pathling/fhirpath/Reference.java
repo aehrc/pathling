@@ -17,12 +17,10 @@
 
 package au.csiro.pathling.fhirpath;
 
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.definition.ReferenceDefinition;
-import au.csiro.pathling.view.DatasetResult.One;
+import jakarta.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import javax.annotation.Nonnull;
 
 public interface Reference {
 

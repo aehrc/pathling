@@ -18,9 +18,9 @@
 package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.encoders.ValueFunctions;
+import jakarta.annotation.Nonnull;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.ArrayType;

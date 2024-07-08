@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.aggregate;
 
+import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import lombok.Getter;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Parameters;

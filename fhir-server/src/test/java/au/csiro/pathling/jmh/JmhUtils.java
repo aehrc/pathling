@@ -17,11 +17,11 @@
 
 package au.csiro.pathling.jmh;
 
-import org.openjdk.jmh.results.format.ResultFormatType;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import java.io.File;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import org.openjdk.jmh.results.format.ResultFormatType;
 
 public class JmhUtils {
 

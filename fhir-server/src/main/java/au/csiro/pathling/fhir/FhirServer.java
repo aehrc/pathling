@@ -38,6 +38,7 @@ import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
+import jakarta.annotation.Nonnull;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -45,7 +46,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServletResponse;
@@ -315,7 +315,7 @@ public class FhirServer extends RestfulServer {
       final IBaseResource instance = constructor.newInstance();
       return Enumerations.ResourceType.fromCode(instance.fhirType());
     } catch (final NoSuchMethodException | IllegalAccessException | InstantiationException
-        | InvocationTargetException e) {
+                   | InvocationTargetException e) {
       throw new RuntimeException("Problem determining FHIR type from resource class", e);
     }
   }

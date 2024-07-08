@@ -21,8 +21,8 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.variable.EnvironmentVariableResolver;
 import au.csiro.pathling.fhirpath.variable.VariableResolverChain;
+import jakarta.annotation.Nonnull;
 import java.util.Map;
-import javax.annotation.Nonnull;
 import lombok.Value;
 
 @Value(staticConstructor = "of")

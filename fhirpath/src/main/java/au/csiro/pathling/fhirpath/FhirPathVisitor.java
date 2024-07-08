@@ -18,8 +18,8 @@
 package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.fhirpath.FhirPath.Composite;
+import jakarta.annotation.Nonnull;
 import lombok.Value;
-import javax.annotation.Nonnull;
 
 public interface FhirPathVisitor<T> {
 

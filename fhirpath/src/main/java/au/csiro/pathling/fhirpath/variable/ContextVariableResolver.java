@@ -2,8 +2,8 @@ package au.csiro.pathling.fhirpath.variable;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import lombok.Value;
 
 /**

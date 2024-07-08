@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.fhirpath.function;
 
+import jakarta.annotation.Nonnull;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-import javax.annotation.Nonnull;
 
 /**
  * Indicates that a method represents the implementation of a FHIRPath function.

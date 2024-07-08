@@ -21,12 +21,12 @@ import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.struct;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
+import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 

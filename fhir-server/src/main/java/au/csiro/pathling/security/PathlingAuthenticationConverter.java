@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.security;
 
+import jakarta.annotation.Nonnull;
 import java.util.Collection;
-import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;

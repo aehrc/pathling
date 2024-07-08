@@ -23,7 +23,7 @@ import static org.apache.spark.sql.functions.when;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
 /**

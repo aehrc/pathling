@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.errors;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
 

@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.fhir;
 
+import jakarta.annotation.Nonnull;
 import java.time.Instant;
-import javax.annotation.Nonnull;
 import lombok.Value;
 
 @Value

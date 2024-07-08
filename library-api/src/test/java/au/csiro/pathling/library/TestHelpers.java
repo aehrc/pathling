@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.library;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.SparkSession.Builder;
 

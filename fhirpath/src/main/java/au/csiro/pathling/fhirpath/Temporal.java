@@ -21,8 +21,8 @@ import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.QuantityCollection;
+import jakarta.annotation.Nonnull;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
 
 /**
  * Describes a path that represents a temporal value such as DateTime or Date, and can be the

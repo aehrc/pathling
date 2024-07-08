@@ -19,11 +19,11 @@ package au.csiro.pathling.utilities;
 
 import static java.util.Objects.requireNonNull;
 
+import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.fs.FileStatus;

@@ -1,9 +1,9 @@
 package au.csiro.pathling.fhirpath.variable;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
+import jakarta.annotation.Nonnull;
 import java.util.Map;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import lombok.Value;
 
 /**

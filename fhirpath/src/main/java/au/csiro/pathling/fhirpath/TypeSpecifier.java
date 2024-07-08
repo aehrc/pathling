@@ -17,10 +17,10 @@
 
 package au.csiro.pathling.fhirpath;
 
+import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
-import javax.annotation.Nonnull;
 import lombok.Value;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;

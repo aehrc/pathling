@@ -17,10 +17,10 @@
 
 package au.csiro.pathling.utilities;
 
+import jakarta.annotation.Nonnull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 
 /**
  * Utility class containing some List helper functions.
@@ -58,9 +58,10 @@ public abstract class Lists {
 
   /**
    * Returns an optional of given list for non-empty list, or empty optional otherwise.
+   *
    * @param list list to convert
-   * @return option of given list for non-empty list, or empty option otherwise
    * @param <T> type of list elements
+   * @return option of given list for non-empty list, or empty option otherwise
    */
   @Nonnull
   public static <T> Optional<List<T>> optionalOf(@Nonnull final List<T> list) {
@@ -68,5 +69,5 @@ public abstract class Lists {
            ? Optional.empty()
            : Optional.of(list);
   }
-  
+
 }

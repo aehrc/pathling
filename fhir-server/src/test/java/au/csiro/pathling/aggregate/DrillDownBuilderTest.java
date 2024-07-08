@@ -17,19 +17,11 @@
 
 package au.csiro.pathling.aggregate;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.helpers.TestHelpers;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import jakarta.annotation.Nonnull;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Base64BinaryType;
@@ -53,8 +45,6 @@ import org.hl7.fhir.r4.model.UnsignedIntType;
 import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.UrlType;
 import org.hl7.fhir.r4.model.UuidType;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @SpringBootUnitTest

@@ -1,7 +1,7 @@
 package au.csiro.pathling.spark;
 
+import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
-import javax.annotation.Nonnull;
 
 /**
  * Common interface for functions/classes that can configure {@link SparkSession}.

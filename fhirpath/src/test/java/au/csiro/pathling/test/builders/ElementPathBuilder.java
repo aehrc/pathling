@@ -26,7 +26,7 @@ import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.definition.ElementChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -160,7 +160,7 @@ public class ElementPathBuilder {
   }
 
   // TODO: check
-  
+
   // @Nonnull
   // public PrimitivePath build() {
   //   return PrimitivePath.build(expression, dataset, idColumn, valueColumn, Optional.empty(),

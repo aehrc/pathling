@@ -23,11 +23,11 @@ import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
+import jakarta.annotation.Nonnull;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
 import org.apache.commons.lang3.tuple.Pair;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 

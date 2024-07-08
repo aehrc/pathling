@@ -2,10 +2,10 @@ package au.csiro.pathling.fhirpath.definition;
 
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
+import jakarta.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import org.apache.commons.lang.WordUtils;
 
 /**

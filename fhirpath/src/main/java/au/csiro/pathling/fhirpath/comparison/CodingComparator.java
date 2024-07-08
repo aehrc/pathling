@@ -21,13 +21,13 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.operator.Comparable;
 import au.csiro.pathling.fhirpath.operator.ColumnComparator;
+import au.csiro.pathling.fhirpath.operator.Comparable;
 import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
+import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
 /**

@@ -20,11 +20,11 @@ package au.csiro.pathling.fhirpath.definition;
 import static java.util.Objects.requireNonNull;
 
 import ca.uhn.fhir.context.RuntimeChildResourceDefinition;
+import jakarta.annotation.Nonnull;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;

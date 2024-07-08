@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.errors.AccessDeniedError;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.function.Executable;
 import org.springframework.boot.test.context.SpringBootTest;

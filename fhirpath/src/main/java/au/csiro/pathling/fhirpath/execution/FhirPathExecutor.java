@@ -20,7 +20,7 @@ package au.csiro.pathling.fhirpath.execution;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
@@ -54,5 +54,5 @@ public interface FhirPathExecutor {
 
   @Nonnull
   Dataset<Row> createInitialDataset();
- 
+
 }

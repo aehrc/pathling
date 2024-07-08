@@ -1,6 +1,6 @@
 package au.csiro.pathling.fhirpath.operator;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
 /**

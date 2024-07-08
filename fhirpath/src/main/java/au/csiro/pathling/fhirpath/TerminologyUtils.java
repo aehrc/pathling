@@ -17,12 +17,9 @@
 
 package au.csiro.pathling.fhirpath;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
-
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import javax.annotation.Nonnull;
-import org.apache.spark.sql.Column;
+import jakarta.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -60,5 +57,5 @@ public interface TerminologyUtils {
   static boolean isCodingOrCodeableConcept(@Nonnull final Collection result) {
     return isCoding(result) || isCodeableConcept(result);
   }
-  
+
 }

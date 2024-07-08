@@ -19,7 +19,7 @@ package au.csiro.pathling.test.builders;
 
 import static org.apache.spark.sql.functions.col;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;

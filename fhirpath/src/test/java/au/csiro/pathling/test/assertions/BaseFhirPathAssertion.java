@@ -24,16 +24,13 @@ import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.execution.CollectionDataset;
+import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.Literal;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.StructType;
-import javax.annotation.Nonnull;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author Piotr Szul

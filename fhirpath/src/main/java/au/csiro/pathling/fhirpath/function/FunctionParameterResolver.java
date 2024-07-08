@@ -8,8 +8,8 @@ import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.path.Paths;
+import jakarta.annotation.Nonnull;
 import java.lang.reflect.Parameter;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Value;
 
@@ -67,5 +67,5 @@ class FunctionParameterResolver {
       throw new RuntimeException("Cannot resolve input:" + parameter);
     }
   }
- 
+
 }

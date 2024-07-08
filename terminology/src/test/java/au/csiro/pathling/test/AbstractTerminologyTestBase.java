@@ -21,11 +21,11 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
+import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;

@@ -20,7 +20,7 @@ package au.csiro.pathling.terminology.mock;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.utilities.ObjectHolder;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 public class MockTerminologyServiceFactory implements TerminologyServiceFactory {
 

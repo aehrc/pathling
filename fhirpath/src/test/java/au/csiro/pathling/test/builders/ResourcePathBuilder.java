@@ -24,8 +24,8 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.fixtures.PatientResourceRowFixture;
 import ca.uhn.fhir.context.FhirContext;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -151,7 +151,7 @@ public class ResourcePathBuilder {
   }
 
   // TODO: check
-  
+
   //
   // @Nonnull
   // public ResourceCollection build() {

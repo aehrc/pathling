@@ -19,8 +19,7 @@ package au.csiro.pathling.config;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Objects;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 /**
  * Represents the type of storage used by the cache.

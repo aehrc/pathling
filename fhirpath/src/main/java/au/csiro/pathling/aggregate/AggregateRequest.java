@@ -22,9 +22,9 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.query.ExpressionWithLabel;
 import au.csiro.pathling.utilities.Lists;
+import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 

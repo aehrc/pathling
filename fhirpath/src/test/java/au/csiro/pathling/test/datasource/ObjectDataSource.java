@@ -4,11 +4,11 @@ import static java.util.stream.Collectors.groupingBy;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.source.DataSource;
+import jakarta.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;

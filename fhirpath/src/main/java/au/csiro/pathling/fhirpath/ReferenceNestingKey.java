@@ -2,7 +2,7 @@ package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import lombok.Value;
 
 /**

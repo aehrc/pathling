@@ -19,9 +19,9 @@ package au.csiro.pathling.security.ga4gh;
 
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
+import jakarta.annotation.Nonnull;
 import java.util.Collection;
 import java.util.function.Predicate;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;

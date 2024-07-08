@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
+import jakarta.annotation.Nonnull;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import javax.annotation.Nonnull;
 
 public interface DataRoot {
 
@@ -78,7 +78,7 @@ public interface DataRoot {
       return master.getTag() + "@" + foreignResourceType.toCode() + "_"
           + masterResourcePath.replace(".", "_");
     }
-    
+
     public static ResolveRoot ofResource(@Nonnull final ResourceType masterType,
         @Nonnull final ResourceType foreignResourceType,
         @Nonnull final String masterResourcePath) {
@@ -86,7 +86,7 @@ public interface DataRoot {
           masterResourcePath);
     }
   }
-  
+
   @Nonnull
   String getTag();
 

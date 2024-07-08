@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhir;
 
+import jakarta.annotation.Nonnull;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -24,7 +25,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.AllArgsConstructor;
 import lombok.Data;

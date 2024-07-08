@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.test.helpers;
 
+import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
-import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 
@@ -126,7 +126,7 @@ public final class TerminologyHelpers {
       "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis");
   public static final Coding LC_29463_7 = new Coding(LOINC_URI, "29463-7",
       "Body weight");
-  
+
   // Others
 
   public static final Coding HL7_USE_DISPLAY = new Coding(

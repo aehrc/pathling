@@ -20,7 +20,7 @@ package au.csiro.pathling.errors;
 import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.config.ServerConfiguration;
 import io.sentry.Sentry;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.EventListener;

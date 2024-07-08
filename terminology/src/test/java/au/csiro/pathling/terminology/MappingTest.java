@@ -21,9 +21,9 @@ import static au.csiro.pathling.test.TestResources.assertJson;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import jakarta.annotation.Nonnull;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.junit.jupiter.api.BeforeEach;

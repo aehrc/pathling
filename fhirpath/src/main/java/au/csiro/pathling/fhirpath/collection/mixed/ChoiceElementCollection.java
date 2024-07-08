@@ -3,7 +3,7 @@ package au.csiro.pathling.fhirpath.collection.mixed;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 

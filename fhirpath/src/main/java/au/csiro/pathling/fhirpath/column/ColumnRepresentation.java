@@ -28,11 +28,11 @@ import static org.apache.spark.sql.functions.raise_error;
 import static org.apache.spark.sql.functions.size;
 import static org.apache.spark.sql.functions.when;
 
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.catalyst.expressions.ArrayJoin;
 import org.apache.spark.sql.catalyst.expressions.Literal;

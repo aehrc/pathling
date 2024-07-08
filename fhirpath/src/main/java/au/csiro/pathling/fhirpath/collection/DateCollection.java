@@ -19,7 +19,6 @@ package au.csiro.pathling.fhirpath.collection;
 
 import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
 
-import au.csiro.pathling.fhirpath.operator.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
@@ -28,12 +27,13 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.DateTimeComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import au.csiro.pathling.fhirpath.operator.Comparable;
 import au.csiro.pathling.sql.dates.date.DateAddDurationFunction;
 import au.csiro.pathling.sql.dates.date.DateSubtractDurationFunction;
+import jakarta.annotation.Nonnull;
 import java.text.ParseException;
 import java.util.Optional;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;

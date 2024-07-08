@@ -20,7 +20,7 @@ package au.csiro.pathling.fhirpath.operator;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 /**
  * Provides the functionality of the family of math operators within FHIRPath, i.e. +, -, *, / and

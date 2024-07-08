@@ -20,7 +20,7 @@ package au.csiro.pathling.fhirpath;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Coding;
 import org.junit.jupiter.api.Test;

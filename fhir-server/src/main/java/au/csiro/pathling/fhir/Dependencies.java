@@ -27,7 +27,7 @@ import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -59,7 +59,7 @@ public class Dependencies {
       @Nonnull final ServerConfiguration configuration) {
     return configuration.getQuery();
   }
-  
+
   @Bean
   @ConditionalOnMissingBean
   @Nonnull

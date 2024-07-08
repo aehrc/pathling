@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.fhirpath;
 
+import jakarta.annotation.Nonnull;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
 
 public interface FhirPathStreamVisitor<E> extends FhirPathVisitor<Stream<E>> {
 

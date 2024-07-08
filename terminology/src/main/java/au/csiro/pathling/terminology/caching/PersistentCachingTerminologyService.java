@@ -21,9 +21,9 @@ import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.config.HttpClientCachingConfiguration;
 import au.csiro.pathling.fhir.TerminologyClient;
+import jakarta.annotation.Nonnull;
 import java.io.Closeable;
 import java.nio.file.Path;
-import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.infinispan.Cache;
 import org.infinispan.commons.marshall.JavaSerializationMarshaller;

@@ -18,10 +18,10 @@
 package au.csiro.pathling.test.fixtures;
 
 import au.csiro.pathling.test.builders.DatasetBuilder;
+import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;

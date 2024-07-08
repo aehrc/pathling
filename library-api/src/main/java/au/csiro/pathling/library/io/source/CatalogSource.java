@@ -19,8 +19,8 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.library.PathlingContext;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 
 /**
  * A class for making FHIR data in the Spark catalog available for query.

@@ -20,8 +20,8 @@ package au.csiro.pathling.terminology;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.utilities.ResourceCloser;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
+import jakarta.annotation.Nonnull;
 import java.io.Closeable;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**

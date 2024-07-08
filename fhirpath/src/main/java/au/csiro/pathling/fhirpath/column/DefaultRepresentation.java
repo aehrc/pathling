@@ -20,10 +20,10 @@ package au.csiro.pathling.fhirpath.column;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.encoders.ValueFunctions;
+import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;

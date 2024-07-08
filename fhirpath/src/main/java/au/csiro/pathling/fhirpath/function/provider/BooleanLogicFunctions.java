@@ -2,7 +2,7 @@ package au.csiro.pathling.fhirpath.function.provider;
 
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 /**
  * Contains functions for boolean logic.

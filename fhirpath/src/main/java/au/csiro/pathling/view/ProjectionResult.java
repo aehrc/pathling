@@ -20,9 +20,9 @@ package au.csiro.pathling.view;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 

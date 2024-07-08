@@ -19,8 +19,8 @@ package au.csiro.pathling.io;
 
 import io.delta.tables.DeltaMergeBuilder;
 import io.delta.tables.DeltaTable;
+import jakarta.annotation.Nonnull;
 import java.util.Set;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;

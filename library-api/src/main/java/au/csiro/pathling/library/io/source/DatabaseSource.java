@@ -19,8 +19,8 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.library.PathlingContext;
+import jakarta.annotation.Nonnull;
 import java.util.Set;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;

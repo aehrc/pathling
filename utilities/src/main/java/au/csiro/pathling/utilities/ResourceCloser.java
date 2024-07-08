@@ -20,11 +20,11 @@ package au.csiro.pathling.utilities;
 
 import static org.apache.hadoop.shaded.org.apache.commons.io.IOUtils.closeQuietly;
 
+import jakarta.annotation.Nonnull;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 
 /**

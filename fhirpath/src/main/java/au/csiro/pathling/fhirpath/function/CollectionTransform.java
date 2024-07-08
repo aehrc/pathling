@@ -19,8 +19,8 @@ package au.csiro.pathling.fhirpath.function;
 
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import jakarta.annotation.Nonnull;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
 
 /**
  * Represents a transformation from one {@link Collection} to another.

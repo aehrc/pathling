@@ -1,7 +1,7 @@
 package au.csiro.pathling.sql.boundary;
 
 import au.csiro.pathling.sql.udf.AbstractUDFRegistrar;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 public class BoundaryUDFRegistrar extends AbstractUDFRegistrar {
 

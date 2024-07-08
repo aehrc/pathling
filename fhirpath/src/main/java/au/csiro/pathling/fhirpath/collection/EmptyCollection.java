@@ -4,8 +4,8 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.EmptyRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -33,5 +33,5 @@ public class EmptyCollection extends Collection {
   public boolean isComparableTo(@Nonnull final Collection path) {
     return true;
   }
- 
+
 }

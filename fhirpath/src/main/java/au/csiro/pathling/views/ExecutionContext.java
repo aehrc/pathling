@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.views;
 
-import org.apache.spark.sql.Column;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
+import org.apache.spark.sql.Column;
 
 /**
  * The execution context for a FHIR view, which encapsulates the minimalistic set of operations

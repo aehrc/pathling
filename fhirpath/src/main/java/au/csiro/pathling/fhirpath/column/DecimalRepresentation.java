@@ -1,7 +1,7 @@
 package au.csiro.pathling.fhirpath.column;
 
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;

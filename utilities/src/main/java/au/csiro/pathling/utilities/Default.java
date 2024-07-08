@@ -19,7 +19,7 @@ package au.csiro.pathling.utilities;
 
 import static java.util.Objects.isNull;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**

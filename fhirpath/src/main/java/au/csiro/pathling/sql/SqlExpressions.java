@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.sql;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
 /**

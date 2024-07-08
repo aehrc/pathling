@@ -18,8 +18,8 @@
 package au.csiro.pathling.view;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;

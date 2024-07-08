@@ -27,7 +27,7 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import lombok.Value;
 import org.fhir.ucum.UcumException;
 

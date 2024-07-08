@@ -19,9 +19,9 @@ package au.csiro.pathling;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
+import jakarta.annotation.Nonnull;
 import java.util.Map;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import lombok.Getter;
 import lombok.Value;
 import org.apache.spark.sql.Column;

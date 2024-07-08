@@ -17,6 +17,9 @@
 
 package au.csiro.pathling.fhir;
 
+import static java.util.Objects.nonNull;
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import ca.uhn.fhir.context.FhirContext;
@@ -27,7 +30,8 @@ import ca.uhn.fhir.rest.client.api.IRestfulClientFactory;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import ca.uhn.fhir.rest.client.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
+import java.io.Closeable;
 import javax.annotation.Nullable;
 import org.apache.http.client.HttpClient;
 import org.hl7.fhir.r4.model.BooleanType;
@@ -39,10 +43,6 @@ import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.Closeable;
-
-import static java.util.Objects.nonNull;
-import static java.util.Objects.requireNonNull;
 
 /**
  * The client interface to FHIR terminology operations.
@@ -60,7 +60,8 @@ public interface TerminologyClient extends Closeable {
    * @param version the version of the code system to validate against
    * @param code the code to validate
    * @return a {@link Parameters} resource
-   * @see <a href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
    */
   @Operation(name = "$validate-code", type = ValueSet.class, idempotent = true)
   @Nonnull
@@ -79,7 +80,8 @@ public interface TerminologyClient extends Closeable {
    * @param version the version of the code system to validate against
    * @param code the code to validate
    * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
-   * @see <a href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
    */
   IOperationUntypedWithInput<Parameters> buildValidateCode(@Nonnull UriType url,
       @Nonnull UriType system,
@@ -93,7 +95,8 @@ public interface TerminologyClient extends Closeable {
    * @param reverse if true, the translation will be reversed
    * @param target the URL of the value set within which the translation is sought
    * @return a {@link Parameters} resource
-   * @see <a href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
    */
   @Operation(name = "$translate", type = CodeSystem.class, idempotent = true)
   @Nonnull
@@ -116,7 +119,8 @@ public interface TerminologyClient extends Closeable {
    * @param reverse if true, the translation will be reversed
    * @param target the URL of the value set within which the translation is sought
    * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
-   * @see <a href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
    */
   @Nonnull
   IOperationUntypedWithInput<Parameters> buildTranslate(@Nonnull UriType url,
@@ -130,7 +134,8 @@ public interface TerminologyClient extends Closeable {
    * @param system the system of the codes being tested
    * @param version the version of the code system that the codes are from
    * @return a {@link Parameters} resource
-   * @see <a href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
    */
   @Operation(name = "$subsumes", type = CodeSystem.class, idempotent = true)
   @Nonnull
@@ -149,7 +154,8 @@ public interface TerminologyClient extends Closeable {
    * @param system the system of the codes being tested
    * @param version the version of the code system that the codes are from
    * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
-   * @see <a href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
    */
   @Nonnull
   IOperationUntypedWithInput<Parameters> buildSubsumes(@Nonnull CodeType codeA,
@@ -162,7 +168,8 @@ public interface TerminologyClient extends Closeable {
    * @param property the property or properties to be returned to the response
    * @param acceptLanguage the preferred language for the localizable return values
    * @return a {@link Parameters} resource
-   * @see <a href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
    */
   @Operation(name = "$lookup", type = CodeSystem.class, idempotent = true)
   @Nonnull
@@ -183,7 +190,8 @@ public interface TerminologyClient extends Closeable {
    * @param property the property or properties to be returned in the response
    * @param acceptLanguage the preferred language for the localizable return values
    * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
-   * @see <a href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
    */
   @Nonnull
   IOperationUntypedWithInput<Parameters> buildLookup(@Nonnull UriType system,

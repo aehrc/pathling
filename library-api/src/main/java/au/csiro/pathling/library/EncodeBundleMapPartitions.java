@@ -19,8 +19,8 @@ package au.csiro.pathling.library;
 
 import au.csiro.pathling.support.FhirConversionSupport;
 import ca.uhn.fhir.context.FhirVersionEnum;
+import jakarta.annotation.Nonnull;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 

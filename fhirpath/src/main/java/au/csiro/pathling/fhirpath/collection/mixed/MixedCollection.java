@@ -3,8 +3,8 @@ package au.csiro.pathling.fhirpath.collection.mixed;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.EmptyRepresentation;
 import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import lombok.Getter;
 
 /**

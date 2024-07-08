@@ -4,8 +4,8 @@ import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import ca.uhn.fhir.context.RuntimeChildExtension;
 import ca.uhn.fhir.context.RuntimeChildResourceDefinition;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 
 
 /**
@@ -53,5 +53,5 @@ public interface ChildDefinition extends NodeDefinition {
    */
   @Nonnull
   Optional<Integer> getMaxCardinality();
- 
+
 }

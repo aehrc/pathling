@@ -18,7 +18,7 @@
 package au.csiro.pathling.fhirpath.context;
 
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 public interface ResourceResolver {

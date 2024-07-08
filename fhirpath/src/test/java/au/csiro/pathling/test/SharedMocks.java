@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.test;
 
+import jakarta.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
-import javax.annotation.Nonnull;
 import org.mockito.Mockito;
 
 public class SharedMocks {

@@ -1,12 +1,10 @@
 package au.csiro.pathling.fhirpath.definition;
 
-import ca.uhn.fhir.context.*;
-
-import java.util.Optional;
-import javax.annotation.Nonnull;
-
+import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.model.api.annotation.Block;
 import ca.uhn.fhir.model.api.annotation.DatatypeDef;
+import jakarta.annotation.Nonnull;
+import java.util.Optional;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**

@@ -19,9 +19,9 @@ package au.csiro.pathling.fhirpath.execution;
 
 
 import au.csiro.pathling.fhirpath.execution.DataRoot.ResourceRoot;
+import jakarta.annotation.Nonnull;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import javax.annotation.Nonnull;
 
 @Value(staticConstructor = "of")
 public class DataDependency {

@@ -23,8 +23,8 @@ import static au.csiro.pathling.io.FileSystemPersistence.safelyJoinPaths;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.FhirMimeTypes;
 import au.csiro.pathling.library.PathlingContext;
+import jakarta.annotation.Nonnull;
 import java.util.function.UnaryOperator;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 

@@ -19,12 +19,12 @@ package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import javax.annotation.Nonnull;
+import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
+import jakarta.annotation.Nonnull;
 
 /**
  * Provides the functionality of the family of comparison operators within FHIRPath, i.e. {@code =},

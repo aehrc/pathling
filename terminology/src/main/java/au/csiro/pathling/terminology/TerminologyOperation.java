@@ -18,8 +18,8 @@
 package au.csiro.pathling.terminology;
 
 import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 
 
 /**

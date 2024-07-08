@@ -22,12 +22,12 @@ import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.utilities.Strings;
+import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Type;
 
 /**

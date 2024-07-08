@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
-import lombok.Value;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import java.util.List;
+import lombok.Value;
 
 @Value(staticConstructor = "of")
 public class DataView {

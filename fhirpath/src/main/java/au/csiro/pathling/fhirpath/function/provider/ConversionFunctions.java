@@ -4,7 +4,7 @@ import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import au.csiro.pathling.utilities.Preconditions;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 /**
  * Functions for converting between different types.

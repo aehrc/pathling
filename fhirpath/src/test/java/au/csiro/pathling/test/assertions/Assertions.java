@@ -19,12 +19,12 @@ package au.csiro.pathling.test.assertions;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsUrl;
 
+import au.csiro.pathling.fhirpath.execution.CollectionDataset;
+import jakarta.annotation.Nonnull;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
-import javax.annotation.Nonnull;
-import au.csiro.pathling.fhirpath.execution.CollectionDataset;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;

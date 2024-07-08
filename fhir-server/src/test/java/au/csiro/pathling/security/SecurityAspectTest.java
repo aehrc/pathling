@@ -20,8 +20,8 @@ package au.csiro.pathling.security;
 
 import static java.util.Objects.requireNonNull;
 
+import jakarta.annotation.Nonnull;
 import java.lang.reflect.Method;
-import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.annotation.AnnotationUtils;

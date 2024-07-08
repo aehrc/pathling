@@ -21,11 +21,11 @@ import static au.csiro.pathling.fhir.FhirUtils.getResourceType;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.library.PathlingContext;
+import jakarta.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;

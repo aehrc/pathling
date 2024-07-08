@@ -17,15 +17,15 @@
 
 package au.csiro.pathling.test.helpers;
 
-import javax.annotation.Nonnull;
+import static au.csiro.pathling.fhirpath.CodingHelpers.codingEquals;
+
+import jakarta.annotation.Nonnull;
+import java.io.Serializable;
 import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Base;
 import org.hl7.fhir.r4.model.Coding;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
-import java.io.Serializable;
-
-import static au.csiro.pathling.fhirpath.CodingHelpers.codingEquals;
 
 public final class FhirMatchers {
 

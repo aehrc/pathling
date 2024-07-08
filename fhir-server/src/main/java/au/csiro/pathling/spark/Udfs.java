@@ -18,14 +18,13 @@
 package au.csiro.pathling.spark;
 
 import au.csiro.pathling.sql.FhirpathUDFRegistrar;
+import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.sql.udf.*;
+import jakarta.annotation.Nonnull;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
-import javax.annotation.Nonnull;
-import java.util.List;
 
 /**
  * Provides an Apache Spark session for use by the Pathling server.

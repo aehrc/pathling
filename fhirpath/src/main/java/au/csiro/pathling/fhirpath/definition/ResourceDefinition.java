@@ -18,7 +18,7 @@
 package au.csiro.pathling.fhirpath.definition;
 
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import lombok.Getter;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;

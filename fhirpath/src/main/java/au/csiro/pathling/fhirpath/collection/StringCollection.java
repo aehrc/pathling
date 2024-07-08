@@ -26,8 +26,8 @@ import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Base64BinaryType;
 import org.hl7.fhir.r4.model.CodeType;
@@ -274,5 +274,5 @@ public class StringCollection extends Collection implements Materializable<Primi
   public boolean isComparableTo(@Nonnull final Collection path) {
     return path instanceof StringCollection || super.isComparableTo(path);
   }
-  
+
 }
