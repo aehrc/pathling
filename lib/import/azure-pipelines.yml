@@ -34,7 +34,7 @@ stages:
               options: "-pl lib/import -am"
               mavenOptions: "$(mavenOptions)"
               javaHomeOption: "JDKVersion"
-              jdkVersionOption: "1.11"
+              jdkVersionOption: "1.17"
               jdkArchitectureOption: "x64"
               goals: "package"
             timeoutInMinutes: 5

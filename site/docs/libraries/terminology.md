@@ -1,5 +1,6 @@
 ---
 sidebar_position: 4
+description: The Pathling library provides a set of functions for querying a FHIR terminology server from within your queries and transformations.
 ---
 
 # Terminology functions

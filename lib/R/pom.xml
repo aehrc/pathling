@@ -63,7 +63,7 @@
       of the sparklyr version that we depend upon that is on the archive site. The reason we can't 
       use the latest from the CDN is that the files drop off the CDN when a new version is released.
     -->
-    <pathling.Rapi.sparkVersion>3.4.0</pathling.Rapi.sparkVersion>
+    <pathling.Rapi.sparkVersion>3.5.1</pathling.Rapi.sparkVersion>
     <pathling.Rapi.scalaVersion>${pathling.scalaVersion}</pathling.Rapi.scalaVersion>
     <pathling.Rapi.hadoopMajorVersion>${pathling.hadoopMajorVersion}</pathling.Rapi.hadoopMajorVersion>
     <pathling.Rapi.hadoopVersion>${pathling.hadoopVersion}</pathling.Rapi.hadoopVersion>
@@ -226,6 +226,21 @@
             </configuration>
           </execution>
           <execution>
+            <id>generate-docs</id>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>Rscript</executable>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <arguments>
+                <argument>-e</argument>
+                <argument>roxygen2::roxygenise()</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>test</id>
             <phase>test</phase>
             <goals>
@@ -308,21 +323,6 @@
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
             <executions>
-              <execution>
-                <id>generate-docs</id>
-                <phase>process-sources</phase>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
-                <configuration>
-                  <executable>Rscript</executable>
-                  <workingDirectory>${project.basedir}</workingDirectory>
-                  <arguments>
-                    <argument>-e</argument>
-                    <argument>roxygen2::roxygenise()</argument>
-                  </arguments>
-                </configuration>
-              </execution>
               <execution>
                 <id>generate-site</id>
                 <phase>process-sources</phase>

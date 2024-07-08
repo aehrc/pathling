@@ -46,7 +46,7 @@ spec:
           {{- if gt (add (len .Values.pathling.config) (len .Values.pathling.secretConfig)) 0 }}
           env:
             - name: JAVA_TOOL_OPTIONS
-              value: {{ printf "-Xmx%s %s" .Values.pathling.resources.maxHeapSize .Values.pathling.additionalJavaOptions }}
+              value: {{ printf "-Xmx%s  --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED %s" .Values.pathling.resources.maxHeapSize .Values.pathling.additionalJavaOptions }}
             - name: spark.driver.host
               value: pathling-driver
             - name: spark.driver.port

@@ -1,0 +1,71 @@
+# This workflow runs a set of performance benchmarks that run and upload their results to a S3 
+# bucket.
+
+name: Benchmark
+
+on:
+  workflow_dispatch:
+
+env:
+  # The add-exports and add-opens flags are required for Java 17
+  MAVEN_OPTS: --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
+
+jobs:
+  benchmark:
+    name: Benchmark
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # This is required so that git-commit-id-plugin can find the latest tag.
+          fetch-depth: 0
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: "zulu"
+      - name: Cache local Maven repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |-
+            ${{ runner.os }}-maven-
+      - name: Cache test data
+        id: cache-test-data
+        uses: actions/cache@v4
+        with:
+          path: fhir-server/src/test/resources/test-data/parquet
+          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala', 'fhir-server/src/main/java/au/csiro/pathling/io/Database.java') }}
+      - name: Get current time
+        id: timestamp
+        run: echo "::set-output name=timestamp::$(date +'%Y%m%d%H%M%S')"
+      - name: Run the verify goal with Maven
+        env:
+          # If there is a cache hit on the test data, we don't need to import it. If it is a cache
+          # miss, we still need to explicitly activate the `importTestData` profile, otherwise
+          # it will be deactivated by `skipTests`.
+          PATHLING_PROFILES: runBenchmark,${{ steps.cache-test-data.outputs.cache-hit && '!importTestData' || 'importTestData' }}
+        run: >-
+          mvn --batch-mode verify
+          -pl fhir-server -am
+          -P${{ env.PATHLING_PROFILES }}
+          -DskipSurefireTests
+          -Dpathling.benchmark.testIterations=100
+          -Dpathling.benchmark.warmupIterations=10
+        timeout-minutes: 720
+      - name: Upload benchmark artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: "**/jmh-*.json"
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::865780493209:role/PathlingBenchmarkUpload
+          aws-region: ap-southeast-2
+      - name: Upload benchmark file to S3
+        run: aws s3 sync fhir-server/target/benchmark s3://pathling-benchmark/${{ github.ref }}/${{ github.run_id }}/${{ steps.timestamp.outputs.timestamp }}/

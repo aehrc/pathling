@@ -1,6 +1,7 @@
 ---
 sidebar_position: 9
 sidebar_label: Synchronization
+description: Synchronize Pathling server with other FHIR servers using subscriptions or bulk data export.
 ---
 
 # Synchronization with other FHIR servers

@@ -25,6 +25,7 @@ package au.csiro.pathling.encoders;
 
 import static au.csiro.pathling.test.SchemaAsserts.assertFieldNotPresent;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -93,9 +94,8 @@ public class SchemaConverterTest {
   private StructType medRequestSchema;
   private StructType questionnaireSchema;
   private StructType questionnaireResponseSchema;
-
   private StructType deviceSchema;
-
+  private StructType observationSchema_L2;
 
   /**
    * Traverses a DataType recursively passing all encountered StructTypes to the provided consumer.
@@ -173,16 +173,17 @@ public class SchemaConverterTest {
     questionnaireSchema = converter_L0.resourceSchema(Questionnaire.class);
     questionnaireResponseSchema = converter_L0.resourceSchema(QuestionnaireResponse.class);
     deviceSchema = converter_L0.resourceSchema(Device.class);
+    observationSchema_L2 = converter_L2.resourceSchema(Observation.class);
   }
 
   @Test
   public void resourceHasId() {
-    assertTrue(getField(conditionSchema, true, "id") instanceof StringType);
+    assertInstanceOf(StringType.class, getField(conditionSchema, true, "id"));
   }
 
   @Test
   public void boundCodeToStruct() {
-    assertTrue(getField(conditionSchema, true, "verificationStatus") instanceof StructType);
+    assertInstanceOf(StructType.class, getField(conditionSchema, true, "verificationStatus"));
   }
 
   @Test
@@ -190,11 +191,11 @@ public class SchemaConverterTest {
 
     final DataType codingType = getField(conditionSchema, true, "severity", "coding");
 
-    assertTrue(getField(codingType, true, "system") instanceof StringType);
-    assertTrue(getField(codingType, true, "version") instanceof StringType);
-    assertTrue(getField(codingType, true, "code") instanceof StringType);
-    assertTrue(getField(codingType, true, "display") instanceof StringType);
-    assertTrue(getField(codingType, true, "userSelected") instanceof BooleanType);
+    assertInstanceOf(StringType.class, getField(codingType, true, "system"));
+    assertInstanceOf(StringType.class, getField(codingType, true, "version"));
+    assertInstanceOf(StringType.class, getField(codingType, true, "code"));
+    assertInstanceOf(StringType.class, getField(codingType, true, "display"));
+    assertInstanceOf(BooleanType.class, getField(codingType, true, "userSelected"));
   }
 
   @Test
@@ -202,30 +203,30 @@ public class SchemaConverterTest {
 
     final DataType codeableType = getField(conditionSchema, true, "severity");
 
-    assertTrue(codeableType instanceof StructType);
-    assertTrue(getField(codeableType, true, "coding") instanceof ArrayType);
-    assertTrue(getField(codeableType, true, "text") instanceof StringType);
+    assertInstanceOf(StructType.class, codeableType);
+    assertInstanceOf(ArrayType.class, getField(codeableType, true, "coding"));
+    assertInstanceOf(StringType.class, getField(codeableType, true, "text"));
   }
 
   @Test
   public void idToString() {
-    assertTrue(getField(conditionSchema, true, "id") instanceof StringType);
+    assertInstanceOf(StringType.class, getField(conditionSchema, true, "id"));
   }
 
   @Test
   public void narrativeToStruct() {
 
-    assertTrue(getField(conditionSchema, true, "text", "status") instanceof StringType);
-    assertTrue(getField(conditionSchema, true, "text", "div") instanceof StringType);
+    assertInstanceOf(StringType.class, getField(conditionSchema, true, "text", "status"));
+    assertInstanceOf(StringType.class, getField(conditionSchema, true, "text", "div"));
   }
 
   @Test
   public void expandChoiceFields() {
-    assertTrue(getField(conditionSchema, true, "onsetPeriod") instanceof StructType);
-    assertTrue(getField(conditionSchema, true, "onsetRange") instanceof StructType);
-    assertTrue(getField(conditionSchema, true, "onsetDateTime") instanceof StringType);
-    assertTrue(getField(conditionSchema, true, "onsetString") instanceof StringType);
-    assertTrue(getField(conditionSchema, true, "onsetAge") instanceof StructType);
+    assertInstanceOf(StructType.class, getField(conditionSchema, true, "onsetPeriod"));
+    assertInstanceOf(StructType.class, getField(conditionSchema, true, "onsetRange"));
+    assertInstanceOf(StringType.class, getField(conditionSchema, true, "onsetDateTime"));
+    assertInstanceOf(StringType.class, getField(conditionSchema, true, "onsetString"));
+    assertInstanceOf(StructType.class, getField(conditionSchema, true, "onsetAge"));
   }
 
   @Test
@@ -244,19 +245,21 @@ public class SchemaConverterTest {
 
   @Test
   public void decimalWithinChoiceField() {
-    assertTrue(getField(questionnaireSchema, true, "item", "enableWhen",
-        "answerDecimal") instanceof DecimalType);
-    assertTrue(getField(questionnaireSchema, true, "item", "enableWhen",
-        "answerDecimal_scale") instanceof IntegerType);
-    assertTrue(getField(questionnaireResponseSchema, true, "item", "answer",
-        "valueDecimal") instanceof DecimalType);
-    assertTrue(getField(questionnaireResponseSchema, true, "item", "answer",
-        "valueDecimal_scale") instanceof IntegerType);
+    assertInstanceOf(DecimalType.class, getField(questionnaireSchema, true, "item", "enableWhen",
+        "answerDecimal"));
+    assertInstanceOf(IntegerType.class, getField(questionnaireSchema, true, "item", "enableWhen",
+        "answerDecimal_scale"));
+    assertInstanceOf(DecimalType.class,
+        getField(questionnaireResponseSchema, true, "item", "answer",
+            "valueDecimal"));
+    assertInstanceOf(IntegerType.class,
+        getField(questionnaireResponseSchema, true, "item", "answer",
+            "valueDecimal_scale"));
   }
 
   @Test
   public void instantToTimestamp() {
-    assertTrue(getField(observationSchema, true, "issued") instanceof TimestampType);
+    assertInstanceOf(TimestampType.class, getField(observationSchema, true, "issued"));
   }
 
   @Test
@@ -266,16 +269,58 @@ public class SchemaConverterTest {
 
   @Test
   public void bigDecimalToDecimal() {
-    assertTrue(
-        getField(observationSchema, true, "valueQuantity", "value") instanceof DecimalType);
+    assertInstanceOf(DecimalType.class,
+        getField(observationSchema, true, "valueQuantity", "value"));
   }
 
   @Test
   public void reference() {
-    assertTrue(
-        getField(observationSchema, true, "subject", "reference") instanceof StringType);
-    assertTrue(getField(observationSchema, true, "subject", "display") instanceof StringType);
+    assertInstanceOf(StringType.class, getField(observationSchema, true, "subject", "id"));
+    assertInstanceOf(StringType.class, getField(observationSchema, true, "subject", "reference"));
+    assertInstanceOf(StringType.class, getField(observationSchema, true, "subject", "display"));
+    assertInstanceOf(StringType.class, getField(observationSchema, true, "subject", "type"));
+    assertInstanceOf(StructType.class, getField(observationSchema, true, "subject", "identifier"));
+    assertInstanceOf(StringType.class,
+        getField(observationSchema, true, "subject", "identifier", "value"));
+
   }
+
+  @Test
+  public void identifier() {
+    assertInstanceOf(StringType.class,
+        unArray(getField(observationSchema, true, "identifier", "value")));
+    // `assigner` field should be present in the root level `Identifier` schema.
+    assertInstanceOf(StructType.class,
+        unArray(getField(observationSchema, true, "identifier", "assigner")));
+    assertInstanceOf(StringType.class,
+        unArray(getField(observationSchema, true, "identifier", "assigner", "reference")));
+
+  }
+
+  @Test
+  public void identifierInReference() {
+    // 
+    // Identifier (assigner) in root Reference
+    // 
+    assertFieldNotPresent("assigner", getField(observationSchema, true, "subject", "identifier"));
+    // The `assigner` field should not be present in Identifier schema of the Reference `identifier` field.
+    assertFieldNotPresent("assigner",
+        getField(observationSchema_L2, true, "subject", "identifier"));
+
+    // 
+    //  Identifier (assigner) in a Reference nested in an Identifier
+    //
+    // the `identifier` field should not be present because for normal nesting rules for 0-level nesting
+    assertFieldNotPresent("identifier",
+        unArray(getField(observationSchema, true, "identifier", "assigner")));
+    // the `identifier` field should be present because for normal nesting rules for 2-level nesting
+    assertInstanceOf(StructType.class,
+        unArray(getField(observationSchema_L2, true, "identifier", "assigner", "identifier")));
+    // but it should not have the assigner field
+    assertFieldNotPresent("assigner",
+        unArray(getField(observationSchema_L2, true, "identifier", "assigner", "identifier")));
+  }
+
 
   @Test
   public void preferredNameOnly() {
@@ -374,7 +419,7 @@ public class SchemaConverterTest {
     final MapType extensionsContainerType = (MapType) getField(extensionSchema, true,
         "_extension");
     assertEquals(DataTypes.IntegerType, extensionsContainerType.keyType());
-    assertTrue(extensionsContainerType.valueType() instanceof ArrayType);
+    assertInstanceOf(ArrayType.class, extensionsContainerType.valueType());
 
     traverseSchema(extensionSchema, t -> {
       assertEquals(DataTypes.IntegerType, t.fields()[t.fieldIndex("_fid")].dataType());
@@ -424,13 +469,13 @@ public class SchemaConverterTest {
   }
 
   private void assertQuantityType(final DataType quantityType) {
-    assertTrue(getField(quantityType, true, "value") instanceof DecimalType);
-    assertTrue(getField(quantityType, true, "value_scale") instanceof IntegerType);
-    assertTrue(getField(quantityType, true, "comparator") instanceof StringType);
-    assertTrue(getField(quantityType, true, "unit") instanceof StringType);
-    assertTrue(getField(quantityType, true, "system") instanceof StringType);
-    assertTrue(getField(quantityType, true, "code") instanceof StringType);
+    assertInstanceOf(DecimalType.class, getField(quantityType, true, "value"));
+    assertInstanceOf(IntegerType.class, getField(quantityType, true, "value_scale"));
+    assertInstanceOf(StringType.class, getField(quantityType, true, "comparator"));
+    assertInstanceOf(StringType.class, getField(quantityType, true, "unit"));
+    assertInstanceOf(StringType.class, getField(quantityType, true, "system"));
+    assertInstanceOf(StringType.class, getField(quantityType, true, "code"));
     assertEquals(FlexiDecimal.DATA_TYPE, getField(quantityType, true, "_value_canonicalized"));
-    assertTrue(getField(quantityType, true, "_code_canonicalized") instanceof StringType);
+    assertInstanceOf(StringType.class, getField(quantityType, true, "_code_canonicalized"));
   }
 }

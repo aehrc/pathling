@@ -138,12 +138,51 @@ public class TestData {
     return condition;
   }
 
+  public static Condition conditionWithReferencesWithIdentifiers() {
+    final Condition condition = new Condition();
+    condition.setId("withReferencesWithIdentifiers");
+    final Coding typeCoding = new Coding("http://terminology.hl7.org/CodeSystem/v2-0203", "MR",
+        null);
+    final CodeableConcept typeConcept = new CodeableConcept(typeCoding);
+    condition.setSubject(
+        new Reference("Patient/example")
+            .setDisplay("Display name")
+            .setIdentifier(
+                new Identifier()
+                    .setType(typeConcept)
+                    .setSystem("https://fhir.example.com/identifiers/mrn")
+                    .setValue("urn:id")
+                    .setAssigner(new Reference("Organization/001"))
+            )
+    );
+    return condition;
+  }
+
+  public static Condition conditionWithIdentifiersWithReferences() {
+    final Condition condition = new Condition();
+    condition.setId("withIdentifiersWithReferences");
+    final Coding typeCoding = new Coding("http://terminology.hl7.org/CodeSystem/v2-0203", "MR",
+        null);
+    final CodeableConcept typeConcept = new CodeableConcept(typeCoding);
+    condition
+        .addIdentifier()
+        .setType(typeConcept)
+        .setSystem("https://fhir.example.com/identifiers/mrn")
+        .setValue("urn:id01")
+        .setAssigner(new Reference("Organization/001")
+            .setIdentifier(new Identifier().setValue("urn:id02")
+                .setAssigner(new Reference("Organization/002"))));
+    return condition;
+  }
+
+
   public static Condition conditionWithVersion() {
     final Condition condition = new Condition();
     final IdType id = new IdType("Condition", "with-version", "1");
     condition.setIdElement(id);
     return condition;
   }
+
 
   /**
    * Returns a FHIR Observation for testing purposes.

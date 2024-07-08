@@ -41,16 +41,21 @@ import java.util.function.Consumer;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
-import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.hl7.fhir.r4.model.BaseResource;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.Device;
+import org.hl7.fhir.r4.model.Expression;
 import org.hl7.fhir.r4.model.IdType;
+import org.hl7.fhir.r4.model.Identifier;
+import org.hl7.fhir.r4.model.Identifier.IdentifierUse;
 import org.hl7.fhir.r4.model.MolecularSequence;
 import org.hl7.fhir.r4.model.MolecularSequence.MolecularSequenceQualityRocComponent;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.PlanDefinition;
 import org.hl7.fhir.r4.model.PlanDefinition.PlanDefinitionActionComponent;
+import org.hl7.fhir.r4.model.Reference;
 import org.json4s.jackson.JsonMethods;
 import org.junit.jupiter.api.Test;
 import scala.collection.mutable.WrappedArray;
@@ -163,6 +168,65 @@ public class LightweightFhirEncodersTest implements JsonMethods {
   }
 
   @Test
+  public void testReference() {
+    final ExpressionEncoder<Condition> encoder = fhirEncoders
+        .of(Condition.class);
+    final Condition conditionWithFullReference = new Condition();
+    final Identifier identifier = new Identifier()
+        .setSystem("urn:id-system")
+        .setValue("id-valule")
+        .setUse(IdentifierUse.OFFICIAL)
+        .setType(new CodeableConcept().addCoding(new Coding().setCode("code").setSystem("system"))
+            .setText("text"));
+    final Reference referenceWithAllFields = new Reference("Patient/1234")
+        .setDisplay("Some Display Name")
+        .setType("Patient")
+        .setIdentifier(identifier);
+    // Set also the Element inherited fields
+    referenceWithAllFields.setId("some-id");
+    conditionWithFullReference.setSubject(referenceWithAllFields);
+    assertSerDeIsIdentity(encoder, conditionWithFullReference);
+  }
+
+  @Test
+  public void testIdentifier() {
+    final ExpressionEncoder<Condition> encoder = fhirEncoders
+        .of(Condition.class);
+    final Condition conditionWithIdentifierWithAssigner = new Condition();
+
+    final Reference assignerReference = new Reference("Organization/1234")
+        .setDisplay("Some Display Name")
+        .setType("Organization");
+
+    final Identifier identifier = new Identifier()
+        .setSystem("urn:id-system")
+        .setValue("id-valule")
+        .setUse(IdentifierUse.OFFICIAL)
+        .setAssigner(assignerReference)
+        .setType(new CodeableConcept().addCoding(new Coding().setCode("code").setSystem("system"))
+            .setText("text"));
+    conditionWithIdentifierWithAssigner.addIdentifier(identifier);
+    assertSerDeIsIdentity(encoder, conditionWithIdentifierWithAssigner);
+  }
+
+  @Test
+  public void testExpression() {
+
+    // Expression contains 'reference' field 
+    // We are checking that it is encoded in generic way not and not the subject to special case for Reference 'reference' field.
+    final ExpressionEncoder<PlanDefinition> encoder = fhirEncoders
+        .of(PlanDefinition.class);
+
+    final PlanDefinition planDefinition = new PlanDefinition();
+
+    final PlanDefinitionActionComponent actionComponent = planDefinition
+        .getActionFirstRep();
+    actionComponent.getConditionFirstRep().setExpression(new Expression().setLanguage("language")
+        .setExpression("expression").setDescription("description"));
+    assertSerDeIsIdentity(encoder, planDefinition);
+  }
+
+  @Test
   public void testThrowsExceptionWhenUnsupportedResource() {
     for (final String resourceName : EXCLUDED_RESOURCES) {
       assertThrows(UnsupportedResourceError.class, () -> fhirEncoders.of(resourceName));
@@ -191,7 +255,7 @@ public class LightweightFhirEncodersTest implements JsonMethods {
 
     // Deserialize the InternalRow to a Row with explicit schema.
     final ExpressionEncoder<Row> rowEncoder = EncoderUtils
-        .defaultResolveAndBind(RowEncoder.apply(encoder.schema()));
+        .defaultResolveAndBind(ExpressionEncoder.apply(encoder.schema()));
     final Row conditionRow = rowEncoder.createDeserializer().apply(serializedRow);
 
     // Get the extensionContainer.
@@ -241,7 +305,7 @@ public class LightweightFhirEncodersTest implements JsonMethods {
     final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(observation);
 
     final ExpressionEncoder<Row> rowEncoder = EncoderUtils.defaultResolveAndBind(
-        RowEncoder.apply(encoder.schema()));
+        ExpressionEncoder.apply(encoder.schema()));
     final Row observationRow = rowEncoder.createDeserializer().apply(serializedRow);
 
     final Row quantityRow = observationRow.getStruct(observationRow.fieldIndex("valueQuantity"));
@@ -258,13 +322,13 @@ public class LightweightFhirEncodersTest implements JsonMethods {
     final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(device);
 
     final ExpressionEncoder<Row> rowEncoder = EncoderUtils.defaultResolveAndBind(
-        RowEncoder.apply(encoder.schema()));
+        ExpressionEncoder.apply(encoder.schema()));
     final Row deviceRow = rowEncoder.createDeserializer().apply(serializedRow);
 
     final List<Row> properties = deviceRow.getList(deviceRow.fieldIndex("property"));
     final Row propertyRow = properties.get(0);
     final List<Row> quantityArray = propertyRow.getList(propertyRow.fieldIndex("valueQuantity"));
-    
+
     final Row quantity1 = quantityArray.get(0);
     assertQuantity(quantity1, "0.0010", "m");
 

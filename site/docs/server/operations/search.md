@@ -1,10 +1,11 @@
 ---
 sidebar_position: 2
+description: Pathling server supports a FHIRPath-based search profile that allows you to retrieve a set of FHIR resources from the server filtered by one or more FHIRPath expressions.
 ---
 
 # Search
 
-[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/search-6)
+[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/search-7)
 
 This operation extends the search capabilities of FHIR using a
 [search profile](https://hl7.org/fhir/R4/search.html#query) called `fhirPath`,

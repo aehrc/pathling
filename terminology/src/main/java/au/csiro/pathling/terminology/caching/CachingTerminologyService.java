@@ -45,11 +45,9 @@ import java.io.Closeable;
 import java.io.Serializable;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import javax.ws.rs.core.CacheControl;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 import org.infinispan.Cache;
@@ -63,13 +61,13 @@ import org.infinispan.manager.EmbeddedCacheManager;
  */
 public abstract class CachingTerminologyService extends BaseTerminologyService {
 
-  public static final String VALIDATE_CODE_CACHE_NAME = "validate-code";
-  public static final String SUBSUMES_CACHE_NAME = "subsumes";
-  public static final String TRANSLATE_CACHE_NAME = "translate";
-  public static final String LOOKUP_CACHE_NAME = "lookup";
-  public static final String ETAG_HEADER_NAME = "etag";
-  public static final String IF_NONE_MATCH_HEADER_NAME = "if-none-match";
-  public static final String CACHE_CONTROL_HEADER_NAME = "cache-control";
+  private static final String VALIDATE_CODE_CACHE_NAME = "validate-code";
+  private static final String SUBSUMES_CACHE_NAME = "subsumes";
+  private static final String TRANSLATE_CACHE_NAME = "translate";
+  private static final String LOOKUP_CACHE_NAME = "lookup";
+  private static final String ETAG_HEADER_NAME = "etag";
+  private static final String IF_NONE_MATCH_HEADER_NAME = "if-none-match";
+  private static final String CACHE_CONTROL_HEADER_NAME = "cache-control";
 
   @Nonnull
   protected final HttpClientCachingConfiguration configuration;
@@ -89,6 +87,11 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
   @Nonnull
   protected final Cache<Integer, TerminologyResult<ArrayList<PropertyOrDesignation>>> lookupCache;
 
+  /**
+   * @param terminologyClient The terminology client to cache results from
+   * @param configuration The caching configuration for the HTTP client
+   * @param resourcesToClose Any resources that should be closed when this service is closed
+   */
   @SuppressWarnings("unchecked")
   public CachingTerminologyService(@Nonnull final TerminologyClient terminologyClient,
       @Nonnull final HttpClientCachingConfiguration configuration,
@@ -231,7 +234,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
           // 1. The override expiry, if present;
           // 2. The expiry provided by the server, if present, then;
           // 3. The default expiry.
-          resolveExpires(overrideExpires, serverExpires, defaultExpires),
+          resolveExpires(List.of(overrideExpires, serverExpires, defaultExpires)),
           false);
 
     } catch (final NotModifiedException e) {
@@ -248,7 +251,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
           // 2. The expiry from the 304 response, if present;
           // 3. The expiry from the cached response, if present, then;
           // 4. The default expiry.
-          resolveExpires(overrideExpires, serverExpires, previousExpiry, defaultExpires),
+          resolveExpires(List.of(overrideExpires, serverExpires, previousExpiry, defaultExpires)),
           false);
 
     } catch (final BaseServerResponseException e) {
@@ -256,7 +259,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
       // amount of time instructed by the server. If there is no such instruction, cache it for the 
       // configured default expiry.
       final Optional<Long> serverExpires = getExpires(e.getResponseHeaders());
-      final long expires = resolveExpires(serverExpires, defaultExpires);
+      final long expires = resolveExpires(List.of(serverExpires, defaultExpires));
       final TerminologyResult<ResultType> fallback = new TerminologyResult<>(
           operation.invalidRequestFallback(), null, expires, false);
       return handleError(e, fallback);
@@ -299,23 +302,38 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
 
   @Nonnull
   private static Optional<Long> getExpires(@Nullable final Map<String, List<String>> headers) {
-    final Optional<Integer> maxAge = getSingularHeader(headers, CACHE_CONTROL_HEADER_NAME)
-        .map(CacheControl::valueOf)
-        .map(CacheControl::getMaxAge);
-    return maxAge.map(CachingTerminologyService::secondsFromNow);
+    return getSingularHeader(headers, CACHE_CONTROL_HEADER_NAME)
+        .flatMap(CachingTerminologyService::parseMaxAgeFromCacheControl)
+        .map(CachingTerminologyService::secondsFromNow);
+  }
+
+  @Nonnull
+  private static Optional<Integer> parseMaxAgeFromCacheControl(@Nonnull final String cacheControl) {
+    final String[] parts = cacheControl.split(",\\s*");
+    for (final String part : parts) {
+      if (part.startsWith("max-age")) {
+        final String argument = part.split("=")[1];
+        try {
+          return Optional.of(Integer.parseInt(argument));
+        } catch (final NumberFormatException e) {
+          return Optional.empty();
+        }
+      }
+    }
+    return Optional.empty();
   }
 
   private static long secondsFromNow(final int seconds) {
     return Instant.now().plusSeconds(seconds).toEpochMilli();
   }
 
-  @SafeVarargs
-  private static Long resolveExpires(final Optional<Long>... orderedExpiryValues) {
+  private static Long resolveExpires(@Nonnull final List<Optional<Long>> orderedExpiryValues) {
     // Go through each of the expiry values and combine them using OR logic. If the final value is 
     // not present, throw an error.
-    return Arrays.stream(orderedExpiryValues)
+    return orderedExpiryValues.stream()
         .reduce((acc, v) -> acc.or(() -> v))
         .orElseThrow()
         .orElseThrow();
   }
+
 }

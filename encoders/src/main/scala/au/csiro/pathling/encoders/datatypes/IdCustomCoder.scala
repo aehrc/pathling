@@ -24,7 +24,7 @@
 package au.csiro.pathling.encoders.datatypes
 
 import au.csiro.pathling.encoders.EncoderUtils.arrayExpression
-import au.csiro.pathling.encoders.ExpressionWithName
+import au.csiro.pathling.encoders.{Catalyst, ExpressionWithName}
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, MapObjects, NewInstance, StaticInvoke}
 import org.apache.spark.sql.types._
@@ -72,11 +72,11 @@ case class IdCustomCoder(elementName: String) extends CustomCoder {
 
   override def customSerializer(evaluator: (Expression => Expression) => Expression): Seq[ExpressionWithName] = {
     val idExpression = evaluator(
-      exp => StaticInvoke(classOf[UTF8String], DataTypes.StringType, "fromString",
+      exp => Catalyst.staticInvoke(classOf[UTF8String], DataTypes.StringType, "fromString",
         List(Invoke(exp, "getIdPart", ObjectType(classOf[String])))))
 
     val versionedIdExpression = evaluator(
-      exp => StaticInvoke(classOf[UTF8String], DataTypes.StringType, "fromString",
+      exp => Catalyst.staticInvoke(classOf[UTF8String], DataTypes.StringType, "fromString",
         List(Invoke(exp, "getValue", ObjectType(classOf[String])))))
     Seq((elementName, idExpression), (versionedName, versionedIdExpression))
   }

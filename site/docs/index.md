@@ -1,3 +1,7 @@
+---
+description: Pathling is a set of tools that make it easier to use FHIR and clinical terminology within health data analytics.
+---
+
 # Overview
 
 Pathling is a set of tools that make it easier to
@@ -5,13 +9,12 @@ use [FHIR&reg;](https://hl7.org/fhir) and clinical terminology within health
 data analytics. It is built on [Apache Spark](https://spark.apache.org), and
 includes both language libraries and a server implementation.
 
-import Components from '@site/src/images/components.png';
-import Components2x from '@site/src/images/components@2x.png';
-import ComponentsDark from '@site/src/images/components-dark.png';
-import ComponentsDark2x from '@site/src/images/components-dark@2x.png';
-
-<img src={Components} srcset={`${Components2x} 2x, ${Components} 1x`} title="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" className="light-mode-only" width="800" />
-<img src={ComponentsDark} srcset={`${ComponentsDark2x} 2x, ${ComponentsDark} 1x`} title="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" className="dark-mode-only" width="800" />
+<iframe class="yt-embed" 
+    src="https://www.youtube.com/embed/ZSv2qMGPquU?si=daZ2jgNFpNc3luQx" 
+    title="YouTube video player" 
+    frameborder="0" 
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+    allowfullscreen />
 
 ## What can it do?
 
@@ -68,6 +71,14 @@ powering interactive web and mobile applications that need to be able to
 aggregate, group and transform FHIR data.
 
 See [Server](/docs/server) for more information.
+
+import Components from '@site/src/images/components.png';
+import Components2x from '@site/src/images/components@2x.png';
+import ComponentsDark from '@site/src/images/components-dark.png';
+import ComponentsDark2x from '@site/src/images/components-dark@2x.png';
+
+<img src={Components} srcset={`${Components2x} 2x, ${Components} 1x`} title="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" className="light-mode-only" width="800" />
+<img src={ComponentsDark} srcset={`${ComponentsDark2x} 2x, ${ComponentsDark} 1x`} title="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" className="dark-mode-only" width="800" />
 
 ## Licensing and attribution
 

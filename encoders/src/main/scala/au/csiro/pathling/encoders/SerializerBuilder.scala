@@ -24,10 +24,8 @@
 package au.csiro.pathling.encoders
 
 import au.csiro.pathling.encoders.ExtensionSupport.{EXTENSIONS_FIELD_NAME, FID_FIELD_NAME}
-import au.csiro.pathling.encoders.QuantitySupport.{CODE_CANONICALIZED_FIELD_NAME, VALUE_CANONICALIZED_FIELD_NAME}
 import au.csiro.pathling.encoders.SerializerBuilderProcessor.{dataTypeToUtf8Expr, getChildExpression, objectTypeFor}
-import au.csiro.pathling.encoders.datatypes.{DataTypeMappings, DecimalCustomCoder}
-import au.csiro.pathling.encoders.terminology.ucum.Ucum
+import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import au.csiro.pathling.schema.SchemaVisitor.isCollection
 import au.csiro.pathling.schema._
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition.ChildTypeEnum
@@ -36,7 +34,7 @@ import org.apache.spark.sql.catalyst.expressions.objects.{ExternalMapToCatalyst,
 import org.apache.spark.sql.catalyst.expressions.{BoundReference, CreateNamedStruct, Expression, If, IsNull, Literal}
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
-import org.hl7.fhir.instance.model.api.{IBaseDatatype, IBaseHasExtensions, IBaseResource}
+import org.hl7.fhir.instance.model.api.{IBaseDatatype, IBaseHasExtensions, IBaseReference, IBaseResource}
 import org.hl7.fhir.r4.model.{Base, Extension, Quantity}
 import org.hl7.fhir.utilities.xhtml.XhtmlNode
 
@@ -97,7 +95,7 @@ private[encoders] class SerializerBuilderProcessor(expression: Expression,
   private def createExtensionsFields(definition: BaseRuntimeElementCompositeDefinition[_]): Seq[(String, Expression)] = {
     val maybeExtensionValueField = definition match {
       case _: RuntimeResourceDefinition =>
-        val collectExtensionsExpression = StaticInvoke(
+        val collectExtensionsExpression = Catalyst.staticInvoke(
           classOf[SerializerBuilderProcessor],
           ObjectType(classOf[Map[Int, java.util.List[Extension]]]),
           "flattenExtensions",
@@ -113,7 +111,7 @@ private[encoders] class SerializerBuilderProcessor(expression: Expression,
       case _ => Nil
     }
     // append _fid serializer
-    (FID_FIELD_NAME, StaticInvoke(
+    (FID_FIELD_NAME, Catalyst.staticInvoke(
       classOf[System], IntegerType, "identityHashCode",
       expression :: Nil)) :: maybeExtensionValueField
   }
@@ -190,10 +188,11 @@ private[encoders] object SerializerBuilderProcessor {
   private def getChildExpression(parentObject: Expression,
                                  childDefinition: BaseRuntimeChildDefinition,
                                  dataType: DataType): Expression = {
-    Invoke(parentObject,
-      accessorFor(childDefinition),
-      dataType)
+
+    val (hasMethod, getMethod) = accessorsFor(childDefinition)
+    GetHapiValue(parentObject, dataType, hasMethod, getMethod)
   }
+
 
   private def getChildExpression(parentObject: Expression,
                                  childDefinition: BaseRuntimeChildDefinition): Expression = {
@@ -209,7 +208,7 @@ private[encoders] object SerializerBuilderProcessor {
   }
 
   private def dataTypeToUtf8Expr(inputObject: Expression): Expression = {
-    StaticInvoke(
+    Catalyst.staticInvoke(
       classOf[UTF8String],
       DataTypes.StringType,
       "fromString",
@@ -219,23 +218,39 @@ private[encoders] object SerializerBuilderProcessor {
   }
 
   /**
-   * Returns the accessor method for the given child field.
+   * Returns the accessor methods for the given child field.
+   * These are the 'has' and 'get' methods that test for the presence of the field an retrieve its value.
+   *
+   * @param field the runtime child definition of the field
+   * @return a tuple containing the names of  'has' and 'get' methods
    */
-  private def accessorFor(field: BaseRuntimeChildDefinition): String = {
+  private def accessorsFor(field: BaseRuntimeChildDefinition): (String, String) = {
+
+    def defaultAccessors(suffix: String): (String, String) = {
+      ("has" + suffix, "get" + suffix)
+    }
 
     // Primitive single-value types typically use the Element suffix in their
     // accessors, with the exception of the "div" field for reasons that are not clear.
     //noinspection DuplicatedCode
-    if (field.isInstanceOf[RuntimeChildPrimitiveDatatypeDefinition] &&
-      field.getMax == 1 &&
-      field.getElementName != "div")
-      "get" + field.getElementName.capitalize + "Element"
-    else {
-      if (field.getElementName.equals("class")) {
-        "get" + field.getElementName.capitalize + "_"
-      } else {
-        "get" + field.getElementName.capitalize
-      }
+    field match {
+      case p: RuntimeChildPrimitiveDatatypeDefinition if p.getMax == 1 && p
+        .getElementName != "div" =>
+        if ("reference" == p.getElementName && classOf[IBaseReference]
+          .isAssignableFrom(p.getField.getDeclaringClass)) {
+          // Special case for subclasses of IBaseReference.
+          // The accessor getReferenceElement returns IdType rather than 
+          // StringType and getReferenceElement_ needs to be used instead.
+          // All subclasses of IBaseReference have a getReferenceElement_ 
+          // method.
+          ("hasReferenceElement", "getReferenceElement_")
+        } else {
+          defaultAccessors(p.getElementName.capitalize + "Element")
+        }
+      case f if f.getElementName.equals("class") =>
+        defaultAccessors(f.getElementName.capitalize + "_")
+      case _ =>
+        defaultAccessors(field.getElementName.capitalize)
     }
   }
 

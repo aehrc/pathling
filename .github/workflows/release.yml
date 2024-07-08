@@ -13,23 +13,27 @@ on:
     tags:
       - "v**"
 
+env:
+  # The add-exports and add-opens flags are required for Java 17
+  MAVEN_OPTS: --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
+
 jobs:
   deploy-maven:
     name: Maven Central
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
-          java-version: 11
+          java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -63,17 +67,17 @@ jobs:
     needs: deploy-maven
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
-          java-version: 11
+          java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -96,17 +100,17 @@ jobs:
     needs: deploy-python
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
-          java-version: 11
+          java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}

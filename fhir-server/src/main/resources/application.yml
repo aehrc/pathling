@@ -133,7 +133,7 @@ pathling:
   # This section configures the server's support asynchronous processing of HTTP requests.
   async:
     # Enables asynchronous processing for those operations that support it,
-    # when explicitly requested by a HTTP client.
+    # when explicitly requested by an HTTP client.
     enabled: true
     
     #  A subset of `pathling.httpCaching.vary` HTTP headers, which should 
@@ -160,7 +160,7 @@ spark:
     delta:
       schema:
         autoMerge:
-          enabled: true
+          enabled: false
   scheduler:
     mode: FAIR
 

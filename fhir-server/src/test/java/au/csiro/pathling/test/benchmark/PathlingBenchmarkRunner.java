@@ -21,6 +21,7 @@ import static au.csiro.pathling.jmh.JmhUtils.buildResultsFileName;
 
 import java.io.File;
 import java.util.Properties;
+import au.csiro.pathling.jmh.SpringBootJmhContext;
 import lombok.extern.slf4j.Slf4j;
 import org.openjdk.jmh.results.format.ResultFormatType;
 import org.openjdk.jmh.runner.Runner;
@@ -42,7 +43,7 @@ public class PathlingBenchmarkRunner {
                              ? argc[0]
                              : "target/benchmark";
 
-    final Properties properties = PropertiesLoaderUtils.loadAllProperties("benchmark.properties");
+    final Properties properties = System.getProperties();
 
     final int warmup = Integer
         .parseInt(properties.getProperty("benchmark.warmup.iterations", "1"));
@@ -79,7 +80,12 @@ public class PathlingBenchmarkRunner {
         .shouldFailOnError(true)
         .jvmArgs("-server -Xmx4g -ea -Duser.timezone=UTC")
         .build();
-    new Runner(opt).run();
+    try {
+      new Runner(opt).run();
+    } finally {
+      // clean up the test application contexts created by the benchmarks
+      SpringBootJmhContext.cleanUpAll();
+    }
   }
 
 }

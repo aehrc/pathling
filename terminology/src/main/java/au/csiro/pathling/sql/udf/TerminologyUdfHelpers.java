@@ -26,8 +26,8 @@ import java.util.Objects;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Coding;
+import scala.collection.Iterable;
 import scala.collection.JavaConverters;
-import scala.collection.mutable.WrappedArray;
 
 /**
  * Helper functions for terminology UDFs.
@@ -49,8 +49,8 @@ public final class TerminologyUdfHelpers {
   @Nullable
   public static Stream<Coding> decodeOneOrMany(final @Nullable Object codingRowOrArray,
       final int argumentIndex) {
-    if (codingRowOrArray instanceof WrappedArray<?>) {
-      return decodeMany((WrappedArray<Row>) codingRowOrArray);
+    if (codingRowOrArray instanceof Iterable<?>) {
+      return decodeMany((Iterable<Row>) codingRowOrArray);
     } else if (codingRowOrArray instanceof Row || codingRowOrArray == null) {
       return decodeOne((Row) codingRowOrArray);
     } else {
@@ -73,7 +73,7 @@ public final class TerminologyUdfHelpers {
   }
 
   @Nullable
-  public static Stream<Coding> decodeMany(final @Nullable WrappedArray<Row> codingsRow) {
+  public static Stream<Coding> decodeMany(final @Nullable Iterable<Row> codingsRow) {
     return codingsRow != null
            ? JavaConverters.asJavaCollection(codingsRow).stream().filter(Objects::nonNull)
                .map(CodingEncoding::decode)

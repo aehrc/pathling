@@ -25,6 +25,8 @@ import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.function.UnaryOperator;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * This class knows how to take an @link{EnumerableDataSource} and write it to a variety of
@@ -33,6 +35,15 @@ import java.util.function.UnaryOperator;
  * @author John Grimes
  */
 public class DataSinkBuilder {
+
+  @Nonnull
+  private static final Map<String, SaveMode> SAVE_MODES = new ImmutableMap.Builder<String, SaveMode>()
+      .put("error", SaveMode.ErrorIfExists)
+      .put("errorifexists", SaveMode.ErrorIfExists)
+      .put("overwrite", SaveMode.Overwrite)
+      .put("append", SaveMode.Append)
+      .put("ignore", SaveMode.Ignore)
+      .build();
 
   @Nonnull
   private final PathlingContext context;
@@ -50,9 +61,16 @@ public class DataSinkBuilder {
    * "ndjson" extension.
    *
    * @param path the directory to write the files to
+   * @param saveMode the save mode to use:
+   * <ul>
+   *   <li>"error" - throw an error if the files already exist</li>
+   *   <li>"overwrite" - overwrite any existing files</li>
+   *   <li>"append" - append to any existing files</li>
+   *   <li>"ignore" - do nothing if the files already exist</li>
+   * </ul>
    */
-  public void ndjson(@Nullable final String path) {
-    new NdjsonSink(context, requireNonNull(path)).write(source);
+  public void ndjson(@Nullable final String path, @Nullable final String saveMode) {
+    new NdjsonSink(context, requireNonNull(path), resolveSaveMode(saveMode)).write(source);
   }
 
   /**
@@ -60,11 +78,19 @@ public class DataSinkBuilder {
    * custom file name mapper.
    *
    * @param path the directory to write the files to
+   * @param saveMode the save mode to use:
+   * <ul>
+   *   <li>"error" - throw an error if the files already exist</li>
+   *   <li>"overwrite" - overwrite any existing files</li>
+   *   <li>"append" - append to any existing files</li>
+   *   <li>"ignore" - do nothing if the files already exist</li>
+   * </ul>
    * @param fileNameMapper a function that maps a resource type to a file name
    */
-  public void ndjson(@Nullable final String path,
+  public void ndjson(@Nullable final String path, @Nullable final String saveMode,
       @Nullable final UnaryOperator<String> fileNameMapper) {
-    new NdjsonSink(context, requireNonNull(path), requireNonNull(fileNameMapper)).write(source);
+    new NdjsonSink(context, requireNonNull(path), resolveSaveMode(saveMode),
+        requireNonNull(fileNameMapper)).write(source);
   }
 
   /**
@@ -72,9 +98,16 @@ public class DataSinkBuilder {
    * "parquet" extension.
    *
    * @param path the directory to write the files to
+   * @param saveMode the save mode to use:
+   * <ul>
+   *   <li>"error" - throw an error if the files already exist</li>
+   *   <li>"overwrite" - overwrite any existing files</li>
+   *   <li>"append" - append to any existing files</li>
+   *   <li>"ignore" - do nothing if the files already exist</li>
+   * </ul>
    */
-  public void parquet(@Nullable final String path) {
-    new ParquetSink(requireNonNull(path)).write(source);
+  public void parquet(@Nullable final String path, @Nullable final String saveMode) {
+    new ParquetSink(requireNonNull(path), resolveSaveMode(saveMode)).write(source);
   }
 
   /**
@@ -132,6 +165,13 @@ public class DataSinkBuilder {
    */
   public void tables(@Nullable final String importMode, @Nullable final String schema) {
     new CatalogSink(context, ImportMode.fromCode(importMode), requireNonNull(schema)).write(source);
+  }
+
+  @Nonnull
+  private static SaveMode resolveSaveMode(final @Nullable String saveMode) {
+    return saveMode == null
+           ? SaveMode.ErrorIfExists
+           : SAVE_MODES.get(saveMode);
   }
 
 }

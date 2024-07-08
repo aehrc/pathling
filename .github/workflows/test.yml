@@ -19,23 +19,27 @@ on:
     branches-ignore:
       - gh-pages
 
+env:
+  # The add-exports and add-opens flags are required for Java 17
+  MAVEN_OPTS: --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
+
 jobs:
   encoders:
     name: Encoders
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
-          java-version: 11
+          java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -52,17 +56,17 @@ jobs:
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 20
       - name: Upload encoders test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: encoders-surefire-reports
           path: encoders/target/surefire-reports
       - name: Upload test coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: encoders-coverage
           path: "**/jacoco.xml"
       - name: Upload dump files
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: encoders-dump-files
           path: |-
@@ -82,17 +86,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
-          java-version: 11
+          java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -100,7 +104,7 @@ jobs:
             ${{ runner.os }}-maven-
       - name: Cache test data
         id: cache-test-data
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: fhir-server/src/test/resources/test-data/parquet
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala', 'fhir-server/src/main/java/au/csiro/pathling/io/Database.java') }}
@@ -124,22 +128,22 @@ jobs:
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 30
       - name: Upload fhir-server test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-1-surefire-reports
           path: fhir-server/target/surefire-reports
       - name: Upload test coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-1-coverage
           path: "**/jacoco.xml"
       - name: Upload timing log
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-1-timing-log
           path: fhir-server/target/timing.log
       - name: Upload dump files
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-1-dump-files
           path: |-
@@ -159,17 +163,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
-          java-version: 11
+          java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -177,7 +181,7 @@ jobs:
             ${{ runner.os }}-maven-
       - name: Cache test data
         id: cache-test-data
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: fhir-server/src/test/resources/test-data/parquet
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala', 'fhir-server/src/main/java/au/csiro/pathling/io/Database.java') }}
@@ -201,22 +205,22 @@ jobs:
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 30
       - name: Upload fhir-server test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-2-surefire-reports
           path: fhir-server/target/surefire-reports
       - name: Upload test coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-2-coverage
           path: "**/jacoco.xml"
       - name: Upload timing log
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-2-timing-log
           path: fhir-server/target/timing.log
       - name: Upload dump files
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-2-dump-files
           path: |-
@@ -242,17 +246,17 @@ jobs:
           role-to-assume: arn:aws:iam::865780493209:role/PathlingBenchmarkUpload
           aws-region: ap-southeast-2
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
-          java-version: 11
+          java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -260,7 +264,7 @@ jobs:
             ${{ runner.os }}-maven-
       - name: Cache test data
         id: cache-test-data
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: fhir-server/src/test/resources/test-data/parquet
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala', 'fhir-server/src/main/java/au/csiro/pathling/io/Database.java') }}
@@ -281,37 +285,37 @@ jobs:
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 30
       - name: Upload utilities test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: utilities-surefire-reports
           path: utilities/target/surefire-reports
       - name: Upload terminology test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terminology-surefire-reports
           path: terminology/target/surefire-reports
       - name: Upload FHIRPath test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhirpath-surefire-reports
           path: fhirpath/target/surefire-reports
       - name: Upload FHIR server test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-3-surefire-reports
           path: fhir-server/target/surefire-reports
       - name: Upload FHIR server test coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-3-coverage
           path: "**/jacoco.xml"
       - name: Upload timing log
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-3-timing-log
           path: fhir-server/target/timing.log
       - name: Upload dump files
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-3-dump-files
           path: |-
@@ -334,17 +338,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
-          java-version: 11
+          java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -386,7 +390,7 @@ jobs:
           image-ref: "aehrc/pathling:${{ github.sha }}"
           exit-code: "1"
           ignore-unfixed: true
-          security-checks: "vuln"
+          scanners: "vuln"
           severity: CRITICAL
           timeout: 20m
       - name: Publish test results
@@ -398,82 +402,25 @@ jobs:
           check_name: Docker image test report
           fail_on_test_failures: true
 
-  benchmark:
-    name: Benchmark
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          role-to-assume: arn:aws:iam::865780493209:role/PathlingBenchmarkUpload
-          aws-region: ap-southeast-2
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          # This is required so that git-commit-id-plugin can find the latest tag.
-          fetch-depth: 0
-      - name: Set up JDK
-        uses: actions/setup-java@v2
-        with:
-          java-version: 11
-          distribution: "zulu"
-      - name: Cache local Maven repository
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |-
-            ${{ runner.os }}-maven-
-      - name: Cache test data
-        id: cache-test-data
-        uses: actions/cache@v3
-        with:
-          path: fhir-server/src/test/resources/test-data/parquet
-          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala', 'fhir-server/src/main/java/au/csiro/pathling/io/Database.java') }}
-      - name: Get current time
-        id: timestamp
-        run: echo "::set-output name=timestamp::$(date +'%Y%m%d%H%M%S')"
-      - name: Run the verify goal with Maven
-        env:
-          # If there is a cache hit on the test data, we don't need to import it. If it is a cache
-          # miss, we still need to explicitly activate the `importTestData` profile, otherwise
-          # it will be deactivated by `skipTests`.
-          PATHLING_PROFILES: runBenchmark,${{ steps.cache-test-data.outputs.cache-hit && '!importTestData' || 'importTestData' }}
-        run: >-
-          mvn --batch-mode verify
-          -pl fhir-server -am
-          -P${{ env.PATHLING_PROFILES }}
-          -DskipSurefireTests
-        timeout-minutes: 20
-      - name: Upload benchmark artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: benchmark-results
-          path: "**/jmh-*.json"
-      - name: Upload benchmark file to S3
-        run: aws s3 sync fhir-server/target/benchmark s3://pathling-benchmark/${{ github.ref }}/${{ github.run_id }}/${{ steps.timestamp.outputs.timestamp }}/
-
   js-client:
     name: JavaScript client
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
-          java-version: 11
+          java-version: 17
           distribution: "zulu"
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: "16"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -490,20 +437,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
-          java-version: 11
+          java-version: 17
           distribution: "zulu"
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: "16"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -515,7 +462,7 @@ jobs:
           -pl lib/import -am
         timeout-minutes: 5
       - name: Upload import lambda
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: import-lambda
           path: lib/import/target/pathling-import-lambda.zip
@@ -525,17 +472,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
-          java-version: 11
+          java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -547,7 +494,7 @@ jobs:
         with:
           python-version: 3.8
       - name: Cache Python packages
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: pythoncache
         with:
           path: /home/runner/.cache/pip
@@ -570,17 +517,17 @@ jobs:
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 30
       - name: Upload library API test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: library-api-surefire-reports
           path: library-api/target/surefire-reports
       - name: Upload library API test coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: library-api-coverage
           path: "**/jacoco.xml"
       - name: Upload Python API test coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: python-api-coverage
           path: lib/python/**/coverage.xml
@@ -590,28 +537,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
-          java-version: 11
+          java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |-
             ${{ runner.os }}-maven-
-      - name: Get R package installation location
-        run: echo "R_PACKAGES=$(Rscript -e 'cat(.libPaths(), sep="\n")' | head -n 1)" >> $GITHUB_ENV
       - name: Cache R packages
         uses: actions/cache@v2
         with:
-          path: ${{ env.R_PACKAGES }}
+          path: ${{ runner.temp }}/Library
           key: r-packages-${{ runner.os }}-${{ hashFiles('lib/R/DESCRIPTION.src') }}
           restore-keys: r-packages-${{ runner.os }}-
       - name: Extract Spark version
@@ -619,7 +564,7 @@ jobs:
         run: echo "SPARK_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.sparkVersion -q -DforceStdout)" >> $GITHUB_ENV
       - name: Extract Hadoop version
         working-directory: lib/R
-        run: echo "HADOOP_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.hadoopVersion -q -DforceStdout)" >> $GITHUB_ENV
+        run: echo "HADOOP_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.hadoopMajorVersion -q -DforceStdout)" >> $GITHUB_ENV
       - name: Cache Spark
         id: cache-spark
         uses: actions/cache@v2
@@ -652,6 +597,15 @@ jobs:
           -pl lib/R -am -Pdocs
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 60
+      - name: Upload check logs
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: r-check-logs
+          path: |
+            lib/R/target/pathling.Rcheck/*.log
+            lib/R/target/pathling.Rcheck/*.out
+            lib/R/target/pathling.Rcheck/*.fail
       - name: Upload package as artifact
         uses: actions/upload-artifact@v2
         with:
@@ -663,35 +617,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
-          java-version: 11
+          java-version: 17
           distribution: "zulu"
       - name: Set up Helm
         uses: azure/setup-helm@v3
         with:
           version: 3.13.2
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: "16"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |-
             ${{ runner.os }}-maven-
+      - name: Cache R packages
+        uses: actions/cache@v2
+        with:
+          path: ${{ runner.temp }}/Library
+          key: r-packages-${{ runner.os }}-${{ hashFiles('lib/R/DESCRIPTION.src') }}
+          restore-keys: r-packages-${{ runner.os }}-
       - name: Extract Spark version
         working-directory: lib/R
         run: echo "SPARK_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.sparkVersion -q -DforceStdout)" >> $GITHUB_ENV
       - name: Extract Hadoop version
         working-directory: lib/R
-        run: echo "HADOOP_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.hadoopVersion -q -DforceStdout)" >> $GITHUB_ENV
+        run: echo "HADOOP_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.hadoopMajorVersion -q -DforceStdout)" >> $GITHUB_ENV
       - name: Cache Spark
         id: cache-spark
         uses: actions/cache@v2
@@ -724,34 +684,34 @@ jobs:
     if: github.actor != 'dependabot[bot]'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Download encoders coverage report
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: encoders-coverage
           path: encoders-coverage
       - name: Download library API coverage report
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: library-api-coverage
           path: library-api-coverage
       - name: Download Python API coverage report
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: python-api-coverage
           path: python-api-coverage
       - name: Download FHIR server coverage report 1
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: fhir-server-1-coverage
           path: fhir-server-1-coverage
       - name: Download FHIR server coverage report 2
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: fhir-server-2-coverage
           path: fhir-server-2-coverage
       - name: Download FHIR server coverage report 3
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: fhir-server-3-coverage
           path: fhir-server-3-coverage
@@ -766,17 +726,17 @@ jobs:
     if: startsWith(github.ref, 'refs/heads/release/')
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
-          java-version: 11
+          java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}

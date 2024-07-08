@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.config;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
 import lombok.Data;
 
 /**

@@ -69,5 +69,4 @@ public abstract class Lists {
            ? Optional.empty()
            : Optional.of(list);
   }
-
 }

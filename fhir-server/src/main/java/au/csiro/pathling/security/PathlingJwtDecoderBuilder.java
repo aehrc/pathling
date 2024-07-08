@@ -53,6 +53,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
@@ -133,10 +134,7 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
   @Nonnull
   protected NimbusJwtDecoder buildDecoderWithValidators(
       @Nonnull final List<OAuth2TokenValidator<Jwt>> validators) {
-    final OAuth2TokenValidator[] validatorsArray = validators.toArray(new OAuth2TokenValidator[0]);
-    @SuppressWarnings("unchecked")
-    final OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(
-        validatorsArray);
+    final OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(validators);
 
     final NimbusJwtDecoder jwtDecoder = new NimbusJwtDecoder(processor());
     jwtDecoder.setJwtValidator(validator);
@@ -172,7 +170,7 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
       final HttpHeaders headers = new HttpHeaders();
       headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON, APPLICATION_JWK_SET_JSON));
       final ResponseEntity<String> response = getResponse(url, headers);
-      if (response.getStatusCodeValue() != 200) {
+      if (!HttpStatusCode.valueOf(200).equals(response.getStatusCode())) {
         throw new IOException(response.toString());
       }
       if (response.getBody() == null) {

@@ -1,5 +1,6 @@
 ---
 sidebar_position: 4
+description: Instructions for configuring Apache Spark to use the Pathling library.
 ---
 
 # Spark configuration
@@ -28,20 +29,43 @@ import TabItem from "@theme/TabItem";
 <TabItem value="python" label="Python">
 
 ```python
-from pathling import PathlingContext, find_jar
+from pathling import PathlingContext
 from pyspark.sql import SparkSession
 
 spark = (
-    SparkSession.builder
-    .config("spark.jars", find_jar())
-    .config("spark.jars.packages", "io.delta:delta-core_2.12:2.2.0")
-    .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-    .config("spark.sql.catalog.spark_catalog",
-            "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-    .getOrCreate()
+    SparkSession.builder.config(
+            "spark.jars.packages",
+            "au.csiro.pathling:library-runtime:7.0.1,"
+            "io.delta:delta-spark_2.12:3.1.0,"
+    )
+    .config(
+            "spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension"
+    )
+    .config(
+            "spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog",
+    ).getOrCreate()
 )
 
 pc = PathlingContext.create(spark)
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+sc <- spark_connect(master = "local",
+                    packages = c(paste("au.csiro.pathling:library-runtime:", pathling_version()), 
+                                 "io.delta:delta-spark_2.12:3.1.0"),
+                    config = list("sparklyr.shell.conf" = c(
+                      "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
+                      "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
+                    )), version = "3.4.0")
+
+pc <- pathling_connect(sc)
 ```
 
 </TabItem>
@@ -51,7 +75,8 @@ pc = PathlingContext.create(spark)
 import au.csiro.pathling.library.PathlingContext
 
 val spark = SparkSession.builder
-  .config("spark.jars.packages", "io.delta:delta-core_2.12:2.2.0")
+  .config("spark.jars.packages", "au.csiro.pathling:library-runtime:7.0.1," +
+      "io.delta:delta-spark_2.12:3.1.0")
   .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
   .config("spark.sql.catalog.spark_catalog",
     "org.apache.spark.sql.delta.catalog.DeltaCatalog")
@@ -71,7 +96,9 @@ class MyApp {
 
     public static void main(String[] args) {
         SparkSession spark = SparkSession.builder()
-            .config("spark.jars.packages", "io.delta:delta-core_2.12:2.2.0")
+            .config("spark.jars.packages", 
+                    "au.csiro.pathling:library-runtime:7.0.1," +
+                    "io.delta:delta-spark_2.12:3.1.0")
             .config("spark.sql.extensions", 
                     "io.delta.sql.DeltaSparkSessionExtension")
             .config("spark.sql.catalog.spark_catalog",

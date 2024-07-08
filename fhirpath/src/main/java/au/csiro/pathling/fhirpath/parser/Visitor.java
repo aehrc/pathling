@@ -27,6 +27,7 @@ import au.csiro.pathling.fhirpath.operator.BinaryOperator;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import au.csiro.pathling.fhirpath.operator.CollectionOperations;
 import au.csiro.pathling.fhirpath.operator.MethodDefinedOperator;
+import au.csiro.pathling.fhirpath.operator.SubsettingOperations;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AdditiveExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AndExpressionContext;
@@ -190,7 +191,7 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
           new Visitor().visit(ctx.expression(1)),
           // Get a wrapped version of the index operator.
           MethodDefinedOperator.build(
-              CollectionOperations.class.getDeclaredMethod("index", Collection.class,
+              SubsettingOperations.class.getDeclaredMethod("index", Collection.class,
                   IntegerCollection.class)));
     } catch (final NoSuchMethodException e) {
       throw new RuntimeException(e);

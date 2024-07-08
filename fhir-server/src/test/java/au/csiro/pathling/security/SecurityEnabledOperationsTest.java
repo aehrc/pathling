@@ -32,7 +32,8 @@ import org.springframework.test.context.TestPropertySource;
  * href="https://stackoverflow.com/questions/58289509/in-spring-boot-test-how-do-i-map-a-temporary-folder-to-a-configuration-property">In
  * Spring Boot Test, how do I map a temporary folder to a configuration property?</a>
  */
-@TestPropertySource(properties = {"pathling.auth.enabled=true"})
+@TestPropertySource(properties = {"pathling.auth.enabled=true",
+    "pathling.auth.issuer=https://pathling.acme.com/fhir"})
 @MockBean(OidcConfiguration.class)
 @MockBean(JwtDecoder.class)
 @MockBean(JwtAuthenticationConverter.class)

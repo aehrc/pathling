@@ -28,6 +28,7 @@ import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;

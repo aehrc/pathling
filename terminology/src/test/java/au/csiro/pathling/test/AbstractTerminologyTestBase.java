@@ -96,7 +96,7 @@ public abstract class AbstractTerminologyTestBase {
   }
 
   @Nonnull
-  public static WrappedArray<Row> encodeMany(Coding... codings) {
+  public static WrappedArray<Object> encodeMany(Coding... codings) {
     return WrappedArray.make(Stream.of(codings).map(CodingEncoding::encode).toArray(Row[]::new));
   }
 
@@ -104,10 +104,10 @@ public abstract class AbstractTerminologyTestBase {
   private static <T> Arguments primitiveArguments(
       final String fhirType, final DataType sqlType,
       final Function<T, ? extends Type> constructor,
-      final T[] propertyAValues, final T[] propertyBValues) {
+      final List<T> propertyAValues, final List<T> propertyBValues) {
     return arguments(fhirType, sqlType,
-        Stream.of(propertyAValues).map(constructor).toArray(Type[]::new),
-        Stream.of(propertyBValues).map(constructor).toArray(Type[]::new),
+        propertyAValues.stream().map(constructor).toList(),
+        propertyBValues.stream().map(constructor).toList(),
         propertyAValues,
         propertyBValues);
   }
@@ -116,32 +116,32 @@ public abstract class AbstractTerminologyTestBase {
   public static Stream<Arguments> propertyParameters() {
     return Stream.of(
         primitiveArguments("string", DataTypes.StringType, StringType::new,
-            new String[]{"string_a"},
-            new String[]{"string_b.0", "string_b.1"}
+            List.of("string_a"),
+            List.of("string_b.0", "string_b.1")
         ),
         primitiveArguments("code", DataTypes.StringType, CodeType::new,
-            new String[]{"code_a"},
-            new String[]{"code_b.0", "code_b.1"}
+            List.of("code_a"),
+            List.of("code_b.0", "code_b.1")
         ),
         primitiveArguments("integer", DataTypes.IntegerType, IntegerType::new,
-            new Integer[]{111},
-            new Integer[]{222, 333}
+            List.of(111),
+            List.of(222, 333)
         ),
         primitiveArguments("boolean", DataTypes.BooleanType, BooleanType::new,
-            new Boolean[]{true},
-            new Boolean[]{false, true}
+            List.of(true),
+            List.of(false, true)
         ),
         primitiveArguments("decimal", DecimalCustomCoder.decimalType(), DecimalType::new,
-            new BigDecimal[]{new BigDecimal("1.11")},
-            new BigDecimal[]{new BigDecimal("2.22"), new BigDecimal("3.33")}
+            List.of(new BigDecimal("1.11")),
+            List.of(new BigDecimal("2.22"), new BigDecimal("3.33"))
         ),
         primitiveArguments("dateTime", DataTypes.StringType, DateTimeType::new,
-            new String[]{"1999-01-01"},
-            new String[]{"2222-02-02", "3333-03-03"}
+            List.of("1999-01-01"),
+            List.of("2222-02-02", "3333-03-03")
         ),
         arguments("Coding", CodingEncoding.DATA_TYPE,
-            new Coding[]{CODING_C},
-            new Coding[]{CODING_D, CODING_E},
+            List.of(CODING_C),
+            List.of(CODING_D, CODING_E),
             CodingEncoding.encodeList(List.of(CODING_C)),
             CodingEncoding.encodeList(List.of(CODING_D, CODING_E))
         )

@@ -1,5 +1,6 @@
 ---
 sidebar_position: 7
+description: Pathling supports Kafka as a streaming data source, and all the operations available within the library are able to execute continuously across a stream of data.
 ---
 
 # Kafka integration
@@ -49,4 +50,4 @@ result = med_administrations.select(
 ```
 
 For more information about Spark's Kafka integration, see
-the [Structured Streaming + Kafka Integration Guide](https://spark.apache.org/docs/3.3.1/structured-streaming-kafka-integration.html#content).
+the [Structured Streaming + Kafka Integration Guide](https://spark.apache.org/docs/latest/structured-streaming-kafka-integration.html).

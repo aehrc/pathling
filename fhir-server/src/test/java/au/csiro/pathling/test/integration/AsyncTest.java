@@ -35,12 +35,13 @@ import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.sparkproject.jetty.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.TestPropertySource;
@@ -78,9 +79,9 @@ class AsyncTest extends IntegrationTest {
     log.info("Sending kick-off request");
     final ResponseEntity<String> response =
         restTemplate.exchange(uri, HttpMethod.GET, request, String.class);
-    assertEquals(HttpStatus.ACCEPTED_202, response.getStatusCode().value());
+    assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
 
-    assertAsyncResponse(response, HttpStatus.OK_200, true);
+    assertAsyncResponse(response, HttpStatus.OK, true);
   }
 
   @Test
@@ -103,7 +104,7 @@ class AsyncTest extends IntegrationTest {
         .exchange(uri, HttpMethod.GET, request, String.class);
     assertTrue(response.getStatusCode().is2xxSuccessful());
 
-    assertAsyncResponse(response, HttpStatus.BAD_REQUEST_400, false);
+    assertAsyncResponse(response, HttpStatus.BAD_REQUEST, false);
   }
 
   @Test
@@ -111,13 +112,13 @@ class AsyncTest extends IntegrationTest {
     final String uri = "http://localhost:" + port + "/fhir/job?id=foo";
     final ResponseEntity<String> response = restTemplate
         .exchange(uri, HttpMethod.GET, RequestEntity.get(new URI(uri)).build(), String.class);
-    assertEquals(HttpStatus.NOT_FOUND_404, response.getStatusCode().value());
+    assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
   }
 
   void assertAsyncResponse(@Nonnull final ResponseEntity<String> response,
-      final int expectedStatus, final boolean inProgressRequired)
+      final HttpStatusCode expectedStatus, final boolean inProgressRequired)
       throws MalformedURLException, URISyntaxException, InterruptedException {
-    int statusCode;
+    HttpStatusCode statusCode;
     boolean encounteredInProgressResponse = false;
     final long startTime = new Date().getTime();
     do {
@@ -132,13 +133,13 @@ class AsyncTest extends IntegrationTest {
       final ResponseEntity<String> statusResponse =
           restTemplate.exchange(statusUrl.toURI(), HttpMethod.GET, statusRequest, String.class);
 
-      statusCode = statusResponse.getStatusCodeValue();
+      statusCode = statusResponse.getStatusCode();
       final List<String> eTag = statusResponse.getHeaders().get("ETag");
       final List<String> cacheControl = statusResponse.getHeaders().get("Cache-Control");
       assertNotNull(eTag);
       assertNotNull(cacheControl);
-      if (statusCode != expectedStatus) {
-        assertEquals(HttpStatus.ACCEPTED_202, statusCode);
+      if (!expectedStatus.equals(statusCode)) {
+        assertEquals(HttpStatus.ACCEPTED, statusCode);
         assertTrue(eTag.contains("W/\"0\""));
         assertTrue(cacheControl.contains("no-store"));
         encounteredInProgressResponse = true;
@@ -158,7 +159,7 @@ class AsyncTest extends IntegrationTest {
   }
 
   @Nonnull
-  private String getContentLocation(@Nonnull ResponseEntity<String> response) {
+  private String getContentLocation(@Nonnull final ResponseEntity<String> response) {
     final List<String> contentLocations = response.getHeaders().get("Content-Location");
     assertNotNull(contentLocations);
     final String contentLocation = contentLocations.get(0);
@@ -178,11 +179,11 @@ class AsyncTest extends IntegrationTest {
     log.info("Sending kick-off request");
     final ResponseEntity<String> response1 =
         restTemplate.exchange(uri, HttpMethod.GET, request, String.class);
-    assertEquals(HttpStatus.ACCEPTED_202, response1.getStatusCode().value());
+    assertEquals(HttpStatus.ACCEPTED, response1.getStatusCode());
 
     final ResponseEntity<String> response2 =
         restTemplate.exchange(uri, HttpMethod.GET, request, String.class);
-    assertEquals(HttpStatus.ACCEPTED_202, response1.getStatusCode().value());
+    assertEquals(HttpStatus.ACCEPTED, response1.getStatusCode());
     assertEquals(getContentLocation(response1), getContentLocation(response2));
   }
 

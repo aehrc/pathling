@@ -18,7 +18,10 @@
 package au.csiro.pathling.test.integration;
 
 import static au.csiro.pathling.test.TestResources.assertJson;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.Arrays;
+import java.util.Collections;
 import org.json.JSONException;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -29,11 +32,19 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.TestPropertySource;
 
 /**
  * @author John Grimes
  */
+@TestPropertySource(properties = {
+    "pathling.cors.maxAge=800",
+    "pathling.cors.allowedMethods=GET,POST",
+    "pathling.cors.allowedOrigins=http://foo.bar,http://boo.bar",
+    "pathling.cors.allowedHeaders=X-Mine,X-Other"
+})
 @Tag("Tranche2")
 class CapabilityStatementTest extends IntegrationTest {
 
@@ -56,12 +67,20 @@ class CapabilityStatementTest extends IntegrationTest {
     final HttpHeaders corsHeaders = new HttpHeaders();
     corsHeaders.setOrigin("http://foo.bar");
     corsHeaders.setAccessControlRequestMethod(HttpMethod.GET);
+    corsHeaders.setAccessControlRequestHeaders(Arrays.asList("X-Mine", "X-Skip"));
 
     final ResponseEntity<String> response = restTemplate.exchange(
         "http://localhost:" + port + "/fhir/metadata", HttpMethod.OPTIONS,
         new HttpEntity<String>(corsHeaders), String.class);
 
-    System.out.println(response);
+    final HttpHeaders responseHeaders = response.getHeaders();
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals("http://foo.bar", responseHeaders.getAccessControlAllowOrigin());
+    assertEquals(Arrays.asList(HttpMethod.GET, HttpMethod.POST),
+        responseHeaders.getAccessControlAllowMethods());
+    assertEquals(800L, responseHeaders.getAccessControlMaxAge());
+    assertEquals(Collections.singletonList("X-Mine"),
+        responseHeaders.getAccessControlAllowHeaders());
   }
 
 }

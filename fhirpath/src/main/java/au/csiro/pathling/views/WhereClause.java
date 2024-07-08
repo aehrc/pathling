@@ -2,7 +2,7 @@ package au.csiro.pathling.views;
 
 import com.google.gson.annotations.SerializedName;
 import jakarta.annotation.Nullable;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**

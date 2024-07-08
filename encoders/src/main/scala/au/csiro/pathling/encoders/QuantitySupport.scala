@@ -26,11 +26,9 @@ package au.csiro.pathling.encoders
 import au.csiro.pathling.encoders.terminology.ucum.Ucum
 import au.csiro.pathling.sql.types.FlexiDecimal
 import au.csiro.pathling.sql.types.FlexiDecimalSupport.createFlexiDecimalSerializer
-import org.apache.spark.sql.Column
+import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, StaticInvoke}
-import org.apache.spark.sql.catalyst.expressions.{CreateNamedStruct, Expression, If, IsNull, Literal}
-import org.apache.spark.sql.functions.{lit, struct}
-import org.apache.spark.sql.types.{DataTypes, Decimal, DecimalType, ObjectType, StructField}
+import org.apache.spark.sql.types.{DataTypes, ObjectType, StructField}
 import org.apache.spark.unsafe.types.UTF8String
 
 /**
@@ -54,15 +52,15 @@ object QuantitySupport {
 
     val canonicalizedValue =
       createFlexiDecimalSerializer(
-        StaticInvoke(classOf[Ucum], ObjectType(classOf[java.math.BigDecimal]),
+        Catalyst.staticInvoke(classOf[Ucum], ObjectType(classOf[java.math.BigDecimal]),
           "getCanonicalValue", Seq(valueExp, codeExp)))
 
     val canonicalizedCode =
-      StaticInvoke(
+      Catalyst.staticInvoke(
         classOf[UTF8String],
         DataTypes.StringType,
         "fromString",
-        StaticInvoke(classOf[Ucum], ObjectType(classOf[java.lang.String]), "getCanonicalCode",
+        Catalyst.staticInvoke(classOf[Ucum], ObjectType(classOf[java.lang.String]), "getCanonicalCode",
           Seq(valueExp, codeExp)) :: Nil)
     Seq(
       (VALUE_CANONICALIZED_FIELD_NAME, canonicalizedValue),

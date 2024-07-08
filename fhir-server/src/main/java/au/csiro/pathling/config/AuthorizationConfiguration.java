@@ -19,9 +19,9 @@ package au.csiro.pathling.config;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Optional;
-import javax.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.ToString;
 

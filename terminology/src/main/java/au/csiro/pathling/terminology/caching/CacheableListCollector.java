@@ -35,6 +35,8 @@ import java.util.stream.Collector;
  * <p>
  * We need this because the list implementation needs to be constrained to ensure that it is
  * serializable for persistent caching purposes.
+ *
+ * @param <T> the type of the elements to collect
  */
 public class CacheableListCollector<T> implements Collector<T, ArrayList<T>, ArrayList<T>> {
 
@@ -58,7 +60,7 @@ public class CacheableListCollector<T> implements Collector<T, ArrayList<T>, Arr
 
   @Override
   public Function<ArrayList<T>, ArrayList<T>> finisher() {
-    return i -> (ArrayList<T>) i;
+    return Function.identity();
   }
 
   @Override

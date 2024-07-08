@@ -98,3 +98,17 @@ code {
 table {
     font-size: 90%;
 }
+
+.yt-embed {
+    /* Default styling for screens wider than 560px */
+    width: 560px;
+    height: 315px;
+}
+
+@media screen and (max-width: 560px) {
+    .yt-embed {
+        /* Adjustments for screens 560px wide or less */
+        width: 92vw;
+        height: calc(92vw * 0.5625);
+    }
+}

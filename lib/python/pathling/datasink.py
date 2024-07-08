@@ -28,6 +28,22 @@ class ImportMode:
     MERGE: str = "merge"
 
 
+class SaveMode:
+    """
+    Constants that represent the different save modes.
+
+    OVERWRITE: Overwrite any existing data.
+    APPEND: Append the new data to the existing data.
+    IGNORE: Only save the data if the file does not already exist.
+    ERROR: Raise an error if the file already exists.
+    """
+
+    OVERWRITE: str = "overwrite"
+    APPEND: str = "append"
+    IGNORE: str = "ignore"
+    ERROR: str = "error"
+
+
 class DataSinks(SparkConversionsMixin):
     """
     A class for writing FHIR data to a variety of different targets.
@@ -41,12 +57,22 @@ class DataSinks(SparkConversionsMixin):
             )
         )
 
-    def ndjson(self, path: str, file_name_mapper: Callable[[str], str] = None) -> None:
+    def ndjson(
+        self,
+        path: str,
+        save_mode: Optional[str] = SaveMode.ERROR,
+        file_name_mapper: Callable[[str], str] = None,
+    ) -> None:
         """
         Writes the data to a directory of NDJSON files. The files will be named using the resource
         type and the ".ndjson" extension.
 
         :param path: The URI of the directory to write the files to.
+        :param save_mode: The save mode to use when writing the data:
+            - "overwrite" will overwrite any existing data.
+            - "append" will append the new data to the existing data.
+            - "ignore" will only save the data if the file does not already exist.
+            - "error" will raise an error if the file already exists.
         :param file_name_mapper: An optional function that can be used to customise the mapping of
         the resource type to the file name.
         """
@@ -54,17 +80,22 @@ class DataSinks(SparkConversionsMixin):
             wrapped_mapper = StringMapper(
                 self.spark._jvm._gateway_client, file_name_mapper
             )
-            self._datasinks.ndjson(path, wrapped_mapper)
+            self._datasinks.ndjson(path, save_mode, wrapped_mapper)
         else:
-            self._datasinks.ndjson(path)
+            self._datasinks.ndjson(path, save_mode)
 
-    def parquet(self, path: str) -> None:
+    def parquet(self, path: str, save_mode: Optional[str] = SaveMode.ERROR) -> None:
         """
         Writes the data to a directory of Parquet files.
 
         :param path: The URI of the directory to write the files to.
+        :param save_mode: The save mode to use when writing the data:
+            - "overwrite" will overwrite any existing data.
+            - "append" will append the new data to the existing data.
+            - "ignore" will only save the data if the file does not already exist.
+            - "error" will raise an error if the file already exists.
         """
-        self._datasinks.parquet(path)
+        self._datasinks.parquet(path, save_mode)
 
     def delta(
         self, path: str, import_mode: Optional[str] = ImportMode.OVERWRITE

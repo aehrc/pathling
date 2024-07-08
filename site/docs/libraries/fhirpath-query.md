@@ -1,5 +1,6 @@
 ---
 sidebar_position: 3
+description: The Pathling library can be used to query datasets of FHIR resources using FHIRPath. This is useful for aggregating data, and creating custom views.
 ---
 
 # FHIRPath query
@@ -335,7 +336,7 @@ NdjsonSource data = pc.read().ndjson("/usr/share/staging/ndjson");
 You can also accommodate a custom naming scheme within the NDJSON files by using
 the [file_name_mapper](https://pathling.csiro.au/docs/python/pathling.html#pathling.datasource.DataSources.ndjson)
 argument. Here is an example of how to import the
-[MIMIC-IV FHIR data set](https://physionet.org/content/mimic-iv-fhir-demo/2.0/):
+[MIMIC-IV FHIR data set](https://physionet.org/content/mimic-iv-fhir/1.0/):
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -344,12 +345,9 @@ argument. Here is an example of how to import the
 ```python
 data = pc.read.ndjson(
         "/usr/share/staging/ndjson",
-        file_name_mapper=lambda file_name: [
-            re.search(
-                    r"^(\w+?)(?:ICU|Chartevents|Datetimeevents|Labevents|"
-                    r"MicroOrg|MicroSusc|MicroTest|Outputevents|Lab)?$",
-                    file_name)
-            .group(1)])
+        file_name_mapper=lambda file_name: re.findall(r"Mimic(\w+?)(?:ED|ICU|"
+        r"Chartevents|Datetimeevents|Labevents|MicroOrg|MicroSusc|MicroTest|"
+        r"Outputevents|Lab|Mix|VitalSigns|VitalSignsED)?$", file_name))
 ```
 
 </TabItem>

@@ -39,6 +39,22 @@ ImportMode <- list(
     MERGE = "merge"
 )
 
+#' SaveMode
+#'
+#' The following save modes are supported:
+#' \itemize{
+#'   \item{\code{OVERWRITE}: Overwrite any existing data.}
+#'   \item{\code{APPEND}: Append the new data to the existing data.}
+#'   \item{\code{IGNORE}: Only save the data if the file does not already exist.}
+#'   \item{\code{ERROR}: Raise an error if the file already exists.}
+#' }
+SaveMode <- list(
+    OVERWRITE = "overwrite",
+    APPEND = "append",
+    IGNORE = "ignore",
+    ERROR = "error"
+)
+
 #' Create a data source from NDJSON
 #' 
 #' Creates a data source from a directory containing NDJSON files. The files must be named with the 
@@ -250,6 +266,7 @@ invoke_datasink <- function(ds, name, ...) {
 #'
 #' @param ds The DataSource object.
 #' @param path The URI of the directory to write the files to.
+#' @param save_mode The save mode to use when writing the data.
 #' @param file_name_mapper An optional function that can be used to customise the mapping 
 #'  of the resource type to the file name. Currently not implemented.
 #'
@@ -269,10 +286,10 @@ invoke_datasink <- function(ds, name, ...) {
 #' @family data sink functions
 #' 
 #' @export
-ds_write_ndjson <- function(ds, path, file_name_mapper = NULL) {
+ds_write_ndjson <- function(ds, path, save_mode = SaveMode$ERROR, file_name_mapper = NULL) {
   #See: issue #1601 (Implement file_name_mappers in R sparkly API)
   stopifnot(file_name_mapper == NULL)
-  invoke_datasink(ds, "ndjson", path)
+  invoke_datasink(ds, "ndjson", path, save_mode)
 }
 
 #' Write FHIR data to Parquet files
@@ -281,6 +298,7 @@ ds_write_ndjson <- function(ds, path, file_name_mapper = NULL) {
 #'
 #' @param ds The DataSource object.
 #' @param path The URI of the directory to write the files to.
+#' @param save_mode The save mode to use when writing the data.
 #'
 #' @return No return value, called for side effects only.
 #' 
@@ -298,8 +316,8 @@ ds_write_ndjson <- function(ds, path, file_name_mapper = NULL) {
 #' @family data sink functions
 #' 
 #' @export
-ds_write_parquet <- function(ds, path) {
-  invoke_datasink(ds, "parquet", path)
+ds_write_parquet <- function(ds, path, save_mode = SaveMode$ERROR) {
+  invoke_datasink(ds, "parquet", path, save_mode)
 }
 
 #' Write FHIR data to Delta files

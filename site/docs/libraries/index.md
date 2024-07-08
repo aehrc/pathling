@@ -1,6 +1,7 @@
 ---
 sidebar_position: 1
 sidebar_label: Introduction
+description: Pathling provides a set of libraries that provide assistance with using FHIR and terminology services from Apache Spark applications and data science workflows.
 ---
 
 # Libraries
@@ -13,7 +14,7 @@ Apache Spark applications and data science workflows.
 The libraries are available for:
 
 - [Python](pathname:///docs/python/pathling.html) (based on [PySpark](https://spark.apache.org/docs/latest/api/python/reference/index.html))
-- [R](pathname:///docs/r/index.html) (based on [sparklyr](https://spark.rstudio.com/))
+- [R](pathname:///docs/r/index.html) (based on [sparklyr](https://spark.posit.co/))
 - [Scala](pathname:///docs/scala/au/csiro/pathling/index.html)
 - [Java](pathname:///docs/java/index.html)
 

@@ -23,11 +23,14 @@
 
 package au.csiro.pathling.encoders;
 
+import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import ca.uhn.fhir.parser.IParser;
 import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -273,12 +276,79 @@ public class FhirEncodersTest {
 
   @Test
   public void reference() {
+    final Condition conditionWithReferences = TestData.conditionWithReferencesWithIdentifiers();
 
-    assertEquals(condition.getSubject().getReference(),
-        conditionsDataset.select("subject.reference").head().get(0));
-    assertEquals(condition.getSubject().getReference(),
-        decodedCondition.getSubject().getReference());
+    final Dataset<Condition> conditionL3Dataset = spark
+        .createDataset(ImmutableList.of(conditionWithReferences), ENCODERS_L3.of(Condition.class));
+
+    final Condition decodedL3Condition = conditionL3Dataset.head();
+
+    assertEquals(
+        RowFactory.create(
+            "withReferencesWithIdentifiers",
+            "Patient/example",
+            "http://terminology.hl7.org/CodeSystem/v2-0203",
+            "MR",
+            "https://fhir.example.com/identifiers/mrn",
+            "urn:id"
+        ),
+        conditionL3Dataset.select(
+            col("id"),
+            col("subject.reference"),
+            col("subject.identifier.type.coding.system").getItem(0),
+            col("subject.identifier.type.coding.code").getItem(0),
+            col("subject.identifier.system"),
+            col("subject.identifier.value")
+        ).head());
+
+    assertEquals("Patient/example",
+        decodedL3Condition.getSubject().getReference());
+
+    assertEquals("urn:id",
+        decodedL3Condition.getSubject().getIdentifier().getValue());
+
+    // the assigner should be pruned from the reference identifier.
+    assertTrue(conditionWithReferences.getSubject().getIdentifier().hasAssigner());
+    assertFalse(decodedL3Condition.getSubject().getIdentifier().hasAssigner());
   }
+
+
+  @Test
+  public void identifier() {
+    final Condition conditionWithIdentifiers = TestData.conditionWithIdentifiersWithReferences();
+
+    final Dataset<Condition> conditionL3Dataset = spark
+        .createDataset(ImmutableList.of(conditionWithIdentifiers), ENCODERS_L3.of(Condition.class));
+
+    final Condition decodedL3Condition = conditionL3Dataset.head();
+
+    assertEquals(
+        RowFactory.create(
+            "withIdentifiersWithReferences",
+            "http://terminology.hl7.org/CodeSystem/v2-0203",
+            "MR",
+            "https://fhir.example.com/identifiers/mrn",
+            "urn:id01",
+            "Organization/001",
+            "urn:id02"
+        ),
+        conditionL3Dataset.select(
+            col("id"),
+            col("identifier.type.coding").getItem(0).getField("system").getItem(0),
+            col("identifier.type.coding").getItem(0).getField("code").getItem(0),
+            col("identifier.system").getItem(0),
+            col("identifier.value").getItem(0),
+            col("identifier.assigner.reference").getItem(0),
+            col("identifier.assigner.identifier.value").getItem(0)
+        ).head());
+
+    // the assigner should be pruned from the reference identifier.
+    assertTrue(conditionWithIdentifiers.getIdentifier().get(0).getAssigner().getIdentifier()
+        .hasAssigner());
+    assertFalse(
+        decodedL3Condition.getIdentifier().get(0).getAssigner().getIdentifier().hasAssigner());
+  }
+
 
   @Test
   public void integer() {
@@ -325,13 +395,13 @@ public class FhirEncodersTest {
         .getAnswerDecimalType().getValue();
 
     final BigDecimal queriedDecimal = (BigDecimal) questionnaireDataset
-        .select(functions.col("item").getItem(0).getField("enableWhen").getItem(0)
+        .select(col("item").getItem(0).getField("enableWhen").getItem(0)
             .getField("answerDecimal"))
         .head()
         .get(0);
 
     final int queriedDecimal_scale = questionnaireDataset
-        .select(functions.col("item").getItem(0).getField("enableWhen").getItem(0)
+        .select(col("item").getItem(0).getField("enableWhen").getItem(0)
             .getField("answerDecimal_scale"))
         .head()
         .getInt(0);
@@ -360,13 +430,13 @@ public class FhirEncodersTest {
         .getValueDecimalType().getValue();
 
     final BigDecimal queriedDecimal = (BigDecimal) questionnaireResponseDataset
-        .select(functions.col("item").getItem(0).getField("answer").getItem(0)
+        .select(col("item").getItem(0).getField("answer").getItem(0)
             .getField("valueDecimal"))
         .head()
         .get(0);
 
     final int queriedDecimal_scale = questionnaireResponseDataset
-        .select(functions.col("item").getItem(0).getField("answer").getItem(0)
+        .select(col("item").getItem(0).getField("answer").getItem(0)
             .getField("valueDecimal_scale"))
         .head()
         .getInt(0);
@@ -516,13 +586,13 @@ public class FhirEncodersTest {
 
     assertEquals(Stream.of("Item/0", "Item/0", "Item/0", "Item/0").map(RowFactory::create)
             .collect(Collectors.toUnmodifiableList()),
-        questionnaireDataset_L3.select(functions.col("item").getItem(0).getField("linkId"))
+        questionnaireDataset_L3.select(col("item").getItem(0).getField("linkId"))
             .collectAsList());
 
     assertEquals(Stream.of(null, "Item/1.0", "Item/1.0", "Item/1.0").map(RowFactory::create)
             .collect(Collectors.toUnmodifiableList()),
         questionnaireDataset_L3
-            .select(functions.col("item")
+            .select(col("item")
                 .getItem(1).getField("item")
                 .getItem(0).getField("linkId"))
             .collectAsList());
@@ -530,7 +600,7 @@ public class FhirEncodersTest {
     assertEquals(Stream.of(null, null, "Item/2.1.0", "Item/2.1.0").map(RowFactory::create)
             .collect(Collectors.toUnmodifiableList()),
         questionnaireDataset_L3
-            .select(functions.col("item")
+            .select(col("item")
                 .getItem(2).getField("item")
                 .getItem(1).getField("item")
                 .getItem(0).getField("linkId"))
@@ -539,7 +609,7 @@ public class FhirEncodersTest {
     assertEquals(Stream.of(null, null, null, "Item/3.2.1.0").map(RowFactory::create)
             .collect(Collectors.toUnmodifiableList()),
         questionnaireDataset_L3
-            .select(functions.col("item")
+            .select(col("item")
                 .getItem(3).getField("item")
                 .getItem(2).getField("item")
                 .getItem(1).getField("item")
@@ -555,4 +625,43 @@ public class FhirEncodersTest {
 
     assertEquals(originalComparator.toCode(), queriedComparator);
   }
+
+  @Test
+  public void nullEncoding() {
+    // empty elements of all types should be encoded as nulls
+    final Observation emptyObservation = new Observation();
+    assertFalse(emptyObservation.hasSubject());
+    final Dataset<Observation> observationsDataset = spark.createDataset(
+        ImmutableList.of(emptyObservation),
+        ENCODERS_L0.of(Observation.class));
+    // 'subject' is a struct 
+    // 'identifier' is an array of struct
+    //  'status' is a primitive type
+    final Row subjectRow = observationsDataset.toDF().select("subject", "identifier", "status")
+        .first();
+    assertTrue(subjectRow.isNullAt(0));
+    assertTrue(subjectRow.isNullAt(1));
+    assertTrue(subjectRow.isNullAt(2));
+  }
+
+
+  @Test
+  public void nullEncodingFromJson() {
+    final IParser parser = ENCODERS_L0.getContext().newJsonParser();
+    final Observation emptyObservationFromJson = parser.parseResource(Observation.class,
+        "{ \"resourceType\": \"Observation\"}");
+    assertFalse(emptyObservationFromJson.hasSubject());
+    final Dataset<Observation> observationsDataset = spark.createDataset(
+        ImmutableList.of(emptyObservationFromJson),
+        ENCODERS_L0.of(Observation.class));
+    // 'subject' is a struct 
+    // 'identifier' is an array of struct
+    //  'status' is a primitive type
+    final Row subjectRow = observationsDataset.toDF().select("subject", "identifier", "status")
+        .first();
+    assertTrue(subjectRow.isNullAt(0));
+    assertTrue(subjectRow.isNullAt(1));
+    assertTrue(subjectRow.isNullAt(2));
+  }
+
 }

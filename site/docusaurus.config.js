@@ -95,7 +95,8 @@ const config = {
         theme: lightCodeTheme,
         darkTheme: darkCodeTheme,
         additionalLanguages: ["java", "scala", "yaml", "docker", "r"]
-      }
+      },
+      image: "/assets/images/social-preview.png",
     })
 };
 

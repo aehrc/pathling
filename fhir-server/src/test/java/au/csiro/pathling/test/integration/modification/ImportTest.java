@@ -19,8 +19,8 @@ package au.csiro.pathling.test.integration.modification;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsUrl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -203,7 +203,7 @@ class ImportTest extends ModificationTest {
         () -> importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT)));
     final BaseServerResponseException convertedError =
         ErrorHandlingInterceptor.convertError(error);
-    assertTrue(convertedError instanceof InvalidRequestException);
+    assertInstanceOf(InvalidRequestException.class, convertedError);
     assertEquals("Encountered a resource with no ID", convertedError.getMessage());
   }
 

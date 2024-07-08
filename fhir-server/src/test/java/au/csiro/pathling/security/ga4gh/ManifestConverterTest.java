@@ -41,6 +41,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -52,7 +53,7 @@ import org.springframework.test.context.TestPropertySource;
     "pathling.storage.databaseName=parquet"})
 @Tag("Tranche2")
 @Slf4j
-@SpringBootTest
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 class ManifestConverterTest extends AbstractParserTest {
 
   @Autowired

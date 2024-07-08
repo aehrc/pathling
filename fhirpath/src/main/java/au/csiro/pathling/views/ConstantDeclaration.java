@@ -1,7 +1,7 @@
 package au.csiro.pathling.views;
 
 import jakarta.annotation.Nonnull;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.hl7.fhir.instance.model.api.IBase;
 

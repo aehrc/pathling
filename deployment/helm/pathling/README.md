@@ -75,7 +75,7 @@ scenario, all processing is performed on a single pod.
 
 ```yml
 pathling:
-    image: aehrc/pathling:6
+    image: aehrc/pathling:7
     resources:
         requests:
             cpu: 2
@@ -113,7 +113,7 @@ pods on demand (at the cost of some latency).
 
 ```yml
 pathling:
-    image: aehrc/pathling:6
+    image: aehrc/pathling:7
     resources:
         requests:
             cpu: 1
@@ -138,7 +138,7 @@ pathling:
         logging.level.au.csiro.pathling: debug
         spark.master: k8s://https://kubernetes.default.svc
         spark.kubernetes.namespace: pathling
-        spark.kubernetes.executor.container.image: aehrc/pathling:6
+        spark.kubernetes.executor.container.image: aehrc/pathling:7
         spark.kubernetes.executor.volumes.hostPath.warehouse.options.path: /home/user/data/pathling
         spark.kubernetes.executor.volumes.hostPath.warehouse.mount.path: /usr/share/warehouse
         spark.kubernetes.executor.volumes.hostPath.warehouse.mount.readOnly: false

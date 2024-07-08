@@ -1,12 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ This is a modified version of the Bunsen library, originally published at
-  ~ https://github.com/cerner/bunsen.
-  ~
-  ~ Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
-  ~ the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
-  ~
-  ~ These modifications are copyright 2023 Commonwealth Scientific and Industrial Research
+  ~ Copyright 2023 Commonwealth Scientific and Industrial Research
   ~ Organisation (CSIRO) ABN 41 687 119 230.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,23 +19,13 @@
 <configuration>
   <appender class="ch.qos.logback.core.ConsoleAppender" name="STDOUT">
     <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] [%X{requestId}] %-5level %logger{36} - %msg%n</pattern>
     </encoder>
   </appender>
-
-  <appender name="CODEGEN" class="ch.qos.logback.core.FileAppender">
-    <file>target/codegen.log</file>
-    <encoder>
-      <pattern>%date %level [%thread] %logger{10} [%file:%line] %msg%n</pattern>
-    </encoder>
-  </appender>
-
   <logger level="INFO" name="au.csiro"/>
-  <!-- enable to debug expression code generation -->
-  <logger level="DEBUG" name="org.apache.spark.sql.catalyst.expressions.codegen.CodeGenerator"
-    additivity="false">
-    <appender-ref ref="CODEGEN"/>
-  </logger>
+  <logger level="ERROR" name="org.apache.hadoop.metrics2"/>
+  <logger level="ERROR" name="org.apache.spark.sql.catalyst.util.SparkStringUtils"/>
+  <logger level="WARN" name="requestLogger"/>
   <root level="WARN">
     <appender-ref ref="STDOUT"/>
   </root>

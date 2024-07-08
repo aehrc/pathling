@@ -1,3 +1,7 @@
+---
+description: A client library for the Pathling FHIR API, for use with JavaScript and TypeScript.
+---
+
 # pathling-client
 
 [pathling-client](https://www.npmjs.com/package/pathling-client) is a client

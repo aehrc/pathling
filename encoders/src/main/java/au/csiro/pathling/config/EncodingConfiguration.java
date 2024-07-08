@@ -23,9 +23,9 @@
 
 package au.csiro.pathling.config;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import java.util.Set;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
 import au.csiro.pathling.encoders.FhirEncoders;
 import lombok.Builder;
 import lombok.Data;
