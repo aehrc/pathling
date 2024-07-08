@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.operator;
 
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import javax.annotation.Nonnull;
 
 /**
@@ -43,9 +44,11 @@ public class DateArithmeticOperator implements BinaryOperator {
 
   // TODO: implement with columns
 
-  // @Nonnull
-  // @Override
-  // public Collection invoke(@Nonnull final BinaryOperatorInput input) {
+  @Nonnull
+  @Override
+  public Collection invoke(@Nonnull final BinaryOperatorInput input) {
+    return null;
+  }
   //   final Collection left = input.getLeft();
   //   final Collection right = input.getRight();
   //   checkUserInput(left instanceof Temporal,
