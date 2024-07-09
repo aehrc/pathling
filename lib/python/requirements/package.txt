@@ -1,2 +1,0 @@
-pyspark==3.5.1
-deprecated==1.2.14

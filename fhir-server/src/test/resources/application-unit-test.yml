@@ -1,7 +1,0 @@
-spark:
-  ui:
-    enabled: false
-
-spring:
-  main:
-    banner-mode: off

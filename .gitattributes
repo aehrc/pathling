@@ -1,4 +1,0 @@
-site/* linguist-documentation
-licenses/* linguist-documentation
-fhir-server/src/main/resources/license-template.ftl linguist-documentation
-**/src/license/THIRD-PARTY.properties linguist-generated
