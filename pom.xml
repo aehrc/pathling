@@ -22,7 +22,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>7.0.1</version>
+  <version>8.0.0</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -43,6 +43,10 @@
       <url>https://github.com/piotrszul</url>
     </developer>
   </developers>
+  
+  <modules>
+    <module>encoders</module>
+  </modules>
 
   <organization>
     <name>Australian e-Health Research Centre, CSIRO</name>
@@ -69,300 +73,28 @@
   </ciManagement>
 
   <properties>
-    <project.majorVersion>7</project.majorVersion>
+    <project.majorVersion>8</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <pathling.sparkVersion>3.5.0</pathling.sparkVersion>
     <pathling.scalaVersion>2.12</pathling.scalaVersion>
     <pathling.scalaFullVersion>2.12.17</pathling.scalaFullVersion>
-    <pathling.deltaVersion>3.2.0</pathling.deltaVersion>
-    <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
-    <pathling.hadoopMajorVersion>3</pathling.hadoopMajorVersion>
     <pathling.hapiFhirVersion>7.0.2</pathling.hapiFhirVersion>
-    <pathling.springBootVersion>3.2.0</pathling.springBootVersion>
-    <pathling.springSecurityVersion>6.2.0</pathling.springSecurityVersion>
-    <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
-    <pathling.dockerJavaVersion>3.3.4</pathling.dockerJavaVersion>
-    <pathling.awsSdkVersion>1.12.603</pathling.awsSdkVersion>
-    <pathling.lombokVersion>1.18.32</pathling.lombokVersion>
-    <pathling.guavaVersion>32.1.3-jre</pathling.guavaVersion>
-    <pathling.infinispanVersion>15.0.3.Final</pathling.infinispanVersion>
+    <pathling.surefireVersion>3.2.5</pathling.surefireVersion>
     <pathling.jacksonVersion>2.16.1</pathling.jacksonVersion>
     <pathling.jerseyVersion>2.40</pathling.jerseyVersion>
-    <pathling.surefireVersion>3.2.5</pathling.surefireVersion>
-    <pathling.logbackVersion>1.4.14</pathling.logbackVersion>
-    <pathling.slf4jVersion>2.0.9</pathling.slf4jVersion>
-    <pathling.derbyVersion>10.14.2.0</pathling.derbyVersion>
+    <pathling.jacksonVersion>2.15.4</pathling.jacksonVersion>
+    <pathling.junitVersion>5.9.1</pathling.junitVersion>
+    <pathling.jettyVersion>9.4.44.v20210927</pathling.jettyVersion>
   </properties>
-
-  <modules>
-    <module>encoders</module>
-    <module>library-api</module>
-    <module>library-runtime</module>
-    <module>terminology</module>
-    <module>fhirpath</module>
-    <module>fhir-server</module>
-    <module>lib/import</module>
-    <module>lib/js</module>
-    <module>lib/python</module>
-    <module>lib/R</module>
-    <module>deployment/helm</module>
-    <module>site</module>
-    <module>utilities</module>
-  </modules>
 
   <dependencyManagement>
     <dependencies>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>encoders</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>encoders</artifactId>
-        <version>${project.version}</version>
-        <classifier>sources</classifier>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>encoders</artifactId>
-        <version>${project.version}</version>
-        <classifier>javadoc</classifier>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>encoders</artifactId>
-        <version>${project.version}</version>
-        <type>test-jar</type>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>terminology</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>terminology</artifactId>
-        <version>${project.version}</version>
-        <classifier>sources</classifier>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>terminology</artifactId>
-        <version>${project.version}</version>
-        <type>test-jar</type>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>fhirpath</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>fhirpath</artifactId>
-        <version>${project.version}</version>
-        <classifier>sources</classifier>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>fhirpath</artifactId>
-        <version>${project.version}</version>
-        <type>test-jar</type>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>fhir-server</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>fhir-server</artifactId>
-        <version>${project.version}</version>
-        <classifier>sources</classifier>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>library-api</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>library-api</artifactId>
-        <version>${project.version}</version>
-        <classifier>sources</classifier>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>library-api</artifactId>
-        <version>${project.version}</version>
-        <type>test-jar</type>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>library-runtime</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>utilities</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>utilities</artifactId>
-        <version>${project.version}</version>
-        <classifier>sources</classifier>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>utilities</artifactId>
-        <version>${project.version}</version>
-        <type>test-jar</type>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>python</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>python</artifactId>
-        <version>${project.version}</version>
-        <classifier>docs</classifier>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>r</artifactId>
-        <version>${project.version}</version>
-        <classifier>docs</classifier>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>js</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>import</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>helm</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-
-      <!-- Ensure that consistent and correct versions of Jackson and Jersey are used. -->
-      <dependency>
-        <groupId>com.fasterxml.jackson</groupId>
-        <artifactId>jackson-bom</artifactId>
-        <version>${pathling.jacksonVersion}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.jersey</groupId>
-        <artifactId>jersey-bom</artifactId>
-        <version>${pathling.jerseyVersion}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-
-      <!-- Apache Spark -->
-      <dependency>
-        <groupId>org.apache.spark</groupId>
-        <artifactId>spark-core_${pathling.scalaVersion}</artifactId>
-        <version>${pathling.sparkVersion}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j2-impl</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
       <dependency>
         <groupId>org.apache.spark</groupId>
         <artifactId>spark-sql_${pathling.scalaVersion}</artifactId>
         <version>${pathling.sparkVersion}</version>
       </dependency>
-      <dependency>
-        <groupId>org.apache.spark</groupId>
-        <artifactId>spark-catalyst_${pathling.scalaVersion}</artifactId>
-        <version>${pathling.sparkVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.spark</groupId>
-        <artifactId>spark-hive_${pathling.scalaVersion}</artifactId>
-        <version>${pathling.sparkVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.spark</groupId>
-        <artifactId>spark-unsafe_${pathling.scalaVersion}</artifactId>
-        <version>${pathling.sparkVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.spark</groupId>
-        <artifactId>spark-kubernetes_${pathling.scalaVersion}</artifactId>
-        <version>${pathling.sparkVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.delta</groupId>
-        <artifactId>delta-spark_${pathling.scalaVersion}</artifactId>
-        <version>${pathling.deltaVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-client-api</artifactId>
-        <version>${pathling.hadoopVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-client-runtime</artifactId>
-        <version>${pathling.hadoopVersion}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-aws</artifactId>
-        <version>${pathling.hadoopVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.curator</groupId>
-        <artifactId>curator-client</artifactId>
-        <version>5.6.0</version>
-      </dependency>
-      <dependency>
-        <groupId>org.scala-lang</groupId>
-        <artifactId>scala-library</artifactId>
-        <version>${pathling.scalaFullVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.derby</groupId>
-        <artifactId>derby</artifactId>
-        <version>${pathling.derbyVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.derby</groupId>
-        <artifactId>derbytools</artifactId>
-        <version>${pathling.derbyVersion}</version>
-      </dependency>
-      <!-- This is required for Spark UI, which still has some expectations that a legacy 
-      javax.servlet API is present -->
-      <dependency>
-        <groupId>javax.servlet</groupId>
-        <artifactId>javax.servlet-api</artifactId>
-        <version>4.0.1</version>
-        <scope>runtime</scope>
-      </dependency>
-
-      <!-- HAPI FHIR -->
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>hapi-fhir-bom</artifactId>
@@ -370,319 +102,52 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-      <!-- Woodstox is used by HAPI for XML processing -->
       <dependency>
-        <groupId>com.fasterxml.woodstox</groupId>
-        <artifactId>woodstox-core</artifactId>
-        <version>6.4.0</version>
-      </dependency>
-
-      <!-- Spring -->
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter</artifactId>
-        <version>${pathling.springBootVersion}</version>
+        <groupId>org.glassfish.jersey.containers</groupId>
+        <artifactId>jersey-container-servlet-core</artifactId>
+        <version>${pathling.jerseyVersion}</version>
       </dependency>
       <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-web</artifactId>
-        <version>${pathling.springBootVersion}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-tomcat</artifactId>
-          </exclusion>
-        </exclusions>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${pathling.jacksonVersion}</version>
       </dependency>
       <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-jetty</artifactId>
-        <version>${pathling.springBootVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-aop</artifactId>
-        <version>${pathling.springBootVersion}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>*</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-configuration-processor</artifactId>
-        <version>${pathling.springBootVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-security</artifactId>
-        <version>${pathling.springBootVersion}</version>
-      </dependency>
-      <dependency>
-      <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-actuator</artifactId>
-        <version>${pathling.springBootVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.security</groupId>
-        <artifactId>spring-security-oauth2-resource-server</artifactId>
-        <version>${pathling.springSecurityVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.security</groupId>
-        <artifactId>spring-security-oauth2-jose</artifactId>
-        <version>${pathling.springSecurityVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.security</groupId>
-        <artifactId>spring-security-test</artifactId>
-        <version>${pathling.springSecurityVersion}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-test</artifactId>
-        <version>${pathling.springBootVersion}</version>
-        <scope>test</scope>
-      </dependency>
-
-      <!-- ANTLR -->
-      <dependency>
-        <groupId>org.antlr</groupId>
-        <artifactId>antlr4</artifactId>
-        <version>${pathling.antlrVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.antlr</groupId>
-        <artifactId>antlr4-runtime</artifactId>
-        <version>${pathling.antlrVersion}</version>
-      </dependency>
-
-      <!-- AWS SDK -->
-      <dependency>
-        <groupId>com.amazonaws</groupId>
-        <artifactId>aws-java-sdk-bom</artifactId>
-        <version>${pathling.awsSdkVersion}</version>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
+        <version>${pathling.junitVersion}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
       <dependency>
-        <groupId>com.amazonaws</groupId>
-        <artifactId>aws-java-sdk-bundle</artifactId>
-        <version>${pathling.awsSdkVersion}</version>
-      </dependency>
-
-      <!-- Error monitoring -->
-      <dependency>
-        <groupId>io.sentry</groupId>
-        <artifactId>sentry</artifactId>
-        <version>6.6.0</version>
-      </dependency>
-
-      <!-- JSR-380 Validation RI -->
-      <dependency>
-        <groupId>org.hibernate.validator</groupId>
-        <artifactId>hibernate-validator</artifactId>
-        <version>8.0.1.Final</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.jboss.logging</groupId>
-            <artifactId>jboss-logging</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-
-      <!-- Testing -->
-      <dependency>
-        <groupId>com.github.docker-java</groupId>
-        <artifactId>docker-java</artifactId>
-        <version>${pathling.dockerJavaVersion}</version>
-        <scope>test</scope>
+        <groupId>javax.servlet</groupId>
+        <artifactId>javax.servlet-api</artifactId>
+        <version>4.0.1</version>
       </dependency>
       <dependency>
-        <groupId>com.github.docker-java</groupId>
-        <artifactId>docker-java-transport-okhttp</artifactId>
-        <version>${pathling.dockerJavaVersion}</version>
-        <scope>test</scope>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-server</artifactId>
+        <version>${pathling.jettyVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-servlet</artifactId>
+        <version>${pathling.jettyVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-util</artifactId>
+        <version>${pathling.jettyVersion}</version>
       </dependency>
       <dependency>
         <groupId>org.skyscreamer</groupId>
         <artifactId>jsonassert</artifactId>
         <version>1.5.1</version>
-        <scope>test</scope>
-        <exclusions>
-          <exclusion>
-            <groupId>com.vaadin.external.google</groupId>
-            <artifactId>android-json</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
-      <dependency>
-        <groupId>com.github.tomakehurst</groupId>
-        <artifactId>wiremock-jre8-standalone</artifactId>
-        <version>2.35.2</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.awaitility</groupId>
-        <artifactId>awaitility</artifactId>
-        <version>4.2.0</version>
-        <scope>test</scope>
-      </dependency>
-
-      <!-- Lombok -->
-      <dependency>
-        <groupId>org.projectlombok</groupId>
-        <artifactId>lombok</artifactId>
-        <version>${pathling.lombokVersion}</version>
-        <scope>provided</scope>
-      </dependency>
-
-      <!-- Misc -->
-      <dependency>
-        <groupId>com.google.code.gson</groupId>
-        <artifactId>gson</artifactId>
-        <version>2.10</version>
-      </dependency>
-      <dependency>
-        <groupId>joda-time</groupId>
-        <artifactId>joda-time</artifactId>
-        <version>2.12.7</version>
-      </dependency>
-      <dependency>
-        <groupId>com.google.code.findbugs</groupId>
-        <artifactId>jsr305</artifactId>
-        <version>3.0.2</version>
-      </dependency>
-      <dependency>
-        <groupId>org.json</groupId>
-        <artifactId>json</artifactId>
-        <version>20240303</version>
-      </dependency>
-      <dependency>
-        <groupId>commons-beanutils</groupId>
-        <artifactId>commons-beanutils</artifactId>
-        <version>1.9.4</version>
-        <exclusions>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>commons-io</groupId>
-        <artifactId>commons-io</artifactId>
-        <version>2.16.1</version>
-      </dependency>
-      <dependency>
-        <groupId>com.google.guava</groupId>
-        <artifactId>guava</artifactId>
-        <version>${pathling.guavaVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>commons-lang</groupId>
-        <artifactId>commons-lang</artifactId>
-        <version>2.6</version>
-      </dependency>
-      <dependency>
-        <groupId>org.infinispan</groupId>
-        <artifactId>infinispan-bom</artifactId>
-        <version>${pathling.infinispanVersion}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
-        <version>${pathling.slf4jVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>log4j-over-slf4j</artifactId>
-        <version>${pathling.slf4jVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>jcl-over-slf4j</artifactId>
-        <version>${pathling.slf4jVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>jul-to-slf4j</artifactId>
-        <version>${pathling.slf4jVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback-classic</artifactId>
-        <version>${pathling.logbackVersion}</version>
-      </dependency>
-
-      <!-- CVE-2022-42889-->
-      <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-text</artifactId>
-        <version>1.12.0</version>
-      </dependency>
-
-      <!-- CVE-2022-25857, CVE-2022-1471, CVE-2022-41854  -->
-      <dependency>
-        <groupId>org.yaml</groupId>
-        <artifactId>snakeyaml</artifactId>
-        <version>2.2</version>
-      </dependency>
-      
-      <!-- CVE-2023-44981 -->
-      <dependency>
-        <groupId>org.apache.zookeeper</groupId>
-        <artifactId>zookeeper</artifactId>
-        <version>3.7.2</version>
-      </dependency>
-
     </dependencies>
   </dependencyManagement>
 
   <build>
-    <plugins>
-      <plugin>
-        <groupId>pl.project13.maven</groupId>
-        <artifactId>git-commit-id-plugin</artifactId>
-        <version>4.9.10</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>revision</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <verbose>false</verbose>
-          <dateFormat>yyyy-MM-dd'T'HH:mm:ssZ</dateFormat>
-          <generateGitPropertiesFile>true</generateGitPropertiesFile>
-          <generateGitPropertiesFilename>${project.build.outputDirectory}/pathling-version.properties</generateGitPropertiesFilename>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <version>3.3.0</version>
-        <executions>
-          <execution>
-            <id>parse-version</id>
-            <goals>
-              <goal>parse-version</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.basepom.maven</groupId>
-        <artifactId>duplicate-finder-maven-plugin</artifactId>
-        <version>1.5.1</version>
-      </plugin>
-    </plugins>
     <pluginManagement>
       <plugins>
         <plugin>
@@ -698,36 +163,6 @@
           </configuration>
         </plugin>
         <plugin>
-          <groupId>net.alchim31.maven</groupId>
-          <artifactId>scala-maven-plugin</artifactId>
-          <version>4.9.1</version>
-          <executions>
-            <execution>
-              <id>scala-compile-first</id>
-              <phase>process-resources</phase>
-              <goals>
-                <goal>add-source</goal>
-                <goal>compile</goal>
-              </goals>
-            </execution>
-            <execution>
-              <id>scala-test-compile</id>
-              <phase>process-test-resources</phase>
-              <goals>
-                <goal>testCompile</goal>
-              </goals>
-            </execution>
-          </executions>
-          <configuration>
-            <source>17</source>
-            <target>17</target>
-            <args>
-              <arg>-feature</arg>
-            </args>
-            <scalaVersion>${pathling.scalaFullVersion}</scalaVersion>
-          </configuration>
-        </plugin>
-        <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>${pathling.surefireVersion}</version>
@@ -735,466 +170,13 @@
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
             <!-- The add-exports and add-opens flags are required for Java 17 -->
-            <argLine>@{argLine} -Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED</argLine>
+            <argLine>-Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED</argLine>
             <forkCount>1C</forkCount>
             <failIfNoTests>false</failIfNoTests>
           </configuration>
         </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-failsafe-plugin</artifactId>
-          <version>${pathling.surefireVersion}</version>
-          <configuration>
-            <!-- The add-exports and add-opens flags are required for Java 17 -->
-            <argLine>-Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED</argLine>
-          </configuration>
-        </plugin>
-        <plugin>
-          <groupId>com.spotify</groupId>
-          <artifactId>dockerfile-maven-plugin</artifactId>
-          <version>1.4.13</version>
-        </plugin>
-        <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>exec-maven-plugin</artifactId>
-          <version>3.2.0</version>
-        </plugin>
-        <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>license-maven-plugin</artifactId>
-          <version>2.0.0</version>
-          <executions>
-            <execution>
-              <id>add-third-party</id>
-              <goals>
-                <goal>add-third-party</goal>
-              </goals>
-              <configuration>
-                <useMissingFile>true</useMissingFile>
-                <acceptPomPackaging>true</acceptPomPackaging>
-              </configuration>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.jacoco</groupId>
-          <artifactId>jacoco-maven-plugin</artifactId>
-          <version>0.8.8</version>
-          <executions>
-            <execution>
-              <id>prepare-agent</id>
-              <goals>
-                <goal>prepare-agent</goal>
-              </goals>
-            </execution>
-            <execution>
-              <id>report</id>
-              <goals>
-                <goal>report</goal>
-              </goals>
-            </execution>
-            <execution>
-              <id>report-aggregate</id>
-              <phase>verify</phase>
-              <goals>
-                <goal>report-aggregate</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-source-plugin</artifactId>
-          <version>3.3.1</version>
-          <executions>
-            <execution>
-              <id>jar-no-fork</id>
-              <goals>
-                <goal>jar-no-fork</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-javadoc-plugin</artifactId>
-          <version>3.6.3</version>
-          <executions>
-            <execution>
-              <id>javadoc</id>
-              <phase>prepare-package</phase>
-              <goals>
-                <goal>javadoc</goal>
-              </goals>
-            </execution>
-            <execution>
-              <id>javadoc-jar</id>
-              <phase>prepare-package</phase>
-              <goals>
-                <goal>jar</goal>
-              </goals>
-            </execution>
-          </executions>
-          <configuration>
-            <skip>true</skip>
-            <includeDependencySources>true</includeDependencySources>
-            <dependencySourceIncludes>
-              <include>au.csiro.pathling:*</include>
-            </dependencySourceIncludes>
-            <dependencySourceExcludes>
-              <exclude>au.csiro.pathling:encoders</exclude>
-            </dependencySourceExcludes>
-            <source>17</source>
-            <links>
-              <link>https://spark.apache.org/docs/latest/api/java/</link>
-              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-base/</link>
-              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-structures-r4/</link>
-              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-client/</link>
-              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-server/</link>
-            </links>
-            <detectLinks/>
-            <doctitle>Pathling ${project.version} API</doctitle>
-            <windowtitle>Pathling ${project.version} API</windowtitle>
-            <bottom>
-              <![CDATA[This content is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0<a>.]]>
-            </bottom>
-          </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-gpg-plugin</artifactId>
-          <version>3.2.4</version>
-          <executions>
-            <execution>
-              <id>sign</id>
-              <goals>
-                <goal>sign</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.sonatype.plugins</groupId>
-          <artifactId>nexus-staging-maven-plugin</artifactId>
-          <version>1.6.13</version>
-          <extensions>true</extensions>
-          <configuration>
-            <serverId>ossrh</serverId>
-            <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-            <autoReleaseAfterClose>true</autoReleaseAfterClose>
-          </configuration>
-          <dependencies>
-            <dependency>
-              <groupId>com.sun.jersey</groupId>
-              <artifactId>jersey-core</artifactId>
-              <version>1.19.4</version>
-            </dependency>
-          </dependencies>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-deploy-plugin</artifactId>
-          <version>3.1.2</version>
-          <configuration>
-            <skip>true</skip>
-          </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-shade-plugin</artifactId>
-          <version>3.5.3</version>
-          <configuration>
-            <filters>
-              <filter>
-                <artifact>au.csiro.pathling:${project.artifactId}</artifact>
-                <excludes>
-                  <exclude>META-INF/**</exclude>
-                </excludes>
-              </filter>
-            </filters>
-          </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-dependency-plugin</artifactId>
-          <version>3.6.1</version>
-          <goals>
-            <goal>analyze-only</goal>
-          </goals>
-          <configuration>
-            <ignoredDependencies>
-              <ignoredDependency>org.projectlombok:lombok</ignoredDependency>
-              <ignoredDependency>au.csiro.pathling:*:test-jar</ignoredDependency>
-            </ignoredDependencies>
-          </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.springframework.boot</groupId>
-          <artifactId>spring-boot-maven-plugin</artifactId>
-          <version>${pathling.springBootVersion}</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-jar-plugin</artifactId>
-          <version>3.4.1</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-clean-plugin</artifactId>
-          <version>3.3.2</version>
-          <configuration>
-            <filesets>
-              <fileset>
-                <directory>${project.basedir}</directory>
-                <includes>
-                  <include>**/spark-warehouse/**</include>
-                  <include>**/metastore_db/**</include>
-                  <include>**/.ipynb_checkpoints/**</include>
-                  <include>**/node_modules/**</include>
-                  <include>**/derby.log</include>
-                </includes>
-              </fileset>
-            </filesets>
-          </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-resources-plugin</artifactId>
-          <version>3.3.1</version>
-        </plugin>
       </plugins>
     </pluginManagement>
   </build>
-
-  <profiles>
-    <profile>
-      <id>docs</id>
-      <build>
-        <pluginManagement>
-          <plugins>
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-javadoc-plugin</artifactId>
-              <configuration>
-                <skip>false</skip>
-              </configuration>
-            </plugin>
-          </plugins>
-        </pluginManagement>
-      </build>
-    </profile>
-    <profile>
-      <id>mavenRelease</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-gpg-plugin</artifactId>
-          </plugin>
-          <plugin>
-            <groupId>org.sonatype.plugins</groupId>
-            <artifactId>nexus-staging-maven-plugin</artifactId>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-deploy-plugin</artifactId>
-            <configuration>
-              <skip>snapshots</skip>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>mavenPreRelease</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-gpg-plugin</artifactId>
-          </plugin>
-          <plugin>
-            <groupId>org.sonatype.plugins</groupId>
-            <artifactId>nexus-staging-maven-plugin</artifactId>
-            <configuration>
-              <autoReleaseAfterClose>false</autoReleaseAfterClose>
-            </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-deploy-plugin</artifactId>
-            <configuration>
-              <skip>releases</skip>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>licenses</id>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-clean-plugin</artifactId>
-            <configuration>
-              <filesets>
-                <fileset>
-                  <directory>${project.basedir}</directory>
-                  <includes>
-                    <include>LICENSE</include>
-                  </includes>
-                </fileset>
-                <fileset>
-                  <directory>${project.basedir}/licenses</directory>
-                </fileset>
-              </filesets>
-            </configuration>
-            <groupId>org.apache.maven.plugins</groupId>
-          </plugin>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>license-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>aggregate-add-third-party</id>
-                <phase>generate-resources</phase>
-                <goals>
-                  <goal>aggregate-add-third-party</goal>
-                </goals>
-                <configuration>
-                  <excludedGroups>au.csiro.pathling.*</excludedGroups>
-                  <fileTemplate>fhir-server/src/main/resources/license-template.ftl</fileTemplate>
-                  <includeTransitiveDependencies>false</includeTransitiveDependencies>
-                  <licenseMerges>
-                    <licenseMerge>Apache License, Version 2.0|Apache Software License 2.0|The Apache License, Version 2.0|The Apache Software License, Version 2.0|Apache 2.0 License|Apache License 2.0|Apache-2.0|Apache 2.0|Apache Software Licenses|Apache 2</licenseMerge>
-                    <licenseMerge>BSD License|BSD New|The BSD License|New BSD License|BSD-3-Clause|The New BSD License</licenseMerge>
-                    <licenseMerge>Eclipse Public License 1.0|Eclipse Public License - v 1.0</licenseMerge>
-                    <licenseMerge>MIT License|The MIT License (MIT)|The MIT License|MIT|The JSON License</licenseMerge>
-                  </licenseMerges>
-                  <thirdPartyFilename>LICENSE</thirdPartyFilename>
-                </configuration>
-              </execution>
-              <execution>
-                <id>aggregate-download-licenses</id>
-                <phase>generate-resources</phase>
-                <goals>
-                  <goal>aggregate-download-licenses</goal>
-                </goals>
-                <configuration>
-                  <includeTransitiveDependencies>false</includeTransitiveDependencies>
-                  <excludedGroups>^au\.csiro\.</excludedGroups>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-resources-plugin</artifactId>
-            <executions>
-              <execution>
-                <configuration>
-                  <outputDirectory>${project.basedir}</outputDirectory>
-                  <resources>
-                    <resource>
-                      <directory>target/generated-sources/license</directory>
-                      <includes>
-                        <include>LICENSE</include>
-                      </includes>
-                    </resource>
-                  </resources>
-                </configuration>
-                <goals>
-                  <goal>copy-resources</goal>
-                </goals>
-                <id>copy-license</id>
-                <phase>package</phase>
-              </execution>
-              <execution>
-                <configuration>
-                  <outputDirectory>${project.basedir}/licenses</outputDirectory>
-                  <resources>
-                    <resource>
-                      <directory>target/generated-resources/licenses</directory>
-                    </resource>
-                  </resources>
-                </configuration>
-                <goals>
-                  <goal>copy-resources</goal>
-                </goals>
-                <id>copy-third-party-licenses</id>
-                <phase>package</phase>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>skipTests</id>
-      <activation>
-        <property>
-          <name>skipTests</name>
-        </property>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.jacoco</groupId>
-            <artifactId>jacoco-maven-plugin</artifactId>
-            <configuration>
-              <skip>true</skip>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>skipSurefireTests</id>
-      <activation>
-        <property>
-          <name>skipSurefireTests</name>
-        </property>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <configuration>
-              <skip>true</skip>
-            </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.jacoco</groupId>
-            <artifactId>jacoco-maven-plugin</artifactId>
-            <configuration>
-              <skip>true</skip>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
-
-  <repositories>
-    <repository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-    </repository>
-  </repositories>
-
-  <distributionManagement>
-    <repository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/content/repositories/releases/</url>
-    </repository>
-    <snapshotRepository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-    </snapshotRepository>
-  </distributionManagement>
 
 </project>
