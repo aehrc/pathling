@@ -31,8 +31,8 @@ class FhirJsonReadWriteTest {
 
   private Path tempDirectory;
 
-  // TODO: Check that this works with primitive extensions.
-  // TODO: Check that this works with arrays of primitive values.
+  // TODO: Add a base64Binary test.
+  // TODO: Add tests for other FHIR versions.
   @Nonnull
   private static Stream<TestParameters> parameters() {
     return Stream.of(
@@ -41,7 +41,11 @@ class FhirJsonReadWriteTest {
         new TestParameters("Observation", "fhir/json/bodyTemp.Observation.json",
             "schema/bodyTemp.Observation.schema.txt"),
         new TestParameters("ExplanationOfBenefit", "fhir/json/withErrors.ExplanationOfBenefit.json",
-            "schema/withErrors.ExplanationOfBenefit.schema.txt")
+            "schema/withErrors.ExplanationOfBenefit.schema.txt"),
+        new TestParameters("ValueSet", "fhir/json/cpt.ValueSet.json",
+            "schema/cpt.ValueSet.schema.txt"),
+        new TestParameters("QuestionnaireResponse", "fhir/json/gcs.QuestionnaireResponse.json",
+            "schema/gcs.QuestionnaireResponse.schema.txt")
     );
   }
 

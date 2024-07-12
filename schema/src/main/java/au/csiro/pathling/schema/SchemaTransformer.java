@@ -35,14 +35,14 @@ public record SchemaTransformer(
     final List<String> columnNames = List.of(dataset.columns());
     final List<Column> columns = columnNames.stream()
         .flatMap(columnName -> {
-          if (columnName.equals("resourceType")) {
+          if (columnName.equals("resourceType") || (columnName.startsWith("_")
+              && !columnName.startsWith("__"))) {
             return Stream.of(dataset.col(columnName));
           }
           final Column column = dataset.col(columnName);
-          final BaseRuntimeChildDefinition childDefinition = Optional.ofNullable(
-                  resourceDefinition.getChildByName(columnName))
-              .orElseThrow(() -> new IllegalArgumentException(
-                  "Field does not match a corresponding FHIR element: " + columnName));
+          final BaseRuntimeChildDefinition childDefinition = getChildDefinition(
+              resourceDefinition, columnName,
+              "Field does not match a corresponding FHIR element: " + columnName);
           final DataType dataType = column.expr().dataType();
           return transformField(column, dataType,
               childToElementDefinition(childDefinition, columnName), columnName);
@@ -86,27 +86,30 @@ public record SchemaTransformer(
       @Nonnull final String columnName) {
     final List<Column> fields = Stream.of(structType.fields())
         .flatMap(field -> {
+          // Let primitive extensions pass through unaltered.
+          final String fieldName = field.name();
+          if (fieldName.startsWith("_") && !fieldName.startsWith("__")) {
+            return Stream.of(struct.getField(fieldName));
+          }
           // Traverse to the definition of the field within the FHIR element.
-          final BaseRuntimeChildDefinition fieldChildDefinition = Optional.ofNullable(
-                  compositeDefinition.getChildByName(field.name()))
-              // If there is no such field in the FHIR definition, throw an exception.
-              .orElseThrow(() -> new IllegalArgumentException(
-                  "Field does not match a corresponding FHIR element: " + columnName + "."
-                      + field.name()));
+          final BaseRuntimeChildDefinition fieldChildDefinition = getChildDefinition(
+              compositeDefinition, fieldName,
+              "Field does not match a corresponding FHIR element: " + columnName + "."
+                  + fieldName);
 
           // Retrieve the child element definition from the child definition.
           final BaseRuntimeElementDefinition fieldDefinition = childToElementDefinition(
-              fieldChildDefinition, field.name());
+              fieldChildDefinition, fieldName);
 
           final DataType fieldType = structType.fields()[structType.fieldIndex(
-              field.name())].dataType();
-          Column fieldColumn = struct.getField(field.name());
+              fieldName)].dataType();
+          Column fieldColumn = struct.getField(fieldName);
           // If the column name does not match the field name, alias it. This happens when we 
           // traverse into arrays.
-          if (!fieldColumn.toString().equals(field.name())) {
-            fieldColumn = fieldColumn.alias(field.name());
+          if (!fieldColumn.toString().equals(fieldName)) {
+            fieldColumn = fieldColumn.alias(fieldName);
           }
-          return transformField(fieldColumn, fieldType, fieldDefinition, field.name());
+          return transformField(fieldColumn, fieldType, fieldDefinition, fieldName);
         })
         .toList();
     // TODO: Use struct(columns, columnNames)?
@@ -137,6 +140,17 @@ public record SchemaTransformer(
     });
     return transformed.alias(columnName);
 
+  }
+
+  @Nonnull
+  private static BaseRuntimeChildDefinition getChildDefinition(
+      @Nonnull final BaseRuntimeElementCompositeDefinition compositeDefinition,
+      @Nonnull final String fieldName, @Nonnull final String errorMessage) {
+    return Optional.ofNullable(
+            compositeDefinition.getChildByName(fieldName))
+        // If there is no such field in the FHIR definition, throw an exception.
+        .orElseThrow(() -> new IllegalArgumentException(
+            errorMessage));
   }
 
   @Nonnull
