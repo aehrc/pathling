@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Collections;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -70,7 +71,8 @@ class FhirJsonReadWriteTest {
         .getOrCreate();
     final String resourceUrl = getResourceAsUrl(parameters.resourceFile)
         .toString();
-    final FhirJsonReader reader = new FhirJsonReader(spark, "R4", parameters.resourceType);
+    final FhirJsonReader reader = new FhirJsonReader(spark, Collections.emptyMap(), "R4",
+        parameters.resourceType);
     final FhirJsonWriter writer = new FhirJsonWriter("R4", parameters.resourceType);
     final Dataset<Row> data = reader.read(resourceUrl);
 

@@ -1,5 +1,6 @@
 package au.csiro.pathling.schema;
 
+import static au.csiro.pathling.schema.SchemaTransformer.transformColumn;
 import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.base64;
 import static org.apache.spark.sql.functions.regexp_replace;
@@ -11,7 +12,7 @@ import ca.uhn.fhir.parser.DataFormatException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Map;
-import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -21,7 +22,7 @@ import org.apache.spark.sql.types.DataTypes;
 public class FhirJsonWriter {
 
   @Nonnull
-  private static final Map<String, BiFunction<Column, String, Stream<Column>>> writeTransforms = Map.of(
+  private static final Map<String, Function<ColumnDescriptor, Stream<Column>>> writeTransforms = Map.of(
       "decimal", FhirJsonWriter::transformDecimal,
       "base64Binary", FhirJsonWriter::transformBinary
   );
@@ -58,15 +59,17 @@ public class FhirJsonWriter {
   }
 
   @Nonnull
-  private static Stream<Column> transformDecimal(@Nonnull final Column column,
-      @Nonnull final String columnName) {
-    return Stream.of(column.cast(DataTypes.createDecimalType(38, 6)).alias(columnName));
+  private static Stream<Column> transformDecimal(@Nonnull final ColumnDescriptor descriptor) {
+    final Column result = transformColumn(descriptor.column(), c -> c.cast(
+        DataTypes.createDecimalType(38, 6)), descriptor.name(), descriptor.type());
+    return Stream.of(result);
   }
 
   @Nonnull
-  private static Stream<Column> transformBinary(@Nonnull final Column column,
-      @Nonnull final String columnName) {
-    return Stream.of(regexp_replace(base64(column), "[\r\n]", "").alias(columnName));
+  private static Stream<Column> transformBinary(@Nonnull final ColumnDescriptor descriptor) {
+    final Column result = transformColumn(descriptor.column(), c -> regexp_replace(base64(c),
+        "[\r\n]", ""), descriptor.name(), descriptor.type());
+    return Stream.of(result);
   }
 
 }

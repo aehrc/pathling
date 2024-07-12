@@ -12,7 +12,7 @@ import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -20,9 +20,10 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.StructType;
+import scala.Function1;
 
 public record SchemaTransformer(
-    @Nonnull Map<String, BiFunction<Column, String, Stream<Column>>> transforms) {
+    @Nonnull Map<String, Function<ColumnDescriptor, Stream<Column>>> transforms) {
 
   @Nonnull
   public Dataset<Row> transformDataset(@Nullable final Dataset<Row> dataset,
@@ -36,9 +37,10 @@ public record SchemaTransformer(
     final List<Column> columns = columnNames.stream()
         // Drop contained resources.
         .filter(columnName -> !columnName.equals("contained"))
+        // Drop annotations.
+        .filter(columnName -> !columnName.startsWith("__"))
         .flatMap(columnName -> {
-          if (columnName.equals("resourceType") || (columnName.startsWith("_")
-              && !columnName.startsWith("__"))) {
+          if (columnName.equals("resourceType") || columnName.startsWith("_")) {
             return Stream.of(dataset.col(columnName));
           }
           final Column column = dataset.col(columnName);
@@ -76,8 +78,9 @@ public record SchemaTransformer(
 
     // If there is a transform for this data type, apply it.
     // Otherwise return the column unaltered.
+    final ColumnDescriptor descriptor = new ColumnDescriptor(candidateColumn, columnName, dataType);
     return Optional.ofNullable(transforms.get(elementDefinition.getName()))
-        .map(transform -> transform.apply(candidateColumn, columnName))
+        .map(transform -> transform.apply(descriptor))
         .orElse(Stream.of(candidateColumn));
   }
 
@@ -87,10 +90,12 @@ public record SchemaTransformer(
       @Nonnull final BaseRuntimeElementCompositeDefinition compositeDefinition,
       @Nonnull final String columnName) {
     final List<Column> fields = Stream.of(structType.fields())
+        // Drop annotations.
+        .filter(field -> !field.name().startsWith("__"))
         .flatMap(field -> {
-          // Let primitive extensions pass through unaltered.
+          // Let primitive extensions and annotations pass through unaltered.
           final String fieldName = field.name();
-          if (fieldName.startsWith("_") && !fieldName.startsWith("__")) {
+          if (fieldName.startsWith("_")) {
             return Stream.of(struct.getField(fieldName));
           }
           // Traverse to the definition of the field within the FHIR element.
@@ -114,7 +119,6 @@ public record SchemaTransformer(
           return transformField(fieldColumn, fieldType, fieldDefinition, fieldName);
         })
         .toList();
-    // TODO: Use struct(columns, columnNames)?
     return struct(fields.toArray(Column[]::new)).alias(columnName);
   }
 
@@ -161,6 +165,15 @@ public record SchemaTransformer(
     return Optional.ofNullable(
         child.getChildByName(columnName)).orElseThrow(() -> new AssertionError(
         "Failed to retrieve element definition from child definition: " + columnName));
+  }
+
+  @Nonnull
+  public static Column transformColumn(@Nonnull final Column column,
+      @Nonnull final Function1<Column, Column> transformation, @Nonnull final String columnName,
+      @Nonnull final DataType dataType) {
+    return dataType instanceof ArrayType
+           ? transform(column, transformation).alias(columnName)
+           : transformation.apply(column).alias(columnName);
   }
 
 }
