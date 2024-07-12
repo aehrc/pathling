@@ -50,7 +50,7 @@
             }
           ]
         },
-        "containsNull": true
+        "containsNull": false
       },
       "nullable": true,
       "metadata": {}
@@ -94,7 +94,7 @@
                           }
                         ]
                       },
-                      "containsNull": true
+                      "containsNull": false
                     },
                     "nullable": true,
                     "metadata": {}
@@ -107,12 +107,12 @@
                   }
                 ]
               },
-              "nullable": true,
+              "nullable": false,
               "metadata": {}
             }
           ]
         },
-        "containsNull": true
+        "containsNull": false
       },
       "nullable": true,
       "metadata": {}
@@ -155,12 +155,12 @@
                   }
                 ]
               },
-              "nullable": true,
+              "nullable": false,
               "metadata": {}
             }
           ]
         },
-        "containsNull": true
+        "containsNull": false
       },
       "nullable": true,
       "metadata": {}
@@ -216,7 +216,7 @@
                           }
                         ]
                       },
-                      "containsNull": true
+                      "containsNull": false
                     },
                     "nullable": true,
                     "metadata": {}
@@ -229,7 +229,7 @@
                   }
                 ]
               },
-              "nullable": true,
+              "nullable": false,
               "metadata": {}
             },
             {
@@ -240,7 +240,7 @@
             }
           ]
         },
-        "containsNull": true
+        "containsNull": false
       },
       "nullable": true,
       "metadata": {}
@@ -312,7 +312,7 @@
             }
           ]
         },
-        "containsNull": true
+        "containsNull": false
       },
       "nullable": true,
       "metadata": {}
@@ -350,7 +350,7 @@
             }
           ]
         },
-        "containsNull": true
+        "containsNull": false
       },
       "nullable": true,
       "metadata": {}

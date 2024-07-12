@@ -109,6 +109,7 @@ public record SchemaTransformer(
           return transformField(fieldColumn, fieldType, fieldDefinition, field.name());
         })
         .toList();
+    // TODO: Use struct(columns, columnNames)?
     return struct(fields.toArray(Column[]::new)).alias(columnName);
   }
 
@@ -134,13 +135,7 @@ public record SchemaTransformer(
         return element;
       }
     });
-    // Unfortunately there doesn't seem to be a way to cast this to containsNull = false, it seems
-    // to cause an error like 'cannot cast "ARRAY<STRING>" to "ARRAY<STRING>"'.
-    // Ideally we would like to filter nulls, and also mark the column as not containing nulls.
-    // Here we are casting it to containsNull = true for consistency and determinism across the
-    // schema, this might not be ideal from a query optimisation point of view.
-    final Column cast = transformed.cast(arrayType.copy(elementType, true));
-    return cast.alias(columnName);
+    return transformed.alias(columnName);
 
   }
 

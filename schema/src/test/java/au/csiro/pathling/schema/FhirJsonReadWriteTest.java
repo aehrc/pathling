@@ -121,6 +121,11 @@ class FhirJsonReadWriteTest {
   record TestParameters(@Nonnull String resourceType, @Nonnull String resourceFile,
                         @Nonnull String schemaFile) {
 
+    @Override
+    public String toString() {
+      return resourceFile;
+    }
+
   }
 
 }
