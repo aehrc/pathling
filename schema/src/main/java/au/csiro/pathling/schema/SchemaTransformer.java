@@ -34,6 +34,8 @@ public record SchemaTransformer(
     }
     final List<String> columnNames = List.of(dataset.columns());
     final List<Column> columns = columnNames.stream()
+        // Drop contained resources.
+        .filter(columnName -> !columnName.equals("contained"))
         .flatMap(columnName -> {
           if (columnName.equals("resourceType") || (columnName.startsWith("_")
               && !columnName.startsWith("__"))) {
