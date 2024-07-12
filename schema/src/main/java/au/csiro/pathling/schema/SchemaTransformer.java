@@ -1,0 +1,155 @@
+package au.csiro.pathling.schema;
+
+import static org.apache.spark.sql.functions.struct;
+import static org.apache.spark.sql.functions.transform;
+
+import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
+import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
+import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
+import ca.uhn.fhir.context.RuntimeResourceDefinition;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.BiFunction;
+import java.util.stream.Stream;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.StructType;
+
+public record SchemaTransformer(
+    @Nonnull Map<String, BiFunction<Column, String, Stream<Column>>> transforms) {
+
+  @Nonnull
+  public Dataset<Row> transformDataset(@Nullable final Dataset<Row> dataset,
+      @Nullable final RuntimeResourceDefinition resourceDefinition) {
+    if (dataset == null) {
+      throw new IllegalArgumentException("Dataset must not be null");
+    } else if (resourceDefinition == null) {
+      throw new IllegalArgumentException("Resource definition must not be null");
+    }
+    final List<String> columnNames = List.of(dataset.columns());
+    final List<Column> columns = columnNames.stream()
+        .flatMap(columnName -> {
+          if (columnName.equals("resourceType")) {
+            return Stream.of(dataset.col(columnName));
+          }
+          final Column column = dataset.col(columnName);
+          final BaseRuntimeChildDefinition childDefinition = Optional.ofNullable(
+                  resourceDefinition.getChildByName(columnName))
+              .orElseThrow(() -> new IllegalArgumentException(
+                  "Field does not match a corresponding FHIR element: " + columnName));
+          final DataType dataType = column.expr().dataType();
+          return transformField(column, dataType,
+              childToElementDefinition(childDefinition, columnName), columnName);
+        })
+        .toList();
+    return dataset.select(columns.toArray(Column[]::new));
+  }
+
+  @Nonnull
+  private Stream<Column> transformField(@Nonnull final Column column,
+      @Nonnull final DataType dataType,
+      @Nonnull final BaseRuntimeElementDefinition elementDefinition, final String columnName) {
+    // Delegate processing of structs and arrays to their respective methods.
+    final Column candidateColumn;
+    if (dataType instanceof StructType) {
+      if (elementDefinition instanceof BaseRuntimeElementCompositeDefinition) {
+        candidateColumn = transformStruct(column, (StructType) dataType,
+            (BaseRuntimeElementCompositeDefinition) elementDefinition, columnName);
+      } else {
+        throw new RuntimeException("Struct field does not match a composite FHIR element: "
+            + columnName);
+      }
+    } else if (dataType instanceof ArrayType) {
+      candidateColumn = transformArray(column, (ArrayType) dataType, elementDefinition,
+          columnName);
+    } else {
+      candidateColumn = column;
+    }
+
+    // If there is a transform for this data type, apply it.
+    // Otherwise return the column unaltered.
+    return Optional.ofNullable(transforms.get(elementDefinition.getName()))
+        .map(transform -> transform.apply(candidateColumn, columnName))
+        .orElse(Stream.of(candidateColumn));
+  }
+
+  @Nonnull
+  private Column transformStruct(@Nonnull final Column struct,
+      @Nonnull final StructType structType,
+      @Nonnull final BaseRuntimeElementCompositeDefinition compositeDefinition,
+      @Nonnull final String columnName) {
+    final List<Column> fields = Stream.of(structType.fields())
+        .flatMap(field -> {
+          // Traverse to the definition of the field within the FHIR element.
+          final BaseRuntimeChildDefinition fieldChildDefinition = Optional.ofNullable(
+                  compositeDefinition.getChildByName(field.name()))
+              // If there is no such field in the FHIR definition, throw an exception.
+              .orElseThrow(() -> new IllegalArgumentException(
+                  "Field does not match a corresponding FHIR element: " + columnName + "."
+                      + field.name()));
+
+          // Retrieve the child element definition from the child definition.
+          final BaseRuntimeElementDefinition fieldDefinition = childToElementDefinition(
+              fieldChildDefinition, field.name());
+
+          final DataType fieldType = structType.fields()[structType.fieldIndex(
+              field.name())].dataType();
+          Column fieldColumn = struct.getField(field.name());
+          // If the column name does not match the field name, alias it. This happens when we 
+          // traverse into arrays.
+          if (!fieldColumn.toString().equals(field.name())) {
+            fieldColumn = fieldColumn.alias(field.name());
+          }
+          return transformField(fieldColumn, fieldType, fieldDefinition, field.name());
+        })
+        .toList();
+    return struct(fields.toArray(Column[]::new)).alias(columnName);
+  }
+
+  @Nonnull
+  private Column transformArray(@Nonnull final Column array, @Nonnull final ArrayType arrayType,
+      @Nonnull final BaseRuntimeElementDefinition elementDefinition,
+      @Nonnull final String columnName) {
+    final DataType elementType = arrayType.elementType();
+
+    // Transform any nested struct or array.
+    final Column transformed = transform(array, element -> {
+      if (elementType instanceof StructType) {
+        if (elementDefinition instanceof BaseRuntimeElementCompositeDefinition) {
+          return transformStruct(element, (StructType) elementType,
+              (BaseRuntimeElementCompositeDefinition) elementDefinition, columnName);
+        } else {
+          throw new RuntimeException("Struct field does not match a composite FHIR element: "
+              + columnName);
+        }
+      } else if (elementType instanceof ArrayType) {
+        return transformArray(element, (ArrayType) elementType, elementDefinition, columnName);
+      } else {
+        return element;
+      }
+    });
+    // Unfortunately there doesn't seem to be a way to cast this to containsNull = false, it seems
+    // to cause an error like 'cannot cast "ARRAY<STRING>" to "ARRAY<STRING>"'.
+    // Ideally we would like to filter nulls, and also mark the column as not containing nulls.
+    // Here we are casting it to containsNull = true for consistency and determinism across the
+    // schema, this might not be ideal from a query optimisation point of view.
+    final Column cast = transformed.cast(arrayType.copy(elementType, true));
+    return cast.alias(columnName);
+
+  }
+
+  @Nonnull
+  private static BaseRuntimeElementDefinition<?> childToElementDefinition(
+      @Nonnull final BaseRuntimeChildDefinition child, @Nonnull final String columnName) {
+    return Optional.ofNullable(
+        child.getChildByName(columnName)).orElseThrow(() -> new AssertionError(
+        "Failed to retrieve element definition from child definition: " + columnName));
+  }
+
+}

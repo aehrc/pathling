@@ -40,12 +40,8 @@
       "use": "official",
       "text": "Mrs. Anne Mary Bennelong",
       "family": "Bennelong",
-      "given": [
-        "Anne"
-      ],
-      "prefix": [
-        "Mrs"
-      ]
+      "given": ["Anne"],
+      "prefix": ["Mrs"]
     }
   ],
   "telecom": [
@@ -60,9 +56,7 @@
   "address": [
     {
       "use": "home",
-      "line": [
-        "4 Brisbane Street"
-      ],
+      "line": ["4 Brisbane Street"],
       "city": "Brisbane",
       "state": "QLD",
       "postalCode": "4112",

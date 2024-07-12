@@ -1,4 +1,4 @@
-package au.csiro.pathling.encoders;
+package au.csiro.pathling.schema;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsString;
 import static au.csiro.pathling.test.TestResources.getResourceAsUrl;
@@ -10,22 +10,28 @@ import jakarta.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.json.JSONException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 
-class FhirJsonProviderTest {
+class FhirJsonReadWriteTest {
 
   private Path tempDirectory;
 
+  // TODO: Check that this works with primitive extensions.
+  // TODO: Check that this works with arrays of primitive values.
   @Nonnull
   private static Stream<TestParameters> parameters() {
     return Stream.of(
@@ -40,7 +46,12 @@ class FhirJsonProviderTest {
 
   @BeforeEach
   void setUp() throws IOException {
-    tempDirectory = Files.createTempDirectory("pathling-FhirJsonProviderTest-");
+    tempDirectory = Files.createTempDirectory("pathling-FhirJsonReadWriteTest-");
+  }
+
+  @AfterEach
+  void tearDown() throws IOException {
+    deleteDirectoryRecursively(tempDirectory);
   }
 
   @ParameterizedTest
@@ -51,23 +62,20 @@ class FhirJsonProviderTest {
     final SparkSession spark = SparkSession.builder()
         .master("local[*]")
         .getOrCreate();
-
     final String resourceUrl = getResourceAsUrl(parameters.resourceFile)
         .toString();
-
-    final Dataset<Row> data = spark.read()
-        .format("au.csiro.pathling.encoders.FhirJsonProvider")
-        .option("multiLine", "true")
-        .option("resourceType", parameters.resourceType)
-        .load(resourceUrl);
+    final FhirJsonReader reader = new FhirJsonReader(spark, "R4", parameters.resourceType);
+    final FhirJsonWriter writer = new FhirJsonWriter("R4", parameters.resourceType);
+    final Dataset<Row> data = reader.read(resourceUrl);
 
     final String expectedSchema = getResourceAsString(parameters.schemaFile);
     final String actualSchema = data.schema().json();
+    data.printSchema();
     assertEquals(expectedSchema, actualSchema, JSONCompareMode.NON_EXTENSIBLE);
 
     final Path targetPath = tempDirectory.resolve(parameters.resourceFile);
     final URI targetUri = targetPath.toUri();
-    data.repartition(1).write().json(targetUri.toString());
+    writer.write(data.repartition(1), targetUri.toString());
     final File singlePartition = getSinglePartition(targetPath, ".json");
     final String writtenJson = Files.readString(singlePartition.toPath());
 
@@ -88,6 +96,27 @@ class FhirJsonProviderTest {
     }
   }
 
+  private static void deleteDirectoryRecursively(@Nonnull final Path path) throws IOException {
+    Files.walkFileTree(path, new SimpleFileVisitor<>() {
+      @Override
+      public FileVisitResult visitFile(@Nullable final Path file,
+          @Nullable final BasicFileAttributes attrs) throws IOException {
+        if (file != null) {
+          Files.delete(file);
+        }
+        return FileVisitResult.CONTINUE;
+      }
+
+      @Override
+      public FileVisitResult postVisitDirectory(@Nullable final Path dir,
+          @Nullable final IOException exc) throws IOException {
+        if (dir != null) {
+          Files.delete(dir);
+        }
+        return FileVisitResult.CONTINUE;
+      }
+    });
+  }
 
   record TestParameters(@Nonnull String resourceType, @Nonnull String resourceFile,
                         @Nonnull String schemaFile) {

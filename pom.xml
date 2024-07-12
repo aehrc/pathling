@@ -45,7 +45,7 @@
   </developers>
   
   <modules>
-    <module>encoders</module>
+    <module>schema</module>
   </modules>
 
   <organization>
@@ -101,6 +101,11 @@
         <version>${pathling.hapiFhirVersion}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.scala-lang.modules</groupId>
+        <artifactId>scala-java8-compat_${pathling.scalaVersion}</artifactId>
+        <version>1.0.2</version>
       </dependency>
       <dependency>
         <groupId>org.glassfish.jersey.containers</groupId>

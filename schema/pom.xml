@@ -9,7 +9,7 @@
     <version>8.0.0</version>
   </parent>
 
-  <artifactId>encoders</artifactId>
+  <artifactId>schema</artifactId>
   <dependencies>
     <dependency>
       <groupId>org.apache.spark</groupId>
@@ -19,6 +19,10 @@
     <dependency>
       <groupId>ca.uhn.hapi.fhir</groupId>
       <artifactId>hapi-fhir-structures-r4</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.scala-lang.modules</groupId>
+      <artifactId>scala-java8-compat_2.12</artifactId>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>

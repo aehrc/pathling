@@ -1,0 +1,50 @@
+{
+  "resourceType": "Observation",
+  "id": "bodytemp-1",
+  "meta": {
+    "profile": [
+      "http://hl7.org.au/fhir/core/StructureDefinition/au-core-bodytemp"
+    ]
+  },
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: Observation bodytemp-1</b></p><a name=\"bodytemp-1\"> </a><a name=\"hcbodytemp-1\"> </a><a name=\"hcbodytemp-1-en-AU\"> </a><p><b>status</b>: Final</p><p><b>category</b>: <span title=\"Codes:{http://terminology.hl7.org/CodeSystem/observation-category vital-signs}\">Vital Signs</span></p><p><b>code</b>: <span title=\"Codes:{http://loinc.org 8310-5}, {http://snomed.info/sct 386725007}\">Body temperature</span></p><p><b>subject</b>: <a href=\"Patient-bennelong-anne.html\">Mrs. Anne Mary Bennelong(official) Female, DoB: 1968-10-11 ( Medicare Number:\u00a06951449677)</a></p><p><b>effective</b>: 2022-02-10</p><p><b>value</b>: 36.5 C<span style=\"background: LightGoldenRodYellow\"> (Details: UCUM  codeCel = 'Cel')</span></p></div>"
+  },
+  "status": "final",
+  "category": [
+    {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+          "code": "vital-signs",
+          "display": "Vital Signs"
+        }
+      ],
+      "text": "Vital Signs"
+    }
+  ],
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "8310-5",
+        "display": "Body temperature"
+      },
+      {
+        "system": "http://snomed.info/sct",
+        "code": "386725007"
+      }
+    ],
+    "text": "Body temperature"
+  },
+  "subject": {
+    "reference": "Patient/bennelong-anne"
+  },
+  "effectiveDateTime": "2022-02-10",
+  "valueQuantity": {
+    "value": 36.5,
+    "unit": "C",
+    "system": "http://unitsofmeasure.org",
+    "code": "Cel"
+  }
+}
