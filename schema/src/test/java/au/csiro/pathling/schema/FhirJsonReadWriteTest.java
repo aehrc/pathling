@@ -2,8 +2,8 @@ package au.csiro.pathling.schema;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsString;
 import static au.csiro.pathling.test.TestResources.getResourceAsUrl;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.skyscreamer.jsonassert.JSONAssert.assertEquals;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -24,6 +24,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 
 class FhirJsonReadWriteTest {
@@ -36,11 +37,11 @@ class FhirJsonReadWriteTest {
   private static Stream<TestParameters> parameters() {
     return Stream.of(
         new TestParameters("Patient", "fhir/json/anne.Patient.json",
-            "schema/anne.Patient.schema.json"),
+            "schema/anne.Patient.schema.txt"),
         new TestParameters("Observation", "fhir/json/bodyTemp.Observation.json",
-            "schema/bodyTemp.Observation.schema.json"),
+            "schema/bodyTemp.Observation.schema.txt"),
         new TestParameters("ExplanationOfBenefit", "fhir/json/withErrors.ExplanationOfBenefit.json",
-            "schema/withErrors.ExplanationOfBenefit.schema.json")
+            "schema/withErrors.ExplanationOfBenefit.schema.txt")
     );
   }
 
@@ -69,9 +70,8 @@ class FhirJsonReadWriteTest {
     final Dataset<Row> data = reader.read(resourceUrl);
 
     final String expectedSchema = getResourceAsString(parameters.schemaFile);
-    final String actualSchema = data.schema().json();
-    data.printSchema();
-    assertEquals(expectedSchema, actualSchema, JSONCompareMode.NON_EXTENSIBLE);
+    final String actualSchema = data.schema().treeString();
+    assertEquals(expectedSchema, actualSchema);
 
     final Path targetPath = tempDirectory.resolve(parameters.resourceFile);
     final URI targetUri = targetPath.toUri();
@@ -80,7 +80,7 @@ class FhirJsonReadWriteTest {
     final String writtenJson = Files.readString(singlePartition.toPath());
 
     final String originalJson = getResourceAsString(parameters.resourceFile);
-    assertEquals(originalJson, writtenJson, JSONCompareMode.STRICT);
+    JSONAssert.assertEquals(originalJson, writtenJson, JSONCompareMode.STRICT);
   }
 
   @Nonnull
