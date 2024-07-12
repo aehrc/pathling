@@ -67,7 +67,10 @@ public class FhirJsonReader {
   @Nonnull
   private static Stream<Column> transformDecimal(@Nonnull final Column column,
       @Nonnull final String name) {
-    return Stream.of(column.cast(DataTypes.StringType).alias(name));
+    return Stream.of(
+        column.cast(DataTypes.StringType).alias(name),
+        column.cast(DataTypes.createDecimalType(38, 6)).alias("__" + name + "_numeric")
+    );
   }
 
   @Nonnull

@@ -31,7 +31,6 @@ class FhirJsonReadWriteTest {
 
   private Path tempDirectory;
 
-  // TODO: Add a base64Binary test.
   // TODO: Add tests for other FHIR versions.
   @Nonnull
   private static Stream<TestParameters> parameters() {

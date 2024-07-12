@@ -101,6 +101,7 @@ root
  |    |    |-- amount: struct (nullable = false)
  |    |    |    |-- currency: string (nullable = true)
  |    |    |    |-- value: string (nullable = true)
+ |    |    |    |-- __value_numeric: decimal(38,6) (nullable = true)
  |    |    |-- category: struct (nullable = false)
  |    |    |    |-- coding: array (nullable = true)
  |    |    |    |    |-- element: struct (containsNull = false)

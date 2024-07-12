@@ -31,3 +31,4 @@ root
  |    |-- system: string (nullable = true)
  |    |-- unit: string (nullable = true)
  |    |-- value: string (nullable = true)
+ |    |-- __value_numeric: decimal(38,6) (nullable = true)

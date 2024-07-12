@@ -18,6 +18,7 @@ root
  |    |    |    |    |    |    |-- element: struct (containsNull = false)
  |    |    |    |    |    |    |    |-- url: string (nullable = true)
  |    |    |    |    |    |    |    |-- valueDecimal: string (nullable = true)
+ |    |    |    |    |    |    |    |-- __valueDecimal_numeric: decimal(38,6) (nullable = true)
  |    |    |    |    |    |-- system: string (nullable = true)
  |    |    |-- linkId: string (nullable = true)
  |-- questionnaire: string (nullable = true)
