@@ -45,7 +45,9 @@ class FhirJsonReadWriteTest {
         new TestParameters("ValueSet", "fhir/json/cpt.ValueSet.json",
             "schema/cpt.ValueSet.schema.txt"),
         new TestParameters("QuestionnaireResponse", "fhir/json/gcs.QuestionnaireResponse.json",
-            "schema/gcs.QuestionnaireResponse.schema.txt")
+            "schema/gcs.QuestionnaireResponse.schema.txt"),
+        new TestParameters("Binary", "fhir/json/photo.Binary.json",
+            "schema/photo.Binary.schema.txt")
     );
   }
 

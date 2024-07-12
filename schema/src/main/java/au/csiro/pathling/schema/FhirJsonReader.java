@@ -1,6 +1,7 @@
 package au.csiro.pathling.schema;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.spark.sql.functions.unbase64;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
@@ -25,7 +26,8 @@ public class FhirJsonReader {
       "integer", FhirJsonReader::transformInteger32,
       "positiveInt", FhirJsonReader::transformInteger32,
       "unsignedInt", FhirJsonReader::transformInteger32,
-      "integer64", FhirJsonReader::transformInteger64
+      "integer64", FhirJsonReader::transformInteger64,
+      "base64Binary", FhirJsonReader::transformBinary
   );
 
   @Nonnull
@@ -78,6 +80,12 @@ public class FhirJsonReader {
   private static Stream<Column> transformInteger64(@Nonnull final Column column,
       @Nonnull final String name) {
     return Stream.of(column.cast(DataTypes.LongType).alias(name));
+  }
+
+  @Nonnull
+  private static Stream<Column> transformBinary(@Nonnull final Column column,
+      @Nonnull final String name) {
+    return Stream.of(unbase64(column).alias(name));
   }
 
 }

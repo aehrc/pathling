@@ -1,6 +1,8 @@
 package au.csiro.pathling.schema;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.spark.sql.functions.base64;
+import static org.apache.spark.sql.functions.regexp_replace;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
@@ -20,7 +22,8 @@ public class FhirJsonWriter {
 
   @Nonnull
   private static final Map<String, BiFunction<Column, String, Stream<Column>>> writeTransforms = Map.of(
-      "decimal", FhirJsonWriter::transformDecimal
+      "decimal", FhirJsonWriter::transformDecimal,
+      "base64Binary", FhirJsonWriter::transformBinary
   );
 
   @Nonnull
@@ -58,6 +61,12 @@ public class FhirJsonWriter {
   private static Stream<Column> transformDecimal(@Nonnull final Column column,
       @Nonnull final String columnName) {
     return Stream.of(column.cast(DataTypes.createDecimalType(38, 6)).alias(columnName));
+  }
+
+  @Nonnull
+  private static Stream<Column> transformBinary(@Nonnull final Column column,
+      @Nonnull final String columnName) {
+    return Stream.of(regexp_replace(base64(column), "[\r\n]", "").alias(columnName));
   }
 
 }

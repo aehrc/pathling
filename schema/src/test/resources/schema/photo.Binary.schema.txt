@@ -1,0 +1,5 @@
+root
+ |-- contentType: string (nullable = true)
+ |-- data: binary (nullable = true)
+ |-- id: string (nullable = true)
+ |-- resourceType: string (nullable = true)
