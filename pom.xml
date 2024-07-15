@@ -81,6 +81,7 @@
     <pathling.scalaVersion>2.12</pathling.scalaVersion>
     <pathling.scalaFullVersion>2.12.17</pathling.scalaFullVersion>
     <pathling.hapiFhirVersion>7.0.2</pathling.hapiFhirVersion>
+    <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.surefireVersion>3.2.5</pathling.surefireVersion>
     <pathling.jacksonVersion>2.16.1</pathling.jacksonVersion>
     <pathling.jerseyVersion>2.40</pathling.jerseyVersion>
@@ -102,6 +103,11 @@
         <version>${pathling.hapiFhirVersion}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.antlr</groupId>
+        <artifactId>antlr4</artifactId>
+        <version>${pathling.antlrVersion}</version>
       </dependency>
       <dependency>
         <groupId>org.scala-lang.modules</groupId>
@@ -150,6 +156,11 @@
         <artifactId>jsonassert</artifactId>
         <version>1.5.1</version>
       </dependency>
+      <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>1.18.32</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -180,6 +191,11 @@
             <forkCount>1C</forkCount>
             <failIfNoTests>false</failIfNoTests>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.antlr</groupId>
+          <artifactId>antlr4-maven-plugin</artifactId>
+          <version>${pathling.antlrVersion}</version>
         </plugin>
       </plugins>
     </pluginManagement>
