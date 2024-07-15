@@ -3,6 +3,7 @@ package au.csiro.pathling.sql.boundary;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.sql.udf.SqlFunction2;
 import jakarta.annotation.Nullable;
+import java.io.Serial;
 import java.math.BigDecimal;
 import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.utilities.Utilities;
@@ -17,6 +18,7 @@ import org.hl7.fhir.utilities.Utilities;
 public class LowBoundaryForDecimal extends DecimalBoundaryFunction implements
     SqlFunction2<BigDecimal, Integer, BigDecimal> {
 
+  @Serial
   private static final long serialVersionUID = -1470191359168496892L;
 
   @Override
