@@ -23,6 +23,10 @@ import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.expression.Paths.EvalFunction;
+import au.csiro.pathling.fhirpath.expression.Paths.Resource;
+import au.csiro.pathling.fhirpath.expression.Paths.This;
+import au.csiro.pathling.fhirpath.expression.Paths.Traversal;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.FunctionInvocationContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.IndexInvocationContext;
@@ -31,10 +35,6 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParamListConte
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ThisInvocationContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TotalInvocationContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathVisitor;
-import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
-import au.csiro.pathling.fhirpath.path.Paths.Resource;
-import au.csiro.pathling.fhirpath.path.Paths.This;
-import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Collections;
