@@ -1,7 +1,7 @@
 package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
-import jakarta.annotation.Nonnull;
+import au.csiro.pathling.fhirpath.expression.Traversal;
 
 /**
  * A description of how to take one {@link Collection} and transform it into another.
@@ -11,6 +11,10 @@ import jakarta.annotation.Nonnull;
 @FunctionalInterface
 public interface FhirPath {
 
-  Collection apply(@Nonnull final Collection input, @Nonnull final EvaluationContext context);
+  Collection apply(final Collection input, final EvaluationContext context);
+
+  default FhirPath traverse(final FhirPath target) {
+    return new Traversal(this, target);
+  }
 
 }

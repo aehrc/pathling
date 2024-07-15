@@ -21,19 +21,19 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
 
 /**
- * Represents a binary operator in FHIRPath.
+ * Represents a unary operator in FHIRPath.
  *
  * @author John Grimes
  */
-public interface BinaryOperator {
+public interface UnaryOperator {
 
   /**
    * Invokes this operator with the specified inputs.
    *
-   * @param input An {@link BinaryOperatorInput} object
-   * @return A {@link Collection} object representing the resulting expression
+   * @param input a {@link UnaryOperatorInput} object
+   * @return a {@link Collection} object representing the resulting expression
    */
   @Nonnull
-  Collection invoke(BinaryOperatorInput input);
+  Collection invoke(UnaryOperatorInput input);
 
 }

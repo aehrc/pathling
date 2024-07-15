@@ -17,23 +17,29 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
+import lombok.Value;
 
 /**
- * Represents a binary operator in FHIRPath.
+ * Represents the inputs to a unary operator in FHIRPath.
  *
  * @author John Grimes
  */
-public interface BinaryOperator {
+@Value
+public class UnaryOperatorInput {
 
   /**
-   * Invokes this operator with the specified inputs.
-   *
-   * @param input An {@link BinaryOperatorInput} object
-   * @return A {@link Collection} object representing the resulting expression
+   * Context and dependencies for use in evaluating the function.
    */
   @Nonnull
-  Collection invoke(BinaryOperatorInput input);
+  EvaluationContext context;
+
+  /**
+   * An expression representing the operand.
+   */
+  @Nonnull
+  Collection operand;
 
 }

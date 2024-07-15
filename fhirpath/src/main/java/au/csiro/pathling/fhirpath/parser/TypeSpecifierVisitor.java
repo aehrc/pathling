@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.expression.TypeSpecifier;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AdditiveExpressionContext;
@@ -70,7 +69,7 @@ import jakarta.annotation.Nonnull;
  *
  * @author Piotr Szul
  */
-class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
+class TypeSpecifierVisitor extends FhirPathBaseVisitor<TypeSpecifier> {
 
   private final boolean isNamespace;
 
@@ -83,12 +82,12 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   @Override
-  public FhirPath visitIdentifier(final IdentifierContext ctx) {
+  public TypeSpecifier visitIdentifier(final IdentifierContext ctx) {
     return new TypeSpecifier(ctx.getText());
   }
 
   @Override
-  public FhirPath visitInvocationExpression(final InvocationExpressionContext ctx) {
+  public TypeSpecifier visitInvocationExpression(final InvocationExpressionContext ctx) {
     // If we are not already in a namespace and there is an invocation, we need to parse the 
     // right-hand side of the invocation within the namespace.
     if (!isNamespace) {
@@ -101,221 +100,221 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   @Override
-  public FhirPath visitTermExpression(final TermExpressionContext ctx) {
+  public TypeSpecifier visitTermExpression(final TermExpressionContext ctx) {
     return visitChildren(ctx);
   }
 
   @Override
-  public FhirPath visitInvocationTerm(final InvocationTermContext ctx) {
+  public TypeSpecifier visitInvocationTerm(final InvocationTermContext ctx) {
     return visitChildren(ctx);
   }
 
   @Override
-  public FhirPath visitMemberInvocation(final MemberInvocationContext ctx) {
+  public TypeSpecifier visitMemberInvocation(final MemberInvocationContext ctx) {
     return visitChildren(ctx);
   }
 
   @Override
-  public FhirPath visitIndexerExpression(
+  public TypeSpecifier visitIndexerExpression(
       final IndexerExpressionContext ctx) {
     throw unexpected("IndexerExpression");
   }
 
   @Override
-  public FhirPath visitPolarityExpression(
+  public TypeSpecifier visitPolarityExpression(
       final PolarityExpressionContext ctx) {
     throw unexpected("PolarityExpression");
   }
 
   @Override
-  public FhirPath visitAdditiveExpression(
+  public TypeSpecifier visitAdditiveExpression(
       final AdditiveExpressionContext ctx) {
     throw unexpected("AdditiveExpression");
   }
 
   @Override
-  public FhirPath visitCombineExpression(
+  public TypeSpecifier visitCombineExpression(
       final CombineExpressionContext ctx) {
     throw unexpected("CombineExpression");
   }
 
   @Override
-  public FhirPath visitMultiplicativeExpression(
+  public TypeSpecifier visitMultiplicativeExpression(
       final MultiplicativeExpressionContext ctx) {
     throw unexpected("MultiplicativeExpression");
   }
 
   @Override
-  public FhirPath visitUnionExpression(final UnionExpressionContext ctx) {
+  public TypeSpecifier visitUnionExpression(final UnionExpressionContext ctx) {
     throw unexpected("UnionExpression");
   }
 
   @Override
-  public FhirPath visitOrExpression(final OrExpressionContext ctx) {
+  public TypeSpecifier visitOrExpression(final OrExpressionContext ctx) {
     throw unexpected("OrExpression");
   }
 
   @Override
-  public FhirPath visitAndExpression(final AndExpressionContext ctx) {
+  public TypeSpecifier visitAndExpression(final AndExpressionContext ctx) {
     throw unexpected("AndExpression");
   }
 
   @Override
-  public FhirPath visitMembershipExpression(
+  public TypeSpecifier visitMembershipExpression(
       final MembershipExpressionContext ctx) {
     throw unexpected("MembershipExpression");
   }
 
   @Override
-  public FhirPath visitInequalityExpression(
+  public TypeSpecifier visitInequalityExpression(
       final InequalityExpressionContext ctx) {
     throw unexpected("InequalityExpression");
   }
 
   @Override
-  public FhirPath visitEqualityExpression(
+  public TypeSpecifier visitEqualityExpression(
       final EqualityExpressionContext ctx) {
     throw unexpected("EqualityExpression");
   }
 
   @Override
-  public FhirPath visitImpliesExpression(
+  public TypeSpecifier visitImpliesExpression(
       final ImpliesExpressionContext ctx) {
     throw unexpected("ImpliesExpression");
   }
 
   @Override
-  public FhirPath visitTypeExpression(final TypeExpressionContext ctx) {
+  public TypeSpecifier visitTypeExpression(final TypeExpressionContext ctx) {
     throw unexpected("TypeExpression");
   }
 
   @Override
-  public FhirPath visitLiteralTerm(final LiteralTermContext ctx) {
+  public TypeSpecifier visitLiteralTerm(final LiteralTermContext ctx) {
     throw unexpected("LiteralTerm");
   }
 
   @Override
-  public FhirPath visitExternalConstantTerm(
+  public TypeSpecifier visitExternalConstantTerm(
       final ExternalConstantTermContext ctx) {
     throw unexpected("ExternalConstantTerm");
   }
 
   @Override
-  public FhirPath visitParenthesizedTerm(
+  public TypeSpecifier visitParenthesizedTerm(
       final ParenthesizedTermContext ctx) {
     throw unexpected("ParenthesizedTerm");
   }
 
   @Override
-  public FhirPath visitNullLiteral(final NullLiteralContext ctx) {
+  public TypeSpecifier visitNullLiteral(final NullLiteralContext ctx) {
     throw unexpected("NullLiteral");
   }
 
   @Override
-  public FhirPath visitBooleanLiteral(final BooleanLiteralContext ctx) {
+  public TypeSpecifier visitBooleanLiteral(final BooleanLiteralContext ctx) {
     throw unexpected("BooleanLiteral");
   }
 
   @Override
-  public FhirPath visitStringLiteral(final StringLiteralContext ctx) {
+  public TypeSpecifier visitStringLiteral(final StringLiteralContext ctx) {
     throw unexpected("StringLiteral");
   }
 
   @Override
-  public FhirPath visitNumberLiteral(final NumberLiteralContext ctx) {
+  public TypeSpecifier visitNumberLiteral(final NumberLiteralContext ctx) {
     throw unexpected("NumberLiteral");
   }
 
   @Override
-  public FhirPath visitDateLiteral(final DateLiteralContext ctx) {
+  public TypeSpecifier visitDateLiteral(final DateLiteralContext ctx) {
     throw unexpected("DateLiteral");
   }
 
   @Override
-  public FhirPath visitDateTimeLiteral(final DateTimeLiteralContext ctx) {
+  public TypeSpecifier visitDateTimeLiteral(final DateTimeLiteralContext ctx) {
     throw unexpected("DateTimeLiteral");
   }
 
   @Override
-  public FhirPath visitTimeLiteral(final TimeLiteralContext ctx) {
+  public TypeSpecifier visitTimeLiteral(final TimeLiteralContext ctx) {
     throw unexpected("TimeLiteral");
   }
 
   @Override
-  public FhirPath visitQuantityLiteral(final QuantityLiteralContext ctx) {
+  public TypeSpecifier visitQuantityLiteral(final QuantityLiteralContext ctx) {
     throw unexpected("QuantityLiteral");
   }
 
   @Override
-  public FhirPath visitCodingLiteral(final CodingLiteralContext ctx) {
+  public TypeSpecifier visitCodingLiteral(final CodingLiteralContext ctx) {
     throw unexpected("CodingLiteral");
   }
 
   @Override
-  public FhirPath visitExternalConstant(final ExternalConstantContext ctx) {
+  public TypeSpecifier visitExternalConstant(final ExternalConstantContext ctx) {
     throw unexpected("ExternalConstant");
   }
 
   @Override
-  public FhirPath visitFunctionInvocation(
+  public TypeSpecifier visitFunctionInvocation(
       final FunctionInvocationContext ctx) {
     throw unexpected("FunctionInvocation");
   }
 
   @Override
-  public FhirPath visitThisInvocation(final ThisInvocationContext ctx) {
+  public TypeSpecifier visitThisInvocation(final ThisInvocationContext ctx) {
     throw unexpected("ThisInvocation");
   }
 
   @Override
-  public FhirPath visitIndexInvocation(final IndexInvocationContext ctx) {
+  public TypeSpecifier visitIndexInvocation(final IndexInvocationContext ctx) {
     throw unexpected("IndexInvocation");
   }
 
   @Override
-  public FhirPath visitTotalInvocation(final TotalInvocationContext ctx) {
+  public TypeSpecifier visitTotalInvocation(final TotalInvocationContext ctx) {
     throw unexpected("TotalInvocation");
   }
 
   @Override
-  public FhirPath visitFunction(final FunctionContext ctx) {
+  public TypeSpecifier visitFunction(final FunctionContext ctx) {
     throw unexpected("Function");
   }
 
   @Override
-  public FhirPath visitParamList(final ParamListContext ctx) {
+  public TypeSpecifier visitParamList(final ParamListContext ctx) {
     throw unexpected("ParamList");
   }
 
   @Override
-  public FhirPath visitQuantity(final QuantityContext ctx) {
+  public TypeSpecifier visitQuantity(final QuantityContext ctx) {
     throw unexpected("Quantity");
   }
 
   @Override
-  public FhirPath visitUnit(final UnitContext ctx) {
+  public TypeSpecifier visitUnit(final UnitContext ctx) {
     throw unexpected("Unit");
   }
 
   @Override
-  public FhirPath visitDateTimePrecision(
+  public TypeSpecifier visitDateTimePrecision(
       final DateTimePrecisionContext ctx) {
     throw unexpected("DateTimePrecision");
   }
 
   @Override
-  public FhirPath visitPluralDateTimePrecision(
+  public TypeSpecifier visitPluralDateTimePrecision(
       final PluralDateTimePrecisionContext ctx) {
     throw unexpected("PluralDateTimePrecision");
   }
 
   @Override
-  public FhirPath visitTypeSpecifier(final TypeSpecifierContext ctx) {
+  public TypeSpecifier visitTypeSpecifier(final TypeSpecifierContext ctx) {
     throw unexpected("TypeSpecifier");
   }
 
   @Override
-  public FhirPath visitQualifiedIdentifier(
+  public TypeSpecifier visitQualifiedIdentifier(
       final QualifiedIdentifierContext ctx) {
     throw unexpected("QualifiedIdentifier");
   }
