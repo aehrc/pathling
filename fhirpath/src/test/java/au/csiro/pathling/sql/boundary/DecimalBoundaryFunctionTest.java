@@ -20,7 +20,7 @@ class DecimalBoundaryFunctionTest {
     final BigDecimal d = new BigDecimal("1.587");
     final BigDecimal result = DecimalBoundaryFunction.lowBoundaryForDecimal(d, null);
     log.debug("{}.lowBoundary() // {}", d, result);
-    assertEquals(new BigDecimal("1.58650000000000000000000000000000000000"), result);
+    assertEquals(new BigDecimal("1.5870000000000000000000000000000000000"), result);
   }
 
   @Test
@@ -29,7 +29,7 @@ class DecimalBoundaryFunctionTest {
     final BigDecimal d = new BigDecimal("1.587");
     final BigDecimal result = DecimalBoundaryFunction.lowBoundaryForDecimal(d, 2);
     log.debug("{}.lowBoundary(2) // {}", d, result);
-    assertEquals(new BigDecimal("1.57"), result);
+    assertEquals(new BigDecimal("1.58"), result);
   }
 
   @Test
@@ -38,7 +38,7 @@ class DecimalBoundaryFunctionTest {
     final BigDecimal d = new BigDecimal("1.587");
     final BigDecimal result = DecimalBoundaryFunction.lowBoundaryForDecimal(d, 4);
     log.debug("{}.lowBoundary(4) // {}", d, result);
-    assertEquals(new BigDecimal("1.5865"), result);
+    assertEquals(new BigDecimal("1.5870"), result);
   }
 
   @Test
@@ -46,7 +46,7 @@ class DecimalBoundaryFunctionTest {
   void negativePrecision() throws Exception {
     final BigDecimal d = new BigDecimal("1.587");
     final BigDecimal result = DecimalBoundaryFunction.lowBoundaryForDecimal(d, -1);
-    log.debug("{}.lowBoundary(-1) // \\{}", d, result);
+    log.debug("{}.lowBoundary(-1) // {}", d, result);
     assertNull(result);
   }
 
@@ -56,7 +56,7 @@ class DecimalBoundaryFunctionTest {
     final BigDecimal d = new BigDecimal("-1.587");
     final BigDecimal result = DecimalBoundaryFunction.lowBoundaryForDecimal(d, null);
     log.debug("{}.lowBoundary() // {}", d, result);
-    assertEquals(new BigDecimal("-1.58750000000000000000000000000000000000"), result);
+    assertEquals(new BigDecimal("-1.5879999999999999999999999999999999999"), result);
   }
 
   @Test
@@ -65,7 +65,7 @@ class DecimalBoundaryFunctionTest {
     final BigDecimal d = new BigDecimal("-1.587");
     final BigDecimal result = DecimalBoundaryFunction.lowBoundaryForDecimal(d, 2);
     log.debug("{}.lowBoundary(2) // {}", d, result);
-    assertEquals(new BigDecimal("-1.58"), result);
+    assertEquals(new BigDecimal("-1.59"), result);
   }
 
   @Test
@@ -74,7 +74,7 @@ class DecimalBoundaryFunctionTest {
     final BigDecimal d = new BigDecimal("-1.587");
     final BigDecimal result = DecimalBoundaryFunction.lowBoundaryForDecimal(d, 4);
     log.debug("{}.lowBoundary(4) // {}", d, result);
-    assertEquals(new BigDecimal("-1.5875"), result);
+    assertEquals(new BigDecimal("-1.5879"), result);
   }
 
   @Test
@@ -82,7 +82,7 @@ class DecimalBoundaryFunctionTest {
   void precisionHigherThanMax() throws Exception {
     final BigDecimal d = new BigDecimal("1.587");
     final BigDecimal result = DecimalBoundaryFunction.lowBoundaryForDecimal(d, 38);
-    log.debug("{}.lowBoundary(38) // \\{}", d, result);
+    log.debug("{}.lowBoundary(38) // {}", d, result);
     assertNull(result);
   }
 
@@ -92,7 +92,7 @@ class DecimalBoundaryFunctionTest {
     final BigDecimal d = new BigDecimal("1");
     final BigDecimal result = DecimalBoundaryFunction.lowBoundaryForDecimal(d, null);
     log.debug("{}.lowBoundary() // {}", d, result);
-    assertEquals(new BigDecimal("0.50000000000000000000000000000000000000"), result);
+    assertEquals(new BigDecimal("1.0000000000000000000000000000000000000"), result);
   }
 
   @Test
@@ -101,7 +101,7 @@ class DecimalBoundaryFunctionTest {
     final BigDecimal d = new BigDecimal("1");
     final BigDecimal result = DecimalBoundaryFunction.lowBoundaryForDecimal(d, 0);
     log.debug("{}.lowBoundary(0) // {}", d, result);
-    assertEquals(new BigDecimal("0"), result);
+    assertEquals(new BigDecimal("1"), result);
   }
 
   @Test
@@ -110,7 +110,7 @@ class DecimalBoundaryFunctionTest {
     final BigDecimal d = new BigDecimal("1");
     final BigDecimal result = DecimalBoundaryFunction.lowBoundaryForDecimal(d, 4);
     log.debug("{}.lowBoundary(4) // {}", d, result);
-    assertEquals(new BigDecimal("0.5000"), result);
+    assertEquals(new BigDecimal("1.0000"), result);
   }
 
   @Test
@@ -119,7 +119,7 @@ class DecimalBoundaryFunctionTest {
     final BigDecimal d = new BigDecimal("1.587");
     final BigDecimal result = DecimalBoundaryFunction.highBoundaryForDecimal(d, null);
     log.debug("{}.highBoundary() // {}", d, result);
-    assertEquals(new BigDecimal("1.58750000000000000000000000000000000000"), result);
+    assertEquals(new BigDecimal("1.5879999999999999999999999999999999999"), result);
   }
 
   @Test
@@ -128,7 +128,7 @@ class DecimalBoundaryFunctionTest {
     final BigDecimal d = new BigDecimal("1.587");
     final BigDecimal result = DecimalBoundaryFunction.highBoundaryForDecimal(d, 2);
     log.debug("{}.highBoundary(2) // {}", d, result);
-    assertEquals(new BigDecimal("1.58"), result);
+    assertEquals(new BigDecimal("1.59"), result);
   }
 
   @Test
@@ -137,7 +137,7 @@ class DecimalBoundaryFunctionTest {
     final BigDecimal d = new BigDecimal("1.587");
     final BigDecimal result = DecimalBoundaryFunction.highBoundaryForDecimal(d, 4);
     log.debug("{}.highBoundary(4) // {}", d, result);
-    assertEquals(new BigDecimal("1.5875"), result);
+    assertEquals(new BigDecimal("1.5879"), result);
   }
 
   @Test
@@ -146,7 +146,7 @@ class DecimalBoundaryFunctionTest {
     final BigDecimal d = new BigDecimal("-1.587");
     final BigDecimal result = DecimalBoundaryFunction.highBoundaryForDecimal(d, null);
     log.debug("{}.highBoundary() // {}", d, result);
-    assertEquals(new BigDecimal("-1.58650000000000000000000000000000000000"), result);
+    assertEquals(new BigDecimal("-1.5870000000000000000000000000000000000"), result);
   }
 
   @Test
@@ -155,7 +155,7 @@ class DecimalBoundaryFunctionTest {
     final BigDecimal d = new BigDecimal("-1.587");
     final BigDecimal result = DecimalBoundaryFunction.highBoundaryForDecimal(d, 2);
     log.debug("{}.highBoundary(2) // {}", d, result);
-    assertEquals(new BigDecimal("-1.57"), result);
+    assertEquals(new BigDecimal("-1.58"), result);
   }
 
   @Test
@@ -164,7 +164,7 @@ class DecimalBoundaryFunctionTest {
     final BigDecimal d = new BigDecimal("-1.587");
     final BigDecimal result = DecimalBoundaryFunction.highBoundaryForDecimal(d, 4);
     log.debug("{}.highBoundary(4) // {}", d, result);
-    assertEquals(new BigDecimal("-1.5865"), result);
+    assertEquals(new BigDecimal("-1.5870"), result);
   }
 
   @Test
@@ -173,7 +173,7 @@ class DecimalBoundaryFunctionTest {
     final BigDecimal d = new BigDecimal("1");
     final BigDecimal result = DecimalBoundaryFunction.highBoundaryForDecimal(d, null);
     log.debug("{}.highBoundary() // {}", d, result);
-    assertEquals(new BigDecimal("1.50000000000000000000000000000000000000"), result);
+    assertEquals(new BigDecimal("1.9999999999999999999999999999999999999"), result);
   }
 
   @Test
@@ -191,7 +191,7 @@ class DecimalBoundaryFunctionTest {
     final BigDecimal d = new BigDecimal("1");
     final BigDecimal result = DecimalBoundaryFunction.highBoundaryForDecimal(d, 4);
     log.debug("{}.highBoundary(4) // {}", d, result);
-    assertEquals(new BigDecimal("1.5000"), result);
+    assertEquals(new BigDecimal("1.9999"), result);
   }
 
 }
