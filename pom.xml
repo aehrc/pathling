@@ -46,6 +46,7 @@
   
   <modules>
     <module>schema</module>
+    <module>fhirpath</module>
   </modules>
 
   <organization>
