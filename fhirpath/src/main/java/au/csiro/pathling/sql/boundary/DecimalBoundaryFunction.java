@@ -39,6 +39,8 @@ public abstract class DecimalBoundaryFunction {
       return null;
     }
 
+    // Determine the digits that will potentially need to be added to the number based on whether
+    // it is negative and whether we are calculating a boundary that is further or closer to zero.
     final boolean inputIsNegative = d.compareTo(BigDecimal.ZERO) < 0;
     final boolean farBoundaryFromZero = isHigh ^ inputIsNegative;
     final String digit = farBoundaryFromZero
@@ -56,10 +58,12 @@ public abstract class DecimalBoundaryFunction {
       }
     }
 
-    // Round the result to the desired precision.
+    // Determine the correct rounding mode based on whether we are calculating a high or low
+    // boundary.
     final RoundingMode roundingMode = isHigh
                                       ? RoundingMode.CEILING
                                       : RoundingMode.FLOOR;
+    // Round the result to the desired precision.
     return result.setScale(Objects.requireNonNullElse(precision, maxScale), roundingMode);
   }
 
