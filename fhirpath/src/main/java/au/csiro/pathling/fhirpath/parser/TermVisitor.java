@@ -37,7 +37,7 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   public FhirPath visitInvocationTerm(final InvocationTermContext ctx) {
-    return new InvocationVisitor(true).visit(ctx.invocation());
+    return new InvocationVisitor(Optional.empty()).visit(ctx.invocation());
   }
 
   @Override
@@ -57,5 +57,5 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
   public FhirPath visitParenthesizedTerm(final ParenthesizedTermContext ctx) {
     return new Visitor().visit(ctx.expression());
   }
- 
+
 }
