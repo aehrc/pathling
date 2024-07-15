@@ -17,18 +17,14 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import static java.util.Objects.requireNonNull;
-
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.expression.Paths.ExternalConstantPath;
+import au.csiro.pathling.fhirpath.expression.ExternalConstant;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ExternalConstantContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ExternalConstantTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.InvocationTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.LiteralTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParenthesizedTermContext;
-import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.util.Optional;
 import org.antlr.v4.runtime.tree.ParseTree;
 
@@ -40,39 +36,26 @@ import org.antlr.v4.runtime.tree.ParseTree;
 class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
-  @Nonnull
-  public FhirPath visitInvocationTerm(
-      @Nullable final InvocationTermContext ctx) {
-    return new InvocationVisitor(true).visit(requireNonNull(ctx).invocation());
+  public FhirPath visitInvocationTerm(final InvocationTermContext ctx) {
+    return new InvocationVisitor(true).visit(ctx.invocation());
   }
 
   @Override
-  @Nonnull
-  public FhirPath visitLiteralTerm(@Nullable final LiteralTermContext ctx) {
-    return new LiteralTermVisitor().visit(requireNonNull(ctx).literal());
+  public FhirPath visitLiteralTerm(final LiteralTermContext ctx) {
+    return new LiteralTermVisitor().visit(ctx.literal());
   }
 
   @Override
-  @Nonnull
-  public FhirPath visitExternalConstantTerm(
-      @Nullable final ExternalConstantTermContext ctx) {
-    final ExternalConstantContext constantContext = requireNonNull(
-        requireNonNull(ctx).externalConstant());
+  public FhirPath visitExternalConstantTerm(final ExternalConstantTermContext ctx) {
+    final ExternalConstantContext constantContext = ctx.externalConstant();
     final String term = Optional.ofNullable((ParseTree) constantContext.identifier())
         .orElse(constantContext.STRING()).getText();
-    requireNonNull(term);
-
-    return new ExternalConstantPath(term);
+    return new ExternalConstant(term);
   }
 
   @Override
-  @Nonnull
-  public FhirPath visitParenthesizedTerm(
-      @Nullable final ParenthesizedTermContext ctx) {
-    // TODO: maybe we do not need that and just use the subExpression directly?
-    // Parentheses are ignored in the standalone term case.
-    final FhirPath subExpression = new Visitor().visit(
-        requireNonNull(ctx).expression());
-    return subExpression;
+  public FhirPath visitParenthesizedTerm(final ParenthesizedTermContext ctx) {
+    return new Visitor().visit(ctx.expression());
   }
+ 
 }
