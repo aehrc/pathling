@@ -15,7 +15,7 @@
     "@types/jest": "^29.2.0",
     "@types/node": "^18.x",
     "jest": "^29.2.2",
-    "prettier": "^2.4.1",
+    "prettier": "^3.3.3",
     "ts-node": "^10.4.0",
     "typescript": "^4.4.4"
   },
