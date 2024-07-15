@@ -11,7 +11,6 @@ import javax.annotation.Nullable;
 public abstract class DecimalBoundaryFunction {
 
   private static final int MAX_PRECISION = 38;
-  private static final String NINES = "99999999999999999999999999999999999999";
 
   @Nullable
   protected static BigDecimal lowBoundaryForDecimal(@Nullable final BigDecimal d,
@@ -27,7 +26,7 @@ public abstract class DecimalBoundaryFunction {
 
   @Nullable
   private static BigDecimal calculateBoundary(@Nullable final BigDecimal d,
-      @Nullable final Integer precision, boolean isHigh) {
+      @Nullable final Integer precision, final boolean isHigh) {
     // Check for null or invalid precision.
     if (d == null || (precision != null && precision < 0)) {
       return null;
