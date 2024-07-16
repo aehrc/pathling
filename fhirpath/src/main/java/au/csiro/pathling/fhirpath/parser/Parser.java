@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathLexer;

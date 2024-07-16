@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.evaluation.EvaluationContext;
 import jakarta.annotation.Nonnull;
 import lombok.Value;
 

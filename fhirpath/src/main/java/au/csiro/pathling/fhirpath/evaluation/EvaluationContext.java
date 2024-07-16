@@ -15,8 +15,9 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath;
+package au.csiro.pathling.fhirpath.evaluation;
 
+import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import ca.uhn.fhir.context.FhirContext;
 import org.apache.spark.sql.SparkSession;
@@ -33,16 +34,16 @@ public interface EvaluationContext {
   /**
    * @return The {@link SparkSession} to use for building Spark queries
    */
-  SparkSession getSpark();
+  SparkSession spark();
 
   /**
    * @return A {@link FhirContext} for accessing FHIR definitions
    */
-  FhirContext getFhirContext();
+  FhirContext fhirContext();
 
   /**
    * @return The input context for the evaluation
    */
-  Collection getInputContext();
+  Collection inputContext();
 
 }
