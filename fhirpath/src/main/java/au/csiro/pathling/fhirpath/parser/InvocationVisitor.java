@@ -20,7 +20,7 @@ package au.csiro.pathling.fhirpath.parser;
 import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.expression.FunctionInvocation;
+import au.csiro.pathling.fhirpath.expression.FunctionCall;
 import au.csiro.pathling.fhirpath.expression.This;
 import au.csiro.pathling.fhirpath.expression.Traversal;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
@@ -85,7 +85,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
             .collect(toList())
         ).orElse(Collections.emptyList());
 
-    return new FunctionInvocation(name, arguments);
+    return new FunctionCall(name, arguments);
   }
 
   @Override

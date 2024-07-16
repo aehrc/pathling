@@ -20,10 +20,10 @@ package au.csiro.pathling.fhirpath.parser;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.expression.BinaryOperatorInvocation;
+import au.csiro.pathling.fhirpath.expression.BinaryOperatorCall;
 import au.csiro.pathling.fhirpath.expression.Invocation;
 import au.csiro.pathling.fhirpath.expression.TypeSpecifier;
-import au.csiro.pathling.fhirpath.expression.UnaryOperatorInvocation;
+import au.csiro.pathling.fhirpath.expression.UnaryOperatorCall;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AdditiveExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AndExpressionContext;
@@ -76,7 +76,7 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
 
   private FhirPath visitBinaryOperator(final ParseTree leftContext, final ParseTree rightContext,
       final String operatorName) {
-    return new BinaryOperatorInvocation(new Visitor().visit(leftContext),
+    return new BinaryOperatorCall(new Visitor().visit(leftContext),
         new Visitor().visit(rightContext), operatorName);
   }
 
@@ -141,7 +141,7 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   public FhirPath visitPolarityExpression(final PolarityExpressionContext ctx) {
-    return new UnaryOperatorInvocation(new Visitor().visit(ctx.expression()),
+    return new UnaryOperatorCall(new Visitor().visit(ctx.expression()),
         ctx.children.get(0).toString());
   }
 
@@ -155,7 +155,7 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
   public FhirPath visitTypeExpression(final TypeExpressionContext ctx) {
     final TypeSpecifier typeSpecifier = new TypeSpecifierVisitor().visit(ctx.typeSpecifier());
     final String operatorName = ctx.children.get(1).toString();
-    return new BinaryOperatorInvocation(new Visitor().visit(ctx.expression()),
+    return new BinaryOperatorCall(new Visitor().visit(ctx.expression()),
         typeSpecifier, operatorName);
   }
 

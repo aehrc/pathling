@@ -28,6 +28,17 @@ public class FhirPathType {
       SYSTEM_NAMESPACE, FhirPathType::isValidSystemType
   );
 
+  public static final FhirPathType BOOLEAN = new FhirPathType("Boolean");
+  public static final FhirPathType STRING = new FhirPathType("String");
+  public static final FhirPathType INTEGER = new FhirPathType("Integer");
+  public static final FhirPathType DECIMAL = new FhirPathType("Decimal");
+  public static final FhirPathType DATE = new FhirPathType("Date");
+  public static final FhirPathType DATE_TIME = new FhirPathType("DateTime");
+  public static final FhirPathType TIME = new FhirPathType("Time");
+  public static final FhirPathType QUANTITY = new FhirPathType("Quantity");
+  public static final FhirPathType ANY = new FhirPathType("Any");
+  public static final FhirPathType CODING = new FhirPathType("FHIR", "Coding");
+
   final String namespace;
   final String typeName;
 
@@ -132,4 +143,9 @@ public class FhirPathType {
     return FHIRPATH_TYPES.contains(typeName);
   }
 
+  @Override
+  public String toString() {
+    return namespace + "." + typeName;
+  }
+ 
 }

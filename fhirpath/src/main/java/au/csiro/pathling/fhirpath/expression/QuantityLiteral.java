@@ -4,12 +4,11 @@ import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 
-public record UnaryOperatorInvocation(FhirPath operand, String operator) implements
-    FhirPath {
+public record QuantityLiteral(String value, String unit) implements FhirPath {
 
   @Override
   public Collection apply(final Collection input, final EvaluationContext context) {
     return null;
   }
-
+ 
 }
