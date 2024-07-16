@@ -18,20 +18,21 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
-import jakarta.annotation.Nonnull;
 import java.util.Optional;
+import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Represents a collection of nodes that are the result of evaluating a FHIRPath expression.
  *
- * @param column a {@link Column} representing the result of evaluating this expression
- * @param type the FHIRPath type of the result, if known
- * @param fhirType the FHIR type of the result, if known
  * @author John Grimes
  */
-public record Collection(@Nonnull Column column, @Nonnull Optional<FhirPathType> type,
-                         @Nonnull Optional<FHIRDefinedType> fhirType) {
+@Getter
+public class Collection {
+
+  Column column;
+  Optional<FhirPathType> type;
+  Optional<FHIRDefinedType> fhirType;
 
 }

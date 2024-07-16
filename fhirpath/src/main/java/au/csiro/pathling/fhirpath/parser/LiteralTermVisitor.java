@@ -17,20 +17,17 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import static java.util.Objects.requireNonNull;
-
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.DateCollection;
 import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.collection.TimeCollection;
-import au.csiro.pathling.fhirpath.expression.Literals.BooleanLiteral;
-import au.csiro.pathling.fhirpath.expression.Literals.CalendarDurationLiteral;
-import au.csiro.pathling.fhirpath.expression.Literals.CodingLiteral;
-import au.csiro.pathling.fhirpath.expression.Literals.NullLiteral;
-import au.csiro.pathling.fhirpath.expression.Literals.StringLiteral;
-import au.csiro.pathling.fhirpath.expression.Literals.UcumQuantityLiteral;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.BooleanLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.CodingLiteralContext;
@@ -41,9 +38,9 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.NumberLiteralC
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.QuantityLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.StringLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TimeLiteralContext;
-import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.text.ParseException;
+import java.util.Optional;
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 /**
@@ -54,19 +51,14 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
-  @Nonnull
-  public FhirPath visitStringLiteral(
-      @Nullable final StringLiteralContext ctx) {
-    @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    requireNonNull(fhirPath);
-    return new StringLiteral(fhirPath);
+  public FhirPath visitStringLiteral(final StringLiteralContext ctx) {
+    final String fhirPath = ctx.getText();
+    return (input, context) -> StringCollection.fromLiteral(fhirPath);
   }
 
   @Override
-  public FhirPath visitDateLiteral(@Nullable final DateLiteralContext ctx) {
-    @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    requireNonNull(fhirPath);
-
+  public FhirPath visitDateLiteral(final DateLiteralContext ctx) {
+    final String fhirPath = ctx.getText();
     return (input, context) -> {
       try {
         return DateCollection.fromLiteral(fhirPath);
@@ -77,12 +69,8 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   @Override
-  @Nonnull
-  public FhirPath visitDateTimeLiteral(
-      @Nullable final DateTimeLiteralContext ctx) {
-    @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    requireNonNull(fhirPath);
-
+  public FhirPath visitDateTimeLiteral(final DateTimeLiteralContext ctx) {
+    final String fhirPath = ctx.getText();
     return (input, context) -> {
       try {
         return DateTimeCollection.fromLiteral(fhirPath);
@@ -93,21 +81,14 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   @Override
-  @Nonnull
-  public FhirPath visitTimeLiteral(@Nullable final TimeLiteralContext ctx) {
-    @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    requireNonNull(fhirPath);
-
+  public FhirPath visitTimeLiteral(final TimeLiteralContext ctx) {
+    final String fhirPath = ctx.getText();
     return (input, context) -> TimeCollection.fromLiteral(fhirPath);
   }
 
   @Override
-  @Nonnull
-  public FhirPath visitNumberLiteral(
-      @Nullable final NumberLiteralContext ctx) {
-    @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    requireNonNull(fhirPath);
-
+  public FhirPath visitNumberLiteral(final NumberLiteralContext ctx) {
+    final String fhirPath = ctx.getText();
     return (input, context) -> {
       // The FHIRPath grammar lumps these two types together, so we tease them apart by trying to 
       // parse them.
@@ -124,37 +105,33 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   @Override
-  @Nonnull
-  public FhirPath visitBooleanLiteral(
-      @Nullable final BooleanLiteralContext ctx) {
-    return new BooleanLiteral(requireNonNull(requireNonNull(ctx).getText()));
+  public FhirPath visitBooleanLiteral(final BooleanLiteralContext ctx) {
+    return (input, context) -> BooleanCollection.fromLiteral(ctx.getText());
   }
 
   @Override
-  @Nonnull
-  public FhirPath visitNullLiteral(@Nullable final NullLiteralContext ctx) {
-    return new NullLiteral();
+  public FhirPath visitNullLiteral(final NullLiteralContext ctx) {
+    return (input, context) -> new EmptyCollection();
   }
 
   @Override
-  @Nonnull
-  public FhirPath visitQuantityLiteral(
-      @Nullable final QuantityLiteralContext ctx) {
-    requireNonNull(ctx);
-    @Nullable final String number = ctx.quantity().NUMBER().getText();
-    requireNonNull(number);
-    @Nullable final TerminalNode ucumUnit = ctx.quantity().unit().STRING();
-    return (ucumUnit == null)
-           ? new CalendarDurationLiteral(
-        String.format("%s %s", number, ctx.quantity().unit().getText()))
-           : new UcumQuantityLiteral(String.format("%s %s", number, ucumUnit.getText()));
+  public FhirPath visitQuantityLiteral(final QuantityLiteralContext ctx) {
+    final String number = ctx.quantity().NUMBER().getText();
+    final ParserRuleContext dateTimePrecision = ctx.quantity().unit()
+        .dateTimePrecision();
+    final ParserRuleContext pluralDateTimePrecisionContext = ctx.quantity().unit()
+        .pluralDateTimePrecision();
+    final TerminalNode ucumUnit = ctx.quantity().unit().STRING();
+    return (input, context) -> Optional.ofNullable(dateTimePrecision)
+        .or(() -> Optional.ofNullable(pluralDateTimePrecisionContext))
+        .map(p -> QuantityCollection.fromCalendarDurationLiteral(number, p.getText()))
+        .orElseGet(() -> QuantityCollection.fromUcumLiteral(number, ucumUnit.getText()));
   }
 
   @Override
-  @Nonnull
-  public FhirPath visitCodingLiteral(
-      @Nullable final CodingLiteralContext ctx) {
-    return new CodingLiteral(requireNonNull(requireNonNull(ctx).getText()));
+  public FhirPath visitCodingLiteral(final CodingLiteralContext ctx) {
+    final TerminalNode coding = ctx.CODING();
+    return (input, context) -> CodingCollection.fromLiteral(coding.getText());
   }
 
 }
