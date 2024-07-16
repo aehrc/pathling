@@ -2,6 +2,7 @@ package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.expression.Traversal;
+import java.util.Optional;
 
 /**
  * A description of how to take one {@link Collection} and transform it into another.
@@ -13,8 +14,8 @@ public interface FhirPath {
 
   Collection apply(final Collection input, final EvaluationContext context);
 
-  default FhirPath traverse(final FhirPath target) {
-    return new Traversal(this, target);
+  default FhirPath traverse(final String target) {
+    return new Traversal(Optional.of(this), target);
   }
 
 }

@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.expression.BinaryOperatorInvocation;
+import au.csiro.pathling.fhirpath.expression.Invocation;
 import au.csiro.pathling.fhirpath.expression.TypeSpecifier;
 import au.csiro.pathling.fhirpath.expression.UnaryOperatorInvocation;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
@@ -69,8 +70,8 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   public FhirPath visitInvocationExpression(final InvocationExpressionContext ctx) {
     final FhirPath source = new Visitor().visit(ctx.expression());
-    final FhirPath target = ctx.invocation().accept(new InvocationVisitor());
-    return source.traverse(target);
+    final FhirPath target = ctx.invocation().accept(new InvocationVisitor(source));
+    return new Invocation(source, target);
   }
 
   private FhirPath visitBinaryOperator(final ParseTree leftContext, final ParseTree rightContext,

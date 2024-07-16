@@ -38,22 +38,6 @@ import org.antlr.v4.runtime.CommonTokenStream;
 public class Parser {
 
   /**
-   * Evaluates a FHIRPath expression.
-   *
-   * @param expression The String representation of the FHIRPath expression
-   * @param context An {@link EvaluationContext} that provides dependencies and context for the *
-   * evaluation of the expression
-   * @return a new {@link Collection} object
-   */
-  @Nonnull
-  public Collection evaluate(@Nonnull final String expression,
-      @Nonnull final EvaluationContext context) {
-    final FhirPath fhirPath = parse(expression);
-    return fhirPath.apply(context.getInputContext(), context);
-  }
-
-
-  /**
    * Parses a FHIRPath expression.
    *
    * @param expression The String representation of the FHIRPath expression
