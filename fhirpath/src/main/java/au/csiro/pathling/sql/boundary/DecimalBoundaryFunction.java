@@ -1,8 +1,9 @@
 package au.csiro.pathling.sql.boundary;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
-import java.util.Objects;
+import java.util.Optional;
 import javax.annotation.Nullable;
 
 /**
@@ -28,43 +29,66 @@ public abstract class DecimalBoundaryFunction {
   private static BigDecimal calculateBoundary(@Nullable final BigDecimal d,
       @Nullable final Integer precision, final boolean isHigh) {
     // Check for null or invalid precision.
-    if (d == null || (precision != null && precision < 0)) {
+    final boolean precisionInvalid =
+        precision != null && (precision <= 0 || precision > MAX_PRECISION);
+    if (d == null || precisionInvalid) {
       return null;
     }
 
-    // Calculate the maximum scale that will fit within the maximum decimal.
-    final int integerLength = d.precision() - d.scale();
-    final int maxScale = MAX_PRECISION - integerLength;
-    if (precision != null && precision > maxScale) {
-      return null;
-    }
-
-    // Determine the digits that will potentially need to be added to the number based on whether
-    // it is negative and whether we are calculating a boundary that is further or closer to zero.
     final boolean inputIsNegative = d.compareTo(BigDecimal.ZERO) < 0;
     final boolean farBoundaryFromZero = isHigh ^ inputIsNegative;
-    final String digit = farBoundaryFromZero
-                         ? "9"
-                         : "0";
+    final int significantFigures = Optional.ofNullable(precision).orElse(MAX_PRECISION);
 
-    BigDecimal result = d;
-    if (farBoundaryFromZero) {
-      // Add the necessary number of extra digits to the decimal.
-      final int additionalDigits = Objects.requireNonNullElse(precision, maxScale) - d.scale();
-      if (additionalDigits > 0) {
-        result = new BigDecimal(d.toPlainString() + (d.scale() == 0
-                                                     ? "."
-                                                     : "") + digit.repeat(additionalDigits));
-      }
-    }
-
-    // Determine the correct rounding mode based on whether we are calculating a high or low
-    // boundary.
+    // Round the number to the requested number of significant figures.
     final RoundingMode roundingMode = isHigh
                                       ? RoundingMode.CEILING
                                       : RoundingMode.FLOOR;
-    // Round the result to the desired precision.
-    return result.setScale(Objects.requireNonNullElse(precision, maxScale), roundingMode);
+    final BigDecimal rounded = d.round(new MathContext(significantFigures, roundingMode));
+
+    // Unscale the number to remove trailing zeroes.
+    final BigDecimal unscaled = new BigDecimal(rounded.stripTrailingZeros().unscaledValue());
+
+    // Expand the number to the far boundary if necessary.
+    final BigDecimal expanded = farBoundaryFromZero
+                                ? inputIsNegative
+                                  ? unscaled.subtract(almostOne())
+                                  : unscaled.add(almostOne())
+                                : unscaled;
+
+    // Scale the number back to the original scale.
+    final int power = rounded.stripTrailingZeros().scale();
+    final RoundingMode divisionRoundingMode = inputIsNegative ^ power < 0
+                                              ? RoundingMode.CEILING
+                                              : RoundingMode.FLOOR;
+    final BigDecimal result = expanded.divide(pow10(power, significantFigures),
+        new MathContext(significantFigures, divisionRoundingMode));
+
+    // Convert the result back into plain notation.
+    return new BigDecimal(result.toPlainString());
+  }
+
+  private static BigDecimal almostOne() {
+    // Calculate the closest number to 1 that is less than 1.
+    final BigDecimal one = BigDecimal.ONE;
+    final MathContext mc = new MathContext(MAX_PRECISION);
+    return one.subtract(BigDecimal.valueOf(1, MAX_PRECISION), mc);
+  }
+
+  private static BigDecimal pow10(final int exponent, final int precision) {
+    if (exponent == 0) {
+      return BigDecimal.ONE; // Any number to the power of 0 is 1.
+    }
+
+    final int absExponent = Math.abs(exponent);
+    final BigDecimal positivePower = BigDecimal.TEN.pow(absExponent);
+
+    if (exponent > 0) {
+      return positivePower;
+    } else {
+      // Calculate reciprocal for negative exponent.
+      final MathContext mc = new MathContext(precision, RoundingMode.HALF_UP);
+      return BigDecimal.ONE.divide(positivePower, mc);
+    }
   }
 
 }
