@@ -95,12 +95,12 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   public FhirPath visitIndexInvocation(final IndexInvocationContext ctx) {
-    throw new UnsupportedExpressionException("$index is not supported");
+    throw new UnsupportedExpressionError("$index is not supported");
   }
 
   @Override
   public FhirPath visitTotalInvocation(final TotalInvocationContext ctx) {
-    throw new UnsupportedExpressionException("$total is not supported");
+    throw new UnsupportedExpressionError("$total is not supported");
   }
 
 }

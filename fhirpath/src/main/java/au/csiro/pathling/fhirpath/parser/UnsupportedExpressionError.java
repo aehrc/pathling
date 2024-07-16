@@ -2,13 +2,13 @@ package au.csiro.pathling.fhirpath.parser;
 
 import java.io.Serial;
 
-public class UnsupportedExpressionException extends RuntimeException {
+public class UnsupportedExpressionError extends FhirPathParsingError {
 
   @Serial
   private static final long serialVersionUID = 1L;
 
-  public UnsupportedExpressionException(final String message) {
+  public UnsupportedExpressionError(final String message) {
     super(message);
   }
- 
+
 }

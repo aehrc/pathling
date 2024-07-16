@@ -321,7 +321,7 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<TypeSpecifier> {
 
   @Nonnull
   private static RuntimeException unexpected(final String expressionType) {
-    return new UnsupportedExpressionException("Unexpected expression type: " + expressionType);
+    return new UnsupportedExpressionError("Unexpected expression type: " + expressionType);
   }
 
 }

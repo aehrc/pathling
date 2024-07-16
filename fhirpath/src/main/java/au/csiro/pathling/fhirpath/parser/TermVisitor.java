@@ -37,7 +37,7 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   public FhirPath visitInvocationTerm(final InvocationTermContext ctx) {
-    return new InvocationVisitor(Optional.empty()).visit(ctx.invocation());
+    return new InvocationVisitor().visit(ctx.invocation());
   }
 
   @Override

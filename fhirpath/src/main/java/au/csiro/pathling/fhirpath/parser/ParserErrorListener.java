@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import au.csiro.pathling.errors.InvalidUserInputError;
 import jakarta.annotation.Nullable;
 import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.RecognitionException;
@@ -45,7 +44,7 @@ public class ParserErrorListener extends BaseErrorListener {
       sb.append(": ");
       sb.append(msg);
     }
-    throw new InvalidUserInputError(sb.toString());
+    throw new FhirPathParsingError(sb.toString());
   }
 
 }

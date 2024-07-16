@@ -19,7 +19,6 @@ package au.csiro.pathling.fhirpath.parser;
 
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.DateCollection;
 import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
@@ -72,7 +71,7 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
       try {
         return DateCollection.fromLiteral(fhirPath);
       } catch (final ParseException e) {
-        throw new InvalidUserInputError("Unable to parse date format: " + fhirPath);
+        throw new FhirPathParsingError("Unable to parse date format: " + fhirPath);
       }
     };
   }
@@ -88,7 +87,7 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
       try {
         return DateTimeCollection.fromLiteral(fhirPath);
       } catch (final ParseException e) {
-        throw new InvalidUserInputError("Unable to parse date/time format: " + fhirPath);
+        throw new FhirPathParsingError("Unable to parse date/time format: " + fhirPath);
       }
     };
   }
@@ -118,7 +117,7 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
         try {
           return DecimalCollection.fromLiteral(fhirPath);
         } catch (final NumberFormatException ex) {
-          throw new InvalidUserInputError("Invalid date format: " + fhirPath);
+          throw new FhirPathParsingError("Invalid date format: " + fhirPath);
         }
       }
     };

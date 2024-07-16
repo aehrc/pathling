@@ -19,7 +19,6 @@ package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import ca.uhn.fhir.context.FhirContext;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 
 /**
@@ -34,13 +33,16 @@ public interface EvaluationContext {
   /**
    * @return The {@link SparkSession} to use for building Spark queries
    */
-  @Nonnull
   SparkSession getSpark();
 
   /**
    * @return A {@link FhirContext} for accessing FHIR definitions
    */
-  @Nonnull
   FhirContext getFhirContext();
+
+  /**
+   * @return The input context for the evaluation
+   */
+  Collection getInputContext();
 
 }

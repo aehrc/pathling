@@ -62,7 +62,6 @@ public class Parser {
   @Nonnull
   public FhirPath parse(@Nonnull final String expression) {
     final FhirPathParser parser = build(expression);
-
     return new Visitor().visit(parser.expression());
   }
 
