@@ -46,17 +46,19 @@ public abstract class DecimalBoundaryFunction {
     final BigDecimal rounded = d.round(new MathContext(significantFigures, roundingMode));
 
     // Unscale the number to remove trailing zeroes.
-    final BigDecimal unscaled = new BigDecimal(rounded.stripTrailingZeros().unscaledValue());
+    final BigDecimal stripped = rounded.stripTrailingZeros();
+    final BigDecimal unscaled = new BigDecimal(stripped.unscaledValue());
+    final boolean trailingZeroes = rounded.scale() > stripped.scale();
 
     // Expand the number to the far boundary if necessary.
-    final BigDecimal expanded = farBoundaryFromZero
+    final BigDecimal expanded = farBoundaryFromZero && !trailingZeroes
                                 ? inputIsNegative
-                                  ? unscaled.subtract(almostOne())
-                                  : unscaled.add(almostOne())
+                                  ? unscaled.subtract(almostHalf())
+                                  : unscaled.add(almostHalf())
                                 : unscaled;
 
     // Scale the number back to the original scale.
-    final int power = rounded.stripTrailingZeros().scale();
+    final int power = stripped.scale();
     final RoundingMode divisionRoundingMode = inputIsNegative ^ power < 0
                                               ? RoundingMode.CEILING
                                               : RoundingMode.FLOOR;
@@ -67,11 +69,11 @@ public abstract class DecimalBoundaryFunction {
     return new BigDecimal(result.toPlainString());
   }
 
-  private static BigDecimal almostOne() {
+  private static BigDecimal almostHalf() {
     // Calculate the closest number to 1 that is less than 1.
-    final BigDecimal one = BigDecimal.ONE;
+    final BigDecimal half = new BigDecimal("0.5");
     final MathContext mc = new MathContext(MAX_PRECISION);
-    return one.subtract(BigDecimal.valueOf(1, MAX_PRECISION), mc);
+    return half.subtract(BigDecimal.valueOf(1, MAX_PRECISION), mc);
   }
 
   private static BigDecimal pow10(final int exponent, final int precision) {
