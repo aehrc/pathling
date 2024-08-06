@@ -22,11 +22,12 @@ import static java.util.Objects.requireNonNull;
 import au.csiro.pathling.io.ImportMode;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
+import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.Map;
 import java.util.function.UnaryOperator;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.apache.spark.sql.SaveMode;
 
 /**
  * This class knows how to take an @link{EnumerableDataSource} and write it to a variety of
