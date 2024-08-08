@@ -25,6 +25,11 @@
       <artifactId>scala-java8-compat_2.12</artifactId>
     </dependency>
     <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
       <scope>test</scope>
@@ -38,11 +43,6 @@
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>javax.servlet</groupId>
-      <artifactId>javax.servlet-api</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
@@ -64,7 +64,10 @@
       <artifactId>jsonassert</artifactId>
       <scope>test</scope>
     </dependency>
-
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+    </dependency>
   </dependencies>
 
   <build>

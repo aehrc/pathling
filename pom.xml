@@ -48,6 +48,7 @@
     <module>io</module>
     <module>fhirpath</module>
     <module>test</module>
+    <module>library-api</module>
   </modules>
 
   <organization>
@@ -94,6 +95,16 @@
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>io</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>fhirpath</artifactId>
+        <version>${project.version}</version>
+      </dependency>
       <dependency>
         <groupId>au.csiro.pathling</groupId>
         <artifactId>test</artifactId>

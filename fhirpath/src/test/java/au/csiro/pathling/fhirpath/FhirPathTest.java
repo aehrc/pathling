@@ -20,6 +20,7 @@ public class FhirPathTest {
         .create();
     final Parser parser = new Parser();
     final FhirPath result = parser.parse("name.where(use = 'official').first()");
+    
   }
 
 }

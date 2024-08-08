@@ -8,8 +8,6 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.parser.DataFormatException;
-import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -19,10 +17,10 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
+import scala.compat.java8.OptionConverters;
 
 public class FhirJsonReader {
 
-  @Nonnull
   private static final Map<String, Function<ColumnDescriptor, Stream<Column>>> readTransforms = Map.of(
       "decimal", FhirJsonReader::transformDecimal,
       "integer", FhirJsonReader::transformInteger32,
@@ -32,22 +30,18 @@ public class FhirJsonReader {
       "base64Binary", FhirJsonReader::transformBinary
   );
 
-  @Nonnull
   private final SparkSession spark;
 
-  @Nonnull
   private final Map<String, String> options;
 
-  @Nonnull
   private final RuntimeResourceDefinition resourceDefinition;
 
-  @Nonnull
   private final SchemaTransformer schemaTransformer;
 
-  public FhirJsonReader(@Nullable final SparkSession spark,
-      @Nonnull final Map<String, String> options, @Nullable final String fhirVersion,
-      @Nullable final String resourceType) throws IllegalArgumentException {
-    this.spark = requireNonNull(spark);
+  public FhirJsonReader(final String resourceType, final String fhirVersion,
+      final Map<String, String> options) throws IllegalArgumentException {
+    this.spark = OptionConverters.toJava(SparkSession.getActiveSession()).orElseThrow(
+        () -> new IllegalStateException("No active Spark session"));
     this.options = options;
     final FhirVersionEnum fhirVersionEnum = FhirVersionEnum.forVersionString(
         requireNonNull(fhirVersion));
@@ -63,18 +57,24 @@ public class FhirJsonReader {
     this.schemaTransformer = new SchemaTransformer(readTransforms);
   }
 
-  public Dataset<Row> read(@Nullable final String path) {
+  public Dataset<Row> read(final String path) {
     if (path == null) {
       throw new IllegalArgumentException("Path must not be null");
     }
+    return read(new String[]{path});
+  }
+
+  public Dataset<Row> read(final String... paths) {
+    if (paths == null) {
+      throw new IllegalArgumentException("Paths must not be null");
+    }
     final DataFrameReader reader = spark.read();
     options.keySet().forEach(key -> reader.option(key, options.get(key)));
-    final Dataset<Row> json = reader.json(path);
+    final Dataset<Row> json = reader.json(paths);
     return schemaTransformer.transformDataset(json, resourceDefinition);
   }
 
-  @Nonnull
-  private static Stream<Column> transformDecimal(@Nonnull final ColumnDescriptor descriptor) {
+  private static Stream<Column> transformDecimal(final ColumnDescriptor descriptor) {
     final Column original = transformColumn(descriptor.column(),
         c -> c.cast(DataTypes.StringType), descriptor.name(), descriptor.type());
     final Column numeric = transformColumn(descriptor.column(),
@@ -83,22 +83,19 @@ public class FhirJsonReader {
     return Stream.of(original, numeric);
   }
 
-  @Nonnull
-  private static Stream<Column> transformInteger32(@Nonnull final ColumnDescriptor descriptor) {
+  private static Stream<Column> transformInteger32(final ColumnDescriptor descriptor) {
     final Column result = transformColumn(descriptor.column(),
         c -> c.cast(DataTypes.IntegerType), descriptor.name(), descriptor.type());
     return Stream.of(result);
   }
 
-  @Nonnull
-  private static Stream<Column> transformInteger64(@Nonnull final ColumnDescriptor descriptor) {
+  private static Stream<Column> transformInteger64(final ColumnDescriptor descriptor) {
     final Column result = transformColumn(descriptor.column(),
         c -> c.cast(DataTypes.LongType), descriptor.name(), descriptor.type());
     return Stream.of(result);
   }
 
-  @Nonnull
-  private static Stream<Column> transformBinary(@Nonnull final ColumnDescriptor descriptor) {
+  private static Stream<Column> transformBinary(final ColumnDescriptor descriptor) {
     final Column result = transformColumn(descriptor.column(),
         c -> unbase64(c).cast(DataTypes.BinaryType), descriptor.name(), descriptor.type());
     return Stream.of(result);

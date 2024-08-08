@@ -71,8 +71,9 @@ class FhirJsonReadWriteTest {
         .getOrCreate();
     final String resourceUrl = getResourceAsUrl(parameters.resourceFile)
         .toString();
-    final FhirJsonReader reader = new FhirJsonReader(spark, Map.of("multiLine", "true"), "R4",
-        parameters.resourceType);
+    final FhirJsonReader reader = new FhirJsonReader(parameters.resourceType, "R4",
+        Map.of("multiLine", "true")
+    );
     final FhirJsonWriter writer = new FhirJsonWriter("R4", parameters.resourceType);
     final Dataset<Row> data = reader.read(resourceUrl);
 
