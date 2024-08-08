@@ -9,7 +9,7 @@
     <version>8.0.0</version>
   </parent>
 
-  <artifactId>schema</artifactId>
+  <artifactId>io</artifactId>
   <dependencies>
     <dependency>
       <groupId>org.apache.spark</groupId>
@@ -43,6 +43,11 @@
       <groupId>javax.servlet</groupId>
       <artifactId>javax.servlet-api</artifactId>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>test</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>

@@ -45,8 +45,9 @@
   </developers>
   
   <modules>
-    <module>schema</module>
+    <module>io</module>
     <module>fhirpath</module>
+    <module>test</module>
   </modules>
 
   <organization>
@@ -88,10 +89,16 @@
     <pathling.jacksonVersion>2.15.4</pathling.jacksonVersion>
     <pathling.junitVersion>5.9.1</pathling.junitVersion>
     <pathling.jettyVersion>9.4.44.v20210927</pathling.jettyVersion>
+    <pathling.commonsIoVersion>2.13.0</pathling.commonsIoVersion>
   </properties>
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>test</artifactId>
+        <version>${project.version}</version>
+      </dependency>
       <dependency>
         <groupId>org.apache.spark</groupId>
         <artifactId>spark-sql_${pathling.scalaVersion}</artifactId>
@@ -160,6 +167,11 @@
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
         <version>1.18.32</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-io</groupId>
+        <artifactId>commons-io</artifactId>
+        <version>${pathling.commonsIoVersion}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

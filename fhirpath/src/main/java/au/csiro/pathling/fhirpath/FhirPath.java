@@ -3,6 +3,7 @@ package au.csiro.pathling.fhirpath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.evaluation.EvaluationContext;
 import au.csiro.pathling.fhirpath.expression.Traversal;
+import com.google.gson.Gson;
 import java.util.Optional;
 
 /**
@@ -17,6 +18,11 @@ public interface FhirPath {
 
   default FhirPath traverse(final String target) {
     return new Traversal(Optional.of(this), target);
+  }
+
+  default String toJson(final Gson gson) {
+    return "{\"" + this.getClass().getSimpleName() + "\": " + gson.toJson(this, this.getClass())
+        + "}";
   }
 
 }

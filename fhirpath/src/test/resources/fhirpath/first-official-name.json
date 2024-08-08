@@ -1,0 +1,47 @@
+{
+  "Invocation": {
+    "source": {
+      "Invocation": {
+        "source": {
+          "Traversal": {
+            "source": {},
+            "target": "name"
+          }
+        },
+        "target": {
+          "FunctionCall": {
+            "name": "where",
+            "arguments": [
+              {
+                "BinaryOperatorCall": {
+                  "left": {
+                    "Traversal": {
+                      "source": {},
+                      "target": "use"
+                    }
+                  },
+                  "right": {
+                    "Literal": {
+                      "type": {
+                        "namespace": "System",
+                        "typeName": "String"
+                      },
+                      "expression": "'official'"
+                    }
+                  },
+                  "operator": "="
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "target": {
+      "FunctionCall": {
+        "name": "first",
+        "arguments": []
+      }
+    }
+  }
+}
