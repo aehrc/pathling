@@ -30,6 +30,11 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>test-data</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
       <scope>test</scope>
@@ -75,6 +80,26 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>unpack-test-data</id>
+            <phase>generate-test-resources</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <type>jar</type>
+              <includeGroupIds>au.csiro.pathling</includeGroupIds>
+              <includeArtifactIds>test-data</includeArtifactIds>
+              <excludeTransitive>true</excludeTransitive>
+              <outputDirectory>${project.build.directory}/generated-test-resources</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

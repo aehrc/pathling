@@ -111,6 +111,11 @@
         <version>${project.version}</version>
       </dependency>
       <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>test-data</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+      </dependency>
+      <dependency>
         <groupId>org.apache.spark</groupId>
         <artifactId>spark-sql_${pathling.scalaVersion}</artifactId>
         <version>${pathling.sparkVersion}</version>
@@ -214,6 +219,11 @@
             <forkCount>1C</forkCount>
             <failIfNoTests>false</failIfNoTests>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>3.7.1</version>
         </plugin>
         <plugin>
           <groupId>org.antlr</groupId>
