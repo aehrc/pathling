@@ -41,9 +41,4 @@ public interface EvaluationContext {
    */
   FhirContext fhirContext();
 
-  /**
-   * @return The input context for the evaluation
-   */
-  Collection inputContext();
-
 }

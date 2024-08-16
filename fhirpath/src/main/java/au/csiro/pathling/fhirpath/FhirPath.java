@@ -21,8 +21,8 @@ public interface FhirPath {
   }
 
   default String toJson(final Gson gson) {
-    return "{\"" + this.getClass().getSimpleName() + "\": " + gson.toJson(this, this.getClass())
-        + "}";
+    return "{\"" + this.getClass().getSimpleName() + "\": "
+        + gson.toJson(this, this.getClass()) + "}";
   }
 
 }

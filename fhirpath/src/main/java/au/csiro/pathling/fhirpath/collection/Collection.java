@@ -21,7 +21,6 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import java.util.Optional;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Represents a collection of nodes that are the result of evaluating a FHIRPath expression.
@@ -33,6 +32,18 @@ public class Collection {
 
   Column column;
   Optional<FhirPathType> type;
-  Optional<FHIRDefinedType> fhirType;
+
+  public Collection(final Column column, final Optional<FhirPathType> type) {
+    this.column = column;
+    this.type = type;
+  }
+
+  public Collection traverse(final String elementName) {
+    if (elementName == null) {
+      throw new IllegalArgumentException("Element name must not be null");
+    }
+    final Column newColumn = column.getField(elementName);
+    return new Collection(newColumn, type);
+  }
 
 }
