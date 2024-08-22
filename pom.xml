@@ -85,7 +85,6 @@
     <pathling.hapiFhirVersion>7.0.2</pathling.hapiFhirVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.surefireVersion>3.2.5</pathling.surefireVersion>
-    <pathling.jacksonVersion>2.16.1</pathling.jacksonVersion>
     <pathling.jerseyVersion>2.40</pathling.jerseyVersion>
     <pathling.jacksonVersion>2.15.4</pathling.jacksonVersion>
     <pathling.junitVersion>5.9.1</pathling.junitVersion>

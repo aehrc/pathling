@@ -20,6 +20,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.instance.model.api.IBase;
 import scala.Function1;
 
 public record SchemaTransformer(
@@ -58,13 +59,14 @@ public record SchemaTransformer(
   @Nonnull
   private Stream<Column> transformField(@Nonnull final Column column,
       @Nonnull final DataType dataType,
-      @Nonnull final BaseRuntimeElementDefinition elementDefinition, final String columnName) {
+      @Nonnull final BaseRuntimeElementDefinition<? extends IBase> elementDefinition,
+      final String columnName) {
     // Delegate processing of structs and arrays to their respective methods.
     final Column candidateColumn;
     if (dataType instanceof StructType) {
       if (elementDefinition instanceof BaseRuntimeElementCompositeDefinition) {
         candidateColumn = transformStruct(column, (StructType) dataType,
-            (BaseRuntimeElementCompositeDefinition) elementDefinition, columnName);
+            (BaseRuntimeElementCompositeDefinition<? extends IBase>) elementDefinition, columnName);
       } else {
         throw new RuntimeException("Struct field does not match a composite FHIR element: "
             + columnName);
@@ -87,7 +89,7 @@ public record SchemaTransformer(
   @Nonnull
   private Column transformStruct(@Nonnull final Column struct,
       @Nonnull final StructType structType,
-      @Nonnull final BaseRuntimeElementCompositeDefinition compositeDefinition,
+      @Nonnull final BaseRuntimeElementCompositeDefinition<? extends IBase> compositeDefinition,
       @Nonnull final String columnName) {
     final List<Column> fields = Stream.of(structType.fields())
         // Drop annotations.
@@ -105,7 +107,7 @@ public record SchemaTransformer(
                   + fieldName);
 
           // Retrieve the child element definition from the child definition.
-          final BaseRuntimeElementDefinition fieldDefinition = childToElementDefinition(
+          final BaseRuntimeElementDefinition<? extends IBase> fieldDefinition = childToElementDefinition(
               fieldChildDefinition, fieldName);
 
           final DataType fieldType = structType.fields()[structType.fieldIndex(
@@ -124,7 +126,7 @@ public record SchemaTransformer(
 
   @Nonnull
   private Column transformArray(@Nonnull final Column array, @Nonnull final ArrayType arrayType,
-      @Nonnull final BaseRuntimeElementDefinition elementDefinition,
+      @Nonnull final BaseRuntimeElementDefinition<? extends IBase> elementDefinition,
       @Nonnull final String columnName) {
     final DataType elementType = arrayType.elementType();
 
@@ -133,7 +135,8 @@ public record SchemaTransformer(
       if (elementType instanceof StructType) {
         if (elementDefinition instanceof BaseRuntimeElementCompositeDefinition) {
           return transformStruct(element, (StructType) elementType,
-              (BaseRuntimeElementCompositeDefinition) elementDefinition, columnName);
+              (BaseRuntimeElementCompositeDefinition<? extends IBase>) elementDefinition,
+              columnName);
         } else {
           throw new RuntimeException("Struct field does not match a composite FHIR element: "
               + columnName);
@@ -150,7 +153,7 @@ public record SchemaTransformer(
 
   @Nonnull
   private static BaseRuntimeChildDefinition getChildDefinition(
-      @Nonnull final BaseRuntimeElementCompositeDefinition compositeDefinition,
+      @Nonnull final BaseRuntimeElementCompositeDefinition<? extends IBase> compositeDefinition,
       @Nonnull final String fieldName, @Nonnull final String errorMessage) {
     return Optional.ofNullable(
             compositeDefinition.getChildByName(fieldName))
