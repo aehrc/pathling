@@ -35,6 +35,7 @@ class BulkParquetWriteTest {
     final URL testData = TestResources.getResourceAsUrl(
         "bulk/fhir/ExplanationOfBenefit.ndjson");
     final Dataset<Row> data = reader.read(testData.toString());
+    data.printSchema();
     data.write()
         .format("parquet")
         .mode(SaveMode.Overwrite)
