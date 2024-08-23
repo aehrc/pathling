@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="test" />
+        <module name="test-data" />
+        <module name="io" />
+        <module name="fhirpath" />
+        <module name="library-api" />
+      </profile>
+    </annotationProcessing>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="fhirpath" options="-Xlint:all,-processing" />
+      <module name="io" options="-Xlint:all,-processing" />
+      <module name="library-api" options="-Xlint:all,-processing" />
+      <module name="test" options="-Xlint:all,-processing" />
+      <module name="test-data" options="" />
+    </option>
+  </component>
+</project>

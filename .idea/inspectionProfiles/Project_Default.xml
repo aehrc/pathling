@@ -1,0 +1,222 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="ComparatorNotSerializable" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="CompareToUsesNonFinalVariable" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="ConstantConditions" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="SUGGEST_NULLABLE_ANNOTATIONS" value="true" />
+      <option name="DONT_REPORT_TRUE_ASSERT_STATEMENTS" value="true" />
+      <option name="IGNORE_ASSERT_STATEMENTS" value="true" />
+    </inspection_tool>
+    <inspection_tool class="ConstantValue" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="DONT_REPORT_TRUE_ASSERT_STATEMENTS" value="true" />
+      <option name="IGNORE_ASSERT_STATEMENTS" value="true" />
+    </inspection_tool>
+    <inspection_tool class="DataFlowIssue" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="SUGGEST_NULLABLE_ANNOTATIONS" value="true" />
+      <option name="DONT_REPORT_TRUE_ASSERT_STATEMENTS" value="false" />
+      <option name="IGNORE_ASSERT_STATEMENTS" value="true" />
+    </inspection_tool>
+    <inspection_tool class="EqualsUsesNonFinalVariable" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="ExternalizableWithSerializationMethods" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="FtlFileReferencesInspection" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="FtlImportCallInspection" enabled="false" level="ERROR" enabled_by_default="false" />
+    <inspection_tool class="FtlReferencesInspection" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="GrazieInspection" enabled="false" level="TYPO" enabled_by_default="false" />
+    <inspection_tool class="HashCodeUsesNonFinalVariable" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="HtmlTagCanBeJavadocTag" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="HtmlUnknownAnchorTarget" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="HtmlUnknownTarget" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="HttpUrlsUsage" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="IncorrectHttpHeaderInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="customHeaders">
+        <set>
+          <option value="X-Progress" />
+        </set>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="JavaDoc" enabled="true" level="INFORMATION" enabled_by_default="true">
+      <scope name="Non-test sources" level="WARNING" enabled="true">
+        <option name="TOP_LEVEL_CLASS_OPTIONS">
+          <value>
+            <option name="ACCESS_JAVADOC_REQUIRED_FOR" value="public" />
+            <option name="REQUIRED_TAGS" value="" />
+          </value>
+        </option>
+        <option name="INNER_CLASS_OPTIONS">
+          <value>
+            <option name="ACCESS_JAVADOC_REQUIRED_FOR" value="public" />
+            <option name="REQUIRED_TAGS" value="" />
+          </value>
+        </option>
+        <option name="METHOD_OPTIONS">
+          <value>
+            <option name="ACCESS_JAVADOC_REQUIRED_FOR" value="public" />
+            <option name="REQUIRED_TAGS" value="@return@param@throws or @exception" />
+          </value>
+        </option>
+        <option name="FIELD_OPTIONS">
+          <value>
+            <option name="ACCESS_JAVADOC_REQUIRED_FOR" value="public" />
+            <option name="REQUIRED_TAGS" value="" />
+          </value>
+        </option>
+        <option name="IGNORE_DEPRECATED" value="false" />
+        <option name="IGNORE_JAVADOC_PERIOD" value="true" />
+        <option name="IGNORE_DUPLICATED_THROWS" value="false" />
+        <option name="IGNORE_POINT_TO_ITSELF" value="false" />
+        <option name="myAdditionalJavadocTags" value="" />
+        <IGNORE_ACCESSORS value="true" />
+      </scope>
+      <option name="TOP_LEVEL_CLASS_OPTIONS">
+        <value>
+          <option name="ACCESS_JAVADOC_REQUIRED_FOR" value="public" />
+          <option name="REQUIRED_TAGS" value="" />
+        </value>
+      </option>
+      <option name="INNER_CLASS_OPTIONS">
+        <value>
+          <option name="ACCESS_JAVADOC_REQUIRED_FOR" value="public" />
+          <option name="REQUIRED_TAGS" value="" />
+        </value>
+      </option>
+      <option name="METHOD_OPTIONS">
+        <value>
+          <option name="ACCESS_JAVADOC_REQUIRED_FOR" value="public" />
+          <option name="REQUIRED_TAGS" value="@return@param@throws or @exception" />
+        </value>
+      </option>
+      <option name="FIELD_OPTIONS">
+        <value>
+          <option name="ACCESS_JAVADOC_REQUIRED_FOR" value="public" />
+          <option name="REQUIRED_TAGS" value="" />
+        </value>
+      </option>
+      <option name="IGNORE_DEPRECATED" value="false" />
+      <option name="IGNORE_JAVADOC_PERIOD" value="true" />
+      <option name="IGNORE_DUPLICATED_THROWS" value="false" />
+      <option name="IGNORE_POINT_TO_ITSELF" value="false" />
+      <option name="myAdditionalJavadocTags" value="" />
+      <IGNORE_ACCESSORS value="true" />
+    </inspection_tool>
+    <inspection_tool class="JavadocDeclaration" enabled="true" level="INFORMATION" enabled_by_default="true">
+      <scope name="Non-test sources" level="WARNING" enabled="true" />
+    </inspection_tool>
+    <inspection_tool class="LocalCanBeFinal" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="REPORT_VARIABLES" value="true" />
+      <option name="REPORT_PARAMETERS" value="true" />
+    </inspection_tool>
+    <inspection_tool class="MarkdownUnresolvedFileReference" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="MissingJavadoc" enabled="true" level="INFORMATION" enabled_by_default="true">
+      <scope name="Non-test sources" level="WARNING" enabled="true">
+        <option name="IGNORE_ACCESSORS" value="true" />
+        <option name="PACKAGE_SETTINGS">
+          <Options>
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+        <option name="MODULE_SETTINGS">
+          <Options>
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+        <option name="TOP_LEVEL_CLASS_SETTINGS">
+          <Options />
+        </option>
+      </scope>
+      <option name="IGNORE_ACCESSORS" value="true" />
+      <option name="PACKAGE_SETTINGS">
+        <Options>
+          <option name="ENABLED" value="false" />
+        </Options>
+      </option>
+      <option name="MODULE_SETTINGS">
+        <Options>
+          <option name="ENABLED" value="false" />
+        </Options>
+      </option>
+      <option name="TOP_LEVEL_CLASS_SETTINGS">
+        <Options />
+      </option>
+    </inspection_tool>
+    <inspection_tool class="MnPropertiesConfig" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="NonSerializableFieldInSerializableClass" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignorableAnnotations">
+        <value />
+      </option>
+      <option name="ignoreAnonymousInnerClasses" value="false" />
+      <option name="superClassString" value="java.awt.Component" />
+    </inspection_tool>
+    <inspection_tool class="NonSerializableObjectBoundToHttpSession" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="NonSerializableObjectPassedToObjectStream" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="NonSerializableWithSerializationMethods" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="NullableProblems" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="REPORT_NULLABLE_METHOD_OVERRIDES_NOTNULL" value="true" />
+      <option name="REPORT_NOT_ANNOTATED_METHOD_OVERRIDES_NOTNULL" value="true" />
+      <option name="REPORT_NOTNULL_PARAMETER_OVERRIDES_NULLABLE" value="true" />
+      <option name="REPORT_NOT_ANNOTATED_PARAMETER_OVERRIDES_NOTNULL" value="true" />
+      <option name="REPORT_NOT_ANNOTATED_GETTER" value="true" />
+      <option name="REPORT_NOTNULL_PARAMETERS_OVERRIDES_NOT_ANNOTATED" value="true" />
+      <option name="REPORT_NOT_ANNOTATED_SETTER_PARAMETER" value="true" />
+      <option name="REPORT_ANNOTATION_NOT_PROPAGATED_TO_OVERRIDERS" value="true" />
+      <option name="REPORT_NULLS_PASSED_TO_NON_ANNOTATED_METHOD" value="true" />
+    </inspection_tool>
+    <inspection_tool class="OptionalOfNullableMisuseMerged" />
+    <inspection_tool class="OptionalUsedAsFieldOrParameterType" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="ReadObjectAndWriteObjectPrivate" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="ReadObjectInitialization" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="ReadResolveAndWriteReplaceProtected" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="RedundantSuppression" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="ReturnNull" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="m_reportObjectMethods" value="true" />
+      <option name="m_reportArrayMethods" value="true" />
+      <option name="m_reportCollectionMethods" value="true" />
+      <option name="m_ignorePrivateMethods" value="true" />
+    </inspection_tool>
+    <inspection_tool class="SerialPersistentFieldsWithWrongSignature" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="SerializableHasSerialVersionUIDField" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoreAnonymousInnerClasses" value="true" />
+    </inspection_tool>
+    <inspection_tool class="SerializableInnerClassHasSerialVersionUIDField" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoreAnonymousInnerClasses" value="false" />
+      <option name="superClassString" value="java.awt.Component" />
+    </inspection_tool>
+    <inspection_tool class="SerializableInnerClassWithNonSerializableOuterClass" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoreAnonymousInnerClasses" value="false" />
+      <option name="superClassString" value="java.awt.Component" />
+    </inspection_tool>
+    <inspection_tool class="SerializableStoresNonSerializable" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="SerializableWithUnconstructableAncestor" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="SpringBootApplicationYaml" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="SpringJavaAutowiredFieldsWarningInspection" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
+    <inspection_tool class="SubtractionInCompareTo" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="TransientFieldInNonSerializableClass" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="TransientFieldNotInitialized" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="TypeMayBeWeakened" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="useRighthandTypeAsWeakestTypeInAssignments" value="true" />
+      <option name="useParameterizedTypeForCollectionMethods" value="true" />
+      <option name="doNotWeakenToJavaLangObject" value="true" />
+      <option name="onlyWeakentoInterface" value="true" />
+    </inspection_tool>
+    <inspection_tool class="UnnecessaryJavaDocLink" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoreInlineLinkToSuper" value="false" />
+    </inspection_tool>
+    <inspection_tool class="UnusedProperty" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="VulnerableLibrariesLocal" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="WeakerAccess" enabled="true" level="WARNING" enabled_by_default="false">
+      <scope name="Production" level="WARNING" enabled="true">
+        <option name="SUGGEST_PACKAGE_LOCAL_FOR_MEMBERS" value="false" />
+        <option name="SUGGEST_PACKAGE_LOCAL_FOR_TOP_CLASSES" value="false" />
+        <option name="SUGGEST_PRIVATE_FOR_INNERS" value="true" />
+        <disabledExtension id="junit" />
+        <disabledExtension id="moduleInfo" />
+      </scope>
+      <option name="SUGGEST_PACKAGE_LOCAL_FOR_MEMBERS" value="false" />
+      <option name="SUGGEST_PACKAGE_LOCAL_FOR_TOP_CLASSES" value="false" />
+      <option name="SUGGEST_PRIVATE_FOR_INNERS" value="true" />
+      <disabledExtension id="junit" />
+      <disabledExtension id="moduleInfo" />
+    </inspection_tool>
+    <inspection_tool class="YAMLSchemaValidation" enabled="false" level="WARNING" enabled_by_default="false" />
+  </profile>
+</component>

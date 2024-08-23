@@ -7,9 +7,19 @@ tmp/
 .project
 .settings/
 
-# IDEA
-.idea
+# IDEA (see https://www.jetbrains.com/help/idea/configure-project-settings.html#share-project-through-vcs)
+.idea/workspace.xml
+.idea/usage.statistics.xml
+.idea/dictionaries
+.idea/shelf
+.idea/libraries
+.idea/modules.xml
+.idea/aws.xml
+.idea/jupyter-settings.xml
+gradle.xml
+*.iws
 *.iml
+out
 
 
 #Others

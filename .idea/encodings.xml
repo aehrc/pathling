@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/deployment/helm/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/deployment/helm/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/fhir-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/fhir-server/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/fhirpath/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/fhirpath/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/io/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/io/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/lib/R" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/lib/R/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/lib/import/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/lib/import/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/lib/js/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/lib/js/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/lib/python" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/lib/python/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/library-api/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/library-api/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/library-runtime/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/library-runtime/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/site/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/site/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/terminology/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/terminology/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/test-data/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/test-data/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/test/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/test/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/utilities/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/utilities/src/main/resources" charset="UTF-8" />
+  </component>
+</project>
