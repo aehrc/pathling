@@ -8,7 +8,8 @@ public record Invocation(FhirPath source, FhirPath target) implements FhirPath {
 
   @Override
   public Collection evaluate(final Collection input, final EvaluationContext context) {
-    return null;
+    final Collection sourceResult = source.evaluate(input, context);
+    return target.evaluate(sourceResult, context);
   }
 
 }

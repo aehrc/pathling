@@ -9,7 +9,7 @@ public record Traversal(Optional<FhirPath> source, String target) implements Fhi
 
   @Override
   public Collection evaluate(final Collection input, final EvaluationContext context) {
-    return null;
+    return input.traverse(target);
   }
 
 }
