@@ -91,7 +91,7 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<TypeSpecifier> {
     // If we are not already in a namespace and there is an invocation, we need to parse the 
     // right-hand side of the invocation within the namespace.
     if (!isNamespace) {
-      final TypeSpecifier typeSpecifier = (TypeSpecifier) ctx.expression()
+      final TypeSpecifier typeSpecifier = ctx.expression()
           .accept(new TypeSpecifierVisitor(true));
       return typeSpecifier.withNamespace(ctx.invocation().getText());
     } else {

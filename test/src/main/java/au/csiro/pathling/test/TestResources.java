@@ -22,7 +22,7 @@ public abstract class TestResources {
   public static URL getResourceAsUrl(final String name) {
     final ClassLoader loader = getClassLoader();
     final URL object = loader.getResource(name);
-    return requireNonNull(object);
+    return requireNonNull(object, "Test resource not found: " + name);
   }
 
   private static InputStream getResourceAsStream(final String name) {

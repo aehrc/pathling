@@ -34,11 +34,6 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>au.csiro.pathling</groupId>
-      <artifactId>test-data</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
       <scope>test</scope>
@@ -88,13 +83,10 @@
             <id>unpack-test-data</id>
             <phase>generate-test-resources</phase>
             <goals>
-              <goal>unpack-dependencies</goal>
+              <goal>unpack</goal>
             </goals>
             <configuration>
-              <type>jar</type>
-              <includeGroupIds>au.csiro.pathling</includeGroupIds>
-              <includeArtifactIds>test-data</includeArtifactIds>
-              <excludeTransitive>true</excludeTransitive>
+              <artifact>au.csiro.pathling:test-data:${pathling.testDataVersion}:jar</artifact>
               <outputDirectory>${project.build.directory}/generated-test-resources</outputDirectory>
             </configuration>
           </execution>

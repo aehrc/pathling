@@ -90,6 +90,7 @@
     <pathling.junitVersion>5.9.1</pathling.junitVersion>
     <pathling.jettyVersion>9.4.44.v20210927</pathling.jettyVersion>
     <pathling.commonsIoVersion>2.13.0</pathling.commonsIoVersion>
+    <pathling.testDataVersion>1.0.0-SNAPSHOT</pathling.testDataVersion>
   </properties>
 
   <dependencyManagement>
@@ -214,9 +215,12 @@
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
             <!-- The add-exports and add-opens flags are required for Java 17 -->
-            <argLine>-Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED</argLine>
+            <argLine>-Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED</argLine>
             <forkCount>1C</forkCount>
             <failIfNoTests>false</failIfNoTests>
+            <additionalClasspathElements>
+              <element>target/generated-test-resources</element>
+            </additionalClasspathElements>
           </configuration>
         </plugin>
         <plugin>
