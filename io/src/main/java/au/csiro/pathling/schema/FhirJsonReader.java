@@ -1,6 +1,6 @@
 package au.csiro.pathling.schema;
 
-import static au.csiro.pathling.schema.SchemaTransformer.transformColumn;
+import static au.csiro.pathling.schema.DatasetTransformer.transformColumn;
 import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.unbase64;
 
@@ -17,10 +17,22 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
+import org.jetbrains.annotations.NotNull;
 import scala.compat.java8.OptionConverters;
 
+/**
+ * Reads FHIR JSON data into a {@link Dataset} that is compatible with the Parquet on FHIR
+ * specification.
+ *
+ * @author John Grimes
+ * @see <a href="https://github.com/aehrc/parquet-on-fhir">Parquet on FHIR</a>
+ */
 public class FhirJsonReader {
 
+  /**
+   * A set of transforms that are applied to columns of specific types when reading FHIR JSON data.
+   */
+  @NotNull
   private static final Map<String, Function<ColumnDescriptor, Stream<Column>>> readTransforms = Map.of(
       "decimal", FhirJsonReader::transformDecimal,
       "integer", FhirJsonReader::transformInteger32,
@@ -30,16 +42,20 @@ public class FhirJsonReader {
       "base64Binary", FhirJsonReader::transformBinary
   );
 
+  @NotNull
   private final SparkSession spark;
 
+  @NotNull
   private final Map<String, String> options;
 
+  @NotNull
   private final RuntimeResourceDefinition resourceDefinition;
 
-  private final SchemaTransformer schemaTransformer;
+  @NotNull
+  private final DatasetTransformer datasetTransformer;
 
-  public FhirJsonReader(final String resourceType, final String fhirVersion,
-      final Map<String, String> options) throws IllegalArgumentException {
+  public FhirJsonReader(@NotNull final String resourceType, @NotNull final String fhirVersion,
+      @NotNull final Map<String, String> options) throws IllegalArgumentException {
     this.spark = OptionConverters.toJava(SparkSession.getActiveSession()).orElseThrow(
         () -> new IllegalStateException("No active Spark session"));
     this.options = options;
@@ -54,27 +70,24 @@ public class FhirJsonReader {
     } catch (final DataFormatException | NullPointerException e) {
       throw new IllegalArgumentException("Unknown resource type: " + resourceType, e);
     }
-    this.schemaTransformer = new SchemaTransformer(readTransforms);
+    this.datasetTransformer = new DatasetTransformer(readTransforms);
   }
 
-  public Dataset<Row> read(final String path) {
-    if (path == null) {
-      throw new IllegalArgumentException("Path must not be null");
-    }
+  @NotNull
+  public Dataset<Row> read(@NotNull final String path) {
     return read(new String[]{path});
   }
 
-  public Dataset<Row> read(final String... paths) {
-    if (paths == null) {
-      throw new IllegalArgumentException("Paths must not be null");
-    }
+  @NotNull
+  public Dataset<Row> read(@NotNull final String... paths) {
     final DataFrameReader reader = spark.read();
     options.keySet().forEach(key -> reader.option(key, options.get(key)));
     final Dataset<Row> json = reader.json(paths);
-    return schemaTransformer.transformDataset(json, resourceDefinition);
+    return datasetTransformer.transformDataset(json, resourceDefinition);
   }
 
-  private static Stream<Column> transformDecimal(final ColumnDescriptor descriptor) {
+  @NotNull
+  private static Stream<Column> transformDecimal(@NotNull final ColumnDescriptor descriptor) {
     final Column original = transformColumn(descriptor.column(),
         c -> c.cast(DataTypes.StringType), descriptor.name(), descriptor.type());
     final Column numeric = transformColumn(descriptor.column(),
@@ -83,19 +96,22 @@ public class FhirJsonReader {
     return Stream.of(original, numeric);
   }
 
-  private static Stream<Column> transformInteger32(final ColumnDescriptor descriptor) {
+  @NotNull
+  private static Stream<Column> transformInteger32(@NotNull final ColumnDescriptor descriptor) {
     final Column result = transformColumn(descriptor.column(),
         c -> c.cast(DataTypes.IntegerType), descriptor.name(), descriptor.type());
     return Stream.of(result);
   }
 
-  private static Stream<Column> transformInteger64(final ColumnDescriptor descriptor) {
+  @NotNull
+  private static Stream<Column> transformInteger64(@NotNull final ColumnDescriptor descriptor) {
     final Column result = transformColumn(descriptor.column(),
         c -> c.cast(DataTypes.LongType), descriptor.name(), descriptor.type());
     return Stream.of(result);
   }
 
-  private static Stream<Column> transformBinary(final ColumnDescriptor descriptor) {
+  @NotNull
+  private static Stream<Column> transformBinary(@NotNull final ColumnDescriptor descriptor) {
     final Column result = transformColumn(descriptor.column(),
         c -> unbase64(c).cast(DataTypes.BinaryType), descriptor.name(), descriptor.type());
     return Stream.of(result);

@@ -17,14 +17,17 @@
 
 package au.csiro.pathling.io.source;
 
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singleton;
+
 import au.csiro.pathling.schema.FhirJsonReader;
-import jakarta.annotation.Nonnull;
-import java.util.Collections;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A class for making FHIR data within a set of NDJSON files available for query.
@@ -38,15 +41,16 @@ public class NdjsonSource extends FileSource {
   // Matches a base name that consists of a resource type, optionally followed by a period and a
   // qualifier string. The first group will contain the resource type, and the second group will
   // contain the qualifier string (if present).
-  public static final Pattern BASE_NAME_WITH_QUALIFIER = Pattern.compile(
+  private static final Pattern BASE_NAME_WITH_QUALIFIER = Pattern.compile(
       "^([A-Za-z]+)(\\.[^.]+)?$");
 
-  public NdjsonSource(final String path, final String fhirVersion) {
+  public NdjsonSource(@NotNull final String path, @NotNull final String fhirVersion) {
     // Recognize files with the extension ".ndjson" as NDJSON files, by default.
     this(path, "ndjson", fhirVersion);
   }
 
-  public NdjsonSource(final String path, final String extension, final String fhirVersion) {
+  private NdjsonSource(@NotNull final String path, @NotNull final String extension,
+      @NotNull final String fhirVersion) {
     this(path, extension,
         // Use the "resource name with qualifier" mapper by default, which takes the resource name
         // from the file name and is tolerant of an optional qualifier string.
@@ -54,11 +58,11 @@ public class NdjsonSource extends FileSource {
         fhirVersion);
   }
 
-  public NdjsonSource(final String path, final String extension,
-      final Function<String, Set<String>> fileNameMapper, final String fhirVersion) {
-    super(path, fileNameMapper, extension,
-        (resourceType, paths) -> new FhirJsonReader(resourceType, fhirVersion,
-            Collections.emptyMap()).read(paths.toArray(new String[0]))
+  private NdjsonSource(@NotNull final String path, @NotNull final String extension,
+      @NotNull final Function<String, Set<String>> fileNameMapper,
+      @NotNull final String fhirVersion) {
+    super(path, fileNameMapper, extension, (resourceType, paths) ->
+        new FhirJsonReader(resourceType, fhirVersion, emptyMap()).read(paths.toArray(new String[0]))
     );
   }
 
@@ -73,22 +77,22 @@ public class NdjsonSource extends FileSource {
    * @return a single-element set containing the resource type, or an empty set if the base name
    * does not match the expected format
    */
-  @Nonnull
-  public static Set<String> resourceNameWithQualifierMapper(@Nonnull final String baseName) {
+  @NotNull
+  private static Set<String> resourceNameWithQualifierMapper(@NotNull final String baseName) {
     final Matcher matcher = BASE_NAME_WITH_QUALIFIER.matcher(baseName);
     // If the base name does not match the expected format, return an empty set.
     if (!matcher.matches()) {
-      return Collections.emptySet();
+      return emptySet();
     }
     // If the base name does not contain a qualifier, return the base name as-is.
     if (matcher.group(2) == null) {
-      return Collections.singleton(baseName);
+      return singleton(baseName);
     }
     // If the base name contains a qualifier, remove it and return the base name without the
     // qualifier.
     final String qualifierRemoved = new StringBuilder(baseName).replace(matcher.start(2),
         matcher.end(2), "").toString();
-    return Collections.singleton(qualifierRemoved);
+    return singleton(qualifierRemoved);
   }
 
 }

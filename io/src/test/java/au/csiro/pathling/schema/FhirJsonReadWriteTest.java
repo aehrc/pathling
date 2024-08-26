@@ -5,8 +5,6 @@ import static au.csiro.pathling.test.TestResources.getResourceAsUrl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -20,6 +18,8 @@ import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,7 +33,6 @@ class FhirJsonReadWriteTest {
   private Path tempDirectory;
 
   // TODO: Add tests for other FHIR versions.
-  @Nonnull
   private static Stream<TestParameters> parameters() {
     return Stream.of(
         new TestParameters("Patient", "fhir/json/anne.Patient.json",
@@ -66,7 +65,7 @@ class FhirJsonReadWriteTest {
   void test(@Nullable final TestParameters parameters) throws JSONException, IOException {
     assertNotNull(parameters);
 
-    final SparkSession spark = SparkSession.builder()
+    SparkSession.builder()
         .master("local[*]")
         .getOrCreate();
     final String resourceUrl = getResourceAsUrl(parameters.resourceFile)
@@ -91,9 +90,10 @@ class FhirJsonReadWriteTest {
     JSONAssert.assertEquals(originalJson, writtenJson, JSONCompareMode.STRICT);
   }
 
-  @Nonnull
-  private static File getSinglePartition(@Nonnull final Path partitionedLocation,
-      @Nonnull final String extension) throws IOException {
+  @SuppressWarnings("SameParameterValue")
+  @NotNull
+  private static File getSinglePartition(@NotNull final Path partitionedLocation,
+      @NotNull final String extension) throws IOException {
     try (final Stream<Path> stream = Files.list(partitionedLocation)) {
       final Path path = stream
           .filter(p -> p.toString().endsWith(extension))
@@ -104,7 +104,7 @@ class FhirJsonReadWriteTest {
     }
   }
 
-  private static void deleteDirectoryRecursively(@Nonnull final Path path) throws IOException {
+  private static void deleteDirectoryRecursively(@NotNull final Path path) throws IOException {
     Files.walkFileTree(path, new SimpleFileVisitor<>() {
       @Override
       public FileVisitResult visitFile(@Nullable final Path file,
@@ -126,8 +126,8 @@ class FhirJsonReadWriteTest {
     });
   }
 
-  record TestParameters(@Nonnull String resourceType, @Nonnull String resourceFile,
-                        @Nonnull String schemaFile) {
+  record TestParameters(@NotNull String resourceType, @NotNull String resourceFile,
+                        @NotNull String schemaFile) {
 
     @Override
     public String toString() {

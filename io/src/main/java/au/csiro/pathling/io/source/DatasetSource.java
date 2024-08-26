@@ -19,15 +19,14 @@ package au.csiro.pathling.io.source;
 
 import static java.util.Objects.requireNonNull;
 
-import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A class for making FHIR data with Spark datasets available for query.
@@ -37,7 +36,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public class DatasetSource implements DataSource {
 
-  @Nonnull
+  @NotNull
   protected Map<ResourceType, Dataset<Row>> resourceMap = new HashMap<>();
 
   /**
@@ -47,8 +46,9 @@ public class DatasetSource implements DataSource {
    * @param dataset the dataset
    * @return this data source, for chaining
    */
-  public DatasetSource dataset(@Nullable final ResourceType resourceType,
-      @Nullable final Dataset<Row> dataset) {
+  @NotNull
+  public DatasetSource dataset(@NotNull final ResourceType resourceType,
+      @NotNull final Dataset<Row> dataset) {
     resourceMap.put(requireNonNull(resourceType), requireNonNull(dataset));
     return this;
   }
@@ -60,28 +60,35 @@ public class DatasetSource implements DataSource {
    * @param dataset the dataset
    * @return this data source, for chaining
    */
-  public DatasetSource dataset(@Nullable final String resourceCode,
-      @Nullable final Dataset<Row> dataset) {
+  @NotNull
+  public DatasetSource dataset(@NotNull final String resourceCode,
+      @NotNull final Dataset<Row> dataset) {
     resourceMap.put(ResourceType.fromCode(resourceCode), requireNonNull(dataset));
     return this;
   }
 
-  @Nonnull
   @Override
-  public Dataset<Row> read(@Nullable final ResourceType resourceType) {
-    return Optional.ofNullable(resourceMap.get(requireNonNull(resourceType)))
-        .orElseThrow(() -> new IllegalArgumentException(
-            "No data found for resource type: " + resourceType));
+  @NotNull
+  public Dataset<Row> read(@NotNull final ResourceType resourceType) {
+    final Dataset<Row> dataset = resourceMap.get(resourceType);
+    if (dataset == null) {
+      throw new IllegalArgumentException("No data found for resource type: " + resourceType);
+    }
+    return dataset;
   }
 
-  @Nonnull
   @Override
-  public Dataset<Row> read(@Nullable final String resourceCode) {
-    return read(ResourceType.fromCode(resourceCode));
+  @NotNull
+  public Dataset<Row> read(@NotNull final String resourceCode) {
+    final ResourceType resourceType = ResourceType.fromCode(resourceCode);
+    if (resourceType == null) {
+      throw new IllegalArgumentException("Invalid resource type code: " + resourceCode);
+    }
+    return read(resourceType);
   }
 
-  @Nonnull
   @Override
+  @NotNull
   public Set<ResourceType> getResourceTypes() {
     return resourceMap.keySet();
   }

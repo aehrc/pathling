@@ -7,8 +7,6 @@ import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -21,12 +19,21 @@ import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBase;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import scala.Function1;
 
-public record SchemaTransformer(
-    @Nonnull Map<String, Function<ColumnDescriptor, Stream<Column>>> transforms) {
+/**
+ * Transforms a dataset for both reading and writing, applying a set of transforms to columns of
+ * specific types.
+ *
+ * @param transforms a map of transforms to apply to columns of specific types
+ * @author John Grimes
+ */
+public record DatasetTransformer(
+    @NotNull Map<String, Function<ColumnDescriptor, Stream<Column>>> transforms) {
 
-  @Nonnull
+  @NotNull
   public Dataset<Row> transformDataset(@Nullable final Dataset<Row> dataset,
       @Nullable final RuntimeResourceDefinition resourceDefinition) {
     if (dataset == null) {
@@ -56,10 +63,10 @@ public record SchemaTransformer(
     return dataset.select(columns.toArray(Column[]::new));
   }
 
-  @Nonnull
-  private Stream<Column> transformField(@Nonnull final Column column,
-      @Nonnull final DataType dataType,
-      @Nonnull final BaseRuntimeElementDefinition<? extends IBase> elementDefinition,
+  @NotNull
+  private Stream<Column> transformField(@NotNull final Column column,
+      @NotNull final DataType dataType,
+      @NotNull final BaseRuntimeElementDefinition<? extends IBase> elementDefinition,
       final String columnName) {
     // Delegate processing of structs and arrays to their respective methods.
     final Column candidateColumn;
@@ -86,11 +93,11 @@ public record SchemaTransformer(
         .orElse(Stream.of(candidateColumn));
   }
 
-  @Nonnull
-  private Column transformStruct(@Nonnull final Column struct,
-      @Nonnull final StructType structType,
-      @Nonnull final BaseRuntimeElementCompositeDefinition<? extends IBase> compositeDefinition,
-      @Nonnull final String columnName) {
+  @NotNull
+  private Column transformStruct(@NotNull final Column struct,
+      @NotNull final StructType structType,
+      @NotNull final BaseRuntimeElementCompositeDefinition<? extends IBase> compositeDefinition,
+      @NotNull final String columnName) {
     final List<Column> fields = Stream.of(structType.fields())
         // Drop annotations.
         .filter(field -> !field.name().startsWith("__"))
@@ -124,10 +131,10 @@ public record SchemaTransformer(
     return struct(fields.toArray(Column[]::new)).alias(columnName);
   }
 
-  @Nonnull
-  private Column transformArray(@Nonnull final Column array, @Nonnull final ArrayType arrayType,
-      @Nonnull final BaseRuntimeElementDefinition<? extends IBase> elementDefinition,
-      @Nonnull final String columnName) {
+  @NotNull
+  private Column transformArray(@NotNull final Column array, @NotNull final ArrayType arrayType,
+      @NotNull final BaseRuntimeElementDefinition<? extends IBase> elementDefinition,
+      @NotNull final String columnName) {
     final DataType elementType = arrayType.elementType();
 
     // Transform any nested struct or array.
@@ -151,10 +158,10 @@ public record SchemaTransformer(
 
   }
 
-  @Nonnull
+  @NotNull
   private static BaseRuntimeChildDefinition getChildDefinition(
-      @Nonnull final BaseRuntimeElementCompositeDefinition<? extends IBase> compositeDefinition,
-      @Nonnull final String fieldName, @Nonnull final String errorMessage) {
+      @NotNull final BaseRuntimeElementCompositeDefinition<? extends IBase> compositeDefinition,
+      @NotNull final String fieldName, @NotNull final String errorMessage) {
     return Optional.ofNullable(
             compositeDefinition.getChildByName(fieldName))
         // If there is no such field in the FHIR definition, throw an exception.
@@ -162,18 +169,18 @@ public record SchemaTransformer(
             errorMessage));
   }
 
-  @Nonnull
+  @NotNull
   private static BaseRuntimeElementDefinition<?> childToElementDefinition(
-      @Nonnull final BaseRuntimeChildDefinition child, @Nonnull final String columnName) {
+      @NotNull final BaseRuntimeChildDefinition child, @NotNull final String columnName) {
     return Optional.ofNullable(
         child.getChildByName(columnName)).orElseThrow(() -> new AssertionError(
         "Failed to retrieve element definition from child definition: " + columnName));
   }
 
-  @Nonnull
-  public static Column transformColumn(@Nonnull final Column column,
-      @Nonnull final Function1<Column, Column> transformation, @Nonnull final String columnName,
-      @Nonnull final DataType dataType) {
+  @NotNull
+  public static Column transformColumn(@NotNull final Column column,
+      @NotNull final Function1<Column, Column> transformation, @NotNull final String columnName,
+      @NotNull final DataType dataType) {
     return dataType instanceof ArrayType
            ? transform(column, transformation).alias(columnName)
            : transformation.apply(column).alias(columnName);

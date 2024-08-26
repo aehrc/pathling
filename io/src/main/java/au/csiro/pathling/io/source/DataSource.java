@@ -20,6 +20,7 @@ import java.util.Set;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A FHIR data source that can read data for a particular resource type, and also list the resource
@@ -36,7 +37,8 @@ public interface DataSource {
    * @param resourceType the type of the FHIR resource.
    * @return the dataset with the resource data.
    */
-  Dataset<Row> read(final ResourceType resourceType);
+  @NotNull
+  Dataset<Row> read(@NotNull final ResourceType resourceType);
 
   /**
    * Gets the dataset for the specified FHIR resource type.
@@ -44,11 +46,13 @@ public interface DataSource {
    * @param resourceCode the code for the FHIR resource type
    * @return the dataset with the resource data
    */
-  Dataset<Row> read(final String resourceCode);
+  @NotNull
+  Dataset<Row> read(@NotNull final String resourceCode);
 
   /**
    * @return the set of resources that are available through this data source
    */
+  @NotNull
   Set<ResourceType> getResourceTypes();
 
 }
