@@ -19,8 +19,8 @@ package au.csiro.pathling.fhirpath.operator;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.evaluation.EvaluationContext;
-import jakarta.annotation.Nonnull;
 import lombok.Value;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents the inputs to a unary operator in FHIRPath.
@@ -33,13 +33,13 @@ public class UnaryOperatorInput {
   /**
    * Context and dependencies for use in evaluating the function.
    */
-  @Nonnull
+  @NotNull
   EvaluationContext context;
 
   /**
    * An expression representing the operand.
    */
-  @Nonnull
+  @NotNull
   Collection operand;
 
 }

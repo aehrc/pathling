@@ -20,7 +20,8 @@ package au.csiro.pathling.fhirpath.function;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
-import jakarta.annotation.Nonnull;
+import au.csiro.pathling.fhirpath.function.annotation.Name;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents a function in FHIRPath.
@@ -33,9 +34,10 @@ public interface NamedFunction<T extends Collection> {
   /**
    * @return the name of this function
    */
-  @Nonnull
+  @NotNull
   default String getName() {
-    return requireNonNull(this.getClass().getAnnotation(Name.class)).value();
+    return requireNonNull(this.getClass().getAnnotation(Name.class),
+        "NamedFunction must have a Name annotation").value();
   }
 
   /**
@@ -44,9 +46,9 @@ public interface NamedFunction<T extends Collection> {
    * @param input a {@link FunctionInput} object
    * @return a {@link Collection} object representing the resulting expression
    */
-  @Nonnull
-  default T invoke(@Nonnull final FunctionInput input) {
-    throw new UnsupportedOperationException("Not implemented: " + getName());
+  @NotNull
+  default T invoke(@NotNull final FunctionInput input) {
+    throw new UnsupportedOperationException("Function not implemented: " + getName());
   }
 
 }

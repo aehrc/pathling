@@ -3,14 +3,21 @@ package au.csiro.pathling.fhirpath.expression;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.evaluation.EvaluationContext;
+import au.csiro.pathling.fhirpath.function.FunctionInput;
+import au.csiro.pathling.fhirpath.function.NamedFunction;
 import java.util.List;
-import org.apache.commons.lang3.NotImplementedException;
+import org.jetbrains.annotations.NotNull;
 
 public record FunctionCall(String name, List<FhirPath> arguments) implements FhirPath {
 
   @Override
+  @NotNull
   public Collection evaluate(final Collection input, final EvaluationContext context) {
-    throw new NotImplementedException("Function calls are not yet implemented");
+    final NamedFunction<? extends Collection> function = context.functionRegistry()
+        .getInstance(name)
+        .orElseThrow(() -> new IllegalArgumentException("Unknown function: " + name));
+    final FunctionInput functionInput = new FunctionInput(context, input, arguments);
+    return function.invoke(functionInput);
   }
 
 }

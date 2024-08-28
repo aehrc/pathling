@@ -20,9 +20,9 @@ package au.csiro.pathling.fhirpath.function;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.evaluation.EvaluationContext;
-import jakarta.annotation.Nonnull;
 import java.util.List;
 import lombok.Value;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents the inputs to a FHIRPath function.
@@ -35,7 +35,7 @@ public class FunctionInput {
   /**
    * Context and dependencies for use in evaluating the function.
    */
-  @Nonnull
+  @NotNull
   EvaluationContext context;
 
   /**
@@ -43,7 +43,7 @@ public class FunctionInput {
    * expression on the left-hand side of the dot preceding the function invocation, or the left-hand
    * operand in the case of an operator.
    */
-  @Nonnull
+  @NotNull
   Collection input;
 
   /**
@@ -51,7 +51,7 @@ public class FunctionInput {
    * the parentheses following the function invocation, separated by commas, or the right-hand
    * operand in the case of an operator.
    */
-  @Nonnull
+  @NotNull
   List<FhirPath> arguments;
 
 }

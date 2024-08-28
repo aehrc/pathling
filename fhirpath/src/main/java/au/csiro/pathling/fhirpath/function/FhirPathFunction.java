@@ -17,20 +17,20 @@
 
 package au.csiro.pathling.fhirpath.function;
 
+import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import org.jetbrains.annotations.NotNull;
 
 /**
- * Used to override the name of a FHIRPath function.
+ * Indicates that a method represents the implementation of a FHIRPath function.
  *
  * @author Piotr Szul
  */
+@NotNull
+@Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Name {
-
-  /**
-   * @return The name of the function
-   */
-  String value();
+public @interface FhirPathFunction {
 
 }

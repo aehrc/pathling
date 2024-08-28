@@ -62,7 +62,7 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TypeExpression
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TypeSpecifierContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.UnionExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.UnitContext;
-import jakarta.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A special visitor for the type specifiers arguments in the FHIRPath function invocations.
@@ -319,7 +319,7 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<TypeSpecifier> {
     throw unexpected("QualifiedIdentifier");
   }
 
-  @Nonnull
+  @NotNull
   private static RuntimeException unexpected(final String expressionType) {
     return new UnsupportedExpressionError("Unexpected expression type: " + expressionType);
   }

@@ -2,6 +2,7 @@ package au.csiro.pathling.library;
 
 import au.csiro.pathling.fhirpath.evaluation.DefaultEvaluationContext;
 import au.csiro.pathling.fhirpath.evaluation.EvaluationContext;
+import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.io.source.NdjsonSource;
 import au.csiro.pathling.test.TestResources;
@@ -27,7 +28,9 @@ class FhirPathExecutorTest {
         .master("local[*]")
         .getOrCreate();
     final FhirContext fhirContext = FhirContext.forR4Cached();
-    final EvaluationContext context = new DefaultEvaluationContext(spark, fhirContext);
+    final StaticFunctionRegistry functionRegistry = new StaticFunctionRegistry();
+    final EvaluationContext context = new DefaultEvaluationContext(spark, fhirContext,
+        functionRegistry);
     final URL testData = TestResources.getResourceAsUrl("bulk/fhir");
     final DataSource dataSource = new NdjsonSource(testData.toString(),
         FhirVersionEnum.R4.getFhirVersionString());

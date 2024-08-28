@@ -21,10 +21,10 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathLexer;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser;
-import jakarta.annotation.Nonnull;
 import lombok.Getter;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * This is an ANTLR-based parser for processing a FHIRPath expression, and aggregating the results
@@ -42,14 +42,14 @@ public class Parser {
    * @param expression The String representation of the FHIRPath expression
    * @return a new {@link Collection} object
    */
-  @Nonnull
-  public FhirPath parse(@Nonnull final String expression) {
+  @NotNull
+  public FhirPath parse(@NotNull final String expression) {
     final FhirPathParser parser = build(expression);
     return new Visitor().visit(parser.expression());
   }
 
-  @Nonnull
-  private static FhirPathParser build(final @Nonnull String expression) {
+  @NotNull
+  private static FhirPathParser build(@NotNull final String expression) {
     final FhirPathLexer lexer = new FhirPathLexer(CharStreams.fromString(expression));
     final CommonTokenStream tokens = new CommonTokenStream(lexer);
     final FhirPathParser parser = new FhirPathParser(tokens);

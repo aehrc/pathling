@@ -19,8 +19,10 @@ package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents a collection of nodes that are the result of evaluating a FHIRPath expression.
@@ -33,17 +35,23 @@ public class Collection {
   Column column;
   Optional<FhirPathType> type;
 
-  public Collection(final Column column, final Optional<FhirPathType> type) {
+  public Collection(@NotNull final Column column, @NotNull final Optional<FhirPathType> type) {
     this.column = column;
     this.type = type;
   }
 
-  public Collection traverse(final String elementName) {
+  @NotNull
+  public Collection traverse(@NotNull final String elementName) {
     if (elementName == null) {
       throw new IllegalArgumentException("Element name must not be null");
     }
     final Column newColumn = column.getField(elementName);
     return new Collection(newColumn, type);
+  }
+
+  @NotNull
+  public Collection map(@NotNull final UnaryOperator<Column> mapper) {
+    return new Collection(mapper.apply(column), type);
   }
 
 }

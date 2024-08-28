@@ -1,11 +1,11 @@
 package au.csiro.pathling.fhirpath;
 
 import com.google.common.collect.ImmutableMap;
-import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.util.Map;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Maps FHIR types to FHIRPath types.
@@ -15,7 +15,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public abstract class FhirTypeMapping {
 
-  @Nonnull
+  @NotNull
   private static final Map<FHIRDefinedType, FhirPathType> FHIR_TO_FHIRPATH_TYPE =
       new ImmutableMap.Builder<FHIRDefinedType, FhirPathType>()
           .put(FHIRDefinedType.BOOLEAN, new FhirPathType("Boolean"))
@@ -41,7 +41,7 @@ public abstract class FhirTypeMapping {
   /**
    * @return the FHIRPath type that the given FHIR type can be automatically converted to
    */
-  @Nonnull
+  @NotNull
   public static Optional<FhirPathType> get(@Nullable final FHIRDefinedType fhirType) {
     return Optional.ofNullable(FhirTypeMapping.FHIR_TO_FHIRPATH_TYPE.get(fhirType));
   }

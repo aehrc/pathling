@@ -15,37 +15,22 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.operator;
+package au.csiro.pathling.fhirpath.function.annotation;
 
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.evaluation.EvaluationContext;
-import lombok.Value;
-import org.jetbrains.annotations.NotNull;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
- * Represents the inputs to a binary operator in FHIRPath.
+ * Used to override the name of a FHIRPath function.
  *
- * @author John Grimes
+ * @author Piotr Szul
  */
-@Value
-public class BinaryOperatorInput {
+@Retention(RetentionPolicy.RUNTIME)
+public @interface Name {
 
   /**
-   * Context and dependencies for use in evaluating the function.
+   * @return The name of the function
    */
-  @NotNull
-  EvaluationContext context;
-
-  /**
-   * An expression representing the left operand.
-   */
-  @NotNull
-  Collection left;
-
-  /**
-   * An expression representing the right operand.
-   */
-  @NotNull
-  Collection right;
+  String value();
 
 }

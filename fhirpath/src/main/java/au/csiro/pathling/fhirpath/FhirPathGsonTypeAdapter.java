@@ -4,8 +4,8 @@ import com.google.gson.Gson;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import jakarta.annotation.Nullable;
 import java.io.IOException;
+import org.jetbrains.annotations.Nullable;
 
 public class FhirPathGsonTypeAdapter extends TypeAdapter<FhirPath> {
 

@@ -29,6 +29,10 @@
       <artifactId>lombok</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
+    </dependency>
+    <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>test</artifactId>
       <scope>test</scope>

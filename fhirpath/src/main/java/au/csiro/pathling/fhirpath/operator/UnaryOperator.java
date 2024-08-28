@@ -18,7 +18,7 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
-import jakarta.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents a unary operator in FHIRPath.
@@ -33,7 +33,7 @@ public interface UnaryOperator {
    * @param input a {@link UnaryOperatorInput} object
    * @return a {@link Collection} object representing the resulting expression
    */
-  @Nonnull
+  @NotNull
   Collection invoke(UnaryOperatorInput input);
 
 }

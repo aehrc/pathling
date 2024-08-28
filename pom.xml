@@ -43,7 +43,7 @@
       <url>https://github.com/piotrszul</url>
     </developer>
   </developers>
-  
+
   <modules>
     <module>io</module>
     <module>fhirpath</module>
@@ -188,6 +188,11 @@
         <groupId>commons-io</groupId>
         <artifactId>commons-io</artifactId>
         <version>${pathling.commonsIoVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jetbrains</groupId>
+        <artifactId>annotations</artifactId>
+        <version>24.0.0</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

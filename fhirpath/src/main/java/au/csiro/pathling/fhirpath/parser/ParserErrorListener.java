@@ -17,10 +17,10 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import jakarta.annotation.Nullable;
 import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Recognizer;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * This is a custom error listener for capturing parse errors and wrapping them in an invalid
