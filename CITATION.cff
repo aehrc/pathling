@@ -1,19 +1,40 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
+message: If you use this software, please cite it using the metadata from 'preferred-citation'.
 authors:
-- family-names: "Grimes"
-  given-names: "John"
-  orcid: "https://orcid.org/0000-0002-9575-7641"
-- family-names: "Szul"
-  given-names: "Piotr"
-- family-names: "Metke Jimenez"
-  given-names: "Alejandro"
-- family-names: "Lawley"
-  given-names: "Michael"
-- family-names: "Loi"
-  given-names: "Kylynn"
-title: "Pathling"
-version: 5
+  - family-names: Grimes
+    given-names: John
+    orcid: https://orcid.org/0000-0002-9575-7641
+  - family-names: Szul
+    given-names: Piotr
+  - family-names: Metke Jimenez
+    given-names: Alejandro
+  - family-names: Lawley
+    given-names: Michael
+  - family-names: Loi
+    given-names: Kylynn
+title: Pathling
 doi: 10.25919/q2vd-a532
-date-released: 2022-03-31
-url: "https://github.com/aehrc/pathling"
+url: https://github.com/aehrc/pathling
+license: Apache-2.0
+keywords:
+  - Data analytics
+  - Interoperability
+  - Clinical terminology
+  - FHIR
+  - FHIRPath
+  - SNOMED CT
+preferred-citation:
+  title: "Pathling: analytics on FHIR"
+  doi: 10.1186/s13326-022-00277-1
+  authors:
+    - family-names: Grimes
+      given-names: John
+      orcid: https://orcid.org/0000-0002-9575-7641
+    - family-names: Szul
+      given-names: Piotr
+    - family-names: Metke Jimenez
+      given-names: Alejandro
+    - family-names: Lawley
+      given-names: Michael
+    - family-names: Loi
+      given-names: Kylynn
