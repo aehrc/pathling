@@ -1,12 +1,14 @@
 package au.csiro.pathling.fhirpath.operator.comparison;
 
 import jakarta.annotation.Nonnull;
+import lombok.Getter;
 import org.apache.commons.lang3.function.TriFunction;
 import org.apache.spark.sql.Column;
 
 /**
  * Represents a type of comparison operation.
  */
+@Getter
 public enum ComparisonOperation {
   /**
    * The equals operation.

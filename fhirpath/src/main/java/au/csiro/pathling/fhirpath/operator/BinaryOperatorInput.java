@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.evaluation.EvaluationContext;
 import lombok.Value;
@@ -37,15 +38,21 @@ public class BinaryOperatorInput {
   EvaluationContext context;
 
   /**
+   * The collection that is the input context within which the operator is being evaluated.
+   */
+  @NotNull
+  Collection input;
+
+  /**
    * An expression representing the left operand.
    */
   @NotNull
-  Collection left;
+  FhirPath left;
 
   /**
    * An expression representing the right operand.
    */
   @NotNull
-  Collection right;
+  FhirPath right;
 
 }

@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.operator.comparison.ColumnComparator;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 import lombok.Getter;
@@ -52,6 +53,18 @@ public class Collection {
   @NotNull
   public Collection map(@NotNull final UnaryOperator<Column> mapper) {
     return new Collection(mapper.apply(column), type);
+  }
+
+  @NotNull
+  public Collection convert(@NotNull final FhirPathType newType)
+      throws UnsupportedOperationException {
+    throw new UnsupportedOperationException("Conversion not supported to type: " + newType);
+  }
+
+  @NotNull
+  public ColumnComparator compare(@NotNull final Collection target)
+      throws UnsupportedOperationException {
+    throw new UnsupportedOperationException("Comparison not supported");
   }
 
 }

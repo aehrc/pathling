@@ -17,10 +17,14 @@
 
 package au.csiro.pathling.fhirpath.operator.comparison;
 
+import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.operator.BinaryOperator;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorInput;
-import jakarta.annotation.Nonnull;
+import java.util.Optional;
+import org.apache.spark.sql.Column;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Provides the functionality of the family of comparison operators within FHIRPath.
@@ -31,28 +35,26 @@ import jakarta.annotation.Nonnull;
  */
 public class ComparisonOperator implements BinaryOperator {
 
-  @Nonnull
+  @NotNull
   private final ComparisonOperation type;
 
   /**
    * @param type The type of operator
    */
-  public ComparisonOperator(@Nonnull final ComparisonOperation type) {
+  public ComparisonOperator(@NotNull final ComparisonOperation type) {
     this.type = type;
   }
 
-  @Nonnull
+  @NotNull
   @Override
-  public Collection invoke(@Nonnull final BinaryOperatorInput input) {
-    // final Collection left = input.getLeft();
-    // final Collection right = input.getRight();
-    // checkUserInput(left.isComparableTo(right), "Operands must be comparable");
-    //
-    // return BooleanCollection.build(
-    //     ColumnRepresentation.binaryOperator(left.getColumn(), right.getColumn(),
-    //         (l, r) -> left.getComparison(type).apply(right))
-    // );
-    return null;
+  public Collection invoke(@NotNull final BinaryOperatorInput input) {
+    final Collection left = input.getLeft().evaluate(input.getInput(), input.getContext());
+    final Collection right = input.getRight().evaluate(input.getInput(), input.getContext());
+
+    final ColumnComparator comparator = left.compare(right);
+    final Column result = type.getOperation()
+        .apply(comparator, left.getColumn(), right.getColumn());
+    return new BooleanCollection(result, Optional.of(FhirPathType.BOOLEAN));
   }
 
 }
