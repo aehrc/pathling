@@ -47,26 +47,14 @@ public class Collection {
       throw new IllegalArgumentException("Element name must not be null");
     }
     final Column newColumn = column.getField(elementName);
-    // TODO: Determine the type of the new column.
-    return new Collection(newColumn, type);
+    return new Collection(newColumn, Optional.empty());
   }
 
   public @NotNull Collection map(final @NotNull UnaryOperator<Column> mapper) {
     return new Collection(mapper.apply(column), type);
   }
 
-  public @NotNull Collection convert(final @NotNull FhirPathType newType)
-      throws UnsupportedOperationException {
-    if (type.isEmpty()) {
-      throw new UnsupportedOperationException(
-          "Conversion not supported from unknown type to " + newType);
-    }
-    throw new UnsupportedOperationException(
-        "Conversion not supported from " + type.get() + " to " + newType);
-  }
-
-  public @NotNull ColumnComparator compare(final @NotNull Collection target)
-      throws UnsupportedOperationException {
+  public @NotNull ColumnComparator compare() {
     return new DefaultComparator();
   }
 

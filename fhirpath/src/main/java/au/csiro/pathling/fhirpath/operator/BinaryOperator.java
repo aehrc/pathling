@@ -33,7 +33,6 @@ public interface BinaryOperator {
    * @param input An {@link BinaryOperatorInput} object
    * @return A {@link Collection} object representing the resulting expression
    */
-  @NotNull
-  Collection invoke(BinaryOperatorInput input);
+  @NotNull Collection invoke(@NotNull BinaryOperatorInput input);
 
 }

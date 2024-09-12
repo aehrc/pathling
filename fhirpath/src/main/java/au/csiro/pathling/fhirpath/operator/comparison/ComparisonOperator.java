@@ -35,42 +35,32 @@ import org.jetbrains.annotations.NotNull;
  */
 public class ComparisonOperator implements BinaryOperator {
 
-  @NotNull
-  private final ComparisonOperation type;
+  private final @NotNull ComparisonOperation type;
 
   /**
    * @param type The type of operator
    */
-  public ComparisonOperator(@NotNull final ComparisonOperation type) {
+  public ComparisonOperator(final @NotNull ComparisonOperation type) {
     this.type = type;
   }
 
-  @NotNull
   @Override
-  public Collection invoke(@NotNull final BinaryOperatorInput input) {
+  public @NotNull Collection invoke(final @NotNull BinaryOperatorInput input) {
     final Collection left = input.getLeft().evaluate(input.getInput(), input.getContext());
     final Collection right = input.getRight().evaluate(input.getInput(), input.getContext());
 
-    if (left.getType().isEmpty() || right.getType().isEmpty()) {
-      throw new UnsupportedOperationException(
-          "Comparison not supported as one or more operands does not have type information");
-    }
-    final FhirPathType leftType = left.getType().get();
-    final FhirPathType rightType = right.getType().get();
-    final Collection resolvedRight;
-    if (!leftType.equals(rightType)) {
-      try {
-        resolvedRight = right.convert(leftType);
-      } catch (final UnsupportedOperationException e) {
+    // If we know the types of both operands and they are not the same, we throw an error.
+    if (left.getType().isPresent() && right.getType().isPresent()) {
+      final FhirPathType leftType = left.getType().get();
+      final FhirPathType rightType = right.getType().get();
+      if (!leftType.equals(rightType)) {
         throw new UnsupportedOperationException(
             "Comparison not supported between " + leftType + " and "
                 + rightType + " types");
       }
-    } else {
-      resolvedRight = right;
     }
 
-    final ColumnComparator comparator = left.compare(resolvedRight);
+    final ColumnComparator comparator = left.compare();
     final Column result = type.getOperation()
         .apply(comparator, left.getColumn(), right.getColumn());
     return new BooleanCollection(result, Optional.of(FhirPathType.BOOLEAN));
