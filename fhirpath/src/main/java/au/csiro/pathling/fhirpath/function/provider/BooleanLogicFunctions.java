@@ -7,6 +7,7 @@ import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Contains functions for boolean logic.
@@ -28,7 +29,7 @@ public class BooleanLogicFunctions {
    * @see <a href="https://hl7.org/fhirpath/#not--boolean">not</a>
    */
   @FhirPathFunction
-  public static BooleanCollection not(final Collection input) {
+  public static @NotNull BooleanCollection not(final @NotNull Collection input) {
     final Column column = functions.not(input.getColumn());
     return new BooleanCollection(column, Optional.of(FhirPathType.BOOLEAN));
   }

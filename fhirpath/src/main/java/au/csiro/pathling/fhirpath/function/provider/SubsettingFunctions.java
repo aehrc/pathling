@@ -26,8 +26,7 @@ public class SubsettingFunctions {
    * - first</a>
    */
   @FhirPathFunction
-  @NotNull
-  public static Collection first(@NotNull final Collection input) {
+  public static @NotNull Collection first(final @NotNull Collection input) {
     return input.map(c -> functions.first(input.getColumn()));
   }
 

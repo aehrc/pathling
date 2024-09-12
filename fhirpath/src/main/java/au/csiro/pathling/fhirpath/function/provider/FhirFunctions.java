@@ -4,6 +4,7 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import au.csiro.pathling.fhirpath.function.annotation.RequiredParameter;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Additional FHIRPath functions that are defined within the FHIR specification.
@@ -28,7 +29,7 @@ public class FhirFunctions {
    * @return A collection containing only those elements for which the criteria expression evaluates
    */
   @FhirPathFunction
-  public static Collection extension(final Collection input,
+  public static @NotNull Collection extension(final @NotNull Collection input,
       @RequiredParameter final StringCollection url) {
     throw new RuntimeException("Not implemented");
   }

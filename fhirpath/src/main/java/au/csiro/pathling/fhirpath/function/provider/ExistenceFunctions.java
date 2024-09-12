@@ -14,6 +14,7 @@ import au.csiro.pathling.fhirpath.function.annotation.OptionalParameter;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Contains functions for evaluating the existence of elements in a collection.
@@ -42,8 +43,8 @@ public class ExistenceFunctions {
    * Specification - exists</a>
    */
   @FhirPathFunction
-  public static BooleanCollection exists(final EvaluationContext context, final Collection input,
-      @OptionalParameter final FhirPath criteria) {
+  public static @NotNull BooleanCollection exists(final @NotNull EvaluationContext context,
+      final @NotNull Collection input, final @OptionalParameter FhirPath criteria) {
     final Collection emptyInput = criteria == null
                                   ? input
                                   : FilteringAndProjectionFunctions.where(context, input, criteria);

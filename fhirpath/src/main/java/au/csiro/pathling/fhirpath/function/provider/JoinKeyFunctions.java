@@ -35,7 +35,6 @@ import org.jetbrains.annotations.NotNull;
 @SuppressWarnings("unused")
 public class JoinKeyFunctions {
 
-
   /**
    * Returns a {@link Collection} of keys for the input {@link ResourceCollection}.
    *
@@ -46,8 +45,7 @@ public class JoinKeyFunctions {
    * on FHIR specification - getResourceKey</a>
    */
   @FhirPathFunction
-  @NotNull
-  public static Collection getResourceKey(final ResourceCollection input) {
+  public static @NotNull Collection getResourceKey(final @NotNull ResourceCollection input) {
     throw new RuntimeException("Not implemented");
   }
 
@@ -62,9 +60,8 @@ public class JoinKeyFunctions {
    * on FHIR specification - getReferenceKey</a>
    */
   @FhirPathFunction
-  @NotNull
-  public static Collection getReferenceKey(final Collection input,
-      @OptionalParameter final TypeSpecifier typeSpecifier) {
+  public static @NotNull Collection getReferenceKey(final @NotNull Collection input,
+      final @OptionalParameter TypeSpecifier typeSpecifier) {
     throw new RuntimeException("Not implemented");
   }
 

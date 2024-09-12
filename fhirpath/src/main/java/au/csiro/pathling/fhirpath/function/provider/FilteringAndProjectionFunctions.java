@@ -38,8 +38,8 @@ public class FilteringAndProjectionFunctions {
    * @see <a href="https://hl7.org/fhirpath/#wherecriteria--expression--collection">where</a>
    */
   @FhirPathFunction
-  public static Collection where(@NotNull final EvaluationContext context,
-      @NotNull final Collection input, @RequiredParameter final FhirPath expression) {
+  public static @NotNull Collection where(final @NotNull EvaluationContext context,
+      final @NotNull Collection input, final @RequiredParameter FhirPath expression) {
     final Collection expressionResult = expression.evaluate(input, context);
     final Column resultColumn = functions.filter(input.getColumn(),
         c -> expressionResult.getColumn());
@@ -59,9 +59,8 @@ public class FilteringAndProjectionFunctions {
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#oftype">ofType</a>
    */
   @FhirPathFunction
-  @NotNull
-  public static Collection ofType(@NotNull final Collection input,
-      @NotNull final TypeSpecifier typeSpecifier) {
+  public static @NotNull Collection ofType(final @NotNull Collection input,
+      final @NotNull TypeSpecifier typeSpecifier) {
     throw new RuntimeException("Not implemented");
   }
 

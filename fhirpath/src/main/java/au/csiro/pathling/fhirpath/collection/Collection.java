@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.function.UnaryOperator;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -56,6 +57,14 @@ public class Collection {
 
   public @NotNull ColumnComparator compare() {
     return new DefaultComparator();
+  }
+
+  public @NotNull Collection singleton() {
+    return this.map(c -> functions.when(functions.size(c).equalTo(1), c.getItem(0))
+        .otherwise(
+            functions.when(functions.size(c).equalTo(0), functions.lit(null))
+                .otherwise(functions.raise_error(functions.lit("Expected a singular input")))
+        ));
   }
 
 }
