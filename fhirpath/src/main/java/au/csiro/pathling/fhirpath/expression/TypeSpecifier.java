@@ -5,6 +5,7 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.evaluation.EvaluationContext;
 import lombok.Value;
+import org.jetbrains.annotations.NotNull;
 
 @Value
 public class TypeSpecifier implements FhirPath {
@@ -43,7 +44,8 @@ public class TypeSpecifier implements FhirPath {
   }
 
   @Override
-  public Collection evaluate(final Collection input, final EvaluationContext context) {
+  public @NotNull Collection evaluate(final @NotNull Collection input,
+      final @NotNull EvaluationContext context) {
     return null;
   }
 

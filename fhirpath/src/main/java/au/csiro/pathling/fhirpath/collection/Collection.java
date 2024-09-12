@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.operator.comparison.ColumnComparator;
+import au.csiro.pathling.fhirpath.operator.comparison.DefaultComparator;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 import lombok.Getter;
@@ -33,38 +34,40 @@ import org.jetbrains.annotations.NotNull;
 @Getter
 public class Collection {
 
-  Column column;
-  Optional<FhirPathType> type;
+  @NotNull Column column;
+  @NotNull Optional<FhirPathType> type;
 
-  public Collection(@NotNull final Column column, @NotNull final Optional<FhirPathType> type) {
+  public Collection(final @NotNull Column column, final @NotNull Optional<FhirPathType> type) {
     this.column = column;
     this.type = type;
   }
 
-  @NotNull
-  public Collection traverse(@NotNull final String elementName) {
+  public @NotNull Collection traverse(final @NotNull String elementName) {
     if (elementName == null) {
       throw new IllegalArgumentException("Element name must not be null");
     }
     final Column newColumn = column.getField(elementName);
+    // TODO: Determine the type of the new column.
     return new Collection(newColumn, type);
   }
 
-  @NotNull
-  public Collection map(@NotNull final UnaryOperator<Column> mapper) {
+  public @NotNull Collection map(final @NotNull UnaryOperator<Column> mapper) {
     return new Collection(mapper.apply(column), type);
   }
 
-  @NotNull
-  public Collection convert(@NotNull final FhirPathType newType)
+  public @NotNull Collection convert(final @NotNull FhirPathType newType)
       throws UnsupportedOperationException {
-    throw new UnsupportedOperationException("Conversion not supported to type: " + newType);
+    if (type.isEmpty()) {
+      throw new UnsupportedOperationException(
+          "Conversion not supported from unknown type to " + newType);
+    }
+    throw new UnsupportedOperationException(
+        "Conversion not supported from " + type.get() + " to " + newType);
   }
 
-  @NotNull
-  public ColumnComparator compare(@NotNull final Collection target)
+  public @NotNull ColumnComparator compare(final @NotNull Collection target)
       throws UnsupportedOperationException {
-    throw new UnsupportedOperationException("Comparison not supported");
+    return new DefaultComparator();
   }
 
 }

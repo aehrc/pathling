@@ -11,8 +11,8 @@ import org.jetbrains.annotations.NotNull;
 public record FunctionCall(String name, List<FhirPath> arguments) implements FhirPath {
 
   @Override
-  @NotNull
-  public Collection evaluate(final Collection input, final EvaluationContext context) {
+  public @NotNull Collection evaluate(final @NotNull Collection input,
+      final @NotNull EvaluationContext context) {
     final NamedFunction<? extends Collection> function = context.functionRegistry()
         .getInstance(name)
         .orElseThrow(() -> new IllegalArgumentException("Unknown function: " + name));

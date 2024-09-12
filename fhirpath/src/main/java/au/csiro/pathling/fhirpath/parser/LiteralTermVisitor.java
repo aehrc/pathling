@@ -20,10 +20,14 @@ package au.csiro.pathling.fhirpath.parser;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.expression.CalendarDurationLiteral;
-import au.csiro.pathling.fhirpath.expression.Literal;
+import au.csiro.pathling.fhirpath.expression.CodingLiteral;
+import au.csiro.pathling.fhirpath.expression.DateLiteral;
+import au.csiro.pathling.fhirpath.expression.DateTimeLiteral;
 import au.csiro.pathling.fhirpath.expression.NullLiteral;
 import au.csiro.pathling.fhirpath.expression.NumberLiteral;
 import au.csiro.pathling.fhirpath.expression.QuantityLiteral;
+import au.csiro.pathling.fhirpath.expression.StringLiteral;
+import au.csiro.pathling.fhirpath.expression.TimeLiteral;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.BooleanLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.CodingLiteralContext;
@@ -47,22 +51,22 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   public FhirPath visitStringLiteral(final StringLiteralContext ctx) {
-    return new Literal(FhirPathType.STRING, ctx.getText());
+    return new StringLiteral(FhirPathType.STRING, ctx.getText());
   }
 
   @Override
   public FhirPath visitDateLiteral(final DateLiteralContext ctx) {
-    return new Literal(FhirPathType.DATE, ctx.getText());
+    return new DateLiteral(FhirPathType.DATE, ctx.getText());
   }
 
   @Override
   public FhirPath visitDateTimeLiteral(final DateTimeLiteralContext ctx) {
-    return new Literal(FhirPathType.DATE_TIME, ctx.getText());
+    return new DateTimeLiteral(FhirPathType.DATE_TIME, ctx.getText());
   }
 
   @Override
   public FhirPath visitTimeLiteral(final TimeLiteralContext ctx) {
-    return new Literal(FhirPathType.TIME, ctx.getText());
+    return new TimeLiteral(FhirPathType.TIME, ctx.getText());
   }
 
   @Override
@@ -72,7 +76,7 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   public FhirPath visitBooleanLiteral(final BooleanLiteralContext ctx) {
-    return new Literal(FhirPathType.BOOLEAN, ctx.getText());
+    return new StringLiteral(FhirPathType.BOOLEAN, ctx.getText());
   }
 
   @Override
@@ -96,7 +100,7 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   public FhirPath visitCodingLiteral(final CodingLiteralContext ctx) {
-    return new Literal(FhirPathType.CODING, ctx.getText());
+    return new CodingLiteral(FhirPathType.CODING, ctx.getText());
   }
 
 }

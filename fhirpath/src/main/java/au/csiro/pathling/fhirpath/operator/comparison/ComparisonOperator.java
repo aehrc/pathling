@@ -51,7 +51,26 @@ public class ComparisonOperator implements BinaryOperator {
     final Collection left = input.getLeft().evaluate(input.getInput(), input.getContext());
     final Collection right = input.getRight().evaluate(input.getInput(), input.getContext());
 
-    final ColumnComparator comparator = left.compare(right);
+    if (left.getType().isEmpty() || right.getType().isEmpty()) {
+      throw new UnsupportedOperationException(
+          "Comparison not supported as one or more operands does not have type information");
+    }
+    final FhirPathType leftType = left.getType().get();
+    final FhirPathType rightType = right.getType().get();
+    final Collection resolvedRight;
+    if (!leftType.equals(rightType)) {
+      try {
+        resolvedRight = right.convert(leftType);
+      } catch (final UnsupportedOperationException e) {
+        throw new UnsupportedOperationException(
+            "Comparison not supported between " + leftType + " and "
+                + rightType + " types");
+      }
+    } else {
+      resolvedRight = right;
+    }
+
+    final ColumnComparator comparator = left.compare(resolvedRight);
     final Column result = type.getOperation()
         .apply(comparator, left.getColumn(), right.getColumn());
     return new BooleanCollection(result, Optional.of(FhirPathType.BOOLEAN));

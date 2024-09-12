@@ -3,15 +3,18 @@ package au.csiro.pathling.fhirpath.collection;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
+import org.jetbrains.annotations.NotNull;
 
 public class StringCollection extends Collection {
 
-  public StringCollection(final Column column, final Optional<FhirPathType> type) {
+  private StringCollection(final Column column, final Optional<FhirPathType> type) {
     super(column, type);
   }
 
-  public static Collection fromLiteral(final String fhirPath) {
-    return null;
+  @NotNull
+  public static Collection fromLiteral(@NotNull final String fhirPath) {
+    return new StringCollection(functions.lit(fhirPath), Optional.of(FhirPathType.STRING));
   }
-
+  
 }

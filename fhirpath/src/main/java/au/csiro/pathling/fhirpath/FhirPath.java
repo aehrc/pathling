@@ -5,6 +5,7 @@ import au.csiro.pathling.fhirpath.evaluation.EvaluationContext;
 import au.csiro.pathling.fhirpath.expression.Traversal;
 import com.google.gson.Gson;
 import java.util.Optional;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A description of how to take one {@link Collection} and transform it into another.
@@ -14,13 +15,16 @@ import java.util.Optional;
 @FunctionalInterface
 public interface FhirPath {
 
-  Collection evaluate(final Collection input, final EvaluationContext context);
+  @NotNull
+  Collection evaluate(@NotNull final Collection input, @NotNull final EvaluationContext context);
 
-  default FhirPath traverse(final String target) {
+  @NotNull
+  default FhirPath traverse(@NotNull final String target) {
     return new Traversal(Optional.of(this), target);
   }
 
-  default String toJson(final Gson gson) {
+  @NotNull
+  default String toJson(@NotNull final Gson gson) {
     return "{\"" + this.getClass().getSimpleName() + "\": "
         + gson.toJson(this, this.getClass()) + "}";
   }
