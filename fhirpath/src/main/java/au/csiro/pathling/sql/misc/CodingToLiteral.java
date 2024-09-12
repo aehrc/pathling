@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.sql.misc;
 
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
 import au.csiro.pathling.sql.udf.SqlFunction1;
@@ -38,7 +40,7 @@ public class CodingToLiteral implements SqlFunction1<Row, String> {
    */
   public static final String FUNCTION_NAME = "coding_to_literal";
 
-  private static final long serialVersionUID = -6274263255779613070L;
+  private static final long serialVersionUID = 1L;
 
   @Override
   public String getName() {
@@ -56,7 +58,7 @@ public class CodingToLiteral implements SqlFunction1<Row, String> {
     if (row == null) {
       return null;
     }
-    final Coding coding = CodingEncoding.decode(row);
+    final Coding coding = requireNonNull(CodingEncoding.decode(row));
     return CodingLiteral.toLiteral(coding);
   }
 

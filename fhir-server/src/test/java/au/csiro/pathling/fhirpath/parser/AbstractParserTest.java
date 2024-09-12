@@ -21,7 +21,9 @@ import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.execution.FhirPathExecutor;
+import au.csiro.pathling.fhirpath.execution.SingleFhirPathExecutor;
+import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -29,7 +31,6 @@ import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.assertions.FhirPathAssertion;
-import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
@@ -65,7 +66,7 @@ public class AbstractParserTest {
   @MockBean
   protected DataSource dataSource;
 
-  Parser parser;
+  FhirPathExecutor executor;
 
   @BeforeEach
   void setUp() {
@@ -75,16 +76,15 @@ public class AbstractParserTest {
         ResourceType.DIAGNOSTICREPORT, ResourceType.ORGANIZATION, ResourceType.QUESTIONNAIRE,
         ResourceType.CAREPLAN);
 
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, dataSource, ResourceType.PATIENT, ResourceType.PATIENT.toCode(), true);
+    setSubjectResource(ResourceType.PATIENT);
+  }
 
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .database(dataSource)
-        .inputContext(subjectResource)
-        .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
-        .build();
-    parser = new Parser(parserContext);
+
+  @SuppressWarnings("SameParameterValue")
+  void setSubjectResource(@Nonnull final ResourceType resourceType) {
+    executor = new SingleFhirPathExecutor(resourceType, fhirContext,
+        StaticFunctionRegistry.getInstance(), Collections.emptyMap(),
+        dataSource);
   }
 
   void mockResource(final ResourceType... resourceTypes) {
@@ -98,21 +98,14 @@ public class AbstractParserTest {
   @Nonnull
   protected FhirPathAssertion assertThatResultOf(@Nonnull final ResourceType resourceType,
       @Nonnull final String expression) {
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, dataSource, resourceType, resourceType.toCode(), true);
 
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .database(dataSource)
-        .inputContext(subjectResource)
-        .build();
-    final Parser resourceParser = new Parser(parserContext);
-    return assertThat(resourceParser.parse(expression));
+    setSubjectResource(resourceType);
+    return assertThat(executor.evaluate(expression));
   }
 
   @SuppressWarnings("SameParameterValue")
   FhirPathAssertion assertThatResultOf(final String expression) {
-    return assertThat(parser.parse(expression));
+    return assertThat(executor.evaluate(expression));
   }
 
 }

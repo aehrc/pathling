@@ -17,20 +17,20 @@
 
 package au.csiro.pathling.aggregate;
 
+import static java.util.stream.Collectors.toList;
+
 import au.csiro.pathling.config.QueryConfiguration;
-import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -73,6 +73,8 @@ public class AggregateExecutor extends AggregateQueryExecutor {
   public AggregateResponse execute(@Nonnull final AggregateRequest query) {
     final ResultWithExpressions resultWithExpressions = buildQuery(
         query);
+    resultWithExpressions.getDataset().explain();
+    resultWithExpressions.getDataset().show(1_000, false);
 
     // Translate the result into a response object to be passed back to the user.
     return buildResponse(resultWithExpressions);
@@ -95,7 +97,7 @@ public class AggregateExecutor extends AggregateQueryExecutor {
         .map(mapRowToGrouping(resultWithExpressions.getParsedAggregations(),
             resultWithExpressions.getParsedGroupings(),
             resultWithExpressions.getParsedFilters()))
-        .collect(Collectors.toList());
+        .collect(toList());
 
     return new AggregateResponse(groupings);
   }
@@ -103,8 +105,8 @@ public class AggregateExecutor extends AggregateQueryExecutor {
   @Nonnull
   @SuppressWarnings("unchecked")
   private Function<Row, AggregateResponse.Grouping> mapRowToGrouping(
-      @Nonnull final List<FhirPath> aggregations, @Nonnull final List<FhirPath> groupings,
-      @Nonnull final Collection<FhirPath> filters) {
+      @Nonnull final List<Collection> aggregations, @Nonnull final List<Collection> groupings,
+      @Nonnull final java.util.Collection<Collection> filters) {
     return row -> {
       final List<Optional<Type>> labels = new ArrayList<>();
       final List<Optional<Type>> results = new ArrayList<>();
@@ -113,7 +115,7 @@ public class AggregateExecutor extends AggregateQueryExecutor {
         final Materializable<Type> grouping = (Materializable<Type>) groupings.get(i);
         // Delegate to the `getValueFromRow` method within each Materializable path class to extract 
         // the Type value from the Row in the appropriate way.
-        final Optional<Type> label = grouping.getValueFromRow(row, i);
+        final Optional<Type> label = grouping.getFhirValueFromRow(row, i);
         labels.add(label);
       }
 
@@ -121,7 +123,7 @@ public class AggregateExecutor extends AggregateQueryExecutor {
         final Materializable<Type> aggregation = (Materializable<Type>) aggregations.get(i);
         // Delegate to the `getValueFromRow` method within each Materializable path class to extract 
         // the Type value from the Row in the appropriate way.
-        final Optional<Type> result = aggregation.getValueFromRow(row, i + groupings.size());
+        final Optional<Type> result = aggregation.getFhirValueFromRow(row, i + groupings.size());
         results.add(result);
       }
 

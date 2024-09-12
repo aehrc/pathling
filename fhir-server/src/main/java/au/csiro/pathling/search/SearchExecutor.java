@@ -17,22 +17,15 @@
 
 package au.csiro.pathling.search;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
-import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
-import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.api.IQueryParameterAnd;
@@ -42,9 +35,8 @@ import ca.uhn.fhir.rest.param.StringOrListParam;
 import ca.uhn.fhir.rest.param.StringParam;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -99,7 +91,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
    */
   public SearchExecutor(@Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final Database database,
+      @Nonnull final DataSource database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final FhirEncoders fhirEncoders, @Nonnull final ResourceType subjectResource,
       @Nonnull final Optional<StringAndListParam> filters) {
@@ -118,92 +110,79 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   }
 
   @Nonnull
+  @NotImplemented
   private Dataset<Row> initializeDataset() {
-    final ResourcePath resourcePath = ResourcePath
-        .build(getFhirContext(), getDataSource(), subjectResource, subjectResource.toCode(),
-            true, true);
-    final Dataset<Row> subjectDataset = resourcePath.getDataset();
-    final Column subjectIdColumn = resourcePath.getIdColumn();
-
-    final Dataset<Row> dataset;
-
-    if (filters.isEmpty() || filters.get().getValuesAsQueryTokens().isEmpty()) {
-      // If there are no filters, return all resources.
-      dataset = subjectDataset;
-
-    } else {
-      final Collection<FhirPath> fhirPaths = new ArrayList<>();
-      @Nullable Column filterIdColumn = null;
-      @Nullable Column filterColumn = null;
-
-      ResourcePath currentContext = ResourcePath
-          .build(getFhirContext(), getDataSource(), subjectResource, subjectResource.toCode(),
-              true);
-
-      // Parse each of the supplied filter expressions, building up a filter column. This captures 
-      // the AND/OR conditions possible through the FHIR API, see 
-      // https://hl7.org/fhir/R4/search.html#combining.
-      for (final StringOrListParam orParam : filters.get().getValuesAsQueryTokens()) {
-        @Nullable Column orColumn = null;
-
-        for (final StringParam param : orParam.getValuesAsQueryTokens()) {
-          final ParserContext parserContext = buildParserContext(currentContext,
-              Collections.singletonList(currentContext.getIdColumn()));
-          final Parser parser = new Parser(parserContext);
-          final String expression = param.getValue();
-          checkUserInput(!expression.isBlank(), "Filter expression cannot be blank");
-
-          final FhirPath fhirPath = parser.parse(expression);
-          checkUserInput(fhirPath instanceof BooleanPath || fhirPath instanceof BooleanLiteralPath,
-              "Filter expression must be of Boolean type: " + fhirPath.getExpression());
-          final Column filterValue = fhirPath.getValueColumn();
-
-          // Add each expression to a list that will later be joined.
-          fhirPaths.add(fhirPath);
-
-          // Combine all the OR columns with OR logic.
-          orColumn = orColumn == null
-                     ? filterValue
-                     : orColumn.or(filterValue);
-
-          // We save away the first encountered ID column so that we can use it later to join the
-          // subject resource dataset with the joined filter datasets.
-          if (filterIdColumn == null) {
-            filterIdColumn = fhirPath.getIdColumn();
-          }
-
-          // Update the context to build the next expression from the same dataset.
-          currentContext = currentContext
-              .copy(currentContext.getExpression(), fhirPath.getDataset(), fhirPath.getIdColumn(),
-                  currentContext.getEidColumn(), fhirPath.getValueColumn(),
-                  currentContext.isSingular(), currentContext.getThisColumn());
-        }
-
-        // Combine all the columns at this level with AND logic.
-        filterColumn = filterColumn == null
-                       ? orColumn
-                       : filterColumn.and(orColumn);
-      }
-      requireNonNull(filterIdColumn);
-      requireNonNull(filterColumn);
-      check(!fhirPaths.isEmpty());
-
-      // Get the full resources which are present in the filtered dataset.
-      final String filterIdAlias = randomAlias();
-      final Dataset<Row> filteredIds = currentContext.getDataset().select(filterIdColumn.alias(
-          filterIdAlias)).filter(filterColumn);
-      dataset = subjectDataset
-          .join(filteredIds, subjectIdColumn.equalTo(col(filterIdAlias)), "left_semi");
-    }
-
-    if (getConfiguration().getCacheResults()) {
-      // We cache the dataset because we know it will be accessed for both the total and the record
-      // retrieval.
-      log.debug("Caching search dataset");
-      dataset.cache();
-    }
-
-    return dataset;
+    // final ResourceCollection resourceCollection = ResourceCollection
+    //     .build(getFhirContext(), getDataSource(), subjectResource);
+    // final Dataset<Row> subjectDataset = resourceCollection.getDataset();
+    // final Dataset<Row> dataset;
+    //
+    // if (filters.isEmpty() || filters.get().getValuesAsQueryTokens().isEmpty()) {
+    //   // If there are no filters, return all resources.
+    //   dataset = subjectDataset;
+    //
+    // } else {
+    //   final ParserContext parserContext = new ParserContext(resourceCollection,
+    //       resourceCollection,
+    //       fhirContext, sparkSession,
+    //       dataSource,
+    //       StaticFunctionRegistry.getInstance(),
+    //       terminologyServiceFactory,
+    //       Optional.empty()
+    //   );
+    //   Dataset<Row> currentDataset = subjectDataset;
+    //   @Nullable Column filterCondition = null;
+    //
+    //   // Parse each of the supplied filter expressions, building up a filter column. This captures 
+    //   // the AND/OR conditions possible through the FHIR API, see 
+    //   // https://hl7.org/fhir/R4/search.html#combining.
+    //   for (final StringOrListParam orParam : filters.get().getValuesAsQueryTokens()) {
+    //
+    //     // Parse all the filter expressions within this AND condition.
+    //     final List<String> filterExpressions = orParam.getValuesAsQueryTokens().stream()
+    //         .map(StringParam::getValue)
+    //         .collect(toList());
+    //     checkUserInput(filterExpressions.stream().noneMatch(String::isBlank),
+    //         "Filter expression cannot be blank");
+    //     final List<Collection> filters = parseExpressions(parserContext, filterExpressions,
+    //         Optional.of(currentDataset));
+    //     validateFilters(filters);
+    //
+    //     // Get the dataset from the last filter.
+    //     currentDataset = filters.get(filters.size() - 1).getDataset();
+    //
+    //     // Combine all the columns with OR logic.
+    //     final Column orColumn = filters.stream()
+    //         .map(Collection::getValueColumn)
+    //         .reduce(Column::or)
+    //         .orElseThrow();
+    //
+    //     // Combine OR-grouped columns with AND logic.
+    //     filterCondition = filterCondition == null
+    //                       ? orColumn
+    //                       : filterCondition.and(orColumn);
+    //   }
+    //   dataset = currentDataset.filter(filterCondition);
+    // }
+    //
+    // final Column[] resourceColumns = resourceCollection.getElementsToColumns().keySet().stream()
+    //     .map(colName -> resourceCollection.getElementsToColumns().get(colName).alias(colName))
+    //     .toArray(Column[]::new);
+    // // Resources are ordered by ID to ensure consistent paging.
+    // final Dataset<Row> result = dataset.select(resourceColumns);
+    // final WindowSpec window = Window.orderBy(col("id"));
+    // final Dataset<Row> withRowNumbers = result.withColumn("row_number",
+    //     row_number().over(window));
+    //
+    // if (getConfiguration().getCacheResults()) {
+    //   // We cache the dataset because we know it will be accessed for both the total and the record
+    //   // retrieval.
+    //   log.debug("Caching search dataset");
+    //   withRowNumbers.cache();
+    // }
+    //
+    // return withRowNumbers;
+    return null;
   }
 
   @Override
@@ -217,26 +196,25 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   public List<IBaseResource> getResources(final int theFromIndex, final int theToIndex) {
     log.info("Retrieving search results ({}-{})", theFromIndex + 1, theToIndex);
 
-    Dataset<Row> resources = result;
+    @Nullable Column filterCondition = null;
     if (theFromIndex != 0) {
-      // Spark does not have an "offset" concept, so we create a list of rows to exclude and
-      // subtract them from the dataset using a left anti-join.
-      final String excludeAlias = randomAlias();
-      final Dataset<Row> exclude = resources.limit(theFromIndex)
-          .select(resources.col("id").alias(excludeAlias));
-      resources = resources
-          .join(exclude, resources.col("id").equalTo(exclude.col(excludeAlias)), "left_anti");
+      filterCondition = col("row_number").geq(theFromIndex + 1);
     }
-    // The dataset is trimmed to the requested size.
     if (theToIndex != 0) {
-      resources = resources.limit(theToIndex - theFromIndex);
+      filterCondition = filterCondition == null
+                        ? col("row_number").lt(theToIndex + 1)
+                        : filterCondition.and(col("row_number").lt(theToIndex + 1));
     }
+    final Dataset<Row> filtered = Optional.ofNullable(filterCondition)
+        .map(result::filter).orElse(result);
+    final Dataset<Row> resources = filtered.drop("row_number");
 
     // The requested resources are encoded into HAPI FHIR objects, and then collected.
     @Nullable final ExpressionEncoder<IBaseResource> encoder = fhirEncoders
         .of(subjectResource.toCode());
     requireNonNull(encoder);
     reportQueryPlan(resources);
+    resources.explain();
 
     return resources.as(encoder).collectAsList();
   }

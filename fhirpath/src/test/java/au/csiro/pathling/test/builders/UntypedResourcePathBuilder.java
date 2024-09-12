@@ -18,21 +18,15 @@
 package au.csiro.pathling.test.builders;
 
 import static org.apache.spark.sql.functions.col;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.fhirpath.UntypedResourcePath;
-import au.csiro.pathling.fhirpath.element.ReferencePath;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * @author John Grimes
@@ -49,9 +43,6 @@ public class UntypedResourcePathBuilder {
   private Column idColumn;
 
   @Nonnull
-  private Optional<Column> eidColumn;
-
-  @Nonnull
   private Column valueColumn;
 
   private boolean singular;
@@ -61,7 +52,6 @@ public class UntypedResourcePathBuilder {
 
   public UntypedResourcePathBuilder(@Nonnull final SparkSession spark) {
     expression = "";
-    eidColumn = Optional.empty();
     dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
@@ -81,7 +71,6 @@ public class UntypedResourcePathBuilder {
   @Nonnull
   public UntypedResourcePathBuilder idEidAndValueColumns() {
     idColumn = functions.col(dataset.columns()[0]);
-    eidColumn = Optional.of(functions.col(dataset.columns()[1]));
     valueColumn = functions.col(dataset.columns()[2]);
     return this;
   }
@@ -116,18 +105,19 @@ public class UntypedResourcePathBuilder {
     return this;
   }
 
-  @Nonnull
-  public UntypedResourcePath build() {
-    final ReferencePath referencePath = mock(ReferencePath.class);
-    when(referencePath.getIdColumn()).thenReturn(idColumn);
-    when(referencePath.getEidColumn()).thenReturn(eidColumn);
-    when(referencePath.getValueColumn()).thenReturn(valueColumn);
-    when(referencePath.getDataset()).thenReturn(dataset);
-    when(referencePath.isSingular()).thenReturn(singular);
-    when(referencePath.getCurrentResource()).thenReturn(Optional.empty());
-    when(referencePath.getThisColumn()).thenReturn(Optional.ofNullable(thisColumn));
-    when(referencePath.getFhirType()).thenReturn(FHIRDefinedType.REFERENCE);
-    return UntypedResourcePath.build(referencePath, expression);
-  }
+  // TODO: check
+  //
+  // @Nonnull
+  // public UntypedResourcePath build() {
+  //   final ReferencePath referencePath = mock(ReferencePath.class);
+  //   when(referencePath.getIdColumn()).thenReturn(idColumn);
+  //   when(referencePath.getValueColumn()).thenReturn(valueColumn);
+  //   when(referencePath.getDataset()).thenReturn(dataset);
+  //   when(referencePath.isSingular()).thenReturn(singular);
+  //   when(referencePath.getCurrentResource()).thenReturn(Optional.empty());
+  //   when(referencePath.getThisColumn()).thenReturn(Optional.ofNullable(thisColumn));
+  //   when(referencePath.getFhirType()).thenReturn(FHIRDefinedType.REFERENCE);
+  //   return UntypedResourcePath.build(referencePath, expression);
+  // }
 
 }

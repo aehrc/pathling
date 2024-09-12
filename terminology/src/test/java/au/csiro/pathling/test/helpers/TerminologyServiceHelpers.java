@@ -226,6 +226,7 @@ public class TerminologyServiceHelpers {
       return this;
     }
 
+    
     @Nonnull
     public final <T extends Type> LookupExpectations withProperty(@Nonnull final Coding coding,
         @Nonnull final String propertyCode, @Nullable final String displayLanguage,

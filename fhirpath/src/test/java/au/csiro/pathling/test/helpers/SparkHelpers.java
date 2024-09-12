@@ -18,6 +18,7 @@
 package au.csiro.pathling.test.helpers;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
@@ -134,7 +135,7 @@ public abstract class SparkHelpers {
     requireNonNull(coding);
 
     final List<Row> codings = coding.stream().map(SparkHelpers::rowFromCoding)
-        .collect(Collectors.toList());
+        .collect(toList());
     final Buffer<Row> buffer = JavaConverters.asScalaBuffer(codings);
     requireNonNull(buffer);
 

@@ -26,8 +26,13 @@ import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
+import au.csiro.pathling.views.ConstantDeclarationTypeAdapterFactory;
+import au.csiro.pathling.views.SelectClauseTypeAdapterFactory;
+import au.csiro.pathling.views.StrictStringTypeAdapterFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 import org.fhir.ucum.UcumException;
@@ -90,14 +95,14 @@ public class UnitTestDependencies {
   @Bean
   @ConditionalOnMissingBean
   @Nonnull
-  static FhirContext fhirContext() {
+  public static FhirContext fhirContext() {
     return FhirContext.forR4();
   }
 
   @Bean
   @ConditionalOnMissingBean
   @Nonnull
-  static IParser jsonParser(@Nonnull final FhirContext fhirContext) {
+  public static IParser jsonParser(@Nonnull final FhirContext fhirContext) {
     return fhirContext.newJsonParser();
   }
 
@@ -105,7 +110,10 @@ public class UnitTestDependencies {
   @ConditionalOnMissingBean
   @Nonnull
   static FhirEncoders fhirEncoders() {
-    return FhirEncoders.forR4().getOrCreate();
+    return FhirEncoders.forR4()
+        .withExtensionsEnabled(true)
+        .withAllOpenTypes()
+        .getOrCreate();
   }
 
   @Bean
@@ -127,6 +135,17 @@ public class UnitTestDependencies {
   @Nonnull
   static UcumService ucumService() throws UcumException {
     return Ucum.service();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  @Nonnull
+  static Gson gson() {
+    final GsonBuilder builder = new GsonBuilder();
+    builder.registerTypeAdapterFactory(new SelectClauseTypeAdapterFactory());
+    builder.registerTypeAdapterFactory(new ConstantDeclarationTypeAdapterFactory());
+    builder.registerTypeAdapterFactory(new StrictStringTypeAdapterFactory());
+    return builder.create();
   }
 
 }

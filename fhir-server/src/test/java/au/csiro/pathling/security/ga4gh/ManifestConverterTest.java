@@ -18,11 +18,12 @@
 package au.csiro.pathling.security.ga4gh;
 
 import static au.csiro.pathling.test.TestResources.assertJson;
+import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.parser.AbstractParserTest;
 import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.context.FhirContext;
@@ -123,9 +124,9 @@ class ManifestConverterTest extends AbstractParserTest {
         boolean found = false;
         for (final String filter : passportScope.get(resourceType)) {
           final Dataset<Row> dataset = assertThatResultOf(resourceType, filter)
-              .isElementPath(BooleanPath.class)
+              .isElementPath(BooleanCollection.class)
               .selectResult()
-              .apply(result -> result.filter(result.columns()[1]))
+              .apply(result -> result.filter(col(result.columns()[1])))
               .getDataset();
           if (dataset.count() > 0) {
             found = true;

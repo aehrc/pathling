@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.test.assertions;
 
-import static au.csiro.pathling.test.assertions.Assertions.assertDatasetAgainstCsv;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
@@ -35,7 +34,10 @@ import java.util.List;
 import java.util.function.UnaryOperator;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.MultiSet;
+import org.apache.commons.collections4.multiset.HashMultiSet;
 import org.apache.commons.io.file.SimplePathVisitor;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
@@ -86,21 +88,30 @@ public class DatasetAssert {
   @Nonnull
   public DatasetAssert hasRows(@Nonnull final SparkSession spark,
       @Nonnull final String expectedCsvPath) {
-    assertDatasetAgainstCsv(spark, expectedCsvPath, dataset);
+    return hasRows(spark, expectedCsvPath, false);
+  }
+
+  public DatasetAssert hasRows(@Nonnull final SparkSession spark,
+      @Nonnull final String expectedCsvPath, final boolean header) {
+    dataset.explain();
+    dataset.show(1000, false);
+    Assertions.assertDatasetAgainstTsv(spark, expectedCsvPath, dataset, header);
     return this;
   }
 
   @Nonnull
-  private DatasetAssert hasRowsUnordered(@Nonnull final Collection<Row> expected) {
-    final List<Row> actualRows = dataset.collectAsList();
-    assertEquals(expected.size(), actualRows.size());
+  public DatasetAssert hasRowsUnordered(@Nonnull final Row... expected) {
+    return hasRowsUnordered(Arrays.asList(expected));
+  }
 
-    if (!actualRows.containsAll(expected)) {
-      return Assertions.fail("Some rows are missing.", expected, actualRows);
+  @Nonnull
+  private DatasetAssert hasRowsUnordered(@Nonnull final Collection<Row> expected) {
+    if (expected.isEmpty() && dataset.isEmpty()) {
+      return this;
     }
-    if (!expected.containsAll(actualRows)) {
-      return Assertions.fail("Unexpected rows found.", expected, actualRows);
-    }
+    final MultiSet<Row> actualRows = new HashMultiSet<>(dataset.collectAsList());
+    final MultiSet<Row> expectedRows = new HashMultiSet<>(expected);
+    assertEquals(expectedRows, actualRows);
     return this;
   }
 
@@ -108,6 +119,30 @@ public class DatasetAssert {
   @SuppressWarnings("UnusedReturnValue")
   public DatasetAssert hasRowsUnordered(@Nonnull final Dataset<Row> expected) {
     return hasRowsUnordered(expected.collectAsList());
+  }
+
+  @Nonnull
+  public DatasetAssert hasRowsAndColumnsUnordered(@Nonnull final Dataset<Row> expected) {
+    if (expected.isEmpty() && dataset.isEmpty()) {
+      return this;
+    }
+    // First, get the list of columns from the expected and actual datasets, sort them and assert
+    // that they are equal.
+    final List<String> expectedColumns = Arrays.asList(expected.columns());
+    final List<String> actualColumns = Arrays.asList(dataset.columns());
+    expectedColumns.sort(String::compareTo);
+    actualColumns.sort(String::compareTo);
+    assertEquals(expectedColumns, actualColumns);
+
+    // Then re-project the expected and actual datasets using the ordered list of columns.
+    final Dataset<Row> expectedReprojected = expected.select(expectedColumns.stream()
+        .map(expected::col).toArray(Column[]::new));
+    final Dataset<Row> actualReprojected = dataset.select(actualColumns.stream()
+        .map(dataset::col).toArray(Column[]::new));
+
+    // Finally, assert that the re-projected datasets are equal.
+    new DatasetAssert(actualReprojected).hasRowsUnordered(expectedReprojected);
+    return this;
   }
 
   @Nonnull
@@ -150,7 +185,7 @@ public class DatasetAssert {
   @Nonnull
   @SuppressWarnings({"unused", "UnusedReturnValue"})
   public DatasetAssert debugAllRows() {
-    dataset.collectAsList().forEach(System.out::println);
+    dataset.collectAsList().forEach(row -> System.out.println(row.mkString(",")));
     return this;
   }
 
