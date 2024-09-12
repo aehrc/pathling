@@ -16,4 +16,9 @@ import org.jetbrains.annotations.Nullable;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface OptionalParameter {
 
+  /**
+   * @return Whether the parameter is expected to be singular
+   */
+  boolean singular() default false;
+
 }

@@ -16,4 +16,9 @@ import org.jetbrains.annotations.NotNull;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface RequiredParameter {
 
+  /**
+   * @return Whether the parameter is expected to be singular
+   */
+  boolean singular() default false;
+
 }
