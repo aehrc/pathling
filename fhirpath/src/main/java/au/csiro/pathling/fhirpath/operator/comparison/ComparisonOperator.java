@@ -46,8 +46,10 @@ public class ComparisonOperator implements BinaryOperator {
 
   @Override
   public @NotNull Collection invoke(final @NotNull BinaryOperatorInput input) {
-    final Collection left = input.getLeft().evaluate(input.getInput(), input.getContext());
-    final Collection right = input.getRight().evaluate(input.getInput(), input.getContext());
+    final Collection left = input.getLeft().evaluate(input.getInput(), input.getContext())
+        .singleton();
+    final Collection right = input.getRight().evaluate(input.getInput(), input.getContext())
+        .singleton();
 
     // If we know the types of both operands and they are not the same, we throw an error.
     if (left.getType().isPresent() && right.getType().isPresent()) {

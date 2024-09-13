@@ -35,7 +35,7 @@ public interface NamedFunction<T extends Collection> {
    * @return the name of this function
    */
   @NotNull
-  default String getName() {
+  default String name() {
     return requireNonNull(this.getClass().getAnnotation(Name.class),
         "NamedFunction must have a Name annotation").value();
   }
@@ -48,7 +48,7 @@ public interface NamedFunction<T extends Collection> {
    */
   @NotNull
   default T invoke(@NotNull final FunctionInput input) {
-    throw new UnsupportedOperationException("Function not implemented: " + getName());
+    throw new UnsupportedOperationException("Function not implemented: " + name());
   }
 
 }

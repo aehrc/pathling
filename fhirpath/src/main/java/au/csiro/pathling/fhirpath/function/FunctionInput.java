@@ -21,37 +21,19 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.evaluation.EvaluationContext;
 import java.util.List;
-import lombok.Value;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents the inputs to a FHIRPath function.
  *
+ * @param context Context and dependencies for use in evaluating the function.
+ * @param input The collection that is the input to the function, i.e. the result of the evaluation
+ * of the expression on the left-hand side of the dot preceding the function invocation.
+ * @param arguments A list of expressions representing the arguments to the function, i.e. the
+ * expressions inside the parentheses following the function invocation, separated by commas.
  * @author John Grimes
  */
-@Value
-public class FunctionInput {
-
-  /**
-   * Context and dependencies for use in evaluating the function.
-   */
-  @NotNull
-  EvaluationContext context;
-
-  /**
-   * The collection that is the input to the function, i.e. the result of the evaluation of the
-   * expression on the left-hand side of the dot preceding the function invocation, or the left-hand
-   * operand in the case of an operator.
-   */
-  @NotNull
-  Collection input;
-
-  /**
-   * A list of expressions representing the arguments to the function, i.e. the expressions inside
-   * the parentheses following the function invocation, separated by commas, or the right-hand
-   * operand in the case of an operator.
-   */
-  @NotNull
-  List<FhirPath> arguments;
+public record FunctionInput(@NotNull EvaluationContext context, @NotNull Collection input,
+                            @NotNull List<FhirPath> arguments) {
 
 }

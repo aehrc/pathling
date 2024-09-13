@@ -13,10 +13,12 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
+import org.jetbrains.annotations.NotNull;
 
 public record FhirPathExecutor(DataSource dataSource, EvaluationContext context) {
 
-  public Dataset<Row> execute(final String resourceType, final String fhirPath) {
+  public @NotNull Dataset<Row> execute(final @NotNull String resourceType,
+      final @NotNull String fhirPath, final @NotNull String columnName) {
     final Dataset<Row> data = dataSource.read(resourceType);
     final Parser parser = new Parser();
     final FhirPath parsed = parser.parse(fhirPath);
@@ -26,7 +28,7 @@ public record FhirPathExecutor(DataSource dataSource, EvaluationContext context)
     final FhirPathType type = new FhirPathType(resourceType);
     final Collection input = new ResourceCollection(column, Optional.of(type));
     final Collection output = parsed.evaluate(input, context);
-    return data.select(output.getColumn());
+    return data.select(output.getColumn().alias(columnName));
   }
 
 }

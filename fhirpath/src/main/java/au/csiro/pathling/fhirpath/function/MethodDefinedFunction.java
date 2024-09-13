@@ -34,7 +34,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-import lombok.Value;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -43,30 +43,59 @@ import org.jetbrains.annotations.NotNull;
  * @author Piotr Szul
  * @author John Grimes
  */
-@Value
-public class MethodDefinedFunction implements NamedFunction<Collection> {
+public record MethodDefinedFunction(@NotNull String name, @NotNull Method method) implements
+    NamedFunction<Collection> {
 
-  String name;
-  Method method;
+  /**
+   * Builds a MethodDefinedFunction from a {@link Method}.
+   *
+   * @param method The method to build the function from
+   * @return A new MethodDefinedFunction
+   */
+  @Contract("_ -> new")
+  public static @NotNull MethodDefinedFunction build(final @NotNull Method method) {
+    return new MethodDefinedFunction(method.getName(), method);
+  }
+
+  /**
+   * Builds a list of {@link NamedFunction}s from the methods defined within a class.
+   *
+   * @param clazz The class to build the functions from
+   * @return A list of {@link NamedFunction}s
+   */
+  public static @NotNull List<NamedFunction<?>> build(final @NotNull Class<?> clazz) {
+    return Stream.of(clazz.getDeclaredMethods())
+        .filter(m -> m.getAnnotation(FhirPathFunction.class) != null)
+        .map(MethodDefinedFunction::build).collect(toUnmodifiableList());
+  }
+
+  /**
+   * Builds a map of {@link NamedFunction}s from the methods defined within a class.
+   *
+   * @param clazz The class to build the functions from
+   * @return A map of {@link NamedFunction}s
+   */
+  public static @NotNull Map<String, NamedFunction<?>> mapOf(final @NotNull Class<?> clazz) {
+    return build(clazz).stream().collect(toUnmodifiableMap(NamedFunction::name,
+        identity()));
+  }
 
   @Override
-  @NotNull
-  public Collection invoke(@NotNull final FunctionInput functionInput) {
-    final List<FhirPath> actualArguments = functionInput.getArguments();
+  public @NotNull Collection invoke(final @NotNull FunctionInput functionInput) {
+    final List<FhirPath> actualArguments = functionInput.arguments();
     final List<Object> invocationArguments = new ArrayList<>(
-        Collections.nCopies(method.getParameterCount(), (Object) null));
-    ;
+        Collections.nCopies(method.getParameterCount(), null));
 
     int parameterIndex = 0;
     int argumentIndex = 0;
     for (final Parameter parameter : method.getParameters()) {
       if (EvaluationContext.class.isAssignableFrom(parameter.getType())) {
         // If the parameter is an EvaluationContext, provide the context to the function.
-        invocationArguments.set(parameterIndex, functionInput.getContext());
+        invocationArguments.set(parameterIndex, functionInput.context());
 
       } else if (Collection.class.isAssignableFrom(parameter.getType())) {
         // If the parameter is a Collection, provide the input to the function.
-        invocationArguments.set(parameterIndex, functionInput.getInput());
+        invocationArguments.set(parameterIndex, functionInput.input());
 
       } else {
         final FhirPath argument = actualArguments.get(argumentIndex);
@@ -91,7 +120,7 @@ public class MethodDefinedFunction implements NamedFunction<Collection> {
         } else if (parameter.getAnnotation(OptionalParameter.class) != null) {
           // If the parameter is an optional parameter, provide the corresponding argument if it exists.
           try {
-            invocationArguments.set(parameterIndex, actualArguments.get(argumentIndex));
+            invocationArguments.set(parameterIndex, argument);
           } catch (final IndexOutOfBoundsException e) {
             // If the argument is missing, provide a null value.
             invocationArguments.set(parameterIndex, null);
@@ -109,42 +138,6 @@ public class MethodDefinedFunction implements NamedFunction<Collection> {
     } catch (final IllegalAccessException | InvocationTargetException e) {
       throw new RuntimeException("Error invoking method-defined function", e);
     }
-  }
-
-  /**
-   * Builds a MethodDefinedFunction from a {@link Method}.
-   *
-   * @param method The method to build the function from
-   * @return A new MethodDefinedFunction
-   */
-  @NotNull
-  public static MethodDefinedFunction build(@NotNull final Method method) {
-    return new MethodDefinedFunction(method.getName(), method);
-  }
-
-  /**
-   * Builds a list of {@link NamedFunction}s from the methods defined within a class.
-   *
-   * @param clazz The class to build the functions from
-   * @return A list of {@link NamedFunction}s
-   */
-  @NotNull
-  public static List<NamedFunction<?>> build(@NotNull final Class<?> clazz) {
-    return Stream.of(clazz.getDeclaredMethods())
-        .filter(m -> m.getAnnotation(FhirPathFunction.class) != null)
-        .map(MethodDefinedFunction::build).collect(toUnmodifiableList());
-  }
-
-  /**
-   * Builds a map of {@link NamedFunction}s from the methods defined within a class.
-   *
-   * @param clazz The class to build the functions from
-   * @return A map of {@link NamedFunction}s
-   */
-  @NotNull
-  public static Map<String, NamedFunction<?>> mapOf(@NotNull final Class<?> clazz) {
-    return build(clazz).stream().collect(toUnmodifiableMap(NamedFunction::getName,
-        identity()));
   }
 
 }

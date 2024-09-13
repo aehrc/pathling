@@ -38,8 +38,8 @@ class FhirPathExecutorTest {
         FhirVersionEnum.R4.getFhirVersionString());
     final FhirPathExecutor executor = new FhirPathExecutor(dataSource, context);
     final Dataset<Row> result = executor.execute("Patient",
-        "name.where(use = 'official').first()");
-    result.show();
+        "name.where(use = 'official').first()", "result");
+    result.show(false);
   }
 
   @AfterEach

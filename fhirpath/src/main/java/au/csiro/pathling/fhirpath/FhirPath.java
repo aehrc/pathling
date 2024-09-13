@@ -15,16 +15,14 @@ import org.jetbrains.annotations.NotNull;
 @FunctionalInterface
 public interface FhirPath {
 
-  @NotNull
-  Collection evaluate(@NotNull final Collection input, @NotNull final EvaluationContext context);
+  @NotNull Collection evaluate(@NotNull final Collection input,
+      @NotNull final EvaluationContext context);
 
-  @NotNull
-  default FhirPath traverse(@NotNull final String target) {
+  default @NotNull FhirPath traverse(@NotNull final String target) {
     return new Traversal(Optional.of(this), target);
   }
 
-  @NotNull
-  default String toJson(@NotNull final Gson gson) {
+  default @NotNull String toJson(final @NotNull Gson gson) {
     return "{\"" + this.getClass().getSimpleName() + "\": "
         + gson.toJson(this, this.getClass()) + "}";
   }

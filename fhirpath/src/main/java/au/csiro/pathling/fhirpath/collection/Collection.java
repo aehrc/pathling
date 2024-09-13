@@ -22,9 +22,10 @@ import au.csiro.pathling.fhirpath.operator.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.operator.comparison.DefaultComparator;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
-import lombok.Getter;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataType;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -32,11 +33,10 @@ import org.jetbrains.annotations.NotNull;
  *
  * @author John Grimes
  */
-@Getter
 public class Collection {
 
-  @NotNull Column column;
-  @NotNull Optional<FhirPathType> type;
+  private final @NotNull Column column;
+  private final @NotNull Optional<FhirPathType> type;
 
   public Collection(final @NotNull Column column, final @NotNull Optional<FhirPathType> type) {
     this.column = column;
@@ -59,12 +59,31 @@ public class Collection {
     return new DefaultComparator();
   }
 
+  public @NotNull Column getColumn() {
+    return column;
+  }
+
+  public @NotNull Optional<FhirPathType> getType() {
+    return type;
+  }
+
   public @NotNull Collection singleton() {
-    return this.map(c -> functions.when(functions.size(c).equalTo(1), c.getItem(0))
-        .otherwise(
-            functions.when(functions.size(c).equalTo(0), functions.lit(null))
-                .otherwise(functions.raise_error(functions.lit("Expected a singular input")))
-        ));
+    return this.map(
+        c -> {
+          final Expression columnExpression = c.expr();
+          if (columnExpression.resolved()) {
+            // If the column is resolved, we can inspect the data type.
+            final DataType dataType = columnExpression.dataType();
+            if (dataType instanceof org.apache.spark.sql.types.ArrayType) {
+              // If the column is an array, we can check its size and enforce the rules here:
+              // https://hl7.org/fhirpath/N1/#singleton-evaluation-of-collections
+              return functions.when(functions.size(c).leq(1), functions.get(c, functions.lit(0)))
+                  .otherwise(functions.raise_error(functions.lit("Expected a singular input")));
+            }
+          }
+          // If the column is not resolved, assume that it is already a singular value.
+          return c;
+        });
   }
 
 }

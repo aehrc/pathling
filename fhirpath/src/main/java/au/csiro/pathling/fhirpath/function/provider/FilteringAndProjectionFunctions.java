@@ -40,9 +40,12 @@ public class FilteringAndProjectionFunctions {
   @FhirPathFunction
   public static @NotNull Collection where(final @NotNull EvaluationContext context,
       final @NotNull Collection input, final @RequiredParameter FhirPath expression) {
-    final Collection expressionResult = expression.evaluate(input, context);
     final Column resultColumn = functions.filter(input.getColumn(),
-        c -> expressionResult.getColumn());
+        elementColumn -> {
+          final Collection elementInput = input.map(c -> elementColumn);
+          final Collection expressionResult = expression.evaluate(elementInput, context);
+          return expressionResult.getColumn();
+        });
     return input.map(i -> resultColumn);
   }
 
