@@ -22,7 +22,6 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.operator.BinaryOperator;
-import ca.uhn.fhir.context.FhirContext;
 import org.apache.spark.sql.SparkSession;
 
 /**
@@ -38,11 +37,6 @@ public interface EvaluationContext {
    * @return The {@link SparkSession} to use for building Spark queries
    */
   SparkSession spark();
-
-  /**
-   * @return A {@link FhirContext} for accessing FHIR definitions
-   */
-  FhirContext fhirContext();
 
   FunctionRegistry<NamedFunction<? extends Collection>> functionRegistry();
 

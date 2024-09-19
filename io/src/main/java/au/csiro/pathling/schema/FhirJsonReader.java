@@ -8,16 +8,19 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.parser.DataFormatException;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import scala.compat.java8.OptionConverters;
 
 /**
@@ -45,14 +48,22 @@ public class FhirJsonReader {
   @NotNull
   private final SparkSession spark;
 
-  @NotNull
+  @Nullable
   private final Map<String, String> options;
 
-  @NotNull
+  @Nullable
   private final RuntimeResourceDefinition resourceDefinition;
 
-  @NotNull
+  @Nullable
   private final DatasetTransformer datasetTransformer;
+
+  public FhirJsonReader() {
+    this.spark = OptionConverters.toJava(SparkSession.getActiveSession()).orElseThrow(
+        () -> new IllegalStateException("No active Spark session"));
+    this.options = null;
+    this.resourceDefinition = null;
+    this.datasetTransformer = null;
+  }
 
   public FhirJsonReader(@NotNull final String resourceType, @NotNull final String fhirVersion,
       @NotNull final Map<String, String> options) throws IllegalArgumentException {
@@ -71,19 +82,6 @@ public class FhirJsonReader {
       throw new IllegalArgumentException("Unknown resource type: " + resourceType, e);
     }
     this.datasetTransformer = new DatasetTransformer(readTransforms);
-  }
-
-  @NotNull
-  public Dataset<Row> read(@NotNull final String path) {
-    return read(new String[]{path});
-  }
-
-  @NotNull
-  public Dataset<Row> read(@NotNull final String... paths) {
-    final DataFrameReader reader = spark.read();
-    options.keySet().forEach(key -> reader.option(key, options.get(key)));
-    final Dataset<Row> json = reader.json(paths);
-    return datasetTransformer.transformDataset(json, resourceDefinition);
   }
 
   @NotNull
@@ -115,6 +113,31 @@ public class FhirJsonReader {
     final Column result = transformColumn(descriptor.column(),
         c -> unbase64(c).cast(DataTypes.BinaryType), descriptor.name(), descriptor.type());
     return Stream.of(result);
+  }
+
+  @NotNull
+  public Dataset<Row> read(@NotNull final String path) {
+    return read(new String[]{path});
+  }
+
+  @NotNull
+  public Dataset<Row> read(@NotNull final String... paths) {
+    final DataFrameReader reader = spark.read();
+    if (options != null && datasetTransformer != null && resourceDefinition != null) {
+      options.keySet().forEach(key -> reader.option(key, options.get(key)));
+      final Dataset<Row> json = reader.json(paths);
+      return datasetTransformer.transformDataset(json, resourceDefinition);
+    }
+    return reader.json(paths);
+  }
+
+  @NotNull
+  public Dataset<Row> read(@NotNull final List<String> jsonStrings) {
+    final Dataset<Row> jsonData = spark.createDataset(jsonStrings, Encoders.STRING()).toDF();
+    if (datasetTransformer != null && resourceDefinition != null) {
+      return datasetTransformer.transformDataset(jsonData, resourceDefinition);
+    }
+    return jsonData;
   }
 
 }

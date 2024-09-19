@@ -1,69 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="http://maven.apache.org/POM/4.0.0"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>au.csiro.pathling</groupId>
-    <artifactId>pathling</artifactId>
-    <version>8.0.0</version>
-  </parent>
-
   <artifactId>fhirpath</artifactId>
-
-  <dependencies>
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-sql_${pathling.scalaVersion}</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-structures-r4</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.antlr</groupId>
-      <artifactId>antlr4</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.jetbrains</groupId>
-      <artifactId>annotations</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>au.csiro.pathling</groupId>
-      <artifactId>test</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-engine</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-api</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-params</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.skyscreamer</groupId>
-      <artifactId>jsonassert</artifactId>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
-  
   <build>
     <plugins>
       <plugin>
-        <groupId>org.antlr</groupId>
         <artifactId>antlr4-maven-plugin</artifactId>
+        <configuration>
+          <visitor>true</visitor>
+        </configuration>
         <executions>
           <execution>
             <goals>
@@ -71,31 +17,105 @@
             </goals>
           </execution>
         </executions>
-        <configuration>
-          <visitor>true</visitor>
-        </configuration>
+        <groupId>org.antlr</groupId>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
-            <id>unpack-test-data</id>
-            <phase>generate-test-resources</phase>
+            <configuration>
+              <excludeTransitive>true</excludeTransitive>
+              <includeArtifactIds>test-data</includeArtifactIds>
+              <includeGroupIds>au.csiro.pathling</includeGroupIds>
+              <outputDirectory>${project.build.directory}/generated-test-resources</outputDirectory>
+              <type>jar</type>
+            </configuration>
             <goals>
               <goal>unpack-dependencies</goal>
             </goals>
-            <configuration>
-              <type>jar</type>
-              <includeGroupIds>au.csiro.pathling</includeGroupIds>
-              <includeArtifactIds>test-data</includeArtifactIds>
-              <excludeTransitive>true</excludeTransitive>
-              <outputDirectory>${project.build.directory}/generated-test-resources</outputDirectory>
-            </configuration>
+            <id>unpack-test-data</id>
+            <phase>generate-test-resources</phase>
           </execution>
         </executions>
+        <groupId>org.apache.maven.plugins</groupId>
       </plugin>
     </plugins>
   </build>
+
+  <dependencies>
+    <dependency>
+      <artifactId>spark-sql_${pathling.scalaVersion}</artifactId>
+      <groupId>org.apache.spark</groupId>
+    </dependency>
+    <dependency>
+      <artifactId>hapi-fhir-structures-r4</artifactId>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+    </dependency>
+    <dependency>
+      <artifactId>antlr4</artifactId>
+      <groupId>org.antlr</groupId>
+    </dependency>
+    <dependency>
+      <artifactId>lombok</artifactId>
+      <groupId>org.projectlombok</groupId>
+    </dependency>
+    <dependency>
+      <artifactId>annotations</artifactId>
+      <groupId>org.jetbrains</groupId>
+    </dependency>
+    <dependency>
+      <artifactId>javax.servlet-api</artifactId>
+      <groupId>javax.servlet</groupId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <artifactId>test</artifactId>
+      <groupId>au.csiro.pathling</groupId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <artifactId>io</artifactId>
+      <groupId>au.csiro.pathling</groupId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <groupId>org.junit.jupiter</groupId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <artifactId>junit-jupiter-api</artifactId>
+      <groupId>org.junit.jupiter</groupId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <artifactId>junit-jupiter-params</artifactId>
+      <groupId>org.junit.jupiter</groupId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <artifactId>jsonassert</artifactId>
+      <groupId>org.skyscreamer</groupId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <artifactId>snakeyaml</artifactId>
+      <groupId>org.yaml</groupId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <artifactId>spring-core</artifactId>
+      <groupId>org.springframework</groupId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <modelVersion>4.0.0</modelVersion>
+  
+  <parent>
+    <artifactId>pathling</artifactId>
+    <groupId>au.csiro.pathling</groupId>
+    <version>8.0.0</version>
+  </parent>
 
 </project>
