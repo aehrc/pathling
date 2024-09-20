@@ -7,7 +7,6 @@ import au.csiro.pathling.fhirpath.function.registry.StaticOperatorRegistry;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.io.source.NdjsonSource;
 import au.csiro.pathling.test.TestResources;
-import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import java.net.URL;
 import org.apache.spark.sql.Dataset;
@@ -28,11 +27,10 @@ class FhirPathExecutorTest {
     final SparkSession spark = SparkSession.builder()
         .master("local[*]")
         .getOrCreate();
-    final FhirContext fhirContext = FhirContext.forR4Cached();
     final StaticFunctionRegistry functionRegistry = new StaticFunctionRegistry();
     final StaticOperatorRegistry operatorRegistry = new StaticOperatorRegistry();
-    final EvaluationContext context = new DefaultEvaluationContext(spark, fhirContext,
-        functionRegistry, operatorRegistry);
+    final EvaluationContext context = new DefaultEvaluationContext(spark, functionRegistry,
+        operatorRegistry);
     final URL testData = TestResources.getResourceAsUrl("bulk/fhir");
     final DataSource dataSource = new NdjsonSource(testData.toString(),
         FhirVersionEnum.R4.getFhirVersionString());

@@ -48,10 +48,6 @@
       <groupId>org.apache.spark</groupId>
     </dependency>
     <dependency>
-      <artifactId>hapi-fhir-structures-r4</artifactId>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-    </dependency>
-    <dependency>
       <artifactId>antlr4</artifactId>
       <groupId>org.antlr</groupId>
     </dependency>
@@ -106,6 +102,26 @@
     <dependency>
       <artifactId>spring-core</artifactId>
       <groupId>org.springframework</groupId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <artifactId>hapi-fhir-structures-dstu2</artifactId>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <artifactId>hapi-fhir-structures-dstu3</artifactId>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <artifactId>hapi-fhir-structures-r4</artifactId>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <artifactId>hapi-fhir-structures-r5</artifactId>
+      <groupId>ca.uhn.hapi.fhir</groupId>
       <scope>test</scope>
     </dependency>
   </dependencies>

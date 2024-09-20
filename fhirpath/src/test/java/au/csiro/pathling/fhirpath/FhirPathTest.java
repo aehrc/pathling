@@ -53,6 +53,12 @@ public class FhirPathTest {
   static final String TEST_GLOB = "*.yaml";
   static final Yaml YAML = new Yaml();
   static final ObjectMapper MAPPER = new ObjectMapper();
+  static final Map<String, String> MODEL_TO_FHIR_VERSION = Map.of(
+      "dstu2", "1.0",
+      "stu3", "3.0",
+      "r4", "4.0",
+      "r5", "5.0"
+  );
 
   @BeforeAll
   static void beforeAll() {
@@ -149,7 +155,8 @@ public class FhirPathTest {
           "result");
       final boolean error = Optional.ofNullable(test.get("error"))
           .map(e -> (Boolean) e).orElse(false);
-      final String model = (String) test.get("model");
+      final String model = Optional.ofNullable((String) test.get("model"))
+          .map(MODEL_TO_FHIR_VERSION::get).orElse(null);
 
       List<String> data = jsonStrings;
       final String inputFile = (String) test.get("inputfile");
@@ -203,8 +210,7 @@ public class FhirPathTest {
     final au.csiro.pathling.fhirpath.collection.Collection output = parsed.evaluate(inputCollection,
         context);
     final Dataset<Row> result = input.select(output.getColumn().alias("result"));
-    final List<Row> rows = result.collectAsList();
-    return rows;
+    return result.collectAsList();
   }
 
   @ParameterizedTest
@@ -251,9 +257,8 @@ public class FhirPathTest {
     }
 
     if (parameters.error) {
-      assertThrows(Exception.class, () -> {
-        evaluateAndExecute(parsed, inputCollection, context, input);
-      });
+      assertThrows(Exception.class,
+          () -> evaluateAndExecute(parsed, inputCollection, context, input));
       return;
     }
     final List<Row> rows = evaluateAndExecute(parsed, inputCollection, context, input);

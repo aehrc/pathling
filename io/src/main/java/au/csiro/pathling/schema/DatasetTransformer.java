@@ -34,6 +34,30 @@ public record DatasetTransformer(
     @NotNull Map<String, Function<ColumnDescriptor, Stream<Column>>> transforms) {
 
   @NotNull
+  private static Optional<BaseRuntimeChildDefinition> getChildDefinition(
+      @NotNull final BaseRuntimeElementCompositeDefinition<? extends IBase> compositeDefinition,
+      @NotNull final String fieldName) {
+    return Optional.ofNullable(compositeDefinition.getChildByName(fieldName));
+  }
+
+  @NotNull
+  private static BaseRuntimeElementDefinition<?> childToElementDefinition(
+      @NotNull final BaseRuntimeChildDefinition child, @NotNull final String columnName) {
+    return Optional.ofNullable(
+        child.getChildByName(columnName)).orElseThrow(() -> new AssertionError(
+        "Failed to retrieve element definition from child definition: " + columnName));
+  }
+
+  @NotNull
+  public static Column transformColumn(@NotNull final Column column,
+      @NotNull final Function1<Column, Column> transformation, @NotNull final String columnName,
+      @NotNull final DataType dataType) {
+    return dataType instanceof ArrayType
+           ? transform(column, transformation).alias(columnName)
+           : transformation.apply(column).alias(columnName);
+  }
+
+  @NotNull
   public Dataset<Row> transformDataset(@Nullable final Dataset<Row> dataset,
       @Nullable final RuntimeResourceDefinition resourceDefinition) {
     if (dataset == null) {
@@ -52,12 +76,14 @@ public record DatasetTransformer(
             return Stream.of(dataset.col(columnName));
           }
           final Column column = dataset.col(columnName);
-          final BaseRuntimeChildDefinition childDefinition = getChildDefinition(
-              resourceDefinition, columnName,
-              "Field does not match a corresponding FHIR element: " + columnName);
-          final DataType dataType = column.expr().dataType();
-          return transformField(column, dataType,
-              childToElementDefinition(childDefinition, columnName), columnName);
+          final @NotNull Optional<BaseRuntimeChildDefinition> childDefinition = getChildDefinition(
+              resourceDefinition, columnName);
+          return childDefinition.map(child -> {
+                final DataType dataType = column.expr().dataType();
+                return transformField(column, dataType,
+                    childToElementDefinition(child, columnName), columnName);
+              })
+              .orElse(Stream.of(column));
         })
         .toList();
     return dataset.select(columns.toArray(Column[]::new));
@@ -104,28 +130,30 @@ public record DatasetTransformer(
         .flatMap(field -> {
           // Let primitive extensions and annotations pass through unaltered.
           final String fieldName = field.name();
+          final Stream<Column> passThroughResult = Stream.of(struct.getField(fieldName));
           if (fieldName.startsWith("_")) {
-            return Stream.of(struct.getField(fieldName));
+            return passThroughResult;
           }
           // Traverse to the definition of the field within the FHIR element.
-          final BaseRuntimeChildDefinition fieldChildDefinition = getChildDefinition(
-              compositeDefinition, fieldName,
-              "Field does not match a corresponding FHIR element: " + columnName + "."
-                  + fieldName);
+          final @NotNull Optional<BaseRuntimeChildDefinition> fieldChildDefinition = getChildDefinition(
+              compositeDefinition, fieldName
+          );
 
-          // Retrieve the child element definition from the child definition.
-          final BaseRuntimeElementDefinition<? extends IBase> fieldDefinition = childToElementDefinition(
-              fieldChildDefinition, fieldName);
+          return fieldChildDefinition.map(childDefinition -> {
+            // Retrieve the child element definition from the child definition.
+            final BaseRuntimeElementDefinition<? extends IBase> fieldDefinition = childToElementDefinition(
+                childDefinition, fieldName);
 
-          final DataType fieldType = structType.fields()[structType.fieldIndex(
-              fieldName)].dataType();
-          Column fieldColumn = struct.getField(fieldName);
-          // If the column name does not match the field name, alias it. This happens when we 
-          // traverse into arrays.
-          if (!fieldColumn.toString().equals(fieldName)) {
-            fieldColumn = fieldColumn.alias(fieldName);
-          }
-          return transformField(fieldColumn, fieldType, fieldDefinition, fieldName);
+            final DataType fieldType = structType.fields()[structType.fieldIndex(
+                fieldName)].dataType();
+            Column fieldColumn = struct.getField(fieldName);
+            // If the column name does not match the field name, alias it. This happens when we 
+            // traverse into arrays.
+            if (!fieldColumn.toString().equals(fieldName)) {
+              fieldColumn = fieldColumn.alias(fieldName);
+            }
+            return transformField(fieldColumn, fieldType, fieldDefinition, fieldName);
+          }).orElse(passThroughResult);
         })
         .toList();
     return struct(fields.toArray(Column[]::new)).alias(columnName);
@@ -156,34 +184,6 @@ public record DatasetTransformer(
     });
     return transformed.alias(columnName);
 
-  }
-
-  @NotNull
-  private static BaseRuntimeChildDefinition getChildDefinition(
-      @NotNull final BaseRuntimeElementCompositeDefinition<? extends IBase> compositeDefinition,
-      @NotNull final String fieldName, @NotNull final String errorMessage) {
-    return Optional.ofNullable(
-            compositeDefinition.getChildByName(fieldName))
-        // If there is no such field in the FHIR definition, throw an exception.
-        .orElseThrow(() -> new IllegalArgumentException(
-            errorMessage));
-  }
-
-  @NotNull
-  private static BaseRuntimeElementDefinition<?> childToElementDefinition(
-      @NotNull final BaseRuntimeChildDefinition child, @NotNull final String columnName) {
-    return Optional.ofNullable(
-        child.getChildByName(columnName)).orElseThrow(() -> new AssertionError(
-        "Failed to retrieve element definition from child definition: " + columnName));
-  }
-
-  @NotNull
-  public static Column transformColumn(@NotNull final Column column,
-      @NotNull final Function1<Column, Column> transformation, @NotNull final String columnName,
-      @NotNull final DataType dataType) {
-    return dataType instanceof ArrayType
-           ? transform(column, transformation).alias(columnName)
-           : transformation.apply(column).alias(columnName);
   }
 
 }
