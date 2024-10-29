@@ -11,7 +11,7 @@ import au.csiro.pathling.fhirpath.function.provider.FilteringAndProjectionFuncti
 import au.csiro.pathling.fhirpath.function.provider.JoinKeyFunctions;
 import au.csiro.pathling.fhirpath.function.provider.StringFunctions;
 import au.csiro.pathling.fhirpath.function.provider.SubsettingFunctions;
-import au.csiro.pathling.terminology.TerminologyFunctions;
+import au.csiro.pathling.fhirpath.function.provider.TerminologyFunctions;
 import com.google.common.collect.ImmutableMap.Builder;
 
 /**
