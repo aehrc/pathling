@@ -19,55 +19,82 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns="http://maven.apache.org/POM/4.0.0"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <build>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <configuration>
-            <compilerArgs>
-              <arg>-Xlint:all,-processing</arg>
-            </compilerArgs>
-            <source>17</source>
-            <target>17</target>
-          </configuration>
-          <groupId>org.apache.maven.plugins</groupId>
-          <version>3.13.0</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <configuration>
-            <additionalClasspathElements>
-              <element>target/generated-test-resources</element>
-            </additionalClasspathElements>
-            <argLine>-Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED</argLine>
-            <!-- The add-exports and add-opens flags are required for Java 17 -->
-            <failIfNoTests>false</failIfNoTests>
-            <forkCount>1C</forkCount>
-            <useManifestOnlyJar>false</useManifestOnlyJar>
-            <useSystemClassLoader>true</useSystemClassLoader>
-          </configuration>
-          <groupId>org.apache.maven.plugins</groupId>
-          <version>${pathling.surefireVersion}</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-dependency-plugin</artifactId>
-          <groupId>org.apache.maven.plugins</groupId>
-          <version>3.7.1</version>
-        </plugin>
-        <plugin>
-          <artifactId>antlr4-maven-plugin</artifactId>
-          <groupId>org.antlr</groupId>
-          <version>${pathling.antlrVersion}</version>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-  </build>
+  <version>8.0.0</version>
+  <packaging>pom</packaging>
+
+  <name>Pathling</name>
+  <description>
+    A set of tools that make it easier to use FHIR® within data analytics, built on Apache Spark.
+  </description>
+  <url>https://pathling.csiro.au</url>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+    </license>
+  </licenses>
+
+  <organization>
+    <name>Australian e-Health Research Centre, CSIRO</name>
+    <url>https://aehrc.csiro.au</url>
+  </organization>
+  <developers>
+    <developer>
+      <email>John.Grimes@csiro.au</email>
+      <name>John Grimes</name>
+      <url>https://github.com/johngrimes</url>
+    </developer>
+    <developer>
+      <email>Piotr.Szul@csiro.au</email>
+      <name>Piotr Szul</name>
+      <url>https://github.com/piotrszul</url>
+    </developer>
+  </developers>
+
+  <scm>
+    <developerConnection>scm:git:https://github.com/aehrc/pathling.git</developerConnection>
+    <url>https://github.com/aehrc/pathling</url>
+  </scm>
+  <issueManagement>
+    <system>GitHub Issues</system>
+    <url>https://github.com/aehrc/pathling/issues</url>
+  </issueManagement>
   <ciManagement>
     <system>GitHub Actions</system>
     <url>https://github.com/aehrc/pathling/actions</url>
   </ciManagement>
+
+  <properties>
+    <project.majorVersion>8</project.majorVersion>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <pathling.sparkVersion>3.5.0</pathling.sparkVersion>
+    <pathling.hapiFhirVersion>7.0.2</pathling.hapiFhirVersion>
+    <pathling.scalaVersion>2.12</pathling.scalaVersion>
+    <pathling.scalaFullVersion>2.12.17</pathling.scalaFullVersion>
+    <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
+    <pathling.commonsIoVersion>2.13.0</pathling.commonsIoVersion>
+    <pathling.jacksonVersion>2.15.4</pathling.jacksonVersion>
+    <pathling.jerseyVersion>2.40</pathling.jerseyVersion>
+    <pathling.jettyVersion>9.4.44.v20210927</pathling.jettyVersion>
+    <pathling.junitVersion>5.9.1</pathling.junitVersion>
+    <pathling.surefireVersion>3.2.5</pathling.surefireVersion>
+    <pathling.allureVersion>2.25.0</pathling.allureVersion>
+    <pathling.testDataVersion>1.0.0-SNAPSHOT</pathling.testDataVersion>
+  </properties>
+
+  <modules>
+    <module>io</module>
+    <module>fhirpath</module>
+    <module>test</module>
+    <module>library-api</module>
+  </modules>
+
   <dependencyManagement>
     <dependencies>
       <dependency>
@@ -179,77 +206,60 @@
         <groupId>org.springframework</groupId>
         <version>6.1.6</version>
       </dependency>
+      <dependency>
+        <groupId>io.qameta.allure</groupId>
+        <artifactId>allure-bom</artifactId>
+        <version>${pathling.allureVersion}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
     </dependencies>
   </dependencyManagement>
-  <description>
-    A set of tools that make it easier to use FHIR® within data analytics, built on Apache Spark.
-  </description>
 
-  <developers>
-    <developer>
-      <email>John.Grimes@csiro.au</email>
-      <name>John Grimes</name>
-      <url>https://github.com/johngrimes</url>
-    </developer>
-    <developer>
-      <email>Piotr.Szul@csiro.au</email>
-      <name>Piotr Szul</name>
-      <url>https://github.com/piotrszul</url>
-    </developer>
-  </developers>
-  <groupId>au.csiro.pathling</groupId>
-  <issueManagement>
-    <system>GitHub Issues</system>
-    <url>https://github.com/aehrc/pathling/issues</url>
-  </issueManagement>
-
-  <licenses>
-    <license>
-      <name>Apache License, Version 2.0</name>
-      <url>https://www.apache.org/licenses/LICENSE-2.0</url>
-    </license>
-  </licenses>
-
-  <modelVersion>4.0.0</modelVersion>
-
-  <modules>
-    <module>io</module>
-    <module>fhirpath</module>
-    <module>test</module>
-    <module>library-api</module>
-  </modules>
-  <name>Pathling</name>
-
-  <organization>
-    <name>Australian e-Health Research Centre, CSIRO</name>
-    <url>https://aehrc.csiro.au</url>
-  </organization>
-  <packaging>pom</packaging>
-  <properties>
-    <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
-    <pathling.commonsIoVersion>2.13.0</pathling.commonsIoVersion>
-
-    <pathling.hapiFhirVersion>7.0.2</pathling.hapiFhirVersion>
-    <pathling.jacksonVersion>2.15.4</pathling.jacksonVersion>
-    <pathling.jerseyVersion>2.40</pathling.jerseyVersion>
-    <pathling.jettyVersion>9.4.44.v20210927</pathling.jettyVersion>
-    <pathling.junitVersion>5.9.1</pathling.junitVersion>
-    <pathling.scalaFullVersion>2.12.17</pathling.scalaFullVersion>
-    <pathling.scalaVersion>2.12</pathling.scalaVersion>
-    <pathling.sparkVersion>3.5.0</pathling.sparkVersion>
-    <pathling.surefireVersion>3.2.5</pathling.surefireVersion>
-    <pathling.testDataVersion>1.0.0-SNAPSHOT</pathling.testDataVersion>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.majorVersion>8</project.majorVersion>
-  </properties>
-
-  <scm>
-    <developerConnection>scm:git:https://github.com/aehrc/pathling.git</developerConnection>
-    <url>https://github.com/aehrc/pathling</url>
-  </scm>
-
-  <url>https://pathling.csiro.au</url>
-
-  <version>8.0.0</version>
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <configuration>
+            <compilerArgs>
+              <arg>-Xlint:all,-processing</arg>
+            </compilerArgs>
+            <source>17</source>
+            <target>17</target>
+          </configuration>
+          <groupId>org.apache.maven.plugins</groupId>
+          <version>3.13.0</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <additionalClasspathElements>
+              <element>target/generated-test-resources</element>
+            </additionalClasspathElements>
+            <argLine>-Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
+              --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED</argLine>
+            <!-- The add-exports and add-opens flags are required for Java 17 -->
+            <failIfNoTests>false</failIfNoTests>
+            <forkCount>1C</forkCount>
+            <useManifestOnlyJar>false</useManifestOnlyJar>
+            <useSystemClassLoader>true</useSystemClassLoader>
+          </configuration>
+          <groupId>org.apache.maven.plugins</groupId>
+          <version>${pathling.surefireVersion}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <groupId>org.apache.maven.plugins</groupId>
+          <version>3.7.1</version>
+        </plugin>
+        <plugin>
+          <artifactId>antlr4-maven-plugin</artifactId>
+          <groupId>org.antlr</groupId>
+          <version>${pathling.antlrVersion}</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
 
 </project>

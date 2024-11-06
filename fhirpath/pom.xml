@@ -2,45 +2,14 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns="http://maven.apache.org/POM/4.0.0"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <artifactId>pathling</artifactId>
+    <groupId>au.csiro.pathling</groupId>
+    <version>8.0.0</version>
+  </parent>
   <artifactId>fhirpath</artifactId>
-  <build>
-    <plugins>
-      <plugin>
-        <artifactId>antlr4-maven-plugin</artifactId>
-        <configuration>
-          <visitor>true</visitor>
-        </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>antlr4</goal>
-            </goals>
-          </execution>
-        </executions>
-        <groupId>org.antlr</groupId>
-      </plugin>
-      <plugin>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-            <configuration>
-              <excludeTransitive>true</excludeTransitive>
-              <includeArtifactIds>test-data</includeArtifactIds>
-              <includeGroupIds>au.csiro.pathling</includeGroupIds>
-              <outputDirectory>${project.build.directory}/generated-test-resources</outputDirectory>
-              <type>jar</type>
-            </configuration>
-            <goals>
-              <goal>unpack-dependencies</goal>
-            </goals>
-            <id>unpack-test-data</id>
-            <phase>generate-test-resources</phase>
-          </execution>
-        </executions>
-        <groupId>org.apache.maven.plugins</groupId>
-      </plugin>
-    </plugins>
-  </build>
 
   <dependencies>
     <dependency>
@@ -124,14 +93,50 @@
       <groupId>ca.uhn.hapi.fhir</groupId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.qameta.allure</groupId>
+      <artifactId>allure-junit5</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
-  <modelVersion>4.0.0</modelVersion>
-  
-  <parent>
-    <artifactId>pathling</artifactId>
-    <groupId>au.csiro.pathling</groupId>
-    <version>8.0.0</version>
-  </parent>
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>antlr4-maven-plugin</artifactId>
+        <configuration>
+          <visitor>true</visitor>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>antlr4</goal>
+            </goals>
+          </execution>
+        </executions>
+        <groupId>org.antlr</groupId>
+      </plugin>
+      <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <configuration>
+              <excludeTransitive>true</excludeTransitive>
+              <includeArtifactIds>test-data</includeArtifactIds>
+              <includeGroupIds>au.csiro.pathling</includeGroupIds>
+              <outputDirectory>${project.build.directory}/generated-test-resources</outputDirectory>
+              <type>jar</type>
+            </configuration>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <id>unpack-test-data</id>
+            <phase>generate-test-resources</phase>
+          </execution>
+        </executions>
+        <groupId>org.apache.maven.plugins</groupId>
+      </plugin>
+    </plugins>
+  </build>
 
 </project>
