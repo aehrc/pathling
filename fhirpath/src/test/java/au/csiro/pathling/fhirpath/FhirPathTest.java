@@ -1,7 +1,6 @@
 package au.csiro.pathling.fhirpath;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
@@ -12,7 +11,6 @@ import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.function.registry.StaticOperatorRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.schema.FhirJsonReader;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -22,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +46,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.yaml.snakeyaml.Yaml;
+import scala.collection.JavaConverters;
 
 @Slf4j
 public class FhirPathTest {
@@ -218,7 +218,14 @@ public class FhirPathTest {
 
   @ParameterizedTest
   @MethodSource("parameters")
-  void test(@NotNull final TestParameters parameters) throws JsonProcessingException {
+  void test(@NotNull final TestParameters parameters) {
+    log.info("Testing {}", parameters.description);
+    log.info("Expression: {}", parameters.expression);
+    log.info("Expected result: {}", parameters.expectedResults);
+    log.info("Error expected: {}", parameters.error);
+    log.info("Input data: {}", parameters.data);
+    log.info("FHIR model version: {}", parameters.model);
+    log.info("Resource type: {}", parameters.resourceType);
 
     final SparkSession spark = SparkSession.active();
 
@@ -269,9 +276,19 @@ public class FhirPathTest {
 
     assertEquals(1, rows.size());
     final Row row = rows.get(0);
-    final Object value = row.get(row.fieldIndex("result"));
-    assertInstanceOf(List.class, value);
-    @SuppressWarnings("unchecked") final List<Object> resultList = (List<Object>) value;
+    final Object rawValue = row.get(row.fieldIndex("result"));
+    final List<Object> value;
+    if (rawValue instanceof scala.collection.mutable.WrappedArray) {
+      //noinspection unchecked
+      value = JavaConverters.seqAsJavaListConverter(
+          (scala.collection.mutable.WrappedArray<Object>) rawValue).asJava();
+    } else if (rawValue instanceof List) {
+      //noinspection unchecked
+      value = (List<Object>) rawValue;
+    } else {
+      value = Collections.singletonList(rawValue);
+    }
+    @SuppressWarnings("unchecked") final List<Object> resultList = value;
 
     assertEquals(parameters.expectedResults, resultList);
   }
