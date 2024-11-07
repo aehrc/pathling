@@ -131,13 +131,16 @@ public class FhirJsonReader {
     return reader.json(paths);
   }
 
-  @NotNull
   public Dataset<Row> read(@NotNull final List<String> jsonStrings) {
-    final Dataset<Row> jsonData = spark.createDataset(jsonStrings, Encoders.STRING()).toDF();
+    final Dataset<Row> jsonData = spark.createDataset(jsonStrings, Encoders.STRING())
+        .toDF("jsonString");
+    final Dataset<Row> structuredData = spark.read()
+        .json(jsonData.select("jsonString").as(Encoders.STRING()));
     if (datasetTransformer != null && resourceDefinition != null) {
-      return datasetTransformer.transformDataset(jsonData, resourceDefinition);
+      return datasetTransformer.transformDataset(structuredData, resourceDefinition);
     }
-    return jsonData;
+    return structuredData;
   }
+
 
 }
