@@ -24,6 +24,7 @@ import au.csiro.pathling.fhirpath.operator.BinaryOperator;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorInput;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -63,8 +64,9 @@ public class ComparisonOperator implements BinaryOperator {
     }
 
     final ColumnComparator comparator = left.compare();
-    final Column result = type.getOperation()
-        .apply(comparator, left.getColumn(), right.getColumn());
+    final Column result = functions.array(
+        type.getOperation().apply(comparator, left.getColumn(), right.getColumn())
+    );
     return new BooleanCollection(result, Optional.of(FhirPathType.BOOLEAN));
   }
 
