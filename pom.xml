@@ -206,13 +206,6 @@
         <groupId>org.springframework</groupId>
         <version>6.1.6</version>
       </dependency>
-      <dependency>
-        <groupId>io.qameta.allure</groupId>
-        <artifactId>allure-bom</artifactId>
-        <version>${pathling.allureVersion}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
     </dependencies>
   </dependencyManagement>
 

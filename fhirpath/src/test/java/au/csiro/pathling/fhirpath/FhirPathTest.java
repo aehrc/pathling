@@ -12,8 +12,6 @@ import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.function.registry.StaticOperatorRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.schema.FhirJsonReader;
-import io.qameta.allure.Allure;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.BufferedReader;
@@ -30,6 +28,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -49,6 +48,7 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.yaml.snakeyaml.Yaml;
 
+@Slf4j
 public class FhirPathTest {
 
   static final String TEST_LOCATION = "classpath:cases/";
@@ -219,10 +219,6 @@ public class FhirPathTest {
   @ParameterizedTest
   @MethodSource("parameters")
   void test(@NotNull final TestParameters parameters) throws JsonProcessingException {
-    Allure.addAttachment("expression", parameters.expression);
-    Allure.addAttachment("expectedResult", MAPPER.writeValueAsString(parameters.expectedResults));
-    Allure.addAttachment("model", MAPPER.writeValueAsString(parameters.model));
-    Allure.addAttachment("resourceType", MAPPER.writeValueAsString(parameters.resourceType));
 
     final SparkSession spark = SparkSession.active();
 
@@ -276,8 +272,6 @@ public class FhirPathTest {
     final Object value = row.get(row.fieldIndex("result"));
     assertInstanceOf(List.class, value);
     @SuppressWarnings("unchecked") final List<Object> resultList = (List<Object>) value;
-
-    Allure.addAttachment("actualResult", MAPPER.writeValueAsString(resultList));
 
     assertEquals(parameters.expectedResults, resultList);
   }
