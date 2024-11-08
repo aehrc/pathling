@@ -28,7 +28,7 @@ public record FhirPathExecutor(DataSource dataSource, EvaluationContext context)
     final FhirPathType type = new FhirPathType(resourceType);
     final Collection input = new ResourceCollection(column, Optional.of(type));
     final Collection output = parsed.evaluate(input, context);
-    return data.select(output.getColumn().alias(columnName));
+    return data.select(output.getRendering().alias(columnName));
   }
 
 }

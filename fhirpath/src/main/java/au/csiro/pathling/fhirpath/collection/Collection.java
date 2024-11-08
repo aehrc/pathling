@@ -18,14 +18,14 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.collection.rendering.Rendering;
+import au.csiro.pathling.fhirpath.collection.rendering.SingleColumnRendering;
 import au.csiro.pathling.fhirpath.operator.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.operator.comparison.DefaultComparator;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.DataType;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -35,55 +35,51 @@ import org.jetbrains.annotations.NotNull;
  */
 public class Collection {
 
-  private final @NotNull Column column;
+  private final @NotNull Rendering rendering;
   private final @NotNull Optional<FhirPathType> type;
 
-  public Collection(final @NotNull Column column, final @NotNull Optional<FhirPathType> type) {
-    this.column = column;
+  public Collection(final @NotNull Rendering rendering,
+      final @NotNull Optional<FhirPathType> type) {
+    this.rendering = rendering;
     this.type = type;
   }
 
-  public @NotNull Collection traverse(final @NotNull String elementName) {
-    if (elementName == null) {
-      throw new IllegalArgumentException("Element name must not be null");
-    }
-    final Column newColumn = column.getField(elementName);
-    return new Collection(newColumn, Optional.empty());
-  }
-
-  public @NotNull Collection map(final @NotNull UnaryOperator<Column> mapper) {
-    return new Collection(mapper.apply(column), type);
-  }
-
-  public @NotNull ColumnComparator compare() {
-    return new DefaultComparator();
-  }
-
-  public @NotNull Column getColumn() {
-    return column;
+  public @NotNull Rendering getRendering() {
+    return rendering;
   }
 
   public @NotNull Optional<FhirPathType> getType() {
     return type;
   }
 
+  public @NotNull Collection map(final @NotNull UnaryOperator<Column> mapper) {
+    return new Collection(rendering.map(mapper), type);
+  }
+
+  public @NotNull Collection map(final @NotNull UnaryOperator<Column> mapper,
+      final @NotNull Optional<FhirPathType> newType) {
+    return new Collection(rendering.map(mapper), newType);
+  }
+
+  public @NotNull Collection traverse(final @NotNull String elementName) {
+    return rendering.traverse(elementName).map(r -> new Collection(r, type))
+        .orElse(Collection.empty());
+  }
+
+  private static @NotNull Collection empty() {
+    return new Collection(new SingleColumnRendering(functions.array()), Optional.empty());
+  }
+
   public @NotNull Collection singleton() {
-    return this.map(
-        c -> {
-          final Expression columnExpression = c.expr();
-          if (columnExpression.resolved()) {
-            // If the column is resolved, we can inspect the data type.
-            final DataType dataType = columnExpression.dataType();
-            if (dataType instanceof org.apache.spark.sql.types.ArrayType) {
-              // If the column is an array, we can check its size and enforce the rules here:
-              // https://hl7.org/fhirpath/N1/#singleton-evaluation-of-collections
-              return functions.when(functions.size(c).leq(1), functions.get(c, functions.lit(0)))
-                  .otherwise(functions.raise_error(functions.lit("Expected a singular input")));
-            }
-          }
-          // If the column is not resolved, assume that it is already a singular value.
-          return c;
-        });
+    return new Collection(rendering.singleton(), type);
+  }
+
+  public @NotNull Collection collection() {
+    return new Collection(rendering.collection(), type);
+  }
+
+  public @NotNull ColumnComparator compare() {
+    return new DefaultComparator();
   }
 
 }

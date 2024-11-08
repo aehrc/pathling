@@ -212,7 +212,7 @@ public class FhirPathTest {
       final @NotNull EvaluationContext context, final @NotNull Dataset<Row> input) {
     final au.csiro.pathling.fhirpath.collection.Collection output = parsed.evaluate(inputCollection,
         context);
-    final Dataset<Row> result = input.select(output.getColumn().alias("result"));
+    final Dataset<Row> result = input.select(output.getRendering().alias("result"));
     return result.collectAsList();
   }
 

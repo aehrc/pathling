@@ -1,11 +1,9 @@
 package au.csiro.pathling.fhirpath.function.provider;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import java.util.Optional;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 import org.jetbrains.annotations.NotNull;
 
@@ -25,13 +23,12 @@ public class BooleanLogicFunctions {
    * Otherwise, the result is empty.
    *
    * @param input The input collection
-   * @return A {@link BooleanCollection} containing the negated values
-   * @see <a href="https://hl7.org/fhirpath/#not--boolean">not</a>
+   * @return A {@link Collection} containing the negated values
+   * @see <a href="https://hl7.org/fhirpath/#not-boolean">not</a>
    */
   @FhirPathFunction
-  public static @NotNull BooleanCollection not(final @NotNull Collection input) {
-    final Column column = functions.not(input.getColumn());
-    return new BooleanCollection(column, Optional.of(FhirPathType.BOOLEAN));
+  public static @NotNull Collection not(final @NotNull Collection input) {
+    return input.map(functions::not, Optional.of(FhirPathType.BOOLEAN));
   }
 
 }

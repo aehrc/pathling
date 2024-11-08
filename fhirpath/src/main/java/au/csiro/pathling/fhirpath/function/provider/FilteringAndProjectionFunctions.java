@@ -6,7 +6,6 @@ import au.csiro.pathling.fhirpath.evaluation.EvaluationContext;
 import au.csiro.pathling.fhirpath.expression.TypeSpecifier;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import au.csiro.pathling.fhirpath.function.annotation.RequiredParameter;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 import org.jetbrains.annotations.NotNull;
 
@@ -40,13 +39,13 @@ public class FilteringAndProjectionFunctions {
   @FhirPathFunction
   public static @NotNull Collection where(final @NotNull EvaluationContext context,
       final @NotNull Collection input, final @RequiredParameter FhirPath expression) {
-    final Column resultColumn = functions.filter(input.getColumn(),
+    return input.collection().map(col -> functions.filter(col,
         elementColumn -> {
           final Collection elementInput = input.map(c -> elementColumn);
           final Collection expressionResult = expression.evaluate(elementInput, context);
-          return expressionResult.getColumn();
-        });
-    return input.map(i -> resultColumn);
+          return expressionResult.getRendering().getColumn().orElseThrow(() -> new RuntimeException(
+              "Expected a column in the evaluation of the criteria expression"));
+        }));
   }
 
   /**

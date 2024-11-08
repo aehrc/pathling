@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.function.provider;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.expression.TypeSpecifier;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import au.csiro.pathling.fhirpath.function.annotation.OptionalParameter;
@@ -36,16 +35,16 @@ import org.jetbrains.annotations.NotNull;
 public class JoinKeyFunctions {
 
   /**
-   * Returns a {@link Collection} of keys for the input {@link ResourceCollection}.
+   * Returns a {@link Collection} of keys for the input {@link Collection}.
    *
-   * @param input The input {@link ResourceCollection}
+   * @param input The input {@link Collection}
    * @return A {@link Collection} of keys
    * @see <a
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html#getresourcekey--keytype">SQL
    * on FHIR specification - getResourceKey</a>
    */
   @FhirPathFunction
-  public static @NotNull Collection getResourceKey(final @NotNull ResourceCollection input) {
+  public static @NotNull Collection getResourceKey(final @NotNull Collection input) {
     throw new RuntimeException("Not implemented");
   }
 
