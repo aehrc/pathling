@@ -3,8 +3,7 @@ package au.csiro.pathling.fhirpath;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import au.csiro.pathling.fhirpath.collection.EmptyCollection;
-import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.collection.rendering.RootRendering;
 import au.csiro.pathling.fhirpath.evaluation.DefaultEvaluationContext;
 import au.csiro.pathling.fhirpath.evaluation.EvaluationContext;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
@@ -212,7 +211,11 @@ public class FhirPathTest {
       final @NotNull EvaluationContext context, final @NotNull Dataset<Row> input) {
     final au.csiro.pathling.fhirpath.collection.Collection output = parsed.evaluate(inputCollection,
         context);
-    final Dataset<Row> result = input.select(output.getRendering().alias("result"));
+    final Optional<Column> column = output.getRendering().getColumn();
+    if (column.isEmpty()) {
+      throw new RuntimeException("Expected a column rendering in the evaluation result");
+    }
+    final Dataset<Row> result = input.select(column.get().alias("result"));
     return result.collectAsList();
   }
 
@@ -257,14 +260,16 @@ public class FhirPathTest {
 
     final au.csiro.pathling.fhirpath.collection.Collection inputCollection;
     if (parameters.data == null) {
-      inputCollection = new EmptyCollection();
+      inputCollection = au.csiro.pathling.fhirpath.collection.Collection.empty();
     } else {
-      final Column column = functions.struct(Stream.of(input.columns())
-          .map(functions::col)
-          .toArray(Column[]::new));
       final Optional<FhirPathType> type = Optional.ofNullable(parameters.resourceType)
           .map(resourceType -> new FhirPathType("FHIR", resourceType));
-      inputCollection = new ResourceCollection(column, type);
+      final Map<String, Column> columnMap = new HashMap<>();
+      for (final String field : input.columns()) {
+        columnMap.put(field, functions.col(field));
+      }
+      inputCollection = new au.csiro.pathling.fhirpath.collection.Collection(
+          new RootRendering(columnMap), type);
     }
 
     if (parameters.error) {

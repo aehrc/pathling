@@ -66,10 +66,6 @@ public class Collection {
         .orElse(Collection.empty());
   }
 
-  private static @NotNull Collection empty() {
-    return new Collection(new SingleColumnRendering(functions.array()), Optional.empty());
-  }
-
   public @NotNull Collection singleton() {
     return new Collection(rendering.singleton(), type);
   }
@@ -80,6 +76,10 @@ public class Collection {
 
   public @NotNull ColumnComparator compare() {
     return new DefaultComparator();
+  }
+
+  public static @NotNull Collection empty() {
+    return new Collection(new SingleColumnRendering(functions.array()), Optional.empty());
   }
 
 }

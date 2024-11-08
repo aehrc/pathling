@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.operator.comparison;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.rendering.SingleColumnRendering;
 import au.csiro.pathling.fhirpath.operator.BinaryOperator;
@@ -63,10 +62,17 @@ public class ComparisonOperator implements BinaryOperator {
       }
     }
 
+    // If we can't get columns from both of the renderings, we can't compare them.
+    final Optional<Column> leftColumn = left.getRendering().getColumn();
+    final Optional<Column> rightColumn = right.getRendering().getColumn();
+    if (leftColumn.isEmpty() || rightColumn.isEmpty()) {
+      throw new UnsupportedOperationException("Comparison not supported");
+    }
+
     final ColumnComparator comparator = left.compare();
     final Column result = type.getOperation()
-        .apply(comparator, left.getRendering(), right.getRendering());
-    return new BooleanCollection(new SingleColumnRendering(result),
+        .apply(comparator, leftColumn.get(), rightColumn.get());
+    return new Collection(new SingleColumnRendering(result),
         Optional.of(FhirPathType.BOOLEAN));
   }
 

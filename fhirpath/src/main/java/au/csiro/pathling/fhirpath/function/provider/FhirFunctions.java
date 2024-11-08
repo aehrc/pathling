@@ -1,7 +1,6 @@
 package au.csiro.pathling.fhirpath.function.provider;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import au.csiro.pathling.fhirpath.function.annotation.RequiredParameter;
 import org.jetbrains.annotations.NotNull;
@@ -30,7 +29,7 @@ public class FhirFunctions {
    */
   @FhirPathFunction
   public static @NotNull Collection extension(final @NotNull Collection input,
-      @RequiredParameter final StringCollection url) {
+      @RequiredParameter final Collection url) {
     throw new RuntimeException("Not implemented");
   }
 
