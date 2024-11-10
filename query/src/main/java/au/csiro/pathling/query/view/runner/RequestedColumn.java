@@ -18,11 +18,11 @@
 package au.csiro.pathling.query.view.runner;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Information about a column that has been requested to be included in a projection.
@@ -37,13 +37,13 @@ public class RequestedColumn {
   /**
    * The parsed FHIRPath expression that defines the column.
    */
-  @Nonnull
+  @NotNull
   FhirPath path;
 
   /**
    * The requested name of the column.
    */
-  @Nonnull
+  @NotNull
   String name;
 
   /**
@@ -54,7 +54,7 @@ public class RequestedColumn {
   /**
    * The type that has been asserted for the column.
    */
-  @Nonnull
+  @NotNull
   Optional<FHIRDefinedType> type;
 
   @Override

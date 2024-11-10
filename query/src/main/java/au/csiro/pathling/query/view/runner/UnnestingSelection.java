@@ -27,11 +27,11 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.EmptyRepresentation;
-import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.Value;
 import org.apache.spark.sql.Column;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents a selection that unnests a nested data structure, with either inner or outer join
@@ -43,17 +43,17 @@ import org.apache.spark.sql.Column;
 @Value
 public class UnnestingSelection implements ProjectionClause {
 
-  @Nonnull
+  @NotNull
   FhirPath path;
 
-  @Nonnull
+  @NotNull
   List<ProjectionClause> components;
 
   boolean joinOuter;
 
-  @Nonnull
+  @NotNull
   @Override
-  public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
+  public ProjectionResult evaluate(@NotNull final ProjectionContext context) {
     // Evaluate the path to get the collection that will serve as the basis for unnesting.
     final Collection unnestingCollection = context.evalExpression(path);
 
@@ -84,9 +84,9 @@ public class UnnestingSelection implements ProjectionClause {
     return ProjectionResult.of(columnDescriptors, columnResult);
   }
 
-  @Nonnull
-  private Column unnestComponents(@Nonnull final Column unnestingColumn,
-      @Nonnull final Collection unnestingCollection, @Nonnull final ProjectionContext context) {
+  @NotNull
+  private Column unnestComponents(@NotNull final Column unnestingColumn,
+      @NotNull final Collection unnestingCollection, @NotNull final ProjectionContext context) {
     // Create a new projection context based upon the unnesting collection.
     final ProjectionContext projectionContext = context.withInputContext(
         unnestingCollection.map(__ -> new DefaultRepresentation(unnestingColumn)));

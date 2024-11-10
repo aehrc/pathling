@@ -21,7 +21,6 @@ import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.struct;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
-import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -29,6 +28,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Value;
 import org.apache.spark.sql.Column;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Creates a projection from the requested columns.
@@ -39,12 +39,12 @@ import org.apache.spark.sql.Column;
 @Value
 public class ColumnSelection implements ProjectionClause {
 
-  @Nonnull
+  @NotNull
   List<RequestedColumn> columns;
 
   @Override
-  @Nonnull
-  public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
+  @NotNull
+  public ProjectionResult evaluate(@NotNull final ProjectionContext context) {
     // Get an iterator of collections and an iterator for requested columns.
     final Iterator<Collection> collectionsIterator = getCollectionIterator(context);
     final Iterator<RequestedColumn> requestedColumnsIterator = columns.iterator();
@@ -81,8 +81,8 @@ public class ColumnSelection implements ProjectionClause {
    * @param context The projection context
    * @return An iterator of collections
    */
-  private @Nonnull Iterator<Collection> getCollectionIterator(
-      final @Nonnull ProjectionContext context) {
+  private @NotNull Iterator<Collection> getCollectionIterator(
+      final @NotNull ProjectionContext context) {
     final Stream<Collection> collections = columns.stream()
         .map(col -> {
           final Collection collection = context.evalExpression(col.getPath());

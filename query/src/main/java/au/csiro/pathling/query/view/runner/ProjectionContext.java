@@ -27,7 +27,6 @@ import au.csiro.pathling.fhirpath.execution.FhirPathExecutor;
 import au.csiro.pathling.fhirpath.execution.SingleFhirPathExecutor;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.query.view.definition.ConstantDeclaration;
-import jakarta.annotation.Nonnull;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +36,7 @@ import org.apache.spark.sql.Row;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Dependencies and logic relating to the traversal of FHIRPath expressions.
@@ -46,19 +46,19 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value
 public class ProjectionContext {
 
-  @Nonnull
+  @NotNull
   FhirPathExecutor executor;
 
-  @Nonnull
+  @NotNull
   Collection inputContext;
 
-  @Nonnull
+  @NotNull
   public Dataset<Row> getDataset() {
     return executor.createInitialDataset();
   }
 
-  @Nonnull
-  public ProjectionContext withInputContext(@Nonnull final Collection inputContext) {
+  @NotNull
+  public ProjectionContext withInputContext(@NotNull final Collection inputContext) {
     return new ProjectionContext(executor, inputContext);
   }
 
@@ -68,15 +68,15 @@ public class ProjectionContext {
    * @param path the path to evaluate
    * @return the result as a column
    */
-  @Nonnull
-  public Collection evalExpression(@Nonnull final FhirPath path) {
+  @NotNull
+  public Collection evalExpression(@NotNull final FhirPath path) {
     return executor.evaluate(path, inputContext);
   }
 
-  @Nonnull
-  public static ProjectionContext of(@Nonnull final ExecutionContext context,
-      @Nonnull final ResourceType subjectResource,
-      @Nonnull final List<ConstantDeclaration> constants) {
+  @NotNull
+  public static ProjectionContext of(@NotNull final ExecutionContext context,
+      @NotNull final ResourceType subjectResource,
+      @NotNull final List<ConstantDeclaration> constants) {
     // Create a map of variables from the provided constants.
     final Map<String, Collection> variables = constants.stream()
         .collect(toMap(ConstantDeclaration::getName,
@@ -90,8 +90,8 @@ public class ProjectionContext {
     return new ProjectionContext(executor, executor.createDefaultInputContext());
   }
 
-  @Nonnull
-  private static Collection getCollectionForConstantValue(@Nonnull final ConstantDeclaration c) {
+  @NotNull
+  private static Collection getCollectionForConstantValue(@NotNull final ConstantDeclaration c) {
     final IBase value = c.getValue();
     final FHIRDefinedType fhirType = FHIRDefinedType.fromCode(value.fhirType());
 

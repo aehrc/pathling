@@ -17,7 +17,6 @@ import au.csiro.pathling.view.RequestedColumn;
 import au.csiro.pathling.view.UnionSelection;
 import au.csiro.pathling.view.UnnestingSelection;
 import ca.uhn.fhir.context.FhirContext;
-import jakarta.annotation.Nonnull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -30,6 +29,7 @@ import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Converts a {@link FhirView} to an executable Spark SQL query.
@@ -41,16 +41,16 @@ public class FhirViewExecutor {
 
   private static final String HL7_FHIR_TYPE_URI_PREFIX = "http://hl7.org/fhir/StructureDefinition/";
 
-  @Nonnull
+  @NotNull
   private final FhirContext fhirContext;
 
-  @Nonnull
+  @NotNull
   private final SparkSession sparkSession;
 
-  @Nonnull
+  @NotNull
   private final DataSource dataSource;
 
-  @Nonnull
+  @NotNull
   private final Parser parser;
 
   /**
@@ -58,8 +58,8 @@ public class FhirViewExecutor {
    * @param sparkSession The Spark session to use for the execution context
    * @param dataset The data source to use for the execution context
    */
-  public FhirViewExecutor(@Nonnull final FhirContext fhirContext,
-      @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataset) {
+  public FhirViewExecutor(@NotNull final FhirContext fhirContext,
+      @NotNull final SparkSession sparkSession, @NotNull final DataSource dataset) {
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
     this.dataSource = dataset;
@@ -72,8 +72,8 @@ public class FhirViewExecutor {
    * @param view the FHIR view to build the query for
    * @return a {@link Dataset} that represents an executable form of the query
    */
-  @Nonnull
-  public Dataset<Row> buildQuery(@Nonnull final FhirView view) {
+  @NotNull
+  public Dataset<Row> buildQuery(@NotNull final FhirView view) {
     final ExecutionContext executionContext = new ExecutionContext(sparkSession, fhirContext,
         dataSource);
     final Projection projection = buildProjection(view);
@@ -87,8 +87,8 @@ public class FhirViewExecutor {
    * @param fhirView the FHIR view to convert
    * @return the converted view
    */
-  @Nonnull
-  private Projection buildProjection(@Nonnull final FhirView fhirView) {
+  @NotNull
+  private Projection buildProjection(@NotNull final FhirView fhirView) {
     // Convert the select clause into a list of ProjectionClause objects.
     final List<ProjectionClause> selectionComponents = fhirView.getSelect().stream()
         .map(this::parseSelection)
@@ -116,8 +116,8 @@ public class FhirViewExecutor {
    * @param select the select clause to parse
    * @return the parsed selection
    */
-  @Nonnull
-  private ProjectionClause parseSelection(@Nonnull final SelectClause select) {
+  @NotNull
+  private ProjectionClause parseSelection(@NotNull final SelectClause select) {
     // There are three types of select:
     // (1) A direct column selection
     // (2) A "for each" selection, which unnests a set of sub-select based on a parent path
@@ -129,18 +129,16 @@ public class FhirViewExecutor {
       // cartesian product of the collections that are produced by the FHIRPath expressions.
       return new GroupingSelection(parseSubSelection(select));
 
-    } else if (select instanceof ForEachSelect) {
+    } else if (select instanceof final ForEachSelect forEachSelect) {
       // If this is a "for each" selection, we use a ForEachSelectionX. This will produce a row for
       // each item in the collection produced by the parent path.
-      final ForEachSelect forEachSelect = (ForEachSelect) select;
       return new UnnestingSelection(parser.parse(requireNonNull(forEachSelect.getPath())),
           parseSubSelection(select), false);
 
-    } else if (select instanceof ForEachOrNullSelect) {
+    } else if (select instanceof final ForEachOrNullSelect forEachOrNullSelect) {
       // If this is a "for each or null" selection, we use a ForEachSelectionX with a flag set to
       // true. This will produce a row for each item in the collection produced by the parent path,
       // or a single null row if the parent path evaluates to an empty collection.
-      final ForEachOrNullSelect forEachOrNullSelect = (ForEachOrNullSelect) select;
       return new UnnestingSelection(parser.parse(requireNonNull(forEachOrNullSelect.getPath())),
           parseSubSelection(select), true);
 
@@ -158,8 +156,8 @@ public class FhirViewExecutor {
    * @param selectClause the select clause to parse
    * @return the parsed sub-selection
    */
-  @Nonnull
-  private List<ProjectionClause> parseSubSelection(@Nonnull final SelectClause selectClause) {
+  @NotNull
+  private List<ProjectionClause> parseSubSelection(@NotNull final SelectClause selectClause) {
     final boolean columnsPresent = !selectClause.getColumn().isEmpty();
     final boolean unionPresent = !selectClause.getUnionAll().isEmpty();
 
@@ -203,8 +201,8 @@ public class FhirViewExecutor {
    * @param column the column to parse
    * @return the parsed column
    */
-  @Nonnull
-  private RequestedColumn buildRequestedColumn(@Nonnull final Column column) {
+  @NotNull
+  private RequestedColumn buildRequestedColumn(@NotNull final Column column) {
     // Parse the FHIRPath expression using the parser.
     final FhirPath path = parser.parse(column.getPath());
 
@@ -231,8 +229,8 @@ public class FhirViewExecutor {
    * @param fhirView the FHIR view to parse the where clause from
    * @return the parsed where clause
    */
-  @Nonnull
-  private Optional<ProjectionClause> parseWhere(@Nonnull final FhirView fhirView) {
+  @NotNull
+  private Optional<ProjectionClause> parseWhere(@NotNull final FhirView fhirView) {
     final List<RequestedColumn> whereComponents = Optional.ofNullable(fhirView.getWhere())
         // Convert the Optional to a stream.
         .stream()

@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.query.view.runner;
 
-import jakarta.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents a component of an abstract query for projecting FHIR data.
@@ -30,7 +30,7 @@ public interface ProjectionClause {
    * @param context The context in which to evaluate this clause
    * @return The result of evaluating this clause
    */
-  @Nonnull
-  ProjectionResult evaluate(@Nonnull final ProjectionContext context);
+  @NotNull
+  ProjectionResult evaluate(@NotNull final ProjectionContext context);
 
 }

@@ -24,11 +24,11 @@ import static org.apache.spark.sql.functions.concat;
 import static org.apache.spark.sql.functions.isnull;
 import static org.apache.spark.sql.functions.when;
 
-import jakarta.annotation.Nonnull;
 import java.util.List;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Groups multiple selections together using a union.
@@ -39,12 +39,12 @@ import org.apache.spark.sql.functions;
 @Value
 public class UnionSelection implements ProjectionClause {
 
-  @Nonnull
+  @NotNull
   List<ProjectionClause> components;
 
-  @Nonnull
+  @NotNull
   @Override
-  public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
+  public ProjectionResult evaluate(@NotNull final ProjectionContext context) {
     // Evaluate each component of the union.
     final List<ProjectionResult> results = components.stream()
         .map(c -> c.evaluate(context))

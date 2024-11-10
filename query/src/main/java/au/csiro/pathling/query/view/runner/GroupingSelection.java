@@ -20,9 +20,9 @@ package au.csiro.pathling.query.view.runner;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toUnmodifiableList;
 
-import jakarta.annotation.Nonnull;
 import java.util.List;
 import lombok.Value;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Groups multiple selections together using a cross join.
@@ -33,12 +33,12 @@ import lombok.Value;
 @Value
 public class GroupingSelection implements ProjectionClause {
 
-  @Nonnull
+  @NotNull
   List<ProjectionClause> components;
 
   @Override
-  @Nonnull
-  public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
+  @NotNull
+  public ProjectionResult evaluate(@NotNull final ProjectionContext context) {
     // evaluate and cross join the subcomponents
     final List<ProjectionResult> subResults = components.stream().map(c -> c.evaluate(context))
         .collect(toUnmodifiableList());

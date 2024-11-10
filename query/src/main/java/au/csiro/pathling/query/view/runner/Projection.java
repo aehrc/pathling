@@ -24,7 +24,6 @@ import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.query.view.definition.ConstantDeclaration;
-import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -40,7 +39,7 @@ import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import au.csiro.pathling.query.view.runner.ProjectionConstraint;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * An abstract representation of a projection of FHIR data, with the ability to select columns,
@@ -54,37 +53,37 @@ public class Projection {
   /**
    * The resource type that the projection is based upon.
    */
-  @Nonnull
+  @NotNull
   ResourceType subjectResource;
 
   /**
    * The constants that are available to the expressions within the projection.
    */
-  @Nonnull
+  @NotNull
   List<ConstantDeclaration> constants;
 
   /**
    * The clause that defines the columns to be included in the projection.
    */
-  @Nonnull
+  @NotNull
   ProjectionClause selection;
 
   /**
    * The clause that defines the rows to be included in the projection.
    */
-  @Nonnull
+  @NotNull
   Optional<ProjectionClause> where;
 
   /**
    * A constraint on the result of the projection, such as whether it must be flat.
    */
-  @Nonnull
+  @NotNull
   ProjectionConstraint constraint;
 
-  public Projection(@Nonnull final ResourceType subjectResource,
-      @Nonnull final List<ConstantDeclaration> constants,
-      @Nonnull final ProjectionClause selection,
-      @Nonnull final Optional<ProjectionClause> where) {
+  public Projection(@NotNull final ResourceType subjectResource,
+      @NotNull final List<ConstantDeclaration> constants,
+      @NotNull final ProjectionClause selection,
+      @NotNull final Optional<ProjectionClause> where) {
     this(subjectResource, constants, selection, where, ProjectionConstraint.UNCONSTRAINED);
   }
 
@@ -94,7 +93,7 @@ public class Projection {
    * @param context The execution context
    * @return The dataset that represents the result of the projection
    */
-  public Dataset<Row> execute(@Nonnull final ExecutionContext context) {
+  public Dataset<Row> execute(@NotNull final ExecutionContext context) {
     // Prepare dependencies for evaluation.
     final ProjectionContext projectionContext = ProjectionContext.of(context,
         subjectResource, constants);
@@ -140,8 +139,8 @@ public class Projection {
    * @param result The result to convert
    * @return The converted column
    */
-  @Nonnull
-  private Column renderColumn(@Nonnull final ProjectedColumn result) {
+  @NotNull
+  private Column renderColumn(@NotNull final ProjectedColumn result) {
     final Collection collection = result.getCollection();
     final RequestedColumn requestedColumn = result.getRequestedColumn();
 
@@ -172,8 +171,8 @@ public class Projection {
    * @param context The execution context
    * @return A column that can be used to filter the result
    */
-  @Nonnull
-  private Optional<Column> evaluateFilters(@Nonnull final ProjectionContext context) {
+  @NotNull
+  private Optional<Column> evaluateFilters(@NotNull final ProjectionContext context) {
     return where.flatMap(whereSelection -> {
       final List<ProjectedColumn> whereResult = whereSelection.evaluate(context).getResults();
       final boolean isValidFilter = whereResult.stream()

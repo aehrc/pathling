@@ -18,8 +18,8 @@
 package au.csiro.pathling.query.view.runner;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
-import jakarta.annotation.Nonnull;
 import lombok.Value;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * The result of evaluating a {@link RequestedColumn} as part of a {@link ProjectionClause}.
@@ -30,13 +30,13 @@ public class ProjectedColumn {
   /**
    * The result of evaluating the column.
    */
-  @Nonnull
+  @NotNull
   Collection collection;
 
   /**
    * The column that was requested to be included in the projection.
    */
-  @Nonnull
+  @NotNull
   RequestedColumn requestedColumn;
 
 }

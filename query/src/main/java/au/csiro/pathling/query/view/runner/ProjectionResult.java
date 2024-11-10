@@ -20,11 +20,11 @@ package au.csiro.pathling.query.view.runner;
 
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.Value;
 import org.apache.spark.sql.Column;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * The result of evaluating a projection, which consists of a list of {@link ProjectedColumn}
@@ -40,13 +40,13 @@ public class ProjectionResult {
   /**
    * A list of results, each of which contains a {@link Collection} and a {@link RequestedColumn}.
    */
-  @Nonnull
+  @NotNull
   List<ProjectedColumn> results;
 
   /**
    * An array of structs. The struct has a field for each column name in the projection.
    */
-  @Nonnull
+  @NotNull
   Column resultColumn;
 
   /**
@@ -55,8 +55,8 @@ public class ProjectionResult {
    * @param results The results to combine
    * @return The combined result
    */
-  @Nonnull
-  public static ProjectionResult combine(@Nonnull final List<ProjectionResult> results) {
+  @NotNull
+  public static ProjectionResult combine(@NotNull final List<ProjectionResult> results) {
     return combine(results, false);
   }
 
@@ -67,8 +67,8 @@ public class ProjectionResult {
    * @param outer Whether to use outer join semantics
    * @return The combined result
    */
-  @Nonnull
-  public static ProjectionResult combine(@Nonnull final List<ProjectionResult> results,
+  @NotNull
+  public static ProjectionResult combine(@NotNull final List<ProjectionResult> results,
       final boolean outer) {
     if (results.size() == 1 && !outer) {
       return results.get(0);
@@ -82,8 +82,8 @@ public class ProjectionResult {
     }
   }
 
-  @Nonnull
-  public static Column structProduct(final boolean outer, @Nonnull final Column... columns) {
+  @NotNull
+  public static Column structProduct(final boolean outer, @NotNull final Column... columns) {
     return outer
            ? ColumnFunctions.structProduct_outer(columns)
            : ColumnFunctions.structProduct(columns);
