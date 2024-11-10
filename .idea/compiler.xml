@@ -12,6 +12,7 @@
         <module name="io" />
         <module name="fhirpath" />
         <module name="library-api" />
+        <module name="query" />
       </profile>
     </annotationProcessing>
   </component>
@@ -20,6 +21,7 @@
       <module name="fhirpath" options="-Xlint:all,-processing" />
       <module name="io" options="-Xlint:all,-processing" />
       <module name="library-api" options="-Xlint:all,-processing" />
+      <module name="query" options="-Xlint:all,-processing" />
       <module name="test" options="-Xlint:all,-processing" />
       <module name="test-data" options="" />
     </option>

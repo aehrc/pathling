@@ -86,12 +86,14 @@
     <pathling.surefireVersion>3.2.5</pathling.surefireVersion>
     <pathling.allureVersion>2.25.0</pathling.allureVersion>
     <pathling.testDataVersion>1.0.0-SNAPSHOT</pathling.testDataVersion>
+    <pathling.gsonVersion>2.10</pathling.gsonVersion>
   </properties>
 
   <modules>
     <module>io</module>
     <module>fhirpath</module>
     <module>test</module>
+    <module>query</module>
     <module>library-api</module>
   </modules>
 
@@ -150,6 +152,11 @@
         <version>${pathling.jacksonVersion}</version>
       </dependency>
       <dependency>
+        <groupId>com.google.code.gson</groupId>
+        <artifactId>gson</artifactId>
+        <version>${pathling.gsonVersion}</version>
+      </dependency>
+      <dependency>
         <artifactId>junit-bom</artifactId>
         <groupId>org.junit</groupId>
         <scope>import</scope>
@@ -197,6 +204,11 @@
         <version>24.0.0</version>
       </dependency>
       <dependency>
+        <groupId>jakarta.validation</groupId>
+        <artifactId>jakarta.validation-api</artifactId>
+        <version>3.1.0</version>
+      </dependency>
+      <dependency>
         <artifactId>snakeyaml</artifactId>
         <groupId>org.yaml</groupId>
         <version>2.3</version>
@@ -231,7 +243,8 @@
               <element>target/generated-test-resources</element>
             </additionalClasspathElements>
             <argLine>-Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
-              --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED</argLine>
+              --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED
+            </argLine>
             <!-- The add-exports and add-opens flags are required for Java 17 -->
             <failIfNoTests>false</failIfNoTests>
             <forkCount>1C</forkCount>
