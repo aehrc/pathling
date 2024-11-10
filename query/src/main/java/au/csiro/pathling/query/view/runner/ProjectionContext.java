@@ -26,7 +26,7 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.execution.FhirPathExecutor;
 import au.csiro.pathling.fhirpath.execution.SingleFhirPathExecutor;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
-import au.csiro.pathling.views.ConstantDeclaration;
+import au.csiro.pathling.query.view.definition.ConstantDeclaration;
 import jakarta.annotation.Nonnull;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;

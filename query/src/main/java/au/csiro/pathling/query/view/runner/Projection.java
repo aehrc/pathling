@@ -17,15 +17,13 @@
 
 package au.csiro.pathling.query.view.runner;
 
-import static au.csiro.pathling.extract.ProjectionConstraint.FLAT;
 import static au.csiro.pathling.utilities.Functions.maybeCast;
 import static org.apache.spark.sql.functions.inline;
 
-import au.csiro.pathling.extract.ProjectionConstraint;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.views.ConstantDeclaration;
+import au.csiro.pathling.query.view.definition.ConstantDeclaration;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
@@ -42,6 +40,7 @@ import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import au.csiro.pathling.query.view.runner.ProjectionConstraint;
 
 /**
  * An abstract representation of a projection of FHIR data, with the ability to select columns,
