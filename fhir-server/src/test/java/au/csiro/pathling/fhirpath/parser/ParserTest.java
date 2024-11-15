@@ -50,6 +50,7 @@ import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import java.util.List;
 
 /**
  * @author Piotr Szul
