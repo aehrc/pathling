@@ -45,15 +45,30 @@ public interface DataRoot {
     @Nonnull
     ResourceType foreignResourceType;
     @Nonnull
-    String foreignResourcePath;
+    String foreignKeyPath;
 
+    @Nonnull
+    public ResourceType getMasterResourceType() {
+      return ((ResourceRoot) master).resourceType;
+    }
+    
     @Nonnull
     @Override
     public String getTag() {
       return master.getTag() + "@" + foreignResourceType.toCode() + "_"
-          + foreignResourcePath.replace(".", "_");
+          + foreignKeyPath.replace(".", "_");
     }
 
+    @Nonnull
+    public String getForeignKeyTag() {
+      return getTag() + "__key";
+    }
+
+    @Nonnull
+    public String getValueTag() {
+      return getTag() + "__value";
+    }
+    
     public static ReverseResolveRoot ofResource(@Nonnull final ResourceType masterType,
         @Nonnull final ResourceType foreignResourceType,
         @Nonnull final String foreignResourcePath) {

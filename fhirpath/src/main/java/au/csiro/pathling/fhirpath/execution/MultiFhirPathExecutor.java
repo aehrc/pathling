@@ -195,7 +195,7 @@ public class MultiFhirPathExecutor implements FhirPathExecutor {
     final String joinTag = dataRoot.getTag();
 
     // TODO: make it better
-    final Column referenceColumn = dataset.col(dataRoot.getForeignResourcePath())
+    final Column referenceColumn = dataset.col(dataRoot.getForeignKeyPath())
         .getField("reference");
     return dataset.groupBy(referenceColumn.alias(dataRoot.getKeyTag()))
         .agg(
