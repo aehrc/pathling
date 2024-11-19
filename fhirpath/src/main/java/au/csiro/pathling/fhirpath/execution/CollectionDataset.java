@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.execution;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
 import lombok.Value;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
@@ -31,4 +32,14 @@ public class CollectionDataset {
 
   @Nonnull
   Collection value;
+  
+  @Nonnull
+  public Column getValueColumn() {
+    return value.getColumnValue();
+  }
+  
+  @Nonnull
+  public Dataset<Row> materialize(@Nonnull final String valueColumnName) {
+    return dataset.withColumn(valueColumnName, getValueColumn());
+  }
 }

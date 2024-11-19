@@ -25,8 +25,11 @@ import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.EpisodeOfCare;
+import org.hl7.fhir.r4.model.EpisodeOfCare.EpisodeOfCareStatus;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Reference;
 import org.junit.jupiter.api.Test;
@@ -34,7 +37,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import scala.collection.mutable.WrappedArray;
 
 /**
- * This is a test class to explore issues related to implementation of reverseResolve and resolve functions.
+ * This is a test class to explore issues related to implementation of reverseResolve and resolve
+ * functions.
  */
 @SpringBootUnitTest
 @Slf4j
@@ -42,11 +46,11 @@ class FhirpathTest {
 
   @Autowired
   SparkSession spark;
-  
+
   @Autowired
   FhirEncoders encoders;
 
-  
+
   final Parser parser = new Parser();
 
   @Test
@@ -73,7 +77,12 @@ class FhirpathTest {
     new DatasetAssert(result)
         .hasRowsUnordered(expected);
   }
-  
+
+  //
+  // SECTION: Reverse Resolve
+  //
+
+
   @Test
   void simpleReverseResolveToSingularValue() {
     //final Dataset<Row> joinedResult = evalFhirPathMulti("reverseResolve(Condition.subject).id", dataSource);
@@ -102,7 +111,7 @@ class FhirpathTest {
 
     final Dataset<Row> conditionDataset = conditionResult.getDataset().select(
         functions.col("Condition.subject.reference").alias("_master_key"),
-        conditionResult.getValue().getColumnValue().alias("value"));
+        conditionResult.getValueColumn().alias("value"));
     conditionDataset.show();
     new DatasetAssert(conditionDataset)
         .hasRowsUnordered(
@@ -114,7 +123,7 @@ class FhirpathTest {
             functions.col("_master_key"))
         .agg(functions.collect_list(functions.col("value")).alias("_fv_01"));
     foreignResult.show();
-    
+
     final Dataset<Row> joinedResult = patientDataset.join(foreignResult,
             patientDataset.col("key").equalTo(foreignResult.col("_master_key")), "left_outer")
         .select(functions.col("id"), functions.col("_fv_01").alias("value"));
@@ -132,29 +141,7 @@ class FhirpathTest {
   void simpleReverseResolveToManyValue() {
     //final Dataset<Row> joinedResult = evalFhirPathMulti("reverseResolve(Condition.subject).code.coding.code", dataSource);
     //joinedResult.show();
-    final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
-        List.of(
-            new Patient().setGender(AdministrativeGender.FEMALE).setId("Patient/1"),
-            new Patient().setGender(AdministrativeGender.MALE).setId("Patient/2"),
-            new Condition()
-                .setSubject(new Reference("Patient/1"))
-                .setCode(
-                    new CodeableConcept()
-                        .addCoding(new Coding().setCode("code-xx"))
-                        .addCoding(new Coding().setCode("code-xy"))
-                        .setText("Coding-x")
-                )
-                .setId("Condition/x"),
-            new Condition()
-                .setSubject(new Reference("Patient/1"))
-                .setCode(
-                    new CodeableConcept()
-                        .addCoding(new Coding().setCode("code-yx"))
-                        .addCoding(new Coding().setCode("code-yy"))
-                        .setText("Coding-y")
-                )
-                .setId("Condition/y")
-        ));
+    final ObjectDataSource dataSource = getPatientsWithConditions();
 
     final CollectionDataset patientResult = evalFhirPath(ResourceType.PATIENT, "id", dataSource);
     // ignore value here - we could just use the resource dataset directly
@@ -173,7 +160,7 @@ class FhirpathTest {
 
     final Dataset<Row> conditionDataset = conditionResult.getDataset().select(
         functions.col("Condition.subject.reference").alias("_master_key"),
-        conditionResult.getValue().getColumnValue().alias("value"));
+        conditionResult.getValueColumn().alias("value"));
 
     conditionDataset.show();
     new DatasetAssert(conditionDataset)
@@ -186,7 +173,7 @@ class FhirpathTest {
             functions.col("_master_key"))
         .agg(functions.flatten(functions.collect_list(functions.col("value"))).alias("_fv_01"));
     foreignResult.show();
-    
+
     final Dataset<Row> joinedResult = patientDataset.join(foreignResult,
             patientDataset.col("key").equalTo(foreignResult.col("_master_key")), "left_outer")
         .select(functions.col("id"), functions.col("_fv_01").alias("value"));
@@ -204,7 +191,186 @@ class FhirpathTest {
   void simpleReverseResolveToLeafAggregateFunction() {
     //final Dataset<Row> joinedResult = evalFhirPathMulti("reverseResolve(Condition.subject).code.coding.code.count()", dataSource);
     //joinedResult.show();
+    final ObjectDataSource dataSource = getPatientsWithConditions();
+
+    final CollectionDataset patientResult = evalFhirPath(ResourceType.PATIENT, "id", dataSource);
+    // ignore value here - we could just use the resource dataset directly
+    // TODO: get access  to it
+    final Dataset<Row> patientDataset = patientResult.getDataset().select("id", "key");
+    patientDataset.show();
+    new DatasetAssert(patientDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", "Patient/1"),
+            RowFactory.create("2", "Patient/2")
+        );
+
+    final CollectionDataset conditionResult = evalFhirPath(ResourceType.CONDITION,
+        "code.coding.code.count()",
+        dataSource);
+
+    final Dataset<Row> conditionDataset = conditionResult.getDataset().select(
+        functions.col("Condition.subject.reference").alias("_master_key"),
+        conditionResult.getValueColumn().alias("value"));
+
+    conditionDataset.show();
+    new DatasetAssert(conditionDataset)
+        .hasRowsUnordered(
+            RowFactory.create("Patient/1", 2),
+            RowFactory.create("Patient/1", 2)
+        );
+
+    final Dataset<Row> foreignResult = conditionDataset.groupBy(
+            functions.col("_master_key"))
+        .agg(functions.sum(functions.col("value")).alias("_fv_01"));
+    foreignResult.show();
+
+    final Dataset<Row> joinedResult = patientDataset.join(foreignResult,
+            patientDataset.col("key").equalTo(foreignResult.col("_master_key")), "left_outer")
+        .select(functions.col("id"), functions.col("_fv_01").alias("value"));
+    joinedResult.show();
+    System.out.println(joinedResult.queryExecution().executedPlan().toString());
+    new DatasetAssert(joinedResult)
+        .hasRowsUnordered(
+            RowFactory.create("1", 4),
+            RowFactory.create("2", null)
+        );
+  }
+
+  //
+  // SECTION: Resolve
+  //
+
+  @Test
+  void resolveManyToOneWithSimpleValue() {
+    // ON Condition
+    //final Dataset<Row> joinedResult = evalFhirPathMulti(ResourceType.CONDITION, 
+    // "subject.resolve().name.gender", dataSource);
+    //joinedResult.show();
+    final ObjectDataSource dataSource = getPatientsWithConditions();
+    final CollectionDataset conditionResult = evalFhirPath(ResourceType.CONDITION,
+        "subject",
+        dataSource);
+
+    final Dataset<Row> conditionDataset = conditionResult
+        .getDataset()
+        .withColumn("_Patient_key", conditionResult.getValueColumn().getField("reference"));
+    conditionDataset.show();
+
+    final CollectionDataset patientResult = evalFhirPath(ResourceType.PATIENT, "gender",
+        dataSource);
+    // ignore value here - we could just use the resource dataset directly
+    // TODO: get access  to it
+    final Dataset<Row> patientDataset = patientResult.materialize("_Patient_fv_01");
+    patientDataset.show();
+
+    // TODO: add unique join id and as a prefix to related columns
+    // also possibly wrap the value in a struct to allow for multiple results from the same join
+    final Dataset<Row> joinedResult = conditionDataset.join(
+        patientDataset.select("key", "_Patient_fv_01"),
+        conditionDataset.col("_Patient_key").equalTo(patientDataset.col("key")), "left_outer");
+    joinedResult.show();
+
+    final Dataset<Row> finalResult = joinedResult.select(
+        functions.col("id"),
+        functions.col("_Patient_fv_01").alias("value"));
+
+    finalResult.show();
+    System.out.println(finalResult.queryExecution().executedPlan().toString());
+    new DatasetAssert(finalResult)
+        .hasRowsUnordered(
+            RowFactory.create("x", "female"),
+            RowFactory.create("y", "female")
+        );
+  }
+
+  @Test
+  void resolveToManyWithSimpleValue() {
+    // ON Encounter
+    // final Dataset<Row> joinedResult = evalFhirPathMulti(ResourceType.ENCOUNTER,"episodeOfCare.resolve().status", dataSource);
+
     final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
+        List.of(
+            new Encounter()
+                .addEpisodeOfCare(new Reference("EpisodeOfCare/01_1"))
+                .addEpisodeOfCare(new Reference("EpisodeOfCare/01_2"))
+                .setId("Encounter/01"),
+            new Encounter()
+                .addEpisodeOfCare(new Reference("EpisodeOfCare/02_1"))
+                .addEpisodeOfCare(new Reference("EpisodeOfCare/02_2"))
+                .setId("Encounter/02"),
+            new Encounter().setId("Encounter/03"),
+            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.ACTIVE).setId("EpisodeOfCare/01_1"),
+            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.FINISHED).setId("EpisodeOfCare/01_2"),
+            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.ONHOLD).setId("EpisodeOfCare/02_1"),
+            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.PLANNED).setId("EpisodeOfCare/02_2")
+        ));
+    
+    final CollectionDataset eocResult = evalFhirPath(ResourceType.EPISODEOFCARE,
+        "status",
+        dataSource);
+    
+    final Dataset<Row> eocDataset = eocResult.materialize("_EpisodeOfCare_fv_01");
+    eocDataset.show();
+
+
+
+    final CollectionDataset encounterResult = evalFhirPath(ResourceType.ENCOUNTER,
+        "episodeOfCare",
+        dataSource);
+
+    final Dataset<Row> encounterDataset = encounterResult
+        .getDataset()
+        .withColumn("_EOC_keys", encounterResult.getValueColumn().getField("reference"));
+    encounterDataset.show();
+    
+    // this is tricky for many reasons but as unless  we incoroprate the concept of exploded collection 
+    // we need to immediately group the foreign values to a list (somehow correlated with the original references)
+
+
+    final Dataset<Row> explodedDataset = encounterDataset
+        .select(functions.col("*"), functions.posexplode_outer(encounterDataset.col("_EOC_keys")).as(new String[]{"_EOC_pos", "_EOC_key"}))
+        .drop("_EOC_keys");
+
+    explodedDataset.show();
+    
+    final Dataset<Row> joinedResult = explodedDataset.join(
+        eocDataset.select(eocDataset.col("key").alias("_EOC_key_slave"), eocDataset.col("_EpisodeOfCare_fv_01")),
+        explodedDataset.col("_EOC_key").equalTo(functions.col("_EOC_key_slave")), "left_outer");
+
+    joinedResult.show();
+    
+    // TOOD: the order needs to preserved here by using structs of (pos,value) and then sorting it back and flattening
+    
+    final Dataset<Row> groupedResult = joinedResult.groupBy(
+        functions.col("id"),
+        functions.col("key")
+    ).agg(
+        functions.any_value(joinedResult.col("Encounter")).alias("Encounter"),
+        functions.any_value(joinedResult.col("_fid")).alias("_fid"),
+        functions.any_value(joinedResult.col("_extension")).alias("_extension"),
+        functions.collect_list(functions.col("_EpisodeOfCare_fv_01")).alias("_EpisodeOfCare_fv_01")
+    );
+    groupedResult.show();
+    
+    final Dataset<Row> finalResult = groupedResult.select(
+        functions.col("id"),
+        functions.col("_EpisodeOfCare_fv_01").alias("value"));
+    finalResult.show();
+    System.out.println(finalResult.queryExecution().executedPlan().toString());
+
+
+    new DatasetAssert(finalResult)
+        .hasRowsUnordered(
+            RowFactory.create("01", sql_array("active", "finished")),
+            RowFactory.create("02", sql_array("onhold", "planned")),
+            RowFactory.create("03", sql_array())
+        );
+    
+  }
+
+  @Nonnull
+  private ObjectDataSource getPatientsWithConditions() {
+    return new ObjectDataSource(spark, encoders,
         List.of(
             new Patient().setGender(AdministrativeGender.FEMALE).setId("Patient/1"),
             new Patient().setGender(AdministrativeGender.MALE).setId("Patient/2"),
@@ -227,48 +393,6 @@ class FhirpathTest {
                 )
                 .setId("Condition/y")
         ));
-
-    final CollectionDataset patientResult = evalFhirPath(ResourceType.PATIENT, "id", dataSource);
-    // ignore value here - we could just use the resource dataset directly
-    // TODO: get access  to it
-    final Dataset<Row> patientDataset = patientResult.getDataset().select("id", "key");
-    patientDataset.show();
-    new DatasetAssert(patientDataset)
-        .hasRowsUnordered(
-            RowFactory.create("1", "Patient/1"),
-            RowFactory.create("2", "Patient/2")
-        );
-
-    final CollectionDataset conditionResult = evalFhirPath(ResourceType.CONDITION,
-        "code.coding.code.count()",
-        dataSource);
-
-    final Dataset<Row> conditionDataset = conditionResult.getDataset().select(
-        functions.col("Condition.subject.reference").alias("_master_key"),
-        conditionResult.getValue().getColumnValue().alias("value"));
-
-    conditionDataset.show();
-    new DatasetAssert(conditionDataset)
-        .hasRowsUnordered(
-            RowFactory.create("Patient/1", 2),
-            RowFactory.create("Patient/1", 2)
-        );
-
-    final Dataset<Row> foreignResult = conditionDataset.groupBy(
-            functions.col("_master_key"))
-        .agg(functions.sum(functions.col("value")).alias("_fv_01"));
-    foreignResult.show();
-    
-    final Dataset<Row> joinedResult = patientDataset.join(foreignResult,
-            patientDataset.col("key").equalTo(foreignResult.col("_master_key")), "left_outer")
-        .select(functions.col("id"), functions.col("_fv_01").alias("value"));
-    joinedResult.show();
-    System.out.println(joinedResult.queryExecution().executedPlan().toString());
-    new DatasetAssert(joinedResult)
-        .hasRowsUnordered(
-            RowFactory.create("1", 4),
-            RowFactory.create("2", null)
-        );
   }
 
 
@@ -295,7 +419,7 @@ class FhirpathTest {
       final String fhirpathExpression,
       final ObjectDataSource dataSource) {
     final FhirPath path = parser.parse(fhirpathExpression);
-    System.out.println(path.toExpression());
+    System.out.println("Eval: " + subjectResourceType.toCode() + "." + path.toExpression());
     final FhirPathExecutor executor = new SingleFhirPathExecutor(subjectResourceType,
         FhirContext.forR4(), StaticFunctionRegistry.getInstance(),
         Collections.emptyMap(), dataSource);
