@@ -5,17 +5,21 @@ import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.execution.CollectionDataset;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
+import au.csiro.pathling.fhirpath.execution.ExecutorUtils;
 import au.csiro.pathling.fhirpath.execution.FhirPathExecutor;
 import au.csiro.pathling.fhirpath.execution.SingleFhirPathExecutor;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
 import ca.uhn.fhir.context.FhirContext;
+import java.awt.*;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
@@ -86,16 +90,6 @@ class FhirpathTest {
   // SECTION: Reverse Resolve
   //
 
-
-  @Nonnull
-  Dataset<Row> evalReverseResolve(@Nonnull final ObjectDataSource dataSource,
-      @Nonnull final ReverseResolveRoot joinRoot,
-      @Nonnull final String slaveExpressions
-  ) {
-    return evalReverseResolve(dataSource, joinRoot, slaveExpressions,
-        c -> ValueFunctions.unnest(functions.collect_list(c)));
-  }
-
   @Nonnull
   Dataset<Row> evalReverseResolve(@Nonnull final ObjectDataSource dataSource,
       @Nonnull final ReverseResolveRoot joinRoot,
@@ -103,14 +97,14 @@ class FhirpathTest {
       @Nonnull final Function<Column, Column> aggFunction) {
     System.out.println("ReverseResolve: " + joinRoot.getTag() + "->" + slaveExpressions);
 
-    final CollectionDataset masterResult = evalFhirPath(joinRoot.getMasterResourceType(),
+    final CollectionDataset parentResult = evalFhirPath(joinRoot.getMasterResourceType(),
         "id",
         dataSource);
     // ignore value here - we could just use the resource dataset directly
     // TODO: get access  to it
-    final Dataset<Row> masterDataset = masterResult.getDataset();
-    masterDataset.show();
-    final CollectionDataset slaveResult = evalFhirPath(joinRoot.getForeignResourceType(),
+    final Dataset<Row> parentDataset = parentResult.getDataset();
+    parentDataset.show();
+    final CollectionDataset childResult = evalFhirPath(joinRoot.getForeignResourceType(),
         slaveExpressions,
         dataSource);
 
@@ -119,34 +113,74 @@ class FhirpathTest {
     // having the dataset returne from the evaluator
     // for now lest just ignore the dataset and only use the value column
 
-    final CollectionDataset slaveKeyResult = evalFhirPath(joinRoot.getForeignResourceType(),
+    final CollectionDataset childParentKeyResult = evalFhirPath(joinRoot.getForeignResourceType(),
         joinRoot.getForeignKeyPath() + "." + "reference",
         dataSource);
 
-    final Dataset<Row> slaveDataset = slaveResult.getDataset().select(
-        slaveKeyResult.getValueColumn().alias(joinRoot.getForeignKeyTag()),
-        slaveResult.getValueColumn().alias(joinRoot.getValueTag()));
-    slaveDataset.show();
+    final Dataset<Row> childDataset = childResult.getDataset().select(
+        childParentKeyResult.getValueColumn().alias(joinRoot.getForeignKeyTag()),
+        childResult.getValueColumn().alias(joinRoot.getValueTag()));
+    childDataset.show();
 
-    final Dataset<Row> foreignResult = slaveDataset.groupBy(
+    final Dataset<Row> foreignResult = childDataset.groupBy(
             functions.col(joinRoot.getForeignKeyTag()))
         .agg(aggFunction.apply(functions.col(joinRoot.getValueTag()))
             .alias(joinRoot.getValueTag()));
     foreignResult.show();
 
-    final Dataset<Row> joinedResult = masterDataset.join(foreignResult,
-        masterDataset.col("key").equalTo(foreignResult.col(joinRoot.getForeignKeyTag())),
+    final Dataset<Row> joinedResult = parentDataset.join(foreignResult,
+        parentDataset.col("key").equalTo(foreignResult.col(joinRoot.getForeignKeyTag())),
         "left_outer");
     joinedResult.show();
     return joinedResult.select(functions.col("id"),
         functions.col(joinRoot.getValueTag()).alias("value"));
   }
-  
+
+  @Nonnull
+  static Function<Column, Column> getAggregation(@Nonnull final FhirPath path) {
+    if (path instanceof Composite) {
+      throw new IllegalArgumentException("Simple path expected");
+    }
+    if (path instanceof final EvalFunction evalFunction) {
+      if (evalFunction.getFunctionIdentifier().equals("count")) {
+        return functions::sum;
+      }
+    }
+    return c -> ValueFunctions.unnest(functions.collect_list(c));
+  }
+
+
+  @Nonnull
+  static Optional<EvalFunction> asReverseResolve(final FhirPath path) {
+    if (path instanceof EvalFunction evalFunction && evalFunction.getFunctionIdentifier()
+        .equals("reverseResolve")) {
+      return Optional.of(evalFunction);
+    }
+    return Optional.empty();
+  }
+
+  @Nonnull
+  Dataset<Row> evalReverseResolve(@Nonnull final ObjectDataSource dataSource,
+      @Nonnull final ResourceType subjectResource,
+      @Nonnull final String reverseResolveExpression) {
+    final FhirPath reverseResolvePath = parser.parse(reverseResolveExpression);
+    System.out.println(reverseResolvePath);
+    final EvalFunction reverseResolve = asReverseResolve(
+        reverseResolvePath.first()).orElseThrow();
+    System.out.println(reverseResolve);
+    final ReverseResolveRoot joinRoot = ExecutorUtils.fromPath(subjectResource,
+        reverseResolve);
+    System.out.println(joinRoot);
+    final FhirPath childPath = reverseResolvePath.suffix();
+    // check if the child ends with an aggregate function
+    // TODO: this actually is more complex and should look for the first occurence of an aggregate function
+    // TODO: make eval work with FhirPath rather then string expressions
+    return evalReverseResolve(dataSource, joinRoot, childPath
+        .toExpression(), getAggregation(childPath.last()));
+  }
+
   @Test
   void simpleReverseResolveToSingularValue() {
-    //final Dataset<Row> joinedResult = evalFhirPathMulti("reverseResolve(Condition.subject).id", dataSource);
-    //joinedResult.show();
-
     final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
         List.of(
             new Patient().setGender(AdministrativeGender.FEMALE).setId("Patient/1"),
@@ -154,11 +188,8 @@ class FhirpathTest {
             new Condition().setSubject(new Reference("Patient/1")).setId("Condition/x"),
             new Condition().setSubject(new Reference("Patient/1")).setId("Condition/y")
         ));
-
-    final ReverseResolveRoot joinRoot = ReverseResolveRoot.ofResource(ResourceType.PATIENT,
-        ResourceType.CONDITION, "subject");
-
-    final Dataset<Row> resultDataset = evalReverseResolve(dataSource, joinRoot, "id");
+    final Dataset<Row> resultDataset = evalReverseResolve(dataSource, ResourceType.PATIENT,
+        "reverseResolve(Condition.subject).id");
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
     resultDataset.show();
     new DatasetAssert(resultDataset)
@@ -170,13 +201,9 @@ class FhirpathTest {
 
   @Test
   void simpleReverseResolveToManyValue() {
-    //final Dataset<Row> joinedResult = evalFhirPathMulti("reverseResolve(Condition.subject).code.coding.code", dataSource);
-    //joinedResult.show();
     final ObjectDataSource dataSource = getPatientsWithConditions();
-    final ReverseResolveRoot joinRoot = ReverseResolveRoot.ofResource(ResourceType.PATIENT,
-        ResourceType.CONDITION, "subject");
-
-    final Dataset<Row> resultDataset = evalReverseResolve(dataSource, joinRoot, "code.coding.code");
+    final Dataset<Row> resultDataset = evalReverseResolve(dataSource, ResourceType.PATIENT,
+        "reverseResolve(Condition.subject).code.coding.code");
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
@@ -187,14 +214,15 @@ class FhirpathTest {
 
   @Test
   void simpleReverseResolveToLeafAggregateFunction() {
-    //final Dataset<Row> joinedResult = evalFhirPathMulti("reverseResolve(Condition.subject).code.coding.code.count()", dataSource);
-    //joinedResult.show();
     final ObjectDataSource dataSource = getPatientsWithConditions();
 
-    final ReverseResolveRoot joinRoot = ReverseResolveRoot.ofResource(ResourceType.PATIENT,
-        ResourceType.CONDITION, "subject");
-    final Dataset<Row> resultDataset = evalReverseResolve(dataSource, joinRoot,
-        "code.coding.code.count()", functions::sum);
+    // final ReverseResolveRoot joinRoot = ReverseResolveRoot.ofResource(ResourceType.PATIENT,
+    //     ResourceType.CONDITION, "subject");
+    // final Dataset<Row> resultDataset = evalReverseResolve(dataSource, joinRoot,
+    //     "code.coding.code.count()", functions::sum);
+    final Dataset<Row> resultDataset = evalReverseResolve(dataSource, ResourceType.PATIENT,
+        "reverseResolve(Condition.subject).code.coding.code.count()");
+
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
@@ -266,7 +294,8 @@ class FhirpathTest {
                 .setId("Encounter/02"),
             new Encounter().setId("Encounter/03"),
             new EpisodeOfCare().setStatus(EpisodeOfCareStatus.ACTIVE).setId("EpisodeOfCare/01_1"),
-            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.FINISHED).setId("EpisodeOfCare/01_2"),
+            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.FINISHED)
+                .setId("EpisodeOfCare/01_2"),
             new EpisodeOfCare().setStatus(EpisodeOfCareStatus.ONHOLD).setId("EpisodeOfCare/02_1"),
             new EpisodeOfCare().setStatus(EpisodeOfCareStatus.PLANNED).setId("EpisodeOfCare/02_2")
         ));
@@ -313,7 +342,8 @@ class FhirpathTest {
         functions.any_value(joinedResult.col("Encounter")).alias("Encounter"),
         functions.any_value(joinedResult.col("_fid")).alias("_fid"),
         functions.any_value(joinedResult.col("_extension")).alias("_extension"),
-        functions.collect_list(functions.col("_EpisodeOfCare_fv_01")).alias("_EpisodeOfCare_fv_01")
+        functions.collect_list(functions.col("_EpisodeOfCare_fv_01"))
+            .alias("_EpisodeOfCare_fv_01")
     );
     groupedResult.show();
 
@@ -357,7 +387,6 @@ class FhirpathTest {
                 .setId("Condition/y")
         ));
   }
-
 
   @Nonnull
   private static <T> WrappedArray<T> sql_array(final T... values) {
