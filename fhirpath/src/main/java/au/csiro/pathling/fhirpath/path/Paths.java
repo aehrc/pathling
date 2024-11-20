@@ -195,6 +195,7 @@ final public class Paths {
     }
   }
 
+  // TODO: replace with FhirPath::This
   @Value
   public static class This implements FhirPath {
 
@@ -203,8 +204,14 @@ final public class Paths {
         @Nonnull final EvaluationContext context) {
       return input;
     }
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return "$this";
+    }
   }
 
+  // TODO: Replace with Literal::StringLiteral
   @Value
   public static class StringLiteral implements FhirPath {
 

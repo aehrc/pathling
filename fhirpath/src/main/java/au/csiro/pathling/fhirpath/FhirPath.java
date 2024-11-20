@@ -3,9 +3,12 @@ package au.csiro.pathling.fhirpath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Value;
+import org.apache.commons.collections4.IterableUtils;
+import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * A description of how to take one {@link Collection} and transform it into another.
@@ -66,10 +69,33 @@ public interface FhirPath {
     return toString();
   }
 
-
   @Nonnull
   default <T> T accept(@Nonnull final FhirPathVisitor<T> visitor) {
     return visitor.visitPath(this);
+  }
+
+  @Nonnull
+  static FhirPath of(@Nonnull final List<FhirPath> elements) {
+    return switch (elements.size()) {
+      case 0 -> nullPath();
+      case 1 -> elements.get(0);
+      default -> new Composite(elements);
+    };
+  }
+
+  /**
+   * Split the path into two parts, the left part is the longest prefix that does not satisfy the
+   * predicate, and the right part is the rest of the path where the first element satisfies the
+   * predicate or  {@link #nullPath()} if the path is empty.
+   *
+   * @param predicate the predicate to split the path
+   * @return a pair of the left and right parts of the path
+   */
+  @Nonnull
+  default Pair<FhirPath, FhirPath> splitRight(@Nonnull final Predicate<FhirPath> predicate) {
+    return predicate.test(this)
+           ? Pair.of(nullPath(), this)
+           : Pair.of(this, nullPath());
   }
 
   @Value
@@ -157,6 +183,20 @@ public interface FhirPath {
     public <T> T accept(@Nonnull final FhirPathVisitor<T> visitor) {
       return visitor.visitComposite(this);
     }
-  }
 
+    @Override
+    @Nonnull
+    public Pair<FhirPath, FhirPath> splitRight(@Nonnull final Predicate<FhirPath> predicate) {
+      // find the first element that satisfies the predicate
+      final int splitIndex = IterableUtils.indexOf(elements, predicate::test);
+      if (splitIndex == -1) {
+        return Pair.of(this, nullPath());
+      } else if (splitIndex == 0) {
+        return Pair.of(nullPath(), this);
+      } else {
+        return Pair.of(FhirPath.of(elements.subList(0, splitIndex)),
+            FhirPath.of(elements.subList(splitIndex, elements.size())));
+      }
+    }
+  }
 }

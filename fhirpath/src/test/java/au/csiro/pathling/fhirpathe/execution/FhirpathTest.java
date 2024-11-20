@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -94,20 +95,20 @@ class FhirpathTest {
   @Nonnull
   Dataset<Row> evalReverseResolve(@Nonnull final ObjectDataSource dataSource,
       @Nonnull final ReverseResolveRoot joinRoot,
-      @Nonnull final String parentExpressions,
-      @Nonnull final String childExpressions,
+      @Nonnull final FhirPath parentPath,
+      @Nonnull final FhirPath childPath,
       @Nonnull final Function<Column, Column> aggFunction) {
-    System.out.println("ReverseResolve: " + joinRoot.getTag() + "->" + childExpressions);
+    System.out.println("ReverseResolve: " + joinRoot.getTag() + "->" + childPath.toExpression());
 
     final CollectionDataset parentResult = evalFhirPath(joinRoot.getMasterResourceType(),
-        parentExpressions,
+        parentPath,
         dataSource);
     // ignore value here - we could just use the resource dataset directly
     // TODO: get access  to it
     final Dataset<Row> parentDataset = parentResult.getDataset();
     parentDataset.show();
     final CollectionDataset childResult = evalFhirPath(joinRoot.getForeignResourceType(),
-        childExpressions,
+        childPath,
         dataSource);
 
     // TODO:  We should be able to combine the evaluation actually 
@@ -115,7 +116,8 @@ class FhirpathTest {
     // having the dataset returne from the evaluator
     // for now lest just ignore the dataset and only use the value column
 
-    final CollectionDataset childParentKeyResult = evalFhirPath(joinRoot.getForeignResourceType(),
+    final CollectionDataset childParentKeyResult = evalFhirExpression(
+        joinRoot.getForeignResourceType(),
         joinRoot.getForeignKeyPath() + "." + "reference",
         dataSource);
 
@@ -153,7 +155,10 @@ class FhirpathTest {
     }
     return c -> ValueFunctions.unnest(functions.collect_list(c));
   }
-
+  
+  static boolean isReverseResolve(final FhirPath path) {
+    return asReverseResolve(path).isPresent();
+  }
 
   @Nonnull
   static Optional<EvalFunction> asReverseResolve(final FhirPath path) {
@@ -167,17 +172,16 @@ class FhirpathTest {
   @Nonnull
   Dataset<Row> evalReverseResolve(@Nonnull final ObjectDataSource dataSource,
       @Nonnull final ResourceType subjectResource,
-      @Nonnull final String reverseResolveExpression) {
-    return evalReverseResolve(dataSource, subjectResource, reverseResolveExpression, "$this");
-  }
+      @Nonnull final String fhirExpression) {
 
-  @Nonnull
-  Dataset<Row> evalReverseResolve(@Nonnull final ObjectDataSource dataSource,
-      @Nonnull final ResourceType subjectResource,
-      @Nonnull final String reverseResolveExpression,
-      @Nonnull final String parentExpression) {
-    final FhirPath reverseResolvePath = parser.parse(reverseResolveExpression);
-    System.out.println(reverseResolvePath);
+    final Pair<FhirPath, FhirPath> parentAndResolvePaths = parser.parse(fhirExpression).splitRight(
+        FhirpathTest::isReverseResolve);
+
+    // TODO: we need to split the path into the path leading to the reverseResolve and the reverseResolve path
+    final FhirPath parentPath = parentAndResolvePaths.getLeft();
+    System.out.println("Parent path:" + parentPath + " -> " + parentPath.toExpression());
+    final FhirPath reverseResolvePath = parentAndResolvePaths.getRight();
+    System.out.println("Resolve path: " + reverseResolvePath);
     final EvalFunction reverseResolve = asReverseResolve(
         reverseResolvePath.first()).orElseThrow();
     System.out.println(reverseResolve);
@@ -187,9 +191,8 @@ class FhirpathTest {
     final FhirPath childPath = reverseResolvePath.suffix();
     // check if the child ends with an aggregate function
     // TODO: this actually is more complex and should look for the first occurence of an aggregate function
-    // TODO: make eval work with FhirPath rather then string expressions
-    return evalReverseResolve(dataSource, joinRoot, parentExpression, childPath
-        .toExpression(), getAggregation(childPath.last()));
+    return evalReverseResolve(dataSource, joinRoot, parentPath, childPath
+        , getAggregation(childPath.last()));
   }
 
   @Test
@@ -279,20 +282,19 @@ class FhirpathTest {
         );
   }
 
-
   @Test
   void whereReverseResolveToSingularValue() {
     final ObjectDataSource dataSource = getPatientsWithConditions();
 
-    final CollectionDataset patientResult = evalFhirPath(ResourceType.PATIENT, "$this",
+    final CollectionDataset patientResult = evalFhirExpression(ResourceType.PATIENT, "$this",
         dataSource);
     final Dataset<Row> patientDataset = patientResult.materialize("_Patient_fv_01");
     patientDataset.show();
 
     final Dataset<Row> resultDataset = evalReverseResolve(dataSource,
         ResourceType.PATIENT,
-        "reverseResolve(Condition.subject).id",
-        "where(gender='female')");
+        "where(gender='female').reverseResolve(Condition.subject).id"
+    );
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
     resultDataset.show();
     new DatasetAssert(resultDataset)
@@ -301,7 +303,6 @@ class FhirpathTest {
             RowFactory.create("3", null)
         );
   }
-
 
   //
   // SECTION: Resolve
@@ -313,7 +314,7 @@ class FhirpathTest {
     // "subject.resolve().name.gender", dataSource);
     //joinedResult.show();
     final ObjectDataSource dataSource = getPatientsWithConditions();
-    final CollectionDataset conditionResult = evalFhirPath(ResourceType.CONDITION,
+    final CollectionDataset conditionResult = evalFhirExpression(ResourceType.CONDITION,
         "subject",
         dataSource);
 
@@ -322,7 +323,7 @@ class FhirpathTest {
         .withColumn("_Patient_key", conditionResult.getValueColumn().getField("reference"));
     conditionDataset.show();
 
-    final CollectionDataset patientResult = evalFhirPath(ResourceType.PATIENT, "gender",
+    final CollectionDataset patientResult = evalFhirExpression(ResourceType.PATIENT, "gender",
         dataSource);
     // ignore value here - we could just use the resource dataset directly
     // TODO: get access  to it
@@ -372,14 +373,14 @@ class FhirpathTest {
             new EpisodeOfCare().setStatus(EpisodeOfCareStatus.PLANNED).setId("EpisodeOfCare/02_2")
         ));
 
-    final CollectionDataset eocResult = evalFhirPath(ResourceType.EPISODEOFCARE,
+    final CollectionDataset eocResult = evalFhirExpression(ResourceType.EPISODEOFCARE,
         "status",
         dataSource);
 
     final Dataset<Row> eocDataset = eocResult.materialize("_EpisodeOfCare_fv_01");
     eocDataset.show();
 
-    final CollectionDataset encounterResult = evalFhirPath(ResourceType.ENCOUNTER,
+    final CollectionDataset encounterResult = evalFhirExpression(ResourceType.ENCOUNTER,
         "episodeOfCare",
         dataSource);
 
@@ -479,16 +480,21 @@ class FhirpathTest {
   }
 
   @Nonnull
-  private CollectionDataset evalFhirPath(final ResourceType subjectResourceType,
+  private CollectionDataset evalFhirExpression(final ResourceType subjectResourceType,
       final String fhirpathExpression,
       final ObjectDataSource dataSource) {
-    final FhirPath path = parser.parse(fhirpathExpression);
-    System.out.println("Eval: " + subjectResourceType.toCode() + "." + path.toExpression());
+    return evalFhirPath(subjectResourceType, parser.parse(fhirpathExpression), dataSource);
+  }
+
+  @Nonnull
+  private CollectionDataset evalFhirPath(final ResourceType subjectResourceType,
+      final FhirPath fhirPath,
+      final ObjectDataSource dataSource) {
+    System.out.println("Eval: " + subjectResourceType.toCode() + "." + fhirPath.toExpression());
     final FhirPathExecutor executor = new SingleFhirPathExecutor(subjectResourceType,
         FhirContext.forR4(), StaticFunctionRegistry.getInstance(),
         Collections.emptyMap(), dataSource);
-
-    return executor.evaluate(path);
+    return executor.evaluate(fhirPath);
   }
 
   @Nonnull
