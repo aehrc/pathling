@@ -40,6 +40,7 @@ import org.hl7.fhir.r4.model.EpisodeOfCare;
 import org.hl7.fhir.r4.model.EpisodeOfCare.EpisodeOfCareStatus;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Reference;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import scala.collection.mutable.WrappedArray;
@@ -93,19 +94,20 @@ class FhirpathTest {
   @Nonnull
   Dataset<Row> evalReverseResolve(@Nonnull final ObjectDataSource dataSource,
       @Nonnull final ReverseResolveRoot joinRoot,
-      @Nonnull final String slaveExpressions,
+      @Nonnull final String parentExpressions,
+      @Nonnull final String childExpressions,
       @Nonnull final Function<Column, Column> aggFunction) {
-    System.out.println("ReverseResolve: " + joinRoot.getTag() + "->" + slaveExpressions);
+    System.out.println("ReverseResolve: " + joinRoot.getTag() + "->" + childExpressions);
 
     final CollectionDataset parentResult = evalFhirPath(joinRoot.getMasterResourceType(),
-        "id",
+        parentExpressions,
         dataSource);
     // ignore value here - we could just use the resource dataset directly
     // TODO: get access  to it
     final Dataset<Row> parentDataset = parentResult.getDataset();
     parentDataset.show();
     final CollectionDataset childResult = evalFhirPath(joinRoot.getForeignResourceType(),
-        slaveExpressions,
+        childExpressions,
         dataSource);
 
     // TODO:  We should be able to combine the evaluation actually 
@@ -129,7 +131,8 @@ class FhirpathTest {
     foreignResult.show();
 
     final Dataset<Row> joinedResult = parentDataset.join(foreignResult,
-        parentDataset.col("key").equalTo(foreignResult.col(joinRoot.getForeignKeyTag())),
+        parentResult.getValueColumn().getField("id_versioned")
+            .equalTo(foreignResult.col(joinRoot.getForeignKeyTag())),
         "left_outer");
     joinedResult.show();
     return joinedResult.select(functions.col("id"),
@@ -144,6 +147,8 @@ class FhirpathTest {
     if (path instanceof final EvalFunction evalFunction) {
       if (evalFunction.getFunctionIdentifier().equals("count")) {
         return functions::sum;
+      } else if (evalFunction.getFunctionIdentifier().equals("first")) {
+        return functions::first;
       }
     }
     return c -> ValueFunctions.unnest(functions.collect_list(c));
@@ -163,6 +168,14 @@ class FhirpathTest {
   Dataset<Row> evalReverseResolve(@Nonnull final ObjectDataSource dataSource,
       @Nonnull final ResourceType subjectResource,
       @Nonnull final String reverseResolveExpression) {
+    return evalReverseResolve(dataSource, subjectResource, reverseResolveExpression, "$this");
+  }
+
+  @Nonnull
+  Dataset<Row> evalReverseResolve(@Nonnull final ObjectDataSource dataSource,
+      @Nonnull final ResourceType subjectResource,
+      @Nonnull final String reverseResolveExpression,
+      @Nonnull final String parentExpression) {
     final FhirPath reverseResolvePath = parser.parse(reverseResolveExpression);
     System.out.println(reverseResolvePath);
     final EvalFunction reverseResolve = asReverseResolve(
@@ -175,19 +188,13 @@ class FhirpathTest {
     // check if the child ends with an aggregate function
     // TODO: this actually is more complex and should look for the first occurence of an aggregate function
     // TODO: make eval work with FhirPath rather then string expressions
-    return evalReverseResolve(dataSource, joinRoot, childPath
+    return evalReverseResolve(dataSource, joinRoot, parentExpression, childPath
         .toExpression(), getAggregation(childPath.last()));
   }
 
   @Test
   void simpleReverseResolveToSingularValue() {
-    final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
-        List.of(
-            new Patient().setGender(AdministrativeGender.FEMALE).setId("Patient/1"),
-            new Patient().setGender(AdministrativeGender.MALE).setId("Patient/2"),
-            new Condition().setSubject(new Reference("Patient/1")).setId("Condition/x"),
-            new Condition().setSubject(new Reference("Patient/1")).setId("Condition/y")
-        ));
+    final ObjectDataSource dataSource = getPatientsWithConditions();
     final Dataset<Row> resultDataset = evalReverseResolve(dataSource, ResourceType.PATIENT,
         "reverseResolve(Condition.subject).id");
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
@@ -195,7 +202,7 @@ class FhirpathTest {
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", WrappedArray.make(new String[]{"x", "y"})),
-            RowFactory.create("2", null)
+            RowFactory.create("3", null)
         );
   }
 
@@ -208,18 +215,13 @@ class FhirpathTest {
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", sql_array("code-xx", "code-xy", "code-yx", "code-yy")),
-            RowFactory.create("2", null)
+            RowFactory.create("3", null)
         );
   }
 
   @Test
-  void simpleReverseResolveToLeafAggregateFunction() {
+  void simpleReverseResolveToLeafCountFunction() {
     final ObjectDataSource dataSource = getPatientsWithConditions();
-
-    // final ReverseResolveRoot joinRoot = ReverseResolveRoot.ofResource(ResourceType.PATIENT,
-    //     ResourceType.CONDITION, "subject");
-    // final Dataset<Row> resultDataset = evalReverseResolve(dataSource, joinRoot,
-    //     "code.coding.code.count()", functions::sum);
     final Dataset<Row> resultDataset = evalReverseResolve(dataSource, ResourceType.PATIENT,
         "reverseResolve(Condition.subject).code.coding.code.count()");
 
@@ -227,9 +229,79 @@ class FhirpathTest {
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", 4),
-            RowFactory.create("2", null)
+            RowFactory.create("3", null)
         );
   }
+
+  @Test
+  void simpleReverseResolveToLeafFirstFunction() {
+    final ObjectDataSource dataSource = getPatientsWithConditions();
+    final Dataset<Row> resultDataset = evalReverseResolve(dataSource, ResourceType.PATIENT,
+        "reverseResolve(Condition.subject).code.coding.code.first()");
+
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", "code-xx"),
+            RowFactory.create("3", null)
+        );
+  }
+
+  @Test
+  @Disabled
+  void simpleReverseResolveToCountFirstFunction() {
+    // TODO: Implement
+    final ObjectDataSource dataSource = getPatientsWithConditions();
+    final Dataset<Row> resultDataset = evalReverseResolve(dataSource, ResourceType.PATIENT,
+        "reverseResolve(Condition.subject).code.coding.code.count().first()");
+
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", 4),
+            RowFactory.create("3", null)
+        );
+  }
+
+  @Test
+  @Disabled
+  void simpleReverseResolveToFirstCountFunction() {
+    // TODO: Implement
+    final ObjectDataSource dataSource = getPatientsWithConditions();
+    final Dataset<Row> resultDataset = evalReverseResolve(dataSource, ResourceType.PATIENT,
+        "reverseResolve(Condition.subject).code.coding.code.first().count()");
+
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", 1),
+            RowFactory.create("3", null)
+        );
+  }
+
+
+  @Test
+  void whereReverseResolveToSingularValue() {
+    final ObjectDataSource dataSource = getPatientsWithConditions();
+
+    final CollectionDataset patientResult = evalFhirPath(ResourceType.PATIENT, "$this",
+        dataSource);
+    final Dataset<Row> patientDataset = patientResult.materialize("_Patient_fv_01");
+    patientDataset.show();
+
+    final Dataset<Row> resultDataset = evalReverseResolve(dataSource,
+        ResourceType.PATIENT,
+        "reverseResolve(Condition.subject).id",
+        "where(gender='female')");
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
+    resultDataset.show();
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", WrappedArray.make(new String[]{"x", "y"})),
+            RowFactory.create("3", null)
+        );
+  }
+
 
   //
   // SECTION: Resolve
@@ -366,7 +438,7 @@ class FhirpathTest {
     return new ObjectDataSource(spark, encoders,
         List.of(
             new Patient().setGender(AdministrativeGender.FEMALE).setId("Patient/1"),
-            new Patient().setGender(AdministrativeGender.MALE).setId("Patient/2"),
+            new Patient().setGender(AdministrativeGender.MALE).setId("Patient/3"),
             new Condition()
                 .setSubject(new Reference("Patient/1"))
                 .setCode(
