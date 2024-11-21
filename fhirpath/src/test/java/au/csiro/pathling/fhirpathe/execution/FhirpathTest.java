@@ -237,7 +237,8 @@ class FhirpathTest {
     resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
-            RowFactory.create("1", WrappedArray.make(new String[]{"x", "y"})),
+            RowFactory.create("1", sql_array("x", "y")),
+            RowFactory.create("2", sql_array("z")),
             RowFactory.create("3", null)
         );
   }
@@ -251,6 +252,7 @@ class FhirpathTest {
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", sql_array("code-xx", "code-xy", "code-yx", "code-yy")),
+            RowFactory.create("2", sql_array("code-zx", "code-zy", "code-zz")),
             RowFactory.create("3", null)
         );
   }
@@ -265,6 +267,7 @@ class FhirpathTest {
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", 4),
+            RowFactory.create("2", 3),
             RowFactory.create("3", null)
         );
   }
@@ -279,6 +282,7 @@ class FhirpathTest {
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", "code-xx"),
+            RowFactory.create("2", "code-zx"),
             RowFactory.create("3", null)
         );
   }
@@ -294,6 +298,7 @@ class FhirpathTest {
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", 4),
+            RowFactory.create("2", 3),
             RowFactory.create("3", null)
         );
   }
@@ -309,6 +314,7 @@ class FhirpathTest {
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", 1),
+            RowFactory.create("2", 1),
             RowFactory.create("3", null)
         );
   }
@@ -325,6 +331,7 @@ class FhirpathTest {
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", WrappedArray.make(new String[]{"x", "y"})),
+            RowFactory.create("2", null),
             RowFactory.create("3", null)
         );
   }
@@ -371,7 +378,8 @@ class FhirpathTest {
     new DatasetAssert(finalResult)
         .hasRowsUnordered(
             RowFactory.create("x", "female"),
-            RowFactory.create("y", "female")
+            RowFactory.create("y", "female"),
+            RowFactory.create("z", "male")
         );
   }
 
@@ -464,6 +472,7 @@ class FhirpathTest {
     return new ObjectDataSource(spark, encoders,
         List.of(
             new Patient().setGender(AdministrativeGender.FEMALE).setId("Patient/1"),
+            new Patient().setGender(AdministrativeGender.MALE).setId("Patient/2"),
             new Patient().setGender(AdministrativeGender.MALE).setId("Patient/3"),
             new Condition()
                 .setSubject(new Reference("Patient/1"))
@@ -482,7 +491,17 @@ class FhirpathTest {
                         .addCoding(new Coding().setCode("code-yy"))
                         .setText("Coding-y")
                 )
-                .setId("Condition/y")
+                .setId("Condition/y"),
+            new Condition()
+                .setSubject(new Reference("Patient/2"))
+                .setCode(
+                    new CodeableConcept()
+                        .addCoding(new Coding().setCode("code-zx"))
+                        .addCoding(new Coding().setCode("code-zy"))
+                        .addCoding(new Coding().setCode("code-zz"))
+                        .setText("Coding-z")
+                )
+                .setId("Condition/z")
         ));
   }
 
