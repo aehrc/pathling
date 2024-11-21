@@ -42,6 +42,7 @@ import org.hl7.fhir.r4.model.EpisodeOfCare;
 import org.hl7.fhir.r4.model.EpisodeOfCare.EpisodeOfCareStatus;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Reference;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import scala.collection.mutable.WrappedArray;
@@ -330,11 +331,67 @@ class FhirpathTest {
     resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
-            RowFactory.create("1", WrappedArray.make(new String[]{"x", "y"})),
+            RowFactory.create("1", sql_array("x", "y")),
             RowFactory.create("2", null),
             RowFactory.create("3", null)
         );
   }
+
+
+  @Test
+  @Disabled
+  void multipleReverseResolveInOperator() {
+    // TODO: Implement
+    final ObjectDataSource dataSource = getPatientsWithConditions();
+    final Dataset<Row> resultDataset = evalReverseResolve(dataSource, ResourceType.PATIENT,
+        "reverseResolve(Condition.subject).code.coding.count() + reverseResolve(Condition.subject).id.count()");
+
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", 5),
+            RowFactory.create("2", 4),
+            RowFactory.create("3", 1)
+        );
+  }
+  
+  @Test
+  @Disabled
+  void nestedReverseResolveToSingularValue() {
+    final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
+        List.of(
+            new Patient().setGender(AdministrativeGender.FEMALE).setId("Patient/1"),
+            new Patient().setGender(AdministrativeGender.MALE).setId("Patient/2"),
+            new Patient().setGender(AdministrativeGender.MALE).setId("Patient/3"),
+            new Encounter().setSubject(new Reference("Patient/1")).setId("Encounter/1.1"),
+            new Encounter().setSubject(new Reference("Patient/1")).setId("Encounter/1.2"),
+            new Encounter().setSubject(new Reference("Patient/2")).setId("Encounter/2.1"),
+            new Condition().setSubject(new Reference("Patient/1"))
+                .setEncounter(new Reference("Encounter/1.1")).setId("Condition/1.1.1"),
+            new Condition().setSubject(new Reference("Patient/1"))
+                .setEncounter(new Reference("Encounter/1.1")).setId("Condition/1.1.2"),
+            new Condition().setSubject(new Reference("Patient/1"))
+                .setEncounter(new Reference("Encounter/1.1")).setId("Condition/1.1.3"),
+            new Condition().setSubject(new Reference("Patient/2"))
+                .setEncounter(new Reference("Encounter/2.1")).setId("Condition/2.1.1"),
+            new Condition().setSubject(new Reference("Patient/2"))
+                .setEncounter(new Reference("Encounter/2.1")).setId("Condition/2.1.2")
+        ));
+
+    final Dataset<Row> resultDataset = evalReverseResolve(dataSource,
+        ResourceType.PATIENT,
+        "reverseResolve(Encounter.subject).reverseResolve(Condition.encounter).id"
+    );
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
+    resultDataset.show();
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", sql_array("1.1.1", "1.1.2", "1.1.3")),
+            RowFactory.create("2", sql_array("2.1.1", "2.1.2")),
+            RowFactory.create("3", null)
+        );
+  }
+
 
   //
   // SECTION: Resolve
