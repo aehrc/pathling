@@ -96,6 +96,12 @@ public abstract class ColumnRepresentation {
    */
   protected abstract ColumnRepresentation copyOf(@Nonnull final Column newValue);
 
+
+  @Nonnull
+  public ColumnRepresentation map(@Nonnull final Function<Column, Column> lambda) {
+    return copyOf(lambda.apply(getValue()));
+  }
+  
   /**
    * Create a new {@link ColumnRepresentation} by providing two functions: one that takes an array
    * and one that takes a singular value. The array function is applied to the column if it is an

@@ -3,6 +3,7 @@ package au.csiro.pathling.fhirpathe.execution;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.execution.CollectionDataset;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.execution.ExecutorUtils;
@@ -41,7 +42,6 @@ import org.hl7.fhir.r4.model.EpisodeOfCare;
 import org.hl7.fhir.r4.model.EpisodeOfCare.EpisodeOfCareStatus;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Reference;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import scala.collection.mutable.WrappedArray;
@@ -59,7 +59,6 @@ class FhirpathTest {
 
   @Autowired
   FhirEncoders encoders;
-
 
   final Parser parser = new Parser();
 
@@ -97,25 +96,29 @@ class FhirpathTest {
       @Nonnull final ReverseResolveRoot joinRoot,
       @Nonnull final FhirPath parentPath,
       @Nonnull final FhirPath childPath,
-      @Nonnull final Function<Column, Column> aggFunction) {
+      @Nonnull final Function<Column, Column> aggFunction,
+      @Nonnull final FhirPath aggSuffix) {
     System.out.println("ReverseResolve: " + joinRoot.getTag() + "->" + childPath.toExpression());
 
-    final CollectionDataset parentResult = evalFhirPath(joinRoot.getMasterResourceType(),
-        parentPath,
+    final FhirPathExecutor parentExecutor = createExecutor(joinRoot.getMasterResourceType(),
         dataSource);
+
+    final FhirPathExecutor childExecutor = createExecutor(joinRoot.getForeignResourceType(),
+        dataSource);
+
+    final CollectionDataset parentResult = parentExecutor.evaluate(parentPath);
     // ignore value here - we could just use the resource dataset directly
     // TODO: get access  to it
     final Dataset<Row> parentDataset = parentResult.getDataset();
     parentDataset.show();
-    final CollectionDataset childResult = evalFhirPath(joinRoot.getForeignResourceType(),
-        childPath,
-        dataSource);
 
+    final CollectionDataset childResult = childExecutor.evaluate(childPath);
     // TODO:  We should be able to combine the evaluation actually 
     // either by having a function that evaluates multiple expressions or 
     // having the dataset returne from the evaluator
     // for now lest just ignore the dataset and only use the value column
 
+    // TODO: replace with the executor call
     final CollectionDataset childParentKeyResult = evalFhirExpression(
         joinRoot.getForeignResourceType(),
         joinRoot.getForeignKeyPath() + "." + "reference",
@@ -126,10 +129,17 @@ class FhirpathTest {
         childResult.getValueColumn().alias(joinRoot.getValueTag()));
     childDataset.show();
 
+    // we need to apply the aggSuffix to the result of agg function
+    // To be able to to this howerver we need access to the collection 
+    // based on the result of the aggregation
+    // and the execution context
+    final Collection aggCollection = childResult.getValue()
+        .map(tr -> tr.map(__ -> aggFunction.apply(functions.col(joinRoot.getValueTag()))));
+    final Collection childCollection = childExecutor.evaluate(aggSuffix, aggCollection);
+
     final Dataset<Row> foreignResult = childDataset.groupBy(
             functions.col(joinRoot.getForeignKeyTag()))
-        .agg(aggFunction.apply(functions.col(joinRoot.getValueTag()))
-            .alias(joinRoot.getValueTag()));
+        .agg(childCollection.getColumnValue().alias(joinRoot.getValueTag()));
     foreignResult.show();
 
     final Dataset<Row> joinedResult = parentDataset.join(foreignResult,
@@ -155,7 +165,7 @@ class FhirpathTest {
     }
     return c -> ValueFunctions.unnest(functions.collect_list(c));
   }
-  
+
   static boolean isReverseResolve(final FhirPath path) {
     return asReverseResolve(path).isPresent();
   }
@@ -189,10 +199,34 @@ class FhirpathTest {
         reverseResolve);
     System.out.println(joinRoot);
     final FhirPath childPath = reverseResolvePath.suffix();
+
+    final Pair<FhirPath, FhirPath> aggAndSuffix = childPath.splitLeft(FhirpathTest::isAggregation);
     // check if the child ends with an aggregate function
-    // TODO: this actually is more complex and should look for the first occurence of an aggregate function
-    return evalReverseResolve(dataSource, joinRoot, parentPath, childPath
-        , getAggregation(childPath.last()));
+    if (aggAndSuffix.getLeft().isNull()) {
+      // not aggregation found - use collect_list
+      return evalReverseResolve(dataSource, joinRoot,
+          parentPath,
+          aggAndSuffix.getRight(),
+          c -> ValueFunctions.unnest(functions.collect_list(c)),
+          FhirPath.nullPath()
+      );
+    } else {
+      final FhirPath aggPath = aggAndSuffix.getLeft();
+      final FhirPath aggSuffix = aggAndSuffix.getRight();
+      System.out.println("Agg split: " + aggPath + " +  " + aggSuffix);
+
+      return evalReverseResolve(dataSource, joinRoot,
+          parentPath,
+          aggPath,
+          getAggregation(aggPath.last()),
+          aggSuffix
+      );
+    }
+  }
+
+  private static boolean isAggregation(FhirPath fhirPath) {
+    return fhirPath instanceof EvalFunction evalFunction && (evalFunction.getFunctionIdentifier()
+        .equals("count") || evalFunction.getFunctionIdentifier().equals("first"));
   }
 
   @Test
@@ -251,7 +285,6 @@ class FhirpathTest {
   }
 
   @Test
-  @Disabled
   void simpleReverseResolveToCountFirstFunction() {
     // TODO: Implement
     final ObjectDataSource dataSource = getPatientsWithConditions();
@@ -267,7 +300,6 @@ class FhirpathTest {
   }
 
   @Test
-  @Disabled
   void simpleReverseResolveToFirstCountFunction() {
     // TODO: Implement
     final ObjectDataSource dataSource = getPatientsWithConditions();
@@ -285,12 +317,6 @@ class FhirpathTest {
   @Test
   void whereReverseResolveToSingularValue() {
     final ObjectDataSource dataSource = getPatientsWithConditions();
-
-    final CollectionDataset patientResult = evalFhirExpression(ResourceType.PATIENT, "$this",
-        dataSource);
-    final Dataset<Row> patientDataset = patientResult.materialize("_Patient_fv_01");
-    patientDataset.show();
-
     final Dataset<Row> resultDataset = evalReverseResolve(dataSource,
         ResourceType.PATIENT,
         "where(gender='female').reverseResolve(Condition.subject).id"
@@ -501,5 +527,13 @@ class FhirpathTest {
   private Dataset<Row> execFhirPath(final String fhirpathExpression,
       final ObjectDataSource dataSource) {
     return execFhirPath(ResourceType.PATIENT, fhirpathExpression, dataSource);
+  }
+
+  @Nonnull
+  private FhirPathExecutor createExecutor(final ResourceType subjectResourceType,
+      final ObjectDataSource dataSource) {
+    return new SingleFhirPathExecutor(subjectResourceType,
+        FhirContext.forR4(), StaticFunctionRegistry.getInstance(),
+        Collections.emptyMap(), dataSource);
   }
 }

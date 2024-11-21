@@ -174,7 +174,7 @@ public class SingleFhirPathExecutor implements FhirPathExecutor {
         fhirpathContext,
         functionRegistry,
         resourceResolver);
-    return path.apply(fhirpathContext.getInputContext(), evalContext);
+    return path.apply(inputContext, evalContext);
   }
 
   @Nonnull

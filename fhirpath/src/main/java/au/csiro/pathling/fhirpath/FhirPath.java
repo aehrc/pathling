@@ -43,7 +43,7 @@ public interface FhirPath {
            ? this
            : new Composite(
                Stream.concat(asStream(), after.asStream())
-                   .collect(Collectors.toUnmodifiableList()));
+                   .toList());
   }
 
   default Stream<FhirPath> asStream() {
@@ -97,6 +97,23 @@ public interface FhirPath {
            ? Pair.of(nullPath(), this)
            : Pair.of(this, nullPath());
   }
+
+
+  /**
+   * Split the path into two parts, the left part is the longest prefix that does not satisfy the
+   * predicate and the first element that foes, and the right part is the rest of the path
+   * {@link #nullPath()} if the path is empty.
+   *
+   * @param predicate the predicate to split the path
+   * @return a pair of the left and right parts of the path
+   */
+  @Nonnull
+  default Pair<FhirPath, FhirPath> splitLeft(@Nonnull final Predicate<FhirPath> predicate) {
+    return predicate.test(this)
+           ? Pair.of(this, nullPath())
+           : Pair.of(nullPath(), this);
+  }
+
 
   @Value
   class This implements FhirPath {
@@ -196,6 +213,22 @@ public interface FhirPath {
       } else {
         return Pair.of(FhirPath.of(elements.subList(0, splitIndex)),
             FhirPath.of(elements.subList(splitIndex, elements.size())));
+      }
+    }
+
+
+    @Override
+    @Nonnull
+    public Pair<FhirPath, FhirPath> splitLeft(@Nonnull final Predicate<FhirPath> predicate) {
+      // find the first element that satisfies the predicate
+      final int splitIndex = IterableUtils.indexOf(elements, predicate::test);
+      if (splitIndex == -1) {
+        return Pair.of(nullPath(), this);
+      } else if (splitIndex == 0) {
+        return Pair.of(first(), suffix());
+      } else {
+        return Pair.of(FhirPath.of(elements.subList(0, splitIndex + 1)),
+            FhirPath.of(elements.subList(splitIndex + 1, elements.size())));
       }
     }
   }
