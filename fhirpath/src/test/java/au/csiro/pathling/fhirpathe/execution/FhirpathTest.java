@@ -95,10 +95,10 @@ class FhirpathTest {
   Dataset<Row> evalReverseResolve(@Nonnull final ObjectDataSource dataSource,
       @Nonnull final ReverseResolveRoot joinRoot,
       @Nonnull final FhirPath parentPath,
-      @Nonnull final FhirPath childPath,
+      @Nonnull final FhirPath aggPath,
       @Nonnull final Function<Column, Column> aggFunction,
       @Nonnull final FhirPath aggSuffix) {
-    System.out.println("ReverseResolve: " + joinRoot.getTag() + "->" + childPath.toExpression());
+    System.out.println("ReverseResolve: " + joinRoot.getTag() + "->" + aggPath.toExpression());
 
     final FhirPathExecutor parentExecutor = createExecutor(joinRoot.getMasterResourceType(),
         dataSource);
@@ -112,39 +112,38 @@ class FhirpathTest {
     final Dataset<Row> parentDataset = parentResult.getDataset();
     parentDataset.show();
 
-    final CollectionDataset childResult = childExecutor.evaluate(childPath);
+    final CollectionDataset childAggResult = childExecutor.evaluate(aggPath);
     // TODO:  We should be able to combine the evaluation actually 
     // either by having a function that evaluates multiple expressions or 
     // having the dataset returne from the evaluator
     // for now lest just ignore the dataset and only use the value column
 
     // TODO: replace with the executor call
-    final CollectionDataset childParentKeyResult = evalFhirExpression(
-        joinRoot.getForeignResourceType(),
-        joinRoot.getForeignKeyPath() + "." + "reference",
-        dataSource);
+    final CollectionDataset childParentKeyResult =
+        childExecutor.evaluate(joinRoot.getForeignKeyPath() + "." + "reference");
 
-    final Dataset<Row> childDataset = childResult.getDataset().select(
+    final Dataset<Row> childDataset = childAggResult.getDataset().select(
         childParentKeyResult.getValueColumn().alias(joinRoot.getForeignKeyTag()),
-        childResult.getValueColumn().alias(joinRoot.getValueTag()));
+        childAggResult.getValueColumn().alias(joinRoot.getValueTag()));
     childDataset.show();
 
     // we need to apply the aggSuffix to the result of agg function
     // To be able to to this howerver we need access to the collection 
     // based on the result of the aggregation
     // and the execution context
-    final Collection aggCollection = childResult.getValue()
-        .map(tr -> tr.map(__ -> aggFunction.apply(functions.col(joinRoot.getValueTag()))));
+    final Collection aggCollection = childAggResult.getValue()
+        .withColumn(aggFunction.apply(functions.col(joinRoot.getValueTag())));
+
     final Collection childCollection = childExecutor.evaluate(aggSuffix, aggCollection);
 
-    final Dataset<Row> foreignResult = childDataset.groupBy(
+    final Dataset<Row> childResult = childDataset.groupBy(
             functions.col(joinRoot.getForeignKeyTag()))
         .agg(childCollection.getColumnValue().alias(joinRoot.getValueTag()));
-    foreignResult.show();
+    childResult.show();
 
-    final Dataset<Row> joinedResult = parentDataset.join(foreignResult,
+    final Dataset<Row> joinedResult = parentDataset.join(childResult,
         parentResult.getValueColumn().getField("id_versioned")
-            .equalTo(foreignResult.col(joinRoot.getForeignKeyTag())),
+            .equalTo(childResult.col(joinRoot.getForeignKeyTag())),
         "left_outer");
     joinedResult.show();
     return joinedResult.select(functions.col("id"),

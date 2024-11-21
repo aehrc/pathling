@@ -379,6 +379,32 @@ public class Collection implements Comparable, Numeric {
   }
 
   /**
+   * Returns a new collection with the same type and representation, the colum value of which is
+   * computed by the lambda based on the current column value.
+   *
+   * @param columnMapper The lambda to use for mapping
+   * @return A new collection with new values determined by the specified lambda
+   */
+
+  @Nonnull
+  public Collection mapColumn(
+      @Nonnull final Function<Column, Column> columnMapper) {
+    return map(cr -> cr.map(columnMapper));
+  }
+
+  /**
+   * Returns a new collection with the same type and representation with the provided column value.
+   *
+   * @param columnValue The lambda to use for mapping
+   * @return A new collection with new values determined by the specified lambda
+   */
+  @Nonnull
+  public Collection withColumn(
+      @Nonnull final Column columnValue) {
+    return mapColumn(__ -> columnValue);
+  }
+
+  /**
    * Returns a new collection with new values determined by the specified lambda.
    *
    * @param mapper The lambda to use for mapping
