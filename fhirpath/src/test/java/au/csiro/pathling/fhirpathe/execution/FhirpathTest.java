@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.spark.sql.Column;
@@ -91,17 +92,14 @@ class FhirpathTest {
   // SECTION: Reverse Resolve
   //
 
-  /**
-   * Evaluate path with not reverseResolve function.
-   */
-  @Nonnull
-  CollectionDataset evalSimplePath(@Nonnull final ObjectDataSource dataSource,
-      @Nonnull final ResourceType subjectResource,
-      @Nonnull final FhirPath fhirPath) {
 
-    final FhirPathExecutor executor = createExecutor(subjectResource,
-        dataSource);
-    return executor.evaluate(fhirPath);
+  @Value(staticConstructor = "of")
+  static class GroupingContext {
+
+    @Nonnull
+    Column groupingColumn;
+    @Nonnull
+    String valueColumnAlias;
   }
 
   /**
@@ -111,46 +109,47 @@ class FhirpathTest {
   CollectionDataset evalSimplePath(@Nonnull final ObjectDataSource dataSource,
       @Nonnull final ResourceType subjectResource,
       @Nonnull final FhirPath fhirPath,
-      @Nonnull final Column groupingContext,
-      @Nonnull final String valueColumnAlias) {
+      @Nonnull final Optional<GroupingContext> groupingContext) {
 
     final FhirPathExecutor executor = createExecutor(subjectResource,
         dataSource);
 
-    final Pair<FhirPath, FhirPath> aggAndSuffix = fhirPath.splitLeft(FhirpathTest::isAggregation);
-    // check if the child ends with an aggregate 
-    if (aggAndSuffix.getLeft().isNull()) {
-      // not aggregation found - use collect_list
-      return evalAggregation(executor,
-          aggAndSuffix.getRight(),
-          c -> ValueFunctions.unnest(functions.collect_list(c)),
-          FhirPath.nullPath(),
-          groupingContext,
-          valueColumnAlias
-      );
-    } else {
-      final FhirPath aggPath = aggAndSuffix.getLeft();
-      final FhirPath aggSuffix = aggAndSuffix.getRight();
-      System.out.println("Agg split: " + aggPath + " +  " + aggSuffix);
+    if (groupingContext.isPresent()) {
 
-      return evalAggregation(executor,
-          aggPath,
-          getAggregation(aggPath.last()),
-          aggSuffix,
-          groupingContext,
-          valueColumnAlias
-      );
+      final Pair<FhirPath, FhirPath> aggAndSuffix = fhirPath.splitLeft(FhirpathTest::isAggregation);
+      // check if the child ends with an aggregate 
+      if (aggAndSuffix.getLeft().isNull()) {
+        // not aggregation found - use collect_list
+        return evalAggregation(executor,
+            aggAndSuffix.getRight(),
+            c -> ValueFunctions.unnest(functions.collect_list(c)),
+            FhirPath.nullPath(),
+            groupingContext.get()
+        );
+      } else {
+        final FhirPath aggPath = aggAndSuffix.getLeft();
+        final FhirPath aggSuffix = aggAndSuffix.getRight();
+        System.out.println("Agg split: " + aggPath + " +  " + aggSuffix);
+
+        return evalAggregation(executor,
+            aggPath,
+            getAggregation(aggPath.last()),
+            aggSuffix,
+            groupingContext.get()
+        );
+      }
+    } else {
+      return executor.evaluate(fhirPath);
     }
   }
-  
+
   @Nonnull
   CollectionDataset evalAggregation(
       @Nonnull final FhirPathExecutor executor,
       @Nonnull final FhirPath aggPath,
       @Nonnull final Function<Column, Column> aggFunction,
       @Nonnull final FhirPath aggSuffix,
-      @Nonnull final Column groupingContext,
-      @Nonnull final String valueColumnAlias) {
+      @Nonnull final GroupingContext groupingContext) {
 
     final CollectionDataset childAggResult = executor.evaluate(aggPath);
     // TODO:  We should be able to combine the evaluation actually 
@@ -158,19 +157,48 @@ class FhirpathTest {
     // having the dataset returne from the evaluator
     // for now lest just ignore the dataset and only use the value column
 
-    final Dataset<Row> childDataset = childAggResult.materialize(valueColumnAlias);
+    final Dataset<Row> childDataset = childAggResult.materialize(
+        groupingContext.getValueColumnAlias());
     final Collection aggCollection = childAggResult.getValue()
-        .withColumn(aggFunction.apply(functions.col(valueColumnAlias)));
+        .withColumn(aggFunction.apply(functions.col(groupingContext.getValueColumnAlias())));
 
     final Collection childCollection = executor.evaluate(aggSuffix, aggCollection);
-    final Dataset<Row> childResult = childDataset.groupBy(groupingContext).agg(
+    final Dataset<Row> childResult = childDataset.groupBy(groupingContext.getGroupingColumn()).agg(
         // TODO: use the actual column list here
         functions.any_value(functions.col("id")),
         functions.any_value(functions.col("key")),
-        childCollection.getColumnValue().alias(valueColumnAlias));
+        childCollection.getColumnValue().alias(groupingContext.getValueColumnAlias()));
     childResult.show();
     return CollectionDataset.of(childResult,
-        childCollection.withColumn(functions.col(valueColumnAlias)));
+        childCollection.withColumn(functions.col(groupingContext.getValueColumnAlias())));
+  }
+
+  @Nonnull
+  CollectionDataset evalReverseResolve(@Nonnull final ObjectDataSource dataSource,
+      @Nonnull final ReverseResolveRoot joinRoot,
+      @Nonnull final FhirPath parentPath,
+      @Nonnull final FhirPath childPath,
+      @Nonnull final Optional<GroupingContext> maybeGroupingContext) {
+    final CollectionDataset result = evalReverseResolve(dataSource, joinRoot, parentPath,
+        childPath);
+    if (maybeGroupingContext.isPresent()) {
+      final GroupingContext groupingContext = maybeGroupingContext.get();
+      final Dataset<Row> resolveDataset = result.getDataset();
+      final Collection resolveCollection = result.getValue();
+      final Dataset<Row> childResult = resolveDataset.groupBy(groupingContext.getGroupingColumn())
+          .agg(
+              // TODO: use the actual column list here
+              functions.any_value(functions.col("id")),
+              functions.any_value(functions.col("key")),
+              ValueFunctions.unnest(functions.collect_list(resolveCollection.getColumnValue()))
+                  .alias(groupingContext.getValueColumnAlias()));
+      childResult.show();
+      return CollectionDataset.of(childResult,
+          resolveCollection.withColumn(functions.col(groupingContext.getValueColumnAlias())));
+      // the collection result here needs to be grouped by the grouping context  
+    } else {
+      return result;
+    }
   }
 
   @Nonnull
@@ -196,11 +224,13 @@ class FhirpathTest {
     final CollectionDataset childParentKeyResult =
         childExecutor.evaluate(joinRoot.getForeignKeyPath() + "." + "reference");
 
-    final CollectionDataset childValueResult = evalSimplePath(dataSource,
+    final CollectionDataset childValueResult = evalPath(dataSource,
         joinRoot.getForeignResourceType(),
         childPath,
-        childParentKeyResult.getValueColumn().alias(joinRoot.getForeignKeyTag()),
-        joinRoot.getValueTag()
+        Optional.of(GroupingContext.of(
+            childParentKeyResult.getValueColumn().alias(joinRoot.getForeignKeyTag()),
+            joinRoot.getValueTag()
+        ))
     );
 
     // we need to apply the aggSuffix to the result of agg function
@@ -251,7 +281,7 @@ class FhirpathTest {
       @Nonnull final ResourceType subjectResource,
       @Nonnull final String fhirExpression) {
 
-    return evalPath(dataSource, subjectResource, parser.parse(fhirExpression))
+    return evalPath(dataSource, subjectResource, parser.parse(fhirExpression), Optional.empty())
         .materialize("value").select("id", "value");
   }
 
@@ -259,7 +289,8 @@ class FhirpathTest {
   @Nonnull
   CollectionDataset evalPath(@Nonnull final ObjectDataSource dataSource,
       @Nonnull final ResourceType subjectResource,
-      @Nonnull final FhirPath fhirPath) {
+      @Nonnull final FhirPath fhirPath,
+      @Nonnull final Optional<GroupingContext> groupingContext) {
 
     final Pair<FhirPath, FhirPath> parentAndResolvePaths = fhirPath.splitRight(
         FhirpathTest::isReverseResolve);
@@ -270,7 +301,7 @@ class FhirpathTest {
     System.out.println("Resolve path: " + reverseResolvePath);
 
     if (reverseResolvePath.isNull()) {
-      return evalSimplePath(dataSource, subjectResource, parentPath);
+      return evalSimplePath(dataSource, subjectResource, parentPath, groupingContext);
     } else {
       final EvalFunction reverseResolve = asReverseResolve(
           reverseResolvePath.first()).orElseThrow();
@@ -279,7 +310,7 @@ class FhirpathTest {
           reverseResolve);
       System.out.println(joinRoot);
       final FhirPath childPath = reverseResolvePath.suffix();
-      return evalReverseResolve(dataSource, joinRoot, parentPath, childPath);
+      return evalReverseResolve(dataSource, joinRoot, parentPath, childPath, groupingContext);
     }
   }
 
