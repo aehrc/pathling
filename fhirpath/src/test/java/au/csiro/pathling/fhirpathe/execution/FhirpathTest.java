@@ -5,6 +5,7 @@ import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.execution.CollectionDataset;
+import au.csiro.pathling.fhirpath.execution.DataRoot.ResolveRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.execution.ExecutorUtils;
 import au.csiro.pathling.fhirpath.execution.FhirPathExecutor;
@@ -12,6 +13,7 @@ import au.csiro.pathling.fhirpath.execution.SingleFhirPathExecutor;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
+import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -287,6 +289,14 @@ class FhirpathTest {
     return asReverseResolve(path).isPresent();
   }
 
+  static boolean isResolve(final FhirPath path) {
+    return asResolve(path).isPresent();
+  }
+
+  static boolean isJoiningPath(final FhirPath path) {
+    return isReverseResolve(path) || isResolve(path);
+  }
+
   @Nonnull
   static Optional<EvalFunction> asReverseResolve(final FhirPath path) {
     if (path instanceof EvalFunction evalFunction && evalFunction.getFunctionIdentifier()
@@ -295,6 +305,17 @@ class FhirpathTest {
     }
     return Optional.empty();
   }
+
+
+  @Nonnull
+  static Optional<EvalFunction> asResolve(final FhirPath path) {
+    if (path instanceof EvalFunction evalFunction && evalFunction.getFunctionIdentifier()
+        .equals("resolve")) {
+      return Optional.of(evalFunction);
+    }
+    return Optional.empty();
+  }
+
 
   @Nonnull
   Dataset<Row> evalExpression(@Nonnull final ObjectDataSource dataSource,
@@ -313,27 +334,80 @@ class FhirpathTest {
       @Nonnull final FhirPath fhirPath,
       @Nonnull final Optional<GroupingContext> groupingContext) {
 
-    final Pair<FhirPath, FhirPath> parentAndResolvePaths = fhirPath.splitRight(
-        FhirpathTest::isReverseResolve);
+    final Pair<FhirPath, FhirPath> parentAndJoninigPath = fhirPath.splitRight(
+        FhirpathTest::isJoiningPath);
 
-    final FhirPath parentPath = parentAndResolvePaths.getLeft();
+    final FhirPath parentPath = parentAndJoninigPath.getLeft();
     System.out.println("Parent path:" + parentPath + " -> " + parentPath.toExpression());
-    final FhirPath reverseResolvePath = parentAndResolvePaths.getRight();
-    System.out.println("Resolve path: " + reverseResolvePath);
+    final FhirPath joiningPath = parentAndJoninigPath.getRight();
+    System.out.println("Joining path: " + joiningPath);
 
-    if (reverseResolvePath.isNull()) {
+    if (joiningPath.isNull()) {
       return evalSimplePath(dataSource, subjectResource, parentPath).aggregate(groupingContext);
-    } else {
+    } else if (isReverseResolve(joiningPath.first())) {
       final EvalFunction reverseResolve = asReverseResolve(
-          reverseResolvePath.first()).orElseThrow();
+          joiningPath.first()).orElseThrow();
       System.out.println(reverseResolve);
       final ReverseResolveRoot joinRoot = ExecutorUtils.fromPath(subjectResource,
           reverseResolve);
       System.out.println(joinRoot);
-      final FhirPath childPath = reverseResolvePath.suffix();
+      final FhirPath childPath = joiningPath.suffix();
       return evalReverseResolve(dataSource, joinRoot, parentPath, childPath).aggregate(
           groupingContext);
+    } else if (isResolve(joiningPath.first())) {
+      // well firstly I might not be able to determine the type of the join resource here 
+      // unless the the explicit ofType() is used
+      // sometimes the type can be inferred from the path itself
+      // if a sinlular reference is used
+      final EvalFunction resolve = asResolve(
+          joiningPath.first()).orElseThrow();
+      System.out.println(resolve);
+      ResolveRoot resolveRoot = ResolveRoot.ofResource(subjectResource, ResourceType.PATIENT,
+          parentPath.toExpression());
+      final FhirPath childPath = joiningPath.suffix();
+      return evalResolve(dataSource, resolveRoot, parentPath, childPath).aggregate(
+          groupingContext);
+    } else {
+      throw new IllegalArgumentException("Unsupported complex path: " + joiningPath);
     }
+  }
+
+  @Nonnull
+  private EvalResult evalResolve(@Nonnull final ObjectDataSource dataSource,
+      @Nonnull final ResolveRoot resolveRoot, @Nonnull final FhirPath parentPath,
+      @Nonnull final FhirPath childPath) {
+
+    System.out.println("Resolve: " + resolveRoot + "->" + parentPath.toExpression() + " : "
+        + childPath.toExpression());
+
+    final FhirPathExecutor parentExecutor = createExecutor(resolveRoot.getMasterResourceType(),
+        dataSource);
+
+    final CollectionDataset parentResult = parentExecutor.evaluate(
+        parentPath.andThen(new Traversal("reference")));
+
+    parentResult.materialize("_master_key").show();
+
+    // TODO: this should be replaced with call to evalPath() with not grouping context
+    final FhirPathExecutor childExecutor = createExecutor(resolveRoot.getForeignResourceType(),
+        dataSource);
+
+    final CollectionDataset childResult = childExecutor.evaluate(childPath);
+    final Dataset<Row> childDataset = childResult.materialize("_child_value")
+        .select(functions.col("key").alias("_child_key"), functions.col("_child_value"));
+    childDataset.show();
+
+    final Dataset<Row> joinedDataset = parentResult.materialize("_master_key").join(
+        childDataset,
+        functions.col("_master_key").equalTo(childDataset.col("_child_key")),
+        "left_outer");
+
+    return EvalResult.of(
+        CollectionDataset.of(joinedDataset,
+            childResult.getValue().withColumn(functions.col("_child_value"))),
+        Aggregator.of(childExecutor, c -> c,
+            FhirPath.nullPath())
+    );
   }
 
   private static boolean isAggregation(FhirPath fhirPath) {
@@ -377,12 +451,31 @@ class FhirpathTest {
         "reverseResolve(Condition.subject).code.coding.code.count()");
 
     // TODO: should be 0 in the last row
-    
+
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", 4),
             RowFactory.create("2", 3),
+            RowFactory.create("3", null)
+        );
+  }
+
+
+  @Test
+  void simpleReverseResolveToChildResourceCountFunction() {
+    final ObjectDataSource dataSource = getPatientsWithConditions();
+    final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
+        "reverseResolve(Condition.subject).count()");
+
+    // TODO: should be 0 in the last row
+
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", 2),
+            RowFactory.create("2", 1),
+            // TODO: count() should be 0
             RowFactory.create("3", null)
         );
   }
@@ -498,9 +591,9 @@ class FhirpathTest {
     );
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
     resultDataset.show();
-    
+
     // TODO: should be 0 in the last row
-    
+
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", 4),
@@ -540,41 +633,14 @@ class FhirpathTest {
   //
   @Test
   void resolveManyToOneWithSimpleValue() {
-    // ON Condition
-    //final Dataset<Row> joinedResult = evalFhirPathMulti(ResourceType.CONDITION, 
-    // "subject.resolve().name.gender", dataSource);
-    //joinedResult.show();
     final ObjectDataSource dataSource = getPatientsWithConditions();
-    final CollectionDataset conditionResult = evalFhirExpression(ResourceType.CONDITION,
-        "subject",
-        dataSource);
-
-    final Dataset<Row> conditionDataset = conditionResult
-        .getDataset()
-        .withColumn("_Patient_key", conditionResult.getValueColumn().getField("reference"));
-    conditionDataset.show();
-
-    final CollectionDataset patientResult = evalFhirExpression(ResourceType.PATIENT, "gender",
-        dataSource);
-    // ignore value here - we could just use the resource dataset directly
-    // TODO: get access  to it
-    final Dataset<Row> patientDataset = patientResult.materialize("_Patient_fv_01");
-    patientDataset.show();
-
-    // TODO: add unique join id and as a prefix to related columns
-    // also possibly wrap the value in a struct to allow for multiple results from the same join
-    final Dataset<Row> joinedResult = conditionDataset.join(
-        patientDataset.select("key", "_Patient_fv_01"),
-        conditionDataset.col("_Patient_key").equalTo(patientDataset.col("key")), "left_outer");
-    joinedResult.show();
-
-    final Dataset<Row> finalResult = joinedResult.select(
-        functions.col("id"),
-        functions.col("_Patient_fv_01").alias("value"));
-
-    finalResult.show();
-    System.out.println(finalResult.queryExecution().executedPlan().toString());
-    new DatasetAssert(finalResult)
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.CONDITION,
+        "subject.resolve().gender"
+    );
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
+    resultDataset.show();
+    new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("x", "female"),
             RowFactory.create("y", "female"),

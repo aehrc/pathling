@@ -86,7 +86,12 @@ public interface DataRoot {
     ResourceType foreignResourceType;
     @Nonnull
     String masterResourcePath;
-
+    
+    @Nonnull
+    public ResourceType getMasterResourceType() {
+      return ((ResourceRoot) master).resourceType;
+    }
+    
     @Nonnull
     @Override
     public String getTag() {
