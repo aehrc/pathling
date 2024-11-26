@@ -249,7 +249,7 @@ class FhirpathTest {
         joinRoot.getForeignResourceType(),
         childPath,
         Optional.of(GroupingContext.of(
-            childParentKeyResult.getValueColumn().alias(joinRoot.getForeignKeyTag()),
+            childParentKeyResult.getValueColumn().alias(joinRoot.getChildKeyTag()),
             joinRoot.getValueTag()
         ))
     );
@@ -263,7 +263,7 @@ class FhirpathTest {
 
     final Dataset<Row> joinedResult = parentDataset.join(childResult,
         parentResult.getValueColumn().getField("id_versioned")
-            .equalTo(childResult.col(joinRoot.getForeignKeyTag())),
+            .equalTo(childResult.col(joinRoot.getChildKeyTag())),
         "left_outer");
     joinedResult.show();
     return childValueResult.withResult(
@@ -385,26 +385,26 @@ class FhirpathTest {
 
     final CollectionDataset parentResult = parentExecutor.evaluate(
         parentPath.andThen(new Traversal("reference")));
-
-    parentResult.materialize("_master_key").show();
-
+    
     // TODO: this should be replaced with call to evalPath() with not grouping context
     final FhirPathExecutor childExecutor = createExecutor(resolveRoot.getForeignResourceType(),
         dataSource);
 
     final CollectionDataset childResult = childExecutor.evaluate(childPath);
-    final Dataset<Row> childDataset = childResult.materialize("_child_value")
-        .select(functions.col("key").alias("_child_key"), functions.col("_child_value"));
+    final Dataset<Row> childDataset = childResult.materialize(resolveRoot.getValueTag())
+        .select(functions.col("key").alias(resolveRoot.getChildKeyTag()),
+            functions.col(resolveRoot.getValueTag()));
     childDataset.show();
 
-    final Dataset<Row> joinedDataset = parentResult.materialize("_master_key").join(
+    final Dataset<Row> joinedDataset = parentResult.materialize(resolveRoot.getParentKeyTag()).join(
         childDataset,
-        functions.col("_master_key").equalTo(childDataset.col("_child_key")),
+        functions.col(resolveRoot.getParentKeyTag())
+            .equalTo(childDataset.col(resolveRoot.getChildKeyTag())),
         "left_outer");
 
     return EvalResult.of(
         CollectionDataset.of(joinedDataset,
-            childResult.getValue().withColumn(functions.col("_child_value"))),
+            childResult.getValue().withColumn(functions.col(resolveRoot.getValueTag()))),
         Aggregator.of(childExecutor, c -> c,
             FhirPath.nullPath())
     );

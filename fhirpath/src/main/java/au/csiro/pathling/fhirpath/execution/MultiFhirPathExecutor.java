@@ -197,7 +197,7 @@ public class MultiFhirPathExecutor implements FhirPathExecutor {
     // TODO: make it better
     final Column referenceColumn = dataset.col(dataRoot.getForeignKeyPath())
         .getField("reference");
-    return dataset.groupBy(referenceColumn.alias(dataRoot.getKeyTag()))
+    return dataset.groupBy(referenceColumn.alias(dataRoot.getParentKeyTag()))
         .agg(
             functions.collect_list(
                 functions.struct(
@@ -247,9 +247,9 @@ public class MultiFhirPathExecutor implements FhirPathExecutor {
 
       derivedDataset = derivedDataset.join(
           foreignDatasetJoin,
-          patients.col("key").equalTo(foreignDatasetJoin.col(reverseJoin.getKeyTag())),
+          patients.col("key").equalTo(foreignDatasetJoin.col(reverseJoin.getParentKeyTag())),
           "left_outer"
-      ).drop(reverseJoin.getKeyTag());
+      ).drop(reverseJoin.getParentKeyTag());
     }
     final Collection result = path.apply(fhirpathContext.getInputContext(), evalContext);
     return derivedDataset.select(functions.col("id"), result.getColumnValue().alias("value"));
@@ -294,9 +294,9 @@ public class MultiFhirPathExecutor implements FhirPathExecutor {
 
       derivedDataset = derivedDataset.join(
           foreignDatasetJoin,
-          patients.col("key").equalTo(foreignDatasetJoin.col(reverseJoin.getKeyTag())),
+          patients.col("key").equalTo(foreignDatasetJoin.col(reverseJoin.getParentKeyTag())),
           "left_outer"
-      ).drop(reverseJoin.getKeyTag());
+      ).drop(reverseJoin.getParentKeyTag());
     }
     final Collection result = path.apply(fhirpathContext.getInputContext(), evalContext);
     return CollectionDataset.of(derivedDataset, result);

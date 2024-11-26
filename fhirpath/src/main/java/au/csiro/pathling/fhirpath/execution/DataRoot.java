@@ -51,7 +51,7 @@ public interface DataRoot {
     public ResourceType getMasterResourceType() {
       return ((ResourceRoot) master).resourceType;
     }
-    
+
     @Nonnull
     @Override
     public String getTag() {
@@ -59,16 +59,6 @@ public interface DataRoot {
           + foreignKeyPath.replace(".", "_");
     }
 
-    @Nonnull
-    public String getForeignKeyTag() {
-      return getTag() + "__key";
-    }
-
-    @Nonnull
-    public String getValueTag() {
-      return getTag() + "__value";
-    }
-    
     public static ReverseResolveRoot ofResource(@Nonnull final ResourceType masterType,
         @Nonnull final ResourceType foreignResourceType,
         @Nonnull final String foreignResourcePath) {
@@ -86,17 +76,17 @@ public interface DataRoot {
     ResourceType foreignResourceType;
     @Nonnull
     String masterResourcePath;
-    
+
     @Nonnull
     public ResourceType getMasterResourceType() {
       return ((ResourceRoot) master).resourceType;
     }
-    
+
     @Nonnull
     @Override
     public String getTag() {
-      return master.getTag() + "@" + foreignResourceType.toCode() + "_"
-          + masterResourcePath.replace(".", "_");
+      return master.getTag() + "_"
+          + masterResourcePath.replace(".", "_") + "@" + foreignResourceType.toCode();
     }
 
     public static ResolveRoot ofResource(@Nonnull final ResourceType masterType,
@@ -111,8 +101,19 @@ public interface DataRoot {
   String getTag();
 
   @Nonnull
-  default String getKeyTag() {
-    return getTag() + "_key";
+  default String getParentKeyTag() {
+    return getTag() + "__pkey";
+  }
+
+
+  @Nonnull
+  default String getChildKeyTag() {
+    return getTag() + "__ckey";
+  }
+
+  @Nonnull
+  default String getValueTag() {
+    return getTag() + "__value";
   }
 }
 
