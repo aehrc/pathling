@@ -9,7 +9,6 @@ import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.Set;
-import org.checkerframework.checker.units.qual.N;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
@@ -62,5 +61,12 @@ public class ReferenceCollection extends Collection {
     return getDefinition().map(ReferenceDefinition.class::cast)
         .map(ReferenceDefinition::getReferenceTypes).orElseThrow();
   }
-
+  
+  public boolean isToOneReference() {
+    return getDefinition().map(ReferenceDefinition.class::cast)
+        .flatMap(ReferenceDefinition::getMaxCardinality)
+        .map(Integer.valueOf(1)::equals)
+        .orElseThrow();
+  }
+  
 }

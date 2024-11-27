@@ -228,7 +228,7 @@ public class MultiFhirPathExecutor implements FhirPathExecutor {
 
     final List<DataView> reverseJoinsViews = findDataViews(path).stream()
         .filter(dv -> dv.getRoot() instanceof ReverseResolveRoot)
-        .collect(Collectors.toUnmodifiableList());
+        .toList();
 
     // for each join eval the reference column
 
@@ -275,7 +275,7 @@ public class MultiFhirPathExecutor implements FhirPathExecutor {
 
     final List<DataView> reverseJoinsViews = findDataViews(path).stream()
         .filter(dv -> dv.getRoot() instanceof ReverseResolveRoot)
-        .collect(Collectors.toUnmodifiableList());
+        .toList();
 
     // for each join eval the reference column
 
@@ -343,7 +343,7 @@ public class MultiFhirPathExecutor implements FhirPathExecutor {
             Collectors.groupingBy(DataDependency::getRoot,
                 Collectors.mapping(DataDependency::getElement, Collectors.toUnmodifiableList()))
         ).entrySet().stream().map(e -> DataView.of(e.getKey(), e.getValue()))
-        .collect(Collectors.toUnmodifiableList());
+        .toList();
   }
 
 

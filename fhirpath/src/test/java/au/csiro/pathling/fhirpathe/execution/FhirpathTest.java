@@ -104,6 +104,13 @@ class FhirpathTest {
     Column groupingColumn;
     @Nonnull
     String valueColumnAlias;
+
+
+    @Nonnull
+    String getColumnTag(@Nonnull final String column) {
+      return column + "@" + Long.toHexString(System.identityHashCode(this));
+    }
+
   }
 
   @Value(staticConstructor = "of")
@@ -163,8 +170,8 @@ class FhirpathTest {
                 .agg(
                     // TODO: maybe  use all the actual column list here
                     // but aliased with a unique ids
-                    functions.any_value(functions.col("id")),
-                    functions.any_value(functions.col("key")),
+                    functions.any_value(functions.col("id")).alias("id"),
+                    functions.any_value(functions.col("key")).alias("key"),
                     aggCollection.getColumnValue().alias(groupingContext.getValueColumnAlias()));
             childResult.show();
             return EvalResult.of(
@@ -246,21 +253,21 @@ class FhirpathTest {
     final CollectionDataset childParentKeyResult =
         childExecutor.evaluate(joinRoot.getForeignKeyPath() + "." + "reference");
 
-    final EvalResult childValueResult = evalPath(dataSource,
-        joinRoot.getForeignResourceType(),
-        childPath,
-        Optional.of(GroupingContext.of(
-            childParentKeyResult.getValueColumn().alias(joinRoot.getChildKeyTag()),
-            joinRoot.getValueTag()
-        ))
-    );
+    final EvalResult childValueResult = evalPath(dataSource, joinRoot.getForeignResourceType(),
+        childPath)
+        .aggregate(
+            Optional.of(GroupingContext.of(
+                childParentKeyResult.getValueColumn().alias(joinRoot.getChildKeyTag()),
+                joinRoot.getValueTag()
+            ))
+        );
 
     // we need to apply the aggSuffix to the result of agg function
     // To be able to to this howerver we need access to the collection 
     // based on the result of the aggregation
     // and the execution context
 
-    final Dataset<Row> childResult = childValueResult.getDataset();
+    final Dataset<Row> childResult = childValueResult.getDataset().drop("id", "key");
 
     final Dataset<Row> joinedResult = parentDataset.join(childResult,
         parentResult.getValueColumn().getField("id_versioned")
@@ -323,7 +330,8 @@ class FhirpathTest {
       @Nonnull final ResourceType subjectResource,
       @Nonnull final String fhirExpression) {
 
-    return evalPath(dataSource, subjectResource, parser.parse(fhirExpression), Optional.empty())
+    return evalPath(dataSource, subjectResource, parser.parse(fhirExpression)).aggregate(
+            Optional.empty())
         .getResult()
         .materialize("value").select("id", "value");
   }
@@ -332,8 +340,7 @@ class FhirpathTest {
   @Nonnull
   EvalResult evalPath(@Nonnull final ObjectDataSource dataSource,
       @Nonnull final ResourceType subjectResource,
-      @Nonnull final FhirPath fhirPath,
-      @Nonnull final Optional<GroupingContext> groupingContext) {
+      @Nonnull final FhirPath fhirPath) {
 
     final Pair<FhirPath, FhirPath> parentAndJoninigPath = fhirPath.splitRight(
         FhirpathTest::isJoiningPath);
@@ -344,7 +351,7 @@ class FhirpathTest {
     System.out.println("Joining path: " + joiningPath);
 
     if (joiningPath.isNull()) {
-      return evalSimplePath(dataSource, subjectResource, parentPath).aggregate(groupingContext);
+      return evalSimplePath(dataSource, subjectResource, parentPath);
     } else if (isReverseResolve(joiningPath.first())) {
       final EvalFunction reverseResolve = asReverseResolve(
           joiningPath.first()).orElseThrow();
@@ -353,8 +360,7 @@ class FhirpathTest {
           reverseResolve);
       System.out.println(joinRoot);
       final FhirPath childPath = joiningPath.suffix();
-      return evalReverseResolve(dataSource, joinRoot, parentPath, childPath).aggregate(
-          groupingContext);
+      return evalReverseResolve(dataSource, joinRoot, parentPath, childPath);
     } else if (isResolve(joiningPath.first())) {
       // well firstly I might not be able to determine the type of the join resource here 
       // unless the the explicit ofType() is used
@@ -364,8 +370,7 @@ class FhirpathTest {
           joiningPath.first()).orElseThrow();
       System.out.println(resolve);
       final FhirPath childPath = joiningPath.suffix();
-      return evalResolve(dataSource, subjectResource, parentPath, childPath).aggregate(
-          groupingContext);
+      return evalResolve(dataSource, subjectResource, parentPath, childPath);
     } else {
       throw new IllegalArgumentException("Unsupported complex path: " + joiningPath);
     }
@@ -391,36 +396,78 @@ class FhirpathTest {
     final ReferenceCollection referenceCollection = (ReferenceCollection) referenceResult.getValue();
     System.out.println(
         "Reference types" + referenceCollection.getReferenceTypes().stream().toList());
-    // TODO: this alwyas gets the first reference type
+    // TODO: this hardcoded Patient for subject referecnes (as the group is ommited
+    // but should instead somehow alllow for lazy evaluation of ofType(...) for 
+    // references with more than one type allowed (polymorphic references)
     final ResolveRoot resolveRoot = ResolveRoot.ofResource(parentResource,
-        referenceCollection.getReferenceTypes().stream().toList().get(0),
+        referenceCollection.getReferenceTypes().stream().filter(t -> t != ResourceType.GROUP)
+            .toList().get(0),
         parentPath.toExpression());
-    
-    System.out.println("Resolve: " + resolveRoot + "->" + parentPath.toExpression() + " : "
-        + childPath.toExpression());
 
-    // TODO: this should be replaced with call to evalPath() with not grouping context
-    final FhirPathExecutor childExecutor = createExecutor(resolveRoot.getForeignResourceType(),
-        dataSource);
+    System.out.println(
+        "Resolve " + referenceCollection.isToOneReference() + " : " + resolveRoot + "->"
+            + parentPath.toExpression() + " : "
+            + childPath.toExpression());
 
-    final CollectionDataset childResult = childExecutor.evaluate(childPath);
-    final Dataset<Row> childDataset = childResult.materialize(resolveRoot.getValueTag())
-        .select(functions.col("key").alias(resolveRoot.getChildKeyTag()),
-            functions.col(resolveRoot.getValueTag()));
-    childDataset.show();
+    if (referenceCollection.isToOneReference()) {
 
-    final Dataset<Row> joinedDataset = parentResult.materialize(resolveRoot.getParentKeyTag()).join(
-        childDataset,
-        functions.col(resolveRoot.getParentKeyTag())
-            .equalTo(childDataset.col(resolveRoot.getChildKeyTag())),
-        "left_outer");
+      // TODO: this should be replaced with call to evalPath() with not grouping context
+      final FhirPathExecutor childExecutor = createExecutor(resolveRoot.getForeignResourceType(),
+          dataSource);
 
-    return EvalResult.of(
-        CollectionDataset.of(joinedDataset,
-            childResult.getValue().withColumn(functions.col(resolveRoot.getValueTag()))),
-        Aggregator.of(childExecutor, c -> c,
-            FhirPath.nullPath())
-    );
+      final CollectionDataset childResult = childExecutor.evaluate(childPath);
+      final Dataset<Row> childDataset = childResult.materialize(resolveRoot.getValueTag())
+          .select(functions.col("key").alias(resolveRoot.getChildKeyTag()),
+              functions.col(resolveRoot.getValueTag()));
+      childDataset.show();
+
+      final Dataset<Row> joinedDataset = parentResult.materialize(resolveRoot.getParentKeyTag())
+          .join(
+              childDataset,
+              functions.col(resolveRoot.getParentKeyTag())
+                  .equalTo(childDataset.col(resolveRoot.getChildKeyTag())),
+              "left_outer");
+
+      return EvalResult.of(
+          CollectionDataset.of(joinedDataset,
+              childResult.getValue().withColumn(functions.col(resolveRoot.getValueTag()))),
+          Aggregator.of(childExecutor, c -> c,
+              FhirPath.nullPath())
+      );
+    } else {
+
+      final EvalResult childEvalResult = evalPath(dataSource, resolveRoot.getForeignResourceType(),
+          childPath).aggregate(Optional.empty());
+
+      final CollectionDataset childResult = childEvalResult.getResult();
+      final Dataset<Row> childDataset = childResult.materialize(resolveRoot.getValueTag())
+          .select(functions.col("key").alias(resolveRoot.getChildKeyTag()),
+              functions.col(resolveRoot.getValueTag()));
+      childDataset.show();
+
+      final Dataset<Row> joinedDataset = parentResult.materialize(resolveRoot.getParentKeyTag(),
+              functions::explode_outer)
+          .join(
+              childDataset,
+              functions.col(resolveRoot.getParentKeyTag())
+                  .equalTo(childDataset.col(resolveRoot.getChildKeyTag())),
+              "left_outer");
+
+      // and now aggregate by this context
+
+      // this grouping context is based on the parent key
+      final GroupingContext parentGroupingContext = GroupingContext.of(
+          // TODO: we actually need to re-group based on the parent resource key (id)
+          parentResult.getDataset().col("key"),
+          resolveRoot.getValueTag()
+      );
+
+      return EvalResult.of(
+          CollectionDataset.of(joinedDataset,
+              childResult.getValue().withColumn(functions.col(resolveRoot.getValueTag()))),
+          childEvalResult.getAggregator()
+      ).aggregate(Optional.of(parentGroupingContext));
+    }
   }
 
   private static boolean isAggregation(FhirPath fhirPath) {
@@ -647,6 +694,7 @@ class FhirpathTest {
   @Test
   void resolveManyToOneWithSimpleValue() {
     final ObjectDataSource dataSource = getPatientsWithConditions();
+
     final Dataset<Row> resultDataset = evalExpression(dataSource,
         ResourceType.CONDITION,
         "subject.resolve().gender"
@@ -684,60 +732,68 @@ class FhirpathTest {
             new EpisodeOfCare().setStatus(EpisodeOfCareStatus.PLANNED).setId("EpisodeOfCare/02_2")
         ));
 
-    final CollectionDataset eocResult = evalFhirExpression(ResourceType.EPISODEOFCARE,
-        "status",
-        dataSource);
+    // final CollectionDataset eocResult = evalFhirExpression(ResourceType.EPISODEOFCARE,
+    //     "status",
+    //     dataSource);
+    //
+    // final Dataset<Row> eocDataset = eocResult.materialize("_EpisodeOfCare_fv_01");
+    // eocDataset.show();
+    //
+    // final CollectionDataset encounterResult = evalFhirExpression(ResourceType.ENCOUNTER,
+    //     "episodeOfCare",
+    //     dataSource);
+    //
+    // final Dataset<Row> encounterDataset = encounterResult
+    //     .getDataset()
+    //     .withColumn("_EOC_keys", encounterResult.getValueColumn().getField("reference"));
+    // encounterDataset.show();
+    //
+    // // this is tricky for many reasons but as unless  we incoroprate the concept of exploded collection 
+    // // we need to immediately group the foreign values to a list (somehow correlated with the original references)
+    //
+    // final Dataset<Row> explodedDataset = encounterDataset
+    //     .select(functions.col("*"), functions.posexplode_outer(encounterDataset.col("_EOC_keys"))
+    //         .as(new String[]{"_EOC_pos", "_EOC_key"}))
+    //     .drop("_EOC_keys");
+    //
+    // explodedDataset.show();
+    //
+    // final Dataset<Row> joinedResult = explodedDataset.join(
+    //     eocDataset.select(eocDataset.col("key").alias("_EOC_key_slave"),
+    //         eocDataset.col("_EpisodeOfCare_fv_01")),
+    //     explodedDataset.col("_EOC_key").equalTo(functions.col("_EOC_key_slave")), "left_outer");
+    //
+    // joinedResult.show();
+    //
+    // // TOOD: the order needs to preserved here by using structs of (pos,value) and then sorting it back and flattening
+    //
+    // final Dataset<Row> groupedResult = joinedResult.groupBy(
+    //     functions.col("id"),
+    //     functions.col("key")
+    // ).agg(
+    //     functions.any_value(joinedResult.col("Encounter")).alias("Encounter"),
+    //     functions.any_value(joinedResult.col("_fid")).alias("_fid"),
+    //     functions.any_value(joinedResult.col("_extension")).alias("_extension"),
+    //     functions.collect_list(functions.col("_EpisodeOfCare_fv_01"))
+    //         .alias("_EpisodeOfCare_fv_01")
+    // );
+    // groupedResult.show();
+    //
+    // final Dataset<Row> finalResult = groupedResult.select(
+    //     functions.col("id"),
+    //     functions.col("_EpisodeOfCare_fv_01").alias("value"));
+    // finalResult.show();
+    // System.out.println(finalResult.queryExecution().executedPlan().toString());
+    //
 
-    final Dataset<Row> eocDataset = eocResult.materialize("_EpisodeOfCare_fv_01");
-    eocDataset.show();
-
-    final CollectionDataset encounterResult = evalFhirExpression(ResourceType.ENCOUNTER,
-        "episodeOfCare",
-        dataSource);
-
-    final Dataset<Row> encounterDataset = encounterResult
-        .getDataset()
-        .withColumn("_EOC_keys", encounterResult.getValueColumn().getField("reference"));
-    encounterDataset.show();
-
-    // this is tricky for many reasons but as unless  we incoroprate the concept of exploded collection 
-    // we need to immediately group the foreign values to a list (somehow correlated with the original references)
-
-    final Dataset<Row> explodedDataset = encounterDataset
-        .select(functions.col("*"), functions.posexplode_outer(encounterDataset.col("_EOC_keys"))
-            .as(new String[]{"_EOC_pos", "_EOC_key"}))
-        .drop("_EOC_keys");
-
-    explodedDataset.show();
-
-    final Dataset<Row> joinedResult = explodedDataset.join(
-        eocDataset.select(eocDataset.col("key").alias("_EOC_key_slave"),
-            eocDataset.col("_EpisodeOfCare_fv_01")),
-        explodedDataset.col("_EOC_key").equalTo(functions.col("_EOC_key_slave")), "left_outer");
-
-    joinedResult.show();
-
-    // TOOD: the order needs to preserved here by using structs of (pos,value) and then sorting it back and flattening
-
-    final Dataset<Row> groupedResult = joinedResult.groupBy(
-        functions.col("id"),
-        functions.col("key")
-    ).agg(
-        functions.any_value(joinedResult.col("Encounter")).alias("Encounter"),
-        functions.any_value(joinedResult.col("_fid")).alias("_fid"),
-        functions.any_value(joinedResult.col("_extension")).alias("_extension"),
-        functions.collect_list(functions.col("_EpisodeOfCare_fv_01"))
-            .alias("_EpisodeOfCare_fv_01")
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.ENCOUNTER,
+        "episodeOfCare.resolve().status"
     );
-    groupedResult.show();
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
+    resultDataset.show();
 
-    final Dataset<Row> finalResult = groupedResult.select(
-        functions.col("id"),
-        functions.col("_EpisodeOfCare_fv_01").alias("value"));
-    finalResult.show();
-    System.out.println(finalResult.queryExecution().executedPlan().toString());
-
-    new DatasetAssert(finalResult)
+    new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("01", sql_array("active", "finished")),
             RowFactory.create("02", sql_array("onhold", "planned")),
