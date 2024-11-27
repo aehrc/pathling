@@ -4,6 +4,7 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.execution.CollectionDataset;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ResolveRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
@@ -362,10 +363,8 @@ class FhirpathTest {
       final EvalFunction resolve = asResolve(
           joiningPath.first()).orElseThrow();
       System.out.println(resolve);
-      ResolveRoot resolveRoot = ResolveRoot.ofResource(subjectResource, ResourceType.PATIENT,
-          parentPath.toExpression());
       final FhirPath childPath = joiningPath.suffix();
-      return evalResolve(dataSource, resolveRoot, parentPath, childPath).aggregate(
+      return evalResolve(dataSource, subjectResource, parentPath, childPath).aggregate(
           groupingContext);
     } else {
       throw new IllegalArgumentException("Unsupported complex path: " + joiningPath);
@@ -374,18 +373,32 @@ class FhirpathTest {
 
   @Nonnull
   private EvalResult evalResolve(@Nonnull final ObjectDataSource dataSource,
-      @Nonnull final ResolveRoot resolveRoot, @Nonnull final FhirPath parentPath,
+      @Nonnull final ResourceType parentResource, @Nonnull final FhirPath parentPath,
       @Nonnull final FhirPath childPath) {
 
+    final FhirPathExecutor parentExecutor = createExecutor(parentResource,
+        dataSource);
+
+    // TODO: eval the reference and to get access to reference path 
+    // and evaluate the key from it and also check for the type of the referenced resource
+    // NOTE: I am not sure how to handle access to multiple reference types here, especially 
+    // if ofType() is applied to an operator of the path 
+    final CollectionDataset parentResult = parentExecutor.evaluate(
+        parentPath.andThen(new Traversal("reference")));
+
+    final CollectionDataset referenceResult = parentExecutor.evaluate(
+        parentPath);
+    final ReferenceCollection referenceCollection = (ReferenceCollection) referenceResult.getValue();
+    System.out.println(
+        "Reference types" + referenceCollection.getReferenceTypes().stream().toList());
+    // TODO: this alwyas gets the first reference type
+    final ResolveRoot resolveRoot = ResolveRoot.ofResource(parentResource,
+        referenceCollection.getReferenceTypes().stream().toList().get(0),
+        parentPath.toExpression());
+    
     System.out.println("Resolve: " + resolveRoot + "->" + parentPath.toExpression() + " : "
         + childPath.toExpression());
 
-    final FhirPathExecutor parentExecutor = createExecutor(resolveRoot.getMasterResourceType(),
-        dataSource);
-
-    final CollectionDataset parentResult = parentExecutor.evaluate(
-        parentPath.andThen(new Traversal("reference")));
-    
     // TODO: this should be replaced with call to evalPath() with not grouping context
     final FhirPathExecutor childExecutor = createExecutor(resolveRoot.getForeignResourceType(),
         dataSource);

@@ -4,10 +4,14 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import au.csiro.pathling.fhirpath.definition.ReferenceDefinition;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
+import java.util.Set;
+import org.checkerframework.checker.units.qual.N;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Represents a collection of Reference elements.
@@ -51,6 +55,12 @@ public class ReferenceCollection extends Collection {
   private ColumnTransform keyFilter(@Nonnull final String pattern) {
     return col -> col.traverse(REFERENCE_ELEMENT_NAME, Optional.of(FHIRDefinedType.STRING))
         .like(pattern);
+  }
+
+  @Nonnull
+  public Set<ResourceType> getReferenceTypes() {
+    return getDefinition().map(ReferenceDefinition.class::cast)
+        .map(ReferenceDefinition::getReferenceTypes).orElseThrow();
   }
 
 }
