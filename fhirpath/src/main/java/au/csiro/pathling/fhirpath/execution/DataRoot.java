@@ -55,8 +55,9 @@ public interface DataRoot {
     @Nonnull
     @Override
     public String getTag() {
+      final String uniqueId = Long.toHexString(System.identityHashCode(this));
       return master.getTag() + "@" + foreignResourceType.toCode() + "_"
-          + foreignKeyPath.replace(".", "_");
+          + foreignKeyPath.replace(".", "_") + "_" + uniqueId;
     }
 
     public static ReverseResolveRoot ofResource(@Nonnull final ResourceType masterType,

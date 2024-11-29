@@ -33,6 +33,8 @@ public interface FhirPathExecutor {
   @Nonnull
   Dataset<Row> execute(@Nonnull final FhirPath path);
 
+  Dataset<Row> execute(@Nonnull final FhirPath path, @Nonnull final Dataset<Row> subjectDataset);
+  
   @Nonnull
   CollectionDataset evaluate(@Nonnull final FhirPath path);
 

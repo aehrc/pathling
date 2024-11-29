@@ -48,6 +48,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.jetbrains.annotations.NotNull;
 
 
 @Value
@@ -209,6 +210,8 @@ public class MultiFhirPathExecutor implements FhirPathExecutor {
   }
 
 
+  
+  
   @Override
   @Nonnull
   public Dataset<Row> execute(@Nonnull final FhirPath path) {
@@ -253,6 +256,12 @@ public class MultiFhirPathExecutor implements FhirPathExecutor {
     }
     final Collection result = path.apply(fhirpathContext.getInputContext(), evalContext);
     return derivedDataset.select(functions.col("id"), result.getColumnValue().alias("value"));
+  }
+
+  @Override
+  public Dataset<Row> execute(@NotNull final FhirPath path,
+      @NotNull final Dataset<Row> subjectDataset) {
+    throw new UnsupportedOperationException("Not implemented");
   }
 
 

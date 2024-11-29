@@ -138,6 +138,25 @@ public class SingleFhirPathExecutor implements FhirPathExecutor {
 
   @Override
   @Nonnull
+  public Dataset<Row> execute(@Nonnull final FhirPath path, @Nonnull final Dataset<Row> subjectDataset) {
+    // just as above ... but with a more intelligent resourceResolver
+    final ResourceResolver resourceResolver = new UnsupportedResourceResolver();
+
+    // we will need to extract the dependencies and create the map for and the subjectDataset;
+    // but for now just make it work for the main resource
+    final FhirPathContext fhirpathContext = FhirPathContext.ofResource(
+        resolveResource(subjectResource), variables);
+    final EvaluationContext evalContext = new ViewEvaluationContext(
+        fhirpathContext,
+        functionRegistry,
+        resourceResolver);
+    final Collection result = path.apply(fhirpathContext.getInputContext(), evalContext);
+    return subjectDataset.select(functions.col("id"), result.getColumnValue().alias("value"));
+  }
+
+
+  @Override
+  @Nonnull
   public CollectionDataset evaluate(@Nonnull final FhirPath path) {
     // just as above ... but with a more intelligent resourceResolver
     final ResourceResolver resourceResolver = new UnsupportedResourceResolver();
