@@ -15,7 +15,6 @@ import au.csiro.pathling.fhirpath.execution.SingleFhirPathExecutor;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
-import au.csiro.pathling.fhirpath.path.Paths.EvalOperator;
 import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.assertions.DatasetAssert;
@@ -31,7 +30,6 @@ import java.util.function.Function;
 import javax.annotation.Nonnull;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -54,7 +52,6 @@ import org.hl7.fhir.r4.model.EpisodeOfCare.EpisodeOfCareStatus;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Reference;
 import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import scala.collection.mutable.WrappedArray;
@@ -209,6 +206,42 @@ class FhirpathPurifyTest {
   @Nonnull
   EvalResult evalSimplePath(@Nonnull final ObjectDataSource dataSource,
       @Nonnull final ResourceType subjectResource,
+      @Nonnull final FhirPath fhirPath, 
+      @Nonnull final Dataset<Row> subjectDataset) {
+
+    // The problem here is that we might need to evaluate the column aggregation multiple times
+    // for different grouping context and then 
+    // to finally apply the suffix  (if any) when the empty (or root) context is reached
+    // Not sure how if/how we can track the subjectResource here
+
+    final FhirPathExecutor executor = createExecutor(subjectResource,
+        dataSource);
+
+    final Pair<FhirPath, FhirPath> aggAndSuffix = fhirPath.splitLeft(
+        FhirpathPurifyTest::isAggregation);
+    // check if the child ends with an aggregate 
+    if (aggAndSuffix.getLeft().isNull()) {
+
+      return EvalResult.of(
+          executor.evaluate(aggAndSuffix.getRight(), subjectDataset),
+          Aggregator.of(executor, c -> ValueFunctions.unnest(functions.collect_list(c)),
+              FhirPath.nullPath())
+      );
+    } else {
+      final FhirPath aggPath = aggAndSuffix.getLeft();
+      final FhirPath aggSuffix = aggAndSuffix.getRight();
+      System.out.println("Agg split: " + aggPath + " +  " + aggSuffix);
+      return EvalResult.of(
+          executor.evaluate(aggPath),
+          Aggregator.of(executor, getAggregation(aggPath.last()), aggSuffix)
+      );
+    }
+  }
+
+
+  @Nonnull
+  EvalResult evalSimplePath(@Nonnull final ObjectDataSource dataSource,
+      @Nonnull final ResourceType subjectResource,
       @Nonnull final FhirPath fhirPath) {
 
     // The problem here is that we might need to evaluate the column aggregation multiple times
@@ -239,6 +272,7 @@ class FhirpathPurifyTest {
       );
     }
   }
+  
 
   @Nonnull
   EvalResult evalReverseResolve(@Nonnull final ObjectDataSource dataSource,
@@ -491,7 +525,7 @@ class FhirpathPurifyTest {
 
 
   @Value(staticConstructor = "of")
-  static class FhirPathResult {
+  static class FhirpathResult {
 
     @Nonnull
     Dataset<Row> dataset;
@@ -519,7 +553,7 @@ class FhirpathPurifyTest {
     }
 
     @Nonnull
-    FhirPathResultCollector add(@Nonnull final FhirPathResult result) {
+    FhirPathResultCollector add(@Nonnull final FhirpathResult result) {
       this.dataset = result.getDataset();
       this.paths.add(result.getFhirPath());
       return this;
@@ -567,16 +601,16 @@ class FhirpathPurifyTest {
     final FhirPathExecutor subjectExecutor = createExecutor(subjectResource, dataSource);
     final Dataset<Row> initialDataset = subjectExecutor.createInitialDataset();
     initialDataset.show();
-    final FhirPathResult purifiedResult = purify(dataSource, subjectResource, fhirPath,
+    final FhirpathResult purifiedResult = purify(dataSource, subjectResource, fhirPath,
         initialDataset);
     System.out.println("Purified path: " + purifiedResult.getFhirPath());
     purifiedResult.getDataset().show();
     return subjectExecutor.execute(purifiedResult.getFhirPath(), purifiedResult.getDataset());
   }
-
-
+  
+  
   @Nonnull
-  FhirPathResult purify(@Nonnull final ObjectDataSource dataSource,
+  FhirpathResult purify(@Nonnull final ObjectDataSource dataSource,
       @Nonnull final ResourceType subjectResource,
       @Nonnull final FhirPath fhirPath,
       @Nonnull final Dataset<Row> parentDataset) {
@@ -603,40 +637,30 @@ class FhirpathPurifyTest {
           dataSource);
 
       // TODO: replace with the executor call
+  
       final CollectionDataset childParentKeyResult =
           childExecutor.evaluate(joinRoot.getForeignKeyPath() + "." + "reference");
 
-      // so here we need to do here depends on if there is any aggregation in the child path
+      // recursively purify child path
+      final FhirpathResult pureChildResult = purify(dataSource, joinRoot.getForeignResourceType(),
+          childPath, childParentKeyResult.getDataset());
+      
+      // The path is not pure so we can evaluate it
+      final EvalResult childValueResult = evalSimplePath(dataSource, joinRoot.getForeignResourceType(),
+          pureChildResult.getFhirPath(), pureChildResult.getDataset())
+          .aggregate(
+              Optional.of(GroupingContext.of(
+                  childParentKeyResult.getValueColumn().alias(joinRoot.getChildKeyTag()),
+                  joinRoot.getValueTag()
+              ))
+          );
 
       // we need to apply the aggSuffix to the result of agg function
       // To be able to to this howerver we need access to the collection 
       // based on the result of the aggregation
       // and the execution context
 
-      final Pair<FhirPath, FhirPath> aggAndSuffix = childPath.splitLeft(
-          FhirpathPurifyTest::isAggregation);
-      // check if the child ends with an aggregate 
-
-      final FhirPath suffixPath;
-      final FhirPath evalPath;
-      final Function<Column, Column> aggregation;
-      if (aggAndSuffix.getLeft().isNull()) {
-        suffixPath = FhirPath.nullPath();
-        evalPath = aggAndSuffix.getRight();
-        aggregation = c -> ValueFunctions.unnest(functions.collect_list(c));
-        // no aggregation - means keep collecting and flattening the values
-      } else {
-        suffixPath = aggAndSuffix.getRight();
-        evalPath = aggAndSuffix.getLeft();
-        aggregation = getAggregation(evalPath.last());
-      }
-
-      final CollectionDataset childValueResult = childExecutor.evaluate(
-          evalPath);
-
-      final Dataset<Row> childResult = childValueResult.getDataset()
-          .groupBy(childParentKeyResult.getValueColumn().alias(joinRoot.getChildKeyTag()))
-          .agg(aggregation.apply(childValueResult.getValueColumn()).alias(joinRoot.getValueTag()));
+      final Dataset<Row> childResult = childValueResult.getDataset().drop("id", "key");
       childResult.show();
       final Dataset<Row> joinedDataset = parentDataset.join(childResult,
               functions.col("key")
@@ -645,12 +669,12 @@ class FhirpathPurifyTest {
           .drop(joinRoot.getChildKeyTag());
       joinedDataset.show();
 
-      return FhirPathResult.of(
+      return FhirpathResult.of(
           joinedDataset,
           parentPath
               .andThen(new ConstPath(childValueResult.getValue().withColumn(
                   functions.col(joinRoot.getValueTag()))))
-              .andThen(suffixPath)
+              .andThen(childValueResult.aggregator.getSuffix())
       );
     } else {
 
@@ -661,12 +685,12 @@ class FhirpathPurifyTest {
       final FhirPathResultCollector collector = headPath.children().sequential().reduce(
           FhirPathResultCollector.empty(parentDataset),
           (acc, childPath) -> {
-            final FhirPathResult result = purify(dataSource, subjectResource, childPath,
+            final FhirpathResult result = purify(dataSource, subjectResource, childPath,
                 acc.getDataset());
             return acc.add(result);
           }, FhirPathResultCollector::combine);
 
-      return FhirPathResult.of(
+      return FhirpathResult.of(
           collector.getDataset(),
           headPath.withNewChildren(collector.getPaths()).andThen(fhirPath.suffix())
       );

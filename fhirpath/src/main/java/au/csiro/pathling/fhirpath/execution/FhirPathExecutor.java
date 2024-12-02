@@ -34,9 +34,16 @@ public interface FhirPathExecutor {
   Dataset<Row> execute(@Nonnull final FhirPath path);
 
   Dataset<Row> execute(@Nonnull final FhirPath path, @Nonnull final Dataset<Row> subjectDataset);
-  
+
+
   @Nonnull
-  CollectionDataset evaluate(@Nonnull final FhirPath path);
+  CollectionDataset evaluate(@Nonnull final FhirPath path, @Nonnull final Dataset<Row> subjectDataset);
+
+
+  @Nonnull
+  default CollectionDataset evaluate(@Nonnull final FhirPath path) {
+    return evaluate(path, createInitialDataset());
+  }
 
   @Nonnull
   default CollectionDataset evaluate(@Nonnull final String fhirpathExpression) {

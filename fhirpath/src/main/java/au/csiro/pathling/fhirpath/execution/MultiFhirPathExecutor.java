@@ -264,6 +264,12 @@ public class MultiFhirPathExecutor implements FhirPathExecutor {
     throw new UnsupportedOperationException("Not implemented");
   }
 
+  @Override
+  public @NotNull CollectionDataset evaluate(@NotNull final FhirPath path,
+      @NotNull final Dataset<Row> subjectDataset) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
 
   @Override
   @Nonnull

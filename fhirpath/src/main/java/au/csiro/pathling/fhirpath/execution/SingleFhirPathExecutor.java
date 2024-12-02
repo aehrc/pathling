@@ -157,13 +157,13 @@ public class SingleFhirPathExecutor implements FhirPathExecutor {
 
   @Override
   @Nonnull
-  public CollectionDataset evaluate(@Nonnull final FhirPath path) {
+  public CollectionDataset evaluate(@Nonnull final FhirPath path, @Nonnull final Dataset<Row> subjectDataset) {
     // just as above ... but with a more intelligent resourceResolver
     final ResourceResolver resourceResolver = new UnsupportedResourceResolver();
 
     // we will need to extract the dependencies and create the map for and the dataset;
     // but for now just make it work for the main resource
-    final Dataset<Row> dataset = resourceDataset(subjectResource);
+    final Dataset<Row> dataset = subjectDataset;
     final FhirPathContext fhirpathContext = FhirPathContext.ofResource(
         resolveResource(subjectResource), variables);
     final EvaluationContext evalContext = new ViewEvaluationContext(
