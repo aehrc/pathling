@@ -206,7 +206,7 @@ class FhirpathPurifyTest {
   @Nonnull
   EvalResult evalSimplePath(@Nonnull final ObjectDataSource dataSource,
       @Nonnull final ResourceType subjectResource,
-      @Nonnull final FhirPath fhirPath, 
+      @Nonnull final FhirPath fhirPath,
       @Nonnull final Dataset<Row> subjectDataset) {
 
     // The problem here is that we might need to evaluate the column aggregation multiple times
@@ -232,8 +232,9 @@ class FhirpathPurifyTest {
       final FhirPath aggSuffix = aggAndSuffix.getRight();
       System.out.println("Agg split: " + aggPath + " +  " + aggSuffix);
       return EvalResult.of(
-          executor.evaluate(aggPath),
-          Aggregator.of(executor, getAggregation(aggPath.last()), aggSuffix)
+          executor.evaluate(aggPath, subjectDataset),
+          Aggregator.of(executor, getAggregation(aggPath.last()),
+              getAggregationPath(aggPath.last()).andThen(aggSuffix))
       );
     }
   }
@@ -272,7 +273,7 @@ class FhirpathPurifyTest {
       );
     }
   }
-  
+
 
   @Nonnull
   EvalResult evalReverseResolve(@Nonnull final ObjectDataSource dataSource,
@@ -332,10 +333,30 @@ class FhirpathPurifyTest {
         return functions::sum;
       } else if (evalFunction.getFunctionIdentifier().equals("first")) {
         return functions::first;
+      } else if (evalFunction.getFunctionIdentifier().equals("sum")) {
+        return functions::sum;
       }
     }
     return c -> ValueFunctions.unnest(functions.collect_list(c));
   }
+
+  @Nonnull
+  static FhirPath getAggregationPath(@Nonnull final FhirPath path) {
+    if (path instanceof Composite) {
+      throw new IllegalArgumentException("Simple path expected");
+    }
+    if (path instanceof final EvalFunction evalFunction) {
+      if (evalFunction.getFunctionIdentifier().equals("count")) {
+        return new EvalFunction("sum", List.of());
+      } else if (evalFunction.getFunctionIdentifier().equals("first")) {
+        return new EvalFunction("first", List.of());
+      } else if (evalFunction.getFunctionIdentifier().equals("sum")) {
+        return new EvalFunction("sum", List.of());
+      }
+    }
+    throw new IllegalArgumentException("Aggregate function expected");
+  }
+
 
   static boolean isReverseResolve(final FhirPath path) {
     return asReverseResolve(path).isPresent();
@@ -358,7 +379,6 @@ class FhirpathPurifyTest {
     return Optional.empty();
   }
 
-
   @Nonnull
   static Optional<EvalFunction> asResolve(final FhirPath path) {
     if (path instanceof EvalFunction evalFunction && evalFunction.getFunctionIdentifier()
@@ -367,7 +387,6 @@ class FhirpathPurifyTest {
     }
     return Optional.empty();
   }
-
 
   @Nonnull
   Dataset<Row> evalExpressionDirect(@Nonnull final ObjectDataSource dataSource,
@@ -379,7 +398,6 @@ class FhirpathPurifyTest {
         .getResult()
         .materialize("value").select("id", "value");
   }
-
 
   @Nonnull
   EvalResult evalPath(@Nonnull final ObjectDataSource dataSource,
@@ -480,7 +498,8 @@ class FhirpathPurifyTest {
       );
     } else {
 
-      final EvalResult childEvalResult = evalPath(dataSource, resolveRoot.getForeignResourceType(),
+      final EvalResult childEvalResult = evalPath(dataSource,
+          resolveRoot.getForeignResourceType(),
           childPath).aggregate(Optional.empty());
 
       final CollectionDataset childResult = childEvalResult.getResult();
@@ -516,13 +535,13 @@ class FhirpathPurifyTest {
 
   private static boolean isAggregation(FhirPath fhirPath) {
     return fhirPath instanceof EvalFunction evalFunction && (evalFunction.getFunctionIdentifier()
-        .equals("count") || evalFunction.getFunctionIdentifier().equals("first"));
+        .equals("count") || evalFunction.getFunctionIdentifier().equals("first")
+        || evalFunction.getFunctionIdentifier().equals("sum"));
   }
 
   // 
   // BEGIN: Purify implementation
   // 
-
 
   @Value(staticConstructor = "of")
   static class FhirpathResult {
@@ -533,7 +552,6 @@ class FhirpathPurifyTest {
     @Nonnull
     FhirPath fhirPath;
   }
-
 
   // This is mutable class
   // private constructor
@@ -570,7 +588,6 @@ class FhirpathPurifyTest {
     }
   }
 
-
   @Value
   static class ConstPath implements FhirPath {
 
@@ -586,6 +603,7 @@ class FhirpathPurifyTest {
     }
 
     @Override
+    @Nonnull
     public String toExpression() {
       return "const";
     }
@@ -607,8 +625,7 @@ class FhirpathPurifyTest {
     purifiedResult.getDataset().show();
     return subjectExecutor.execute(purifiedResult.getFhirPath(), purifiedResult.getDataset());
   }
-  
-  
+
   @Nonnull
   FhirpathResult purify(@Nonnull final ObjectDataSource dataSource,
       @Nonnull final ResourceType subjectResource,
@@ -637,16 +654,23 @@ class FhirpathPurifyTest {
           dataSource);
 
       // TODO: replace with the executor call
-  
+
       final CollectionDataset childParentKeyResult =
           childExecutor.evaluate(joinRoot.getForeignKeyPath() + "." + "reference");
 
       // recursively purify child path
       final FhirpathResult pureChildResult = purify(dataSource, joinRoot.getForeignResourceType(),
           childPath, childParentKeyResult.getDataset());
+
+      
+      System.out.println(("Reverse - pure"));
+      System.out.println(pureChildResult.getFhirPath());
+      pureChildResult.getDataset().show();
+      
       
       // The path is not pure so we can evaluate it
-      final EvalResult childValueResult = evalSimplePath(dataSource, joinRoot.getForeignResourceType(),
+      final EvalResult childValueResult = evalSimplePath(dataSource,
+          joinRoot.getForeignResourceType(),
           pureChildResult.getFhirPath(), pureChildResult.getDataset())
           .aggregate(
               Optional.of(GroupingContext.of(
@@ -697,7 +721,6 @@ class FhirpathPurifyTest {
     }
   }
 
-
   @Test
   void simpleReverseResolveToSingularValue() {
     final ObjectDataSource dataSource = getPatientsWithConditions();
@@ -740,10 +763,9 @@ class FhirpathPurifyTest {
         .hasRowsUnordered(
             RowFactory.create("1", 4),
             RowFactory.create("2", 3),
-            RowFactory.create("3", null)
+            RowFactory.create("3", 0)
         );
   }
-
 
   @Test
   void simpleReverseResolveToChildResourceCountFunction() {
@@ -758,11 +780,9 @@ class FhirpathPurifyTest {
         .hasRowsUnordered(
             RowFactory.create("1", 2),
             RowFactory.create("2", 1),
-            // TODO: count() should be 0
-            RowFactory.create("3", null)
+            RowFactory.create("3", 0)
         );
   }
-
 
   @Test
   void reverseResolveInWhereWithChildResourceCountFunction() {
@@ -809,7 +829,7 @@ class FhirpathPurifyTest {
         .hasRowsUnordered(
             RowFactory.create("1", 4),
             RowFactory.create("2", 3),
-            RowFactory.create("3", null)
+            RowFactory.create("3", 0)
         );
   }
 
@@ -846,7 +866,6 @@ class FhirpathPurifyTest {
         );
   }
 
-
   @Test
   void multipleReverseResolveInOperator() {
     // TODO: Implement
@@ -859,8 +878,7 @@ class FhirpathPurifyTest {
         .hasRowsUnordered(
             RowFactory.create("1", 6),
             RowFactory.create("2", 4),
-            // TODO: count() should be 0
-            RowFactory.create("3", null)
+            RowFactory.create("3", 0)
         );
   }
 
@@ -882,7 +900,6 @@ class FhirpathPurifyTest {
         );
   }
 
-
   @Test
   void nestedReverseResolveToAggregation() {
     final ObjectDataSource dataSource = getPatientsWithEncountersWithConditions();
@@ -900,10 +917,9 @@ class FhirpathPurifyTest {
         .hasRowsUnordered(
             RowFactory.create("1", 4),
             RowFactory.create("2", 2),
-            RowFactory.create("3", null)
+            RowFactory.create("3", 0)
         );
   }
-
 
   private @NotNull ObjectDataSource getPatientsWithEncountersWithConditions() {
     return new ObjectDataSource(spark, encoders,
@@ -928,7 +944,6 @@ class FhirpathPurifyTest {
                 .setEncounter(new Reference("Encounter/2.1")).setId("Condition/2.1.2")
         ));
   }
-
 
   //
   // SECTION: Resolve

@@ -5,6 +5,7 @@ import static java.util.Objects.nonNull;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
@@ -76,6 +77,20 @@ public class ExistenceFunctions {
     return IntegerCollection.build(input.getColumn().count());
   }
 
+
+  /**
+   * Returns the sum of the numbers input collection. Returns 0 when the input collection is empty.
+   *
+   * @param input The input collection
+   * @return An {@link Collection} containing the result count</a>
+   */
+  // TODO: Update documentation and move to a separate class
+  @FhirPathFunction
+  @Nonnull
+  public static Collection sum(@Nonnull final Collection input) {
+    return input.map(ColumnRepresentation::sum);
+  }
+  
   /**
    * Takes a collection of Boolean values and returns {@code true} if all the items are
    * {@code true}. If any items are {@code false}, the result is {@code false}.
