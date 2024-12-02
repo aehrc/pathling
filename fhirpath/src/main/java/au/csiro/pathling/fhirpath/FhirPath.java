@@ -63,6 +63,15 @@ public interface FhirPath {
     return NULL.equals(this);
   }
 
+  @Nonnull
+  default FhirPath withNewChildren(@Nonnull final List<FhirPath> children) {
+    if (children.isEmpty()) {
+      return this;
+    } else {
+      throw new IllegalArgumentException("Non-empty child list passed to zero arg FhirPath");
+    }
+  }
+  
 
   @Nonnull
   default String toExpression() {

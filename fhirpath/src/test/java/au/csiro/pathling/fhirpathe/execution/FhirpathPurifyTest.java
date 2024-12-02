@@ -29,7 +29,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
@@ -498,6 +501,42 @@ class FhirpathPurifyTest {
   }
 
 
+  // This is mutable class
+  // private constructor
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
+  @Getter
+  static class FhirPathResultCollector {
+
+    @Nonnull
+    private Dataset<Row> dataset;
+    @Nonnull
+    private final List<FhirPath> paths;
+
+
+    @Nonnull
+    List<FhirPath> getPaths() {
+      return Collections.unmodifiableList(paths);
+    }
+
+    @Nonnull
+    FhirPathResultCollector add(@Nonnull final FhirPathResult result) {
+      this.dataset = result.getDataset();
+      this.paths.add(result.getFhirPath());
+      return this;
+    }
+
+    @Nonnull
+    static FhirPathResultCollector empty(@Nonnull final Dataset<Row> dataset) {
+      return new FhirPathResultCollector(dataset, new ArrayList<>());
+    }
+
+    @Nonnull
+    FhirPathResultCollector combine(@Nonnull final FhirPathResultCollector other) {
+      throw new UnsupportedOperationException("Not implemented");
+    }
+  }
+
+
   @Value
   static class ConstPath implements FhirPath {
 
@@ -613,44 +652,23 @@ class FhirpathPurifyTest {
                   functions.col(joinRoot.getValueTag()))))
               .andThen(suffixPath)
       );
-    } else if (fhirPath.first() instanceof EvalOperator evalOperator) {
-      // TODO: rewrite in functional style
-      Dataset<Row> currentDataset = parentDataset;
-      List<FhirPath> pureArguments = new ArrayList<>();
-      for (final FhirPath childPath : evalOperator.children().toList()) {
-        final FhirPathResult result = purify(dataSource, subjectResource, childPath,
-            currentDataset);
-        currentDataset = result.getDataset();
-        pureArguments.add(result.getFhirPath());
-      }
-      return FhirPathResult.of(
-          currentDataset,
-          new EvalOperator(pureArguments.get(0), pureArguments.get(1), evalOperator.getOperator()).andThen(fhirPath.suffix())
-      );
-    } else if (fhirPath.first() instanceof EvalFunction evalFunction) {
-      // TODO: rewrite in functional style
-      Dataset<Row> currentDataset = parentDataset;
-      List<FhirPath> pureArguments = new ArrayList<>();
-      for (final FhirPath childPath : evalFunction.children().toList()) {
-        final FhirPathResult result = purify(dataSource, subjectResource, childPath,
-            currentDataset);
-        currentDataset = result.getDataset();
-        pureArguments.add(result.getFhirPath());
-      }
-      return FhirPathResult.of(
-          currentDataset,
-          new EvalFunction(evalFunction.getFunctionIdentifier(), pureArguments).andThen(fhirPath.suffix())
-      );
-
-
     } else {
 
+      final FhirPath headPath = fhirPath.first();
       // ok how to purify an operator or anything else
       // well we will need to be able to mapChildren so that
       // they can be purified while at the same time the dataset is reduced
+      final FhirPathResultCollector collector = headPath.children().sequential().reduce(
+          FhirPathResultCollector.empty(parentDataset),
+          (acc, childPath) -> {
+            final FhirPathResult result = purify(dataSource, subjectResource, childPath,
+                acc.getDataset());
+            return acc.add(result);
+          }, FhirPathResultCollector::combine);
+
       return FhirPathResult.of(
-          parentDataset,
-          fhirPath
+          collector.getDataset(),
+          headPath.withNewChildren(collector.getPaths()).andThen(fhirPath.suffix())
       );
     }
   }
