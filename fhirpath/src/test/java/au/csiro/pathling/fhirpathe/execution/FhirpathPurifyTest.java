@@ -632,7 +632,8 @@ class FhirpathPurifyTest {
 
     // recursively purify child path
     final FhirpathResult pureChildResult = purify(dataSource, joinRoot.getForeignResourceType(),
-        childPath, childParentKeyResult.getDataset(), Optional.empty());
+        childPath, childParentKeyResult.getDataset(),
+        Optional.of(childExecutor.createDefaultInputContext()));
 
     System.out.println(("Reverse - pure"));
     System.out.println(pureChildResult.getFhirPath());
@@ -718,7 +719,14 @@ class FhirpathPurifyTest {
       final FhirPathExecutor childExecutor = createExecutor(resolveRoot.getForeignResourceType(),
           dataSource);
 
-      final CollectionDataset childResult = childExecutor.evaluate(childPath);
+      // recursively purify child path
+      final FhirpathResult pureChildResult = purify(dataSource,
+          resolveRoot.getForeignResourceType(),
+          childPath, childExecutor.createInitialDataset(),
+          Optional.of(childExecutor.createDefaultInputContext()));
+
+      final CollectionDataset childResult = childExecutor.evaluate(pureChildResult.getFhirPath(),
+          pureChildResult.getDataset());
       final Dataset<Row> childDataset = childResult.materialize(resolveRoot.getValueTag())
           .select(functions.col("key").alias(resolveRoot.getChildKeyTag()),
               functions.col(resolveRoot.getValueTag()));
@@ -961,7 +969,7 @@ class FhirpathPurifyTest {
     resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
-            RowFactory.create("1", sql_array("1.1.1", "1.1.2", "1.1.3", "2.1.1")),
+            RowFactory.create("1", sql_array("1.1.1", "1.1.2", "1.1.3", "1.2.1")),
             RowFactory.create("2", sql_array("2.1.1", "2.1.2")),
             RowFactory.create("3", null)
         );
@@ -988,6 +996,31 @@ class FhirpathPurifyTest {
         );
   }
 
+
+  @Test
+  void nestedResolveOneToValue() {
+    final ObjectDataSource dataSource = getPatientsWithEncountersWithConditions();
+
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.CONDITION,
+        "encounter.resolve().subject.resolve().id"
+    );
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
+    resultDataset.show();
+
+    // TODO: should be 0 in the last row
+
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1.1.1", "1"),
+            RowFactory.create("1.1.2", "1"),
+            RowFactory.create("1.1.3", "1"),
+            RowFactory.create("1.2.1", "1"),
+            RowFactory.create("2.1.1", "2"),
+            RowFactory.create("2.1.2", "2")
+        );
+  }
+
   private @NotNull ObjectDataSource getPatientsWithEncountersWithConditions() {
     return new ObjectDataSource(spark, encoders,
         List.of(
@@ -1004,7 +1037,7 @@ class FhirpathPurifyTest {
             new Condition().setSubject(new Reference("Patient/1"))
                 .setEncounter(new Reference("Encounter/1.1")).setId("Condition/1.1.3"),
             new Condition().setSubject(new Reference("Patient/1"))
-                .setEncounter(new Reference("Encounter/1.2")).setId("Condition/2.1.1"),
+                .setEncounter(new Reference("Encounter/1.2")).setId("Condition/1.2.1"),
             new Condition().setSubject(new Reference("Patient/2"))
                 .setEncounter(new Reference("Encounter/2.1")).setId("Condition/2.1.1"),
             new Condition().setSubject(new Reference("Patient/2"))
@@ -1035,8 +1068,6 @@ class FhirpathPurifyTest {
 
   @Test
   void resolveToManyWithSimpleValue() {
-    // ON Encounter
-    // final Dataset<Row> joinedResult = evalFhirPathMulti(ResourceType.ENCOUNTER,"episodeOfCare.resolve().status", dataSource);
 
     final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
         List.of(
@@ -1108,6 +1139,42 @@ class FhirpathPurifyTest {
                 )
                 .setId("Condition/z")
         ));
+  }
+
+  @Test
+  void reverseResolveBackToResolved() {
+    final ObjectDataSource dataSource = getPatientsWithConditions();
+
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.CONDITION,
+        "subject.resolve().reverseResolve(Condition.subject).id"
+    );
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
+    resultDataset.show();
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("x", sql_array("x", "y")),
+            RowFactory.create("y", sql_array("x", "y")),
+            RowFactory.create("z", sql_array("z"))
+        );
+  }
+
+  @Test
+  void resolveBackFromReverseResolve() {
+    final ObjectDataSource dataSource = getPatientsWithConditions();
+
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.PATIENT,
+        "reverseResolve(Condition.subject).subject.resolve().id"
+    );
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
+    resultDataset.show();
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", sql_array("1", "1")),
+            RowFactory.create("2", sql_array("2")),
+            RowFactory.create("3", null)
+        );
   }
 
   @SafeVarargs
