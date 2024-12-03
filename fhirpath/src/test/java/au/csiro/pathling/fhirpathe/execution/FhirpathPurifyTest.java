@@ -273,7 +273,7 @@ class FhirpathPurifyTest {
       );
     }
   }
-  
+
   @Nonnull
   static Function<Column, Column> getAggregation(@Nonnull final FhirPath path) {
     if (path instanceof Composite) {
@@ -553,7 +553,7 @@ class FhirpathPurifyTest {
     final Dataset<Row> initialDataset = subjectExecutor.createInitialDataset();
     initialDataset.show();
     final FhirpathResult purifiedResult = purify(dataSource, subjectResource, fhirPath,
-        initialDataset);
+        initialDataset, Optional.of(subjectExecutor.createDefaultInputContext()));
     System.out.println("Purified path: " + purifiedResult.getFhirPath());
     purifiedResult.getDataset().show();
     return subjectExecutor.execute(purifiedResult.getFhirPath(), purifiedResult.getDataset());
@@ -563,7 +563,11 @@ class FhirpathPurifyTest {
   FhirpathResult purify(@Nonnull final ObjectDataSource dataSource,
       @Nonnull final ResourceType subjectResource,
       @Nonnull final FhirPath fhirPath,
-      @Nonnull final Dataset<Row> parentDataset) {
+      @Nonnull final Dataset<Row> parentDataset,
+      @Nonnull final Optional<Collection> maybeParentContext) {
+
+    // TODO : remove the construction from here
+    final FhirPathExecutor subjectExecutor = createExecutor(subjectResource, dataSource);
 
     final FhirPath headPath = fhirPath.first();
 
@@ -574,6 +578,13 @@ class FhirpathPurifyTest {
           subjectResource, parentDataset,
           asReverseResolve(headPath).orElseThrow(),
           fhirPath.suffix());
+    } else if (isResolve(headPath)) {
+      return purifyResolve(dataSource,
+          subjectResource, parentDataset,
+          fhirPath.suffix(),
+          // TODO: replace with a better exception
+          maybeParentContext.orElseThrow()
+      );
     } else {
       // ok how to purify an operator or anything else
       // well we will need to be able to mapChildren so that
@@ -582,17 +593,20 @@ class FhirpathPurifyTest {
           FhirPathResultCollector.empty(parentDataset),
           (acc, childPath) -> {
             final FhirpathResult result = purify(dataSource, subjectResource, childPath,
-                acc.getDataset());
+                acc.getDataset(), maybeParentContext);
             return acc.add(result);
           }, FhirPathResultCollector::combine);
 
+      final FhirPath pureHeadPath = headPath
+          .withNewChildren(collector.getPaths());
       // and now purify the rest of the path
       final FhirpathResult pureSuffix = purify(dataSource, subjectResource, fhirPath.suffix(),
-          collector.getDataset());
+          collector.getDataset(),
+          maybeParentContext.map(c -> subjectExecutor.evaluate(pureHeadPath, c)));
 
       return FhirpathResult.of(
           pureSuffix.getDataset(),
-          headPath.withNewChildren(collector.getPaths()).andThen(pureSuffix.getFhirPath())
+          pureHeadPath.andThen(pureSuffix.getFhirPath())
       );
     }
   }
@@ -618,7 +632,7 @@ class FhirpathPurifyTest {
 
     // recursively purify child path
     final FhirpathResult pureChildResult = purify(dataSource, joinRoot.getForeignResourceType(),
-        childPath, childParentKeyResult.getDataset());
+        childPath, childParentKeyResult.getDataset(), Optional.empty());
 
     System.out.println(("Reverse - pure"));
     System.out.println(pureChildResult.getFhirPath());
@@ -656,7 +670,124 @@ class FhirpathPurifyTest {
             .andThen(childValueResult.aggregator.getSuffix())
     );
   }
-  
+
+
+  @Nonnull
+  private FhirpathResult purifyResolve(@Nonnull final ObjectDataSource dataSource,
+      @Nonnull final ResourceType parentResource,
+      @Nonnull final Dataset<Row> parentDataset,
+      @Nonnull final FhirPath childPath,
+      @Nonnull final Collection parentContext) {
+
+    final FhirPathExecutor parentExecutor = createExecutor(parentResource,
+        dataSource);
+
+    // TODO: eval the reference and to get access to reference path 
+    // and evaluate the key from it and also check for the type of the referenced resource
+    // NOTE: I am not sure how to handle access to multiple reference types here, especially 
+    // if ofType() is applied to an operator of the path 
+
+    final ReferenceCollection referenceCollection = (ReferenceCollection) parentContext;
+    System.out.println(
+        "Reference types" + referenceCollection.getReferenceTypes().stream().toList());
+    // TODO: this hardcoded Patient for subject referecnes (as the group is ommited
+    // but should instead somehow alllow for lazy evaluation of ofType(...) for 
+    // references with more than one type allowed (polymorphic references)
+
+    final Collection childReferences = parentExecutor.evaluate(
+        new Traversal("reference"), parentContext);
+
+    System.out.println(
+        "Reference types" + referenceCollection.getReferenceTypes().stream().toList());
+    // TODO: this hardcoded Patient for subject referecnes (as the group is ommited
+    // but should instead somehow alllow for lazy evaluation of ofType(...) for 
+    // references with more than one type allowed (polymorphic references)
+    final ResolveRoot resolveRoot = ResolveRoot.ofResource(parentResource,
+        referenceCollection.getReferenceTypes().stream().filter(t -> t != ResourceType.GROUP)
+            .toList().get(0),
+        "_REF");
+
+    System.out.println(
+        "Resolve " + referenceCollection.isToOneReference() + " : " + resolveRoot + "->"
+            + "_REF" + " : "
+            + childPath.toExpression());
+
+    if (referenceCollection.isToOneReference()) {
+
+      // TODO: this should be replaced with call to evalPath() with not grouping context
+      final FhirPathExecutor childExecutor = createExecutor(resolveRoot.getForeignResourceType(),
+          dataSource);
+
+      final CollectionDataset childResult = childExecutor.evaluate(childPath);
+      final Dataset<Row> childDataset = childResult.materialize(resolveRoot.getValueTag())
+          .select(functions.col("key").alias(resolveRoot.getChildKeyTag()),
+              functions.col(resolveRoot.getValueTag()));
+      childDataset.show();
+
+      // TODO: check if we need to materialize childReferences
+      final Dataset<Row> joinedDataset = parentDataset
+          .join(
+              childDataset.drop("id", "key"),
+              //functions.col(resolveRoot.getParentKeyTag())
+              childReferences.getColumnValue()
+                  .equalTo(childDataset.col(resolveRoot.getChildKeyTag())),
+              "left_outer");
+
+      System.out.println("Joined dataset");
+      joinedDataset.show();
+
+      return FhirpathResult.of(
+          joinedDataset.drop(resolveRoot.getChildKeyTag()),
+          new ConstPath(childResult.getValue().withColumn(
+              functions.col(resolveRoot.getValueTag())))
+      );
+
+    } else {
+
+      final FhirPathExecutor childExecutor = createExecutor(resolveRoot.getForeignResourceType(),
+          dataSource);
+
+      // TODO: this should be replaced with call to evalPath() with not grouping context
+      final CollectionDataset childResult = childExecutor.evaluate(childPath);
+      final Dataset<Row> childDataset = childResult.materialize(resolveRoot.getValueTag())
+          .select(functions.col("key").alias(resolveRoot.getChildKeyTag()),
+              functions.col(resolveRoot.getValueTag()));
+      childDataset.show();
+
+      final Dataset<Row> explodedParentDataset = parentDataset
+          .withColumn(resolveRoot.getParentKeyTag(), functions.explode_outer(
+              childReferences.getColumnValue()));
+
+      final Dataset<Row> joinedDataset = explodedParentDataset
+          .join(
+              childDataset.drop("id", "key"),
+              functions.col(resolveRoot.getParentKeyTag())
+                  .equalTo(childDataset.col(resolveRoot.getChildKeyTag())),
+              "left_outer");
+
+      joinedDataset.show();
+
+      final Dataset<Row> reGrouppedDataset = joinedDataset.groupBy(parentDataset.col("key"))
+          .agg(
+              functions.any_value(functions.col("id")).alias("id"),
+              functions.any_value(functions.col(parentResource.toCode()))
+                  .alias(parentResource.toCode()),
+              functions.any_value(functions.col("_fid")).alias("_fid"),
+              functions.any_value(functions.col("_extension")).alias("_extension"),
+              functions.collect_list(functions.col(resolveRoot.getValueTag()))
+                  .alias(resolveRoot.getValueTag())
+          );
+      reGrouppedDataset.show();
+
+      return FhirpathResult.of(
+          reGrouppedDataset,
+          new ConstPath(childResult.getValue().withColumn(
+              functions.col(resolveRoot.getValueTag())))
+      );
+    }
+  }
+
+
   @Test
   void simpleReverseResolveToSingularValue() {
     final ObjectDataSource dataSource = getPatientsWithConditions();
@@ -936,7 +1067,8 @@ class FhirpathPurifyTest {
         .hasRowsUnordered(
             RowFactory.create("01", sql_array("active", "finished")),
             RowFactory.create("02", sql_array("onhold", "planned")),
-            RowFactory.create("03", sql_array())
+            // TODO: How do we represent an empty array
+            RowFactory.create("03", null)
         );
   }
 
@@ -978,6 +1110,7 @@ class FhirpathPurifyTest {
         ));
   }
 
+  @SafeVarargs
   @Nonnull
   private static <T> WrappedArray<T> sql_array(final T... values) {
     return WrappedArray.make(values);
