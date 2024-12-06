@@ -107,7 +107,8 @@ class FhirpathPurifyTest {
   //
 
 
-  @Value(staticConstructor = "of")
+  @Value()
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
   static class GroupingContext {
 
     @Nonnull
@@ -115,12 +116,34 @@ class FhirpathPurifyTest {
     @Nonnull
     String valueColumnAlias;
 
+    @Nonnull
+    List<String> passThroughColumns;
 
     @Nonnull
     String getColumnTag(@Nonnull final String column) {
       return column + "@" + Long.toHexString(System.identityHashCode(this));
     }
 
+
+    @Nonnull
+    static GroupingContext of(@Nonnull final Column groupingColumn,
+        @Nonnull final String valueColumnAlias) {
+      return new GroupingContext(groupingColumn, valueColumnAlias, List.of());
+    }
+
+    @Nonnull
+    GroupingContext withPassThroughColumns(@Nonnull final List<String> passThroughColumns) {
+      return new GroupingContext(groupingColumn, valueColumnAlias, passThroughColumns);
+    }
+
+    @Nonnull
+    GroupingContext withPassThroughColumns(@Nonnull final Dataset<Row> dataset,
+        String... excludeColumns) {
+      final Set<String> excluded = Set.of(excludeColumns);
+      return new GroupingContext(groupingColumn, valueColumnAlias, Stream.of(dataset.columns())
+          .filter(c -> !excluded.contains(c))
+          .toList());
+    }
   }
 
   @Value(staticConstructor = "of")
@@ -180,9 +203,13 @@ class FhirpathPurifyTest {
                 .agg(
                     // TODO: maybe  use all the actual column list here
                     // but aliased with a unique ids
-                    functions.any_value(functions.col("id")).alias("id"),
-                    functions.any_value(functions.col("key")).alias("key"),
-                    aggCollection.getColumnValue().alias(groupingContext.getValueColumnAlias()));
+                    // functions.any_value(functions.col("id")).alias("id"),
+                    // functions.any_value(functions.col("key")).alias("key"),
+                    aggCollection.getColumnValue().alias(groupingContext.getValueColumnAlias()),
+                    groupingContext.getPassThroughColumns().stream()
+                        .map(c -> functions.first(functions.col(c)).alias(c))
+                        .toArray(Column[]::new)
+                );
             childResult.show();
             return EvalResult.of(
                 CollectionDataset.of(childResult,
@@ -759,8 +786,12 @@ class FhirpathPurifyTest {
           dataSource);
 
       // TODO: this should be replaced with call to evalPath() with not grouping context
-      final CollectionDataset childResult = childExecutor.evaluate(childPath);
-      final Dataset<Row> childDataset = childResult.materialize(resolveRoot.getValueTag())
+      final EvalResult childResult = evalPurePath(dataSource,
+          resolveRoot.getForeignResourceType(),
+          childPath, childExecutor.createInitialDataset());
+
+      final Dataset<Row> childDataset = childResult.getResult()
+          .materialize(resolveRoot.getValueTag())
           .select(functions.col("key").alias(resolveRoot.getChildKeyTag()),
               functions.col(resolveRoot.getValueTag()));
       childDataset.show();
@@ -777,16 +808,30 @@ class FhirpathPurifyTest {
               "left_outer");
 
       joinedDataset.show();
-      final Dataset<Row> reGrouppedDataset =
-          groupBy(joinedDataset, joinedDataset.col("key"),
-              Set.of("key", resolveRoot.getValueTag()),
-              functions.collect_list(functions.col(resolveRoot.getValueTag()))
-                  .alias(resolveRoot.getValueTag()));
+
+      final GroupingContext parentGroupingContext = GroupingContext.of(
+          // TODO: we actually need to re-group based on the parent resource key (id)
+          joinedDataset.col("key"),
+          resolveRoot.getValueTag()
+      ).withPassThroughColumns(joinedDataset, "key", resolveRoot.getValueTag());
+
+      final EvalResult regroupedResult = childResult.withResult(
+              CollectionDataset.of(joinedDataset,
+                  childResult.getValue().withColumn(functions.col(resolveRoot.getValueTag()))))
+          .aggregate(Optional.of(parentGroupingContext));
+
+      final Dataset<Row> reGrouppedDataset = regroupedResult.getDataset();
+      // groupBy(joinedDataset, joinedDataset.col("key"),
+      //     Set.of("key", resolveRoot.getValueTag()),
+      //     functions.collect_list(functions.col(resolveRoot.getValueTag()))
+      //         .alias(resolveRoot.getValueTag()));
       reGrouppedDataset.show();
+
       return FhirpathResult.of(
           reGrouppedDataset,
           new ConstPath(childResult.getValue().withColumn(
-              functions.col(resolveRoot.getValueTag())))
+              functions.col(resolveRoot.getValueTag()))).andThen(
+              regroupedResult.getAggregator().getSuffix())
       );
     }
   }
@@ -1078,23 +1123,7 @@ class FhirpathPurifyTest {
   @Test
   void resolveToManyWithSimpleValue() {
 
-    final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
-        List.of(
-            new Encounter()
-                .addEpisodeOfCare(new Reference("EpisodeOfCare/01_1"))
-                .addEpisodeOfCare(new Reference("EpisodeOfCare/01_2"))
-                .setId("Encounter/01"),
-            new Encounter()
-                .addEpisodeOfCare(new Reference("EpisodeOfCare/02_1"))
-                .addEpisodeOfCare(new Reference("EpisodeOfCare/02_2"))
-                .setId("Encounter/02"),
-            new Encounter().setId("Encounter/03"),
-            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.ACTIVE).setId("EpisodeOfCare/01_1"),
-            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.FINISHED)
-                .setId("EpisodeOfCare/01_2"),
-            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.ONHOLD).setId("EpisodeOfCare/02_1"),
-            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.PLANNED).setId("EpisodeOfCare/02_2")
-        ));
+    final ObjectDataSource dataSource = encoundersWithEpisodes();
 
     final Dataset<Row> resultDataset = evalExpression(dataSource,
         ResourceType.ENCOUNTER,
@@ -1106,12 +1135,54 @@ class FhirpathPurifyTest {
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("01", sql_array("active", "finished")),
-            RowFactory.create("02", sql_array("onhold", "planned")),
+            RowFactory.create("02", sql_array("onhold", "planned", "waitlist")),
             // TODO: How do we represent an empty array
             RowFactory.create("03", null)
         );
   }
 
+
+  @Test
+  void resolveToManyWithAggregation() {
+
+    final ObjectDataSource dataSource = encoundersWithEpisodes();
+
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.ENCOUNTER,
+        "episodeOfCare.resolve().count()"
+    );
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
+    resultDataset.show();
+
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("01", 2),
+            RowFactory.create("02", 3),
+            RowFactory.create("03", 0)
+        );
+  }
+
+  private @NotNull ObjectDataSource encoundersWithEpisodes() {
+    return new ObjectDataSource(spark, encoders,
+        List.of(
+            new Encounter()
+                .addEpisodeOfCare(new Reference("EpisodeOfCare/01_1"))
+                .addEpisodeOfCare(new Reference("EpisodeOfCare/01_2"))
+                .setId("Encounter/01"),
+            new Encounter()
+                .addEpisodeOfCare(new Reference("EpisodeOfCare/02_1"))
+                .addEpisodeOfCare(new Reference("EpisodeOfCare/02_2"))
+                .addEpisodeOfCare(new Reference("EpisodeOfCare/02_3"))
+                .setId("Encounter/02"),
+            new Encounter().setId("Encounter/03"),
+            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.ACTIVE).setId("EpisodeOfCare/01_1"),
+            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.FINISHED)
+                .setId("EpisodeOfCare/01_2"),
+            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.ONHOLD).setId("EpisodeOfCare/02_1"),
+            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.PLANNED).setId("EpisodeOfCare/02_2"),
+            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.WAITLIST).setId("EpisodeOfCare/02_3")
+        ));
+  }
 
   @Test
   void resolveToManyWithSimpleValueAndWhereInPath() {
