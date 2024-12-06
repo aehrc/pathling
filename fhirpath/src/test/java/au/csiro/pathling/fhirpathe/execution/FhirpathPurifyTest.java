@@ -268,42 +268,7 @@ class FhirpathPurifyTest {
       );
     }
   }
-
-
-  @Nonnull
-  EvalResult evalPurePath(@Nonnull final ObjectDataSource dataSource,
-      @Nonnull final ResourceType subjectResource,
-      @Nonnull final FhirPath fhirPath) {
-
-    // The problem here is that we might need to evaluate the column aggregation multiple times
-    // for different grouping context and then 
-    // to finally apply the suffix  (if any) when the empty (or root) context is reached
-    // Not sure how if/how we can track the subjectResource here
-
-    final FhirPathExecutor executor = createExecutor(subjectResource,
-        dataSource);
-
-    final Pair<FhirPath, FhirPath> aggAndSuffix = fhirPath.splitLeft(
-        FhirpathPurifyTest::isAggregation);
-    // check if the child ends with an aggregate 
-    if (aggAndSuffix.getLeft().isNull()) {
-
-      return EvalResult.of(
-          executor.evaluate(aggAndSuffix.getRight()),
-          Aggregator.of(executor, c -> ValueFunctions.unnest(functions.collect_list(c)),
-              FhirPath.nullPath())
-      );
-    } else {
-      final FhirPath aggPath = aggAndSuffix.getLeft();
-      final FhirPath aggSuffix = aggAndSuffix.getRight();
-      System.out.println("Agg split: " + aggPath + " +  " + aggSuffix);
-      return EvalResult.of(
-          executor.evaluate(aggPath),
-          Aggregator.of(executor, getAggregation(aggPath.last()), aggSuffix)
-      );
-    }
-  }
-
+  
   @Nonnull
   static Function<Column, Column> getAggregation(@Nonnull final FhirPath path) {
     if (path instanceof Composite) {
@@ -348,11 +313,7 @@ class FhirpathPurifyTest {
   static boolean isResolve(final FhirPath path) {
     return asResolve(path).isPresent();
   }
-
-  static boolean isJoiningPath(final FhirPath path) {
-    return isReverseResolve(path) || isResolve(path);
-  }
-
+  
   @Nonnull
   static Optional<EvalFunction> asReverseResolve(final FhirPath path) {
     if (path instanceof EvalFunction evalFunction && evalFunction.getFunctionIdentifier()
@@ -369,131 +330,6 @@ class FhirpathPurifyTest {
       return Optional.of(evalFunction);
     }
     return Optional.empty();
-  }
-
-  @Nonnull
-  EvalResult evalPath(@Nonnull final ObjectDataSource dataSource,
-      @Nonnull final ResourceType subjectResource,
-      @Nonnull final FhirPath fhirPath) {
-
-    final Pair<FhirPath, FhirPath> parentAndJoninigPath = fhirPath.splitRight(
-        FhirpathPurifyTest::isJoiningPath);
-
-    final FhirPath parentPath = parentAndJoninigPath.getLeft();
-    System.out.println("Parent path:" + parentPath + " -> " + parentPath.toExpression());
-    final FhirPath joiningPath = parentAndJoninigPath.getRight();
-    System.out.println("Joining path: " + joiningPath);
-
-    if (joiningPath.isNull()) {
-      return evalPurePath(dataSource, subjectResource, parentPath);
-    } else if (isResolve(joiningPath.first())) {
-      // well firstly I might not be able to determine the type of the join resource here 
-      // unless the the explicit ofType() is used
-      // sometimes the type can be inferred from the path itself
-      // if a sinlular reference is used
-      final EvalFunction resolve = asResolve(
-          joiningPath.first()).orElseThrow();
-      System.out.println(resolve);
-      final FhirPath childPath = joiningPath.suffix();
-      return evalResolve(dataSource, subjectResource, parentPath, childPath);
-    } else {
-      throw new IllegalArgumentException("Unsupported complex path: " + joiningPath);
-    }
-  }
-
-  @Nonnull
-  private EvalResult evalResolve(@Nonnull final ObjectDataSource dataSource,
-      @Nonnull final ResourceType parentResource, @Nonnull final FhirPath parentPath,
-      @Nonnull final FhirPath childPath) {
-
-    final FhirPathExecutor parentExecutor = createExecutor(parentResource,
-        dataSource);
-
-    // TODO: eval the reference and to get access to reference path 
-    // and evaluate the key from it and also check for the type of the referenced resource
-    // NOTE: I am not sure how to handle access to multiple reference types here, especially 
-    // if ofType() is applied to an operator of the path 
-    final CollectionDataset parentResult = parentExecutor.evaluate(
-        parentPath.andThen(new Traversal("reference")));
-
-    final CollectionDataset referenceResult = parentExecutor.evaluate(
-        parentPath);
-    final ReferenceCollection referenceCollection = (ReferenceCollection) referenceResult.getValue();
-    System.out.println(
-        "Reference types" + referenceCollection.getReferenceTypes().stream().toList());
-    // TODO: this hardcoded Patient for subject referecnes (as the group is ommited
-    // but should instead somehow alllow for lazy evaluation of ofType(...) for 
-    // references with more than one type allowed (polymorphic references)
-    final ResolveRoot resolveRoot = ResolveRoot.ofResource(parentResource,
-        referenceCollection.getReferenceTypes().stream().filter(t -> t != ResourceType.GROUP)
-            .toList().get(0),
-        parentPath.toExpression());
-
-    System.out.println(
-        "Resolve " + referenceCollection.isToOneReference() + " : " + resolveRoot + "->"
-            + parentPath.toExpression() + " : "
-            + childPath.toExpression());
-
-    if (referenceCollection.isToOneReference()) {
-
-      // TODO: this should be replaced with call to evalPath() with not grouping context
-      final FhirPathExecutor childExecutor = createExecutor(resolveRoot.getForeignResourceType(),
-          dataSource);
-
-      final CollectionDataset childResult = childExecutor.evaluate(childPath);
-      final Dataset<Row> childDataset = childResult.materialize(resolveRoot.getValueTag())
-          .select(functions.col("key").alias(resolveRoot.getChildKeyTag()),
-              functions.col(resolveRoot.getValueTag()));
-      childDataset.show();
-
-      final Dataset<Row> joinedDataset = parentResult.materialize(resolveRoot.getParentKeyTag())
-          .join(
-              childDataset,
-              functions.col(resolveRoot.getParentKeyTag())
-                  .equalTo(childDataset.col(resolveRoot.getChildKeyTag())),
-              "left_outer");
-
-      return EvalResult.of(
-          CollectionDataset.of(joinedDataset,
-              childResult.getValue().withColumn(functions.col(resolveRoot.getValueTag()))),
-          Aggregator.of(childExecutor, c -> c,
-              FhirPath.nullPath())
-      );
-    } else {
-
-      final EvalResult childEvalResult = evalPath(dataSource,
-          resolveRoot.getForeignResourceType(),
-          childPath).aggregate(Optional.empty());
-
-      final CollectionDataset childResult = childEvalResult.getResult();
-      final Dataset<Row> childDataset = childResult.materialize(resolveRoot.getValueTag())
-          .select(functions.col("key").alias(resolveRoot.getChildKeyTag()),
-              functions.col(resolveRoot.getValueTag()));
-      childDataset.show();
-
-      final Dataset<Row> joinedDataset = parentResult.materialize(resolveRoot.getParentKeyTag(),
-              functions::explode_outer)
-          .join(
-              childDataset,
-              functions.col(resolveRoot.getParentKeyTag())
-                  .equalTo(childDataset.col(resolveRoot.getChildKeyTag())),
-              "left_outer");
-
-      // and now aggregate by this context
-
-      // this grouping context is based on the parent key
-      final GroupingContext parentGroupingContext = GroupingContext.of(
-          // TODO: we actually need to re-group based on the parent resource key (id)
-          parentResult.getDataset().col("key"),
-          resolveRoot.getValueTag()
-      );
-
-      return EvalResult.of(
-          CollectionDataset.of(joinedDataset,
-              childResult.getValue().withColumn(functions.col(resolveRoot.getValueTag()))),
-          childEvalResult.getAggregator()
-      ).aggregate(Optional.of(parentGroupingContext));
-    }
   }
 
   private static boolean isAggregation(FhirPath fhirPath) {
@@ -685,7 +521,7 @@ class FhirpathPurifyTest {
     // based on the result of the aggregation
     // and the execution context
 
-    final Dataset<Row> childResult = childValueResult.getDataset().drop("id", "key");
+    final Dataset<Row> childResult = childValueResult.getDataset();
     childResult.show();
     final Dataset<Row> joinedDataset = parentDataset.join(childResult,
             functions.col("key")
@@ -765,8 +601,7 @@ class FhirpathPurifyTest {
       // TODO: check if we need to materialize childReferences
       final Dataset<Row> joinedDataset = parentDataset
           .join(
-              childDataset.drop("id", "key"),
-              //functions.col(resolveRoot.getParentKeyTag())
+              childDataset,
               childReferences.getColumnValue()
                   .equalTo(childDataset.col(resolveRoot.getChildKeyTag())),
               "left_outer");
@@ -821,10 +656,6 @@ class FhirpathPurifyTest {
           .aggregate(Optional.of(parentGroupingContext));
 
       final Dataset<Row> reGrouppedDataset = regroupedResult.getDataset();
-      // groupBy(joinedDataset, joinedDataset.col("key"),
-      //     Set.of("key", resolveRoot.getValueTag()),
-      //     functions.collect_list(functions.col(resolveRoot.getValueTag()))
-      //         .alias(resolveRoot.getValueTag()));
       reGrouppedDataset.show();
 
       return FhirpathResult.of(
@@ -835,7 +666,7 @@ class FhirpathPurifyTest {
       );
     }
   }
-  
+
   @Test
   void simpleReverseResolveToSingularValue() {
     final ObjectDataSource dataSource = getPatientsWithConditions();
