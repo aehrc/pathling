@@ -26,7 +26,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -45,6 +47,7 @@ import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.Encounter;
+import org.hl7.fhir.r4.model.Encounter.EncounterStatus;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.EpisodeOfCare;
@@ -774,25 +777,31 @@ class FhirpathPurifyTest {
               "left_outer");
 
       joinedDataset.show();
-
-      final Dataset<Row> reGrouppedDataset = joinedDataset.groupBy(parentDataset.col("key"))
-          .agg(
-              functions.any_value(functions.col("id")).alias("id"),
-              functions.any_value(functions.col(parentResource.toCode()))
-                  .alias(parentResource.toCode()),
-              functions.any_value(functions.col("_fid")).alias("_fid"),
-              functions.any_value(functions.col("_extension")).alias("_extension"),
+      final Dataset<Row> reGrouppedDataset =
+          groupBy(joinedDataset, joinedDataset.col("key"),
+              Set.of("key", resolveRoot.getValueTag()),
               functions.collect_list(functions.col(resolveRoot.getValueTag()))
-                  .alias(resolveRoot.getValueTag())
-          );
+                  .alias(resolveRoot.getValueTag()));
       reGrouppedDataset.show();
-
       return FhirpathResult.of(
           reGrouppedDataset,
           new ConstPath(childResult.getValue().withColumn(
               functions.col(resolveRoot.getValueTag())))
       );
     }
+  }
+
+  @Nonnull
+  public static Dataset<Row> groupBy(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column groupingExpression, @Nonnull final Set<String> excludeFields,
+      @Nonnull final Column... aggExpressions) {
+    final Stream<Column> passThroughExpressions = Stream.of(dataset.columns())
+        .filter(c -> !excludeFields.contains(c))
+        .map(c -> functions.any_value(functions.col(c)).alias(c));
+    final List<Column> aggColumns = Stream.concat(passThroughExpressions, Stream.of(aggExpressions))
+        .toList();
+    return dataset.groupBy(groupingExpression)
+        .agg(aggColumns.get(0), aggColumns.stream().skip(1).toArray(Column[]::new));
   }
 
 
@@ -1102,6 +1111,51 @@ class FhirpathPurifyTest {
             RowFactory.create("03", null)
         );
   }
+
+
+  @Test
+  void resolveToManyWithSimpleValueAndWhereInPath() {
+
+    final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
+        List.of(
+            new Patient().setGender(AdministrativeGender.MALE).setId("Patient/1"),
+            new Patient().setGender(AdministrativeGender.FEMALE).setId("Patient/2"),
+            new Encounter()
+                .setSubject(new Reference("Patient/1"))
+                .setStatus(EncounterStatus.ARRIVED)
+                .addEpisodeOfCare(new Reference("EpisodeOfCare/01_1"))
+                .addEpisodeOfCare(new Reference("EpisodeOfCare/01_2"))
+                .setId("Encounter/01"),
+            new Encounter()
+                .setSubject(new Reference("Patient/2"))
+                .setStatus(EncounterStatus.CANCELLED)
+                .addEpisodeOfCare(new Reference("EpisodeOfCare/02_1"))
+                .addEpisodeOfCare(new Reference("EpisodeOfCare/02_2"))
+                .setId("Encounter/02"),
+            new Encounter().setId("Encounter/03"),
+            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.ACTIVE).setId("EpisodeOfCare/01_1"),
+            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.FINISHED)
+                .setId("EpisodeOfCare/01_2"),
+            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.ONHOLD).setId("EpisodeOfCare/02_1"),
+            new EpisodeOfCare().setStatus(EpisodeOfCareStatus.PLANNED).setId("EpisodeOfCare/02_2")
+        ));
+
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.ENCOUNTER,
+        "where(subject.resolve().gender = 'male').episodeOfCare.resolve().status"
+    );
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
+    resultDataset.show();
+
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("01", sql_array("active", "finished")),
+            RowFactory.create("02", null),
+            // TODO: How do we represent an empty array
+            RowFactory.create("03", null)
+        );
+  }
+
 
   @Nonnull
   private ObjectDataSource getPatientsWithConditions() {
