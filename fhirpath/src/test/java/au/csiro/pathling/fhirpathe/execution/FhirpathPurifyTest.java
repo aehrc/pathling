@@ -835,21 +835,7 @@ class FhirpathPurifyTest {
       );
     }
   }
-
-  @Nonnull
-  public static Dataset<Row> groupBy(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column groupingExpression, @Nonnull final Set<String> excludeFields,
-      @Nonnull final Column... aggExpressions) {
-    final Stream<Column> passThroughExpressions = Stream.of(dataset.columns())
-        .filter(c -> !excludeFields.contains(c))
-        .map(c -> functions.any_value(functions.col(c)).alias(c));
-    final List<Column> aggColumns = Stream.concat(passThroughExpressions, Stream.of(aggExpressions))
-        .toList();
-    return dataset.groupBy(groupingExpression)
-        .agg(aggColumns.get(0), aggColumns.stream().skip(1).toArray(Column[]::new));
-  }
-
-
+  
   @Test
   void simpleReverseResolveToSingularValue() {
     final ObjectDataSource dataSource = getPatientsWithConditions();
