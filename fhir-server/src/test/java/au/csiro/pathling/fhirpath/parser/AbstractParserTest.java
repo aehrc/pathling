@@ -21,6 +21,7 @@ import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
 import au.csiro.pathling.fhirpath.execution.FhirPathExecutor;
 import au.csiro.pathling.fhirpath.execution.SingleFhirPathExecutor;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
@@ -66,7 +67,7 @@ public class AbstractParserTest {
   @MockBean
   protected DataSource dataSource;
 
-  FhirPathExecutor executor;
+  FhirPathEvaluator executor;
 
   @BeforeEach
   void setUp() {

@@ -33,18 +33,25 @@ public class CollectionDataset {
 
   @Nonnull
   Collection value;
-  
+
   @Nonnull
   public Column getValueColumn() {
     return value.getColumnValue();
   }
-  
+
   @Nonnull
   public Dataset<Row> materialize(@Nonnull final String valueColumnName) {
     return dataset.withColumn(valueColumnName, getValueColumn());
   }
+
   @Nonnull
-  public Dataset<Row> materialize(@Nonnull final String valueColumnName, @Nonnull Function<Column, Column> mapper) {
+  public Dataset<Row> materialize(@Nonnull final String valueColumnName,
+      @Nonnull Function<Column, Column> mapper) {
     return dataset.withColumn(valueColumnName, mapper.apply(getValueColumn()));
+  }
+
+  @Nonnull
+  public Dataset<Row> toIdValueDataset() {
+    return dataset.select(dataset.col("id").alias("id"), getValueColumn().alias("value"));
   }
 }

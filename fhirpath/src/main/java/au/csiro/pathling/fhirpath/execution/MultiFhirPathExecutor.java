@@ -51,6 +51,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.jetbrains.annotations.NotNull;
 
 
+@Deprecated
 @Value
 public class MultiFhirPathExecutor implements FhirPathExecutor {
 

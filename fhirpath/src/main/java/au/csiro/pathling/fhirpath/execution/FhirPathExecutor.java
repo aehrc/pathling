@@ -24,8 +24,7 @@ import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
-
-public interface FhirPathExecutor {
+public interface FhirPathExecutor extends FhirPathEvaluator {
 
   @Nonnull
   Collection validate(@Nonnull final FhirPath path);
@@ -37,7 +36,8 @@ public interface FhirPathExecutor {
 
 
   @Nonnull
-  CollectionDataset evaluate(@Nonnull final FhirPath path, @Nonnull final Dataset<Row> subjectDataset);
+  CollectionDataset evaluate(@Nonnull final FhirPath path,
+      @Nonnull final Dataset<Row> subjectDataset);
 
 
   @Nonnull
@@ -45,6 +45,7 @@ public interface FhirPathExecutor {
     return evaluate(path, createInitialDataset());
   }
 
+  @Override
   @Nonnull
   default CollectionDataset evaluate(@Nonnull final String fhirpathExpression) {
     return evaluate(new Parser().parse(fhirpathExpression));
