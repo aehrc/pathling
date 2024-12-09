@@ -101,7 +101,7 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation map(@Nonnull final Function<Column, Column> lambda) {
     return copyOf(lambda.apply(getValue()));
   }
-  
+
   /**
    * Create a new {@link ColumnRepresentation} by providing two functions: one that takes an array
    * and one that takes a singular value. The array function is applied to the column if it is an
@@ -210,6 +210,21 @@ public abstract class ColumnRepresentation {
     );
   }
 
+
+  /**
+   * If necessary converters the underlying simple type column to an array with its value as the
+   * only element.
+   *
+   * @return A new {@link ColumnRepresentation} when the underlying column has the ARRAY<?>.
+   */
+  @Nonnull
+  public ColumnRepresentation asArray() {
+    return vectorize(
+        Function.identity(),
+        c -> functions.when(c.isNotNull(), functions.array(c))
+    );
+  }
+  
   /**
    * Filters the current {@link ColumnRepresentation} using a lambda function.
    *
