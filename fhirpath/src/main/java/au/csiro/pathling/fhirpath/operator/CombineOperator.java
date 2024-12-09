@@ -41,7 +41,7 @@ public class CombineOperator implements BinaryOperator {
     final Collection right = input.getRight();
 
     // TODO: check the condition
-    checkUserInput(left.getFhirType().equals(right.getFhirType()),
+    checkUserInput(left.getType().equals(right.getType()),
         "Collection must have the same type");
     // and also need to
 
