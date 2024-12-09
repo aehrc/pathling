@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
 import au.csiro.pathling.fhirpath.execution.FhirPathExecutor;
+import au.csiro.pathling.fhirpath.execution.ResolvingFhirPathEvaluator;
 import au.csiro.pathling.fhirpath.execution.SingleFhirPathExecutor;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.io.source.DataSource;
@@ -83,9 +84,7 @@ public class AbstractParserTest {
 
   @SuppressWarnings("SameParameterValue")
   void setSubjectResource(@Nonnull final ResourceType resourceType) {
-    executor = new SingleFhirPathExecutor(resourceType, fhirContext,
-        StaticFunctionRegistry.getInstance(), Collections.emptyMap(),
-        dataSource);
+    executor = new ResolvingFhirPathEvaluator(resourceType, dataSource);
   }
 
   void mockResource(final ResourceType... resourceTypes) {
