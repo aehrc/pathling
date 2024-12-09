@@ -857,7 +857,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf("iif(gender='male', birthDate, {})")
         .isElementPath(DateCollection.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testIifWithNullLiteral.csv");
+        .hasRows(spark, "responses/ParserTest/testIifWithNullLiteral.tsv");
   }
 
   @Test
@@ -867,7 +867,7 @@ public class ParserTest extends AbstractParserTest {
         "subject.resolve().ofType(Patient).birthDate.until(%resource.period.start, 'years')")
         .isElementPath(IntegerCollection.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testUntilFunction.csv");
+        .hasRows(spark, "responses/ParserTest/testUntilFunction.tsv");
   }
 
   @Test
@@ -877,7 +877,7 @@ public class ParserTest extends AbstractParserTest {
             + " / reverseResolve(Observation.subject).where(valueQuantity < 1.50 'm').valueQuantity.first()).value")
         .isElementPath(DecimalCollection.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testQuantityMultiplicationAndDivision.csv");
+        .hasRows(spark, "responses/ParserTest/testQuantityMultiplicationAndDivision.tsv");
   }
 
   @Test
@@ -888,7 +888,7 @@ public class ParserTest extends AbstractParserTest {
             + " - reverseResolve(Observation.subject).where(valueQuantity > 1 'mmol/L').valueQuantity.first()) = 19873051110000000000000000 'm-3'")
         .isElementPath(BooleanCollection.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testQuantityAdditionSubtractionAndEquality.csv");
+        .hasRows(spark, "responses/ParserTest/testQuantityAdditionSubtractionAndEquality.tsv");
   }
 
   @Test
@@ -898,12 +898,12 @@ public class ParserTest extends AbstractParserTest {
         "(reverseResolve(Observation.subject).where(valueQuantity > 100 'mmol/L').valueQuantity.first() + 33 'mmol/L').value")
         .isElementPath(DecimalCollection.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testQuantityAdditionWithOverflow_value.csv");
+        .hasRows(spark, "responses/ParserTest/testQuantityAdditionWithOverflow_value.tsv");
     assertThatResultOf(
         "(reverseResolve(Observation.subject).where(valueQuantity > 100 'mmol/L').valueQuantity.first() + 33 'mmol/L').code")
         .isElementPath(StringCollection.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testQuantityAdditionWithOverflow_code.csv");
+        .hasRows(spark, "responses/ParserTest/testQuantityAdditionWithOverflow_code.tsv");
   }
 
   @Test
@@ -914,7 +914,7 @@ public class ParserTest extends AbstractParserTest {
             + ".valueReference.resolve().ofType(Goal).description.text")
         .isElementPath(StringCollection.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testResolutionOfExtensionReference.csv");
+        .hasRows(spark, "responses/ParserTest/testResolutionOfExtensionReference.tsv");
   }
 
   @Test
@@ -925,7 +925,7 @@ public class ParserTest extends AbstractParserTest {
             + ".valueReference.resolve().ofType(Condition).id")
         .isElementPath(StringCollection.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testResolutionOfExtensionReferenceWithWrongType.csv");
+        .hasRows(spark, "responses/ParserTest/testResolutionOfExtensionReferenceWithWrongType.tsv");
   }
 
 }
