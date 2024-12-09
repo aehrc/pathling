@@ -48,6 +48,7 @@ import au.csiro.pathling.fhirpath.path.Paths.EvalOperator;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Map;
+import java.util.Optional;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 /**
@@ -95,6 +96,9 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
 
+  // TODO: encapsulate in operator resolver
+  // Decide when do perform the operator resolution (maybe should be at execution time same as for functions)
+  // or maybe the functions should be resolved at parse time as well.
   private static final Map<String, BinaryOperator> BINARY_OPERATORS = MethodDefinedOperator.mapOf(
       CollectionOperations.class);
 
@@ -105,8 +109,8 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
     requireNonNull(operatorName);
     return new EvalOperator(new Visitor().visit(leftContext),
         new Visitor().visit(rightContext),
-        BINARY_OPERATORS.getOrDefault(operatorName,
-            BinaryOperatorType.fromSymbol(operatorName).getInstance()));
+        Optional.ofNullable(BINARY_OPERATORS.get(operatorName))
+            .orElseGet(() -> BinaryOperatorType.fromSymbol(operatorName).getInstance()));
 
   }
 

@@ -68,8 +68,9 @@ public class CollectionOperations {
   public static BooleanCollection contains(@Nonnull final Collection collection,
       @Nonnull final Collection element) {
     return BooleanCollection.build(collection.getColumn().vectorize(
-        c -> functions.array_contains(c, element.asSingular().getColumnValue()),
-        c -> c.equalTo(element.asSingular().getColumnValue()))
+            c -> functions.array_contains(c, element.asSingular().getColumnValue()),
+            c -> c.equalTo(element.asSingular().getColumnValue()))
+        .orElse(false)
     );
   }
 
