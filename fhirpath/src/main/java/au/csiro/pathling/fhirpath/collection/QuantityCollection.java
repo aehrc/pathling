@@ -80,7 +80,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
    */
   @Nonnull
   public static QuantityCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
-      @Nonnull final Optional<NodeDefinition> definition) {
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
     return new QuantityCollection(columnRepresentation, Optional.of(FhirPathType.QUANTITY),
         Optional.of(FHIRDefinedType.QUANTITY), definition);
   }
@@ -291,7 +291,8 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
       final Column resultQuantityColumn = when(sourceContext.isNull().or(targetContext.isNull()),
           null).otherwise(validResult);
 
-      return QuantityCollection.build(new DefaultRepresentation(resultQuantityColumn));
+      return QuantityCollection.build(new DefaultRepresentation(resultQuantityColumn),
+          getDefinition());
     };
   }
 
