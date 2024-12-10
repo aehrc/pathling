@@ -7,7 +7,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.path.Paths;
+import au.csiro.pathling.fhirpath.path.ParserPaths;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.lang.reflect.Parameter;
@@ -46,7 +46,7 @@ class FunctionParameterResolver {
       return (CollectionTransform) (c -> argument.apply(c, evaluationContext));
     } else if (TypeSpecifier.class.isAssignableFrom(parameter.getType())) {
       // bind type specifier
-      return ((Paths.TypeSpecifierPath) argument).getTypeSpecifier();
+      return ((ParserPaths.TypeSpecifierPath) argument).getValue();
     } else if (FhirPath.class.isAssignableFrom(parameter.getType())) {
       // bind type specifier
       return argument;

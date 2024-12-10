@@ -64,8 +64,8 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TypeExpression
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TypeSpecifierContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.UnionExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.UnitContext;
-import au.csiro.pathling.fhirpath.path.Paths;
-import au.csiro.pathling.fhirpath.path.Paths.TypeSpecifierPath;
+import au.csiro.pathling.fhirpath.path.ParserPaths.TypeNamespacePath;
+import au.csiro.pathling.fhirpath.path.ParserPaths.TypeSpecifierPath;
 import jakarta.annotation.Nonnull;
 
 /**
@@ -87,7 +87,9 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   public FhirPath visitIdentifier(final IdentifierContext ctx) {
-    return new Paths.TypeSpecifierPath(new TypeSpecifier(ctx.getText()));
+    return isNamespace
+           ? new TypeNamespacePath(ctx.getText())
+           : new TypeSpecifierPath(new TypeSpecifier(ctx.getText()));
   }
 
   @Override
@@ -95,11 +97,11 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
     // If we are not already in a namespace and there is an invocation, we need to parse the 
     // right-hand side of the invocation within the namespace.
     if (!isNamespace) {
-      final TypeSpecifierPath typeSpecifierPath = (TypeSpecifierPath) ctx.expression()
+      final TypeNamespacePath typeNamespacePath = (TypeNamespacePath) ctx.expression()
           .accept(new TypeSpecifierVisitor(true));
-      final TypeSpecifier unqualifiedTypeSpecifier = typeSpecifierPath.getTypeSpecifier();
-      return new Paths.TypeSpecifierPath(
-          unqualifiedTypeSpecifier.withNamespace(ctx.invocation().getText()));
+      final String namespace = typeNamespacePath.getValue();
+      final String typeName = ctx.invocation().getText();
+      return new TypeSpecifierPath(new TypeSpecifier(namespace, typeName));
     } else {
       throw newUnexpectedExpressionException("InvocationExpression");
     }
@@ -174,7 +176,6 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
     throw newUnexpectedExpressionException("ImpliesExpression");
   }
 
-  @SuppressWarnings("RedundantMethodOverride")
   @Override
   public FhirPath visitTermExpression(final TermExpressionContext ctx) {
     return visitChildren(ctx);
@@ -185,7 +186,6 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
     throw newUnexpectedExpressionException("TypeExpression");
   }
 
-  @SuppressWarnings("RedundantMethodOverride")
   @Override
   public FhirPath visitInvocationTerm(final InvocationTermContext ctx) {
     return visitChildren(ctx);
@@ -258,7 +258,6 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
     throw newUnexpectedExpressionException("ExternalConstant");
   }
 
-  @SuppressWarnings("RedundantMethodOverride")
   @Override
   public FhirPath visitMemberInvocation(final MemberInvocationContext ctx) {
     return visitChildren(ctx);

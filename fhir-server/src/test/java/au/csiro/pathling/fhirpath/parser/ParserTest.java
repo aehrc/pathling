@@ -746,7 +746,7 @@ public class ParserTest extends AbstractParserTest {
   void testExtensionFunction() {
     // This should be the same as: "extension.where($this.url='http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName').valueString"
     assertThatResultOf(
-        "extension('http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName').value.ofType(FHIR.string)")
+        "extension('http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName').value.ofType(string)")
         .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testExtensionFunction.tsv");

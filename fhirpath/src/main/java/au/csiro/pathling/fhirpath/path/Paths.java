@@ -22,7 +22,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.function.FunctionInput;
@@ -37,28 +36,12 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Value;
+import lombok.experimental.UtilityClass;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
+@UtilityClass
 final public class Paths {
-
-  private Paths() {
-  }
-
-  /**
-   * FHIRPath expression with a type specifier value.
-   */
-  @Value
-  public static class TypeSpecifierPath implements FhirPath {
-
-    TypeSpecifier typeSpecifier;
-
-    @Override
-    public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      throw new UnsupportedOperationException("TypeSpecifierPath cannot be evaluated directly");
-    }
-  }
-
+  
   @Value
   public static class ExternalConstantPath implements FhirPath {
 
