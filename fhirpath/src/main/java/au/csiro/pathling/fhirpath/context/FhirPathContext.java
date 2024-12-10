@@ -39,9 +39,9 @@ public class FhirPathContext {
 
   @Nonnull
   public Collection resolveVariable(@Nonnull final String name) {
-    if (name.equals("%context")) {
+    if (name.equals("context")) {
       return inputContext;
-    } else if (name.equals("%resource") || name.equals("%rootResource")) {
+    } else if (name.equals("resource") || name.equals("rootResource")) {
       return resource;
     } else {
       return variables.get(name)
