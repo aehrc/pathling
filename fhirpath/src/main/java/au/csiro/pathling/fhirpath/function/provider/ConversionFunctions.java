@@ -79,7 +79,7 @@ public class ConversionFunctions {
 
     Preconditions.checkUserInput(isNull(falseResult) || trueResult.getType()
             .equals(requireNonNull(falseResult.getType())),
-        "iff() true and false results must have the same type");
+        "iff() trueResult and falseResult must have the same type");
 
     // TODO: check pre-conditions
     // TODO: if possible implement short-circuiting as per FHIRPath spec
