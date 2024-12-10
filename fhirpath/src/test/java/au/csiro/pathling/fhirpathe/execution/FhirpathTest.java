@@ -79,6 +79,24 @@ class FhirpathTest {
 
 
     @Test
+    void accessToResourceVariable() {
+        // ????
+        final ObjectDataSource dataSource = getPatientsWithConditions();
+        final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
+                "reverseResolve(Condition.subject).code.coding.subsumes(%resources.reverseResolve(Condition.subject).code)");
+        System.out.println(resultDataset.queryExecution().executedPlan().toString());
+        resultDataset.show();
+        // TODO: update expectations
+        new DatasetAssert(resultDataset)
+                .hasRowsUnordered(
+                        RowFactory.create("1", sql_array(true)),
+                        RowFactory.create("2", sql_array(false)),
+                        RowFactory.create("3", null)
+                );
+    }
+    
+
+    @Test
     void simpleReverseResolveToSingularValue() {
         final ObjectDataSource dataSource = getPatientsWithConditions();
         final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,

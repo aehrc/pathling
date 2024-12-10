@@ -438,6 +438,15 @@ public class ResolvingFhirPathEvaluator implements FhirPathEvaluator {
 
     // TODO: replace with the executor call
 
+
+    final CollectionDataset referenceResult =
+        childExecutor.evaluate(joinRoot.getForeignKeyPath());
+    // check the type of the reference matches
+    final Set<ResourceType> allowedReferenceTypes = ((ReferenceCollection) referenceResult.getValue()).getReferenceTypes();
+    if (!allowedReferenceTypes.contains(subjectResource)) {
+      throw new IllegalArgumentException("Reference type does not match. Expected: " + allowedReferenceTypes + " but got: " + subjectResource);
+    }
+
     final CollectionDataset childParentKeyResult =
         childExecutor.evaluate(joinRoot.getForeignKeyPath() + "." + "reference");
 
