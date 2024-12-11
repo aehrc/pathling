@@ -325,7 +325,7 @@ class FhirpathTest {
 
     final Dataset<Row> resultDataset = evalExpression(dataSource,
         ResourceType.CONDITION,
-        "encounter.resolve().subject.resolve().id"
+        "encounter.resolve().subject.resolve().ofType(Patient).id"
     );
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
     resultDataset.show();
@@ -481,7 +481,7 @@ class FhirpathTest {
 
     final Dataset<Row> resultDataset = evalExpression(dataSource,
         ResourceType.ENCOUNTER,
-        "where(subject.resolve().gender = 'male').episodeOfCare.resolve().status"
+        "where(subject.resolve().ofType(Patient).gender = 'male').episodeOfCare.resolve().status"
     );
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
     resultDataset.show();
@@ -540,7 +540,7 @@ class FhirpathTest {
 
     final Dataset<Row> resultDataset = evalExpression(dataSource,
         ResourceType.CONDITION,
-        "subject.resolve().reverseResolve(Condition.subject).id"
+        "subject.resolve().ofType(Patient).reverseResolve(Condition.subject).id"
     );
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
     resultDataset.show();
@@ -558,7 +558,7 @@ class FhirpathTest {
 
     final Dataset<Row> resultDataset = evalExpression(dataSource,
         ResourceType.PATIENT,
-        "reverseResolve(Condition.subject).subject.resolve().id"
+        "reverseResolve(Condition.subject).subject.resolve().ofType(Patient).id"
     );
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
     resultDataset.show();
