@@ -35,6 +35,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -98,15 +99,15 @@ public class CodingCollection extends Collection implements Materializable<Codin
   @Nonnull
   private static Column buildColumn(@Nonnull final Coding coding) {
     return struct(
-        lit(coding.getId()).as("id"),
-        lit(coding.getSystem()).as("system"),
-        lit(coding.getVersion()).as("version"),
-        lit(coding.getCode()).as("code"),
-        lit(coding.getDisplay()).as("display"),
+        lit(coding.getId()).cast(DataTypes.StringType).as("id"),
+        lit(coding.getSystem()).cast(DataTypes.StringType).as("system"),
+        lit(coding.getVersion()).cast(DataTypes.StringType).as("version"),
+        lit(coding.getCode()).cast(DataTypes.StringType).as("code"),
+        lit(coding.getDisplay()).cast(DataTypes.StringType).as("display"),
         lit(coding.hasUserSelected()
             ? coding.getUserSelected()
-            : null).as("userSelected"),
-        lit(null).as("_fid"));
+            : null).cast(DataTypes.BooleanType).as("userSelected"),
+        lit(null).cast(DataTypes.IntegerType).as("_fid"));
   }
 
   @Nonnull
