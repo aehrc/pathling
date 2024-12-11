@@ -22,10 +22,7 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
-import au.csiro.pathling.fhirpath.execution.FhirPathExecutor;
 import au.csiro.pathling.fhirpath.execution.ResolvingFhirPathEvaluator;
-import au.csiro.pathling.fhirpath.execution.SingleFhirPathExecutor;
-import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -36,7 +33,6 @@ import au.csiro.pathling.test.assertions.FhirPathAssertion;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
-import java.util.Collections;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;

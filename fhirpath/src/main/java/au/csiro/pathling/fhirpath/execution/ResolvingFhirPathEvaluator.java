@@ -411,9 +411,13 @@ public class ResolvingFhirPathEvaluator implements FhirPathEvaluator {
       final FhirPath pureHeadPath = headPath
           .withNewChildren(collector.getPaths());
       // and now purify the rest of the path
-      final FhirpathResult pureSuffix = purify(dataSource, subjectResource, fhirPath.suffix(),
-          collector.getDataset(),
-          maybeParentContext.map(c -> subjectExecutor.evaluate(pureHeadPath, c)));
+      final FhirPath suffix = fhirPath.suffix();
+      final FhirpathResult pureSuffix = suffix.isNull()
+                                        ? FhirpathResult.of(collector.getDataset(), suffix)
+                                        : purify(dataSource, subjectResource, suffix,
+                                            collector.getDataset(),
+                                            maybeParentContext.map(
+                                                c -> subjectExecutor.evaluate(pureHeadPath, c)));
 
       return FhirpathResult.of(
           pureSuffix.getDataset(),
@@ -438,13 +442,14 @@ public class ResolvingFhirPathEvaluator implements FhirPathEvaluator {
 
     // TODO: replace with the executor call
 
-
     final CollectionDataset referenceResult =
         childExecutor.evaluate(joinRoot.getForeignKeyPath());
     // check the type of the reference matches
     final Set<ResourceType> allowedReferenceTypes = ((ReferenceCollection) referenceResult.getValue()).getReferenceTypes();
     if (!allowedReferenceTypes.contains(subjectResource)) {
-      throw new IllegalArgumentException("Reference type does not match. Expected: " + allowedReferenceTypes + " but got: " + subjectResource);
+      throw new IllegalArgumentException(
+          "Reference type does not match. Expected: " + allowedReferenceTypes + " but got: "
+              + subjectResource);
     }
 
     final CollectionDataset childParentKeyResult =
