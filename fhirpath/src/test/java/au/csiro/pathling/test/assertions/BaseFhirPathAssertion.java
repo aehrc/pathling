@@ -25,6 +25,7 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.execution.CollectionDataset;
 import jakarta.annotation.Nonnull;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.Literal;
@@ -51,10 +52,16 @@ public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> 
 
   // TODO: implement with columns
 
+  
+  @Nonnull
+  protected Column getValueColumn() {
+    return result.getColumnValue();
+  }
+  
   @Nonnull
   public DatasetAssert selectResult() {
     final Dataset<Row> resultDataset = datasetResult.getDataset()
-        .select(functions.col("id"), result.getColumnValue().alias("value"));
+        .select(functions.col("id"), getValueColumn().alias("value"));
     final StructType schema = resultDataset.schema();
     final Dataset<Row> explodedDataset = schema.fields()[schema.fieldIndex(
         "value")].dataType() instanceof ArrayType
@@ -69,7 +76,7 @@ public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> 
   @Nonnull
   public DatasetAssert selectOrderedResult() {
     final Dataset<Row> resultDataset = datasetResult.getDataset()
-        .select(functions.col("id"), result.getColumnValue().alias("value"));
+        .select(functions.col("id"), getValueColumn().alias("value"));
     final StructType schema = resultDataset.schema();
     final Dataset<Row> explodedDataset = schema.fields()[schema.fieldIndex(
         "value")].dataType() instanceof ArrayType
