@@ -1,7 +1,11 @@
 package au.csiro.pathling.fhirpathe.execution;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhirpath.execution.ExpandingFhirPathEvaluator;
+import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
 import au.csiro.pathling.fhirpath.execution.ResolvingFhirPathEvaluator;
+import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -21,7 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import java.util.List;
 
 import static au.csiro.pathling.test.helpers.SqlHelpers.sql_array;
@@ -43,16 +47,25 @@ class FhirpathTest {
   @Autowired
   FhirEncoders encoders;
 
+
   @Nonnull
   Dataset<Row> evalExpression(@Nonnull final ObjectDataSource dataSource,
       @Nonnull final ResourceType subjectResource,
       @Nonnull final String fhirExpression) {
 
-    return new ResolvingFhirPathEvaluator(subjectResource, dataSource)
+    return createEvaluator(subjectResource, dataSource)
         .evaluate(fhirExpression)
         .toIdValueDataset();
   }
 
+  @Nonnull
+  FhirPathEvaluator createEvaluator(@Nonnull final ResourceType subjectResource,
+      @Nonnull final DataSource datasource) {
+    return new ExpandingFhirPathEvaluator(subjectResource, encoders.getContext(),
+        StaticFunctionRegistry.getInstance(), datasource);
+    //    return new ResolvingFhirPathEvaluator(subjectResource, dataSource)
+  }
+  
   @Test
   void singleResourceTest() {
     final Patient patient = new Patient();
@@ -80,7 +93,7 @@ class FhirpathTest {
 
   @Test
   void testOfTypeForChoice() {
-    final ObjectDataSource dataSource =  new ObjectDataSource(spark, encoders,
+    final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
         List.of(
             new Observation().setId("Condition/1"),
             new Observation().setId("Condition/2")

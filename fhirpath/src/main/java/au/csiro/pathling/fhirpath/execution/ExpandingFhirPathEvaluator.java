@@ -22,6 +22,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathStreamVisitor;
 import au.csiro.pathling.fhirpath.FhirPathVisitor;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.context.FhirPathContext;
@@ -30,6 +31,7 @@ import au.csiro.pathling.fhirpath.context.ViewEvaluationContext;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ResourceRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
+import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
 import au.csiro.pathling.fhirpath.path.Paths.This;
@@ -37,6 +39,7 @@ import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -51,9 +54,107 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.jetbrains.annotations.NotNull;
 
 
-@Deprecated
 @Value
-public class MultiFhirPathExecutor implements FhirPathExecutor {
+public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
+
+
+  @Nonnull
+  public Dataset<Row> createInitialDataset() {
+    return resourceDataset(subjectResource);
+  }
+
+
+  @Override
+  public @NotNull CollectionDataset evaluate(@NotNull final String fhirpathExpression) {
+
+    final FhirPath fhirPath = parser.parse(fhirpathExpression);
+    final Set<DataRoot> joinRoots = findJoinsRoots(fhirPath);
+    System.out.println("Join roots: " + joinRoots);
+    joinRoots.forEach(System.out::println);
+
+    Dataset<Row> resolvedDataset =
+        joinRoots.size() == 1
+        ? reverseResolveJoin((ReverseResolveRoot) joinRoots.iterator().next(),
+            createInitialDataset())
+        : createInitialDataset();
+
+    final ResourceResolver resourceResolver = new EmptyResourceResolver();
+    final FhirPathContext fhirpathContext = FhirPathContext.ofResource(
+        resourceResolver.resolveResource(subjectResource));
+    final EvaluationContext evalContext = new ViewEvaluationContext(
+        fhirpathContext,
+        functionRegistry,
+        resourceResolver);
+    return CollectionDataset.of(
+        resolvedDataset,
+        fhirPath.apply(fhirpathContext.getInputContext(), evalContext)
+    );
+  }
+
+
+  @Nonnull
+  private Dataset<Row> reverseResolveJoin(@Nonnull final ReverseResolveRoot joinRoot,
+      @Nonnull final Dataset<Row> parentDataset) {
+
+    // 
+
+    // assert a single level join for now
+    assert joinRoot.getMaster() instanceof ResourceRoot;
+
+    final FhirPathExecutor childExecutor = createExecutor(joinRoot.getForeignResourceType(),
+        dataSource);
+
+    // TODO: replace with the executor call
+
+    final CollectionDataset referenceResult =
+        childExecutor.evaluate(joinRoot.getForeignKeyPath());
+    // check the type of the reference matches
+    final Set<ResourceType> allowedReferenceTypes = ((ReferenceCollection) referenceResult.getValue()).getReferenceTypes();
+    if (!allowedReferenceTypes.contains(subjectResource)) {
+      throw new IllegalArgumentException(
+          "Reference type does not match. Expected: " + allowedReferenceTypes + " but got: "
+              + subjectResource);
+    }
+
+    final CollectionDataset childParentKeyResult =
+        childExecutor.evaluate(joinRoot.getForeignKeyPath() + "." + "reference");
+    final Collection childResource = childExecutor.createDefaultInputContext();
+
+    final Dataset<Row> childResult = childParentKeyResult.getDataset()
+        .groupBy(childParentKeyResult.getValueColumn().alias(joinRoot.getChildKeyTag()))
+        .agg(
+            functions.map_from_entries(
+                // wrap the element into array to create the map
+                functions.array(
+                    functions.struct(
+                        functions.any_value(childParentKeyResult.getValueColumn()).alias("key"),
+                        functions.collect_list(childResource.getColumnValue()).alias("value")
+                    )
+                )
+            ).alias(joinRoot.getValueTag())
+        );
+
+    // // 
+    //functions.map_from_arrays()
+
+    childResult.show();
+    final Dataset<Row> joinedDataset = parentDataset.join(childResult,
+            functions.col("key")
+                .equalTo(childResult.col(joinRoot.getChildKeyTag())),
+            "left_outer")
+        .drop(joinRoot.getChildKeyTag());
+    joinedDataset.show();
+    return joinedDataset;
+  }
+
+
+  @Nonnull
+  private FhirPathExecutor createExecutor(final ResourceType subjectResourceType,
+      final DataSource dataSource) {
+    return new SingleFhirPathExecutor(subjectResourceType,
+        fhirContext, functionRegistry,
+        Collections.emptyMap(), dataSource);
+  }
 
   @Value
   static class DataRootFinderVisitor implements FhirPathStreamVisitor<DataRoot> {
@@ -144,8 +245,15 @@ public class MultiFhirPathExecutor implements FhirPathExecutor {
       final String resourceName = expression.split("\\.")[0];
       final ResourceType foreignResourceType = ResourceType.fromCode(resourceName);
 
-      return ResourceCollection.build(new DefaultRepresentation(
-              functions.col(resourceType.toCode() + "@" + expression.replace('.', '_'))),
+      final ReverseResolveRoot root = ReverseResolveRoot.ofResource(resourceType,
+          foreignResourceType, expression.split("\\.")[1]);
+
+      return ResourceCollection.build(
+          new DefaultRepresentation(
+              // TODO: change to execution of get ReferenceKey
+              functions.col(root.getValueTag())
+                  .apply(parentResource.getColumn().traverse("id_versioned").getValue())
+          ),
           fhirContext, foreignResourceType);
     }
   }
@@ -161,6 +269,10 @@ public class MultiFhirPathExecutor implements FhirPathExecutor {
 
   @Nonnull
   DataSource dataSource;
+
+
+  @Nonnull
+  Parser parser = new Parser();
 
   @Nonnull
   public Collection validate(@Nonnull final FhirPath path) {
@@ -212,9 +324,6 @@ public class MultiFhirPathExecutor implements FhirPathExecutor {
   }
 
 
-  
-  
-  @Override
   @Nonnull
   public Dataset<Row> execute(@Nonnull final FhirPath path) {
     // just as above ... but with a more intelligent resourceResolver
@@ -260,20 +369,17 @@ public class MultiFhirPathExecutor implements FhirPathExecutor {
     return derivedDataset.select(functions.col("id"), result.getColumnValue().alias("value"));
   }
 
-  @Override
   public Dataset<Row> execute(@NotNull final FhirPath path,
       @NotNull final Dataset<Row> subjectDataset) {
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  @Override
   public @NotNull CollectionDataset evaluate(@NotNull final FhirPath path,
       @NotNull final Dataset<Row> subjectDataset) {
     throw new UnsupportedOperationException("Not implemented");
   }
 
 
-  @Override
   @Nonnull
   public CollectionDataset evaluate(@Nonnull final FhirPath path) {
     // just as above ... but with a more intelligent resourceResolver
@@ -320,27 +426,17 @@ public class MultiFhirPathExecutor implements FhirPathExecutor {
   }
 
   @Nonnull
-  @Override
   public Collection evaluate(@Nonnull final FhirPath path, @Nonnull final Collection inputContext) {
     throw new UnsupportedOperationException("Not implemented");
   }
 
   @Nonnull
-  @Override
   public Collection createDefaultInputContext() {
     throw new UnsupportedOperationException("Not implemented");
   }
 
   @Nonnull
-  @Override
-  public Dataset<Row> createInitialDataset() {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Nonnull
   public Set<DataRoot> findJoinsRoots(@Nonnull final FhirPath path) {
-    // return path.accept(new DataRootFinderVisitor(subjectResource))
-    //     .collect(Collectors.toUnmodifiableSet());
     return path.accept(new DependencyFinderVisitor(Optional.of(ResourceRoot.of(subjectResource))))
         .map(DataDependency::getRoot)
         .filter(ReverseResolveRoot.class::isInstance)

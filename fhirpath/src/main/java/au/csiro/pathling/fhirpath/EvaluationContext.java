@@ -31,7 +31,7 @@ public interface EvaluationContext {
   ResourceCollection resolveResource(@Nonnull final ResourceType resourceType);
 
   @Nonnull
-  ResourceCollection resolveReverseJoin(@Nonnull final ResourceType resourceType,
+  ResourceCollection resolveReverseJoin(@Nonnull final ResourceCollection parentResource,
       @Nonnull final String expression);
 
   @Nonnull

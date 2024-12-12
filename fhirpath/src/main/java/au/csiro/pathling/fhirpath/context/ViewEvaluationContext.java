@@ -47,9 +47,9 @@ public class ViewEvaluationContext implements EvaluationContext {
 
   @Nonnull
   @Override
-  public ResourceCollection resolveReverseJoin(@Nonnull final ResourceType resourceType,
+  public ResourceCollection resolveReverseJoin(@Nonnull final ResourceCollection parentResource,
       @Nonnull final String expression) {
-    return resourceResolver.resolveReverseJoin(resourceType, expression);
+    return resourceResolver.resolveReverseJoin(parentResource, expression);
   }
 
   @Nonnull

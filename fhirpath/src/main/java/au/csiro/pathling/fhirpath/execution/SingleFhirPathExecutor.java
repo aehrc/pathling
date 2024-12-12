@@ -82,7 +82,7 @@ public class SingleFhirPathExecutor implements FhirPathExecutor {
 
     @Nonnull
     @Override
-    public ResourceCollection resolveReverseJoin(@Nonnull final ResourceType resourceType,
+    public ResourceCollection resolveReverseJoin(@Nonnull final ResourceCollection parentResource,
         @Nonnull final String expression) {
       throw new UnsupportedOperationException("resolveReverseJoin() is not supported");
     }
