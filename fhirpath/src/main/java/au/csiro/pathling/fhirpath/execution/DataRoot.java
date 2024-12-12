@@ -23,6 +23,10 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 public interface DataRoot {
 
+  
+  @Nonnull
+  ResourceType getResourceType();
+  
   @Value(staticConstructor = "of")
   class ResourceRoot implements DataRoot {
 
@@ -48,8 +52,8 @@ public interface DataRoot {
     String foreignKeyPath;
 
     @Nonnull
-    public ResourceType getMasterResourceType() {
-      return ((ResourceRoot) master).resourceType;
+    public ResourceType getResourceType() {
+      return foreignResourceType;
     }
 
     @Nonnull
@@ -79,8 +83,8 @@ public interface DataRoot {
     String masterResourcePath;
 
     @Nonnull
-    public ResourceType getMasterResourceType() {
-      return ((ResourceRoot) master).resourceType;
+    public ResourceType getResourceType() {
+      return foreignResourceType;
     }
 
     @Nonnull

@@ -45,6 +45,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import jakarta.annotation.Nullable;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -75,7 +76,7 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
     Dataset<Row> resolvedDataset =
         joinRoots.size() == 1
         ? reverseResolveJoin((ReverseResolveRoot) joinRoots.iterator().next(),
-            createInitialDataset())
+            createInitialDataset(), null)
         : createInitialDataset();
 
     final ResourceResolver resourceResolver = new EmptyResourceResolver();
@@ -93,34 +94,45 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
 
 
   @Nonnull
-  private Dataset<Row> reverseResolveJoin(@Nonnull final ReverseResolveRoot joinRoot,
-      @Nonnull final Dataset<Row> parentDataset) {
+  private Dataset<Row> computeReverseJoin(@Nonnull final Dataset<Row> parentDataset,
+      @Nullable final Dataset<Row> maybeChildDataset, @Nonnull final ReverseResolveRoot joinRoot) {
 
-    // 
-
-    // assert a single level join for now
-    assert joinRoot.getMaster() instanceof ResourceRoot;
+    System.out.println("Computing reverse join for: " + joinRoot);
 
     final FhirPathExecutor childExecutor = createExecutor(joinRoot.getForeignResourceType(),
         dataSource);
 
-    // TODO: replace with the executor call
+    final Dataset<Row> childDataset = maybeChildDataset == null
+                                      ? childExecutor.createInitialDataset()
+                                      : maybeChildDataset;
 
     final CollectionDataset referenceResult =
-        childExecutor.evaluate(joinRoot.getForeignKeyPath());
+        childExecutor.evaluate(parser.parse(joinRoot.getForeignKeyPath()), childDataset);
+
     // check the type of the reference matches
     final Set<ResourceType> allowedReferenceTypes = ((ReferenceCollection) referenceResult.getValue()).getReferenceTypes();
-    if (!allowedReferenceTypes.contains(subjectResource)) {
+    if (!allowedReferenceTypes.contains(joinRoot.getMaster().getResourceType())) {
       throw new IllegalArgumentException(
           "Reference type does not match. Expected: " + allowedReferenceTypes + " but got: "
-              + subjectResource);
+              + joinRoot.getMaster().getResourceType());
     }
 
     final CollectionDataset childParentKeyResult =
         childExecutor.evaluate(joinRoot.getForeignKeyPath() + "." + "reference");
     final Collection childResource = childExecutor.createDefaultInputContext();
 
-    final Dataset<Row> childResult = childParentKeyResult.getDataset()
+
+    final Dataset<Row> childInput = referenceResult.getDataset();
+    System.out.println("Child input:");
+    childInput.show();
+
+    final Column[] passThroughColumns = Stream.of(childInput.columns())
+        .filter(c -> c.contains("@"))
+        // TODO: replace with the map_combine function
+        .map(c -> functions.any_value(functions.col(c)).alias(c))
+        .toArray(Column[]::new);
+    
+    final Dataset<Row> childResult = childInput
         .groupBy(childParentKeyResult.getValueColumn().alias(joinRoot.getChildKeyTag()))
         .agg(
             functions.map_from_entries(
@@ -131,11 +143,11 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
                         functions.collect_list(childResource.getColumnValue()).alias("value")
                     )
                 )
-            ).alias(joinRoot.getValueTag())
+            ).alias(joinRoot.getValueTag()),
+            passThroughColumns
+            // pass through for any existing columns that require
+            // map aggregation
         );
-
-    // // 
-    //functions.map_from_arrays()
 
     childResult.show();
     final Dataset<Row> joinedDataset = parentDataset.join(childResult,
@@ -145,6 +157,40 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
         .drop(joinRoot.getChildKeyTag());
     joinedDataset.show();
     return joinedDataset;
+
+  }
+
+
+  @Nonnull
+  private Dataset<Row> reverseResolveJoin(@Nonnull final ReverseResolveRoot joinRoot,
+      @Nonnull final Dataset<Row> parentDataset, @Nullable final Dataset<Row> maybeChildDataset) {
+
+    // 
+
+    // for nested joins we need to do it recursively aggregating all the existing join map columns
+    // the problem is that I need to do it in reverse order 
+
+    // Ineed to to do deep unnestign
+
+    if (joinRoot.getMaster() instanceof ResourceRoot rr) {
+      return computeReverseJoin(parentDataset, maybeChildDataset, joinRoot);
+    } else if (joinRoot.getMaster() instanceof ReverseResolveRoot rrr) {
+
+      final Dataset<Row> childDataset = computeReverseJoin(
+          createExecutor(rrr.getResourceType(), dataSource).createInitialDataset(),
+          maybeChildDataset, joinRoot);
+
+      return reverseResolveJoin(rrr, parentDataset, childDataset);
+      // compute the dataset for the current resolve root with the master type as the subject
+      // and default master resource as parent dataset
+
+      //  resulting dataset then needs to be passed as the child result for the deeper join
+      //  if there is no child result then we create one from the default child dataset (so initially it's null)
+
+    } else {
+      throw new UnsupportedOperationException(
+          "Not implemented - unknown root type: " + joinRoot.getMaster());
+    }
   }
 
 
@@ -245,16 +291,17 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
       final String resourceName = expression.split("\\.")[0];
       final ResourceType foreignResourceType = ResourceType.fromCode(resourceName);
 
-      final ReverseResolveRoot root = ReverseResolveRoot.ofResource(resourceType,
+      final ReverseResolveRoot root = ReverseResolveRoot.of(parentResource.getDataRoot(),
           foreignResourceType, expression.split("\\.")[1]);
 
       return ResourceCollection.build(
           new DefaultRepresentation(
               // TODO: change to execution of get ReferenceKey
+              // TODO: make it work with collections of ids
               functions.col(root.getValueTag())
                   .apply(parentResource.getColumn().traverse("id_versioned").getValue())
           ),
-          fhirContext, foreignResourceType);
+          fhirContext, root);
     }
   }
 

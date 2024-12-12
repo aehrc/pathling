@@ -24,8 +24,10 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
+import au.csiro.pathling.fhirpath.execution.DataRoot;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
+import com.amazonaws.services.mediatailor.model.CreateSourceLocationRequest;
 import jakarta.annotation.Nonnull;
 import java.util.EnumSet;
 import java.util.Optional;
@@ -34,6 +36,7 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.checkerframework.checker.units.qual.N;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -53,13 +56,29 @@ public class ResourceCollection extends Collection {
   @Nonnull
   private final ResourceDefinition resourceDefinition;
 
+  @Nonnull
+  @Getter
+  private final DataRoot dataRoot;
+
+  protected ResourceCollection(@Nonnull final ColumnRepresentation columnRepresentation,
+      @Nonnull final Optional<FhirPathType> type,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final Optional<? extends NodeDefinition> definition,
+      @Nonnull final ResourceDefinition resourceDefinition,
+      @Nonnull final DataRoot dataRoot) {
+    super(columnRepresentation, type, fhirType, definition);
+    this.resourceDefinition = resourceDefinition;
+    // TODO check that dataypes are compatible
+    this.dataRoot = dataRoot;
+  }
+
   protected ResourceCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final ResourceDefinition resourceDefinition) {
-    super(columnRepresentation, type, fhirType, definition);
-    this.resourceDefinition = resourceDefinition;
+    this(columnRepresentation, type, fhirType, definition, resourceDefinition,
+        DataRoot.ResourceRoot.of(resourceDefinition.getResourceType()));
   }
 
   @Nonnull
@@ -119,6 +138,25 @@ public class ResourceCollection extends Collection {
     return new ResourceCollection(columnRepresentation, Optional.empty(),
         getFhirType(resourceType), Optional.of(definition), definition);
   }
+
+
+  @Nonnull
+  public static ResourceCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
+      @Nonnull final FhirContext fhirContext,
+      @Nonnull final DataRoot dataRoot) {
+    final ResourceType resourceType = dataRoot.getResourceType();
+    // Get the resource definition from HAPI.
+    final String resourceCode = resourceType.toCode();
+    final RuntimeResourceDefinition hapiDefinition = fhirContext.getResourceDefinition(
+        resourceCode);
+    final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
+
+    // We use a literal column as the resource value - the actual value is not important.
+    // But the non-null value indicates that the resource should be included in any result.
+    return new ResourceCollection(columnRepresentation, Optional.empty(),
+        getFhirType(resourceType), Optional.of(definition), definition, dataRoot);
+  }
+
 
   /**
    * @return The set of resource types currently supported by this implementation.
