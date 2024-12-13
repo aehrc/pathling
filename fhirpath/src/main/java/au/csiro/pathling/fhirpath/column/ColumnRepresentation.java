@@ -28,6 +28,7 @@ import static org.apache.spark.sql.functions.raise_error;
 import static org.apache.spark.sql.functions.size;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.encoders.ValueFunctions;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -224,7 +225,18 @@ public abstract class ColumnRepresentation {
         c -> functions.when(c.isNotNull(), functions.array(c))
     );
   }
-  
+
+  /**
+   *
+   */
+  @Nonnull
+  public ColumnRepresentation applyTo(@Nonnull final Column mapColumn) {
+    return vectorize(
+        c-> ValueFunctions.unnest(functions.transform(c, mapColumn::apply)),
+        mapColumn::apply
+    );
+  }
+
   /**
    * Filters the current {@link ColumnRepresentation} using a lambda function.
    *

@@ -39,13 +39,13 @@ import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import jakarta.annotation.Nullable;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -57,6 +57,20 @@ import org.jetbrains.annotations.NotNull;
 
 @Value
 public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
+
+  // TODO: Move somewhere else
+
+  @Nonnull
+  public static Column collect_map(@Nonnull final Column mapColumn) {
+    // TODO: try to implement this more eccielty and in a way 
+    // that does not requiere:
+    // .config("spark.sql.mapKeyDedupPolicy", "LAST_WIN")
+    return functions.reduce(
+        functions.collect_list(mapColumn),
+        functions.any_value(mapColumn),
+        (acc, elem) -> functions.when(acc.isNull(), elem).otherwise(functions.map_concat(acc, elem))
+    );
+  }
 
 
   @Nonnull
@@ -121,7 +135,6 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
         childExecutor.evaluate(joinRoot.getForeignKeyPath() + "." + "reference");
     final Collection childResource = childExecutor.createDefaultInputContext();
 
-
     final Dataset<Row> childInput = referenceResult.getDataset();
     System.out.println("Child input:");
     childInput.show();
@@ -129,9 +142,9 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
     final Column[] passThroughColumns = Stream.of(childInput.columns())
         .filter(c -> c.contains("@"))
         // TODO: replace with the map_combine function
-        .map(c -> functions.any_value(functions.col(c)).alias(c))
+        .map(c -> collect_map(functions.col(c)).alias(c))
         .toArray(Column[]::new);
-    
+
     final Dataset<Row> childResult = childInput
         .groupBy(childParentKeyResult.getValueColumn().alias(joinRoot.getChildKeyTag()))
         .agg(
@@ -172,7 +185,7 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
 
     // Ineed to to do deep unnestign
 
-    if (joinRoot.getMaster() instanceof ResourceRoot rr) {
+    if (joinRoot.getMaster() instanceof ResourceRoot) {
       return computeReverseJoin(parentDataset, maybeChildDataset, joinRoot);
     } else if (joinRoot.getMaster() instanceof ReverseResolveRoot rrr) {
 
@@ -211,7 +224,7 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
     @Nonnull
     @Override
     public Stream<DataRoot> visitPath(@Nonnull final FhirPath path) {
-      if (path instanceof EvalFunction && "reverseResolve".equals(((EvalFunction) path)
+      if (path instanceof EvalFunction && "reverseResolve" .equals(((EvalFunction) path)
           .getFunctionIdentifier())) {
         // actually we know we do not want to visit the children of this function
         return Stream.of(ExecutorUtils.fromPath(subjectResource, (EvalFunction) path));
@@ -233,7 +246,7 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
       if (path instanceof Traversal) {
         return resourceContext.map(r -> DataDependency.of(r, ((Traversal) path).getPropertyName()))
             .stream();
-      } else if (path instanceof EvalFunction && "reverseResolve".equals(((EvalFunction) path)
+      } else if (path instanceof EvalFunction && "reverseResolve" .equals(((EvalFunction) path)
           .getFunctionIdentifier())) {
         return Stream.empty();
       } else {
@@ -249,7 +262,7 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
             ((Paths.Resource) path).getResourceType())));
       } else if (isTransparent(path)) {
         return this;
-      } else if (path instanceof EvalFunction && "reverseResolve".equals(((EvalFunction) path)
+      } else if (path instanceof EvalFunction && "reverseResolve" .equals(((EvalFunction) path)
           .getFunctionIdentifier())) {
         return new DependencyFinderVisitor(
             Optional.of(ExecutorUtils.fromPath(resourceContext.orElseThrow(),
@@ -295,12 +308,8 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
           foreignResourceType, expression.split("\\.")[1]);
 
       return ResourceCollection.build(
-          new DefaultRepresentation(
-              // TODO: change to execution of get ReferenceKey
-              // TODO: make it work with collections of ids
-              functions.col(root.getValueTag())
-                  .apply(parentResource.getColumn().traverse("id_versioned").getValue())
-          ),
+          parentResource.getColumn().traverse("id_versioned")
+              .applyTo(functions.col(root.getValueTag())),
           fhirContext, root);
     }
   }
