@@ -58,6 +58,10 @@ import org.jetbrains.annotations.NotNull;
 @Value
 public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
 
+
+  @Nonnull
+  DataRootResolver dataRootResolver = new DataRootResolver();
+
   // TODO: Move somewhere else
 
   @Nonnull
@@ -224,7 +228,7 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
     @Nonnull
     @Override
     public Stream<DataRoot> visitPath(@Nonnull final FhirPath path) {
-      if (path instanceof EvalFunction && "reverseResolve" .equals(((EvalFunction) path)
+      if (path instanceof EvalFunction && "reverseResolve".equals(((EvalFunction) path)
           .getFunctionIdentifier())) {
         // actually we know we do not want to visit the children of this function
         return Stream.of(ExecutorUtils.fromPath(subjectResource, (EvalFunction) path));
@@ -246,7 +250,7 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
       if (path instanceof Traversal) {
         return resourceContext.map(r -> DataDependency.of(r, ((Traversal) path).getPropertyName()))
             .stream();
-      } else if (path instanceof EvalFunction && "reverseResolve" .equals(((EvalFunction) path)
+      } else if (path instanceof EvalFunction && "reverseResolve".equals(((EvalFunction) path)
           .getFunctionIdentifier())) {
         return Stream.empty();
       } else {
@@ -262,7 +266,7 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
             ((Paths.Resource) path).getResourceType())));
       } else if (isTransparent(path)) {
         return this;
-      } else if (path instanceof EvalFunction && "reverseResolve" .equals(((EvalFunction) path)
+      } else if (path instanceof EvalFunction && "reverseResolve".equals(((EvalFunction) path)
           .getFunctionIdentifier())) {
         return new DependencyFinderVisitor(
             Optional.of(ExecutorUtils.fromPath(resourceContext.orElseThrow(),
@@ -493,9 +497,17 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
 
   @Nonnull
   public Set<DataRoot> findJoinsRoots(@Nonnull final FhirPath path) {
-    return path.accept(new DependencyFinderVisitor(Optional.of(ResourceRoot.of(subjectResource))))
-        .map(DataDependency::getRoot)
-        .filter(ReverseResolveRoot.class::isInstance)
+    // return path.accept(new DependencyFinderVisitor(Optional.of(ResourceRoot.of(subjectResource))))
+    //     .map(DataDependency::getRoot)
+    //     .filter(ReverseResolveRoot.class::isInstance)
+    //     .collect(Collectors.toUnmodifiableSet());
+
+    // TODO: create the actual hierarchy of the joins
+    // for now find the longest root path 
+    final Set<DataRoot> dataRoots = dataRootResolver.findDataRoots(subjectResource, path);
+    return dataRoots.stream()
+        .filter(r -> r.depth() > 0)
+        .sorted((r1, r2) -> Integer.compare(r2.depth(), r1.depth())).limit(1)
         .collect(Collectors.toUnmodifiableSet());
   }
 
