@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.context;
 
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
@@ -26,6 +27,7 @@ import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
 import jakarta.annotation.Nonnull;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.jetbrains.annotations.NotNull;
 
 @Value
 public class ViewEvaluationContext implements EvaluationContext {
@@ -43,6 +45,13 @@ public class ViewEvaluationContext implements EvaluationContext {
   @Override
   public ResourceCollection resolveResource(@Nonnull final ResourceType resourceType) {
     return resourceResolver.resolveResource(resourceType);
+  }
+
+  @Override
+  @Nonnull
+  public Collection resolveJoin(
+      @Nonnull final ReferenceCollection referenceCollection) {
+    return resourceResolver.resolveJoin(referenceCollection);
   }
 
   @Nonnull

@@ -1,13 +1,13 @@
 package au.csiro.pathling.fhirpath.collection.mixed;
 
-import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.execution.ResolvingFhirPathEvaluator.FhirpathResult;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import jakarta.annotation.Nonnull;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import java.util.function.Function;
 
 /**
  * Represents a polymorphic resource collection, which can be resolved to a single resource type.
@@ -19,15 +19,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @EqualsAndHashCode(callSuper = false)
 public class MixedResourceCollection extends MixedCollection {
 
-  @FunctionalInterface
-  public interface Purifier {
-
-    @Nonnull
-    FhirpathResult apply(@Nonnull final ResourceType type, @Nonnull final FhirPath childPath);
-  }
-  
-  @Nonnull
-  Purifier purifier;
+  Function<ResourceType, ResourceCollection> resolver;
 
   /**
    * Returns a new collection representing just the elements of this collection with the specified
@@ -40,7 +32,6 @@ public class MixedResourceCollection extends MixedCollection {
   @Nonnull
   @Override
   public Collection filterByType(@Nonnull final TypeSpecifier type) {
-    throw new UnsupportedOperationException("filterByType is not supported for MixedResourceCollection");
+    return resolver.apply(type.toResourceType());
   }
-
 }

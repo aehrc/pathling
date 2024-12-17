@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.execution;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.context.FhirPathContext;
@@ -39,6 +40,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.jetbrains.annotations.NotNull;
 
 
 @Value
@@ -78,6 +80,13 @@ public class SingleFhirPathExecutor implements FhirPathExecutor {
     @Override
     public ResourceCollection resolveResource(@Nonnull final ResourceType resourceType) {
       throw new UnsupportedOperationException("resolveResource() is not supported");
+    }
+
+    @Override
+    @Nonnull
+    public Collection resolveJoin(
+        @Nonnull final ReferenceCollection referenceCollection) {
+      throw new UnsupportedOperationException("resolveJoin() is not supported");
     }
 
     @Nonnull
@@ -138,7 +147,8 @@ public class SingleFhirPathExecutor implements FhirPathExecutor {
 
   @Override
   @Nonnull
-  public Dataset<Row> execute(@Nonnull final FhirPath path, @Nonnull final Dataset<Row> subjectDataset) {
+  public Dataset<Row> execute(@Nonnull final FhirPath path,
+      @Nonnull final Dataset<Row> subjectDataset) {
     // just as above ... but with a more intelligent resourceResolver
     final ResourceResolver resourceResolver = new UnsupportedResourceResolver();
 
@@ -157,7 +167,8 @@ public class SingleFhirPathExecutor implements FhirPathExecutor {
 
   @Override
   @Nonnull
-  public CollectionDataset evaluate(@Nonnull final FhirPath path, @Nonnull final Dataset<Row> subjectDataset) {
+  public CollectionDataset evaluate(@Nonnull final FhirPath path,
+      @Nonnull final Dataset<Row> subjectDataset) {
     // just as above ... but with a more intelligent resourceResolver
     final ResourceResolver resourceResolver = new UnsupportedResourceResolver();
 

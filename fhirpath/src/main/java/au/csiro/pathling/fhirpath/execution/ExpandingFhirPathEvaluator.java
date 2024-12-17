@@ -24,10 +24,13 @@ import au.csiro.pathling.fhirpath.FhirPathVisitor;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.collection.mixed.MixedResourceCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.context.FhirPathContext;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.fhirpath.context.ViewEvaluationContext;
+import au.csiro.pathling.fhirpath.execution.DataRoot.JoinRoot;
+import au.csiro.pathling.fhirpath.execution.DataRoot.ResolveRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ResourceRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
@@ -38,6 +41,7 @@ import au.csiro.pathling.fhirpath.path.Paths.This;
 import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
+import com.google.common.collect.Streams;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Collections;
@@ -93,7 +97,7 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
 
     Dataset<Row> resolvedDataset =
         joinRoots.size() == 1
-        ? reverseResolveJoin((ReverseResolveRoot) joinRoots.iterator().next(),
+        ? resolveJoins((JoinRoot) joinRoots.iterator().next(),
             createInitialDataset(), null)
         : createInitialDataset();
 
@@ -108,6 +112,170 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
         resolvedDataset,
         fhirPath.apply(fhirpathContext.getInputContext(), evalContext)
     );
+  }
+
+  @Nonnull
+  private Dataset<Row> computeJoin(@Nonnull final Dataset<Row> parentDataset,
+      @Nullable final Dataset<Row> maybeChildDataset, @Nonnull final JoinRoot joinRoot) {
+    if (joinRoot instanceof ReverseResolveRoot rrr) {
+      return computeReverseJoin(parentDataset, maybeChildDataset, rrr);
+    } else if (joinRoot instanceof ResolveRoot rr) {
+      return computeResolveJoin(parentDataset, maybeChildDataset, rr);
+    } else {
+      throw new UnsupportedOperationException(
+          "Not implemented - unknown root type: " + joinRoot);
+    }
+  }
+
+
+  @Nonnull
+  private Dataset<Row> computeResolveJoin(@Nonnull final Dataset<Row> parentDataset,
+      @Nullable final Dataset<Row> maybeChildDataset, @Nonnull final ResolveRoot joinRoot) {
+
+    System.out.println("Computing resolve join for: " + joinRoot);
+
+    final FhirPathExecutor parentExecutor = createExecutor(joinRoot.getMaster().getResourceType(),
+        dataSource);
+    final ReferenceCollection referenceCollection = (ReferenceCollection)
+        parentExecutor.evaluate(joinRoot.getMasterResourcePath()).getValue();
+    System.out.println(
+        "Reference types" + referenceCollection.getReferenceTypes().stream().toList());
+
+    // lest assume for now we just have one type
+    //assert referenceCollection.getReferenceTypes().size() == 1;
+    // this way we can create the actual root for the join
+    // TODO: move to the root itself
+    final ResolveRoot typedRoot = ResolveRoot.of(joinRoot.getMaster(),
+        referenceCollection.getReferenceTypes().stream().filter(rt -> rt != ResourceType.GROUP)
+            .findAny().get(),
+        joinRoot.getMasterResourcePath());
+
+    if (referenceCollection.isToOneReference()) {
+
+      // TODO: this should be replaced with call to evalPath() with not grouping context
+      final FhirPathExecutor childExecutor = createExecutor(
+          typedRoot.getForeignResourceType(),
+          dataSource);
+
+      final Dataset<Row> childDataset = maybeChildDataset == null
+                                        ? childExecutor.createInitialDataset()
+                                        : maybeChildDataset;
+
+      // this shoukld point to the resource column
+      final Collection childResource = childExecutor.createDefaultInputContext();
+
+      // we essentially need to join the child result (with a map) to the parent dataset
+      // using the resolved reference as the joining key
+
+      final Stream<Column> passThroughColumns = Stream.of(childDataset.columns())
+          .filter(c -> c.contains("@"))
+          // TODO: replace with the map_combine function
+          .map(functions::col);
+
+      // create one key-value pair map a the value
+      final Stream<Column> keyValuesColumns = Stream.of(
+          childDataset.col("key").alias(typedRoot.getChildKeyTag()),
+          functions.map_from_arrays(
+              functions.array(childDataset.col("key")),
+              // maybe need to be wrapped in another array
+              functions.array(childResource.getColumnValue())
+          ).alias(typedRoot.getValueTag())
+      );
+
+      final Dataset<Row> childResult = childDataset.select(
+          Streams.concat(keyValuesColumns, passThroughColumns)
+              .toArray(Column[]::new));
+
+      // and now join to the parent reference
+
+      final Collection parentRegKey = parentExecutor.evaluate(new Traversal("reference"),
+          referenceCollection);
+
+      final Dataset<Row> joinedDataset = parentDataset.join(childResult,
+              parentRegKey.getColumnValue().equalTo(childResult.col(typedRoot.getChildKeyTag())),
+              "left_outer")
+          .drop(typedRoot.getChildKeyTag());
+
+      joinedDataset.show();
+      return joinedDataset;
+    } else {
+
+      // TODO: this should be replaced with call to evalPath() with not grouping context
+      final FhirPathExecutor childExecutor = createExecutor(
+          typedRoot.getForeignResourceType(),
+          dataSource);
+
+      final Dataset<Row> childDataset = maybeChildDataset == null
+                                        ? childExecutor.createInitialDataset()
+                                        : maybeChildDataset;
+
+      // this shoukld point to the resource column
+      final Collection childResource = childExecutor.createDefaultInputContext();
+
+      // we essentially need to join the child result (with a map) to the parent dataset
+      // using the resolved reference as the joining key
+
+      final Stream<Column> childPassThroughColumns = Stream.of(childDataset.columns())
+          .filter(c -> c.contains("@"))
+          // TODO: replace with the map_combine function
+          .map(functions::col);
+
+      // create one key-value pair map a the value
+      final Stream<Column> keyValuesColumns = Stream.of(
+          childDataset.col("key").alias(typedRoot.getChildKeyTag()),
+          functions.map_from_arrays(
+              functions.array(childDataset.col("key")),
+              // maybe need to be wrapped in another array
+              functions.array(childResource.getColumnValue())
+          ).alias(typedRoot.getValueTag())
+      );
+
+      final Dataset<Row> childResult = childDataset.select(
+          Streams.concat(keyValuesColumns, childPassThroughColumns)
+              .toArray(Column[]::new));
+
+      // and now join to the parent reference
+
+      final Collection parentRegKey = parentExecutor.evaluate(new Traversal("reference"),
+          referenceCollection);
+
+      final Dataset<Row> expandedParent = parentDataset.withColumn(typedRoot.getParentKeyTag(),
+          functions.explode_outer(parentRegKey.getColumnValue()));
+
+      final Dataset<Row> joinedDataset = expandedParent.join(childResult,
+              expandedParent.col(typedRoot.getParentKeyTag())
+                  .equalTo(childResult.col(typedRoot.getChildKeyTag())),
+              "left_outer")
+          .drop(typedRoot.getChildKeyTag(), typedRoot.getParentKeyTag());
+      joinedDataset.show();
+
+      final Stream<Column> passThroughColumns = Stream.of(childDataset.columns())
+          .filter(c -> c.contains("@"))
+          // TODO: replace with the map_combine function
+          .map(c -> collect_map(functions.col(c)).alias(c));
+
+      final Stream<Column> parentColumns = Stream.of(parentDataset.columns())
+          .filter(c -> !"key".equals(c) && !"id".equals(c))
+          // TODO: replace with the map_combine function
+          .map(c -> functions.any_value(functions.col(c)).alias(c));
+
+      final Column[] allPassColumns = Stream.concat(
+              parentColumns,
+              Stream.concat(Stream.of(
+                      collect_map(functions.col(typedRoot.getValueTag())).alias(typedRoot.getValueTag())),
+                  passThroughColumns))
+          .toArray(Column[]::new);
+
+      final Dataset<Row> regroupedDataset = joinedDataset.groupBy(joinedDataset.col("id"))
+          .agg(
+              functions.any_value(joinedDataset.col("key")).alias("key"),
+              allPassColumns
+          );
+
+      regroupedDataset.show();
+      return regroupedDataset;
+
+    }
   }
 
 
@@ -179,7 +347,7 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
 
 
   @Nonnull
-  private Dataset<Row> reverseResolveJoin(@Nonnull final ReverseResolveRoot joinRoot,
+  private Dataset<Row> resolveJoins(@Nonnull final JoinRoot joinRoot,
       @Nonnull final Dataset<Row> parentDataset, @Nullable final Dataset<Row> maybeChildDataset) {
 
     // 
@@ -190,14 +358,14 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
     // Ineed to to do deep unnestign
 
     if (joinRoot.getMaster() instanceof ResourceRoot) {
-      return computeReverseJoin(parentDataset, maybeChildDataset, joinRoot);
-    } else if (joinRoot.getMaster() instanceof ReverseResolveRoot rrr) {
+      return computeJoin(parentDataset, maybeChildDataset, joinRoot);
+    } else if (joinRoot.getMaster() instanceof JoinRoot jr) {
 
-      final Dataset<Row> childDataset = computeReverseJoin(
-          createExecutor(rrr.getResourceType(), dataSource).createInitialDataset(),
+      final Dataset<Row> childDataset = computeJoin(
+          createExecutor(jr.getResourceType(), dataSource).createInitialDataset(),
           maybeChildDataset, joinRoot);
 
-      return reverseResolveJoin(rrr, parentDataset, childDataset);
+      return resolveJoins(jr, parentDataset, childDataset);
       // compute the dataset for the current resolve root with the master type as the subject
       // and default master resource as parent dataset
 
@@ -206,7 +374,7 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
 
     } else {
       throw new UnsupportedOperationException(
-          "Not implemented - unknown root type: " + joinRoot.getMaster());
+          "Not implemented - unknown root type: " + joinRoot);
     }
   }
 
@@ -296,6 +464,35 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
       return ResourceCollection.build(
           new DefaultRepresentation(functions.col(resourceType.toCode())),
           fhirContext, resourceType);
+    }
+
+
+    @Nonnull
+    ResourceCollection resolveTypedJoin(@Nonnull final ReferenceCollection referenceCollection,
+        @Nonnull final ResourceType referenceType) {
+
+      if (!referenceCollection.getReferenceTypes().contains(referenceType)) {
+        throw new IllegalArgumentException(
+            "Reference type does not match. Expected: " + referenceType + " but got: "
+                + referenceCollection.getReferenceTypes());
+      }
+      // TODO: get from the reference collection
+      final String valueTag = "@" + referenceType.toCode() + "_id__value";
+
+      return ResourceCollection.build(
+          referenceCollection.getColumn().traverse("reference")
+              .applyTo(functions.col(valueTag)),
+          fhirContext, referenceType);
+    }
+
+
+    @Override
+    public @Nonnull Collection resolveJoin(
+        @Nonnull final ReferenceCollection referenceCollection) {
+      final Set<ResourceType> referenceTypes = referenceCollection.getReferenceTypes();
+      return referenceTypes.size() == 1
+             ? resolveTypedJoin(referenceCollection, referenceTypes.iterator().next())
+             : new MixedResourceCollection(type -> resolveTypedJoin(referenceCollection, type));
     }
 
     @Nonnull

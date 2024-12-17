@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
@@ -34,6 +35,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Context and dependencies used in the evaluation of a FHIRPath expression.
@@ -177,6 +179,12 @@ public class LegacyEvaluationContext implements EvaluationContext {
   @Override
   public ResourceCollection resolveResource(@Nonnull final ResourceType resourceType) {
     throw new UnsupportedOperationException("resolveResource() not supported in this context");
+  }
+
+  @Override
+  public Collection resolveJoin(
+      @NotNull final ReferenceCollection referenceCollection) {
+    throw new UnsupportedOperationException("resolveJoin() not supported in this context");
   }
 
   @Nonnull

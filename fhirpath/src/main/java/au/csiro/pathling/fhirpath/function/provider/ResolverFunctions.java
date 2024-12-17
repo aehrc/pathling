@@ -2,6 +2,8 @@ package au.csiro.pathling.fhirpath.function.provider;
 
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
@@ -31,5 +33,14 @@ public class ResolverFunctions {
 
     return evaluationContext.resolveReverseJoin(input, subjectPath.toExpression());
   }
+
+
+  @FhirPathFunction
+  @Nonnull
+  public static Collection resolve(@Nonnull final ReferenceCollection input,
+      @Nonnull EvaluationContext evaluationContext) {
+    return evaluationContext.resolveJoin(input);
+  }
+
 
 }

@@ -53,8 +53,6 @@ class DataRootResolverTest {
   void testNestedReverseResolve() {
     final Set<DataRoot> roots = getDataRoots(ResourceType.PATIENT,
         "reverseResolve(Encounter.subject).reverseResolve(Condition.encounter)");
-
-    roots.forEach(System.out::println);
     assertEquals(Set.of(
         ResourceRoot.of(ResourceType.PATIENT),
         ReverseResolveRoot.ofResource(ResourceType.PATIENT, ResourceType.ENCOUNTER,
@@ -90,9 +88,23 @@ class DataRootResolverTest {
   void simpleResolve() {
     final Set<DataRoot> roots = getDataRoots(ResourceType.CONDITION,
         "encounter.resolve().id");
+    roots.forEach(System.out::println);
     assertEquals(Set.of(
         ResourceRoot.of(ResourceType.CONDITION),
-        ResolveRoot.of(ResourceRoot.of(ResourceType.CONDITION), ResourceType.ENCOUNTER, "encounter")
+        ResolveRoot.of(ResourceRoot.of(ResourceType.CONDITION), ResourceType.RESOURCE, "encounter")
     ), roots);
   }
+
+  @Test
+  void resolveWithResourceAndElementModifiers() {
+    final Set<DataRoot> roots = getDataRoots(ResourceType.CONDITION,
+        "where(id='3232').encounter.first().resolve().id");
+    roots.forEach(System.out::println);
+    assertEquals(Set.of(
+        ResourceRoot.of(ResourceType.CONDITION),
+        ResolveRoot.of(ResourceRoot.of(ResourceType.CONDITION), ResourceType.RESOURCE, "encounter")
+    ), roots);
+  }
+
+
 }

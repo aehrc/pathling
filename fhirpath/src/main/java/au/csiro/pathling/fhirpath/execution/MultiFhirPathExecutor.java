@@ -22,6 +22,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathStreamVisitor;
 import au.csiro.pathling.fhirpath.FhirPathVisitor;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.context.FhirPathContext;
@@ -134,6 +135,12 @@ public class MultiFhirPathExecutor implements FhirPathExecutor {
           fhirContext, resourceType);
     }
 
+    @Override
+    public Collection resolveJoin(
+        @NotNull final ReferenceCollection referenceCollection) {
+      throw new UnsupportedOperationException("resolveJoin() is not supported");
+    }
+    
     @Nonnull
     @Override
     public ResourceCollection resolveReverseJoin(@Nonnull final ResourceCollection parentResource,

@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
@@ -30,6 +31,9 @@ public interface EvaluationContext {
   @Nonnull
   ResourceCollection resolveResource(@Nonnull final ResourceType resourceType);
 
+  @Nonnull
+  Collection resolveJoin(@Nonnull final ReferenceCollection referenceCollection);
+  
   @Nonnull
   ResourceCollection resolveReverseJoin(@Nonnull final ResourceCollection parentResource,
       @Nonnull final String expression);

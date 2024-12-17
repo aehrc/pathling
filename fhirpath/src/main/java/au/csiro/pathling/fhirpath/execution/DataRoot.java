@@ -44,8 +44,18 @@ public interface DataRoot {
     }
   }
 
+  
+  interface JoinRoot extends DataRoot {
+    @Nonnull
+    DataRoot getMaster();
+    
+    default int depth() {
+      return getMaster().depth() + 1;
+    }
+  }
+  
   @Value(staticConstructor = "of")
-  class ReverseResolveRoot implements DataRoot {
+  class ReverseResolveRoot implements JoinRoot {
 
     @Nonnull
     DataRoot master;
@@ -74,15 +84,10 @@ public interface DataRoot {
       return new ReverseResolveRoot(ResourceRoot.of(masterType), foreignResourceType,
           foreignResourcePath);
     }
-    
-    @Override
-    public int depth() {
-      return master.depth() + 1;
-    }
   }
 
   @Value(staticConstructor = "of")
-  class ResolveRoot implements DataRoot {
+  class ResolveRoot implements JoinRoot {
 
     @Nonnull
     DataRoot master;
@@ -101,12 +106,12 @@ public interface DataRoot {
     public int depth() {
       return master.depth() + 1;
     }
+
     
     @Nonnull
     @Override
     public String getTag() {
-      return master.getTag() + "_"
-          + masterResourcePath.replace(".", "_") + "@" + foreignResourceType.toCode();
+          return "@" + foreignResourceType.toCode() + "_id";
     }
 
     public static ResolveRoot ofResource(@Nonnull final ResourceType masterType,

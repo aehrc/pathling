@@ -123,7 +123,11 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
             .collect(toList())
         ).orElse(Collections.emptyList());
 
-    return new EvalFunction(functionIdentifier, arguments);
+    // if ("resolve".equals(functionIdentifier)) {
+    //   return ResolvePath.of(arguments);
+    // } else {
+      return new EvalFunction(functionIdentifier, arguments);
+    // }
   }
 
   @Override
