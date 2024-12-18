@@ -28,6 +28,7 @@ import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.EpisodeOfCare;
 import org.hl7.fhir.r4.model.EpisodeOfCare.EpisodeOfCareStatus;
+import org.hl7.fhir.r4.model.Location;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Reference;
@@ -70,7 +71,7 @@ class FhirpathTest {
         StaticFunctionRegistry.getInstance(), datasource);
     //    return new ResolvingFhirPathEvaluator(subjectResource, dataSource)
   }
-  
+
   @Test
   void singleResourceTest() {
     final Patient patient = new Patient();
@@ -525,8 +526,8 @@ class FhirpathTest {
                 .setSubject(new Reference("Patient/1"))
                 .setCode(
                     new CodeableConcept()
-                        .addCoding(new Coding().setCode("code-xx"))
-                        .addCoding(new Coding().setCode("code-xy"))
+                        .addCoding(new Coding().setCode("code-xx").setSystem("system-x"))
+                        .addCoding(new Coding().setCode("code-xy").setSystem("system-x"))
                         .setText("Coding-x")
                 )
                 .setId("Condition/x"),
@@ -534,8 +535,8 @@ class FhirpathTest {
                 .setSubject(new Reference("Patient/1"))
                 .setCode(
                     new CodeableConcept()
-                        .addCoding(new Coding().setCode("code-yx"))
-                        .addCoding(new Coding().setCode("code-yy"))
+                        .addCoding(new Coding().setCode("code-yx").setSystem("system-x"))
+                        .addCoding(new Coding().setCode("code-yy").setSystem("system-x"))
                         .setText("Coding-y")
                 )
                 .setId("Condition/y"),
@@ -543,9 +544,9 @@ class FhirpathTest {
                 .setSubject(new Reference("Patient/2"))
                 .setCode(
                     new CodeableConcept()
-                        .addCoding(new Coding().setCode("code-zx"))
-                        .addCoding(new Coding().setCode("code-zy"))
-                        .addCoding(new Coding().setCode("code-zz"))
+                        .addCoding(new Coding().setCode("code-zx").setSystem("system-x"))
+                        .addCoding(new Coding().setCode("code-zy").setSystem("system-x"))
+                        .addCoding(new Coding().setCode("code-zz").setSystem("system-x"))
                         .setText("Coding-z")
                 )
                 .setId("Condition/z")
@@ -585,6 +586,43 @@ class FhirpathTest {
             RowFactory.create("1", sql_array("1", "1")),
             RowFactory.create("2", sql_array("2")),
             RowFactory.create("3", null)
+        );
+  }
+
+
+  @Test
+  void multipleResolveToTheSameResourceOnDiffernetPaths() {
+    final ObjectDataSource dataSource =
+        new ObjectDataSource(spark, encoders,
+            List.of(
+                new Encounter()
+                    .setHospitalization(new Encounter.EncounterHospitalizationComponent()
+                        .setOrigin(new Reference("Location/1"))
+                        .setDestination(new Reference("Location/2"))
+                    )
+                    .setId("Encounter/1"),
+                new Encounter()
+                    .setHospitalization(new Encounter.EncounterHospitalizationComponent()
+                        .setOrigin(new Reference("Location/3"))
+                        .setDestination(new Reference("Location/3"))
+                    )
+                    .setId("Encounter/2"),
+
+                new Location().setId("Location/1"),
+                new Location().setId("Location/2"),
+                new Location().setId("Location/3")
+            ));
+
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.ENCOUNTER,
+        "hospitalization.origin.resolve().ofType(Location).id"
+            + " = hospitalization.destination.resolve().ofType(Location).id"
+    );
+    resultDataset.show();
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", false),
+            RowFactory.create("2", true)
         );
   }
 }
