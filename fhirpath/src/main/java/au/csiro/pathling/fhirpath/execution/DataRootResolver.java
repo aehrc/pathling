@@ -7,7 +7,6 @@ import static au.csiro.pathling.fhirpath.execution.ResolvingFhirPathEvaluator.is
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
-import au.csiro.pathling.fhirpath.context.FhirPathContext;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ResolveRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ResourceRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
@@ -28,7 +27,6 @@ public class DataRootResolver {
 
   FhirContext fhirContext;
 
-  @Nonnull
   static boolean isTypeOf(@Nonnull final FhirPath path) {
     return asTypeOf(path).isPresent();
   }

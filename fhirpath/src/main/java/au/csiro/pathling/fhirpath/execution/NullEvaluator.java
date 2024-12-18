@@ -15,7 +15,6 @@ import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import lombok.Value;
-import org.checkerframework.checker.units.qual.N;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 @Value

@@ -23,20 +23,20 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 public interface DataRoot {
 
-  
+
   @Nonnull
   ResourceType getResourceType();
-  
+
   default int depth() {
     return 0;
   }
-  
+
   @Value(staticConstructor = "of")
   class ResourceRoot implements DataRoot {
 
     @Nonnull
     ResourceType resourceType;
-    
+
     @Nonnull
     @Override
     public String getTag() {
@@ -44,16 +44,26 @@ public interface DataRoot {
     }
   }
 
-  
+
   interface JoinRoot extends DataRoot {
+
     @Nonnull
     DataRoot getMaster();
-    
+
     default int depth() {
       return getMaster().depth() + 1;
     }
+
+    @Nonnull
+    JoinTag asTag();
+
+    @Override
+    @Nonnull
+    default String getTag() {
+      return asTag().getTag();
+    }
   }
-  
+
   @Value(staticConstructor = "of")
   class ReverseResolveRoot implements JoinRoot {
 
@@ -72,10 +82,8 @@ public interface DataRoot {
 
     @Nonnull
     @Override
-    public String getTag() {
-      final String uniqueId = Long.toHexString(System.identityHashCode(this));
-      return master.getTag() + "@" + foreignResourceType.toCode() + "_"
-          + foreignKeyPath.replace(".", "_"); //+ "_" + uniqueId;
+    public JoinTag asTag() {
+      return JoinTag.ReverseResolveTag.of(foreignResourceType, foreignKeyPath);
     }
 
     public static ReverseResolveRoot ofResource(@Nonnull final ResourceType masterType,
@@ -84,6 +92,7 @@ public interface DataRoot {
       return new ReverseResolveRoot(ResourceRoot.of(masterType), foreignResourceType,
           foreignResourcePath);
     }
+
   }
 
   @Value(staticConstructor = "of")
@@ -107,11 +116,10 @@ public interface DataRoot {
       return master.depth() + 1;
     }
 
-    
     @Nonnull
     @Override
-    public String getTag() {
-          return "@" + foreignResourceType.toCode() + "_id";
+    public JoinTag asTag() {
+      return JoinTag.ResolveTag.of(foreignResourceType);
     }
 
     public static ResolveRoot ofResource(@Nonnull final ResourceType masterType,
@@ -130,7 +138,6 @@ public interface DataRoot {
     return getTag() + "__pkey";
   }
 
-
   @Nonnull
   default String getChildKeyTag() {
     return getTag() + "__ckey";
@@ -138,7 +145,7 @@ public interface DataRoot {
 
   @Nonnull
   default String getValueTag() {
-    return getTag() + "__value";
+    return getTag();
   }
 }
 

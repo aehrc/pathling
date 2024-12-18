@@ -51,7 +51,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Value;
-import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.P;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -278,7 +277,7 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
   @Nonnull
   private Dataset<Row> computeReverseJoin(@Nonnull final Dataset<Row> parentDataset,
       @Nullable final Dataset<Row> maybeChildDataset, @Nonnull final ReverseResolveRoot joinRoot) {
-    
+
     System.out.println("Computing reverse join for: " + joinRoot);
 
     final FhirPathExecutor childExecutor = createExecutor(joinRoot.getForeignResourceType(),
@@ -474,11 +473,11 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
                 + referenceCollection.getReferenceTypes());
       }
       // TODO: get from the reference collection
-      final String valueTag = "@" + referenceType.toCode() + "_id__value";
+      final JoinTag valueTag = JoinTag.ResolveTag.of(referenceType);
 
       return ResourceCollection.build(
           referenceCollection.getColumn().traverse("reference")
-              .applyTo(functions.col(valueTag)),
+              .applyTo(functions.col(valueTag.getTag())),
           fhirContext, referenceType);
     }
 
@@ -500,14 +499,17 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
       final ResourceType resourceType = parentResource.getResourceType();
       // TODO: implement this
       final String resourceName = expression.split("\\.")[0];
-      final ResourceType foreignResourceType = ResourceType.fromCode(resourceName);
+      final String masterKeyPath = expression.split("\\.")[1];
+      final ResourceType childResourceType = ResourceType.fromCode(resourceName);
 
       final ReverseResolveRoot root = ReverseResolveRoot.of(parentResource.getDataRoot(),
-          foreignResourceType, expression.split("\\.")[1]);
+          childResourceType,masterKeyPath);
 
+      final JoinTag valueTag = JoinTag.ReverseResolveTag.of(childResourceType, masterKeyPath);
+      
       return ResourceCollection.build(
           parentResource.getColumn().traverse("id_versioned")
-              .applyTo(functions.col(root.getValueTag())),
+              .applyTo(functions.col(valueTag.getTag())),
           fhirContext, root);
     }
   }
