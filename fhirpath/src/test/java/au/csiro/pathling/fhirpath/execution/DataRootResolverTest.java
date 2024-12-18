@@ -6,6 +6,7 @@ import au.csiro.pathling.fhirpath.execution.DataRoot.ResolveRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ResourceRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.Set;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -15,7 +16,7 @@ import org.junit.jupiter.api.Test;
 class DataRootResolverTest {
 
   @Nonnull
-  final DataRootResolver resolver = new DataRootResolver();
+  final DataRootResolver resolver = new DataRootResolver(FhirContext.forR4());
 
   @Nonnull
   final Parser parser = new Parser();

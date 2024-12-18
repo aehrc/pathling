@@ -51,6 +51,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Value;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.P;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -61,10 +62,6 @@ import org.jetbrains.annotations.NotNull;
 
 @Value
 public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
-
-
-  @Nonnull
-  DataRootResolver dataRootResolver = new DataRootResolver();
 
   // TODO: Move somewhere else
 
@@ -138,17 +135,16 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
         dataSource);
     final ReferenceCollection referenceCollection = (ReferenceCollection)
         parentExecutor.evaluate(joinRoot.getMasterResourcePath()).getValue();
+    final Set<ResourceType> referenceTypes = referenceCollection.getReferenceTypes();
     System.out.println(
-        "Reference types" + referenceCollection.getReferenceTypes().stream().toList());
+        "Reference types: " + referenceTypes);
 
-    // lest assume for now we just have one type
-    //assert referenceCollection.getReferenceTypes().size() == 1;
-    // this way we can create the actual root for the join
-    // TODO: move to the root itself
-    final ResolveRoot typedRoot = ResolveRoot.of(joinRoot.getMaster(),
-        referenceCollection.getReferenceTypes().stream().filter(rt -> rt != ResourceType.GROUP)
-            .findAny().get(),
-        joinRoot.getMasterResourcePath());
+    final ResolveRoot typedRoot = joinRoot;
+    if (!referenceTypes.contains(typedRoot.getResourceType())) {
+      throw new IllegalArgumentException(
+          "Reference type does not match. Expected: " + referenceTypes + " but got: "
+              + typedRoot.getResourceType());
+    }
 
     if (referenceCollection.isToOneReference()) {
 
@@ -282,7 +278,7 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
   @Nonnull
   private Dataset<Row> computeReverseJoin(@Nonnull final Dataset<Row> parentDataset,
       @Nullable final Dataset<Row> maybeChildDataset, @Nonnull final ReverseResolveRoot joinRoot) {
-
+    
     System.out.println("Computing reverse join for: " + joinRoot);
 
     final FhirPathExecutor childExecutor = createExecutor(joinRoot.getForeignResourceType(),
@@ -362,7 +358,8 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
     } else if (joinRoot.getMaster() instanceof JoinRoot jr) {
 
       final Dataset<Row> childDataset = computeJoin(
-          createExecutor(jr.getResourceType(), dataSource).createInitialDataset(),
+          createExecutor(joinRoot.getMaster().getResourceType(),
+              dataSource).createInitialDataset(),
           maybeChildDataset, joinRoot);
 
       return resolveJoins(jr, parentDataset, childDataset);
@@ -699,6 +696,7 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
     //     .filter(ReverseResolveRoot.class::isInstance)
     //     .collect(Collectors.toUnmodifiableSet());
 
+    final DataRootResolver dataRootResolver = new DataRootResolver(fhirContext);
     // TODO: create the actual hierarchy of the joins
     // for now find the longest root path 
     final Set<DataRoot> dataRoots = dataRootResolver.findDataRoots(subjectResource, path);
