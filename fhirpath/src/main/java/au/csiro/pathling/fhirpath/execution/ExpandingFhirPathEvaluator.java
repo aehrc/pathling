@@ -698,10 +698,10 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
     //     .filter(ReverseResolveRoot.class::isInstance)
     //     .collect(Collectors.toUnmodifiableSet());
 
-    final DataRootResolver dataRootResolver = new DataRootResolver(fhirContext);
+    final DataRootResolver dataRootResolver = new DataRootResolver(subjectResource, fhirContext);
     // TODO: create the actual hierarchy of the joins
     // for now find the longest root path 
-    final Set<DataRoot> dataRoots = dataRootResolver.findDataRoots(subjectResource, path);
+    final Set<DataRoot> dataRoots = dataRootResolver.findDataRoots(path);
     return dataRoots.stream()
         .filter(r -> r.depth() > 0)
         .sorted((r1, r2) -> Integer.compare(r2.depth(), r1.depth())).limit(1)

@@ -129,8 +129,8 @@ class FhirpathTest {
     // TODO: update expectations
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
-            RowFactory.create("1", sql_array(true)),
-            RowFactory.create("2", sql_array(false)),
+            RowFactory.create("1", true),
+            RowFactory.create("2", false),
             RowFactory.create("3", null)
         );
   }

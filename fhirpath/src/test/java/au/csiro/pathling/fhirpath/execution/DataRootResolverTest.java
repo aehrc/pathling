@@ -16,13 +16,11 @@ import org.junit.jupiter.api.Test;
 class DataRootResolverTest {
 
   @Nonnull
-  final DataRootResolver resolver = new DataRootResolver(FhirContext.forR4());
-
-  @Nonnull
   final Parser parser = new Parser();
 
   private @Nonnull Set<DataRoot> getDataRoots(ResourceType patient, String id) {
-    return resolver.findDataRoots(patient,
+    final DataRootResolver resolver = new DataRootResolver(patient, FhirContext.forR4());
+    return resolver.findDataRoots(
         parser.parse(id));
   }
 
@@ -84,26 +82,54 @@ class DataRootResolverTest {
         ReverseResolveRoot.ofResource(ResourceType.PATIENT, ResourceType.ENCOUNTER, "subject")
     ), roots);
   }
-  
+
   @Test
-  void simpleResolve() {
+  void simpleMonomorphicResolve() {
     final Set<DataRoot> roots = getDataRoots(ResourceType.CONDITION,
         "encounter.resolve().id");
     roots.forEach(System.out::println);
     assertEquals(Set.of(
         ResourceRoot.of(ResourceType.CONDITION),
-        ResolveRoot.of(ResourceRoot.of(ResourceType.CONDITION), ResourceType.RESOURCE, "encounter")
+        ResolveRoot.of(ResourceRoot.of(ResourceType.CONDITION), ResourceType.ENCOUNTER, "encounter")
     ), roots);
   }
 
   @Test
-  void resolveWithResourceAndElementModifiers() {
+  void monomorphicResolveWithResourceAndElementModifiers() {
     final Set<DataRoot> roots = getDataRoots(ResourceType.CONDITION,
         "where(id='3232').encounter.first().resolve().id");
     roots.forEach(System.out::println);
     assertEquals(Set.of(
         ResourceRoot.of(ResourceType.CONDITION),
-        ResolveRoot.of(ResourceRoot.of(ResourceType.CONDITION), ResourceType.RESOURCE, "encounter")
+        ResolveRoot.of(ResourceRoot.of(ResourceType.CONDITION), ResourceType.ENCOUNTER, "encounter")
+    ), roots);
+  }
+
+  @Test
+  void dualResolveToTheSameRoot() {
+    final Set<DataRoot> roots = getDataRoots(ResourceType.ENCOUNTER,
+        "where(subject.resolve().ofType(Patient).gender = 'male').episodeOfCare.resolve().status");
+    roots.forEach(System.out::println);
+    assertEquals(Set.of(
+        ResourceRoot.of(ResourceType.ENCOUNTER),
+        ResolveRoot.of(ResourceRoot.of(ResourceType.ENCOUNTER), ResourceType.PATIENT, "subject"),
+        ResolveRoot.of(ResourceRoot.of(ResourceType.ENCOUNTER), ResourceType.EPISODEOFCARE,
+            "episodeOfCare")
+    ), roots);
+  }
+
+
+  @Test
+  void resourceReferenceInForeingJoin() {
+    final Set<DataRoot> roots = getDataRoots(ResourceType.PATIENT,
+        "reverseResolve(Condition.subject).where(id=%resource.reverseResolve(Encounter.subject).id.first())");
+    roots.forEach(System.out::println);
+    assertEquals(Set.of(
+        ResourceRoot.of(ResourceType.PATIENT),
+        ReverseResolveRoot.of(ResourceRoot.of(ResourceType.PATIENT), ResourceType.CONDITION,
+            "subject"),
+        ReverseResolveRoot.of(ResourceRoot.of(ResourceType.PATIENT), ResourceType.ENCOUNTER,
+            "subject")
     ), roots);
   }
 

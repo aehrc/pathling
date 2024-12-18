@@ -25,7 +25,9 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value
 public class DataRootResolver {
 
+  ResourceType subjectResource;
   FhirContext fhirContext;
+
 
   static boolean isTypeOf(@Nonnull final FhirPath path) {
     return asTypeOf(path).isPresent();
@@ -41,8 +43,7 @@ public class DataRootResolver {
 
 
   @Nonnull
-  public Set<DataRoot> findDataRoots(@Nonnull final ResourceType subjectResource,
-      @Nonnull final FhirPath path) {
+  public Set<DataRoot> findDataRoots(@Nonnull final FhirPath path) {
     final ResourceRoot subjectRoot = ResourceRoot.of(subjectResource);
     final Set<DataRoot> dataRoots = new HashSet<>();
     dataRoots.add(subjectRoot);
@@ -102,7 +103,15 @@ public class DataRootResolver {
       } else {
         collectDataRoots(currentRoot, fhirPath.suffix(), traversalPath, dataRoots);
       }
-
+    } else if (headPath instanceof Paths.ExternalConstantPath ecp) {
+      // we do not need to do anything here
+      System.out.println("External constant path" + ecp);
+      if ("resource".equals(ecp.getName()) || "rootResource".equals(ecp.getName())) {
+        // this root should already be addded here
+        collectDataRoots(ResourceRoot.of(subjectResource), fhirPath.suffix(), FhirPath.nullPath(),
+            dataRoots);
+      }
+      // NOTE: other paths should be literals so we should not need to resolve them
     } else if (!headPath.isNull()) {
       // and also collect the for the children
       headPath.children()
