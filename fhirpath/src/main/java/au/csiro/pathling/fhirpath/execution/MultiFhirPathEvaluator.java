@@ -19,8 +19,6 @@ package au.csiro.pathling.fhirpath.execution;
 
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.FhirPathStreamVisitor;
-import au.csiro.pathling.fhirpath.FhirPathVisitor;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
@@ -35,9 +33,6 @@ import au.csiro.pathling.fhirpath.execution.DataRoot.ResourceRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.fhirpath.path.Paths;
-import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
-import au.csiro.pathling.fhirpath.path.Paths.This;
 import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
@@ -45,8 +40,6 @@ import com.google.common.collect.Streams;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -59,8 +52,11 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.jetbrains.annotations.NotNull;
 
 
+/**
+ * A FHIRPath evaluator that can handle multiple joins.
+ */
 @Value
-public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
+public class MultiFhirPathEvaluator implements FhirPathEvaluator {
 
   // TODO: Move somewhere else
 
@@ -81,8 +77,7 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
   public Dataset<Row> createInitialDataset() {
     return resourceDataset(subjectResource);
   }
-
-
+  
   @Override
   public @NotNull CollectionDataset evaluate(@NotNull final String fhirpathExpression) {
 
@@ -97,7 +92,7 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
             createInitialDataset(), null)
         : createInitialDataset();
 
-    final ResourceResolver resourceResolver = new EmptyResourceResolver();
+    final ResourceResolver resourceResolver = new DefaultResourceResolver();
     final FhirPathContext fhirpathContext = FhirPathContext.ofResource(
         resourceResolver.resolveResource(subjectResource));
     final EvaluationContext evalContext = new ViewEvaluationContext(
@@ -337,10 +332,8 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
         .drop(joinRoot.getChildKeyTag());
     joinedDataset.show();
     return joinedDataset;
-
   }
-
-
+  
   @Nonnull
   private Dataset<Row> resolveJoins(@Nonnull final JoinRoot joinRoot,
       @Nonnull final Dataset<Row> parentDataset, @Nullable final Dataset<Row> maybeChildDataset) {
@@ -383,76 +376,7 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
         Collections.emptyMap(), dataSource);
   }
 
-  @Value
-  static class DataRootFinderVisitor implements FhirPathStreamVisitor<DataRoot> {
-
-    @Nonnull
-    ResourceType subjectResource;
-
-    @Nonnull
-    @Override
-    public Stream<DataRoot> visitPath(@Nonnull final FhirPath path) {
-      if (path instanceof EvalFunction && "reverseResolve".equals(((EvalFunction) path)
-          .getFunctionIdentifier())) {
-        // actually we know we do not want to visit the children of this function
-        return Stream.of(ExecutorUtils.fromPath(subjectResource, (EvalFunction) path));
-      } else {
-        return visitChildren(path);
-      }
-    }
-  }
-
-  @Value
-  static class DependencyFinderVisitor implements FhirPathStreamVisitor<DataDependency> {
-
-    @Nonnull
-    Optional<DataRoot> resourceContext;
-
-    @Nonnull
-    @Override
-    public Stream<DataDependency> visitPath(@Nonnull final FhirPath path) {
-      if (path instanceof Traversal) {
-        return resourceContext.map(r -> DataDependency.of(r, ((Traversal) path).getPropertyName()))
-            .stream();
-      } else if (path instanceof EvalFunction && "reverseResolve".equals(((EvalFunction) path)
-          .getFunctionIdentifier())) {
-        return Stream.empty();
-      } else {
-        return visitChildren(path);
-      }
-    }
-
-    @Nonnull
-    @Override
-    public FhirPathVisitor<Stream<DataDependency>> enterContext(@Nonnull final FhirPath path) {
-      if (path instanceof Paths.Resource) {
-        return new DependencyFinderVisitor(Optional.of(ResourceRoot.of(
-            ((Paths.Resource) path).getResourceType())));
-      } else if (isTransparent(path)) {
-        return this;
-      } else if (path instanceof EvalFunction && "reverseResolve".equals(((EvalFunction) path)
-          .getFunctionIdentifier())) {
-        return new DependencyFinderVisitor(
-            Optional.of(ExecutorUtils.fromPath(resourceContext.orElseThrow(),
-                (EvalFunction) path)));
-      } else {
-        return resourceContext.isEmpty()
-               ? this
-               : new DependencyFinderVisitor(Optional.empty());
-      }
-    }
-
-    private static final Set<String> TRANSPARENT_FUNCTIONS = Set.of("first", "last", "where");
-
-    static boolean isTransparent(@Nonnull final FhirPath path) {
-      return
-          (path instanceof EvalFunction && TRANSPARENT_FUNCTIONS.contains(((EvalFunction) path)
-              .getFunctionIdentifier()))
-              || (path instanceof This);
-    }
-  }
-
-  class EmptyResourceResolver implements ResourceResolver {
+  class DefaultResourceResolver implements ResourceResolver {
 
     @Nonnull
     @Override
@@ -503,10 +427,10 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
       final ResourceType childResourceType = ResourceType.fromCode(resourceName);
 
       final ReverseResolveRoot root = ReverseResolveRoot.of(parentResource.getDataRoot(),
-          childResourceType,masterKeyPath);
+          childResourceType, masterKeyPath);
 
       final JoinTag valueTag = JoinTag.ReverseResolveTag.of(childResourceType, masterKeyPath);
-      
+
       return ResourceCollection.build(
           parentResource.getColumn().traverse("id_versioned")
               .applyTo(functions.col(valueTag.getTag())),
@@ -531,20 +455,6 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
   Parser parser = new Parser();
 
   @Nonnull
-  public Collection validate(@Nonnull final FhirPath path) {
-
-    final ResourceResolver resourceResolver = new EmptyResourceResolver();
-    final FhirPathContext fhirpathContext = FhirPathContext.ofResource(
-        resourceResolver.resolveResource(subjectResource));
-    final EvaluationContext evalContext = new ViewEvaluationContext(
-        fhirpathContext,
-        functionRegistry,
-        resourceResolver);
-    return path.apply(fhirpathContext.getInputContext(), evalContext);
-  }
-
-
-  @Nonnull
   Dataset<Row> resourceDataset(@Nonnull final ResourceType resourceType) {
     final Dataset<Row> dataset = dataSource.read(resourceType);
     return dataset.select(
@@ -555,76 +465,7 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
                 .map(dataset::col).toArray(Column[]::new)
         ).alias(resourceType.toCode()));
   }
-
-
-  @Nonnull
-  Dataset<Row> reverseJoinDataset(@Nonnull final ReverseResolveRoot dataRoot,
-      @Nonnull final List<String> dependencies) {
-    final Dataset<Row> dataset = dataSource.read(dataRoot.getForeignResourceType());
-    final Set<String> columns = Stream.of(dataset.columns())
-        .collect(Collectors.toUnmodifiableSet());
-    final String joinTag = dataRoot.getTag();
-
-    // TODO: make it better
-    final Column referenceColumn = dataset.col(dataRoot.getForeignKeyPath())
-        .getField("reference");
-    return dataset.groupBy(referenceColumn.alias(dataRoot.getParentKeyTag()))
-        .agg(
-            functions.collect_list(
-                functions.struct(
-                    dependencies.stream().filter(columns::contains)
-                        .map(dataset::col).toArray(Column[]::new)
-                )
-            ).alias(joinTag)
-        );
-  }
-
-
-  @Nonnull
-  public Dataset<Row> execute(@Nonnull final FhirPath path) {
-    // just as above ... but with a more intelligent resourceResolver
-    final ResourceResolver resourceResolver = new EmptyResourceResolver();
-
-    // we will need to extract the dependencies and create the map for and the dataset;
-    // but for now just make it work for the main resource
-    final Dataset<Row> patients = resourceDataset(subjectResource);
-
-    final FhirPathContext fhirpathContext = FhirPathContext.ofResource(
-        resourceResolver.resolveResource(subjectResource));
-    final EvaluationContext evalContext = new ViewEvaluationContext(
-        fhirpathContext,
-        functionRegistry,
-        resourceResolver);
-
-    final List<DataView> reverseJoinsViews = findDataViews(path).stream()
-        .filter(dv -> dv.getRoot() instanceof ReverseResolveRoot)
-        .toList();
-
-    // for each join eval the reference column
-
-    Dataset<Row> derivedDataset = patients;
-    for (DataView reverseJoinsView : reverseJoinsViews) {
-      final ReverseResolveRoot reverseJoin = (ReverseResolveRoot) reverseJoinsView.getRoot();
-
-      if (!ResourceRoot.of(subjectResource).equals(reverseJoin.getMaster())) {
-        throw new IllegalStateException("Only reverse resolve to subject resource");
-      }
-
-      final Dataset<Row> foreignDatasetJoin = reverseJoinDataset(
-          reverseJoin,
-          reverseJoinsView.getDependencies()
-      );
-
-      derivedDataset = derivedDataset.join(
-          foreignDatasetJoin,
-          patients.col("key").equalTo(foreignDatasetJoin.col(reverseJoin.getParentKeyTag())),
-          "left_outer"
-      ).drop(reverseJoin.getParentKeyTag());
-    }
-    final Collection result = path.apply(fhirpathContext.getInputContext(), evalContext);
-    return derivedDataset.select(functions.col("id"), result.getColumnValue().alias("value"));
-  }
-
+  
   public Dataset<Row> execute(@NotNull final FhirPath path,
       @NotNull final Dataset<Row> subjectDataset) {
     throw new UnsupportedOperationException("Not implemented");
@@ -635,69 +476,13 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
     throw new UnsupportedOperationException("Not implemented");
   }
 
-
-  @Nonnull
-  public CollectionDataset evaluate(@Nonnull final FhirPath path) {
-    // just as above ... but with a more intelligent resourceResolver
-    final ResourceResolver resourceResolver = new EmptyResourceResolver();
-
-    // we will need to extract the dependencies and create the map for and the dataset;
-    // but for now just make it work for the main resource
-    final Dataset<Row> patients = resourceDataset(subjectResource);
-
-    final FhirPathContext fhirpathContext = FhirPathContext.ofResource(
-        resourceResolver.resolveResource(subjectResource));
-    final EvaluationContext evalContext = new ViewEvaluationContext(
-        fhirpathContext,
-        functionRegistry,
-        resourceResolver);
-
-    final List<DataView> reverseJoinsViews = findDataViews(path).stream()
-        .filter(dv -> dv.getRoot() instanceof ReverseResolveRoot)
-        .toList();
-
-    // for each join eval the reference column
-
-    Dataset<Row> derivedDataset = patients;
-    for (final DataView reverseJoinsView : reverseJoinsViews) {
-      final ReverseResolveRoot reverseJoin = (ReverseResolveRoot) reverseJoinsView.getRoot();
-
-      if (!ResourceRoot.of(subjectResource).equals(reverseJoin.getMaster())) {
-        throw new IllegalStateException("Only reverse resolve to subject resource");
-      }
-
-      final Dataset<Row> foreignDatasetJoin = reverseJoinDataset(
-          reverseJoin,
-          reverseJoinsView.getDependencies()
-      );
-
-      derivedDataset = derivedDataset.join(
-          foreignDatasetJoin,
-          patients.col("key").equalTo(foreignDatasetJoin.col(reverseJoin.getParentKeyTag())),
-          "left_outer"
-      ).drop(reverseJoin.getParentKeyTag());
-    }
-    final Collection result = path.apply(fhirpathContext.getInputContext(), evalContext);
-    return CollectionDataset.of(derivedDataset, result);
-  }
-
   @Nonnull
   public Collection evaluate(@Nonnull final FhirPath path, @Nonnull final Collection inputContext) {
     throw new UnsupportedOperationException("Not implemented");
   }
 
   @Nonnull
-  public Collection createDefaultInputContext() {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Nonnull
   public Set<DataRoot> findJoinsRoots(@Nonnull final FhirPath path) {
-    // return path.accept(new DependencyFinderVisitor(Optional.of(ResourceRoot.of(subjectResource))))
-    //     .map(DataDependency::getRoot)
-    //     .filter(ReverseResolveRoot.class::isInstance)
-    //     .collect(Collectors.toUnmodifiableSet());
-
     final DataRootResolver dataRootResolver = new DataRootResolver(subjectResource, fhirContext);
     // TODO: create the actual hierarchy of the joins
     // for now find the longest root path 
@@ -707,22 +492,5 @@ public class ExpandingFhirPathEvaluator implements FhirPathEvaluator {
         .sorted((r1, r2) -> Integer.compare(r2.depth(), r1.depth())).limit(1)
         .collect(Collectors.toUnmodifiableSet());
   }
-
-  @Nonnull
-  public Set<DataDependency> findDataDependencies(@Nonnull final FhirPath path) {
-    return path.accept(new DependencyFinderVisitor(Optional.of(ResourceRoot.of(subjectResource))))
-        .collect(Collectors.toUnmodifiableSet());
-  }
-
-
-  @Nonnull
-  List<DataView> findDataViews(@Nonnull final FhirPath path) {
-    return findDataDependencies(path).stream().collect(
-            Collectors.groupingBy(DataDependency::getRoot,
-                Collectors.mapping(DataDependency::getElement, Collectors.toUnmodifiableList()))
-        ).entrySet().stream().map(e -> DataView.of(e.getKey(), e.getValue()))
-        .toList();
-  }
-
-
+  
 }

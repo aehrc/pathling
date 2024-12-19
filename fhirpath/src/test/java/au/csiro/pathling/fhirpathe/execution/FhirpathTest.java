@@ -3,7 +3,7 @@ package au.csiro.pathling.fhirpathe.execution;
 import static au.csiro.pathling.test.helpers.SqlHelpers.sql_array;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.execution.ExpandingFhirPathEvaluator;
+import au.csiro.pathling.fhirpath.execution.MultiFhirPathEvaluator;
 import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.io.source.DataSource;
@@ -67,7 +67,7 @@ class FhirpathTest {
   @Nonnull
   FhirPathEvaluator createEvaluator(@Nonnull final ResourceType subjectResource,
       @Nonnull final DataSource datasource) {
-    return new ExpandingFhirPathEvaluator(subjectResource, encoders.getContext(),
+    return new MultiFhirPathEvaluator(subjectResource, encoders.getContext(),
         StaticFunctionRegistry.getInstance(), datasource);
     //    return new ResolvingFhirPathEvaluator(subjectResource, dataSource)
   }

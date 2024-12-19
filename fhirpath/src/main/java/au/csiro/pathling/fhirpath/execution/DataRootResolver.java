@@ -1,8 +1,8 @@
 package au.csiro.pathling.fhirpath.execution;
 
-import static au.csiro.pathling.fhirpath.execution.ResolvingFhirPathEvaluator.asReverseResolve;
-import static au.csiro.pathling.fhirpath.execution.ResolvingFhirPathEvaluator.isResolve;
-import static au.csiro.pathling.fhirpath.execution.ResolvingFhirPathEvaluator.isReverseResolve;
+import static au.csiro.pathling.fhirpath.execution.PathsUtils.asReverseResolve;
+import static au.csiro.pathling.fhirpath.execution.PathsUtils.isResolve;
+import static au.csiro.pathling.fhirpath.execution.PathsUtils.isReverseResolve;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
@@ -17,7 +17,6 @@ import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -27,19 +26,6 @@ public class DataRootResolver {
 
   ResourceType subjectResource;
   FhirContext fhirContext;
-
-
-  static boolean isTypeOf(@Nonnull final FhirPath path) {
-    return asTypeOf(path).isPresent();
-  }
-
-  @Nonnull
-  static Optional<EvalFunction> asTypeOf(@Nonnull final FhirPath path) {
-    return path instanceof EvalFunction evalFunction && evalFunction.getFunctionIdentifier()
-        .equals("ofType")
-           ? Optional.of(evalFunction)
-           : Optional.empty();
-  }
 
 
   @Nonnull
@@ -89,8 +75,8 @@ public class DataRootResolver {
         dataRoots.add(resolveRoot);
       }
       collectDataRoots(resolveRoot, fhirPath.suffix(), FhirPath.nullPath(), dataRoots);
-    } else if (isTypeOf(headPath)) {
-      final EvalFunction evalFunction = asTypeOf(headPath).orElseThrow();
+    } else if (PathsUtils.isTypeOf(headPath)) {
+      final EvalFunction evalFunction = PathsUtils.asTypeOf(headPath).orElseThrow();
       final TypeSpecifier typeSpecifier = ((TypeSpecifierPath) evalFunction.getArguments()
           .get(0)).getValue();
 
@@ -120,7 +106,7 @@ public class DataRootResolver {
 
       // TODO: we should be also need to be abel to check 
       // if the current traversal is to a resource or to a reference
-      final FhirPath newTraversalPath = isTraversal(headPath)
+      final FhirPath newTraversalPath = PathsUtils.isTraversal(headPath)
                                         ? traversalPath.andThen(headPath)
                                         : traversalPath;
       collectDataRoots(currentRoot, fhirPath.suffix(), newTraversalPath, dataRoots);
@@ -132,7 +118,4 @@ public class DataRootResolver {
     }
   }
 
-  private static boolean isTraversal(@Nonnull final FhirPath path) {
-    return path instanceof Paths.Traversal;
-  }
 }
