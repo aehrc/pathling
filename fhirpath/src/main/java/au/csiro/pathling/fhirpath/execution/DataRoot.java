@@ -27,6 +27,9 @@ public interface DataRoot {
   @Nonnull
   ResourceType getResourceType();
 
+  @Nonnull
+  ResourceType getParentResourceType();
+
   default int depth() {
     return 0;
   }
@@ -37,6 +40,12 @@ public interface DataRoot {
     @Nonnull
     ResourceType resourceType;
 
+    @Override
+    @Nonnull
+    public ResourceType getParentResourceType() {
+      return resourceType;
+    }
+
     @Nonnull
     @Override
     public String getTag() {
@@ -46,6 +55,12 @@ public interface DataRoot {
 
 
   interface JoinRoot extends DataRoot {
+
+    @Override
+    @Nonnull
+    default ResourceType getParentResourceType() {
+      return getMaster().getResourceType();
+    }
 
     @Nonnull
     DataRoot getMaster();

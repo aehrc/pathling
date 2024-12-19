@@ -27,6 +27,8 @@ public class DataRootResolver {
   ResourceType subjectResource;
   FhirContext fhirContext;
 
+  
+  
 
   @Nonnull
   public Set<DataRoot> findDataRoots(@Nonnull final FhirPath path) {

@@ -616,8 +616,10 @@ class FhirpathTest {
     final Dataset<Row> resultDataset = evalExpression(dataSource,
         ResourceType.ENCOUNTER,
         "hospitalization.origin.resolve().ofType(Location).id"
-            + " = hospitalization.destination.resolve().ofType(Location).id"
+            + "=hospitalization.destination.resolve().ofType(Location).id"
     );
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
+
     resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(

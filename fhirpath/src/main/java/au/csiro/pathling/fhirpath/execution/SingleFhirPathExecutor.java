@@ -40,7 +40,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.jetbrains.annotations.NotNull;
 
 
 @Value
@@ -107,12 +106,12 @@ public class SingleFhirPathExecutor implements FhirPathExecutor {
         dataset.col("id_versioned").alias("key"),
         functions.struct(
             Stream.of(dataset.columns()).filter(c -> !c.startsWith("_"))
-                .map(dataset::col).toArray(Column[]::new)
+                .map(functions::col).toArray(Column[]::new)
         ).alias(resourceType.toCode())
     );
     final Stream<Column> implicitColumns = Stream.of(dataset.columns())
         .filter(c -> c.startsWith("_"))
-        .map(dataset::col);
+        .map(functions::col);
 
     return dataset.select(Stream.concat(explicitColumns, implicitColumns)
         .toArray(Column[]::new));

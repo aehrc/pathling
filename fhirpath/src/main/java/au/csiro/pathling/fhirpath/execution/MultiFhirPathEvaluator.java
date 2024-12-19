@@ -77,7 +77,7 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
   public Dataset<Row> createInitialDataset() {
     return resourceDataset(subjectResource);
   }
-  
+
   @Override
   public @NotNull CollectionDataset evaluate(@NotNull final String fhirpathExpression) {
 
@@ -86,11 +86,19 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
     System.out.println("Join roots: " + joinRoots);
     joinRoots.forEach(System.out::println);
 
-    Dataset<Row> resolvedDataset =
-        joinRoots.size() == 1
-        ? resolveJoins((JoinRoot) joinRoots.iterator().next(),
-            createInitialDataset(), null)
-        : createInitialDataset();
+    // Dataset<Row> resolvedDataset =
+    //     joinRoots.size() == 1
+    //     ? resolveJoins((JoinRoot) joinRoots.iterator().next(),
+    //         createInitialDataset(), null)
+    //     : createInitialDataset();
+
+    Dataset<Row> resolvedDataset = resolveJoinsEx(
+        JoinSet.mergeRoots(joinRoots).iterator().next(),
+        createInitialDataset());
+
+    System.out.println("Resolved dataset:");
+    resolvedDataset.show();
+    System.out.println(resolvedDataset.queryExecution().executedPlan().toString());
 
     final ResourceResolver resourceResolver = new DefaultResourceResolver();
     final FhirPathContext fhirpathContext = FhirPathContext.ofResource(
@@ -182,10 +190,11 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
           referenceCollection);
 
       final Dataset<Row> joinedDataset = parentDataset.join(childResult,
-              parentRegKey.getColumnValue().equalTo(childResult.col(typedRoot.getChildKeyTag())),
+              parentRegKey.getColumnValue().equalTo(functions.col(typedRoot.getChildKeyTag())),
               "left_outer")
           .drop(typedRoot.getChildKeyTag());
 
+      System.out.println("Joined dataset:");
       joinedDataset.show();
       return joinedDataset;
     } else {
@@ -333,7 +342,19 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
     joinedDataset.show();
     return joinedDataset;
   }
-  
+
+  @Nonnull
+  private Dataset<Row> resolveJoinsEx(@Nonnull final JoinSet joinSet,
+      @Nonnull final Dataset<Row> parentDataset) {
+    
+    // now just reduce current children
+    return joinSet.getChildren().stream()
+        .reduce(parentDataset, (dataset, subset) ->
+            // the parent dataset for subjoin should be different
+            computeJoin(dataset, resolveJoinsEx(subset, resourceDataset(subset.getMaster().getResourceType())),
+                (JoinRoot) subset.getMaster()), (dataset1, dataset2) -> dataset1);
+  }
+
   @Nonnull
   private Dataset<Row> resolveJoins(@Nonnull final JoinRoot joinRoot,
       @Nonnull final Dataset<Row> parentDataset, @Nullable final Dataset<Row> maybeChildDataset) {
@@ -465,7 +486,7 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
                 .map(dataset::col).toArray(Column[]::new)
         ).alias(resourceType.toCode()));
   }
-  
+
   public Dataset<Row> execute(@NotNull final FhirPath path,
       @NotNull final Dataset<Row> subjectDataset) {
     throw new UnsupportedOperationException("Not implemented");
@@ -492,5 +513,5 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
         .sorted((r1, r2) -> Integer.compare(r2.depth(), r1.depth())).limit(1)
         .collect(Collectors.toUnmodifiableSet());
   }
-  
+
 }
