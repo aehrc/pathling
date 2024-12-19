@@ -507,11 +507,7 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
     final DataRootResolver dataRootResolver = new DataRootResolver(subjectResource, fhirContext);
     // TODO: create the actual hierarchy of the joins
     // for now find the longest root path 
-    final Set<DataRoot> dataRoots = dataRootResolver.findDataRoots(path);
-    return dataRoots.stream()
-        .filter(r -> r.depth() > 0)
-        .sorted((r1, r2) -> Integer.compare(r2.depth(), r1.depth())).limit(1)
-        .collect(Collectors.toUnmodifiableSet());
+    return dataRootResolver.findDataRoots(path);
   }
 
 }
