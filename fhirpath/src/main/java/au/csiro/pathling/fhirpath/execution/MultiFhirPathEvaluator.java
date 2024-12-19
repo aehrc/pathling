@@ -40,8 +40,8 @@ import com.google.common.collect.Streams;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Value;
 import org.apache.spark.sql.Column;
@@ -170,6 +170,7 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
           // TODO: replace with the map_combine function
           .map(functions::col);
 
+      final String uniqueValueTag = typedRoot.getValueTag() + "_unique";
       // create one key-value pair map a the value
       final Stream<Column> keyValuesColumns = Stream.of(
           childDataset.col("key").alias(typedRoot.getChildKeyTag()),
@@ -177,7 +178,7 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
               functions.array(childDataset.col("key")),
               // maybe need to be wrapped in another array
               functions.array(childResource.getColumnValue())
-          ).alias(typedRoot.getValueTag())
+          ).alias(uniqueValueTag)
       );
 
       final Dataset<Row> childResult = childDataset.select(
@@ -189,10 +190,19 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
       final Collection parentRegKey = parentExecutor.evaluate(new Traversal("reference"),
           referenceCollection);
 
+      final boolean needsMerging = List.of(parentDataset.columns())
+          .contains(typedRoot.getValueTag());
       final Dataset<Row> joinedDataset = parentDataset.join(childResult,
               parentRegKey.getColumnValue().equalTo(functions.col(typedRoot.getChildKeyTag())),
               "left_outer")
-          .drop(typedRoot.getChildKeyTag());
+          .withColumn(typedRoot.getValueTag(),
+              needsMerging
+              ? functions.map_concat(
+                  functions.col(typedRoot.getValueTag()),
+                  functions.col(uniqueValueTag))
+              : functions.col(uniqueValueTag)
+          )
+          .drop(typedRoot.getChildKeyTag(), uniqueValueTag);
 
       System.out.println("Joined dataset:");
       joinedDataset.show();
@@ -346,12 +356,13 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
   @Nonnull
   private Dataset<Row> resolveJoinsEx(@Nonnull final JoinSet joinSet,
       @Nonnull final Dataset<Row> parentDataset) {
-    
+
     // now just reduce current children
     return joinSet.getChildren().stream()
         .reduce(parentDataset, (dataset, subset) ->
             // the parent dataset for subjoin should be different
-            computeJoin(dataset, resolveJoinsEx(subset, resourceDataset(subset.getMaster().getResourceType())),
+            computeJoin(dataset,
+                resolveJoinsEx(subset, resourceDataset(subset.getMaster().getResourceType())),
                 (JoinRoot) subset.getMaster()), (dataset1, dataset2) -> dataset1);
   }
 
