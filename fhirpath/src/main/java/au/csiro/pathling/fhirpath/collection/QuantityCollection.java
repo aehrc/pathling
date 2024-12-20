@@ -67,8 +67,9 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   public QuantityCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(columnRepresentation, type, fhirType, definition);
+      @Nonnull final Optional<? extends NodeDefinition> definition,
+      @Nonnull final Optional<Column> extensionMapColumn) {
+    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
   }
 
   /**
@@ -82,7 +83,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   public static QuantityCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
     return new QuantityCollection(columnRepresentation, Optional.of(FhirPathType.QUANTITY),
-        Optional.of(FHIRDefinedType.QUANTITY), definition);
+        Optional.of(FHIRDefinedType.QUANTITY), definition, Optional.empty());
   }
 
 

@@ -417,7 +417,7 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
                 resolveJoins(subset, resourceDataset(subset.getMaster().getResourceType())),
                 (JoinRoot) subset.getMaster()), (dataset1, dataset2) -> dataset1);
   }
-  
+
   @Nonnull
   private FhirPathExecutor createExecutor(final ResourceType subjectResourceType,
       final DataSource dataSource) {
@@ -476,15 +476,12 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
       final String masterKeyPath = expression.split("\\.")[1];
       final ResourceType childResourceType = ResourceType.fromCode(resourceName);
 
-      final ReverseResolveRoot root = ReverseResolveRoot.of(parentResource.getDataRoot(),
-          childResourceType, masterKeyPath);
-
       final JoinTag valueTag = JoinTag.ReverseResolveTag.of(childResourceType, masterKeyPath);
 
       return ResourceCollection.build(
           parentResource.getColumn().traverse("id_versioned")
               .applyTo(functions.col(valueTag.getTag())),
-          fhirContext, root);
+          fhirContext, childResourceType);
     }
   }
 
@@ -511,7 +508,7 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
         dataset.col("id"),
         dataset.col("id_versioned").alias("key"),
         functions.struct(
-            Stream.of(dataset.columns()).filter(c -> !c.startsWith("_"))
+            Stream.of(dataset.columns())
                 .map(dataset::col).toArray(Column[]::new)
         ).alias(resourceType.toCode()));
   }

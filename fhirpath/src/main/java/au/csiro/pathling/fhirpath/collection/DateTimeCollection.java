@@ -58,8 +58,9 @@ public class DateTimeCollection extends Collection implements
   protected DateTimeCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(columnRepresentation, type, fhirType, definition);
+      @Nonnull final Optional<? extends NodeDefinition> definition, 
+      @Nonnull final Optional<Column> extensionMapColumn) {
+    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
   }
 
   /**
@@ -73,7 +74,7 @@ public class DateTimeCollection extends Collection implements
   public static DateTimeCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
     return new DateTimeCollection(columnRepresentation, Optional.of(FhirPathType.DATETIME),
-        Optional.of(FHIRDefinedType.DATETIME), definition);
+        Optional.of(FHIRDefinedType.DATETIME), definition, Optional.empty());
   }
 
   /**

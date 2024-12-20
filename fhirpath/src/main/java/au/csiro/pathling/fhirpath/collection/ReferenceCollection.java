@@ -9,6 +9,7 @@ import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.Set;
+import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
@@ -24,8 +25,9 @@ public class ReferenceCollection extends Collection {
 
   protected ReferenceCollection(@Nonnull final ColumnRepresentation column,
       @Nonnull final Optional<FhirPathType> type, @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(column, type, fhirType, definition);
+      @Nonnull final Optional<? extends NodeDefinition> definition, 
+      @Nonnull final Optional<Column> extensionMapColumn) {
+    super(column, type, fhirType, definition, extensionMapColumn);
   }
 
   /**

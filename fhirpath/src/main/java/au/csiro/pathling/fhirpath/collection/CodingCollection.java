@@ -50,8 +50,9 @@ public class CodingCollection extends Collection implements Materializable<Codin
   protected CodingCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(columnRepresentation, type, fhirType, definition);
+      @Nonnull final Optional<? extends NodeDefinition> definition,
+      @Nonnull final Optional<Column> extensionMapColumn) {
+    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
   }
 
   /**
@@ -65,7 +66,7 @@ public class CodingCollection extends Collection implements Materializable<Codin
   public static CodingCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
     return new CodingCollection(columnRepresentation, Optional.of(FhirPathType.CODING),
-        Optional.of(FHIRDefinedType.CODING), definition);
+        Optional.of(FHIRDefinedType.CODING), definition, Optional.empty());
   }
 
 

@@ -57,8 +57,9 @@ public class IntegerCollection extends Collection implements
   protected IntegerCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(columnRepresentation, type, fhirType, definition);
+      @Nonnull final Optional<? extends NodeDefinition> definition, 
+      @Nonnull final Optional<Column> extensionMapColumn) {
+    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
   }
 
   /**
@@ -72,7 +73,7 @@ public class IntegerCollection extends Collection implements
   public static IntegerCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
     return new IntegerCollection(columnRepresentation, Optional.of(FhirPathType.INTEGER),
-        Optional.of(FHIRDefinedType.INTEGER), definition);
+        Optional.of(FHIRDefinedType.INTEGER), definition, Optional.empty());
   }
 
   /**

@@ -28,6 +28,7 @@ import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Base64BinaryType;
 import org.hl7.fhir.r4.model.CodeType;
@@ -51,8 +52,9 @@ public class StringCollection extends Collection implements Materializable<Primi
   protected StringCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(columnRepresentation, type, fhirType, definition);
+      @Nonnull final Optional<? extends NodeDefinition> definition, 
+      @Nonnull final Optional<Column> extensionMapColumn) {
+    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
   }
 
   /**
@@ -66,7 +68,7 @@ public class StringCollection extends Collection implements Materializable<Primi
   public static StringCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
     return new StringCollection(columnRepresentation, Optional.of(FhirPathType.STRING),
-        Optional.of(FHIRDefinedType.STRING), definition);
+        Optional.of(FHIRDefinedType.STRING), definition, Optional.empty());
   }
 
   /**

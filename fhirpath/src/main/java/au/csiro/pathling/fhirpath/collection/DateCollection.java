@@ -52,8 +52,9 @@ public class DateCollection extends Collection implements Materializable<DateTyp
   protected DateCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(columnRepresentation, type, fhirType, definition);
+      @Nonnull final Optional<? extends NodeDefinition> definition, 
+      @Nonnull final Optional<Column> extensionMapColumn) {
+    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
   }
 
   /**
@@ -67,7 +68,7 @@ public class DateCollection extends Collection implements Materializable<DateTyp
   public static DateCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
     return new DateCollection(columnRepresentation, Optional.of(FhirPathType.DATE),
-        Optional.of(FHIRDefinedType.DATE), definition);
+        Optional.of(FHIRDefinedType.DATE), definition, Optional.empty());
   }
 
   @Nonnull

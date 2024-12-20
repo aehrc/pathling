@@ -25,6 +25,7 @@ import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.operator.Comparable;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -40,8 +41,9 @@ public class BooleanCollection extends Collection implements Materializable<Bool
   protected BooleanCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(columnRepresentation, type, fhirType, definition);
+      @Nonnull final Optional<? extends NodeDefinition> definition, 
+      @Nonnull final Optional<Column> extensionMapColumn) {
+    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
   }
 
   /**
@@ -55,7 +57,7 @@ public class BooleanCollection extends Collection implements Materializable<Bool
   public static BooleanCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
     return new BooleanCollection(columnRepresentation, Optional.of(FhirPathType.BOOLEAN),
-        Optional.of(FHIRDefinedType.BOOLEAN), definition);
+        Optional.of(FHIRDefinedType.BOOLEAN), definition, Optional.empty());
   }
 
   /**

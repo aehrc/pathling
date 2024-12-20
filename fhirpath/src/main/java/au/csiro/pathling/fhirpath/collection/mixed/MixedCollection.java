@@ -16,7 +16,8 @@ import lombok.Getter;
 public abstract class MixedCollection extends Collection {
 
   protected MixedCollection() {
-    super(EmptyRepresentation.getInstance(), Optional.empty(), Optional.empty(), Optional.empty());
+    super(EmptyRepresentation.getInstance(), Optional.empty(), Optional.empty(), Optional.empty(),
+        Optional.empty());
   }
 
   /**

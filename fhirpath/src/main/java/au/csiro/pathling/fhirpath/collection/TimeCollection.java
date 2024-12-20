@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.operator.Comparable;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.TimeType;
@@ -41,8 +42,9 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
   protected TimeCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(columnRepresentation, type, fhirType, definition);
+      @Nonnull final Optional<? extends NodeDefinition> definition,
+      @Nonnull final Optional<Column> extensionMapColumn) {
+    super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
   }
 
   /**
@@ -56,7 +58,7 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
   public static TimeCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
     return new TimeCollection(columnRepresentation, Optional.of(FhirPathType.TIME),
-        Optional.of(FHIRDefinedType.TIME), definition);
+        Optional.of(FHIRDefinedType.TIME), definition, Optional.empty());
   }
 
   /**

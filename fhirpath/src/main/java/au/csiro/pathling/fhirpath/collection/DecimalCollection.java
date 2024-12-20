@@ -55,8 +55,9 @@ public class DecimalCollection extends Collection implements Materializable<Deci
   protected DecimalCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> fhirPathType,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<NodeDefinition> definition) {
-    super(columnRepresentation, fhirPathType, fhirType, definition);
+      @Nonnull final Optional<NodeDefinition> definition, 
+      @Nonnull final Optional<Column> extensionMapColumn) {
+    super(columnRepresentation, fhirPathType, fhirType, definition, extensionMapColumn);
   }
 
   /**
@@ -70,7 +71,7 @@ public class DecimalCollection extends Collection implements Materializable<Deci
   public static DecimalCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
     return new DecimalCollection(columnRepresentation, Optional.of(FhirPathType.DECIMAL),
-        Optional.of(FHIRDefinedType.DECIMAL), definition);
+        Optional.of(FHIRDefinedType.DECIMAL), definition, Optional.empty());
   }
 
   /**

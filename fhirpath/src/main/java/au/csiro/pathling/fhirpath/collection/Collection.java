@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
-import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.FhirPathType;
@@ -45,6 +44,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Column;
+import org.checkerframework.checker.units.qual.N;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -109,6 +109,9 @@ public class Collection implements Comparable, Numeric {
   @Nonnull
   private final Optional<? extends NodeDefinition> definition;
 
+  @Nonnull
+  private final Optional<Column> extensionMapColumn;
+
   /**
    * Builds a generic {@link Collection} with the specified column, FHIRPath type, FHIR type and
    * definition.
@@ -119,12 +122,14 @@ public class Collection implements Comparable, Numeric {
    * @param definition the {@link ElementDefinition} that this path should be based upon
    * @return a new {@link Collection}
    */
+
   @Nonnull
   public static Collection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> fhirPathType,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    return new Collection(columnRepresentation, fhirPathType, fhirType, definition);
+    return new Collection(columnRepresentation, fhirPathType, fhirType, definition,
+        Optional.empty());
   }
 
   /**
@@ -142,7 +147,8 @@ public class Collection implements Comparable, Numeric {
   public static Collection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final FHIRDefinedType fhirType,
       @Nonnull final Optional<ElementDefinition> definition) {
-    return getInstance(columnRepresentation, Optional.of(fhirType), definition);
+    return getInstance(columnRepresentation, Optional.of(fhirType), definition,
+        Optional.empty());
   }
 
   /**
@@ -157,10 +163,12 @@ public class Collection implements Comparable, Numeric {
    */
   @Nonnull
   public static Collection build(@Nonnull final ColumnRepresentation columnRepresentation,
+      @Nonnull Optional<Column> extensionMapColumn,
       @Nonnull final ElementDefinition definition) {
     final Optional<FHIRDefinedType> optionalFhirType = definition.getFhirType();
     if (optionalFhirType.isPresent()) {
-      return getInstance(columnRepresentation, optionalFhirType, Optional.of(definition));
+      return getInstance(columnRepresentation, optionalFhirType, Optional.of(definition),
+          extensionMapColumn);
     } else {
       throw new IllegalArgumentException(
           "Attempted to build a Collection with an ElementDefinition with no fhirType");
@@ -181,13 +189,15 @@ public class Collection implements Comparable, Numeric {
   @Nonnull
   public static Collection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final FHIRDefinedType fhirType) {
-    return getInstance(columnRepresentation, Optional.of(fhirType), Optional.empty());
+    return getInstance(columnRepresentation, Optional.of(fhirType), Optional.empty(),
+        Optional.empty());
   }
 
   @Nonnull
   private static Collection getInstance(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<ElementDefinition> definition) {
+      @Nonnull final Optional<ElementDefinition> definition,
+      @Nonnull final Optional<Column> extensionMapColumn) {
     // Look up the class that represents an element with the specified FHIR type.
     final FHIRDefinedType resolvedType = fhirType
         .or(() -> definition.flatMap(ElementDefinition::getFhirType))
@@ -200,9 +210,10 @@ public class Collection implements Comparable, Numeric {
       // Call its constructor and return.
       final Constructor<? extends Collection> constructor = elementPathClass
           .getDeclaredConstructor(ColumnRepresentation.class, Optional.class, Optional.class,
-              Optional.class);
+              Optional.class, Optional.class);
       return constructor
-          .newInstance(columnRepresentation, fhirPathType, fhirType, definition);
+          .newInstance(columnRepresentation, fhirPathType, fhirType, definition,
+              extensionMapColumn);
     } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
                    InvocationTargetException e) {
       throw new RuntimeException("Problem building a Collection object", e);
@@ -268,7 +279,6 @@ public class Collection implements Comparable, Numeric {
     }
   }
 
-
   /**
    * Return the child {@link Collection} that results from traversing to the given child element
    * definition.
@@ -282,17 +292,20 @@ public class Collection implements Comparable, Numeric {
     final ColumnRepresentation columnRepresentation = getColumn().traverse(
         childDef.getElementName(), childDef.getFhirType());
     // Return a new Collection with the new column and the child definition.
-    return Collection.build(columnRepresentation, childDef);
+    return Collection.build(columnRepresentation,
+        extensionMapColumn,
+        childDef);
   }
-
+  
   @Nonnull
   protected Optional<Collection> traverseExtension(
       @Nonnull final ElementDefinition extensionDefinition) {
-    final Column extensionColumn = col(ExtensionSupport.EXTENSIONS_FIELD_NAME());
-    return Optional.of(extensionColumn)
+    return getExtensionMapColumn()
         .map(em -> Collection.build(
             // We need here to deal with the situation where _fid is an array of element ids
-            getFid().transform(em::apply).flatten(), extensionDefinition));
+            getFid().transform(em::apply).flatten(),
+            extensionMapColumn,
+            extensionDefinition));
   }
 
   @Nonnull
@@ -340,7 +353,8 @@ public class Collection implements Comparable, Numeric {
     definition.ifPresent(def -> check(def instanceof ElementDefinition,
         "Cannot copy a Collection with a non-ElementDefinition definition"));
     //noinspection unchecked
-    return getInstance(newValue, getFhirType(), (Optional<ElementDefinition>) definition);
+    return getInstance(newValue, getFhirType(), (Optional<ElementDefinition>) definition,
+        extensionMapColumn);
   }
 
   /**

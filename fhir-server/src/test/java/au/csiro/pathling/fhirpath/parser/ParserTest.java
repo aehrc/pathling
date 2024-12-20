@@ -916,7 +916,7 @@ public class ParserTest extends AbstractParserTest {
     mockResource(ResourceType.PATIENT, ResourceType.ENCOUNTER, ResourceType.GOAL);
     assertThatResultOf(
         "reverseResolve(Encounter.subject).extension.where(url = 'urn:test:associated-goal')"
-            + ".valueReference.resolve().ofType(Goal).description.text")
+            + ".ofType(Reference).resolve().ofType(Goal).description.text")
         .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testResolutionOfExtensionReference.tsv");

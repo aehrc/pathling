@@ -6,6 +6,7 @@ import au.csiro.pathling.fhirpath.column.EmptyRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
+import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -14,12 +15,14 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class EmptyCollection extends Collection {
 
   private static final EmptyCollection INSTANCE = new EmptyCollection(
-      EmptyRepresentation.getInstance(), Optional.empty(), Optional.empty(), Optional.empty());
+      EmptyRepresentation.getInstance(), Optional.empty(), Optional.empty(), Optional.empty(),
+      Optional.empty());
 
   protected EmptyCollection(@Nonnull final ColumnRepresentation column,
       @Nonnull final Optional<FhirPathType> type, @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(column, type, fhirType, definition);
+      @Nonnull final Optional<? extends NodeDefinition> definition,
+      @Nonnull final Optional<Column> extensionMapColumn) {
+    super(column, type, fhirType, definition, extensionMapColumn);
   }
 
   /**
