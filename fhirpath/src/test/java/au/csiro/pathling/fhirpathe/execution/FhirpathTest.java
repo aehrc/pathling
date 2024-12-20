@@ -19,6 +19,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.Appointment;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Condition;
@@ -588,10 +589,9 @@ class FhirpathTest {
             RowFactory.create("3", null)
         );
   }
-
-
+  
   @Test
-  void multipleResolveToTheSameResourceOnDiffernetPaths() {
+  void multipleResolveToOneToTheSameResourceOnDiffernetPaths() {
     final ObjectDataSource dataSource =
         new ObjectDataSource(spark, encoders,
             List.of(
@@ -607,7 +607,11 @@ class FhirpathTest {
                         .setDestination(new Reference("Location/3"))
                     )
                     .setId("Encounter/2"),
-
+                new Encounter()
+                    .setHospitalization(new Encounter.EncounterHospitalizationComponent()
+                        .setOrigin(new Reference("Location/3"))
+                    )
+                    .setId("Encounter/3"),
                 new Location().setId("Location/1"),
                 new Location().setId("Location/2"),
                 new Location().setId("Location/3")
@@ -615,16 +619,92 @@ class FhirpathTest {
 
     final Dataset<Row> resultDataset = evalExpression(dataSource,
         ResourceType.ENCOUNTER,
-        "hospitalization.origin.resolve().ofType(Location).id"
-            + "=hospitalization.destination.resolve().ofType(Location).id"
+        "hospitalization.origin.resolve().ofType(Location).count()"
+            + "=hospitalization.destination.resolve().ofType(Location).count()"
     );
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
 
     resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
-            RowFactory.create("1", false),
-            RowFactory.create("2", true)
+            RowFactory.create("1", true),
+            RowFactory.create("2", true),
+            RowFactory.create("3", false)
         );
   }
+  
+  @Test
+  void multipleResolveToManyTheSameResourceInSubresolve() {
+    final ObjectDataSource dataSource =
+        new ObjectDataSource(spark, encoders,
+            List.of(
+                new Encounter()
+                    .addAppointment(new Reference("Appointment/1.1"))
+                    .addReasonReference(new Reference("Condition/1.1"))
+                    .setId("Encounter/1"),
+                new Appointment()
+                    .addReasonReference(new Reference("Condition/1.1"))
+                    .setId("Appointment/1.1"),
+                new Condition().setId("Condition/1.1"),
+                new Encounter()
+                    .addAppointment(new Reference("Appointment/2.1"))
+                    .addReasonReference(new Reference("Condition/2.1"))
+                    .setId("Encounter/2"),
+                new Appointment()
+                    .addReasonReference(new Reference("Condition/2.2"))
+                    .setId("Appointment/2.1"),
+                new Condition().setId("Condition/2.1"),
+                new Condition().setId("Condition/2.2")
+            ));
+
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.ENCOUNTER,
+        "appointment.resolve().reasonReference.resolve().ofType(Condition).id.first()"
+            + " = reasonReference.resolve().ofType(Condition).id.first()"
+    );
+    resultDataset.show();
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", true),
+            RowFactory.create("2", false)
+        );
+  }
+
+
+  @Test
+  void chainedReferenceToSameResouece() {
+    final ObjectDataSource dataSource =
+        new ObjectDataSource(spark, encoders,
+            List.of(
+                new Observation()
+                    .addHasMember(new Reference("Observation/2"))
+                    .setId("Observation/1"),
+                new Observation()
+                    .addHasMember(new Reference("Observation/3"))
+                    .setId("Observation/2"),
+                new Observation()
+                    .addHasMember(new Reference("Observation/4"))
+                    .setId("Observation/3"),
+                new Observation().setId("Observation/4")
+            ));
+
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.OBSERVATION,
+        "hasMember.resolve().ofType(Observation)"
+            + ".hasMember.resolve().ofType(Observation)"
+            + ".hasMember.resolve().ofType(Observation)"
+            + ".count()"
+            + " + hasMember.resolve().ofType(Observation).count()"
+            + " + hasMember.resolve().ofType(Observation).hasMember.resolve().ofType(Observation).count()"
+    );
+    resultDataset.show();
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", 3),
+            RowFactory.create("2", 2),
+            RowFactory.create("3", 1),
+            RowFactory.create("4", 0)
+        );
+  }
+  
 }

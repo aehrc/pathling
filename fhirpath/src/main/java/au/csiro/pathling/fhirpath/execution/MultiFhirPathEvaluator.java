@@ -29,7 +29,6 @@ import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.fhirpath.context.ViewEvaluationContext;
 import au.csiro.pathling.fhirpath.execution.DataRoot.JoinRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ResolveRoot;
-import au.csiro.pathling.fhirpath.execution.DataRoot.ResourceRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
@@ -40,8 +39,10 @@ import com.google.common.collect.Streams;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Value;
 import org.apache.spark.sql.Column;
@@ -58,6 +59,14 @@ import org.jetbrains.annotations.NotNull;
 @Value
 public class MultiFhirPathEvaluator implements FhirPathEvaluator {
 
+
+  @Nonnull
+  static Column ns_map_concat(@Nonnull final Column left, @Nonnull final Column right) {
+    return functions.when(left.isNull(), right)
+        .when(right.isNull(), left)
+        .otherwise(functions.map_concat(left, right));
+  }
+
   // TODO: Move somewhere else
 
   @Nonnull
@@ -68,7 +77,7 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
     return functions.reduce(
         functions.collect_list(mapColumn),
         functions.any_value(mapColumn),
-        (acc, elem) -> functions.when(acc.isNull(), elem).otherwise(functions.map_concat(acc, elem))
+        (acc, elem) -> functions.when(acc.isNull(), elem).otherwise(ns_map_concat(acc, elem))
     );
   }
 
@@ -92,7 +101,7 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
     //         createInitialDataset(), null)
     //     : createInitialDataset();
 
-    Dataset<Row> resolvedDataset = resolveJoinsEx(
+    Dataset<Row> resolvedDataset = resolveJoins(
         JoinSet.mergeRoots(joinRoots).iterator().next(),
         createInitialDataset());
 
@@ -148,6 +157,7 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
               + typedRoot.getResourceType());
     }
 
+    Dataset<Row> resultDataset;
     if (referenceCollection.isToOneReference()) {
 
       // TODO: this should be replaced with call to evalPath() with not grouping context
@@ -190,25 +200,20 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
       final Collection parentRegKey = parentExecutor.evaluate(new Traversal("reference"),
           referenceCollection);
 
-      final boolean needsMerging = List.of(parentDataset.columns())
-          .contains(typedRoot.getValueTag());
       final Dataset<Row> joinedDataset = parentDataset.join(childResult,
               parentRegKey.getColumnValue().equalTo(functions.col(typedRoot.getChildKeyTag())),
               "left_outer")
-          .withColumn(typedRoot.getValueTag(),
-              needsMerging
-              ? functions.map_concat(
-                  functions.col(typedRoot.getValueTag()),
-                  functions.col(uniqueValueTag))
-              : functions.col(uniqueValueTag)
-          )
-          .drop(typedRoot.getChildKeyTag(), uniqueValueTag);
+          .drop(typedRoot.getChildKeyTag());
 
-      System.out.println("Joined dataset:");
-      joinedDataset.show();
-      return joinedDataset;
+      final Dataset<Row> finalDataset = mergeMapColumns(joinedDataset, typedRoot.getValueTag(),
+          uniqueValueTag);
+
+      System.out.println("Final dataset:");
+      finalDataset.show();
+      return finalDataset;
     } else {
 
+      final String uniqueValueTag = typedRoot.getValueTag() + "_unique";
       // TODO: this should be replaced with call to evalPath() with not grouping context
       final FhirPathExecutor childExecutor = createExecutor(
           typedRoot.getForeignResourceType(),
@@ -236,12 +241,15 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
               functions.array(childDataset.col("key")),
               // maybe need to be wrapped in another array
               functions.array(childResource.getColumnValue())
-          ).alias(typedRoot.getValueTag())
+          ).alias(uniqueValueTag)
       );
 
-      final Dataset<Row> childResult = childDataset.select(
-          Streams.concat(keyValuesColumns, childPassThroughColumns)
-              .toArray(Column[]::new));
+      final Dataset<Row> childResult =
+          childDataset.select(
+              Streams.concat(keyValuesColumns, childPassThroughColumns)
+                  .toArray(Column[]::new));
+
+      // but we also need to map_concat child maps to the current join if exits
 
       // and now join to the parent reference
 
@@ -251,10 +259,9 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
       final Dataset<Row> expandedParent = parentDataset.withColumn(typedRoot.getParentKeyTag(),
           functions.explode_outer(parentRegKey.getColumnValue()));
 
-      final Dataset<Row> joinedDataset = expandedParent.join(childResult,
-              expandedParent.col(typedRoot.getParentKeyTag())
-                  .equalTo(childResult.col(typedRoot.getChildKeyTag())),
-              "left_outer")
+      final Dataset<Row> joinedDataset = joinWithMapMerge(expandedParent, childResult,
+          expandedParent.col(typedRoot.getParentKeyTag())
+              .equalTo(childResult.col(typedRoot.getChildKeyTag())))
           .drop(typedRoot.getChildKeyTag(), typedRoot.getParentKeyTag());
       joinedDataset.show();
 
@@ -271,7 +278,7 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
       final Column[] allPassColumns = Stream.concat(
               parentColumns,
               Stream.concat(Stream.of(
-                      collect_map(functions.col(typedRoot.getValueTag())).alias(typedRoot.getValueTag())),
+                      collect_map(functions.col(uniqueValueTag)).alias(uniqueValueTag)),
                   passThroughColumns))
           .toArray(Column[]::new);
 
@@ -281,12 +288,57 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
               allPassColumns
           );
 
-      regroupedDataset.show();
-      return regroupedDataset;
-
+      resultDataset = mergeMapColumns(regroupedDataset, typedRoot.getValueTag(),
+          uniqueValueTag);
+      resultDataset.show();
+      return resultDataset;
     }
   }
 
+  // I Need to be able to make a smart join where the map columns are merged
+  // and the other columns are passed through
+
+  @Nonnull
+  private Dataset<Row> joinWithMapMerge(@Nonnull final Dataset<Row> leftDataset,
+      @Nonnull final Dataset<Row> rightDataset,
+      @Nonnull final Column on) {
+
+    // deduplicate columns
+    // for @map colums map_contat
+    // for others keep the left
+    final Set<String> commonColumns = new HashSet<>(List.of(leftDataset.columns()));
+    commonColumns.retainAll(Set.of(rightDataset.columns()));
+
+    final Set<String> commonMapColumns = commonColumns.stream()
+        .filter(c -> c.contains("@"))
+        .collect(Collectors.toUnmodifiableSet());
+
+    final Column[] uniqueSelection = Stream.concat(
+        Stream.of(leftDataset.columns())
+            .map(c -> commonMapColumns.contains(c)
+                      ? ns_map_concat(leftDataset.col(c), rightDataset.col(c)).alias(c)
+                      : leftDataset.col(c)),
+        Stream.of(rightDataset.columns())
+            .filter(c -> !commonColumns.contains(c))
+            .map(rightDataset::col)
+
+    ).toArray(Column[]::new);
+    return leftDataset.join(rightDataset, on, "left_outer")
+        .select(uniqueSelection);
+  }
+
+
+  @Nonnull
+  private Dataset<Row> mergeMapColumns(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final String finalColumn, @Nonnull final String tempColumn) {
+    if (List.of(dataset.columns()).contains(finalColumn)) {
+      return dataset.withColumn(finalColumn,
+              ns_map_concat(functions.col(finalColumn), functions.col(tempColumn)))
+          .drop(tempColumn);
+    } else {
+      return dataset.withColumnRenamed(tempColumn, finalColumn);
+    }
+  }
 
   @Nonnull
   private Dataset<Row> computeReverseJoin(@Nonnull final Dataset<Row> parentDataset,
@@ -354,7 +406,7 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
   }
 
   @Nonnull
-  private Dataset<Row> resolveJoinsEx(@Nonnull final JoinSet joinSet,
+  private Dataset<Row> resolveJoins(@Nonnull final JoinSet joinSet,
       @Nonnull final Dataset<Row> parentDataset) {
 
     // now just reduce current children
@@ -362,44 +414,10 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
         .reduce(parentDataset, (dataset, subset) ->
             // the parent dataset for subjoin should be different
             computeJoin(dataset,
-                resolveJoinsEx(subset, resourceDataset(subset.getMaster().getResourceType())),
+                resolveJoins(subset, resourceDataset(subset.getMaster().getResourceType())),
                 (JoinRoot) subset.getMaster()), (dataset1, dataset2) -> dataset1);
   }
-
-  @Nonnull
-  private Dataset<Row> resolveJoins(@Nonnull final JoinRoot joinRoot,
-      @Nonnull final Dataset<Row> parentDataset, @Nullable final Dataset<Row> maybeChildDataset) {
-
-    // 
-
-    // for nested joins we need to do it recursively aggregating all the existing join map columns
-    // the problem is that I need to do it in reverse order 
-
-    // Ineed to to do deep unnestign
-
-    if (joinRoot.getMaster() instanceof ResourceRoot) {
-      return computeJoin(parentDataset, maybeChildDataset, joinRoot);
-    } else if (joinRoot.getMaster() instanceof JoinRoot jr) {
-
-      final Dataset<Row> childDataset = computeJoin(
-          createExecutor(joinRoot.getMaster().getResourceType(),
-              dataSource).createInitialDataset(),
-          maybeChildDataset, joinRoot);
-
-      return resolveJoins(jr, parentDataset, childDataset);
-      // compute the dataset for the current resolve root with the master type as the subject
-      // and default master resource as parent dataset
-
-      //  resulting dataset then needs to be passed as the child result for the deeper join
-      //  if there is no child result then we create one from the default child dataset (so initially it's null)
-
-    } else {
-      throw new UnsupportedOperationException(
-          "Not implemented - unknown root type: " + joinRoot);
-    }
-  }
-
-
+  
   @Nonnull
   private FhirPathExecutor createExecutor(final ResourceType subjectResourceType,
       final DataSource dataSource) {
