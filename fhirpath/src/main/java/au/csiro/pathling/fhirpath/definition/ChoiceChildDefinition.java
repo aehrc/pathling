@@ -82,6 +82,7 @@ public class ChoiceChildDefinition implements ChildDefinition {
    */
   @Nonnull
   private Optional<ElementDefinition> getChildByElementName(final String name) {
+    // TODO: Needs fixing as sometime this needs to be ReferenceDefinition (or ExtensionReferenceDefinition)
     return Optional.ofNullable(elementNameToDefinition.get(name))
         .map(def -> new ElementChildDefinition(def, this.childDefinition, name));
   }

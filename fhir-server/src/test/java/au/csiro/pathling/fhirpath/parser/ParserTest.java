@@ -788,7 +788,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(
         "address.where($this.city = 'Boston')"
             + ".extension('http://hl7.org/fhir/StructureDefinition/geolocation')"
-            + ".extension('latitude').valueDecimal")
+            + ".extension('latitude').value.ofType(decimal)")
         .isElementPath(DecimalCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testComplexExtensionsOnComplexPath.tsv");
@@ -797,7 +797,7 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testExtensionFunctionInWhere() {
     assertThatResultOf(
-        "address.where($this.extension('http://hl7.org/fhir/StructureDefinition/geolocation').extension('latitude').valueDecimal contains 42.391383).city")
+        "address.where($this.extension('http://hl7.org/fhir/StructureDefinition/geolocation').extension('latitude').value.ofType(decimal) contains 42.391383).city")
         .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testExtensionFunctionInWhere.tsv");
@@ -916,7 +916,7 @@ public class ParserTest extends AbstractParserTest {
     mockResource(ResourceType.PATIENT, ResourceType.ENCOUNTER, ResourceType.GOAL);
     assertThatResultOf(
         "reverseResolve(Encounter.subject).extension.where(url = 'urn:test:associated-goal')"
-            + ".ofType(Reference).resolve().ofType(Goal).description.text")
+            + "value.ofType(Reference).resolve().ofType(Goal).description.text")
         .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testResolutionOfExtensionReference.tsv");

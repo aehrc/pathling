@@ -27,8 +27,6 @@ public class DataRootResolver {
   ResourceType subjectResource;
   FhirContext fhirContext;
 
-  
-  
 
   @Nonnull
   public Set<DataRoot> findDataRoots(@Nonnull final FhirPath path) {
@@ -89,7 +87,8 @@ public class DataRootResolver {
         dataRoots.add(typedRoot);
         collectDataRoots(typedRoot, fhirPath.suffix(), traversalPath, dataRoots);
       } else {
-        collectDataRoots(currentRoot, fhirPath.suffix(), traversalPath, dataRoots);
+        // TODO: check if we are in a mixed collection
+        collectDataRoots(currentRoot, fhirPath.suffix(), traversalPath.andThen(headPath), dataRoots);
       }
     } else if (headPath instanceof Paths.ExternalConstantPath ecp) {
       // we do not need to do anything here
@@ -108,9 +107,7 @@ public class DataRootResolver {
 
       // TODO: we should be also need to be abel to check 
       // if the current traversal is to a resource or to a reference
-      final FhirPath newTraversalPath = PathsUtils.isTraversal(headPath)
-                                        ? traversalPath.andThen(headPath)
-                                        : traversalPath;
+      final FhirPath newTraversalPath = traversalPath.andThen(PathsUtils.toTraversal(headPath));
       collectDataRoots(currentRoot, fhirPath.suffix(), newTraversalPath, dataRoots);
     } else {
       // if we have an untyped resolve root add it here

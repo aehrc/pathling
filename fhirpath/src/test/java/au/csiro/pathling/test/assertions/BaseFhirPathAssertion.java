@@ -142,7 +142,7 @@ public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> 
   //
 
   public ElementPathAssertion isElementPath(final Class<? extends Collection> ofType) {
-    assertTrue(ofType.isAssignableFrom(result.getClass()));
+    assertTrue(ofType.isAssignableFrom(result.getClass()),ofType.getName() + " is not assignable from " + result.getClass().getName());
     return new ElementPathAssertion(datasetResult);
   }
 

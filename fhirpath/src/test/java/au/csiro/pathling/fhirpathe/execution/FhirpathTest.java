@@ -27,6 +27,8 @@ import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.EpisodeOfCare;
 import org.hl7.fhir.r4.model.EpisodeOfCare.EpisodeOfCareStatus;
+import org.hl7.fhir.r4.model.Extension;
+import org.hl7.fhir.r4.model.Goal;
 import org.hl7.fhir.r4.model.Location;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
@@ -69,7 +71,7 @@ class FhirpathTest {
     return new MultiFhirPathEvaluator(subjectResource, encoders.getContext(),
         StaticFunctionRegistry.getInstance(), datasource);
   }
-  
+
   @Test
   void accessParentResourceInJoinedExpression() {
     // ????
@@ -656,5 +658,32 @@ class FhirpathTest {
             RowFactory.create("4", 0)
         );
   }
+
+  @Test
+  void extensionReference() {
+    final ObjectDataSource dataSource =
+        new ObjectDataSource(spark, encoders,
+            List.of(
+                new Encounter()
+                    .addExtension(new Extension("urn:goal", new Reference("Goal/1")))
+                    .setId("Encounter/1"),
+                new Goal().setId("Goal/1"),
+                new Encounter().setId("Encounter/2")
+            ));
+
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.ENCOUNTER,
+        "extension('urn:goal').value.ofType(Reference).resolve().ofType(Goal).id"
+    );
+    resultDataset.show();
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", 3),
+            RowFactory.create("2", 2),
+            RowFactory.create("3", 1),
+            RowFactory.create("4", 0)
+        );
+  }
+
 
 }

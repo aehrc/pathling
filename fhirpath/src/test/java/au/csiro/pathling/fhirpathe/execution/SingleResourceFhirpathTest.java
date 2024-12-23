@@ -3,11 +3,15 @@ package au.csiro.pathling.fhirpathe.execution;
 import static au.csiro.pathling.test.helpers.SqlHelpers.sql_array;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
+import au.csiro.pathling.fhirpath.execution.CollectionDataset;
 import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
 import au.csiro.pathling.fhirpath.execution.MultiFhirPathEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.test.assertions.Assertions;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
@@ -26,6 +30,7 @@ import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -50,7 +55,17 @@ class SingleResourceFhirpathTest {
 
 
   @Nonnull
-  Dataset<Row> evalExpression(@Nonnull final ObjectDataSource dataSource,
+  CollectionDataset evalExpression(@Nonnull final ObjectDataSource dataSource,
+      @Nonnull final ResourceType subjectResource,
+      @Nonnull final String fhirExpression) {
+
+    return createEvaluator(subjectResource, dataSource)
+        .evaluate(fhirExpression);
+
+  }
+
+  @Nonnull
+  Dataset<Row> selectExpression(@Nonnull final ObjectDataSource dataSource,
       @Nonnull final ResourceType subjectResource,
       @Nonnull final String fhirExpression) {
 
@@ -76,7 +91,7 @@ class SingleResourceFhirpathTest {
     final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
         List.of(patient));
 
-    final Dataset<Row> result = evalExpression(dataSource, ResourceType.PATIENT,
+    final Dataset<Row> result = selectExpression(dataSource, ResourceType.PATIENT,
         "where(gender='female').name.where(family.where($this='Kay').exists()).given.join(',')");
     result.show();
     System.out.println(result.queryExecution().executedPlan().toString());
@@ -105,7 +120,7 @@ class SingleResourceFhirpathTest {
             new Patient().setId("3")
         ));
 
-    final Dataset<Row> result = evalExpression(dataSource, ResourceType.PATIENT,
+    final Dataset<Row> result = selectExpression(dataSource, ResourceType.PATIENT,
         "name.text");
     result.show();
     System.out.println(result.queryExecution().executedPlan().toString());
@@ -122,7 +137,7 @@ class SingleResourceFhirpathTest {
   void resourceExtensionTest() {
     final ObjectDataSource dataSource = getExtensionTestSource();
 
-    final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
+    final Dataset<Row> resultDataset = selectExpression(dataSource, ResourceType.PATIENT,
         "extension('urn:ex1').value.ofType(string)");
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
     resultDataset.show();
@@ -138,7 +153,7 @@ class SingleResourceFhirpathTest {
   void nestedExtensionTest() {
     final ObjectDataSource dataSource = getExtensionTestSource();
 
-    final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
+    final Dataset<Row> resultDataset = selectExpression(dataSource, ResourceType.PATIENT,
         "extension('urn:ex3').extension('urn:ex3_1').value.ofType(string)");
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
     resultDataset.show();
@@ -157,7 +172,7 @@ class SingleResourceFhirpathTest {
     final ObjectDataSource dataSource = getExtensionTestSource();
 
     // TODO: works ok with extension('urn:ex3').extension.url
-    final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
+    final Dataset<Row> resultDataset = selectExpression(dataSource, ResourceType.PATIENT,
         "extension.extension.url");
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
     resultDataset.show();
@@ -173,7 +188,7 @@ class SingleResourceFhirpathTest {
   void elementExtensionTest() {
     final ObjectDataSource dataSource = getExtensionTestSource();
 
-    final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
+    final Dataset<Row> resultDataset = selectExpression(dataSource, ResourceType.PATIENT,
         "name.extension('urn:name1').value.ofType(string)");
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
     resultDataset.show();
@@ -189,7 +204,7 @@ class SingleResourceFhirpathTest {
   void ofTypeExtensionTest() {
     final ObjectDataSource dataSource = getExtensionTestSource();
 
-    final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
+    final Dataset<Row> resultDataset = selectExpression(dataSource, ResourceType.PATIENT,
         "extension('urn:ex2').value.ofType(integer)");
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
     resultDataset.show();
@@ -229,19 +244,57 @@ class SingleResourceFhirpathTest {
   void testOfTypeForChoice() {
     final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
         List.of(
-            new Observation().setId("Condition/1"),
-            new Observation().setId("Condition/2")
+            new Observation()
+                .setValue(new IntegerType("17"))
+                .setId("Observation/1"),
+            new Observation()
+                .setValue(new StringType("value1"))
+                .setId("Observation/2"),
+            new Observation()
+                .setId("Observation/3")
         )
     );
 
-    final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.OBSERVATION,
-        "value.ofType(string)");
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
-    new DatasetAssert(resultDataset)
+    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.OBSERVATION,
+        "value.ofType(integer)");
+
+    Assertions.assertThat(evalResult)
+        .isElementPath(IntegerCollection.class)
+        .selectResult()
         .hasRowsUnordered(
-            RowFactory.create("1", null),
-            RowFactory.create("2", null)
+            RowFactory.create("1", 17),
+            RowFactory.create("2", null),
+            RowFactory.create("3", null)
         );
   }
+
+
+  @Test
+  void testOfTypeForReference() {
+    final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
+        List.of(
+            new Observation()
+                .addExtension(new Extension("urn:ref", new Reference("MolecularSequence/1")))
+                .setId("Observation/1"),
+            new Observation()
+                .setId("Observation/2")
+        )
+    );
+
+    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.OBSERVATION,
+        "extension.value.ofType(Reference)");
+
+
+    ((ReferenceCollection)evalResult.getValue()).getReferenceTypes().forEach(System.out::println);
+    
+    Assertions.assertThat(evalResult)
+        .isElementPath(ReferenceCollection.class)
+        .selectResult()
+        .hasRowsUnordered(
+            RowFactory.create("1", 17),
+            RowFactory.create("2", null),
+            RowFactory.create("3", null)
+        );
+  }
+
 }
