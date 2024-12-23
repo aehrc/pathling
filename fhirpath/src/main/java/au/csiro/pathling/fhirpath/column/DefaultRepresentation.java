@@ -84,13 +84,15 @@ public class DefaultRepresentation extends ColumnRepresentation {
 
   @Nonnull
   @Override
-  public DefaultRepresentation traverse(@Nonnull final String fieldName) {
-    return new DefaultRepresentation(traverseColumn(fieldName));
+  public ColumnRepresentation traverse(@Nonnull final String fieldName) {
+    return new DefaultRepresentation(traverseColumn(fieldName))
+        .removeNulls()
+        .normaliseNull();
   }
 
   @Override
   @Nonnull
-  public DefaultRepresentation traverse(@Nonnull final String fieldName,
+  public ColumnRepresentation traverse(@Nonnull final String fieldName,
       @Nonnull final Optional<FHIRDefinedType> fhirType) {
     @Nullable final FHIRDefinedType resolvedFhirType = fhirType.orElse(null);
     if (FHIRDefinedType.DECIMAL.equals(resolvedFhirType)) {
@@ -98,7 +100,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
       return DecimalRepresentation.fromTraversal(this, fieldName);
     } else if (FHIRDefinedType.BASE64BINARY.equals(resolvedFhirType)) {
       // If the field is a base64Binary, represent it using a BinaryRepresentation.
-      return new BinaryRepresentation(traverseColumn(fieldName));
+      return new BinaryRepresentation(traverse(fieldName).getValue());
     } else {
       // Otherwise, use the default representation.
       return traverse(fieldName);

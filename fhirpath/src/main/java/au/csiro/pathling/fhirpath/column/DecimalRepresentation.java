@@ -39,7 +39,7 @@ public class DecimalRepresentation extends DefaultRepresentation {
   @Nonnull
   public static DecimalRepresentation fromTraversal(
       @Nonnull final DefaultRepresentation column, @Nonnull final String fieldName) {
-    return new DecimalRepresentation(column.traverseColumn(fieldName),
+    return new DecimalRepresentation(column.traverse(fieldName).getValue(),
         column.traverseColumn(fieldName + SCALE_SUFFIX));
   }
 

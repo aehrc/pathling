@@ -44,7 +44,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Column;
-import org.checkerframework.checker.units.qual.N;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -296,21 +295,21 @@ public class Collection implements Comparable, Numeric {
         extensionMapColumn,
         childDef);
   }
-  
+
   @Nonnull
   protected Optional<Collection> traverseExtension(
       @Nonnull final ElementDefinition extensionDefinition) {
     return getExtensionMapColumn()
         .map(em -> Collection.build(
             // We need here to deal with the situation where _fid is an array of element ids
-            getFid().transform(em::apply).flatten(),
+            getFid().applyTo(em).normaliseNull(),
             extensionMapColumn,
             extensionDefinition));
   }
 
   @Nonnull
   protected ColumnRepresentation getFid() {
-    return column.traverse(ExtensionSupport.FID_FIELD_NAME(), Optional.empty());
+    return column.traverse(ExtensionSupport.FID_FIELD_NAME());
   }
 
   @Nonnull

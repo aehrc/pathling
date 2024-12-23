@@ -3,24 +3,20 @@ package au.csiro.pathling.fhirpathe.execution;
 import static au.csiro.pathling.test.helpers.SqlHelpers.sql_array;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.execution.MultiFhirPathEvaluator;
 import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
-import au.csiro.pathling.fhirpath.execution.SingleFhirPathExecutor;
+import au.csiro.pathling.fhirpath.execution.MultiFhirPathEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.assertions.DatasetAssert;
-import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Appointment;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
@@ -31,12 +27,10 @@ import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.EpisodeOfCare;
 import org.hl7.fhir.r4.model.EpisodeOfCare.EpisodeOfCareStatus;
-import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.Location;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Reference;
-import org.hl7.fhir.r4.model.StringType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,84 +68,8 @@ class FhirpathTest {
       @Nonnull final DataSource datasource) {
     return new MultiFhirPathEvaluator(subjectResource, encoders.getContext(),
         StaticFunctionRegistry.getInstance(), datasource);
-    //    return new ResolvingFhirPathEvaluator(subjectResource, dataSource)
   }
-
-  @Test
-  void singleResourceTest() {
-    final Patient patient = new Patient();
-    patient.setId("1");
-    patient.setGender(AdministrativeGender.FEMALE);
-    patient.addName().setFamily("Kay").addGiven("Awee");
-    patient.addName().setFamily("Kay").addGiven("Zosia");
-    final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
-        List.of(patient));
-
-    final Dataset<Row> result = evalExpression(dataSource, ResourceType.PATIENT,
-        "where(gender='female').name.where(family.where($this='Kay').exists()).given.join(',')");
-    result.show();
-    System.out.println(result.queryExecution().executedPlan().toString());
-    final Dataset<Row> expected = DatasetBuilder.of(spark)
-        .withColumn("id", DataTypes.StringType)
-        .withColumn("value", DataTypes.StringType)
-        .withRow("1", "Awee,Zosia")
-        .build();
-
-    new DatasetAssert(result)
-        .hasRowsUnordered(expected);
-  }
-
-
-  @Test
-  void resourceExtensionTest() {
-    final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
-        List.of(
-            new Patient()
-                .addExtension(new Extension("urn:ex1", new StringType("value1")))
-                .setId("Patient/1"),
-            new Patient()
-                .addExtension(new Extension("urn:ex2", new StringType("value2")))
-                .setId("Patient/2")
-        )
-    );
-
-    new SingleFhirPathExecutor(ResourceType.PATIENT, encoders.getContext(),
-        StaticFunctionRegistry.getInstance(), Map.of(), dataSource)
-        .createInitialDataset().show();
-
-    final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
-        "extension('urn:ex1').value.ofType(string)");
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
-    new DatasetAssert(resultDataset)
-        .hasRowsUnordered(
-            RowFactory.create("1", sql_array("value1")),
-            RowFactory.create("2", sql_array())
-        );
-  }
-
-  @Test
-  void testOfTypeForChoice() {
-    final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
-        List.of(
-            new Observation().setId("Condition/1"),
-            new Observation().setId("Condition/2")
-        )
-    );
-
-    final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.OBSERVATION,
-        "value.ofType(string)");
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
-    new DatasetAssert(resultDataset)
-        .hasRowsUnordered(
-            RowFactory.create("1", null),
-            RowFactory.create("2", null)
-        );
-  }
-
-  //"extension('http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName').value.ofType(string)"
-
+  
   @Test
   void accessParentResourceInJoinedExpression() {
     // ????

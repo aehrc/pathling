@@ -28,7 +28,6 @@ import static org.apache.spark.sql.functions.raise_error;
 import static org.apache.spark.sql.functions.size;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.encoders.ValueFunctions;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -231,10 +230,7 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation applyTo(@Nonnull final Column mapColumn) {
-    return vectorize(
-        c-> ValueFunctions.unnest(functions.transform(c, mapColumn::apply)),
-        mapColumn::apply
-    );
+    return transform(mapColumn::apply).flatten();
   }
 
   /**
@@ -274,6 +270,22 @@ public abstract class ColumnRepresentation {
         Function.identity()
     );
   }
+
+
+  /**
+   * Converts empty arrays to nulls in the current {@link ColumnRepresentation}.
+   *
+   * @return A new {@link ColumnRepresentation} when all empty collections are represented as NULLs
+   * regardless of their arity.
+   */
+  @Nonnull
+  public ColumnRepresentation normaliseNull() {
+    return vectorize(
+        c -> functions.when(size(c).equalTo(0), null).otherwise(c),
+        Function.identity()
+    );
+  }
+
 
   /**
    * Transforms the current {@link ColumnRepresentation} in a way that only affects a singular value
