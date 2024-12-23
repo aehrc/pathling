@@ -7,9 +7,11 @@ import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
 import au.csiro.pathling.fhirpath.execution.MultiFhirPathEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
+import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +23,7 @@ import org.hl7.fhir.r4.model.Appointment;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.DiagnosticReport;
 import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.Encounter.EncounterStatus;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
@@ -54,6 +57,9 @@ class FhirpathTest {
   @Autowired
   FhirEncoders encoders;
 
+  @Autowired
+  TerminologyService terminologyService;
+
 
   @Nonnull
   Dataset<Row> evalExpression(@Nonnull final ObjectDataSource dataSource,
@@ -74,21 +80,19 @@ class FhirpathTest {
 
   @Test
   void accessParentResourceInJoinedExpression() {
-    // ????
+    TerminologyServiceHelpers.setupSubsumes(terminologyService);
     final ObjectDataSource dataSource = getPatientsWithConditions();
     final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
         "reverseResolve(Condition.subject).code.coding.subsumes(%resource.reverseResolve(Condition.subject).code)");
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
     resultDataset.show();
-    // TODO: update expectations
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", true),
-            RowFactory.create("2", false),
+            RowFactory.create("2", true),
             RowFactory.create("3", null)
         );
   }
-
 
   @Test
   void simpleReverseResolveToSingularValue() {
@@ -685,5 +689,63 @@ class FhirpathTest {
         );
   }
 
+  @Test
+  void testCombineOperatorWithTwoUntypedResourcePaths() {
+    final ObjectDataSource dataSource =
+        new ObjectDataSource(spark, encoders,
+            List.of(
+                new Patient().setId("Patient/1"),
+                new Condition()
+                    .setSubject(new Reference("Patient/1"))
+                    .setId("Condition/1"),
+                new DiagnosticReport()
+                    .setSubject(new Reference("Patient/1"))
+                    .setId("DiagnosticReport/1")
+            ));
+
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.PATIENT,
+        "(reverseResolve(Condition.subject).subject.resolve() combine "
+            + "reverseResolve(DiagnosticReport.subject).subject.resolve()).ofType(Patient).id"
+    );
+    resultDataset.show();
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", sql_array("1", "1"))
+        );
+  }
+
+
+  @Test
+  void testIfFunctionWithUntypedResourceResult() {
+
+    final ObjectDataSource dataSource =
+        new ObjectDataSource(spark, encoders,
+            List.of(
+                new Patient()
+                    .setGender(AdministrativeGender.MALE)
+                    .addLink(new Patient.PatientLinkComponent()
+                        .setType(Patient.LinkType.REPLACEDBY)
+                        .setOther(new Reference("Patient/2")))
+                    .setId("Patient/1"),
+                new Patient()
+                    .setGender(AdministrativeGender.UNKNOWN)
+                    .setId("Patient/2"),
+                new Patient().setId("Patient/3")
+            ));
+
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.PATIENT,
+        "iif(gender = 'male', link.where(type = 'replaced-by').other.resolve(), "
+            + "link.where(type = 'replaces').other.resolve()).ofType(Patient).gender"
+    );
+    resultDataset.show();
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", "unknown"),
+            RowFactory.create("2", null),
+            RowFactory.create("3", null)
+        );
+  }
 
 }

@@ -1,8 +1,10 @@
 package au.csiro.pathling.fhirpath.execution;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.operator.CombineOperator;
 import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
+import au.csiro.pathling.fhirpath.path.Paths.EvalOperator;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.experimental.UtilityClass;
@@ -60,6 +62,20 @@ public class PathsUtils {
     return asTypeOf(path).isPresent();
   }
 
+  public static boolean isCombineOperation(@Nonnull final FhirPath path) {
+    return path instanceof EvalOperator evalOperator
+        && evalOperator.getOperator() instanceof CombineOperator;
+  }
+
+  public static boolean isIif(@Nonnull final FhirPath path) {
+    return path instanceof EvalFunction evalFunction && evalFunction.getFunctionIdentifier()
+        .equals("iif");
+  }
+
+  public static boolean isMulitPath(@Nonnull final FhirPath path) {
+    return isCombineOperation(path) || isIif(path);
+  }
+
   @Nonnull
   public static Optional<EvalFunction> asTypeOf(@Nonnull final FhirPath path) {
     return path instanceof EvalFunction evalFunction && evalFunction.getFunctionIdentifier()
@@ -67,4 +83,6 @@ public class PathsUtils {
            ? Optional.of(evalFunction)
            : Optional.empty();
   }
+
+
 }

@@ -88,7 +88,8 @@ public class DataRootResolver {
         collectDataRoots(typedRoot, fhirPath.suffix(), traversalPath, dataRoots);
       } else {
         // TODO: check if we are in a mixed collection
-        collectDataRoots(currentRoot, fhirPath.suffix(), traversalPath.andThen(headPath), dataRoots);
+        collectDataRoots(currentRoot, fhirPath.suffix(), traversalPath.andThen(headPath),
+            dataRoots);
       }
     } else if (headPath instanceof Paths.ExternalConstantPath ecp) {
       // we do not need to do anything here
@@ -99,6 +100,13 @@ public class DataRootResolver {
             dataRoots);
       }
       // NOTE: other paths should be literals so we should not need to resolve them
+    } else if (PathsUtils.isMulitPath(headPath)) {
+      // combine needs to be processed differentnly 
+      // each of the children needs to be processed with the entire suffic
+      headPath.children()
+          .forEach(child -> collectDataRoots(currentRoot, child.andThen(fhirPath.suffix()),
+              traversalPath, dataRoots));
+
     } else if (!headPath.isNull()) {
       // and also collect the for the children
       headPath.children()
