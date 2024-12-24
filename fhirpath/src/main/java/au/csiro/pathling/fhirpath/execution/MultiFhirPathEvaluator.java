@@ -408,10 +408,9 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
         );
 
     childResult.show();
-    final Dataset<Row> joinedDataset = parentDataset.join(childResult,
-            functions.col("key")
-                .equalTo(childResult.col(joinRoot.getChildKeyTag())),
-            "left_outer")
+    final Dataset<Row> joinedDataset = joinWithMapMerge(parentDataset, childResult,
+        functions.col("key")
+            .equalTo(childResult.col(joinRoot.getChildKeyTag())))
         .drop(joinRoot.getChildKeyTag());
     joinedDataset.show();
     return joinedDataset;
