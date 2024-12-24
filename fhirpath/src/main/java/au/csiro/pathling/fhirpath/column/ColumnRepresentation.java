@@ -518,5 +518,21 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation asString() {
     return cast(DataTypes.StringType);
   }
+  
+  @Nonnull
+  public ColumnRepresentation vectorize2(@Nonnull final ColumnRepresentation other,
+      @Nonnull final BiFunction<Column, Column, Column> arrayExpression,
+      @Nonnull final BiFunction<Column, Column, Column> singularExpression) {
+    return vectorize(
+        a1 -> other.vectorize(
+            a2 -> arrayExpression.apply(a1, a2),
+            s2 -> arrayExpression.apply(a1, functions.array(s2))
+        ).getValue(),
+        s1 -> other.vectorize(
+            a2 -> arrayExpression.apply(functions.array(s1), a2),
+            s2 -> singularExpression.apply(s1, s2)
+        ).getValue()
+    );
+  }
 
 }

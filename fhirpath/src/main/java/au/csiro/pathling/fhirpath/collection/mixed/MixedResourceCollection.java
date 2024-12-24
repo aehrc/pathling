@@ -2,12 +2,15 @@ package au.csiro.pathling.fhirpath.collection.mixed;
 
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
+import java.util.function.BiFunction;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import java.util.function.Function;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Represents a polymorphic resource collection, which can be resolved to a single resource type.
@@ -19,7 +22,9 @@ import java.util.function.Function;
 @EqualsAndHashCode(callSuper = false)
 public class MixedResourceCollection extends MixedCollection {
 
-  Function<ResourceType, ResourceCollection> resolver;
+  ReferenceCollection resourceCollection;
+
+  BiFunction<ReferenceCollection, ResourceType, ResourceCollection> resolver;
 
   /**
    * Returns a new collection representing just the elements of this collection with the specified
@@ -32,6 +37,21 @@ public class MixedResourceCollection extends MixedCollection {
   @Nonnull
   @Override
   public Collection filterByType(@Nonnull final TypeSpecifier type) {
-    return resolver.apply(type.toResourceType());
+    return resolver.apply(resourceCollection, type.toResourceType());
+  }
+
+  // TODO: maybe override map() instead of these two methods
+
+  @Override
+  @Nonnull
+  public Collection copyWith(@NotNull final ColumnRepresentation newValue) {
+    return new MixedResourceCollection((ReferenceCollection) resourceCollection.copyWith(newValue),
+        resolver);
+  }
+
+  @Override
+  @Nonnull
+  public ColumnRepresentation getColumn() {
+    return resourceCollection.getColumn();
   }
 }

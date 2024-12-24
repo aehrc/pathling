@@ -736,16 +736,17 @@ class FhirpathTest {
 
     final Dataset<Row> resultDataset = evalExpression(dataSource,
         ResourceType.PATIENT,
-        "iif(gender = 'male', link.where(type = 'replaced-by').other.resolve(), "
+        "iif(gender = 'male', link.where(type = 'replaced-by').other.resolve(),"
             + "link.where(type = 'replaces').other.resolve()).ofType(Patient).gender"
     );
+
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
     resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
-            RowFactory.create("1", "unknown"),
+            RowFactory.create("1", sql_array("unknown")),
             RowFactory.create("2", null),
             RowFactory.create("3", null)
         );
   }
-
 }

@@ -7,6 +7,7 @@ import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
 import au.csiro.pathling.fhirpath.path.Paths.EvalOperator;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
+import java.util.stream.Stream;
 import lombok.experimental.UtilityClass;
 
 @UtilityClass
@@ -75,6 +76,17 @@ public class PathsUtils {
   public static boolean isMulitPath(@Nonnull final FhirPath path) {
     return isCombineOperation(path) || isIif(path);
   }
+
+  public static Stream<FhirPath> getHeads(@Nonnull final FhirPath path) {
+    if (isCombineOperation(path)) {
+      return path.children();
+    } else if (isIif(path)) {
+      return path.children().skip(1);
+    } else {
+      throw new IllegalArgumentException("Not a multi-path");
+    }
+  }
+
 
   @Nonnull
   public static Optional<EvalFunction> asTypeOf(@Nonnull final FhirPath path) {

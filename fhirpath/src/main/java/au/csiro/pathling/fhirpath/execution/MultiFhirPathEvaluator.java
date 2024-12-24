@@ -49,6 +49,7 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.ArrayType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.jetbrains.annotations.NotNull;
 
@@ -158,7 +159,18 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
     }
 
     Dataset<Row> resultDataset;
-    if (referenceCollection.isToOneReference()) {
+
+    // unfortunatelly singularity cannot be determined from the reference alone as its parents 
+    // may not be singular
+
+    // TODO: optimize
+    // for not we will just select referecne column on the parent dataset to check the representation
+
+    final Dataset<Row> referenceDataset = parentDataset.select(
+        referenceCollection.getColumnValue().alias("reference"));
+    final boolean isSingular = !(referenceDataset.schema().apply(0)
+        .dataType() instanceof ArrayType);
+    if (isSingular) {
 
       // TODO: this should be replaced with call to evalPath() with not grouping context
       final FhirPathExecutor childExecutor = createExecutor(
@@ -462,7 +474,7 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
       final Set<ResourceType> referenceTypes = referenceCollection.getReferenceTypes();
       return referenceTypes.size() == 1
              ? resolveTypedJoin(referenceCollection, referenceTypes.iterator().next())
-             : new MixedResourceCollection(type -> resolveTypedJoin(referenceCollection, type));
+             : new MixedResourceCollection(referenceCollection, this::resolveTypedJoin);
     }
 
     @Nonnull

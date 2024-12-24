@@ -1,8 +1,10 @@
 package au.csiro.pathling.fhirpath.function.provider;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import au.csiro.pathling.utilities.Preconditions;
@@ -10,9 +12,6 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Optional;
 import org.apache.spark.sql.functions;
-
-import static java.util.Objects.isNull;
-import static java.util.Objects.requireNonNull;
 
 /**
  * Functions for converting between different types.
@@ -91,9 +90,11 @@ public class ConversionFunctions {
     // MAYBE not even possible to do it or maybe needs to be done differently (as if with dual ifArray (this is possibly a better option))
     // That is something along the the lines of ifArray(trueResult, ifArray(falseResult, trueResult, falseResult), ifArray(falseResult, trueResult, falseResult))
     return Optional.ofNullable(falseResult)
-        .map(fr -> trueResult.map(ColumnRepresentation::asArray)
-            .mapColumn(c -> functions.when(conditionResult.getColumnValue(), c)
-                    .otherwise(fr.getColumn().asArray().getValue()))
+        .map(fr -> trueResult.map(
+                tr -> tr.vectorize2(fr.getColumn(),
+                    (t, f) -> functions.when(conditionResult.getColumnValue(), t).otherwise(f),
+                    (t, f) -> functions.when(conditionResult.getColumnValue(), t).otherwise(f))
+            )
         )
         .orElse(trueResult.mapColumn(c -> functions.when(conditionResult.getColumnValue(), c)));
   }

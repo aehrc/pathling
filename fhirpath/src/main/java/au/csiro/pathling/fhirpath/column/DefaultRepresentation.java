@@ -85,9 +85,11 @@ public class DefaultRepresentation extends ColumnRepresentation {
   @Nonnull
   @Override
   public ColumnRepresentation traverse(@Nonnull final String fieldName) {
-    return new DefaultRepresentation(traverseColumn(fieldName))
-        .removeNulls()
-        .normaliseNull();
+    return new DefaultRepresentation(traverseColumn(fieldName));
+    // TODO: reconsider when the normalisation is needed as it polutes 
+    // column expressions and makes them unreadable
+    // .removeNulls()
+    // .normaliseNull();
   }
 
   @Override

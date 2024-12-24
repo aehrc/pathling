@@ -103,10 +103,9 @@ public class DataRootResolver {
     } else if (PathsUtils.isMulitPath(headPath)) {
       // combine needs to be processed differentnly 
       // each of the children needs to be processed with the entire suffic
-      headPath.children()
-          .forEach(child -> collectDataRoots(currentRoot, child.andThen(fhirPath.suffix()),
+      PathsUtils.getHeads(headPath)
+          .forEach(head -> collectDataRoots(currentRoot, head.andThen(fhirPath.suffix()),
               traversalPath, dataRoots));
-
     } else if (!headPath.isNull()) {
       // and also collect the for the children
       headPath.children()
