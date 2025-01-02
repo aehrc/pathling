@@ -102,8 +102,10 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
     //         createInitialDataset(), null)
     //     : createInitialDataset();
 
+    final JoinSet subjectJoinSet = JoinSet.mergeRoots(joinRoots).iterator().next();
+    System.out.println("Subject join set: \n" + subjectJoinSet.toTreeString());
     Dataset<Row> resolvedDataset = resolveJoins(
-        JoinSet.mergeRoots(joinRoots).iterator().next(),
+        subjectJoinSet,
         createInitialDataset());
 
     System.out.println("Resolved dataset:");
@@ -419,7 +421,6 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
   @Nonnull
   private Dataset<Row> resolveJoins(@Nonnull final JoinSet joinSet,
       @Nonnull final Dataset<Row> parentDataset) {
-
     // now just reduce current children
     return joinSet.getChildren().stream()
         .reduce(parentDataset, (dataset, subset) ->

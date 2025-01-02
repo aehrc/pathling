@@ -14,7 +14,7 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 
-@Value()
+@Value
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class JoinSet {
 
@@ -59,7 +59,7 @@ public class JoinSet {
   }
 
   @Nonnull
-  public static List<JoinSet> mergeRoots(@Nonnull final List<List<DataRoot>> paths) {
+  private static List<JoinSet> mergeRoots(@Nonnull final List<List<DataRoot>> paths) {
     // convert to paths and then group by recurively by common prefixes
     // we have got it already somwhere else
     final Map<DataRoot, List<List<DataRoot>>> suffixesByHeads = paths.stream()
@@ -74,10 +74,47 @@ public class JoinSet {
         .toList();
   }
 
+  /**
+   * Merges a set of roots into a tree of join sets by recursively grouping by common prefixes.
+   *
+   * @param roots the roots to merge
+   * @return the merged join sets
+   */
   @Nonnull
   public static List<JoinSet> mergeRoots(@Nonnull final Set<DataRoot> roots) {
-    // convert to paths and then group by recurively by common prefixes
-    // we have got it already somwhere else
+    // convert to paths and then group by recursively by common prefixes
     return mergeRoots(roots.stream().map(JoinSet::toPath).toList());
   }
+
+  /**
+   * Returns a string representation of the join set as a tree.
+   */
+  @Nonnull
+  public String toTreeString() {
+    return toTreeString(0);
+  }
+
+  /**
+   * Prints a string representation of the join set as a tree.
+   */
+  public void printTree() {
+    System.out.println(toTreeString());
+  }
+
+  @Nonnull
+  private String toTreeString(final int depth) {
+    final StringBuilder sb = new StringBuilder();
+    sb.append("  ".repeat(depth > 0
+                          ? depth - 1
+                          : 0));
+    sb.append(depth > 0
+              ? "+-"
+              : "");
+    sb.append(master.toDisplayString());
+    sb.append("\n");
+    children.forEach(child -> sb.append(child.toTreeString(depth + 1)));
+    return sb.toString();
+  }
+
+
 }
