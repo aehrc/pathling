@@ -1,6 +1,10 @@
 package au.csiro.pathling.fhirpath.definition;
 
+import static au.csiro.pathling.fhirpath.definition.ReferenceDefinition.isReferenceDefinition;
+import static java.util.Objects.nonNull;
+
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
+import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import ca.uhn.fhir.context.RuntimeChildExtension;
 import ca.uhn.fhir.context.RuntimeChildResourceDefinition;
@@ -20,18 +24,35 @@ public interface ChildDefinition extends NodeDefinition {
    * @return A shiny new ElementDefinition
    */
   @Nonnull
-  static ChildDefinition build(@Nonnull final BaseRuntimeChildDefinition childDefinition) {
-    // TODO: Check if this is safe to remove.
-    //   if (childDefinition instanceof RuntimeChildAny && "valueReference".equals(childDefinition
-    //       .getElementName())) {
-    //     return new ReferenceExtensionDefinition((RuntimeChildAny) childDefinition);
-    //   } else 
-    if (childDefinition instanceof RuntimeChildResourceDefinition) {
-      return new ReferenceDefinition((RuntimeChildResourceDefinition) childDefinition);
-    } else if (isChildChoiceDefinition(childDefinition)) {
-      return new ChoiceChildDefinition((RuntimeChildChoiceDefinition) childDefinition);
+  static Optional<? extends ChildDefinition> build(
+      @Nonnull final BaseRuntimeChildDefinition childDefinition,
+      @Nonnull final String elementName) {
+
+    if (isChildChoiceDefinition(childDefinition) && childDefinition.getElementName()
+        .equals(elementName)) {
+      return Optional.of(
+          new ChoiceChildDefinition((RuntimeChildChoiceDefinition) childDefinition));
     } else {
-      return new ElementChildDefinition(childDefinition);
+      return buildElement(childDefinition, elementName);
+    }
+  }
+
+  @Nonnull
+  static Optional<ElementDefinition> buildElement(
+      @Nonnull final BaseRuntimeChildDefinition childDefinition,
+      @Nonnull final String elementName) {
+    final BaseRuntimeElementDefinition<?> elementDefinition = childDefinition.getChildByName(
+        elementName);
+    if (childDefinition instanceof RuntimeChildResourceDefinition rctd) {
+      return Optional.of(new ReferenceDefinition(rctd));
+    } else if (isChildChoiceDefinition(childDefinition) && isReferenceDefinition(
+        elementDefinition)) {
+      return Optional.of(
+          new ReferenceDefinition((RuntimeChildChoiceDefinition) childDefinition, elementName));
+    } else if (nonNull(elementDefinition)) {
+      return Optional.of(new ElementChildDefinition(childDefinition, elementName));
+    } else {
+      return Optional.empty();
     }
   }
 

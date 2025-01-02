@@ -283,9 +283,6 @@ class SingleResourceFhirpathTest {
 
     final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.OBSERVATION,
         "extension.value.ofType(Reference)");
-
-
-    ((ReferenceCollection)evalResult.getValue()).getReferenceTypes().forEach(System.out::println);
     
     Assertions.assertThat(evalResult)
         .isElementPath(ReferenceCollection.class)

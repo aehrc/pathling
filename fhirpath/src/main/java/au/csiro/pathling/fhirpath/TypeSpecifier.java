@@ -153,4 +153,9 @@ public class TypeSpecifier {
     return FhirPathType.isValidFhirPathType(typeName);
   }
 
+  @Override
+  public String toString() {
+    return namespace + "." + typeName;
+  }
+  
 }

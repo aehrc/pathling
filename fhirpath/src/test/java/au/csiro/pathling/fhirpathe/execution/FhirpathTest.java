@@ -682,10 +682,8 @@ class FhirpathTest {
     resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
-            RowFactory.create("1", 3),
-            RowFactory.create("2", 2),
-            RowFactory.create("3", 1),
-            RowFactory.create("4", 0)
+            RowFactory.create("1", sql_array("1")),
+            RowFactory.create("2", null)
         );
   }
 

@@ -19,15 +19,18 @@ package au.csiro.pathling.fhirpath.definition;
 
 import static java.util.Objects.requireNonNull;
 
+import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
+import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import ca.uhn.fhir.context.RuntimeChildResourceDefinition;
 import jakarta.annotation.Nonnull;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.Reference;
 
 /**
  * Encapsulates the FHIR definitions for a reference element.
@@ -39,9 +42,19 @@ public class ReferenceDefinition extends ElementChildDefinition {
 
   private final List<Class<? extends IBaseResource>> resourceTypes;
 
+
+  protected ReferenceDefinition(@Nonnull final RuntimeChildChoiceDefinition childDefinition,
+      @Nonnull final String elementName) {
+    super(requireNonNull(childDefinition.getChildElementDefinitionByDatatype(Reference.class)),
+        childDefinition,
+        elementName);
+    resourceTypes = childDefinition.getResourceTypes();
+    requireNonNull(resourceTypes);
+  }
+
   protected ReferenceDefinition(@Nonnull final RuntimeChildResourceDefinition childDefinition) {
     super(childDefinition);
-    resourceTypes = ((RuntimeChildResourceDefinition) childDefinition).getResourceTypes();
+    resourceTypes = childDefinition.getResourceTypes();
     requireNonNull(resourceTypes);
   }
 
@@ -51,10 +64,10 @@ public class ReferenceDefinition extends ElementChildDefinition {
    * @return A set of {@link ResourceType} objects, if this element is a reference
    */
   @Nonnull
-  public Set<ResourceType> getReferenceTypes() {
+  public ResourceTypeSet getReferenceTypes() {
     // final List<Class<? extends IBaseResource>> resourceTypes = ((RuntimeChildResourceDefinition) childDefinition).getResourceTypes();
     // requireNonNull(resourceTypes);
-    return resourceTypes.stream()
+    return ResourceTypeSet.from(resourceTypes.stream()
         .map(clazz -> {
           final String resourceCode;
           try {
@@ -69,7 +82,12 @@ public class ReferenceDefinition extends ElementChildDefinition {
             throw new RuntimeException("Problem accessing resource types on element", e);
           }
         })
-        .collect(Collectors.toSet());
+        .collect(Collectors.toSet()));
+  }
+
+  public static boolean isReferenceDefinition(
+      @Nonnull final BaseRuntimeElementDefinition<?> elementDefinition) {
+    return FHIRDefinedType.REFERENCE.toCode().equals(elementDefinition.getName());
   }
 
 }

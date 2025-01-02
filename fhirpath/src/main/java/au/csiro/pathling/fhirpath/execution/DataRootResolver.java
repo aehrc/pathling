@@ -7,6 +7,7 @@ import static au.csiro.pathling.fhirpath.execution.PathsUtils.isReverseResolve;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
+import au.csiro.pathling.fhirpath.definition.ResourceTypeSet;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ResolveRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ResourceRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
@@ -60,11 +61,10 @@ public class DataRootResolver {
       final NullEvaluator evaluator = NullEvaluator.of(currentRoot.getResourceType(), fhirContext);
       final ReferenceCollection referenceCollection = (ReferenceCollection) evaluator.evaluate(
           traversalPath);
-      final Set<ResourceType> referenceTypes = referenceCollection.getReferenceTypes();
+      final ResourceTypeSet referenceTypes = referenceCollection.getReferenceTypes();
 
-      final ResourceType referenceType = referenceTypes.size() == 1
-                                         ? referenceTypes.iterator().next()
-                                         : ResourceType.RESOURCE;
+      final ResourceType referenceType = referenceTypes.asSingleResourceType()
+          .orElse(ResourceType.RESOURCE);
 
       final ResolveRoot resolveRoot = ResolveRoot.of(currentRoot,
           referenceType,

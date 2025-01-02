@@ -35,7 +35,7 @@ import org.springframework.stereotype.Component;
 public class FhirHelpers {
 
   @Nonnull
-  public static Optional<ChildDefinition> getChildOfResource(
+  public static Optional<? extends ChildDefinition> getChildOfResource(
       @Nonnull final FhirContext fhirContext, @Nonnull final String resourceCode,
       @Nonnull final String elementName) {
     final RuntimeResourceDefinition hapiDefinition = fhirContext

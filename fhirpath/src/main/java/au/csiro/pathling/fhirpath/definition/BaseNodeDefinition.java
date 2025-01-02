@@ -71,12 +71,12 @@ abstract public class BaseNodeDefinition<ED extends BaseRuntimeElementDefinition
 
   @Override
   @Nonnull
-  public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
+  public Optional<? extends ChildDefinition> getChildElement(@Nonnull final String name) {
     // If the child is a qualified choice element (e.g. valueString), resolve the correct child 
     // definition using the pre-built map.
     final RuntimeChildChoiceDefinition choiceChild = nestedChildElementsByName.get(name);
     if (choiceChild != null) {
-      return Optional.of(new ElementChildDefinition(choiceChild, name));
+      return ChildDefinition.build(choiceChild, name);
     }
 
     // If the child is not a qualified choice, look for the child definition by name.
@@ -89,7 +89,7 @@ abstract public class BaseNodeDefinition<ED extends BaseRuntimeElementDefinition
             .or(() -> Optional.ofNullable(compElementDef.getChildByName(name + "[x]"))))
         // The ChildDefinition.build method is a factory method that creates the correct
         // implementation of ChildDefinition based on the type of the child.
-        .map(ChildDefinition::build);
+        .flatMap(cd -> ChildDefinition.build(cd, name));
   }
 
   @Nonnull

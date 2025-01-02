@@ -33,6 +33,12 @@ public class ParserPaths {
         @Nonnull final EvaluationContext context) {
       throw new UnsupportedOperationException("ValuePath cannot be evaluated directly");
     }
+
+    @Override
+    @Nonnull
+    default String toExpression() {
+      return getValue().toString();
+    }
   }
 
   /**

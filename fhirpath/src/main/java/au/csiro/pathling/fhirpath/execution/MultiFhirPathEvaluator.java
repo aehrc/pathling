@@ -27,6 +27,7 @@ import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.context.FhirPathContext;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.fhirpath.context.ViewEvaluationContext;
+import au.csiro.pathling.fhirpath.definition.ResourceTypeSet;
 import au.csiro.pathling.fhirpath.execution.DataRoot.JoinRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ResolveRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
@@ -149,7 +150,7 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
         dataSource);
     final ReferenceCollection referenceCollection = (ReferenceCollection)
         parentExecutor.evaluate(joinRoot.getMasterResourcePath()).getValue();
-    final Set<ResourceType> referenceTypes = referenceCollection.getReferenceTypes();
+    final ResourceTypeSet referenceTypes = referenceCollection.getReferenceTypes();
     System.out.println(
         "Reference types: " + referenceTypes);
 
@@ -371,7 +372,7 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
         childExecutor.evaluate(parser.parse(joinRoot.getForeignKeyPath()), childDataset);
 
     // check the type of the reference matches
-    final Set<ResourceType> allowedReferenceTypes = ((ReferenceCollection) referenceResult.getValue()).getReferenceTypes();
+    final ResourceTypeSet allowedReferenceTypes = ((ReferenceCollection) referenceResult.getValue()).getReferenceTypes();
     if (!allowedReferenceTypes.contains(joinRoot.getMaster().getResourceType())) {
       throw new IllegalArgumentException(
           "Reference type does not match. Expected: " + allowedReferenceTypes + " but got: "
@@ -471,10 +472,11 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
     @Override
     public @Nonnull Collection resolveJoin(
         @Nonnull final ReferenceCollection referenceCollection) {
-      final Set<ResourceType> referenceTypes = referenceCollection.getReferenceTypes();
-      return referenceTypes.size() == 1
-             ? resolveTypedJoin(referenceCollection, referenceTypes.iterator().next())
-             : new MixedResourceCollection(referenceCollection, this::resolveTypedJoin);
+      final ResourceTypeSet referenceTypes = referenceCollection.getReferenceTypes();
+      return referenceTypes.asSingleResourceType()
+          .map(referenceType -> (Collection) resolveTypedJoin(referenceCollection, referenceType))
+          .orElseGet(() -> new MixedResourceCollection(referenceCollection,
+              this::resolveTypedJoin));
     }
 
     @Nonnull

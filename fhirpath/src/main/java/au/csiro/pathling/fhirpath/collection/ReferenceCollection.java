@@ -5,13 +5,12 @@ import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.ReferenceDefinition;
+import au.csiro.pathling.fhirpath.definition.ResourceTypeSet;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import java.util.Set;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Represents a collection of Reference elements.
@@ -25,7 +24,7 @@ public class ReferenceCollection extends Collection {
 
   protected ReferenceCollection(@Nonnull final ColumnRepresentation column,
       @Nonnull final Optional<FhirPathType> type, @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition, 
+      @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(column, type, fhirType, definition, extensionMapColumn);
   }
@@ -59,16 +58,9 @@ public class ReferenceCollection extends Collection {
   }
 
   @Nonnull
-  public Set<ResourceType> getReferenceTypes() {
+  public ResourceTypeSet getReferenceTypes() {
     return getDefinition().map(ReferenceDefinition.class::cast)
-        .map(ReferenceDefinition::getReferenceTypes).orElseThrow();
-  }
-  
-  public boolean isToOneReference() {
-    return getDefinition().map(ReferenceDefinition.class::cast)
-        .flatMap(ReferenceDefinition::getMaxCardinality)
-        .map(Integer.valueOf(1)::equals)
+        .map(ReferenceDefinition::getReferenceTypes)
         .orElseThrow();
   }
-  
 }

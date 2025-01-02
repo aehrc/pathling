@@ -19,15 +19,9 @@ public class ChoiceChildDefinition implements ChildDefinition {
 
   @Nonnull
   private final RuntimeChildChoiceDefinition childDefinition;
-
-  @Nonnull
-  private final Map<String, BaseRuntimeElementDefinition<?>> elementNameToDefinition;
-
+  
   protected ChoiceChildDefinition(@Nonnull final RuntimeChildChoiceDefinition childDefinition) {
     this.childDefinition = childDefinition;
-    elementNameToDefinition = new HashMap<>();
-    childDefinition.getValidChildNames()
-        .forEach(name -> elementNameToDefinition.put(name, childDefinition.getChildByName(name)));
   }
 
   /**
@@ -82,9 +76,7 @@ public class ChoiceChildDefinition implements ChildDefinition {
    */
   @Nonnull
   private Optional<ElementDefinition> getChildByElementName(final String name) {
-    // TODO: Needs fixing as sometime this needs to be ReferenceDefinition (or ExtensionReferenceDefinition)
-    return Optional.ofNullable(elementNameToDefinition.get(name))
-        .map(def -> new ElementChildDefinition(def, this.childDefinition, name));
+    return ChildDefinition.buildElement(childDefinition, name);
   }
 
 }
