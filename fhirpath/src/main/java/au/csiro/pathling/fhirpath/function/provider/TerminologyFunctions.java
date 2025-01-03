@@ -208,7 +208,7 @@ public abstract class TerminologyFunctions {
   public static BooleanCollection subsumes(@Nonnull final CodingCollection input,
       @Nonnull final CodingCollection codes) {
     return input.map(ctx ->
-            ctx.callUdf("subsumes", codes.getColumn(),
+            ctx.transformWithUdf("subsumes", codes.getColumn(),
                 DefaultRepresentation.literal(false)),
         BooleanCollection::build);
   }
@@ -228,7 +228,7 @@ public abstract class TerminologyFunctions {
   public static BooleanCollection subsumedBy(@Nonnull final CodingCollection input,
       @Nonnull final CodingCollection codes) {
     return input.map(ctx ->
-            ctx.callUdf("subsumes", codes.getColumn(),
+            ctx.transformWithUdf("subsumes", codes.getColumn(),
                 DefaultRepresentation.literal(true)),
         BooleanCollection::build);
   }
