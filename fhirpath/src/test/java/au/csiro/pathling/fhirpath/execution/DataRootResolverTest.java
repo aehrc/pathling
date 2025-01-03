@@ -18,10 +18,10 @@ class DataRootResolverTest {
   @Nonnull
   final Parser parser = new Parser();
 
-  private @Nonnull Set<DataRoot> getDataRoots(ResourceType patient, String id) {
+  private @Nonnull Set<DataRoot> getDataRoots(ResourceType patient, String fhirpath) {
     final DataRootResolver resolver = new DataRootResolver(patient, FhirContext.forR4());
     return resolver.findDataRoots(
-        parser.parse(id));
+        parser.parse(fhirpath));
   }
 
   @Test
@@ -132,6 +132,5 @@ class DataRootResolverTest {
             "subject")
     ), roots);
   }
-
-
+  
 }
