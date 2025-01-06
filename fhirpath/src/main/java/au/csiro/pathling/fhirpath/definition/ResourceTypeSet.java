@@ -1,6 +1,7 @@
 package au.csiro.pathling.fhirpath.definition;
 
 import jakarta.annotation.Nonnull;
+import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import java.util.Collections;
 import java.util.Optional;
@@ -59,10 +60,11 @@ public interface ResourceTypeSet {
   /**
    * Represents a set of declared resource types.
    */
+  @Value
   class DeclaredResourceTypes implements ResourceTypeSet {
 
     @Nonnull
-    private final Set<ResourceType> resourceTypes;
+    Set<ResourceType> resourceTypes;
 
     private DeclaredResourceTypes(@Nonnull final Set<ResourceType> resourceTypes) {
       if (resourceTypes.isEmpty()) {
@@ -123,5 +125,18 @@ public interface ResourceTypeSet {
   static ResourceTypeSet of(@Nonnull final Set<ResourceType> resourceTypes) {
     return new DeclaredResourceTypes(resourceTypes);
   }
+
+
+  /**
+   * Creates a new {@link ResourceTypeSet} from the given resource types. The set must not be
+   * empty.
+   *
+   * @param resourceTypes The resource types
+   * @return A new {@link ResourceTypeSet} instance
+   */
+  static ResourceTypeSet of(@Nonnull final ResourceType... resourceTypes) {
+    return new DeclaredResourceTypes(Set.of(resourceTypes));
+  }
+
 
 }

@@ -50,7 +50,7 @@ class NodeDefinitionTest {
             "Reference")
         .orElseThrow();
     assertInstanceOf(ReferenceDefinition.class, referenceDefinition);
-    assertEquals(Set.of(ResourceType.MEDICATION),
+    assertEquals(ResourceTypeSet.of(ResourceType.MEDICATION),
         ((ReferenceDefinition) referenceDefinition).getReferenceTypes());
     assertEquals("medicationReference", referenceDefinition.getElementName());
   }
@@ -70,6 +70,7 @@ class NodeDefinitionTest {
         .orElseThrow();
     assertInstanceOf(ReferenceDefinition.class, referenceDefinition);
     assertEquals("valueReference", referenceDefinition.getElementName());
-    System.out.println(((ReferenceDefinition) referenceDefinition).getReferenceTypes());
+    assertEquals(ResourceTypeSet.allResourceTypes(),
+        ((ReferenceDefinition) referenceDefinition).getReferenceTypes());
   }
 }
