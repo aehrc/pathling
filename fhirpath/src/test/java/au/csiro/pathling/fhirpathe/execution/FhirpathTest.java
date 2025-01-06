@@ -44,7 +44,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * This is a test class to explore issues related to implementation of reverseResolve and resolve
  * functions.
  * <p>
- * This attemps to use 'purification approch' where elements that are not pure are replaced with
+ * This attemps to use 'purification approach' where elements that are not pure are replaced with
  * pure elements in a preprocessing step that constructs the input dataset.
  */
 @SpringBootUnitTest
@@ -88,8 +88,8 @@ class FhirpathTest {
     resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
-            RowFactory.create("1", true),
-            RowFactory.create("2", true),
+            RowFactory.create("1", sql_array(true, true, true, true)),
+            RowFactory.create("2", sql_array(true, true, true)),
             RowFactory.create("3", null)
         );
   }
