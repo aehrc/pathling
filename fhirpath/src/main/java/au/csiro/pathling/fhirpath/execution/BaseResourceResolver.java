@@ -1,0 +1,86 @@
+package au.csiro.pathling.fhirpath.execution;
+
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.context.ResourceResolver;
+import au.csiro.pathling.io.source.DataSource;
+import ca.uhn.fhir.context.FhirContext;
+import jakarta.annotation.Nonnull;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import java.util.stream.Stream;
+
+
+public abstract class BaseResourceResolver implements ResourceResolver {
+
+  @Nonnull
+  public abstract ResourceType getSubjectResource();
+
+  @Nonnull
+  public abstract FhirContext getFhirContext();
+
+  @Override
+  public @Nonnull ResourceCollection resolveResource(
+      @Nonnull final ResourceType resourceType) {
+    if (resourceType.equals(getSubjectResource())) {
+      return resolveSubjectResource();
+    } else {
+      return resolveForeignResource(resourceType);
+    }
+  }
+
+  @Override
+  @Nonnull
+  public ResourceCollection resolveSubjectResource() {
+    return createResource(getSubjectResource());
+  }
+
+  @Nonnull
+  ResourceCollection resolveForeignResource(@Nonnull final ResourceType resourceType) {
+    throw new UnsupportedOperationException("resolveForeignResource() is not supported");
+  }
+
+  @Override
+  @Nonnull
+  public Collection resolveJoin(@Nonnull final ReferenceCollection referenceCollection) {
+    throw new UnsupportedOperationException("resolveJoin() is not supported");
+  }
+
+  @Override
+  @Nonnull
+  public ResourceCollection resolveReverseJoin(
+      @Nonnull final ResourceCollection parentResource, @Nonnull final String expression) {
+    throw new UnsupportedOperationException("resolveReverseJoin() is not supported");
+  }
+
+
+  @Nonnull
+  protected ResourceCollection createResource(@Nonnull final ResourceType resourceType) {
+    return ResourceCollection.build(
+        new DefaultRepresentation(functions.col(resourceType.toCode())),
+        getFhirContext(), resourceType);
+  }
+
+  @Nonnull
+  public Dataset<Row> createView() {
+    throw new UnsupportedOperationException("createView() is not supported");
+  }
+
+  @Nonnull
+  protected static Dataset<Row> resourceDataset(@Nonnull final DataSource dataSource,
+      @Nonnull final ResourceType resourceType) {
+    final Dataset<Row> dataset = dataSource.read(resourceType);
+    return dataset.select(
+        dataset.col("id"),
+        dataset.col("id_versioned").alias("key"),
+        functions.struct(
+            Stream.of(dataset.columns())
+                .map(dataset::col).toArray(Column[]::new)
+        ).alias(resourceType.toCode()));
+  }
+}

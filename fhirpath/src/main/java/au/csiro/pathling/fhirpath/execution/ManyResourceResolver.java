@@ -17,21 +17,16 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedResourceCollection;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.context.FhirPathContext;
-import au.csiro.pathling.fhirpath.context.ResourceResolver;
-import au.csiro.pathling.fhirpath.context.ViewEvaluationContext;
 import au.csiro.pathling.fhirpath.definition.ResourceTypeSet;
 import au.csiro.pathling.fhirpath.execution.DataRoot.JoinRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ResolveRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
-import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
+import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import au.csiro.pathling.io.source.DataSource;
@@ -45,6 +40,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -52,15 +48,87 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.ArrayType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.jetbrains.annotations.NotNull;
-
 
 /**
- * A FHIRPath evaluator that can handle multiple joins.
+ * A FHIRPath ResourceResolver that can handle joins.
  */
+@EqualsAndHashCode(callSuper = true)
 @Value
-public class MultiFhirPathEvaluator implements FhirPathEvaluator {
+public class ManyResourceResolver extends BaseResourceResolver {
 
+  @Nonnull
+  ResourceType subjectResource;
+
+  @Nonnull
+  FhirContext fhirContext;
+
+  @Nonnull
+  DataSource dataSource;
+
+  @Nonnull
+  JoinSet subjectJoinSet;
+
+  @Nonnull
+  Parser parser = new Parser();
+
+  @Nonnull
+  protected ResourceCollection resolveTypedJoin(
+      @Nonnull final ReferenceCollection referenceCollection,
+      @Nonnull final ResourceType referenceType) {
+
+    if (!referenceCollection.getReferenceTypes().contains(referenceType)) {
+      throw new IllegalArgumentException(
+          "Reference type does not match. Expected: " + referenceType + " but got: "
+              + referenceCollection.getReferenceTypes());
+    }
+    // TODO: get from the reference collection
+    final JoinTag valueTag = JoinTag.ResolveTag.of(referenceType);
+
+    return ResourceCollection.build(
+        referenceCollection.getColumn().traverse("reference")
+            .applyTo(functions.col(valueTag.getTag())),
+        fhirContext, referenceType);
+  }
+
+
+  @Override
+  public @Nonnull Collection resolveJoin(
+      @Nonnull final ReferenceCollection referenceCollection) {
+    final ResourceTypeSet referenceTypes = referenceCollection.getReferenceTypes();
+    return referenceTypes.asSingleResourceType()
+        .map(referenceType -> (Collection) resolveTypedJoin(referenceCollection, referenceType))
+        .orElseGet(() -> new MixedResourceCollection(referenceCollection,
+            this::resolveTypedJoin));
+  }
+
+  @Nonnull
+  @Override
+  public ResourceCollection resolveReverseJoin(@Nonnull final ResourceCollection parentResource,
+      @Nonnull final String expression) {
+
+    final ResourceType resourceType = parentResource.getResourceType();
+    // TODO: implement this
+    final String resourceName = expression.split("\\.")[0];
+    final String masterKeyPath = expression.split("\\.")[1];
+    final ResourceType childResourceType = ResourceType.fromCode(resourceName);
+
+    final JoinTag valueTag = JoinTag.ReverseResolveTag.of(childResourceType, masterKeyPath);
+
+    return ResourceCollection.build(
+        parentResource.getColumn().traverse("id_versioned")
+            .applyTo(functions.col(valueTag.getTag())),
+        fhirContext, childResourceType);
+  }
+
+  @Nonnull
+  @Override
+  public Dataset<Row> createView() {
+    return resolveJoins(subjectJoinSet, resourceDataset(dataSource, subjectResource));
+  }
+
+  //
+  //  TODO: Move to a more appropriate place
+  // 
 
   @Nonnull
   static Column ns_map_concat(@Nonnull final Column left, @Nonnull final Column right) {
@@ -80,49 +148,6 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
         functions.collect_list(mapColumn),
         functions.any_value(mapColumn),
         (acc, elem) -> functions.when(acc.isNull(), elem).otherwise(ns_map_concat(acc, elem))
-    );
-  }
-
-
-  @Nonnull
-  public Dataset<Row> createInitialDataset() {
-    return resourceDataset(subjectResource);
-  }
-
-  @Override
-  public @NotNull CollectionDataset evaluate(@NotNull final String fhirpathExpression) {
-
-    final FhirPath fhirPath = parser.parse(fhirpathExpression);
-    final Set<DataRoot> joinRoots = findJoinsRoots(fhirPath);
-    System.out.println("Join roots: " + joinRoots);
-    joinRoots.forEach(System.out::println);
-
-    // Dataset<Row> resolvedDataset =
-    //     joinRoots.size() == 1
-    //     ? resolveJoins((JoinRoot) joinRoots.iterator().next(),
-    //         createInitialDataset(), null)
-    //     : createInitialDataset();
-
-    final JoinSet subjectJoinSet = JoinSet.mergeRoots(joinRoots).iterator().next();
-    System.out.println("Subject join set: \n" + subjectJoinSet.toTreeString());
-    Dataset<Row> resolvedDataset = resolveJoins(
-        subjectJoinSet,
-        createInitialDataset());
-
-    System.out.println("Resolved dataset:");
-    resolvedDataset.show();
-    System.out.println(resolvedDataset.queryExecution().executedPlan().toString());
-
-    final ResourceResolver resourceResolver = new DefaultResourceResolver();
-    final FhirPathContext fhirpathContext = FhirPathContext.ofResource(
-        resourceResolver.resolveResource(subjectResource));
-    final EvaluationContext evalContext = new ViewEvaluationContext(
-        fhirpathContext,
-        functionRegistry,
-        resourceResolver);
-    return CollectionDataset.of(
-        resolvedDataset,
-        fhirPath.apply(fhirpathContext.getInputContext(), evalContext)
     );
   }
 
@@ -146,10 +171,10 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
 
     System.out.println("Computing resolve join for: " + joinRoot);
 
-    final FhirPathExecutor parentExecutor = createExecutor(joinRoot.getMaster().getResourceType(),
+    final FhirpathEvaluator parentExecutor = createExecutor(joinRoot.getMaster().getResourceType(),
         dataSource);
     final ReferenceCollection referenceCollection = (ReferenceCollection)
-        parentExecutor.evaluate(joinRoot.getMasterResourcePath()).getValue();
+        parentExecutor.evaluate(parser.parse(joinRoot.getMasterResourcePath()));
     final ResourceTypeSet referenceTypes = referenceCollection.getReferenceTypes();
     System.out.println(
         "Reference types: " + referenceTypes);
@@ -176,7 +201,7 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
     if (isSingular) {
 
       // TODO: this should be replaced with call to evalPath() with not grouping context
-      final FhirPathExecutor childExecutor = createExecutor(
+      final FhirpathEvaluator childExecutor = createExecutor(
           typedRoot.getForeignResourceType(),
           dataSource);
 
@@ -230,7 +255,7 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
 
       final String uniqueValueTag = typedRoot.getValueTag() + "_unique";
       // TODO: this should be replaced with call to evalPath() with not grouping context
-      final FhirPathExecutor childExecutor = createExecutor(
+      final FhirpathEvaluator childExecutor = createExecutor(
           typedRoot.getForeignResourceType(),
           dataSource);
 
@@ -361,29 +386,31 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
 
     System.out.println("Computing reverse join for: " + joinRoot);
 
-    final FhirPathExecutor childExecutor = createExecutor(joinRoot.getForeignResourceType(),
+    final FhirpathEvaluator childExecutor = createExecutor(joinRoot.getForeignResourceType(),
         dataSource);
 
     final Dataset<Row> childDataset = maybeChildDataset == null
                                       ? childExecutor.createInitialDataset()
                                       : maybeChildDataset;
 
-    final CollectionDataset referenceResult =
-        childExecutor.evaluate(parser.parse(joinRoot.getForeignKeyPath()), childDataset);
+    final FhirPath referencePath = parser.parse(joinRoot.getForeignKeyPath());
+
+    final Collection referenceResult =
+        childExecutor.evaluate(referencePath);
 
     // check the type of the reference matches
-    final ResourceTypeSet allowedReferenceTypes = ((ReferenceCollection) referenceResult.getValue()).getReferenceTypes();
+    final ResourceTypeSet allowedReferenceTypes = ((ReferenceCollection) referenceResult).getReferenceTypes();
     if (!allowedReferenceTypes.contains(joinRoot.getMaster().getResourceType())) {
       throw new IllegalArgumentException(
           "Reference type does not match. Expected: " + allowedReferenceTypes + " but got: "
               + joinRoot.getMaster().getResourceType());
     }
 
-    final CollectionDataset childParentKeyResult =
-        childExecutor.evaluate(joinRoot.getForeignKeyPath() + "." + "reference");
+    final Collection childParentKeyResult =
+        childExecutor.evaluate(referencePath.andThen(new Traversal("reference")));
     final Collection childResource = childExecutor.createDefaultInputContext();
 
-    final Dataset<Row> childInput = referenceResult.getDataset();
+    final Dataset<Row> childInput = childDataset;
     System.out.println("Child input:");
     childInput.show();
 
@@ -394,13 +421,13 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
         .toArray(Column[]::new);
 
     final Dataset<Row> childResult = childInput
-        .groupBy(childParentKeyResult.getValueColumn().alias(joinRoot.getChildKeyTag()))
+        .groupBy(childParentKeyResult.getColumnValue().alias(joinRoot.getChildKeyTag()))
         .agg(
             functions.map_from_entries(
                 // wrap the element into array to create the map
                 functions.array(
                     functions.struct(
-                        functions.any_value(childParentKeyResult.getValueColumn()).alias("key"),
+                        functions.any_value(childParentKeyResult.getColumnValue()).alias("key"),
                         functions.collect_list(childResource.getColumnValue()).alias("value")
                     )
                 )
@@ -427,127 +454,17 @@ public class MultiFhirPathEvaluator implements FhirPathEvaluator {
         .reduce(parentDataset, (dataset, subset) ->
             // the parent dataset for subjoin should be different
             computeJoin(dataset,
-                resolveJoins(subset, resourceDataset(subset.getMaster().getResourceType())),
+                resolveJoins(subset,
+                    resourceDataset(dataSource, subset.getMaster().getResourceType())),
                 (JoinRoot) subset.getMaster()), (dataset1, dataset2) -> dataset1);
   }
 
   @Nonnull
-  private FhirPathExecutor createExecutor(final ResourceType subjectResourceType,
+  private FhirpathEvaluator createExecutor(final ResourceType subjectResourceType,
       final DataSource dataSource) {
-    return new SingleFhirPathExecutor(subjectResourceType,
-        fhirContext, functionRegistry,
+    return SingleFhirpathEvaluator.of(subjectResourceType,
+        fhirContext, StaticFunctionRegistry.getInstance(),
         Collections.emptyMap(), dataSource);
-  }
-
-  class DefaultResourceResolver implements ResourceResolver {
-
-    @Nonnull
-    @Override
-    public ResourceCollection resolveResource(@Nonnull final ResourceType resourceType) {
-      return ResourceCollection.build(
-          new DefaultRepresentation(functions.col(resourceType.toCode())),
-          fhirContext, resourceType);
-    }
-
-
-    @Nonnull
-    ResourceCollection resolveTypedJoin(@Nonnull final ReferenceCollection referenceCollection,
-        @Nonnull final ResourceType referenceType) {
-
-      if (!referenceCollection.getReferenceTypes().contains(referenceType)) {
-        throw new IllegalArgumentException(
-            "Reference type does not match. Expected: " + referenceType + " but got: "
-                + referenceCollection.getReferenceTypes());
-      }
-      // TODO: get from the reference collection
-      final JoinTag valueTag = JoinTag.ResolveTag.of(referenceType);
-
-      return ResourceCollection.build(
-          referenceCollection.getColumn().traverse("reference")
-              .applyTo(functions.col(valueTag.getTag())),
-          fhirContext, referenceType);
-    }
-
-
-    @Override
-    public @Nonnull Collection resolveJoin(
-        @Nonnull final ReferenceCollection referenceCollection) {
-      final ResourceTypeSet referenceTypes = referenceCollection.getReferenceTypes();
-      return referenceTypes.asSingleResourceType()
-          .map(referenceType -> (Collection) resolveTypedJoin(referenceCollection, referenceType))
-          .orElseGet(() -> new MixedResourceCollection(referenceCollection,
-              this::resolveTypedJoin));
-    }
-
-    @Nonnull
-    @Override
-    public ResourceCollection resolveReverseJoin(@Nonnull final ResourceCollection parentResource,
-        @Nonnull final String expression) {
-
-      final ResourceType resourceType = parentResource.getResourceType();
-      // TODO: implement this
-      final String resourceName = expression.split("\\.")[0];
-      final String masterKeyPath = expression.split("\\.")[1];
-      final ResourceType childResourceType = ResourceType.fromCode(resourceName);
-
-      final JoinTag valueTag = JoinTag.ReverseResolveTag.of(childResourceType, masterKeyPath);
-
-      return ResourceCollection.build(
-          parentResource.getColumn().traverse("id_versioned")
-              .applyTo(functions.col(valueTag.getTag())),
-          fhirContext, childResourceType);
-    }
-  }
-
-  @Nonnull
-  ResourceType subjectResource;
-
-  @Nonnull
-  FhirContext fhirContext;
-
-  @Nonnull
-  FunctionRegistry<?> functionRegistry;
-
-  @Nonnull
-  DataSource dataSource;
-
-
-  @Nonnull
-  Parser parser = new Parser();
-
-  @Nonnull
-  Dataset<Row> resourceDataset(@Nonnull final ResourceType resourceType) {
-    final Dataset<Row> dataset = dataSource.read(resourceType);
-    return dataset.select(
-        dataset.col("id"),
-        dataset.col("id_versioned").alias("key"),
-        functions.struct(
-            Stream.of(dataset.columns())
-                .map(dataset::col).toArray(Column[]::new)
-        ).alias(resourceType.toCode()));
-  }
-
-  public Dataset<Row> execute(@NotNull final FhirPath path,
-      @NotNull final Dataset<Row> subjectDataset) {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  public @NotNull CollectionDataset evaluate(@NotNull final FhirPath path,
-      @NotNull final Dataset<Row> subjectDataset) {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Nonnull
-  public Collection evaluate(@Nonnull final FhirPath path, @Nonnull final Collection inputContext) {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Nonnull
-  public Set<DataRoot> findJoinsRoots(@Nonnull final FhirPath path) {
-    final DataRootResolver dataRootResolver = new DataRootResolver(subjectResource, fhirContext);
-    // TODO: create the actual hierarchy of the joins
-    // for now find the longest root path 
-    return dataRootResolver.findDataRoots(path);
   }
 
 }

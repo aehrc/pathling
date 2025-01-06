@@ -21,8 +21,8 @@ import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.execution.MultiFhirPathEvaluator;
-import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
+import au.csiro.pathling.fhirpath.execution.FhirpathExecutor;
+import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator.ManyProvider;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -42,6 +42,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import java.util.Map;
 
 @SpringBootUnitTest
 @ExtendWith(TimingExtension.class)
@@ -65,7 +66,7 @@ public class AbstractParserTest {
   @MockBean
   protected DataSource dataSource;
 
-  FhirPathEvaluator executor;
+  FhirpathExecutor executor;
 
   @BeforeEach
   void setUp() {
@@ -80,14 +81,13 @@ public class AbstractParserTest {
 
 
   @Nonnull
-  protected FhirPathEvaluator createExecutor(@Nonnull final ResourceType resourceType) {
+  protected FhirpathExecutor createExecutor(@Nonnull final ResourceType resourceType) {
     // TODO: Select one
-    //return new ResolvingFhirPathEvaluator(resourceType, dataSource);
-    return new MultiFhirPathEvaluator(resourceType, fhirContext,
-        StaticFunctionRegistry.getInstance(), dataSource);
+    return FhirpathExecutor.of(new Parser(), new ManyProvider(fhirContext,
+        StaticFunctionRegistry.getInstance(), Map.of(), dataSource));
   }
-  
-  
+
+
   @SuppressWarnings("SameParameterValue")
   void setSubjectResource(@Nonnull final ResourceType resourceType) {
     executor = createExecutor(resourceType);
@@ -106,12 +106,12 @@ public class AbstractParserTest {
       @Nonnull final String expression) {
 
     setSubjectResource(resourceType);
-    return assertThat(executor.evaluate(expression));
+    return assertThat(executor.evaluate(resourceType, expression));
   }
 
   @SuppressWarnings("SameParameterValue")
   FhirPathAssertion assertThatResultOf(final String expression) {
-    return assertThat(executor.evaluate(expression));
+    return assertThat(executor.evaluate(ResourceType.PATIENT, expression));
   }
 
 }

@@ -3,9 +3,10 @@ package au.csiro.pathling.fhirpathe.execution;
 import static au.csiro.pathling.test.helpers.SqlHelpers.sql_array;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
-import au.csiro.pathling.fhirpath.execution.MultiFhirPathEvaluator;
+import au.csiro.pathling.fhirpath.execution.FhirpathExecutor;
+import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator.ManyProvider;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
+import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -14,6 +15,7 @@ import au.csiro.pathling.test.datasource.ObjectDataSource;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import jakarta.annotation.Nonnull;
 import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -67,15 +69,15 @@ class FhirpathTest {
       @Nonnull final String fhirExpression) {
 
     return createEvaluator(subjectResource, dataSource)
-        .evaluate(fhirExpression)
+        .evaluate(subjectResource, fhirExpression)
         .toIdValueDataset();
   }
 
   @Nonnull
-  FhirPathEvaluator createEvaluator(@Nonnull final ResourceType subjectResource,
+  FhirpathExecutor createEvaluator(@Nonnull final ResourceType subjectResource,
       @Nonnull final DataSource datasource) {
-    return new MultiFhirPathEvaluator(subjectResource, encoders.getContext(),
-        StaticFunctionRegistry.getInstance(), datasource);
+    return FhirpathExecutor.of(new Parser(), new ManyProvider(encoders.getContext(),
+        StaticFunctionRegistry.getInstance(), Map.of(), datasource));
   }
 
   @Test

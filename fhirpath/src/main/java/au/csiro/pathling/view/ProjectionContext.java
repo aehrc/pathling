@@ -23,8 +23,8 @@ import static java.util.stream.Collectors.toMap;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.execution.FhirPathExecutor;
-import au.csiro.pathling.fhirpath.execution.SingleFhirPathExecutor;
+import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
+import au.csiro.pathling.fhirpath.execution.SingleFhirpathEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.views.ConstantDeclaration;
 import jakarta.annotation.Nonnull;
@@ -47,7 +47,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public class ProjectionContext {
 
   @Nonnull
-  FhirPathExecutor executor;
+  FhirpathEvaluator executor;
 
   @Nonnull
   Collection inputContext;
@@ -83,7 +83,7 @@ public class ProjectionContext {
             ProjectionContext::getCollectionForConstantValue));
 
     // Create a new FhirPathExecutor.
-    final FhirPathExecutor executor = new SingleFhirPathExecutor(subjectResource,
+    final FhirpathEvaluator executor = SingleFhirpathEvaluator.of(subjectResource,
         context.getFhirContext(), new StaticFunctionRegistry(), variables, context.getDataSource());
 
     // Return a new ProjectionContext with the executor and the default input context.

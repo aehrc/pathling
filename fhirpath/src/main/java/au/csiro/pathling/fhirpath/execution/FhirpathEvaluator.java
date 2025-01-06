@@ -19,48 +19,33 @@ package au.csiro.pathling.fhirpath.execution;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import jakarta.annotation.Nonnull;
+import java.util.List;
+import java.util.function.Supplier;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
-public interface FhirPathExecutor extends FhirPathEvaluator {
+public interface FhirpathEvaluator {
 
-  @Nonnull
-  Collection validate(@Nonnull final FhirPath path);
+  interface Provider {
 
-  @Nonnull
-  Dataset<Row> execute(@Nonnull final FhirPath path);
-
-  Dataset<Row> execute(@Nonnull final FhirPath path, @Nonnull final Dataset<Row> subjectDataset);
-
-
-  @Nonnull
-  CollectionDataset evaluate(@Nonnull final FhirPath path,
-      @Nonnull final Dataset<Row> subjectDataset);
-
-
-  @Nonnull
-  default CollectionDataset evaluate(@Nonnull final FhirPath path) {
-    return evaluate(path, createInitialDataset());
-  }
-
-  @Override
-  @Nonnull
-  default CollectionDataset evaluate(@Nonnull final String fhirpathExpression) {
-    return evaluate(new Parser().parse(fhirpathExpression));
+    @Nonnull
+    FhirpathEvaluator create(@Nonnull final ResourceType subjectResource,
+                             @Nonnull final Supplier<List<FhirPath>> contextPathsSupplier);
   }
 
   @Nonnull
-  default Dataset<Row> execute(@Nonnull final String expression) {
-    return execute(new Parser().parse(expression));
+  default Collection evaluate(@Nonnull final FhirPath path) {
+    return evaluate(path, createDefaultInputContext());
   }
 
   @Nonnull
   Collection evaluate(@Nonnull final FhirPath path, @Nonnull final Collection inputContext);
 
   @Nonnull
-  Collection createDefaultInputContext();
+  ResourceCollection createDefaultInputContext();
 
   @Nonnull
   Dataset<Row> createInitialDataset();

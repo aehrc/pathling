@@ -16,9 +16,11 @@ import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
@@ -39,6 +41,16 @@ public class DataRootResolver {
     return Collections.unmodifiableSet(dataRoots);
   }
 
+
+  @Nonnull
+  public Set<DataRoot> findDataRoots(@Nonnull final Collection<FhirPath> paths) {
+    return paths.stream()
+        .map(this::findDataRoots)
+        .flatMap(Collection::stream)
+        .collect(Collectors.toUnmodifiableSet());
+  }
+
+
   public void collectDataRoots(@Nonnull final DataRoot currentRoot,
       @Nonnull final FhirPath fhirPath,
       @Nonnull final FhirPath traversalPath,
@@ -58,7 +70,8 @@ public class DataRootResolver {
 
       // eval the currenrt reference
       // TODO: make sure that the current root is typed
-      final NullEvaluator evaluator = NullEvaluator.of(currentRoot.getResourceType(), fhirContext);
+      final FhirpathEvaluator evaluator = NullEvaluator.of(currentRoot.getResourceType(),
+          fhirContext);
       final ReferenceCollection referenceCollection = (ReferenceCollection) evaluator.evaluate(
           traversalPath);
       final ResourceTypeSet referenceTypes = referenceCollection.getReferenceTypes();

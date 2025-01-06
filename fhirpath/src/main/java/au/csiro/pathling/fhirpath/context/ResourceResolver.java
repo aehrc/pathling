@@ -21,18 +21,25 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import jakarta.annotation.Nonnull;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 public interface ResourceResolver {
 
   @Nonnull
-  ResourceCollection resolveResource(@Nonnull final ResourceType resourceType);
+  ResourceCollection resolveSubjectResource();
 
+  @Nonnull
+  ResourceCollection resolveResource(@Nonnull final ResourceType resourceType);
 
   @Nonnull
   Collection resolveJoin(@Nonnull final ReferenceCollection referenceCollection);
-  
+
   @Nonnull
   ResourceCollection resolveReverseJoin(@Nonnull final ResourceCollection parentResource,
       @Nonnull final String expression);
+
+  @Nonnull
+  Dataset<Row> createView();
 }

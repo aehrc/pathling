@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.sql;
 
-import au.csiro.pathling.fhirpath.execution.MultiFhirPathEvaluator;
+import au.csiro.pathling.fhirpath.execution.ManyResourceResolver;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import java.util.List;
@@ -56,7 +56,7 @@ public class SqFunctionsTest {
 
     final Dataset<Row> aggregatedDf = df.groupBy("group")
         .agg(
-            MultiFhirPathEvaluator.collect_map(functions.col("map_column"))
+            ManyResourceResolver.collect_map(functions.col("map_column"))
                 .alias("map_column")
         );
     
