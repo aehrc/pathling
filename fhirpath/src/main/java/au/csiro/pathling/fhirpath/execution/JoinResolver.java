@@ -1,0 +1,421 @@
+/*
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package au.csiro.pathling.fhirpath.execution;
+
+import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
+import au.csiro.pathling.fhirpath.definition.ResourceTypeSet;
+import au.csiro.pathling.fhirpath.execution.DataRoot.JoinRoot;
+import au.csiro.pathling.fhirpath.execution.DataRoot.ResolveRoot;
+import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
+import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
+import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.fhirpath.path.Paths.Traversal;
+import au.csiro.pathling.io.source.DataSource;
+import ca.uhn.fhir.context.FhirContext;
+import com.google.common.collect.Streams;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+import lombok.Value;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.ArrayType;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static au.csiro.pathling.fhirpath.execution.BaseResourceResolver.resourceDataset;
+
+/**
+ * A FHIRPath ResourceResolver that can handle joins.
+ */
+@Value(staticConstructor = "of")
+public class JoinResolver {
+
+    @Nonnull
+    ResourceType subjectResource;
+
+    @Nonnull
+    FhirContext fhirContext;
+
+    @Nonnull
+    DataSource dataSource;
+
+    @Nonnull
+    Parser parser = new Parser();
+
+    /**
+     * Resolve the joins in the given {@link JoinSet} and return the resulting {@link Dataset}.
+     *
+     * @param joinSet
+     * @return
+     */
+    @Nonnull
+    public Dataset<Row> resolveJoins(@Nonnull final JoinSet joinSet) {
+        return resolveJoins(joinSet, resourceDataset(dataSource, subjectResource));
+    }
+
+    @Nonnull
+    public Dataset<Row> resolveJoins(@Nonnull final JoinSet joinSet,
+                                     @Nonnull final Dataset<Row> parentDataset) {
+        // now just reduce current children
+        return joinSet.getChildren().stream()
+                .reduce(parentDataset, (dataset, subset) ->
+                        // the parent dataset for subjoin should be different
+                        computeJoin(dataset,
+                                resolveJoins(subset,
+                                        resourceDataset(dataSource, subset.getMaster().getResourceType())),
+                                (JoinRoot) subset.getMaster()), (dataset1, dataset2) -> dataset1);
+    }
+
+
+    @Nonnull
+    static Column ns_map_concat(@Nonnull final Column left, @Nonnull final Column right) {
+        return functions.when(left.isNull(), right)
+                .when(right.isNull(), left)
+                .otherwise(functions.map_concat(left, right));
+    }
+
+    // TODO: Move somewhere else
+
+    @Nonnull
+    public static Column collect_map(@Nonnull final Column mapColumn) {
+        // TODO: try to implement this more eccielty and in a way 
+        // that does not requiere:
+        // .config("spark.sql.mapKeyDedupPolicy", "LAST_WIN")
+        return functions.reduce(
+                functions.collect_list(mapColumn),
+                functions.any_value(mapColumn),
+                (acc, elem) -> functions.when(acc.isNull(), elem).otherwise(ns_map_concat(acc, elem))
+        );
+    }
+
+    @Nonnull
+    private Dataset<Row> computeJoin(@Nonnull final Dataset<Row> parentDataset,
+                                     @Nullable final Dataset<Row> maybeChildDataset, @Nonnull final JoinRoot joinRoot) {
+        if (joinRoot instanceof ReverseResolveRoot rrr) {
+            return computeReverseJoin(parentDataset, maybeChildDataset, rrr);
+        } else if (joinRoot instanceof ResolveRoot rr) {
+            return computeResolveJoin(parentDataset, maybeChildDataset, rr);
+        } else {
+            throw new UnsupportedOperationException(
+                    "Not implemented - unknown root type: " + joinRoot);
+        }
+    }
+
+
+    @Nonnull
+    private Dataset<Row> computeResolveJoin(@Nonnull final Dataset<Row> parentDataset,
+                                            @Nullable final Dataset<Row> maybeChildDataset,
+                                            @Nonnull final ResolveRoot joinRoot) {
+
+        System.out.println("Computing resolve join for: " + joinRoot);
+
+        final FhirpathEvaluator parentExecutor = createExecutor(joinRoot.getMaster().getResourceType(),
+                dataSource);
+        final ReferenceCollection referenceCollection = (ReferenceCollection)
+                parentExecutor.evaluate(parser.parse(joinRoot.getMasterResourcePath()));
+        final ResourceTypeSet referenceTypes = referenceCollection.getReferenceTypes();
+        System.out.println(
+                "Reference types: " + referenceTypes);
+
+        final ResolveRoot typedRoot = joinRoot;
+        if (!referenceTypes.contains(typedRoot.getResourceType())) {
+            throw new IllegalArgumentException(
+                    "Reference type does not match. Expected: " + referenceTypes + " but got: "
+                            + typedRoot.getResourceType());
+        }
+
+        Dataset<Row> resultDataset;
+
+        // unfortunatelly singularity cannot be determined from the reference alone as its parents 
+        // may not be singular
+
+        // TODO: optimize
+        // for not we will just select referecne column on the parent dataset to check the representation
+
+        final Dataset<Row> referenceDataset = parentDataset.select(
+                referenceCollection.getColumnValue().alias("reference"));
+        final boolean isSingular = !(referenceDataset.schema().apply(0)
+                .dataType() instanceof ArrayType);
+        if (isSingular) {
+
+            // TODO: this should be replaced with call to evalPath() with not grouping context
+            final FhirpathEvaluator childExecutor = createExecutor(
+                    typedRoot.getForeignResourceType(),
+                    dataSource);
+
+            final Dataset<Row> childDataset = maybeChildDataset == null
+                    ? childExecutor.createInitialDataset()
+                    : maybeChildDataset;
+
+            // this shoukld point to the resource column
+            final Collection childResource = childExecutor.createDefaultInputContext();
+
+            // we essentially need to join the child result (with a map) to the parent dataset
+            // using the resolved reference as the joining key
+
+            final Stream<Column> passThroughColumns = Stream.of(childDataset.columns())
+                    .filter(c -> c.contains("@"))
+                    // TODO: replace with the map_combine function
+                    .map(functions::col);
+
+            final String uniqueValueTag = typedRoot.getValueTag() + "_unique";
+            // create one key-value pair map a the value
+            final Stream<Column> keyValuesColumns = Stream.of(
+                    childDataset.col("key").alias(typedRoot.getChildKeyTag()),
+                    functions.map_from_arrays(
+                            functions.array(childDataset.col("key")),
+                            // maybe need to be wrapped in another array
+                            functions.array(childResource.getColumnValue())
+                    ).alias(uniqueValueTag)
+            );
+
+            final Dataset<Row> childResult = childDataset.select(
+                    Streams.concat(keyValuesColumns, passThroughColumns)
+                            .toArray(Column[]::new));
+
+            // and now join to the parent reference
+
+            final Collection parentRegKey = parentExecutor.evaluate(new Traversal("reference"),
+                    referenceCollection);
+
+            final Dataset<Row> joinedDataset = parentDataset.join(childResult,
+                            parentRegKey.getColumnValue().equalTo(functions.col(typedRoot.getChildKeyTag())),
+                            "left_outer")
+                    .drop(typedRoot.getChildKeyTag());
+
+            final Dataset<Row> finalDataset = mergeMapColumns(joinedDataset, typedRoot.getValueTag(),
+                    uniqueValueTag);
+
+            System.out.println("Final dataset:");
+            finalDataset.show();
+            return finalDataset;
+        } else {
+
+            final String uniqueValueTag = typedRoot.getValueTag() + "_unique";
+            // TODO: this should be replaced with call to evalPath() with not grouping context
+            final FhirpathEvaluator childExecutor = createExecutor(
+                    typedRoot.getForeignResourceType(),
+                    dataSource);
+
+            final Dataset<Row> childDataset = maybeChildDataset == null
+                    ? childExecutor.createInitialDataset()
+                    : maybeChildDataset;
+
+            // this shoukld point to the resource column
+            final Collection childResource = childExecutor.createDefaultInputContext();
+
+            // we essentially need to join the child result (with a map) to the parent dataset
+            // using the resolved reference as the joining key
+
+            final Stream<Column> childPassThroughColumns = Stream.of(childDataset.columns())
+                    .filter(c -> c.contains("@"))
+                    // TODO: replace with the map_combine function
+                    .map(functions::col);
+
+            // create one key-value pair map a the value
+            final Stream<Column> keyValuesColumns = Stream.of(
+                    childDataset.col("key").alias(typedRoot.getChildKeyTag()),
+                    functions.map_from_arrays(
+                            functions.array(childDataset.col("key")),
+                            // maybe need to be wrapped in another array
+                            functions.array(childResource.getColumnValue())
+                    ).alias(uniqueValueTag)
+            );
+
+            final Dataset<Row> childResult =
+                    childDataset.select(
+                            Streams.concat(keyValuesColumns, childPassThroughColumns)
+                                    .toArray(Column[]::new));
+
+            // but we also need to map_concat child maps to the current join if exits
+
+            // and now join to the parent reference
+
+            final Collection parentRegKey = parentExecutor.evaluate(new Traversal("reference"),
+                    referenceCollection);
+
+            final Dataset<Row> expandedParent = parentDataset.withColumn(typedRoot.getParentKeyTag(),
+                    functions.explode_outer(parentRegKey.getColumnValue()));
+
+            final Dataset<Row> joinedDataset = joinWithMapMerge(expandedParent, childResult,
+                    expandedParent.col(typedRoot.getParentKeyTag())
+                            .equalTo(childResult.col(typedRoot.getChildKeyTag())))
+                    .drop(typedRoot.getChildKeyTag(), typedRoot.getParentKeyTag());
+            joinedDataset.show();
+
+            final Stream<Column> passThroughColumns = Stream.of(childDataset.columns())
+                    .filter(c -> c.contains("@"))
+                    // TODO: replace with the map_combine function
+                    .map(c -> collect_map(functions.col(c)).alias(c));
+
+            final Stream<Column> parentColumns = Stream.of(parentDataset.columns())
+                    .filter(c -> !"key".equals(c) && !"id".equals(c))
+                    // TODO: replace with the map_combine function
+                    .map(c -> functions.any_value(functions.col(c)).alias(c));
+
+            final Column[] allPassColumns = Stream.concat(
+                            parentColumns,
+                            Stream.concat(Stream.of(
+                                            collect_map(functions.col(uniqueValueTag)).alias(uniqueValueTag)),
+                                    passThroughColumns))
+                    .toArray(Column[]::new);
+
+            final Dataset<Row> regroupedDataset = joinedDataset.groupBy(joinedDataset.col("id"))
+                    .agg(
+                            functions.any_value(joinedDataset.col("key")).alias("key"),
+                            allPassColumns
+                    );
+
+            resultDataset = mergeMapColumns(regroupedDataset, typedRoot.getValueTag(),
+                    uniqueValueTag);
+            resultDataset.show();
+            return resultDataset;
+        }
+    }
+
+    // I Need to be able to make a smart join where the map columns are merged
+    // and the other columns are passed through
+
+    @Nonnull
+    private Dataset<Row> joinWithMapMerge(@Nonnull final Dataset<Row> leftDataset,
+                                          @Nonnull final Dataset<Row> rightDataset,
+                                          @Nonnull final Column on) {
+
+        // deduplicate columns
+        // for @map colums map_contat
+        // for others keep the left
+        final Set<String> commonColumns = new HashSet<>(List.of(leftDataset.columns()));
+        commonColumns.retainAll(Set.of(rightDataset.columns()));
+
+        final Set<String> commonMapColumns = commonColumns.stream()
+                .filter(c -> c.contains("@"))
+                .collect(Collectors.toUnmodifiableSet());
+
+        final Column[] uniqueSelection = Stream.concat(
+                Stream.of(leftDataset.columns())
+                        .map(c -> commonMapColumns.contains(c)
+                                ? ns_map_concat(leftDataset.col(c), rightDataset.col(c)).alias(c)
+                                : leftDataset.col(c)),
+                Stream.of(rightDataset.columns())
+                        .filter(c -> !commonColumns.contains(c))
+                        .map(rightDataset::col)
+
+        ).toArray(Column[]::new);
+        return leftDataset.join(rightDataset, on, "left_outer")
+                .select(uniqueSelection);
+    }
+
+
+    @Nonnull
+    private Dataset<Row> mergeMapColumns(@Nonnull final Dataset<Row> dataset,
+                                         @Nonnull final String finalColumn, @Nonnull final String tempColumn) {
+        if (List.of(dataset.columns()).contains(finalColumn)) {
+            return dataset.withColumn(finalColumn,
+                            ns_map_concat(functions.col(finalColumn), functions.col(tempColumn)))
+                    .drop(tempColumn);
+        } else {
+            return dataset.withColumnRenamed(tempColumn, finalColumn);
+        }
+    }
+
+    @Nonnull
+    private Dataset<Row> computeReverseJoin(@Nonnull final Dataset<Row> parentDataset,
+                                            @Nullable final Dataset<Row> maybeChildDataset,
+                                            @Nonnull final ReverseResolveRoot joinRoot) {
+
+        System.out.println("Computing reverse join for: " + joinRoot);
+
+        final FhirpathEvaluator childExecutor = createExecutor(joinRoot.getForeignResourceType(),
+                dataSource);
+
+        final Dataset<Row> childDataset = maybeChildDataset == null
+                ? childExecutor.createInitialDataset()
+                : maybeChildDataset;
+
+        final FhirPath referencePath = parser.parse(joinRoot.getForeignKeyPath());
+
+        final Collection referenceResult =
+                childExecutor.evaluate(referencePath);
+
+        // check the type of the reference matches
+        final ResourceTypeSet allowedReferenceTypes = ((ReferenceCollection) referenceResult).getReferenceTypes();
+        if (!allowedReferenceTypes.contains(joinRoot.getMaster().getResourceType())) {
+            throw new IllegalArgumentException(
+                    "Reference type does not match. Expected: " + allowedReferenceTypes + " but got: "
+                            + joinRoot.getMaster().getResourceType());
+        }
+
+        final Collection childParentKeyResult =
+                childExecutor.evaluate(referencePath.andThen(new Traversal("reference")));
+        final Collection childResource = childExecutor.createDefaultInputContext();
+
+        final Dataset<Row> childInput = childDataset;
+        System.out.println("Child input:");
+        childInput.show();
+
+        final Column[] passThroughColumns = Stream.of(childInput.columns())
+                .filter(c -> c.contains("@"))
+                // TODO: replace with the map_combine function
+                .map(c -> collect_map(functions.col(c)).alias(c))
+                .toArray(Column[]::new);
+
+        final Dataset<Row> childResult = childInput
+                .groupBy(childParentKeyResult.getColumnValue().alias(joinRoot.getChildKeyTag()))
+                .agg(
+                        functions.map_from_entries(
+                                // wrap the element into array to create the map
+                                functions.array(
+                                        functions.struct(
+                                                functions.any_value(childParentKeyResult.getColumnValue()).alias("key"),
+                                                functions.collect_list(childResource.getColumnValue()).alias("value")
+                                        )
+                                )
+                        ).alias(joinRoot.getValueTag()),
+                        passThroughColumns
+                        // pass through for any existing columns that require
+                        // map aggregation
+                );
+
+        childResult.show();
+        final Dataset<Row> joinedDataset = joinWithMapMerge(parentDataset, childResult,
+                functions.col("key")
+                        .equalTo(childResult.col(joinRoot.getChildKeyTag())))
+                .drop(joinRoot.getChildKeyTag());
+        joinedDataset.show();
+        return joinedDataset;
+    }
+
+    @Nonnull
+    private FhirpathEvaluator createExecutor(@Nonnull final ResourceType subjectResourceType,
+                                             @Nonnull final DataSource dataSource) {
+        return SingleFhirpathEvaluator.of(subjectResourceType,
+                fhirContext, StaticFunctionRegistry.getInstance(),
+                Collections.emptyMap(), dataSource);
+    }
+
+}

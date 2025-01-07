@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.sql;
 
-import au.csiro.pathling.fhirpath.execution.ManyResourceResolver;
+import au.csiro.pathling.fhirpath.execution.JoinResolver;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import java.util.List;
@@ -56,10 +56,10 @@ public class SqFunctionsTest {
 
     final Dataset<Row> aggregatedDf = df.groupBy("group")
         .agg(
-            ManyResourceResolver.collect_map(functions.col("map_column"))
+            JoinResolver.collect_map(functions.col("map_column"))
                 .alias("map_column")
         );
-    
+
     final Dataset<Row> expected = spark.createDataFrame(List.of(
             RowFactory.create("group1",
                 Map.of("key1", 1, "key2", 3, "key3", 4)),
