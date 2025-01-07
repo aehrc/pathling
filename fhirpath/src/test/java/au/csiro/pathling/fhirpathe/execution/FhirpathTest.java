@@ -749,4 +749,24 @@ class FhirpathTest {
             RowFactory.create("3", null)
         );
   }
+
+
+  @Test
+  void doubleNestedReverseResolveToTheSameResource() {
+    final ObjectDataSource dataSource = getPatientsWithConditions();
+
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.PATIENT,
+        "reverseResolve(Condition.subject).subject.resolve().ofType(Patient).reverseResolve(Condition.subject).id"
+    );
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
+    resultDataset.show();
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", sql_array("x", "y", "x", "y")),
+            RowFactory.create("2", sql_array("z")),
+            RowFactory.create("3", null)
+        );
+  }
+
 }
