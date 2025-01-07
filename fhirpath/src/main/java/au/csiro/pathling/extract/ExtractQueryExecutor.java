@@ -20,7 +20,6 @@ import au.csiro.pathling.view.RequestedColumn;
 import au.csiro.pathling.view.UnnestingSelection;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -107,12 +106,15 @@ public class ExtractQueryExecutor extends QueryExecutor {
     // Rename each column in the result to match the requested column names.
     final List<String> requestedColumnNames = query.getColumns().stream()
         .map(ExpressionWithLabel::getLabel)
-        .collect(toList());
+        .toList();
     final List<String> resultColumnNames = Arrays.asList(result.columns());
+
     for (int i = 0; i < requestedColumnNames.size(); i++) {
       final String requestedName = requestedColumnNames.get(i);
       final String resultName = resultColumnNames.get(i);
-      result = result.withColumnRenamed(resultName, requestedName);
+      result = requestedName != null
+               ? result.withColumnRenamed(resultName, requestedName)
+               : result;
     }
 
     return result;

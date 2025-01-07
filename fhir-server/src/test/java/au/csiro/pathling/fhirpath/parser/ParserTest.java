@@ -60,7 +60,7 @@ public class ParserTest extends AbstractParserTest {
 
   @SuppressWarnings("SameParameterValue")
   private <T extends Throwable> T assertThrows(final Class<T> errorType, final String expression) {
-    return Assertions.assertThrows(errorType, () -> executor.evaluate(expression));
+    return Assertions.assertThrows(errorType, () -> executor.evaluate(ResourceType.PATIENT, expression));
   }
 
   private TranslateExpectations setupMockTranslationFor_195662009_444814009(
