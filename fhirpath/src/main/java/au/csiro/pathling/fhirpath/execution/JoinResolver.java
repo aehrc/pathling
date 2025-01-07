@@ -135,29 +135,17 @@ public class JoinResolver {
 
     final FhirpathEvaluator parentExecutor = createExecutor(joinRoot.getMaster().getResourceType(),
         dataSource);
-    final ReferenceCollection referenceCollection = (ReferenceCollection)
-        parentExecutor.evaluate(parser.parse(joinRoot.getMasterResourcePath()));
+    final ReferenceCollection childReferenceInParent = evaluateReference(
+        joinRoot.getMasterResourcePath(), joinRoot.getResourceType(), parentExecutor);
 
-    final ResourceTypeSet referenceTypes = referenceCollection.getReferenceTypes();
-    System.out.println(
-        "Reference types: " + referenceTypes);
+    final boolean isSingularReference = isSingular(childReferenceInParent, parentDataset);
 
-    if (!referenceTypes.contains(joinRoot.getResourceType())) {
-      throw new IllegalArgumentException(
-          "Reference type does not match. Expected: " + referenceTypes + " but got: "
-              + joinRoot.getResourceType());
-    }
-
-    // unfortunatelly singularity cannot be determined from the reference alone as its parents 
-    // may not be singular
-
-    // TODO: optimize
-    // for not we will just select referecne column on the parent dataset to check the representation
-
-    final Dataset<Row> referenceDataset = parentDataset.select(
-        referenceCollection.getColumnValue().alias("reference"));
-    final boolean isSingular = !(referenceDataset.schema().apply(0)
-        .dataType() instanceof ArrayType);
+    log.debug("Child({}) reference({}) in parent({}) is singular: {} has types: {}",
+        joinRoot.getResourceType(),
+        joinRoot.getMasterResourcePath(),
+        joinRoot.getMaster().getResourceType(),
+        isSingularReference,
+        childReferenceInParent.getReferenceTypes());
 
     final FhirpathEvaluator childExecutor = createExecutor(
         joinRoot.getForeignResourceType(),
@@ -174,10 +162,8 @@ public class JoinResolver {
     // we essentially need to join the child result (with a map) to the parent dataset
     // using the resolved reference as the joining key
 
-    final Stream<Column> passThroughColumns = Stream.of(childDataset.columns())
-        .filter(c -> c.contains("@"))
-        .map(functions::col);
-
+    final Stream<Column> passThroughForeignResourceColumns = mapForeignColumns(childDataset,
+        Function.identity());
     final Dataset<Row> childResult = withMapMerge(joinRoot.getValueTag(), tempColumn ->
         childDataset.select(
             Streams.concat(
@@ -189,25 +175,25 @@ public class JoinResolver {
                             functions.array(childResource.getColumnValue())
                         ).alias(tempColumn)
                     ),
-                    passThroughColumns)
+                    passThroughForeignResourceColumns)
                 .toArray(Column[]::new))
     );
 
     logDataset("Child result", childResult);
-    final Collection parentRefKey = referenceCollection.getKeyCollection(Optional.empty());
-    
-    if (isSingular) {
+    final Collection childKeyInParent = childReferenceInParent.getKeyCollection(Optional.empty());
+
+    if (isSingularReference) {
       logDataset("Parent input", parentDataset);
       // since the reference key is singular we can just join on the key
       final Dataset<Row> joinedDataset = joinWithMapMerge(parentDataset, childResult,
-          parentRefKey.getColumnValue().equalTo(functions.col(joinRoot.getChildKeyTag()))
+          childKeyInParent.getColumnValue().equalTo(functions.col(joinRoot.getChildKeyTag()))
       ).drop(joinRoot.getChildKeyTag());
       logDataset("Joined result", joinedDataset);
       return joinedDataset;
     } else {
 
       final Dataset<Row> expandedParent = parentDataset.withColumn(joinRoot.getParentKeyTag(),
-          functions.explode_outer(parentRefKey.getColumnValue()));
+          functions.explode_outer(childKeyInParent.getColumnValue()));
 
       logDataset("Expanded parent", expandedParent);
 
@@ -218,29 +204,106 @@ public class JoinResolver {
 
       logDataset("Joined result", joinedDataset);
 
-      final Stream<Column> groupingColumns = Stream.of(joinedDataset.columns())
-          .filter(c -> c.contains("@"))
-          // TODO: replace with the map_combine function
-          .map(c -> collect_map(functions.col(c)).alias(c));
+      final Stream<Column> aggForeignResourceColumns = mapForeignColumns(joinedDataset,
+          JoinResolver::collect_map);
 
-      final Stream<Column> parentColumns = Stream.of(parentDataset.columns())
+      final Stream<Column> aggParentColumns = Stream.of(parentDataset.columns())
           .filter(c -> !"key".equals(c) && !"id".equals(c) && !c.contains("@"))
-          // TODO: replace with the map_combine function
           .map(c -> functions.any_value(functions.col(c)).alias(c));
 
-      final Column[] allPassColumns = Stream.concat(
-          parentColumns,
-          groupingColumns).toArray(Column[]::new);
+      final Column[] aggColumns = Stream.concat(
+          aggParentColumns,
+          aggForeignResourceColumns).toArray(Column[]::new);
 
       final Dataset<Row> resultDataset = joinedDataset.groupBy(joinedDataset.col("id"))
           .agg(
               functions.any_value(joinedDataset.col("key")).alias("key"),
-              allPassColumns
+              aggColumns
           );
 
       logDataset("Re-grouped result", resultDataset);
       return resultDataset;
     }
+  }
+
+
+  @Nonnull
+  private Dataset<Row> computeReverseJoin(@Nonnull final Dataset<Row> parentDataset,
+      @Nullable final Dataset<Row> maybeChildDataset,
+      @Nonnull final ReverseResolveRoot joinRoot) {
+
+    log.debug("Computing reverse join for: {}", joinRoot);
+    // create executor for a child resource  (e.g. for Patient.reverseResolve(Condition.subject))
+    // child resource is Condition
+    final FhirpathEvaluator childExecutor = createExecutor(joinRoot.getForeignResourceType(),
+        dataSource);
+    // evaluate the child's reference to the parent resource (e.g. Condition.subject)
+    // and check that the reference type matches the parent resource type (e.g. Patient)
+    final ReferenceCollection parentReferenceInChild = evaluateReference(
+        joinRoot.getForeignKeyPath(),
+        joinRoot.getMaster().getResourceType(),
+        childExecutor
+    );
+    log.debug("Parent({}) reference({}) in child({}) has types: {}",
+        joinRoot.getMaster().getResourceType(),
+        joinRoot.getForeignKeyPath(),
+        joinRoot.getForeignResourceType(),
+        parentReferenceInChild.getReferenceTypes());
+
+    // get the joing key to the parent resource in the child resource
+    final Collection parentKeyInChild = parentReferenceInChild.getKeyCollection(Optional.empty());
+
+    final Collection childResource = childExecutor.createDefaultInputContext();
+    final Dataset<Row> childInput = maybeChildDataset == null
+                                    ? childExecutor.createInitialDataset()
+                                    : maybeChildDataset;
+
+    logDataset("Child input", childInput);
+
+    //  aggregate existing foreign resource columns with `collect_map` function 
+    final Column[] aggForeignResourceColumns = mapForeignColumns(childInput,
+        JoinResolver::collect_map).toArray(Column[]::new);
+
+    final Dataset<Row> childResult = withMapMerge(joinRoot.getValueTag(), tempColumn ->
+        childInput
+            .groupBy(parentKeyInChild.getColumnValue().alias(joinRoot.getChildKeyTag()))
+            .agg(
+                functions.map_from_entries(
+                    // wrap the element into array to create the map
+                    functions.array(
+                        functions.struct(
+                            functions.any_value(parentKeyInChild.getColumnValue()).alias("key"),
+                            functions.collect_list(childResource.getColumnValue()).alias("value")
+                        )
+                    )
+                ).alias(tempColumn),
+                aggForeignResourceColumns
+            )
+    );
+    logDataset("Child result", childResult);
+    logDataset("Parent input", parentDataset);
+    final Dataset<Row> joinedDataset = joinWithMapMerge(parentDataset, childResult,
+        functions.col("key")
+            .equalTo(childResult.col(joinRoot.getChildKeyTag())))
+        .drop(joinRoot.getChildKeyTag());
+    logDataset("Joined result", joinedDataset);
+    return joinedDataset;
+  }
+
+  @Nonnull
+  ReferenceCollection evaluateReference(@Nonnull final String referenceExpr,
+      @Nonnull final ResourceType requiredType, @Nonnull final FhirpathEvaluator evaluator) {
+    final FhirPath referencePath = parser.parse(referenceExpr);
+    final ReferenceCollection referenceCollection = (ReferenceCollection) evaluator.evaluate(
+        referencePath);
+    // check the type of the reference matches
+    final ResourceTypeSet allowedReferenceTypes = referenceCollection.getReferenceTypes();
+    if (!allowedReferenceTypes.contains(requiredType)) {
+      throw new IllegalArgumentException(
+          "Reference type does not match. Expected: " + allowedReferenceTypes + " but got: "
+              + requiredType);
+    }
+    return referenceCollection;
   }
 
   // I Need to be able to make a smart join where the map columns are merged
@@ -297,63 +360,21 @@ public class JoinResolver {
   }
 
   @Nonnull
-  private Dataset<Row> computeReverseJoin(@Nonnull final Dataset<Row> parentDataset,
-      @Nullable final Dataset<Row> maybeChildDataset,
-      @Nonnull final ReverseResolveRoot joinRoot) {
-
-    log.debug("Computing reverse join for: {}", joinRoot);
-    final FhirpathEvaluator childExecutor = createExecutor(joinRoot.getForeignResourceType(),
-        dataSource);
-    final FhirPath referencePath = parser.parse(joinRoot.getForeignKeyPath());
-    final ReferenceCollection referenceResult = (ReferenceCollection) childExecutor.evaluate(
-        referencePath);
-    // check the type of the reference matches
-    final ResourceTypeSet allowedReferenceTypes = referenceResult.getReferenceTypes();
-    if (!allowedReferenceTypes.contains(joinRoot.getMaster().getResourceType())) {
-      throw new IllegalArgumentException(
-          "Reference type does not match. Expected: " + allowedReferenceTypes + " but got: "
-              + joinRoot.getMaster().getResourceType());
-    }
-
-    final Collection childParentKeyResult = referenceResult.getKeyCollection(Optional.empty());
-    final Collection childResource = childExecutor.createDefaultInputContext();
-    final Dataset<Row> childInput = maybeChildDataset == null
-                                    ? childExecutor.createInitialDataset()
-                                    : maybeChildDataset;
-
-    logDataset("Child input", childInput);
-    final Column[] passThroughColumns = Stream.of(childInput.columns())
+  private static Stream<Column> mapForeignColumns(@Nonnull final Dataset<Row> dataset,
+      @Nonnull Function<Column, Column> mapper) {
+    return Stream.of(dataset.columns())
         .filter(c -> c.contains("@"))
-        .map(c -> collect_map(functions.col(c)).alias(c))
-        .toArray(Column[]::new);
+        .map(c -> mapper.apply(functions.col(c)).alias(c));
+  }
 
-    final Dataset<Row> childResult = withMapMerge(joinRoot.getValueTag(), tempColumn ->
-        childInput
-            .groupBy(childParentKeyResult.getColumnValue().alias(joinRoot.getChildKeyTag()))
-            .agg(
-                functions.map_from_entries(
-                    // wrap the element into array to create the map
-                    functions.array(
-                        functions.struct(
-                            functions.any_value(childParentKeyResult.getColumnValue()).alias("key"),
-                            functions.collect_list(childResource.getColumnValue()).alias("value")
-                        )
-                    )
-                ).alias(tempColumn),
-                passThroughColumns
-                // pass through for any existing columns that require
-                // map aggregation
-            )
-    );
-
-    logDataset("Child result", childResult);
-    logDataset("Parent input", parentDataset);
-    final Dataset<Row> joinedDataset = joinWithMapMerge(parentDataset, childResult,
-        functions.col("key")
-            .equalTo(childResult.col(joinRoot.getChildKeyTag())))
-        .drop(joinRoot.getChildKeyTag());
-    logDataset("Joined result", joinedDataset);
-    return joinedDataset;
+  boolean isSingular(@Nonnull final Collection collection, @Nonnull final Dataset<Row> dataset) {
+    // unfortunatelly singularity cannot be determined from the reference alone as its parents 
+    // may not be singular
+    // TODO: optimize
+    // for now we will just select the column on the parent dataset to check the representation
+    final Dataset<Row> referenceDataset = dataset.select(
+        collection.getColumnValue().alias("value"));
+    return !(referenceDataset.schema().apply(0).dataType() instanceof ArrayType);
   }
 
   @Nonnull
