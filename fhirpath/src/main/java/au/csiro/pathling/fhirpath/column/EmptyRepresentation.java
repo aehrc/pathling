@@ -59,7 +59,7 @@ public class EmptyRepresentation extends ColumnRepresentation {
   @Nonnull
   @Override
   public EmptyRepresentation traverse(@Nonnull final String fieldName,
-      final Optional<FHIRDefinedType> fhirType) {
+      @Nonnull final Optional<FHIRDefinedType> fhirType) {
     return traverse(fieldName);
   }
 

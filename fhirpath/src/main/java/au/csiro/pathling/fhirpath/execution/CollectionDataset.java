@@ -18,8 +18,8 @@
 package au.csiro.pathling.fhirpath.execution;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
-import java.util.function.Function;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -40,18 +40,12 @@ public class CollectionDataset {
   }
 
   @Nonnull
-  public Dataset<Row> materialize(@Nonnull final String valueColumnName) {
-    return dataset.withColumn(valueColumnName, getValueColumn());
-  }
-
-  @Nonnull
-  public Dataset<Row> materialize(@Nonnull final String valueColumnName,
-      @Nonnull Function<Column, Column> mapper) {
-    return dataset.withColumn(valueColumnName, mapper.apply(getValueColumn()));
-  }
-
-  @Nonnull
   public Dataset<Row> toIdValueDataset() {
     return dataset.select(dataset.col("id").alias("id"), getValueColumn().alias("value"));
+  }
+
+  @Nonnull
+  public CollectionDataset toCanonical() {
+    return new CollectionDataset(dataset, value.map(ColumnRepresentation::asCanonical));
   }
 }

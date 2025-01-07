@@ -209,22 +209,7 @@ public abstract class ColumnRepresentation {
         Function.identity()
     );
   }
-
-
-  /**
-   * If necessary converters the underlying simple type column to an array with its value as the
-   * only element.
-   *
-   * @return A new {@link ColumnRepresentation} when the underlying column has the ARRAY<?>.
-   */
-  @Nonnull
-  public ColumnRepresentation asArray() {
-    return vectorize(
-        Function.identity(),
-        c -> functions.when(c.isNotNull(), functions.array(c))
-    );
-  }
-
+  
   /**
    *
    */
@@ -271,7 +256,6 @@ public abstract class ColumnRepresentation {
     );
   }
 
-
   /**
    * Converts empty arrays to nulls in the current {@link ColumnRepresentation}.
    *
@@ -284,6 +268,14 @@ public abstract class ColumnRepresentation {
         c -> functions.when(size(c).equalTo(0), null).otherwise(c),
         Function.identity()
     );
+  }
+
+  /**
+   * Converts the current {@link ColumnRepresentation} to a canonical form.
+   */
+  @Nonnull
+  public ColumnRepresentation asCanonical() {
+    return removeNulls().normaliseNull();
   }
 
 
@@ -518,7 +510,7 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation asString() {
     return cast(DataTypes.StringType);
   }
-  
+
   @Nonnull
   public ColumnRepresentation vectorize2(@Nonnull final ColumnRepresentation other,
       @Nonnull final BiFunction<Column, Column, Column> arrayExpression,

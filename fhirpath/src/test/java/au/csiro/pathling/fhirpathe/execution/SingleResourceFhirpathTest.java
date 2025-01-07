@@ -4,7 +4,7 @@ import static au.csiro.pathling.test.helpers.SqlHelpers.sql_array;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
-import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.execution.CollectionDataset;
 import au.csiro.pathling.fhirpath.execution.FhirpathExecutor;
 import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator.ManyProvider;
@@ -62,7 +62,8 @@ class SingleResourceFhirpathTest {
       @Nonnull final String fhirExpression) {
 
     return createEvaluator(subjectResource, dataSource)
-        .evaluate(subjectResource, fhirExpression);
+        .evaluate(subjectResource, fhirExpression)
+        .toCanonical();
 
   }
 
@@ -70,9 +71,7 @@ class SingleResourceFhirpathTest {
   Dataset<Row> selectExpression(@Nonnull final ObjectDataSource dataSource,
       @Nonnull final ResourceType subjectResource,
       @Nonnull final String fhirExpression) {
-
-    return createEvaluator(subjectResource, dataSource)
-        .evaluate(subjectResource, fhirExpression)
+    return evalExpression(dataSource, subjectResource, fhirExpression)
         .toIdValueDataset();
   }
 
@@ -286,15 +285,14 @@ class SingleResourceFhirpathTest {
     );
 
     final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.OBSERVATION,
-        "extension.value.ofType(Reference)");
+        "extension.value.ofType(Reference).reference");
 
     Assertions.assertThat(evalResult)
-        .isElementPath(ReferenceCollection.class)
+        .isElementPath(StringCollection.class)
         .selectResult()
         .hasRowsUnordered(
-            RowFactory.create("1", 17),
-            RowFactory.create("2", null),
-            RowFactory.create("3", null)
+            RowFactory.create("1", "MolecularSequence/1"),
+            RowFactory.create("2", null)
         );
   }
 
