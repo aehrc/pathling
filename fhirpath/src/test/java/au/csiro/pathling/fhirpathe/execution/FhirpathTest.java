@@ -285,9 +285,6 @@ class FhirpathTest {
     );
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
     resultDataset.show();
-
-    // TODO: should be 0 in the last row
-
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", 4),
@@ -330,6 +327,7 @@ class FhirpathTest {
             new Encounter().setSubject(new Reference("Patient/1")).setId("Encounter/1.1"),
             new Encounter().setSubject(new Reference("Patient/1")).setId("Encounter/1.2"),
             new Encounter().setSubject(new Reference("Patient/2")).setId("Encounter/2.1"),
+            new Encounter().setSubject(new Reference("Patient/2")).setId("Encounter/2.2"),
             new Condition().setSubject(new Reference("Patient/1"))
                 .setEncounter(new Reference("Encounter/1.1")).setId("Condition/1.1.1"),
             new Condition().setSubject(new Reference("Patient/1"))

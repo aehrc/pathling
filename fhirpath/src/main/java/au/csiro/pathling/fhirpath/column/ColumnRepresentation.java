@@ -215,7 +215,7 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation applyTo(@Nonnull final Column mapColumn) {
-    return transform(mapColumn::apply).flatten();
+    return transform(mapColumn::apply).removeNulls().flatten();
   }
 
   /**
