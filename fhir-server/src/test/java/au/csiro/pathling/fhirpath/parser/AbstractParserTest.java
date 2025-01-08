@@ -68,6 +68,8 @@ public class AbstractParserTest {
 
   FhirpathExecutor executor;
 
+  ResourceType subjectResource;
+
   @BeforeEach
   void setUp() {
     SharedMocks.resetAll();
@@ -77,11 +79,12 @@ public class AbstractParserTest {
         ResourceType.CAREPLAN);
 
     setSubjectResource(ResourceType.PATIENT);
+    executor = createExecutor();
   }
 
 
   @Nonnull
-  protected FhirpathExecutor createExecutor(@Nonnull final ResourceType resourceType) {
+  protected FhirpathExecutor createExecutor() {
     // TODO: Select one
     return FhirpathExecutor.of(new Parser(), new ManyProvider(fhirContext,
         StaticFunctionRegistry.getInstance(), Map.of(), dataSource));
@@ -90,7 +93,7 @@ public class AbstractParserTest {
 
   @SuppressWarnings("SameParameterValue")
   void setSubjectResource(@Nonnull final ResourceType resourceType) {
-    executor = createExecutor(resourceType);
+    subjectResource = resourceType;
   }
 
   void mockResource(final ResourceType... resourceTypes) {
@@ -104,14 +107,13 @@ public class AbstractParserTest {
   @Nonnull
   protected FhirPathAssertion assertThatResultOf(@Nonnull final ResourceType resourceType,
       @Nonnull final String expression) {
-
     setSubjectResource(resourceType);
-    return assertThat(executor.evaluate(resourceType, expression));
+    return assertThat(executor.evaluate(subjectResource, expression));
   }
 
   @SuppressWarnings("SameParameterValue")
   FhirPathAssertion assertThatResultOf(final String expression) {
-    return assertThat(executor.evaluate(ResourceType.PATIENT, expression));
+    return assertThat(executor.evaluate(subjectResource, expression));
   }
 
 }
