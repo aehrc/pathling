@@ -2,9 +2,9 @@ package au.csiro.pathling.views;
 
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toUnmodifiableList;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.execution.SingleFhirpathEvaluator;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.utilities.Lists;
@@ -74,8 +74,9 @@ public class FhirViewExecutor {
    */
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final FhirView view) {
-    final ExecutionContext executionContext = new ExecutionContext(sparkSession, fhirContext,
-        dataSource);
+    final ExecutionContext executionContext = new ExecutionContext(sparkSession,
+        SingleFhirpathEvaluator.SingleFactory.of(fhirContext, dataSource)
+    );
     final Projection projection = buildProjection(view);
     return projection.execute(executionContext);
   }
@@ -92,7 +93,7 @@ public class FhirViewExecutor {
     // Convert the select clause into a list of ProjectionClause objects.
     final List<ProjectionClause> selectionComponents = fhirView.getSelect().stream()
         .map(this::parseSelection)
-        .collect(toUnmodifiableList());
+        .toList();
 
     // Create a GroupingSelection object that represents all the select components.
     final ProjectionClause selection = new GroupingSelection(selectionComponents);
@@ -129,18 +130,16 @@ public class FhirViewExecutor {
       // cartesian product of the collections that are produced by the FHIRPath expressions.
       return new GroupingSelection(parseSubSelection(select));
 
-    } else if (select instanceof ForEachSelect) {
+    } else if (select instanceof final ForEachSelect forEachSelect) {
       // If this is a "for each" selection, we use a ForEachSelectionX. This will produce a row for
       // each item in the collection produced by the parent path.
-      final ForEachSelect forEachSelect = (ForEachSelect) select;
       return new UnnestingSelection(parser.parse(requireNonNull(forEachSelect.getPath())),
           parseSubSelection(select), false);
 
-    } else if (select instanceof ForEachOrNullSelect) {
+    } else if (select instanceof final ForEachOrNullSelect forEachOrNullSelect) {
       // If this is a "for each or null" selection, we use a ForEachSelectionX with a flag set to
       // true. This will produce a row for each item in the collection produced by the parent path,
       // or a single null row if the parent path evaluates to an empty collection.
-      final ForEachOrNullSelect forEachOrNullSelect = (ForEachOrNullSelect) select;
       return new UnnestingSelection(parser.parse(requireNonNull(forEachOrNullSelect.getPath())),
           parseSubSelection(select), true);
 
@@ -168,7 +167,7 @@ public class FhirViewExecutor {
       // If there are columns present, convert them into a list of {@link RequestedColumn} objects.
       final List<RequestedColumn> requestedColumns = selectClause.getColumn().stream()
           .map(this::buildRequestedColumn)
-          .collect(toUnmodifiableList());
+          .toList();
       columnSelection = Stream.of(new ColumnSelection(requestedColumns));
     } else {
       columnSelection = Stream.empty();
@@ -181,7 +180,7 @@ public class FhirViewExecutor {
       final List<SelectClause> select = selectClause.getUnionAll();
       unionAll = Stream.of(new UnionSelection(select.stream()
           .map(this::parseSelection)
-          .collect(toUnmodifiableList())));
+          .toList()));
     } else {
       unionAll = Stream.empty();
     }
@@ -194,7 +193,7 @@ public class FhirViewExecutor {
             unionAll
         )
         .flatMap(Function.identity())
-        .collect(toUnmodifiableList());
+        .toList();
   }
 
   /**
@@ -244,7 +243,7 @@ public class FhirViewExecutor {
         .map(parser::parse)
         // Create a PrimitiveSelection object for each FHIRPath.
         .map(path -> new RequestedColumn(path, randomAlias(), false, Optional.empty()))
-        .collect(toUnmodifiableList());
+        .toList();
 
     // If there are no where components, return an empty Optional. 
     return Lists.optionalOf(whereComponents)

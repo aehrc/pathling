@@ -7,6 +7,7 @@ import static java.util.stream.Collectors.toList;
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.query.ExpressionWithLabel;
@@ -26,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -94,8 +96,21 @@ public class ExtractQueryExecutor extends QueryExecutor {
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query,
       @Nonnull final ProjectionConstraint constraint) {
-    final ExecutionContext executionContext = new ExecutionContext(sparkSession, fhirContext,
-        dataSource);
+
+    // TODO: optimize so that the parsing happens only one time
+    // all paths
+    final List<FhirPath> contextPaths =
+        Stream.concat(query.getColumns().stream()
+                .map(expression -> parser.parse(expression.getExpression())),
+            query.getFilters().stream().map(parser::parse)
+        ).toList();
+
+    final ExecutionContext executionContext = new ExecutionContext(sparkSession,
+        MultiFhirpathEvaluator.ManyFactory.fromPaths(
+            query.getSubjectResource(),
+            fhirContext, dataSource,
+            contextPaths
+        ));
 
     // Build a Projection from the ExtractRequest.
     final Projection projection = buildProjection(query, constraint);

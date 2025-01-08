@@ -20,8 +20,11 @@ package au.csiro.pathling.fhirpath.execution;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
+import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import jakarta.annotation.Nonnull;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -33,7 +36,18 @@ public interface FhirpathEvaluator {
 
     @Nonnull
     FhirpathEvaluator create(@Nonnull final ResourceType subjectResource,
-                             @Nonnull final Supplier<List<FhirPath>> contextPathsSupplier);
+        @Nonnull final Supplier<List<FhirPath>> contextPathsSupplier);
+  }
+  
+  interface Factory {
+    @Nonnull
+    FhirpathEvaluator create(@Nonnull final ResourceType subjectResource, @Nonnull final
+    FunctionRegistry<?> functionRegistry, @Nonnull final Map<String, Collection> variables);
+
+    @Nonnull
+    default FhirpathEvaluator create(@Nonnull final ResourceType subjectResource) {
+      return create(subjectResource, StaticFunctionRegistry.getInstance(), Map.of());
+    }
   }
 
   @Nonnull

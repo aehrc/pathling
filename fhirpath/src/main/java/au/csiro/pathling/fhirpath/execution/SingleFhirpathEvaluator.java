@@ -34,6 +34,30 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @UtilityClass
 public class SingleFhirpathEvaluator {
 
+  @Value(staticConstructor = "of")
+  public static class SingleFactory implements FhirpathEvaluator.Factory {
+
+    @Nonnull
+    FhirContext fhirContext;
+
+    @Nonnull
+    DataSource dataSource;
+
+    @Override
+    @Nonnull
+    public FhirpathEvaluator create(@Nonnull final ResourceType subjectResource,
+        @Nonnull final FunctionRegistry<?> functionRegistry,
+        @Nonnull final Map<String, Collection> variables) {
+      return SingleFhirpathEvaluator.of(
+          subjectResource,
+          fhirContext,
+          functionRegistry,
+          variables,
+          dataSource
+      );
+    }
+  }
+  
   @Value
   public static class SingleProvider implements FhirpathEvaluator.Provider {
 

@@ -24,7 +24,6 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
-import au.csiro.pathling.fhirpath.execution.SingleFhirpathEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.views.ConstantDeclaration;
 import jakarta.annotation.Nonnull;
@@ -83,8 +82,8 @@ public class ProjectionContext {
             ProjectionContext::getCollectionForConstantValue));
 
     // Create a new FhirPathExecutor.
-    final FhirpathEvaluator executor = SingleFhirpathEvaluator.of(subjectResource,
-        context.getFhirContext(), new StaticFunctionRegistry(), variables, context.getDataSource());
+    final FhirpathEvaluator executor = context.getFhirpathEvaluatorFactory()
+        .create(subjectResource, StaticFunctionRegistry.getInstance(), variables);
 
     // Return a new ProjectionContext with the executor and the default input context.
     return new ProjectionContext(executor, executor.createDefaultInputContext());

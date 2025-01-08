@@ -17,8 +17,7 @@
 
 package au.csiro.pathling.view;
 
-import au.csiro.pathling.io.source.DataSource;
-import ca.uhn.fhir.context.FhirContext;
+import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import lombok.Value;
 import org.apache.spark.sql.SparkSession;
 
@@ -33,14 +32,9 @@ public class ExecutionContext {
    */
   SparkSession spark;
 
-  /**
-   * The {@link FhirContext} for accessing the FHIR object model.
-   */
-  FhirContext fhirContext;
 
   /**
-   * A {@link DataSource} for the FHIR data that the view will be executed against.
+   * The {@link FhirpathEvaluator.Factory} for producint FHIRPath evaluators.
    */
-  DataSource dataSource;
- 
+  FhirpathEvaluator.Factory fhirpathEvaluatorFactory;
 }
