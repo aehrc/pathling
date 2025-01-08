@@ -169,12 +169,9 @@ class SingleResourceFhirpathTest {
   }
 
 
-  @Disabled("Seems to be an issue with nested ifArray????")
   @Test
   void nestedExtensionTraversalTest() {
     final ObjectDataSource dataSource = getExtensionTestSource();
-
-    // TODO: works ok with extension('urn:ex3').extension.url
     final Dataset<Row> resultDataset = selectExpression(dataSource, ResourceType.PATIENT,
         "extension.extension.url");
     System.out.println(resultDataset.queryExecution().executedPlan().toString());
