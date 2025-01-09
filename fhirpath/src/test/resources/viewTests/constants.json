@@ -56,7 +56,7 @@
       "title": "URI constant",
       "view": {
         "resource": "Patient",
-        "constants": [
+        "constant": [
           {
             "name": "loincSystem",
             "valueUri": "http://loinc.org"

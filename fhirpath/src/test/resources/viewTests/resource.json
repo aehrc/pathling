@@ -102,11 +102,11 @@
             "column": [
               {
                 "path": "id",
-                "alias": "id"
+                "name": "id"
               },
               {
                 "path": "where(gender='male').name.family",
-                "alias": "familyName"
+                "name": "familyName"
               }
             ]
           }
