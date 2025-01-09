@@ -795,4 +795,50 @@ class FhirpathTest {
   }
 
 
+  @Test
+  void testResolutionOfExtensionReference() {
+
+    final ObjectDataSource dataSource =
+        new ObjectDataSource(spark, encoders,
+            List.of(
+                new Patient()
+                    .setGender(AdministrativeGender.MALE)
+                    .setId("Patient/1"),
+                new Patient()
+                    .setGender(AdministrativeGender.UNKNOWN)
+                    .setId("Patient/2"),
+                new Patient().setId("Patient/3"),
+                new Encounter()
+                    .setSubject(new Reference("Patient/1"))
+                    .addExtension(
+                        new Extension("urn:test:associated-goal", new Reference("Goal/1")))
+                    .setId("Encounter/1"),
+                new Encounter()
+                    .setSubject(new Reference("Patient/1"))
+                    .setId("Encounter/2"),
+                new Goal().setDescription(new CodeableConcept().setText("Goal_1")).setId("Goal/1")
+            ));
+
+    // A simpler way to reproduce the issue (access to non-singular extensions)
+    // "reverseResolve(Encounter.subject).extension.url"
+
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.PATIENT,
+        "reverseResolve(Encounter.subject).extension('urn:test:associated-goal')"
+            + ".value.ofType(Reference).resolve().ofType(Goal).description.text"
+
+    );
+    resultDataset.printSchema();
+    System.out.println(resultDataset.logicalPlan());
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
+    resultDataset.show();
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", sql_array("Goal_1")),
+            RowFactory.create("2", null),
+            RowFactory.create("3", null)
+        );
+  }
+
+
 }

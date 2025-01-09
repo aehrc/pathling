@@ -302,7 +302,11 @@ public class Collection implements Comparable, Numeric {
     return getExtensionMapColumn()
         .map(em -> Collection.build(
             // We need here to deal with the situation where _fid is an array of element ids
-            getFid().applyTo(em).normaliseNull(),
+            // but also when em is an array of maps (case in foreign resources)
+            // TODO: this is potentially inefficient as only some of the keys are relevant to some od the arrays
+            // TODO: fix applyTo to handle arrays of maps
+            new DefaultRepresentation(em).transform(
+                c -> getFid().applyTo(c).removeNulls().getValue()).removeNulls().flatten(),
             extensionMapColumn,
             extensionDefinition));
   }
