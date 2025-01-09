@@ -97,6 +97,33 @@ class FhirpathTest {
   }
 
   @Test
+  void reverseResolveSubsumesInWhere() {
+    TerminologyServiceHelpers.setupSubsumes(terminologyService);
+    final ObjectDataSource dataSource = getPatientsWithConditions();
+
+    // THIS seems to be a simpler way to reproduce the same issue with spark 3.5.0
+    // works: 
+    // "where(reverseResolve(Condition.subject).code.exists()).id"
+    // fails:
+    // "where(reverseResolve(Condition.subject).code.text.exists()).id"
+
+    final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
+        "where($this.reverseResolve(Condition.subject).code"
+            + ".subsumedBy(system-x|code-xx) contains true).gender"
+    );
+    System.out.println(resultDataset.logicalPlan());
+    System.out.println(resultDataset.queryExecution().executedPlan().toString());
+    resultDataset.show();
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", "female"),
+            RowFactory.create("2", null),
+            RowFactory.create("3", null)
+        );
+  }
+
+
+  @Test
   void simpleReverseResolveToSingularValue() {
     final ObjectDataSource dataSource = getPatientsWithConditions();
     final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
@@ -766,5 +793,6 @@ class FhirpathTest {
             RowFactory.create("3", null)
         );
   }
+
 
 }

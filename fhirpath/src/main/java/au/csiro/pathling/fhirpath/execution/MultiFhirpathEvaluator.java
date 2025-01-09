@@ -124,7 +124,7 @@ public class MultiFhirpathEvaluator {
     final Set<DataRoot> joinRoots = dataRootResolver.findDataRoots(contextPaths);
     log.debug("Join roots: {}", joinRoots);
     final JoinSet joinSet = JoinSet.mergeRoots(joinRoots).iterator().next();
-    log.debug("Join set: {}", joinSet.toTreeString());
+    log.debug("Join set:\n{}", joinSet.toTreeString());
     return joinSet;
   }
 }
