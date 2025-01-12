@@ -21,12 +21,14 @@ import static au.csiro.pathling.utilities.Strings.randomAlias;
 
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
+import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator.ManyFactory;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -34,6 +36,8 @@ import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -145,9 +149,9 @@ public class AggregateQueryExecutor extends QueryExecutor {
           return dataset;
         }, (dataset1, dataset2) -> dataset1);
 
-    // then groupby the grouppings and aggregate with the relevant aggregation functions
-    // TODO: groupby expanded groupping columns and aggregate the agg columns with the 
-    // relevant post-agg functions (combiner functions)
+    // then groupBy the groupings and aggregate with the relevant combiner function
+    // The combiner function is used to aggregate partial aggregation results from agg fhirpaths.
+    // For example for `count()` the aggregation is SQL SUM(), for 
 
     final Column[] groupingColumms = Stream.of(expandeDataset.columns())
         .limit(evaluatedGoupings.size())
@@ -159,9 +163,11 @@ public class AggregateQueryExecutor extends QueryExecutor {
         .map(expandeDataset::col)
         .toArray(Column[]::new);
 
-    // TODO: for now assume that all aggregation functions are sum
-    // determine the aggregation functions from the last element of the path
-    final List<Column> aggExpr = Stream.of(aggColumns).map(functions::sum).toList();
+    // apply the appropriate combiner functions to each of the aggregation columns
+    final List<Column> aggExpr =
+        IntStream.range(0, aggColumns.length)
+            .mapToObj(i -> getCombiner(aggPaths.get(i)).apply(aggColumns[i]))
+            .toList();
 
     final Dataset<Row> resultDataset = expandeDataset
         .groupBy(groupingColumms)
@@ -170,6 +176,27 @@ public class AggregateQueryExecutor extends QueryExecutor {
     return new ResultWithExpressions(resultDataset, evaluatedAggs, evaluatedGoupings,
         evaluatedFilters);
   }
+
+
+  @Nonnull
+  static Function<Column, Column> getCombiner(@Nonnull final FhirPath path) {
+    // TODO: include somehow in the definition of the function
+    // TODO: include all aggregation functions
+    final FhirPath tail = path.last();
+    if (tail instanceof final EvalFunction evalFunction) {
+      switch (evalFunction.getFunctionIdentifier()) {
+        case "count", "sum" -> {
+          return functions::sum;
+        }
+        case "first" -> {
+          return functions::first;
+        }
+      }
+    }
+    // by default collect all the values to a list
+    return c -> ValueFunctions.unnest(functions.collect_list(c));
+  }
+
 
   @Value
   public static class ResultWithExpressions {
