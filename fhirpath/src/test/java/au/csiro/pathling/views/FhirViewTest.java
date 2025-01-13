@@ -22,6 +22,7 @@ import au.csiro.pathling.sql.boundary.LowBoundaryForDateTimeFunction;
 import au.csiro.pathling.sql.boundary.LowBoundaryForTimeFunction;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.utilities.Streams;
 import ca.uhn.fhir.context.FhirContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -91,13 +92,12 @@ abstract class FhirViewTest {
 
   @Autowired
   Gson gson;
-
-  @MockBean
-  TerminologyServiceFactory terminologyServiceFactory;
-
-
+  
+  @Nonnull
   private final String testLocationGlob;
 
+  @Nonnull
+  private final Set<String> includeTags;
 
   @FunctionalInterface
   interface Expectation {
@@ -221,9 +221,21 @@ abstract class FhirViewTest {
   }
 
 
-  protected FhirViewTest(final String testLocationGlob) {
+  /**
+   * Constructor for the FhirViewTest class.
+   *
+   * @param includeTags the set of tags to include. Empty set means all tags are included.
+   */
+  protected FhirViewTest(@Nonnull final String testLocationGlob,
+      @Nonnull final Set<String> includeTags) {
     this.testLocationGlob = testLocationGlob;
+    this.includeTags = includeTags;
   }
+
+  protected FhirViewTest(@Nonnull final String testLocationGlob) {
+    this(testLocationGlob, Collections.emptySet());
+  }
+
 
   @BeforeAll
   static void beforeAll() throws IOException {
@@ -306,22 +318,31 @@ abstract class FhirViewTest {
       for (final Iterator<JsonNode> it = views.elements(); it.hasNext(); ) {
         final JsonNode view = it.next();
 
-        // Get the view JSON.
-        final String viewJson = view.get("view").toPrettyString();
+        final List<String> tags = Optional.ofNullable(view.get("tags"))
+            .map(JsonNode::elements)
+            .map(Streams::streamOf)
+            .orElse(Stream.empty())
+            .map(JsonNode::asText)
+            .toList();
+        
+        if (includeTags.isEmpty() || !Collections.disjoint(tags, includeTags)) {
+          // Get the view JSON.
+          final String viewJson = view.get("view").toPrettyString();
 
-        // Write the expected JSON to a file, named after the view.
-        final Path directory = getTempDir(testDefinition);
-        final String expectedFileName =
-            String.format("%02d_%s.json", testNumber,
-                view.get("title").asText().replaceAll("\\W+", "_"));
-        final Path expectedPath = directory.resolve(expectedFileName);
-        final boolean disabled = Optional.ofNullable(view.get("disabled"))
-            .map(JsonNode::asBoolean).orElse(false);
-        result.add(
-            new TestParameters(testDefinition.get("title").asText(), view.get("title").asText(),
-                sourceData, viewJson, getExpectation(view, expectedPath),
-                disabled));
-        testNumber++;
+          // Write the expected JSON to a file, named after the view.
+          final Path directory = getTempDir(testDefinition);
+          final String expectedFileName =
+              String.format("%02d_%s.json", testNumber,
+                  view.get("title").asText().replaceAll("\\W+", "_"));
+          final Path expectedPath = directory.resolve(expectedFileName);
+          final boolean disabled = Optional.ofNullable(view.get("disabled"))
+              .map(JsonNode::asBoolean).orElse(false);
+          result.add(
+              new TestParameters(testDefinition.get("title").asText(), view.get("title").asText(),
+                  sourceData, viewJson, getExpectation(view, expectedPath),
+                  disabled));
+          testNumber++;
+        }
       }
       return result;
     } catch (final IOException e) {

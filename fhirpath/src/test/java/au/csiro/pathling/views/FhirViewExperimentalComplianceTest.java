@@ -21,14 +21,17 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-@Disabled("Disabled until we can fix the tests")
-public class FhirViewComplianceTest extends FhirViewTest {
+import java.util.Set;
+
+
+@Disabled
+public class FhirViewExperimentalComplianceTest extends FhirViewTest {
 
   @RegisterExtension
   static final Extension JSON_REPORTING_EXTENSION = new JsonReportingExtension(
-      "target/fhir-view-compliance-test.json");
+      "target/fhir-view-compliance-test_experimental.json");
 
-  public FhirViewComplianceTest() {
-    super("classpath:tests/sql-on-fhir/*.json");
+  public FhirViewExperimentalComplianceTest() {
+    super("classpath:tests/sql-on-fhir/*.json", Set.of("experimental"));
   }
 }
