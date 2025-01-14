@@ -868,7 +868,6 @@ public class ParserTest extends AbstractParserTest {
         .hasRows(spark, "responses/ParserTest/testIifWithNullLiteral.tsv");
   }
 
-  @Disabled("TODO: Implement `until` function")
   @Test
   void testUntilFunction() {
     setSubjectResource(ResourceType.ENCOUNTER);

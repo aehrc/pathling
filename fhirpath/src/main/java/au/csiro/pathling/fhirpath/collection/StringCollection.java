@@ -52,7 +52,7 @@ public class StringCollection extends Collection implements Materializable<Primi
   protected StringCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition, 
+      @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
   }
@@ -221,6 +221,18 @@ public class StringCollection extends Collection implements Materializable<Primi
         .orElseThrow(() -> new IllegalStateException(
             "Cannot convert column to literal value: " + this.getColumn()));
   }
+
+
+  /**
+   * Cast the column value of this collection to a literal.
+   *
+   * @return The column value as a literal is present, otherwise empty
+   */
+  @Nonnull
+  public Optional<String> asLiteralValue() {
+    return getColumn().asStringValue();
+  }
+
 
   /**
    * Gets a value from a row for a String or String literal.

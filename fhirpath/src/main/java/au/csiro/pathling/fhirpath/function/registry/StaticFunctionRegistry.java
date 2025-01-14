@@ -5,6 +5,7 @@ import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.provider.BooleanLogicFunctions;
 import au.csiro.pathling.fhirpath.function.provider.BoundaryFunctions;
 import au.csiro.pathling.fhirpath.function.provider.ConversionFunctions;
+import au.csiro.pathling.fhirpath.function.provider.DateTimeFunctions;
 import au.csiro.pathling.fhirpath.function.provider.ExistenceFunctions;
 import au.csiro.pathling.fhirpath.function.provider.FhirFunctions;
 import au.csiro.pathling.fhirpath.function.provider.FilteringAndProjectionFunctions;
@@ -42,6 +43,7 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
         .putAll(MethodDefinedFunction.mapOf(SubsettingFunctions.class))
         .putAll(MethodDefinedFunction.mapOf(TerminologyFunctions.class))
         .putAll(MethodDefinedFunction.mapOf(ResolverFunctions.class))
+        .putAll(MethodDefinedFunction.mapOf(DateTimeFunctions.class))
         .build());
   }
 
