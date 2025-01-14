@@ -637,7 +637,6 @@ public class ParserTest extends AbstractParserTest {
         .hasRows(spark, "responses/ParserTest/testTranslateWithWhereAndTranslate.tsv");
   }
 
-  @Disabled("TODO: Fix implementation of the contains operator to handle complex types correctly")
   @Test
   void testWithCodingLiteral() {
     assertThatResultOf(

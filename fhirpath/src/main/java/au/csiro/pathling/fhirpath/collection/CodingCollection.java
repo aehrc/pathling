@@ -32,7 +32,7 @@ import au.csiro.pathling.fhirpath.operator.Comparable;
 import au.csiro.pathling.sql.misc.CodingToLiteral;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataTypes;
@@ -138,14 +138,15 @@ public class CodingCollection extends Collection implements Materializable<Codin
   }
 
   @Override
-  public boolean isComparableTo(@Nonnull final Collection path) {
+  public boolean isComparableTo(@Nonnull final Comparable path) {
     return path instanceof CodingCollection || super.isComparableTo(path);
   }
-
+  
   @Override
   @Nonnull
-  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return CodingComparator.buildComparison(this, operation);
+  public BiFunction<Column, Column, Column> getSqlComparator(@Nonnull final Comparable other,
+      @Nonnull final ComparisonOperation operation) {
+    return CodingComparator.buildSqlComparator(this, other, operation);
   }
 
   @Nonnull

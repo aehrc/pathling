@@ -17,10 +17,10 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import au.csiro.pathling.fhirpath.ColumnHelpers;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import org.apache.commons.lang3.function.TriFunction;
 import org.apache.spark.sql.Column;
@@ -37,37 +37,57 @@ public interface Comparable {
   ColumnComparator DEFAULT_COMPARATOR = new DefaultComparator();
 
   /**
-   * Builds a comparison function for directly comparable paths using the custom comparator.
+   * Get a function that can take two Comparable paths and return a function that can compare their
+   * columnar representations. The type of comparison is controlled by supplying a
+   * {@link ComparisonOperation}.
    *
-   * @param source The path to build the comparison function for
+   * @param other The other path to compare to
    * @param operation The {@link ComparisonOperation} type to retrieve a comparison for
-   * @param comparator The {@link ColumnComparator} to use
-   * @return A new {@link Function}
+   * @return A {@link BiFunction} that takes two {@link Column} objects as its parameters, and
+   * returns a {@link Column} with the result of the comparison.
    */
   @Nonnull
-  static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
-      @Nonnull final ComparisonOperation operation, @Nonnull final ColumnComparator comparator) {
-
-    final TriFunction<ColumnComparator, Column, Column, Column> compFunction = operation.compFunction;
-
-    // TODO: Move to the interface (asking for the singular column)
-    return target -> compFunction
-        .apply(comparator, ColumnHelpers.singular(source.getColumn().getValue()),
-            ColumnHelpers.singular(target.getColumn().getValue()));
+  default BiFunction<Column, Column, Column> getSqlComparator(@Nonnull final Comparable other,
+      @Nonnull final ComparisonOperation operation) {
+    return buildSqlComparator(this, other, operation);
   }
 
   /**
-   * Builds a comparison function for directly comparable paths using the standard Spark SQL
-   * comparison operators.
+   * Get a function that can take two Comparable paths and return a function that can compare their
+   * columnar representations. The type of comparison is controlled by supplying a
+   * {@link ComparisonOperation}.
    *
-   * @param source The path to build the comparison function for
+   * @param left The left path to compare
+   * @param right The right path to compare
    * @param operation The {@link ComparisonOperation} type to retrieve a comparison for
-   * @return A new {@link Function}
+   * @param comparator The {@link ColumnComparator} to use
+   * @return A {@link BiFunction} that takes two {@link Column} objects as its parameters, and
+   * returns a {@link Column} with the result of the comparison.
    */
-  static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
-      @Nonnull final ComparisonOperation operation) {
+  @Nonnull
+  static BiFunction<Column, Column, Column> buildSqlComparator(
+      @Nonnull final Comparable left, @Nonnull final Comparable right,
+      @Nonnull final ComparisonOperation operation, @Nonnull final ColumnComparator comparator) {
+    if (!left.isComparableTo(right)) {
+      throw new IllegalArgumentException("Cannot compare " + left + " to " + right);
+    }
+    return (x, y) -> operation.compFunction.apply(comparator, x, y);
+  }
 
-    return buildComparison(source, operation, DEFAULT_COMPARATOR);
+  /**
+   * Get a function that can take two Comparable paths and return a function that can compare their
+   * columnar representations using the default comparator.
+   *
+   * @param left The left path to compare
+   * @param right The right path to compare
+   * @param operation The {@link ComparisonOperation} type to retrieve a comparison for
+   * @return A {@link BiFunction} that takes two {@link Column} objects as its parameters, and
+   */
+  @Nonnull
+  static BiFunction<Column, Column, Column> buildSqlComparator(
+      @Nonnull final Comparable left, @Nonnull final Comparable right,
+      @Nonnull final ComparisonOperation operation) {
+    return buildSqlComparator(left, right, operation, DEFAULT_COMPARATOR);
   }
 
   /**
@@ -75,7 +95,7 @@ public interface Comparable {
    * comparison condition. The type of condition is controlled by supplying a
    * {@link ComparisonOperation}.
    * <p>
-   * Please use {@link #isComparableTo(Collection)} to first check whether the specified path should
+   * Please use {@link #isComparableTo(Comparable)} to first check whether the specified path should
    * be compared to this path.
    *
    * @param operation The {@link ComparisonOperation} type to retrieve a comparison for
@@ -83,7 +103,14 @@ public interface Comparable {
    * {@link Column}
    */
   @Nonnull
-  Function<Comparable, Column> getComparison(@Nonnull ComparisonOperation operation);
+  default Function<Comparable, Column> getComparison(@Nonnull ComparisonOperation operation) {
+    return target -> {
+      final BiFunction<Column, Column, Column> sqlComparator = getSqlComparator(target,
+          operation);
+      return sqlComparator.apply(getColumn().singular().getValue(),
+          target.getColumn().singular().getValue());
+    };
+  }
 
   /**
    * Returns a {@link Column} within the dataset containing the values of the nodes.
@@ -96,7 +123,7 @@ public interface Comparable {
   /**
    * @return {@code true} if this path can be compared to the specified class
    */
-  boolean isComparableTo(@Nonnull Collection path);
+  boolean isComparableTo(@Nonnull Comparable path);
 
   /**
    * Represents a type of comparison operation.

@@ -230,14 +230,15 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   }
 
   @Override
-  public boolean isComparableTo(@Nonnull final Collection path) {
+  public boolean isComparableTo(@Nonnull final Comparable path) {
     return path instanceof QuantityCollection || super.isComparableTo(path);
   }
 
-  @Nonnull
   @Override
-  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return QuantityComparator.buildComparison(this, operation);
+  @Nonnull
+  public BiFunction<Column, Column, Column> getSqlComparator(@Nonnull final Comparable other,
+      @Nonnull final ComparisonOperation operation) {
+    return QuantityComparator.buildSqlComparator(this, other, operation);
   }
 
   @Nonnull

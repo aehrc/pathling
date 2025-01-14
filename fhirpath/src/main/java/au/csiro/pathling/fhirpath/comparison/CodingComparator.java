@@ -25,10 +25,9 @@ import au.csiro.pathling.fhirpath.operator.ColumnComparator;
 import au.csiro.pathling.fhirpath.operator.Comparable;
 import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import org.apache.spark.sql.Column;
 
 /**
@@ -66,16 +65,18 @@ public class CodingComparator implements ColumnComparator {
   }
 
   /**
-   * Builds a comparison function for Coding paths.
+   * Builds a comparison function for Coding collections
    *
-   * @param source The path to build the comparison function for
-   * @param operation The {@link Comparable.ComparisonOperation} type to build
-   * @return A new {@link Function}
+   * @param left the left collection
+   * @param right the right collection
+   * @param operation the operation to perform
+   * @return a sql function that compares the columns representing the values of the collections
    */
   @Nonnull
-  public static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
+  public static BiFunction<Column, Column, Column> buildSqlComparator(
+      @Nonnull final Comparable left, @Nonnull final Comparable right,
       @Nonnull final ComparisonOperation operation) {
-    return Comparable.buildComparison(source, operation, INSTANCE);
+    return Comparable.buildSqlComparator(left, right, operation, INSTANCE);
   }
 
 }

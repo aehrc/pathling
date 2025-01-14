@@ -33,6 +33,7 @@ import au.csiro.pathling.sql.dates.date.DateSubtractDurationFunction;
 import jakarta.annotation.Nonnull;
 import java.text.ParseException;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
@@ -52,7 +53,7 @@ public class DateCollection extends Collection implements Materializable<DateTyp
   protected DateCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition, 
+      @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
   }
@@ -112,12 +113,13 @@ public class DateCollection extends Collection implements Materializable<DateTyp
 
   @Override
   @Nonnull
-  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return DateTimeComparator.buildComparison(this, operation);
+  public BiFunction<Column, Column, Column> getSqlComparator(@Nonnull final Comparable other,
+      @Nonnull final ComparisonOperation operation) {
+    return DateTimeComparator.buildSqlComparison(this, other, operation);
   }
 
   @Override
-  public boolean isComparableTo(@Nonnull final Collection path) {
+  public boolean isComparableTo(@Nonnull final Comparable path) {
     return DateTimeCollection.getComparableTypes().contains(path.getClass())
         || super.isComparableTo(path);
   }

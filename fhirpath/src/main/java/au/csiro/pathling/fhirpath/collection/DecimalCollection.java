@@ -29,6 +29,7 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DecimalRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import au.csiro.pathling.fhirpath.operator.Comparable;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -145,7 +146,7 @@ public class DecimalCollection extends Collection implements Materializable<Deci
   }
 
   @Override
-  public boolean isComparableTo(@Nonnull final Collection path) {
+  public boolean isComparableTo(@Nonnull final Comparable path) {
     return IntegerCollection.getComparableTypes().contains(path.getClass()) ||
         super.isComparableTo(path);
   }

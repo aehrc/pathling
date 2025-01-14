@@ -43,6 +43,12 @@ public class DecimalRepresentation extends DefaultRepresentation {
         column.traverseColumn(fieldName + SCALE_SUFFIX));
   }
 
+  @Override
+  public DecimalRepresentation copyOf(@Nonnull final Column newValue) {
+    return scaleValue.map(scale -> new DecimalRepresentation(newValue, scale))
+        .orElseGet(() -> new DecimalRepresentation(newValue));
+  }
+
   /**
    * @param value The value to represent
    */

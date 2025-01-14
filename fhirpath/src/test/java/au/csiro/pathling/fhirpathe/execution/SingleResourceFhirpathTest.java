@@ -3,6 +3,7 @@ package au.csiro.pathling.fhirpathe.execution;
 import static au.csiro.pathling.test.helpers.SqlHelpers.sql_array;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.execution.CollectionDataset;
@@ -25,6 +26,9 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Device;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Extension;
@@ -291,5 +295,58 @@ class SingleResourceFhirpathTest {
             RowFactory.create("2", null)
         );
   }
+
+
+  @Test
+  void testContainsWithCodingLiteral() {
+
+    final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
+        List.of(
+            new Patient()
+                .setMaritalStatus(new CodeableConcept()
+                    .addCoding(new Coding()
+                        .setSystem("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus")
+                        .setCode("S")
+                        .setDisplay("S")))
+                .setId("Patient/1")
+        )
+    );
+
+    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.PATIENT,
+        "maritalStatus.coding contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S||S");
+
+    Assertions.assertThat(evalResult)
+        .isElementPath(BooleanCollection.class)
+        .selectResult()
+        .hasRowsUnordered(
+            RowFactory.create("1", true)
+        );
+  }
+
+
+  @Test
+  void testComparisonBase64Binay() {
+
+    final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
+        List.of(
+            new Device()
+                .addUdiCarrier(new Device.DeviceUdiCarrierComponent()
+                    .setCarrierAIDC("AID1".getBytes())
+                    .setCarrierHRF("HRF1"))
+                .setId("Device/1")
+        )
+    );
+
+    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.DEVICE,
+        // "udiCarrier.carrierAIDC = 'QUlEMQ=='");
+        "udiCarrier.carrierAIDC = 'QUlEMQ=='");
+
+    Assertions.assertThat(evalResult)
+        .isElementPath(BooleanCollection.class)
+        .selectResult()
+        .debugSchema()
+        .debugAllRows();
+  }
+
 
 }

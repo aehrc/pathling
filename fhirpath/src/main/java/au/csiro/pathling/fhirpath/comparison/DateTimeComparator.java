@@ -28,7 +28,7 @@ import au.csiro.pathling.sql.dates.datetime.DateTimeGreaterThanOrEqualToFunction
 import au.csiro.pathling.sql.dates.datetime.DateTimeLessThanFunction;
 import au.csiro.pathling.sql.dates.datetime.DateTimeLessThanOrEqualToFunction;
 import jakarta.annotation.Nonnull;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import org.apache.spark.sql.Column;
 
 /**
@@ -66,15 +66,17 @@ public class DateTimeComparator implements ColumnComparator {
   }
 
   /**
-   * Builds a comparison function for date and date/time like paths.
+   * Builds a comparison function for date and date/time like collections
    *
-   * @param source the path to build the comparison function for
-   * @param operation the {@link ComparisonOperation} that should be built
-   * @return a new {@link Function}
+   * @param left the left collection
+   * @param right the right collection
+   * @param operation the operation to perform
+   * @return a sql function that compares the columns representing the values of the collections
    */
   @Nonnull
-  public static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
+  public static BiFunction<Column, Column, Column> buildSqlComparison(@Nonnull final Comparable left,
+      @Nonnull final Comparable right,
       @Nonnull final ComparisonOperation operation) {
-    return Comparable.buildComparison(source, operation, INSTANCE);
+    return Comparable.buildSqlComparator(left, right, operation, INSTANCE);
   }
 }

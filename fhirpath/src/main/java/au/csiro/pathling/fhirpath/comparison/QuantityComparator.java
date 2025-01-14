@@ -93,9 +93,20 @@ public class QuantityComparator implements ColumnComparator {
    * @param operation the {@link ComparisonOperation} that should be built
    * @return a new {@link Function}
    */
+
+  /**
+   * Builds a comparison function for quantity like collections
+   *
+   * @param left the left collection
+   * @param right the right collection
+   * @param operation the operation to perform
+   * @return a sql function that compares the columns representing the values of the collections
+   */
   @Nonnull
-  public static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
+  public static BiFunction<Column, Column, Column> buildSqlComparator(
+      @Nonnull final Comparable left,
+      @Nonnull final Comparable right,
       @Nonnull final ComparisonOperation operation) {
-    return Comparable.buildComparison(source, operation, INSTANCE);
+    return Comparable.buildSqlComparator(left, right, operation, INSTANCE);
   }
 }

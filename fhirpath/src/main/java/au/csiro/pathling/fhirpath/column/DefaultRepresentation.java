@@ -63,7 +63,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
   }
 
   @Override
-  protected ColumnRepresentation copyOf(@Nonnull final Column newValue) {
+  protected DefaultRepresentation copyOf(@Nonnull final Column newValue) {
     return new DefaultRepresentation(newValue);
   }
 
@@ -72,14 +72,14 @@ public class DefaultRepresentation extends ColumnRepresentation {
   public DefaultRepresentation vectorize(
       @Nonnull final Function<Column, Column> arrayExpression,
       @Nonnull final Function<Column, Column> singularExpression) {
-    return new DefaultRepresentation(
+    return copyOf(
         ValueFunctions.ifArray(value, arrayExpression::apply, singularExpression::apply));
   }
 
   @Override
   @Nonnull
   public DefaultRepresentation flatten() {
-    return new DefaultRepresentation(ValueFunctions.unnest(value));
+    return copyOf(ValueFunctions.unnest(value));
   }
 
   @Nonnull

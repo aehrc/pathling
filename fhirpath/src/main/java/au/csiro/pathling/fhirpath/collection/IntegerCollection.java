@@ -192,7 +192,7 @@ public class IntegerCollection extends Collection implements
   }
 
   @Override
-  public boolean isComparableTo(@Nonnull final Collection path) {
+  public boolean isComparableTo(@Nonnull final Comparable path) {
     return COMPARABLE_TYPES.contains(path.getClass()) || super.isComparableTo(path);
   }
 
