@@ -34,8 +34,14 @@ public class EmptyCollection extends Collection {
   }
 
   @Override
+  @Nonnull
+  public Collection copyWith(@Nonnull final ColumnRepresentation column) {
+    return this;
+  }
+
+  @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
     return true;
   }
-
+  
 }

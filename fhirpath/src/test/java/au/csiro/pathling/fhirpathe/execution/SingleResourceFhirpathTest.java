@@ -338,7 +338,6 @@ class SingleResourceFhirpathTest {
     );
 
     final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.DEVICE,
-        // "udiCarrier.carrierAIDC = 'QUlEMQ=='");
         "udiCarrier.carrierAIDC = 'QUlEMQ=='");
 
     Assertions.assertThat(evalResult)
@@ -347,6 +346,5 @@ class SingleResourceFhirpathTest {
         .debugSchema()
         .debugAllRows();
   }
-
 
 }

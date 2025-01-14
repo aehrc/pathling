@@ -682,7 +682,6 @@ public class ParserTest extends AbstractParserTest {
   }
 
   @Test
-  @Disabled("TODO: Implement type adjustment for combine operator")
   void testCombineOperatorWithComplexTypeAndNull() {
     assertThatResultOf("(name combine {}).given")
         .isElementPath(StringCollection.class)

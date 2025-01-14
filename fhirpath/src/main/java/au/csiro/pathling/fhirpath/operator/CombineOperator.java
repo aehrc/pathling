@@ -20,8 +20,12 @@ package au.csiro.pathling.fhirpath.operator;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import jakarta.annotation.Nonnull;
+import java.util.stream.Stream;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 
 /**
@@ -45,9 +49,23 @@ public class CombineOperator implements BinaryOperator {
         "Collection must have the same type");
     // and also need to
 
-    return left.copyWith(
-        ColumnRepresentation.binaryOperator(left.getColumn().toArray(), right.getColumn().toArray(),
-            functions::concat)
-    );
+    // if at least one is not empty then the result is of the type of the non-empty one and we can cast the other one to that type
+
+    // just handle empty collections
+    final Collection resultCollection = left instanceof EmptyCollection
+                                        ? right
+                                        : left;
+    
+    final Column[] concatColumns = Stream.of(left, right)
+        .filter(c -> !(c instanceof EmptyCollection))
+        .map(Collection::getColumn)
+        .map(ColumnRepresentation::plural)
+        .map(ColumnRepresentation::getValue)
+        .toArray(Column[]::new);
+
+    return resultCollection.copyWith(
+        new DefaultRepresentation(
+            functions.concat(concatColumns)
+        ));
   }
 }
