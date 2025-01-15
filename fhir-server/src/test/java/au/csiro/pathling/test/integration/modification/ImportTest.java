@@ -182,6 +182,28 @@ class ImportTest extends ModificationTest {
 
     DatasetAssert.of(expandedItemsDataset).hasRows(expectedDataset);
   }
+  
+  @Test
+  void importParquetFile() {
+    final URL parquetURL = getResourceAsUrl("import/Patient.parquet");
+    importExecutor.execute(buildImportParameters(parquetURL, ResourceType.PATIENT, "parquet"));
+
+    final Dataset<Row> result = database.read(ResourceType.PATIENT);
+    final Dataset<Row> expected = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withRow("121503c8-9564-4b48-9086-a22df717948e")
+        .withRow("2b36c1e2-bbe1-45ae-8124-4adad2677702")
+        .withRow("7001ad9c-34d2-4eb5-8165-5fdc2147f469")
+        .withRow("8ee183e2-b3c0-4151-be94-b945d6aa8c6d")
+        .withRow("9360820c-8602-4335-8b50-c88d627a0c20")
+        .withRow("a7eb2ce7-1075-426c-addd-957b861b0e55")
+        .withRow("bbd33563-70d9-4f6d-a79a-dd1fc55f5ad9")
+        .withRow("beff242e-580b-47c0-9844-c1a68c36c5bf")
+        .withRow("e62e52ae-2d75-4070-a0ae-3cc78d35ed08")
+        .build();
+
+    DatasetAssert.of(result.select("id")).hasRows(expected);
+  }
 
   @Test
   void throwsOnUnsupportedResourceType() {

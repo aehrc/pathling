@@ -142,7 +142,7 @@ public class ImportExecutor {
 
       // Get the serialized resource type from the source parameter.
       final String serializationMode = sourceParam.getPart().stream()
-          .filter(param -> "serializationType".equals(param.getName()))
+          .filter(param -> "format".equals(param.getName()))
           .findFirst()
           .map(param -> ((StringType) param.getValue()).getValueAsString()).orElse(null);
           
