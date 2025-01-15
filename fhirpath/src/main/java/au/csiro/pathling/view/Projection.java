@@ -25,12 +25,14 @@ import au.csiro.pathling.extract.ProjectionConstraint;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.views.ConstantDeclaration;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -123,28 +125,34 @@ public class Projection {
     final StructType structType = (StructType) arrayType.elementType();
     final List<String> columnNames = Arrays.stream(structType.fields())
         .map(StructField::name)
-        .collect(Collectors.toList());
+        .toList();
 
     // Get the list of columns to select from the inlined result.
     final Column[] columns = columnNames.stream()
         .map(functions::col)
         .toArray(Column[]::new);
 
+    // Zip the columns with the ProjectedColumn collection and render them
+    // with the projection constraint
+    final Column[] renderedColumns = IntStream.range(0, columns.length)
+        .mapToObj(i -> projectionResult.getResults().get(i).getCollection()
+            .copyWith(new DefaultRepresentation(columns[i])))
+        .map(this::renderColumn)
+        .toArray(Column[]::new);
+
     // Select the columns from the inlined result.
-    return inlinedResult.select(columns);
+    return inlinedResult.select(renderedColumns);
   }
 
   /**
-   * Converts a {@link ProjectedColumn} to a {@link Column} based upon the context of the requested
+   * Converts a {@link Collection} to a {@link Column} based upon the context of the requested
    * operation.
    *
-   * @param result The result to convert
+   * @param collection The result to convert
    * @return The converted column
    */
   @Nonnull
-  private Column renderColumn(@Nonnull final ProjectedColumn result) {
-    final Collection collection = result.getCollection();
-    final RequestedColumn requestedColumn = result.getRequestedColumn();
+  private Column renderColumn(@Nonnull final Collection collection) {
 
     final Collection finalResult;
     if (FLAT.equals(constraint)) {
@@ -156,14 +164,7 @@ public class Projection {
       // Otherwise, we can use the collection as-is.
       finalResult = collection;
     }
-
-    // Map singleton collections from arrays to singular values.
-    final Column column = requestedColumn.isCollection()
-                          ? finalResult.getColumn().getValue()
-                          : finalResult.asSingular().getColumn().getValue();
-
-    // Alias the column with the requested column name.
-    return column.alias(requestedColumn.getName());
+    return finalResult.getColumn().getValue();
   }
 
 
