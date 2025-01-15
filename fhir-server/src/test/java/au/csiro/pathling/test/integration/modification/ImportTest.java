@@ -251,5 +251,17 @@ class ImportTest extends ModificationTest {
     assertInstanceOf(InvalidRequestException.class, convertedError);
     assertEquals("Encountered a resource with no ID", convertedError.getMessage());
   }
-
+  
+  @Test
+  void throwsOnUnsupportedFormat() {
+    final List<String> formats = Arrays.asList("ndjson", "parquet", "delta");
+    for (final String format : formats) {
+      final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+          () -> importExecutor.execute(
+              buildImportParameters(new URL("file://some/url"),
+                  ResourceType.PATIENT, format)), "Unsupported format: " + format);
+      assertEquals("Unsupported format: " + format, error.getMessage());
+    }
+  }
+  
 }
