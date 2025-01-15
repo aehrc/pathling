@@ -72,20 +72,21 @@ class ImportTest extends ModificationTest {
 
   @SuppressWarnings("SameParameterValue")
   @Nonnull
-  Parameters buildImportParameters(@Nonnull final URL jsonURL,
-      @Nonnull final ResourceType resourceType) {
+  Parameters buildImportParameters(@Nonnull final URL url,
+      @Nonnull final ResourceType resourceType, @Nonnull final String format) {
     final Parameters parameters = new Parameters();
     final ParametersParameterComponent sourceParam = parameters.addParameter().setName("source");
     sourceParam.addPart().setName("resourceType").setValue(new CodeType(resourceType.toCode()));
-    sourceParam.addPart().setName("url").setValue(new UrlType(jsonURL.toExternalForm()));
+    sourceParam.addPart().setName("url").setValue(new UrlType(url.toExternalForm()));
+    sourceParam.addPart().setName("format").setValue(new CodeType(format));
     return parameters;
   }
 
   @SuppressWarnings("SameParameterValue")
   @Nonnull
-  Parameters buildImportParameters(@Nonnull final URL jsonURL,
-      @Nonnull final ResourceType resourceType, @Nonnull final ImportMode mode) {
-    final Parameters parameters = buildImportParameters(jsonURL, resourceType);
+  Parameters buildImportParameters(@Nonnull final URL url,
+      @Nonnull final ResourceType resourceType, @Nonnull final String format, @Nonnull final ImportMode mode) {
+    final Parameters parameters = buildImportParameters(url, resourceType, format);
     final ParametersParameterComponent sourceParam = parameters.getParameter().stream()
         .filter(p -> p.getName().equals("source")).findFirst()
         .orElseThrow();
@@ -96,7 +97,7 @@ class ImportTest extends ModificationTest {
   @Test
   void importJsonFile() {
     final URL jsonURL = getResourceAsUrl("import/Patient.ndjson");
-    importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT));
+    importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT, "ndjson"));
 
     final Dataset<Row> result = database.read(ResourceType.PATIENT);
     final Dataset<Row> expected = new DatasetBuilder(spark)
@@ -119,7 +120,7 @@ class ImportTest extends ModificationTest {
   void mergeJsonFile() {
     final URL jsonURL = getResourceAsUrl("import/Patient_updates.ndjson");
     importExecutor.execute(
-        buildImportParameters(jsonURL, ResourceType.PATIENT, ImportMode.MERGE));
+        buildImportParameters(jsonURL, ResourceType.PATIENT, "ndjson", ImportMode.MERGE));
 
     final Dataset<Row> result = database.read(ResourceType.PATIENT);
     final Dataset<Row> expected = new DatasetBuilder(spark)
@@ -143,14 +144,14 @@ class ImportTest extends ModificationTest {
   @Test
   void importJsonFileWithBlankLines() {
     final URL jsonURL = getResourceAsUrl("import/Patient_with_eol.ndjson");
-    importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT));
+    importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT, "ndjson"));
     assertEquals(9, database.read(ResourceType.PATIENT).count());
   }
 
   @Test
   void importJsonFileWithRecursiveDatatype() {
     final URL jsonURL = getResourceAsUrl("import/Questionnaire.ndjson");
-    importExecutor.execute(buildImportParameters(jsonURL, ResourceType.QUESTIONNAIRE));
+    importExecutor.execute(buildImportParameters(jsonURL, ResourceType.QUESTIONNAIRE, "ndjson"));
     final Dataset<Row> questionnaireDataset = database.read(ResourceType.QUESTIONNAIRE);
     assertEquals(1, questionnaireDataset.count());
 
@@ -191,7 +192,7 @@ class ImportTest extends ModificationTest {
       final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
           () -> importExecutor.execute(
               buildImportParameters(new URL("file://some/url"),
-                  resourceType)), "Unsupported resource type: " + resourceType.toCode());
+                  resourceType, "ndjson")), "Unsupported resource type: " + resourceType.toCode());
       assertEquals("Unsupported resource type: " + resourceType.toCode(), error.getMessage());
     }
   }
@@ -200,7 +201,7 @@ class ImportTest extends ModificationTest {
   void throwsOnMissingId() {
     final URL jsonURL = getResourceAsUrl("import/Patient_missing_id.ndjson");
     final Exception error = assertThrows(Exception.class,
-        () -> importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT)));
+        () -> importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT, "ndjson")));
     final BaseServerResponseException convertedError =
         ErrorHandlingInterceptor.convertError(error);
     assertInstanceOf(InvalidRequestException.class, convertedError);
