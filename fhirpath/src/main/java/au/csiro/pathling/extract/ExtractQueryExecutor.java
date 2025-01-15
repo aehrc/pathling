@@ -132,7 +132,8 @@ public class ExtractQueryExecutor extends QueryExecutor {
                : result;
     }
 
-    return result;
+    final Dataset<Row> finalResult = result;
+    return query.getLimit().map(finalResult::limit).orElse(finalResult);
   }
 
   @Nonnull
