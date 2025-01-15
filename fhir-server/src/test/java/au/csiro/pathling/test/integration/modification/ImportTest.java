@@ -73,6 +73,17 @@ class ImportTest extends ModificationTest {
   @SuppressWarnings("SameParameterValue")
   @Nonnull
   Parameters buildImportParameters(@Nonnull final URL url,
+      @Nonnull final ResourceType resourceType) {
+    final Parameters parameters = new Parameters();
+    final ParametersParameterComponent sourceParam = parameters.addParameter().setName("source");
+    sourceParam.addPart().setName("resourceType").setValue(new CodeType(resourceType.toCode()));
+    sourceParam.addPart().setName("url").setValue(new UrlType(url.toExternalForm()));
+    return parameters;
+  }
+  
+  @SuppressWarnings("SameParameterValue")
+  @Nonnull
+  Parameters buildImportParameters(@Nonnull final URL url,
       @Nonnull final ResourceType resourceType, @Nonnull final String format) {
     final Parameters parameters = new Parameters();
     final ParametersParameterComponent sourceParam = parameters.addParameter().setName("source");
@@ -81,7 +92,7 @@ class ImportTest extends ModificationTest {
     sourceParam.addPart().setName("format").setValue(new CodeType(format));
     return parameters;
   }
-
+  
   @SuppressWarnings("SameParameterValue")
   @Nonnull
   Parameters buildImportParameters(@Nonnull final URL url,
@@ -100,22 +111,18 @@ class ImportTest extends ModificationTest {
     importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT, "ndjson"));
 
     final Dataset<Row> result = database.read(ResourceType.PATIENT);
-    final Dataset<Row> expected = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withRow("121503c8-9564-4b48-9086-a22df717948e")
-        .withRow("2b36c1e2-bbe1-45ae-8124-4adad2677702")
-        .withRow("7001ad9c-34d2-4eb5-8165-5fdc2147f469")
-        .withRow("8ee183e2-b3c0-4151-be94-b945d6aa8c6d")
-        .withRow("9360820c-8602-4335-8b50-c88d627a0c20")
-        .withRow("a7eb2ce7-1075-426c-addd-957b861b0e55")
-        .withRow("bbd33563-70d9-4f6d-a79a-dd1fc55f5ad9")
-        .withRow("beff242e-580b-47c0-9844-c1a68c36c5bf")
-        .withRow("e62e52ae-2d75-4070-a0ae-3cc78d35ed08")
-        .build();
-
-    DatasetAssert.of(result.select("id")).hasRows(expected);
+    assertPatientDatasetMatches(result);
   }
 
+  @Test
+  void importJsonFileUsingDefault() {
+    final URL jsonURL = getResourceAsUrl("import/Patient.ndjson");
+    importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT));
+
+    final Dataset<Row> result = database.read(ResourceType.PATIENT);
+    assertPatientDatasetMatches(result);
+  }
+  
   @Test
   void mergeJsonFile() {
     final URL jsonURL = getResourceAsUrl("import/Patient_updates.ndjson");
@@ -182,51 +189,25 @@ class ImportTest extends ModificationTest {
 
     DatasetAssert.of(expandedItemsDataset).hasRows(expectedDataset);
   }
-  
+
   @Test
   void importParquetFile() {
     final URL parquetURL = getResourceAsUrl("import/Patient.parquet");
     importExecutor.execute(buildImportParameters(parquetURL, ResourceType.PATIENT, "parquet"));
 
     final Dataset<Row> result = database.read(ResourceType.PATIENT);
-    final Dataset<Row> expected = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withRow("121503c8-9564-4b48-9086-a22df717948e")
-        .withRow("2b36c1e2-bbe1-45ae-8124-4adad2677702")
-        .withRow("7001ad9c-34d2-4eb5-8165-5fdc2147f469")
-        .withRow("8ee183e2-b3c0-4151-be94-b945d6aa8c6d")
-        .withRow("9360820c-8602-4335-8b50-c88d627a0c20")
-        .withRow("a7eb2ce7-1075-426c-addd-957b861b0e55")
-        .withRow("bbd33563-70d9-4f6d-a79a-dd1fc55f5ad9")
-        .withRow("beff242e-580b-47c0-9844-c1a68c36c5bf")
-        .withRow("e62e52ae-2d75-4070-a0ae-3cc78d35ed08")
-        .build();
-
-    DatasetAssert.of(result.select("id")).hasRows(expected);
+    assertPatientDatasetMatches(result);
   }
-  
+
   @Test
   void importDeltaFile() {
-    final URL jsonURL = getResourceAsUrl("import/Patient.delta");
-    importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT, "delta"));
+    final URL deltaURL = getResourceAsUrl("import/Patient.delta");
+    importExecutor.execute(buildImportParameters(deltaURL, ResourceType.PATIENT, "delta"));
 
     final Dataset<Row> result = database.read(ResourceType.PATIENT);
-    final Dataset<Row> expected = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withRow("121503c8-9564-4b48-9086-a22df717948e")
-        .withRow("2b36c1e2-bbe1-45ae-8124-4adad2677702")
-        .withRow("7001ad9c-34d2-4eb5-8165-5fdc2147f469")
-        .withRow("8ee183e2-b3c0-4151-be94-b945d6aa8c6d")
-        .withRow("9360820c-8602-4335-8b50-c88d627a0c20")
-        .withRow("a7eb2ce7-1075-426c-addd-957b861b0e55")
-        .withRow("bbd33563-70d9-4f6d-a79a-dd1fc55f5ad9")
-        .withRow("beff242e-580b-47c0-9844-c1a68c36c5bf")
-        .withRow("e62e52ae-2d75-4070-a0ae-3cc78d35ed08")
-        .build();
-
-    DatasetAssert.of(result.select("id")).hasRows(expected);
+    assertPatientDatasetMatches(result);
   }
-
+  
   @Test
   void throwsOnUnsupportedResourceType() {
     final List<ResourceType> resourceTypes = Arrays.asList(ResourceType.PARAMETERS,
@@ -262,6 +243,23 @@ class ImportTest extends ModificationTest {
                   ResourceType.PATIENT, format)), "Unsupported format: " + format);
       assertEquals("Unsupported format: " + format, error.getMessage());
     }
+  }
+
+  private void assertPatientDatasetMatches(@Nonnull final Dataset<Row> result) {
+    final Dataset<Row> expected = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withRow("121503c8-9564-4b48-9086-a22df717948e")
+        .withRow("2b36c1e2-bbe1-45ae-8124-4adad2677702")
+        .withRow("7001ad9c-34d2-4eb5-8165-5fdc2147f469")
+        .withRow("8ee183e2-b3c0-4151-be94-b945d6aa8c6d")
+        .withRow("9360820c-8602-4335-8b50-c88d627a0c20")
+        .withRow("a7eb2ce7-1075-426c-addd-957b861b0e55")
+        .withRow("bbd33563-70d9-4f6d-a79a-dd1fc55f5ad9")
+        .withRow("beff242e-580b-47c0-9844-c1a68c36c5bf")
+        .withRow("e62e52ae-2d75-4070-a0ae-3cc78d35ed08")
+        .build();
+
+    DatasetAssert.of(result.select("id")).hasRows(expected);
   }
   
 }
