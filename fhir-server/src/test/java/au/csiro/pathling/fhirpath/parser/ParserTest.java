@@ -858,7 +858,6 @@ public class ParserTest extends AbstractParserTest {
   }
 
   @Test
-  @Disabled("TODO: Implement type reconciliation for empty collection literals")
   void testIifWithNullLiteral() {
     assertThatResultOf("iif(gender='male', birthDate, {})")
         .isElementPath(DateCollection.class)

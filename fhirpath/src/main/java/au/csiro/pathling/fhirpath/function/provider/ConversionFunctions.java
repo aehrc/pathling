@@ -10,7 +10,6 @@ import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import au.csiro.pathling.utilities.Preconditions;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.util.Optional;
 import org.apache.spark.sql.functions;
 
 /**
@@ -76,27 +75,59 @@ public class ConversionFunctions {
       @Nonnull final Collection trueResult,
       @Nullable final Collection falseResult) {
 
-    Preconditions.checkUserInput(isNull(falseResult) || trueResult.getType()
-            .equals(requireNonNull(falseResult.getType())),
-        "iff() trueResult and falseResult must have the same type");
+    return isNull(falseResult)
+           ? iif(input, criterion, trueResult)
+           : iifElse(input, criterion, trueResult, requireNonNull(falseResult));
+  }
 
-    // TODO: check pre-conditions
-    // TODO: if possible implement short-circuiting as per FHIRPath spec
-    // TODO: we need to reconcile the sigularity of both expressions.
-    // the only lazy way seem to be to convert both to arrays and then 
-    // singularize if possible
+  @Nonnull
+  private static Collection iif(@Nonnull final Collection input,
+      @Nonnull final CollectionTransform criterion,
+      @Nonnull final Collection trueResult) {
     final Collection conditionResult = criterion.requireBoolean().apply(input);
-    // TODO: Add the singularization of the result (requires a custom expression as may produce different types of results).
-    // MAYBE not even possible to do it or maybe needs to be done differently (as if with dual ifArray (this is possibly a better option))
-    // That is something along the the lines of ifArray(trueResult, ifArray(falseResult, trueResult, falseResult), ifArray(falseResult, trueResult, falseResult))
-    return Optional.ofNullable(falseResult)
-        .map(fr -> trueResult.map(
-                tr -> tr.vectorize2(fr.getColumn(),
-                    (t, f) -> functions.when(conditionResult.getColumnValue(), t).otherwise(f),
-                    (t, f) -> functions.when(conditionResult.getColumnValue(), t).otherwise(f))
-            )
-        )
-        .orElse(trueResult.mapColumn(c -> functions.when(conditionResult.getColumnValue(), c)));
+    return trueResult.mapColumn(c -> functions.when(conditionResult.getColumnValue(), c));
+  }
+
+  @Nonnull
+  private static Collection iifElse(@Nonnull final Collection input,
+      @Nonnull final CollectionTransform criterion,
+      @Nonnull final Collection trueResult,
+      @Nonnull final Collection falseResult) {
+    Preconditions.checkUserInput(
+        trueResult.convertibleTo(falseResult) || falseResult.convertibleTo(
+            trueResult),
+        "iff() trueResult and falseResult must have the compatible types");
+
+    // TODO: if possible implement short-circuiting as per FHIRPath spec
+    // TODO: implement this type adjutemnt in collection as it may be useful elsewhere
+    final Collection returnType;
+    final Collection compatibleTrue;
+    final Collection compatibleFalse;
+    if (trueResult.convertibleTo(falseResult) && falseResult.convertibleTo(trueResult)) {
+      // same type
+      returnType = trueResult;
+      compatibleTrue = trueResult;
+      compatibleFalse = falseResult;
+    } else if (trueResult.convertibleTo(falseResult)) {
+      // trueResult is convertible to falseResult
+      returnType = falseResult;
+      compatibleTrue = falseResult.mapColumn(c -> trueResult.getColumnValue());
+      compatibleFalse = falseResult;
+    } else if (falseResult.convertibleTo(trueResult)) {
+      // falseResult is convertible to trueResult
+      returnType = trueResult;
+      compatibleTrue = trueResult;
+      compatibleFalse = trueResult.mapColumn(c -> falseResult.getColumnValue());
+    } else {
+      throw new IllegalStateException(
+          "iff() trueResult and falseResult must have the compatible types");
+    }
+    final Collection conditionResult = criterion.requireBoolean().apply(input);
+    return returnType.copyWith(compatibleTrue.map(
+        tr -> tr.vectorize2(compatibleFalse.getColumn(),
+            (t, f) -> functions.when(conditionResult.getColumnValue(), t).otherwise(f),
+            (t, f) -> functions.when(conditionResult.getColumnValue(), t).otherwise(f))
+    ).getColumn());
   }
 
 }

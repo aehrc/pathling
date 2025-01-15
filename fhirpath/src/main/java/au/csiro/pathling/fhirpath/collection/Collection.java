@@ -315,7 +315,7 @@ public class Collection implements Comparable, Numeric {
   protected ColumnRepresentation getFid() {
     return column.traverse(ExtensionSupport.FID_FIELD_NAME());
   }
-    
+
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
     return path instanceof EmptyCollection;
@@ -487,4 +487,25 @@ public class Collection implements Comparable, Numeric {
         .map(__ -> (CodingCollection) traverse("coding").orElseThrow());
   }
 
+
+  /**
+   * This collection can be converted to the other collection type
+   *
+   * @param other the other collection
+   * @return true if the other collection can be converted to the other collection type
+   */
+  public boolean convertibleTo(@Nonnull final Collection other) {
+    // if one has a type then the other needs to have the same type
+    if (type.isPresent() || other.type.isPresent()) {
+      return type.equals(other.type);
+    }
+    if (fhirType.isPresent() || other.fhirType.isPresent()) {
+      // otherwise if this can be either an empty literal or an element literal
+      // in which case we need to check that the fhir types are the same
+      return fhirType.equals(other.fhirType);
+    } else {
+      // this most likely is an empty collection we will handle that in EmptyCollection and MixedCollection
+      throw new IllegalStateException("Both types and fhir types are empty");
+    }
+  }
 }

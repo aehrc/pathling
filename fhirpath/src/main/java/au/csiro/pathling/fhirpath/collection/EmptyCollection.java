@@ -43,5 +43,9 @@ public class EmptyCollection extends Collection {
   public boolean isComparableTo(@Nonnull final Comparable path) {
     return true;
   }
-  
+
+  @Override
+  public boolean convertibleTo(@Nonnull final Collection other) {
+    return true;
+  }
 }

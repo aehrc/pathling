@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.test.assertions;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -52,12 +53,18 @@ public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> 
 
   // TODO: implement with columns
 
-  
+
   @Nonnull
   protected Column getValueColumn() {
     return result.getColumnValue();
   }
-  
+
+
+  @Nonnull
+  public DatasetAssert toCanonicalResult() {
+    return DatasetAssert.of(datasetResult.toCanonical().toIdValueDataset());
+  }
+
   @Nonnull
   public DatasetAssert selectResult() {
     final Dataset<Row> resultDataset = datasetResult.getDataset()
@@ -142,7 +149,8 @@ public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> 
   //
 
   public ElementPathAssertion isElementPath(final Class<? extends Collection> ofType) {
-    assertTrue(ofType.isAssignableFrom(result.getClass()),ofType.getName() + " is not assignable from " + result.getClass().getName());
+    assertTrue(ofType.isAssignableFrom(result.getClass()),
+        ofType.getName() + " is not assignable from " + result.getClass().getName());
     return new ElementPathAssertion(datasetResult);
   }
 
@@ -153,7 +161,7 @@ public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> 
 
   public LiteralPathAssertion isLiteralPath(final Class<? extends Collection> ofType) {
     assertTrue(ofType.isAssignableFrom(result.getClass()));
-    assertTrue(result.getColumnValue().expr() instanceof Literal);
+    assertInstanceOf(Literal.class, result.getColumnValue().expr());
     return new LiteralPathAssertion(datasetResult);
   }
 

@@ -54,4 +54,12 @@ public class MixedResourceCollection extends MixedCollection {
   public ColumnRepresentation getColumn() {
     return resourceCollection.getColumn();
   }
+
+  @Override
+  public boolean convertibleTo(@Nonnull final Collection other) {
+    // TODO: Perhpaps more needs to be done to the check the compatibility of the resource types
+    //  as well as possibly compatibility of the resolved resource collections
+    return other instanceof MixedResourceCollection;
+  }
+
 }

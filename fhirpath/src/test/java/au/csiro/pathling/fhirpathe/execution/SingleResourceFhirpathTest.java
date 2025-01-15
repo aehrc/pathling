@@ -4,6 +4,7 @@ import static au.csiro.pathling.test.helpers.SqlHelpers.sql_array;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.execution.CollectionDataset;
@@ -75,6 +76,7 @@ class SingleResourceFhirpathTest {
       @Nonnull final ResourceType subjectResource,
       @Nonnull final String fhirExpression) {
     return evalExpression(dataSource, subjectResource, fhirExpression)
+        .toCanonical()
         .toIdValueDataset();
   }
 
@@ -99,8 +101,6 @@ class SingleResourceFhirpathTest {
 
     final Dataset<Row> result = selectExpression(dataSource, ResourceType.PATIENT,
         "where(gender='female').name.where(family.where($this='Kay').exists()).given.join(',')");
-    result.show();
-    System.out.println(result.queryExecution().executedPlan().toString());
     final Dataset<Row> expected = DatasetBuilder.of(spark)
         .withColumn("id", DataTypes.StringType)
         .withColumn("value", DataTypes.StringType)
@@ -128,9 +128,6 @@ class SingleResourceFhirpathTest {
 
     final Dataset<Row> result = selectExpression(dataSource, ResourceType.PATIENT,
         "name.text");
-    result.show();
-    System.out.println(result.queryExecution().executedPlan().toString());
-
     new DatasetAssert(result)
         .hasRowsUnordered(
             RowFactory.create("1", sql_array("Awee Kay")),
@@ -145,8 +142,6 @@ class SingleResourceFhirpathTest {
 
     final Dataset<Row> resultDataset = selectExpression(dataSource, ResourceType.PATIENT,
         "extension('urn:ex1').value.ofType(string)");
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", sql_array("value1.1.1", "value1.1.2")),
@@ -161,8 +156,6 @@ class SingleResourceFhirpathTest {
 
     final Dataset<Row> resultDataset = selectExpression(dataSource, ResourceType.PATIENT,
         "extension('urn:ex3').extension('urn:ex3_1').value.ofType(string)");
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", sql_array("value1.3_1.1")),
@@ -177,8 +170,6 @@ class SingleResourceFhirpathTest {
     final ObjectDataSource dataSource = getExtensionTestSource();
     final Dataset<Row> resultDataset = selectExpression(dataSource, ResourceType.PATIENT,
         "extension.extension.url");
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", sql_array("urn:ex3_1")),
@@ -193,8 +184,6 @@ class SingleResourceFhirpathTest {
 
     final Dataset<Row> resultDataset = selectExpression(dataSource, ResourceType.PATIENT,
         "name.extension('urn:name1').value.ofType(string)");
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", null),
@@ -209,8 +198,6 @@ class SingleResourceFhirpathTest {
 
     final Dataset<Row> resultDataset = selectExpression(dataSource, ResourceType.PATIENT,
         "extension('urn:ex2').value.ofType(integer)");
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", null),
@@ -263,7 +250,7 @@ class SingleResourceFhirpathTest {
 
     Assertions.assertThat(evalResult)
         .isElementPath(IntegerCollection.class)
-        .selectResult()
+        .toCanonicalResult()
         .hasRowsUnordered(
             RowFactory.create("1", 17),
             RowFactory.create("2", null),
@@ -289,9 +276,9 @@ class SingleResourceFhirpathTest {
 
     Assertions.assertThat(evalResult)
         .isElementPath(StringCollection.class)
-        .selectResult()
+        .toCanonicalResult()
         .hasRowsUnordered(
-            RowFactory.create("1", "MolecularSequence/1"),
+            RowFactory.create("1", sql_array("MolecularSequence/1")),
             RowFactory.create("2", null)
         );
   }
@@ -317,7 +304,7 @@ class SingleResourceFhirpathTest {
 
     Assertions.assertThat(evalResult)
         .isElementPath(BooleanCollection.class)
-        .selectResult()
+        .toCanonicalResult()
         .hasRowsUnordered(
             RowFactory.create("1", true)
         );
@@ -342,9 +329,77 @@ class SingleResourceFhirpathTest {
 
     Assertions.assertThat(evalResult)
         .isElementPath(BooleanCollection.class)
-        .selectResult()
-        .debugSchema()
-        .debugAllRows();
+        .toCanonicalResult()
+        .hasRowsUnordered(
+            RowFactory.create("1", true)
+        );
+  }
+
+  @Test
+  void testIifWithNullLiteralAsFalse() {
+
+    final ObjectDataSource dataSource = getPatients();
+
+    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.PATIENT,
+        "iif(gender='male', name.family, {})");
+    Assertions.assertThat(evalResult)
+        .isElementPath(StringCollection.class)
+        .toCanonicalResult()
+        .hasRowsUnordered(
+            RowFactory.create("1", sql_array("Kay", "Adams")),
+            RowFactory.create("2", null)
+        );
+  }
+
+  @Test
+  void testIifWithNullLiteralAsTrue() {
+    final ObjectDataSource dataSource = getPatients();
+
+    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.PATIENT,
+        "iif(gender='male', {}, name.family)");
+    Assertions.assertThat(evalResult)
+        .isElementPath(StringCollection.class)
+        .toCanonicalResult()
+        .hasRowsUnordered(
+            RowFactory.create("1", null),
+            RowFactory.create("2", sql_array("Lee"))
+        );
+  }
+
+
+  @Test
+  void testIifWithNullLiteralAsTrueAndFalse() {
+    final ObjectDataSource dataSource = getPatients();
+
+    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.PATIENT,
+        "iif(gender='male', {}, {})");
+    Assertions.assertThat(evalResult)
+        .isElementPath(EmptyCollection.class)
+        .toCanonicalResult()
+        .hasRowsUnordered(
+            RowFactory.create("1", null),
+            RowFactory.create("2", null)
+        );
+  }
+
+  @Nonnull
+  private ObjectDataSource getPatients() {
+    return new ObjectDataSource(spark, encoders,
+        List.of(
+            new Patient()
+                .setGender(AdministrativeGender.MALE)
+                .setName(List.of(
+                    new HumanName().setFamily("Kay").addGiven("John"),
+                    new HumanName().setFamily("Adams").addGiven("John")
+                ))
+                .setId("Patient/1"),
+            new Patient()
+                .setGender(AdministrativeGender.FEMALE)
+                .setName(List.of(new HumanName().setFamily("Lee").addGiven("Anna")))
+                .setId("Patient/2")
+
+        )
+    );
   }
 
 }
