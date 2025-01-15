@@ -80,7 +80,7 @@ class ImportTest extends ModificationTest {
     sourceParam.addPart().setName("url").setValue(new UrlType(url.toExternalForm()));
     return parameters;
   }
-  
+
   @SuppressWarnings("SameParameterValue")
   @Nonnull
   Parameters buildImportParameters(@Nonnull final URL url,
@@ -92,11 +92,12 @@ class ImportTest extends ModificationTest {
     sourceParam.addPart().setName("format").setValue(new CodeType(format));
     return parameters;
   }
-  
+
   @SuppressWarnings("SameParameterValue")
   @Nonnull
   Parameters buildImportParameters(@Nonnull final URL url,
-      @Nonnull final ResourceType resourceType, @Nonnull final String format, @Nonnull final ImportMode mode) {
+      @Nonnull final ResourceType resourceType, @Nonnull final String format,
+      @Nonnull final ImportMode mode) {
     final Parameters parameters = buildImportParameters(url, resourceType, format);
     final ParametersParameterComponent sourceParam = parameters.getParameter().stream()
         .filter(p -> p.getName().equals("source")).findFirst()
@@ -122,7 +123,7 @@ class ImportTest extends ModificationTest {
     final Dataset<Row> result = database.read(ResourceType.PATIENT);
     assertPatientDatasetMatches(result);
   }
-  
+
   @Test
   void mergeJsonFile() {
     final URL jsonURL = getResourceAsUrl("import/Patient_updates.ndjson");
@@ -207,7 +208,7 @@ class ImportTest extends ModificationTest {
     final Dataset<Row> result = database.read(ResourceType.PATIENT);
     assertPatientDatasetMatches(result);
   }
-  
+
   @Test
   void throwsOnUnsupportedResourceType() {
     final List<ResourceType> resourceTypes = Arrays.asList(ResourceType.PARAMETERS,
@@ -216,7 +217,7 @@ class ImportTest extends ModificationTest {
     for (final ResourceType resourceType : resourceTypes) {
       final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
           () -> importExecutor.execute(
-              buildImportParameters(new URL("file://some/url"),
+              buildImportParameters(getResourceAsUrl("import/Patient.ndjson"),
                   resourceType, "ndjson")), "Unsupported resource type: " + resourceType.toCode());
       assertEquals("Unsupported resource type: " + resourceType.toCode(), error.getMessage());
     }
@@ -226,23 +227,20 @@ class ImportTest extends ModificationTest {
   void throwsOnMissingId() {
     final URL jsonURL = getResourceAsUrl("import/Patient_missing_id.ndjson");
     final Exception error = assertThrows(Exception.class,
-        () -> importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT, "ndjson")));
+        () -> importExecutor.execute(
+            buildImportParameters(jsonURL, ResourceType.PATIENT, "ndjson")));
     final BaseServerResponseException convertedError =
         ErrorHandlingInterceptor.convertError(error);
     assertInstanceOf(InvalidRequestException.class, convertedError);
     assertEquals("Encountered a resource with no ID", convertedError.getMessage());
   }
-  
+
   @Test
   void throwsOnUnsupportedFormat() {
-    final List<String> formats = Arrays.asList("ndjson", "parquet", "delta");
-    for (final String format : formats) {
-      final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
-          () -> importExecutor.execute(
-              buildImportParameters(new URL("file://some/url"),
-                  ResourceType.PATIENT, format)), "Unsupported format: " + format);
-      assertEquals("Unsupported format: " + format, error.getMessage());
-    }
+    assertThrows(InvalidUserInputError.class,
+        () -> importExecutor.execute(
+            buildImportParameters(getResourceAsUrl("import/Patient.ndjson"),
+                ResourceType.PATIENT, "foo")), "Unsupported format: foo");
   }
 
   private void assertPatientDatasetMatches(@Nonnull final Dataset<Row> result) {
@@ -261,5 +259,5 @@ class ImportTest extends ModificationTest {
 
     DatasetAssert.of(result.select("id")).hasRows(expected);
   }
-  
+
 }

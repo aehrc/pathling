@@ -29,6 +29,7 @@ import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.FileSystemPersistence;
 import au.csiro.pathling.io.ImportMode;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
+import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -141,13 +142,11 @@ public class ImportExecutor {
           .orElse(ImportMode.OVERWRITE);
 
       // Get the serialized resource type from the source parameter.
-      final String serializationMode = sourceParam.getPart().stream()
+      final String format = sourceParam.getPart().stream()
           .filter(param -> "format".equals(param.getName()))
           .findFirst()
           .map(param -> ((StringType) param.getValue()).getValueAsString()).orElse(null);
-          
-      
-      
+
       final String resourceCode = ((CodeType) resourceTypeParam.getValue()).getCode();
       final ResourceType resourceType = ResourceType.fromCode(resourceCode);
 
@@ -159,10 +158,8 @@ public class ImportExecutor {
         throw new InvalidUserInputError("Unsupported resource type: " + resourceCode);
       }
 
-      
       // Read the resources from the source URL into a dataset of strings.
-      final Dataset<Row> rows = readRowsFromUrl(urlParam, serializationMode, fhirEncoder);
-
+      final Dataset<Row> rows = readRowsFromUrl(urlParam, format, fhirEncoder);
 
       log.info("Importing {} resources (mode: {})", resourceType.toCode(), importMode.getCode());
       if (importMode == ImportMode.OVERWRITE) {
@@ -196,12 +193,20 @@ public class ImportExecutor {
       // Check that the user is authorized to execute the operation.
       accessRules.ifPresent(ar -> ar.checkCanImportFrom(convertedUrl));
       final FilterFunction<String> nonBlanks = s -> !s.isBlank();
-      if("parquet".equals(serializationMode))
-        rowDataset = spark.read().parquet(convertedUrl);
-      else
+      if (serializationMode == null || "ndjson".equals(serializationMode)) {
         // Parse each line into a HAPI FHIR object, then encode to a Spark dataset.
-        rowDataset = spark.read().textFile(convertedUrl).filter(nonBlanks).map(jsonToResourceConverter(),
-            fhirEncoder).toDF();
+        rowDataset = spark.read().textFile(convertedUrl).filter(nonBlanks)
+            .map(jsonToResourceConverter(),
+                fhirEncoder).toDF();
+      } else if ("parquet".equals(serializationMode)) {
+        // Use the Spark Parquet reader.
+        rowDataset = spark.read().parquet(convertedUrl);
+      } else if ("delta".equals(serializationMode)) {
+        // Use the Delta Lake reader.
+        rowDataset = DeltaTable.forPath(spark, convertedUrl).toDF();
+      } else {
+        throw new InvalidUserInputError("Unsupported format: " + serializationMode);
+      }
     } catch (final SecurityError e) {
       throw new InvalidUserInputError("Not allowed to import from URL: " + convertedUrl, e);
     } catch (final Exception e) {
