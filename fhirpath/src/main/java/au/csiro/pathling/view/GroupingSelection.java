@@ -18,7 +18,6 @@
 package au.csiro.pathling.view;
 
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toUnmodifiableList;
 
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -41,7 +40,7 @@ public class GroupingSelection implements ProjectionClause {
   public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
     // evaluate and cross join the subcomponents
     final List<ProjectionResult> subResults = components.stream().map(c -> c.evaluate(context))
-        .collect(toUnmodifiableList());
+        .toList();
     return ProjectionResult.combine(subResults);
   }
 
@@ -54,4 +53,18 @@ public class GroupingSelection implements ProjectionClause {
         "]}";
   }
 
+  @Nonnull
+  public String toExpression() {
+    return "group";
+  }
+  
+  @Override
+  @Nonnull
+  public String toTreeString(final int level) {
+    final String indent = "  ".repeat(level);
+    return indent + toExpression() + "\n" +
+        components.stream()
+            .map(c -> c.toTreeString(level + 1))
+            .collect(joining("\n"));
+  }
 }

@@ -22,13 +22,11 @@ import static org.apache.spark.sql.functions.struct;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import lombok.Value;
 import org.apache.spark.sql.Column;
 
@@ -41,81 +39,94 @@ import org.apache.spark.sql.Column;
 @Value
 public class ColumnSelection implements ProjectionClause {
 
-    @Nonnull
-    List<RequestedColumn> columns;
+  @Nonnull
+  List<RequestedColumn> columns;
 
-    @Override
-    @Nonnull
-    public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
-        // Get an iterator of collections and an iterator for requested columns.
-        final Iterator<Collection> collectionsIterator = getCollectionIterator(context);
-        final Iterator<RequestedColumn> requestedColumnsIterator = columns.iterator();
+  @Override
+  @Nonnull
+  public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
+    // Get an iterator of collections and an iterator for requested columns.
+    final Iterator<Collection> collectionsIterator = getCollectionIterator(context);
+    final Iterator<RequestedColumn> requestedColumnsIterator = columns.iterator();
 
-        // Create a list of ProjectedColumns, which pair a collection with a requested column.
-        final List<ProjectedColumn> projectedColumns = new ArrayList<>();
-        while (collectionsIterator.hasNext() && requestedColumnsIterator.hasNext()) {
-            final Collection collection = collectionsIterator.next();
-            final RequestedColumn requestedColumn = requestedColumnsIterator.next();
-            projectedColumns.add(new ProjectedColumn(collection, requestedColumn));
-        }
-
-        // Collect the columns into an array, aliasing them with the requested names.
-        final Column[] collectedColumns = projectedColumns.stream()
-                .map(projectedColumn -> {
-                    final Column collectionColumn = projectedColumn.getCollection().getColumn()
-                            .getValue();
-                    final String requestedName = projectedColumn.getRequestedColumn().getName();
-                    return collectionColumn.alias(requestedName);
-                })
-                .toArray(Column[]::new);
-
-        // Create a new column that is an array of structs, where each struct has a field for each
-        // requested column.
-        final Column resultColumn = array(struct(collectedColumns));
-
-        // Create a new ProjectionResult with the projected columns and the result column.
-        return ProjectionResult.of(projectedColumns, resultColumn);
+    // Create a list of ProjectedColumns, which pair a collection with a requested column.
+    final List<ProjectedColumn> projectedColumns = new ArrayList<>();
+    while (collectionsIterator.hasNext() && requestedColumnsIterator.hasNext()) {
+      final Collection collection = collectionsIterator.next();
+      final RequestedColumn requestedColumn = requestedColumnsIterator.next();
+      projectedColumns.add(new ProjectedColumn(collection, requestedColumn));
     }
 
-    /**
-     * Evaluate each requested column to get the collection it represents.
-     *
-     * @param context The projection context
-     * @return An iterator of collections
-     */
-    private @Nonnull Iterator<Collection> getCollectionIterator(
-            final @Nonnull ProjectionContext context) {
-        final Stream<Collection> collections = columns.stream()
-                .map(col -> {
-                    final Collection collection = context.evalExpression(col.getPath());
+    // Collect the columns into an array, aliasing them with the requested names.
+    final Column[] collectedColumns = projectedColumns.stream()
+        .map(projectedColumn -> {
+          final Column collectionColumn = projectedColumn.getCollection().getColumn()
+              .getValue();
+          final String requestedName = projectedColumn.getRequestedColumn().getName();
+          return collectionColumn.alias(requestedName);
+        })
+        .toArray(Column[]::new);
 
-                    // If a type was asserted for the column, check that the collection is of that type.
-                    col.getType().ifPresent(type -> {
-                        if (collection.getFhirType().isPresent() && !collection.getFhirType().get()
-                                .equals(type)) {
-                            throw new IllegalArgumentException(
-                                    "Collection " + collection + " has type " + collection.getFhirType().get()
-                                            + ", expected " + type);
-                        }
-                    });
+    // Create a new column that is an array of structs, where each struct has a field for each
+    // requested column.
+    final Column resultColumn = array(struct(collectedColumns));
 
-                    return col.isCollection()
-                            ? collection.asPlural()
-                            : collection.asSingular();
-                });
+    // Create a new ProjectionResult with the projected columns and the result column.
+    return ProjectionResult.of(projectedColumns, resultColumn);
+  }
 
-        // Zip stream of requested columns with the stream of collections, creating a ProjectedColumn 
-        // for each pair.
-        return collections.iterator();
-    }
+  /**
+   * Evaluate each requested column to get the collection it represents.
+   *
+   * @param context The projection context
+   * @return An iterator of collections
+   */
+  private @Nonnull Iterator<Collection> getCollectionIterator(
+      final @Nonnull ProjectionContext context) {
+    final Stream<Collection> collections = columns.stream()
+        .map(col -> {
+          final Collection collection = context.evalExpression(col.getPath());
 
-    @Override
-    public String toString() {
-        return "ColumnSelection{" +
-                "columns=[" + columns.stream()
-                .map(RequestedColumn::toString)
-                .collect(Collectors.joining(", ")) +
-                "]}";
-    }
+          // If a type was asserted for the column, check that the collection is of that type.
+          col.getType().ifPresent(type -> {
+            if (collection.getFhirType().isPresent() && !collection.getFhirType().get()
+                .equals(type)) {
+              throw new IllegalArgumentException(
+                  "Collection " + collection + " has type " + collection.getFhirType().get()
+                      + ", expected " + type);
+            }
+          });
 
+          return col.isCollection()
+                 ? collection.asPlural()
+                 : collection.asSingular();
+        });
+
+    // Zip stream of requested columns with the stream of collections, creating a ProjectedColumn 
+    // for each pair.
+    return collections.iterator();
+  }
+
+  @Override
+  public String toString() {
+    return "ColumnSelection{" +
+        "columns=[" + columns.stream()
+        .map(RequestedColumn::toString)
+        .collect(Collectors.joining(", ")) +
+        "]}";
+  }
+
+  @Nonnull
+  public String toExpression() {
+    return "columns";
+  }
+
+  @Override
+  @Nonnull
+  public String toTreeString(final int level) {
+    return "  ".repeat(level) + toExpression() + "\n" +
+        columns.stream()
+            .map(c -> "  ".repeat(level + 1) + c.toExpression())
+            .collect(Collectors.joining("\n"));
+  }
 }

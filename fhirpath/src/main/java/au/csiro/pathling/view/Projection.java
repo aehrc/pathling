@@ -202,4 +202,9 @@ public class Projection {
         '}';
   }
 
+  @Nonnull
+  public String toTreeString() {
+    return selection.toTreeString(0);
+  }
+  
 }

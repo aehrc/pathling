@@ -19,7 +19,6 @@ package au.csiro.pathling.view;
 
 import static au.csiro.pathling.encoders.ColumnFunctions.structProduct;
 import static au.csiro.pathling.encoders.ColumnFunctions.structProduct_outer;
-import static java.util.stream.Collectors.toUnmodifiableList;
 import static org.apache.spark.sql.functions.flatten;
 import static org.apache.spark.sql.functions.transform;
 
@@ -75,10 +74,10 @@ public class UnnestingSelection implements ProjectionClause {
         unnestingCollection.map(__ -> EmptyRepresentation.getInstance()));
     final List<ProjectionResult> stubResults = components.stream()
         .map(s -> s.evaluate(stubContext))
-        .collect(toUnmodifiableList());
+        .toList();
     final List<ProjectedColumn> columnDescriptors = stubResults.stream()
         .flatMap(sr -> sr.getResults().stream())
-        .collect(toUnmodifiableList());
+        .toList();
 
     // Return a new projection result from the column result and the column descriptors.
     return ProjectionResult.of(columnDescriptors, columnResult);
@@ -110,6 +109,24 @@ public class UnnestingSelection implements ProjectionClause {
         .collect(Collectors.joining(", ")) +
         "], joinOuter=" + joinOuter +
         '}';
+  }
+
+  @Nonnull
+  public String toExpression() {
+    return (joinOuter
+            ? "forEachOrNull"
+            : "forEach")
+        + ": " + path.toExpression();
+  }
+
+  @Override
+  @Nonnull
+  public String toTreeString(final int level) {
+    final String indent = "  ".repeat(level);
+    return indent + toExpression() + "\n" +
+        components.stream()
+            .map(c -> c.toTreeString(level + 1))
+            .collect(Collectors.joining("\n"));
   }
 
 }

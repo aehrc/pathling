@@ -18,7 +18,7 @@
 package au.csiro.pathling.view;
 
 import static au.csiro.pathling.encoders.ValueFunctions.ifArray;
-import static java.util.stream.Collectors.toUnmodifiableList;
+import static java.util.stream.Collectors.joining;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.concat;
 import static org.apache.spark.sql.functions.isnull;
@@ -29,6 +29,7 @@ import java.util.List;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Groups multiple selections together using a union.
@@ -48,7 +49,7 @@ public class UnionSelection implements ProjectionClause {
     // Evaluate each component of the union.
     final List<ProjectionResult> results = components.stream()
         .map(c -> c.evaluate(context))
-        .collect(toUnmodifiableList());
+        .toList();
 
     // Process each result to ensure that they are all arrays.
     final Column[] converted = results.stream()
@@ -69,4 +70,18 @@ public class UnionSelection implements ProjectionClause {
     return ProjectionResult.of(results.get(0).getResults(), combinedResult);
   }
 
+  @Nonnull
+  public String toExpression() {
+    return "union";
+  }
+
+  @Override
+  @Nonnull
+  public @NotNull String toTreeString(final int level) {
+    final String indent = "  ".repeat(level);
+    return indent + toExpression() + "\n" +
+        components.stream()
+            .map(c -> c.toTreeString(level + 1))
+            .collect(joining("\n"));
+  }
 }

@@ -66,4 +66,10 @@ public class RequestedColumn {
         '}';
   }
 
+  @Nonnull
+  public String toExpression() {
+    return (collection
+            ? "many"
+            : "one") + ": " + path.toExpression() + " as " + name;
+  }
 }

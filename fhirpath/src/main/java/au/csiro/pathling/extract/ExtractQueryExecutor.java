@@ -2,6 +2,7 @@ package au.csiro.pathling.extract;
 
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.QueryExecutor;
@@ -115,6 +116,8 @@ public class ExtractQueryExecutor extends QueryExecutor {
     // Build a Projection from the ExtractRequest.
     final Projection projection = buildProjection(query, constraint);
 
+    log.debug("Executing projection:\n {}", projection.toTreeString());
+
     // Execute the Projection to get the result dataset.
     Dataset<Row> result = projection.execute(executionContext);
 
@@ -156,7 +159,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
   }
 
   @Nonnull
-  private ProjectionClause buildSelectClause(@Nonnull final List<FhirPath> paths) {
+  static ProjectionClause buildSelectClause(@Nonnull final List<FhirPath> paths) {
     if (paths.isEmpty()) {
       throw new IllegalArgumentException("Empty column list");
     }
@@ -171,19 +174,14 @@ public class ExtractQueryExecutor extends QueryExecutor {
 
     // Group the paths by their first element. We use a LinkedHashMap to preserve the order.
     final Map<FhirPath, List<FhirPath>> groupedPaths = paths.stream()
-        .collect(groupingBy(FhirPath::first, LinkedHashMap::new, toList()));
+        .collect(
+            groupingBy(FhirPath::first, LinkedHashMap::new, mapping(FhirPath::suffix, toList())));
 
     final List<ProjectionClause> selects = groupedPaths.entrySet().stream()
         .map(entry -> {
-          // Take the suffix of each path and build a new ProjectionClause from it. The suffix
-          // is all the components of the traversal except the first one.
-          final List<ProjectionClause> tail = entry.getValue().stream()
-              .map(FhirPath::suffix)
-              .map(path -> buildSelectClause(List.of(path)))
-              .collect(toList());
-          // Create an UnnestingSelection with a base corresponding to the group, and the 
-          // projections representing the suffixes as the components.
-          return new UnnestingSelection(entry.getKey(), tail, true);
+          // we need to split the suffixed by aggregated and non aggregated
+          ProjectionClause tail = buildSelectClause(entry.getValue());
+          return new UnnestingSelection(entry.getKey(), List.of(tail), true);
         })
         .collect(toList());
 

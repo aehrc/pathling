@@ -33,4 +33,7 @@ public interface ProjectionClause {
   @Nonnull
   ProjectionResult evaluate(@Nonnull final ProjectionContext context);
 
+  @Nonnull
+  String toTreeString(final int level);
+  
 }
