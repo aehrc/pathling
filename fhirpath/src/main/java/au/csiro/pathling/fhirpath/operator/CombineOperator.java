@@ -55,7 +55,7 @@ public class CombineOperator implements BinaryOperator {
     final Collection resultCollection = left instanceof EmptyCollection
                                         ? right
                                         : left;
-    
+
     final Column[] concatColumns = Stream.of(left, right)
         .filter(c -> !(c instanceof EmptyCollection))
         .map(Collection::getColumn)
@@ -68,4 +68,12 @@ public class CombineOperator implements BinaryOperator {
             functions.concat(concatColumns)
         ));
   }
+
+  @Override
+  @Nonnull
+  public String getOperatorName() {
+    return NAME;
+  }
+
+
 }

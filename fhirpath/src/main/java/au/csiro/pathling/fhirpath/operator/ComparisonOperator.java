@@ -62,4 +62,9 @@ public class ComparisonOperator implements BinaryOperator {
     );
   }
 
+  @Override
+  @Nonnull
+  public String getOperatorName() {
+    return type.toString();
+  }
 }

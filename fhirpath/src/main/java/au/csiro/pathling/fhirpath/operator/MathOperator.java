@@ -82,5 +82,10 @@ public class MathOperator implements BinaryOperator {
     final Numeric rightNumeric = (Numeric) right;
     return leftNumeric.getMathOperation(type).apply(rightNumeric);
   }
-
+  
+  @Override
+  @Nonnull
+  public String getOperatorName() {
+    return type.toString();
+  }
 }

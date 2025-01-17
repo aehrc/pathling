@@ -71,4 +71,9 @@ public class DateArithmeticOperator implements BinaryOperator {
   //       .apply(calendarDuration);
   // }
 
+  @Override
+  @Nonnull
+  public String getOperatorName() {
+    return type.toString();
+  }
 }

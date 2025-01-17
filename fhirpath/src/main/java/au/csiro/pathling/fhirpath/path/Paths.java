@@ -41,7 +41,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 @UtilityClass
 final public class Paths {
-  
+
   @Value
   public static class ExternalConstantPath implements FhirPath {
 
@@ -94,6 +94,14 @@ final public class Paths {
     public Stream<FhirPath> children() {
       return Stream.of(leftPath, rightPath);
     }
+
+    @Override
+    @Nonnull
+    public String toExpression() {
+      return leftPath.toExpression() + " " + operator.getOperatorName() + " "
+          + rightPath.toExpression();
+    }
+
   }
 
   @Value

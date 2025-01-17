@@ -76,4 +76,11 @@ public class MethodDefinedOperator implements BinaryOperator {
 
   }
 
+  @Override
+  @Nonnull
+  public String getOperatorName() {
+    // TODO: Get it from the annotation
+    return method.getName();
+  }
+
 }

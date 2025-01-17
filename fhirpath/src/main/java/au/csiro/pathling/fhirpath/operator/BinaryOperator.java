@@ -36,4 +36,9 @@ public interface BinaryOperator {
   @Nonnull
   Collection invoke(@Nonnull BinaryOperatorInput input);
 
+
+  @Nonnull
+  default String getOperatorName() {
+    return this.getClass().getSimpleName();
+  }
 }
