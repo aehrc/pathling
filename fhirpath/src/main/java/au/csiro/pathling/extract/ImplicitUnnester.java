@@ -94,8 +94,10 @@ public class ImplicitUnnester {
     }
   }
 
-  private final static Set<String> AGG_FUNCTIONS = Set.of("count", "sum", "first", "exists");
+  private final static Set<String> AGG_FUNCTIONS = Set.of(
+      "count", "sum", "first", "exists", "where");
 
+  // Quite possibly all functions should be treated as aggregate functions
   static boolean isAggregate(@Nonnull final FhirPath path) {
     return (path.first() instanceof Paths.EvalFunction evalFunction)
         && AGG_FUNCTIONS.contains(evalFunction.getFunctionIdentifier());
