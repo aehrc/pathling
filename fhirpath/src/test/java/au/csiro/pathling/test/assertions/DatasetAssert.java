@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MultiSet;
@@ -104,13 +105,28 @@ public class DatasetAssert {
     return hasRowsUnordered(Arrays.asList(expected));
   }
 
+  private static class MyMultiSet<T> extends HashMultiSet<T> {
+
+    public MyMultiSet(@Nonnull final Collection<T> collection) {
+      super(collection);
+    }
+
+    @Override
+    public String toString() {
+      return entrySet().stream()
+          .map(Object::toString)
+          .sorted()
+          .collect(Collectors.joining("\n"));
+    }
+  }
+
   @Nonnull
   private DatasetAssert hasRowsUnordered(@Nonnull final Collection<Row> expected) {
     if (expected.isEmpty() && dataset.isEmpty()) {
       return this;
     }
-    final MultiSet<Row> actualRows = new HashMultiSet<>(dataset.collectAsList());
-    final MultiSet<Row> expectedRows = new HashMultiSet<>(expected);
+    final MultiSet<Row> actualRows = new MyMultiSet<>(dataset.collectAsList());
+    final MultiSet<Row> expectedRows = new MyMultiSet<>(expected);
     assertEquals(expectedRows, actualRows);
     return this;
   }
