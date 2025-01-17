@@ -9,8 +9,6 @@ import jakarta.annotation.Nonnull;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-// TODO: Maybe we should build a nesting three structure first 
-//  and only then convert it to a projection clause
 public class ImplicitUnnesterTest {
 
 
@@ -53,11 +51,9 @@ public class ImplicitUnnesterTest {
                 node("given"),
                 node("family")
             ),
-            node("maritalStatus",
-                node("coding",
-                    node("system"),
-                    node("code")
-                )
+            node("maritalStatus.coding",
+                node("system"),
+                node("code")
             )
         ),
         projection
@@ -94,6 +90,51 @@ public class ImplicitUnnesterTest {
         projection
     );
   }
+
+
+  @Test
+  void testNonBranchedPathsShouldNotBeUnnested() {
+    final List<String> columns = List.of(
+        "id",
+        "name.given.count()"
+    );
+    final Tree<FhirPath> projection = toProjection(columns);
+    // this should be 
+    // id
+    // name
+    //   given
+    //   family
+    // name.count()
+    // name.exists()
+    assertTreeEquals(
+        node("%resource",
+            node("id"),
+            node("name.given.count()")
+        ),
+        projection
+    );
+  }
+
+  @Test
+  void testMixedNestedAggAndValue() {
+    final List<String> columns = List.of(
+        "id",
+        "name.family",
+        "name.given.count()"
+    );
+    final Tree<FhirPath> projection = toProjection(columns);
+    assertTreeEquals(
+        node("%resource",
+            node("id"),
+            node("name",
+                node("family"),
+                node("given.count()")
+            )
+        ),
+        projection
+    );
+  }
+
 
   @Test
   void testNestedSimpleAndNestedAggregateColumns() {

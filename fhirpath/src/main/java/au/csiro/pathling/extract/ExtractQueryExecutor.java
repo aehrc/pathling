@@ -1,8 +1,6 @@
 package au.csiro.pathling.extract;
 
 import static au.csiro.pathling.utilities.Strings.randomAlias;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.QueryExecutor;
@@ -10,6 +8,7 @@ import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.fhirpath.path.Paths.This;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.query.ExpressionWithLabel;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -24,9 +23,7 @@ import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -158,33 +155,35 @@ public class ExtractQueryExecutor extends QueryExecutor {
         constraint);
   }
 
+  static UnnestingSelection fromTree(@Nonnull final Tree<FhirPath> tree) {
+    if (tree instanceof Tree.Leaf<FhirPath> leaf) {
+      // for each leaf we create an unnesting selection with $this as the path
+      return new UnnestingSelection(leaf.getValue(), List.of(
+          new ColumnSelection(
+              List.of(
+                  new RequestedColumn(new This(), randomAlias(), false, Optional.empty())
+              ))
+      ), true);
+    } else if (tree instanceof Tree.Node<FhirPath> node) {
+      // each node represents an unnesting selection of its children
+      return new UnnestingSelection(node.getValue(), node.getChildren().stream()
+          .map(ExtractQueryExecutor::fromTree)
+          .collect(toList()), true);
+    } else {
+      throw new IllegalArgumentException("Unknown tree type: " + tree.getClass());
+    }
+  }
+
   @Nonnull
   static ProjectionClause buildSelectClause(@Nonnull final List<FhirPath> paths) {
     if (paths.isEmpty()) {
       throw new IllegalArgumentException("Empty column list");
     }
-
-    // If there is only one path, and it is a reference to $this, return a simple column selection.
-    // This is the terminal state of the recursion.
-    if (paths.size() == 1 && paths.get(0).isNull()) {
-      final RequestedColumn requestedColumn = new RequestedColumn(paths.get(0),
-          randomAlias(), false, Optional.empty());
-      return new ColumnSelection(List.of(requestedColumn));
-    }
-
-    // Group the paths by their first element. We use a LinkedHashMap to preserve the order.
-    final Map<FhirPath, List<FhirPath>> groupedPaths = paths.stream()
-        .collect(
-            groupingBy(FhirPath::first, LinkedHashMap::new, mapping(FhirPath::suffix, toList())));
-
-    final List<ProjectionClause> selects = groupedPaths.entrySet().stream()
-        .map(entry -> {
-          // we need to split the suffixed by aggregated and non aggregated
-          ProjectionClause tail = buildSelectClause(entry.getValue());
-          return new UnnestingSelection(entry.getKey(), List.of(tail), true);
-        })
-        .collect(toList());
-
+    final Tree<FhirPath> unnestingTree = new ImplicitUnnester().unnestPaths(paths);
+    log.debug("Unnested tree:\n{}", unnestingTree.map(FhirPath::toExpression).toTreeString());
+    // this should be a selection for the resource with the unnesting tree
+    final UnnestingSelection resourceSelection = fromTree(unnestingTree);
+    final List<ProjectionClause> selects = resourceSelection.getComponents();
     // If there is more than one select, return a GroupingSelection.
     // Otherwise, return the single select by itself.
     return selects.size() > 1

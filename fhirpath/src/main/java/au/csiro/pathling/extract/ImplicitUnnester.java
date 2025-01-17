@@ -42,6 +42,19 @@ public class ImplicitUnnester {
   }
 
   @Nonnull
+  private static Tree<FhirPath> maybeUnnestingNode(
+      @Nonnull final FhirPath prefix,
+      @Nonnull final List<Tree<FhirPath>> children) {
+    if (children.isEmpty()) {
+      return Tree.Leaf.of(prefix);
+    } else if (children.size() == 1) {
+      return children.get(0).mapValue(prefix::andThen);
+    } else {
+      return Tree.node(prefix, children);
+    }
+  }
+
+  @Nonnull
   List<Tree<FhirPath>> unnestPathsInternal(@Nonnull final List<FhirPath> paths) {
     log.trace("Unnesting paths: {}", asExpressions(paths));
     if (paths.isEmpty()) {
@@ -72,7 +85,8 @@ public class ImplicitUnnester {
                 final Stream<Tree<FhirPath>> unnestedNodesStream =
                     suffixesToUnnest.isEmpty()
                     ? Stream.empty()
-                    : Stream.of(Tree.node(entry.getKey(), unnestPathsInternal(suffixesToUnnest)));
+                    : Stream.of(maybeUnnestingNode(entry.getKey(),
+                        unnestPathsInternal(suffixesToUnnest)));
                 final List<Tree<FhirPath>> unnestNodes = unnestedNodesStream.toList();
                 return Stream.concat(unnestNodes.stream(), aggNodes.stream());
               }
