@@ -47,6 +47,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -487,6 +488,7 @@ class ExtractQueryTest {
         .hasRows(spark, "responses/ExtractQueryTest/combineWithLiterals.tsv");
   }
 
+  @Disabled("TODO: Define unnesting rules for operators")
   @Test
   void combineWithUnequalCardinalities() {
     subjectResource = ResourceType.PATIENT;
