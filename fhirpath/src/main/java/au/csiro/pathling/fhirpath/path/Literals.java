@@ -41,9 +41,13 @@ import java.text.ParseException;
 @UtilityClass
 public class Literals {
 
+  public interface LiteralPath extends FhirPath {
+
+  }
+
 
   @Value
-  public static class NullLiteral implements FhirPath {
+  public static class NullLiteral implements LiteralPath {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
@@ -59,7 +63,7 @@ public class Literals {
   }
 
   @Value
-  public static class StringLiteral implements FhirPath {
+  public static class StringLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -78,7 +82,7 @@ public class Literals {
   }
 
   @Value
-  public static class BooleanLiteral implements FhirPath {
+  public static class BooleanLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -97,7 +101,7 @@ public class Literals {
   }
 
   @Value
-  public static class CodingLiteral implements FhirPath {
+  public static class CodingLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -120,7 +124,7 @@ public class Literals {
   }
 
   @Value
-  public static class CalendarDurationLiteral implements FhirPath {
+  public static class CalendarDurationLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -139,7 +143,7 @@ public class Literals {
   }
 
   @Value
-  public static class UcumQuantityLiteral implements FhirPath {
+  public static class UcumQuantityLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -165,7 +169,7 @@ public class Literals {
    * Date literal.
    */
   @Value
-  public static class DateLiteral implements FhirPath {
+  public static class DateLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -191,7 +195,7 @@ public class Literals {
    * DateTime literal.
    */
   @Value
-  public static class DateTimeLiteral implements FhirPath {
+  public static class DateTimeLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -217,7 +221,7 @@ public class Literals {
    * Time literal.
    */
   @Value
-  public static class TimeLiteral implements FhirPath {
+  public static class TimeLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -239,7 +243,7 @@ public class Literals {
    * Integer literal.
    */
   @Value
-  public static class IntegerLiteral implements FhirPath {
+  public static class IntegerLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -261,7 +265,7 @@ public class Literals {
    * Decimal literal.
    */
   @Value
-  public static class DecimalLiteral implements FhirPath {
+  public static class DecimalLiteral implements LiteralPath {
 
     @Nonnull
     String value;

@@ -27,6 +27,7 @@ import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator.ManyFactory;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.fhirpath.path.Literals.LiteralPath;
 import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
@@ -187,6 +188,8 @@ public class AggregateQueryExecutor extends QueryExecutor {
           return functions::first;
         }
       }
+    } else if (tail instanceof LiteralPath) {
+      return functions::first;
     }
     // by default collect all the values to a list
     return c -> ValueFunctions.unnest(functions.collect_list(c));
