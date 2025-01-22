@@ -46,7 +46,6 @@ import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers.TranslateExpectations;
 import java.util.List;
-import org.apache.spark.sql.execution.SparkPlan;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Assertions;
@@ -248,40 +247,7 @@ public class ParserTest extends AbstractParserTest {
   //       .hasExpression("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S|v1")
   //       .hasCodingValue(expectedCodingWithVersion);
   // }
-
-
-  @Test
-  void testBasicReverseResolve() {
-    mockResource(ResourceType.PATIENT, ResourceType.CONDITION);
-
-    final SparkPlan p = assertThatResultOf(
-        "reverseResolve(Condition.subject).code.coding")
-        //.isElementPath(IntegerCollection.class)
-        //.isSingular()
-        .selectOrderedResult()
-        .debugAllRows()
-        .getDataset().queryExecution().executedPlan();
-
-    System.out.println(p);
-  }
-
-
-  @Test
-  void testBasicResolve() {
-    mockResource(ResourceType.ENCOUNTER, ResourceType.CONDITION);
-
-    final SparkPlan p = assertThatResultOf(ResourceType.CONDITION,
-        "encounter.resolve().status")
-        //.isElementPath(IntegerCollection.class)
-        //.isSingular()
-        .selectOrderedResult()
-        .debugAllRows()
-        .getDataset().queryExecution().executedPlan();
-
-    System.out.println(p);
-  }
-
-
+  
   @Test
   void testCountWithReverseResolve() {
     assertThatResultOf("reverseResolve(Condition.subject).code.coding.count()")

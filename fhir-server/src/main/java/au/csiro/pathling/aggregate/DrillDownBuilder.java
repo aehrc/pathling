@@ -92,7 +92,6 @@ public class DrillDownBuilder {
       final EvaluatedPath grouping = groupings.get(i);
       final Optional<Type> label = labels.get(i);
       if (label.isPresent()) {
-        System.out.println("label: " + label.get() + " grouping: " + label.get().getClass());
         final String literal = ((Materializable<Type>) grouping.getResult()).toLiteral(label.get());
         final String equality = grouping.isSingular()
                                 ? " = "
