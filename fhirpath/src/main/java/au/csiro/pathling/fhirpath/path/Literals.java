@@ -68,8 +68,7 @@ public final class Literals {
     @Nonnull
     @Override
     public String toExpression() {
-      // TODO: use a better conversion
-      return "'" + value + "'";
+      return value;
     }
   }
 

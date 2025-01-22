@@ -21,7 +21,6 @@ import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.Materializable;
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -105,14 +104,14 @@ public class AggregateExecutor extends AggregateQueryExecutor {
   @Nonnull
   @SuppressWarnings("unchecked")
   private Function<Row, AggregateResponse.Grouping> mapRowToGrouping(
-      @Nonnull final List<Collection> aggregations, @Nonnull final List<Collection> groupings,
-      @Nonnull final java.util.Collection<Collection> filters) {
+      @Nonnull final List<EvaluatedPath> aggregations, @Nonnull final List<EvaluatedPath> groupings,
+      @Nonnull final List<EvaluatedPath> filters) {
     return row -> {
       final List<Optional<Type>> labels = new ArrayList<>();
       final List<Optional<Type>> results = new ArrayList<>();
 
       for (int i = 0; i < groupings.size(); i++) {
-        final Materializable<Type> grouping = (Materializable<Type>) groupings.get(i);
+        final Materializable<Type> grouping = (Materializable<Type>) groupings.get(i).getResult();
         // Delegate to the `getValueFromRow` method within each Materializable path class to extract 
         // the Type value from the Row in the appropriate way.
         final Optional<Type> label = grouping.getFhirValueFromRow(row, i);
@@ -120,7 +119,8 @@ public class AggregateExecutor extends AggregateQueryExecutor {
       }
 
       for (int i = 0; i < aggregations.size(); i++) {
-        final Materializable<Type> aggregation = (Materializable<Type>) aggregations.get(i);
+        final Materializable<Type> aggregation = (Materializable<Type>) aggregations.get(i)
+            .getResult();
         // Delegate to the `getValueFromRow` method within each Materializable path class to extract 
         // the Type value from the Row in the appropriate way.
         final Optional<Type> result = aggregation.getFhirValueFromRow(row, i + groupings.size());
@@ -128,7 +128,8 @@ public class AggregateExecutor extends AggregateQueryExecutor {
       }
 
       // Build a drill-down FHIRPath expression for inclusion with the returned grouping.
-      final Optional<String> drillDown = new DrillDownBuilder(labels, groupings, filters).build();
+      final Optional<String> drillDown = new DrillDownBuilder(labels, groupings,
+          filters).build();
 
       return new AggregateResponse.Grouping(labels, results, drillDown);
     };

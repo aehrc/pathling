@@ -24,7 +24,6 @@ import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator.ManyFactory;
 import au.csiro.pathling.fhirpath.parser.Parser;
@@ -109,12 +108,10 @@ public class AggregateQueryExecutor extends QueryExecutor {
         fhirContext, dataSource,
         contextPaths).create(query.getSubjectResource());
 
-    final List<Collection> evaluatedFilters = filterPaths.stream()
-        .map(fhirEvaluator::evaluate)
-        .toList();
+    final List<EvaluatedPath> evaluatedFilters = evalPaths(filterPaths, fhirEvaluator);
 
     final Optional<Column> maybeFilter = evaluatedFilters.stream()
-        .map(Collection::getColumnValue)
+        .map(EvaluatedPath::getColumnValue)
         .reduce(Column::and);
 
     final Dataset<Row> filteredDataset = maybeFilter.map(
@@ -124,13 +121,8 @@ public class AggregateQueryExecutor extends QueryExecutor {
     // compute aggregation bases 
     // TODO: for now assume that the last element on the path is the aggregation function
 
-    final List<Collection> evaluatedGoupings = grouppingPaths.stream()
-        .map(fhirEvaluator::evaluate)
-        .toList();
-
-    final List<Collection> evaluatedAggs = aggPaths.stream()
-        .map(fhirEvaluator::evaluate)
-        .toList();
+    final List<EvaluatedPath> evaluatedGoupings = evalPaths(grouppingPaths, fhirEvaluator);
+    final List<EvaluatedPath> evaluatedAggs = evalPaths(aggPaths, fhirEvaluator);
 
     final Dataset<Row> inputDataset = filteredDataset.select(
         Stream.of(evaluatedGoupings, evaluatedAggs)
@@ -173,8 +165,11 @@ public class AggregateQueryExecutor extends QueryExecutor {
         .groupBy(groupingColumms)
         .agg(aggExpr.get(0), aggExpr.subList(1, aggExpr.size()).toArray(new Column[0]));
 
-    return new ResultWithExpressions(resultDataset, evaluatedAggs, evaluatedGoupings,
-        evaluatedFilters);
+    return new ResultWithExpressions(resultDataset,
+        evaluatedAggs.stream().map(p -> p.bind(filteredDataset)).toList(),
+        evaluatedGoupings.stream().map(p -> p.bind(filteredDataset)).toList(),
+        evaluatedFilters
+    );
   }
 
 
@@ -198,6 +193,15 @@ public class AggregateQueryExecutor extends QueryExecutor {
   }
 
 
+  @Nonnull
+  List<EvaluatedPath> evalPaths(@Nonnull final List<FhirPath> paths,
+      @Nonnull final FhirpathEvaluator fhirEvaluator) {
+    return paths.stream()
+        .map(p -> EvaluatedPath.of(p, fhirEvaluator.evaluate(p)))
+        .toList();
+  }
+
+
   @Value
   public static class ResultWithExpressions {
 
@@ -205,13 +209,13 @@ public class AggregateQueryExecutor extends QueryExecutor {
     Dataset<Row> dataset;
 
     @Nonnull
-    List<Collection> parsedAggregations;
+    List<EvaluatedPath> parsedAggregations;
 
     @Nonnull
-    List<Collection> parsedGroupings;
+    List<EvaluatedPath> parsedGroupings;
 
     @Nonnull
-    java.util.Collection<Collection> parsedFilters;
+    List<EvaluatedPath> parsedFilters;
 
   }
 }

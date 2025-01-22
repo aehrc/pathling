@@ -43,4 +43,16 @@ public interface Materializable<T extends Type> {
   @Nonnull
   Optional<T> getFhirValueFromRow(@Nonnull Row row, int columnNumber);
 
+
+  /**
+   * Converts a FHIR value to a literal string representation.
+   *
+   * @param value the FHIR value to convert
+   * @return the literal string representation
+   */
+  @Nonnull
+  default String toLiteral(@Nonnull T value) {
+    return value.primitiveValue();
+  }
+
 }

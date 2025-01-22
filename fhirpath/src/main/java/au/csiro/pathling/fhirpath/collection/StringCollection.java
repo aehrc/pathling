@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import au.csiro.pathling.fhirpath.literal.StringLiteral;
 import au.csiro.pathling.fhirpath.operator.Comparable;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
@@ -288,6 +289,12 @@ public class StringCollection extends Collection implements Materializable<Primi
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
     return path instanceof StringCollection || super.isComparableTo(path);
+  }
+  
+  @Override
+  @Nonnull
+  public String toLiteral(@Nonnull final PrimitiveType value) {
+    return StringLiteral.toLiteral(value.getValueAsString());
   }
 
 }

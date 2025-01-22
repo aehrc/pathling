@@ -508,4 +508,6 @@ public class Collection implements Comparable, Numeric {
       throw new IllegalStateException("Both types and fhir types are empty");
     }
   }
+
+
 }

@@ -74,7 +74,7 @@ public class ExistenceFunctions {
   @FhirPathFunction
   @Nonnull
   public static IntegerCollection count(@Nonnull final Collection input) {
-    return IntegerCollection.build(input.getColumn().count());
+    return IntegerCollection.buildUnsigned(input.getColumn().count());
   }
 
 
@@ -90,7 +90,7 @@ public class ExistenceFunctions {
   public static Collection sum(@Nonnull final Collection input) {
     return input.map(ColumnRepresentation::sum);
   }
-  
+
   /**
    * Takes a collection of Boolean values and returns {@code true} if all the items are
    * {@code true}. If any items are {@code false}, the result is {@code false}.
