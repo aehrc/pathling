@@ -300,7 +300,9 @@ public class ParserTest extends AbstractParserTest {
   void testCount() {
     final DatasetBuilder expectedCountResult =
         allPatientsWithValue(spark, 1L)
-            .changeValue(PATIENT_ID_9360820c, 2L);
+            .changeValue(PATIENT_ID_9360820c, 2L)
+            .changeValue(PATIENT_ID_8ee183e2, 2L);
+
     assertThatResultOf("name.count()")
         .selectOrderedResult()
         .hasRows(expectedCountResult);
@@ -311,11 +313,16 @@ public class ParserTest extends AbstractParserTest {
 
     assertThatResultOf("name.given.count()")
         .selectOrderedResult()
-        .hasRows(expectedCountResult);
+        .hasRows(expectedCountResult
+            .changeValue(PATIENT_ID_8ee183e2, 3L)
+        );
 
     assertThatResultOf("name.prefix.count()")
         .selectOrderedResult()
-        .hasRows(expectedCountResult.changeValue(PATIENT_ID_bbd33563, 0L));
+        .hasRows(expectedCountResult
+            .changeValue(PATIENT_ID_8ee183e2, 2L)
+            .changeValue(PATIENT_ID_bbd33563, 0L)
+        );
   }
 
   @Test
