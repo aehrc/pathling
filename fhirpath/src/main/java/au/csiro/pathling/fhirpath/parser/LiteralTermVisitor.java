@@ -19,13 +19,7 @@ package au.csiro.pathling.fhirpath.parser;
 
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.collection.DateCollection;
-import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
-import au.csiro.pathling.fhirpath.collection.DecimalCollection;
-import au.csiro.pathling.fhirpath.collection.IntegerCollection;
-import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.BooleanLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.CodingLiteralContext;
@@ -39,12 +33,16 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TimeLiteralCon
 import au.csiro.pathling.fhirpath.path.Literals.BooleanLiteral;
 import au.csiro.pathling.fhirpath.path.Literals.CalendarDurationLiteral;
 import au.csiro.pathling.fhirpath.path.Literals.CodingLiteral;
+import au.csiro.pathling.fhirpath.path.Literals.DateLiteral;
+import au.csiro.pathling.fhirpath.path.Literals.DateTimeLiteral;
+import au.csiro.pathling.fhirpath.path.Literals.DecimalLiteral;
+import au.csiro.pathling.fhirpath.path.Literals.IntegerLiteral;
 import au.csiro.pathling.fhirpath.path.Literals.NullLiteral;
 import au.csiro.pathling.fhirpath.path.Literals.StringLiteral;
+import au.csiro.pathling.fhirpath.path.Literals.TimeLiteral;
 import au.csiro.pathling.fhirpath.path.Literals.UcumQuantityLiteral;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.text.ParseException;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 /**
@@ -59,22 +57,13 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   public FhirPath visitStringLiteral(
       @Nullable final StringLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    requireNonNull(fhirPath);
-    return new StringLiteral(fhirPath);
+    return new StringLiteral(requireNonNull(fhirPath));
   }
 
   @Override
   public FhirPath visitDateLiteral(@Nullable final DateLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    requireNonNull(fhirPath);
-
-    return (input, context) -> {
-      try {
-        return DateCollection.fromLiteral(fhirPath);
-      } catch (final ParseException e) {
-        throw new InvalidUserInputError("Unable to parse date format: " + fhirPath);
-      }
-    };
+    return new DateLiteral(requireNonNull(fhirPath));
   }
 
   @Override
@@ -82,46 +71,28 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   public FhirPath visitDateTimeLiteral(
       @Nullable final DateTimeLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    requireNonNull(fhirPath);
+    return new DateTimeLiteral(requireNonNull(fhirPath));
 
-    return (input, context) -> {
-      try {
-        return DateTimeCollection.fromLiteral(fhirPath);
-      } catch (final ParseException e) {
-        throw new InvalidUserInputError("Unable to parse date/time format: " + fhirPath);
-      }
-    };
   }
 
   @Override
   @Nonnull
   public FhirPath visitTimeLiteral(@Nullable final TimeLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    requireNonNull(fhirPath);
-
-    return (input, context) -> TimeCollection.fromLiteral(fhirPath);
+    return new TimeLiteral(requireNonNull(fhirPath));
   }
 
   @Override
   @Nonnull
   public FhirPath visitNumberLiteral(
       @Nullable final NumberLiteralContext ctx) {
-    @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    requireNonNull(fhirPath);
-
-    return (input, context) -> {
-      // The FHIRPath grammar lumps these two types together, so we tease them apart by trying to 
-      // parse them.
-      try {
-        return IntegerCollection.fromLiteral(fhirPath);
-      } catch (final NumberFormatException e) {
-        try {
-          return DecimalCollection.fromLiteral(fhirPath);
-        } catch (final NumberFormatException ex) {
-          throw new InvalidUserInputError("Invalid date format: " + fhirPath);
-        }
-      }
-    };
+    final String fhirPath = requireNonNull(requireNonNull(ctx).getText());
+    try {
+      Integer.parseInt(fhirPath);
+      return new IntegerLiteral(fhirPath);
+    } catch (final NumberFormatException e) {
+      return new DecimalLiteral(fhirPath);
+    }
   }
 
   @Override

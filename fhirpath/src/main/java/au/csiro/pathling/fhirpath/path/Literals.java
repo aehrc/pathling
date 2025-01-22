@@ -24,17 +24,22 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.DateCollection;
+import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
+import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import jakarta.annotation.Nonnull;
 import lombok.Value;
+import lombok.experimental.UtilityClass;
 import org.fhir.ucum.UcumException;
+import java.text.ParseException;
 
-public final class Literals {
-
-  private Literals() {
-  }
+@UtilityClass
+public class Literals {
 
 
   @Value
@@ -147,6 +152,124 @@ public final class Literals {
       } catch (final UcumException e) {
         throw new RuntimeException(e);
       }
+    }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return value;
+    }
+  }
+
+  /**
+   * Date literal.
+   */
+  @Value
+  public static class DateLiteral implements FhirPath {
+
+    @Nonnull
+    String value;
+
+    @Override
+    public DateCollection apply(@Nonnull final Collection input,
+        @Nonnull final EvaluationContext context) {
+      try {
+        return DateCollection.fromLiteral(value);
+      } catch (final ParseException e) {
+        throw new InvalidUserInputError("Unable to parse date format: " + value);
+      }
+    }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return value;
+    }
+  }
+
+  /**
+   * DateTime literal.
+   */
+  @Value
+  public static class DateTimeLiteral implements FhirPath {
+
+    @Nonnull
+    String value;
+
+    @Override
+    public DateTimeCollection apply(@Nonnull final Collection input,
+        @Nonnull final EvaluationContext context) {
+      try {
+        return DateTimeCollection.fromLiteral(value);
+      } catch (final ParseException e) {
+        throw new InvalidUserInputError("Unable to parse date/time format: " + value);
+      }
+    }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return value;
+    }
+  }
+
+  /**
+   * Time literal.
+   */
+  @Value
+  public static class TimeLiteral implements FhirPath {
+
+    @Nonnull
+    String value;
+
+    @Override
+    public TimeCollection apply(@Nonnull final Collection input,
+        @Nonnull final EvaluationContext context) {
+      return TimeCollection.fromLiteral(value);
+    }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return value;
+    }
+  }
+
+  /**
+   * Integer literal.
+   */
+  @Value
+  public static class IntegerLiteral implements FhirPath {
+
+    @Nonnull
+    String value;
+
+    @Override
+    public IntegerCollection apply(@Nonnull final Collection input,
+        @Nonnull final EvaluationContext context) {
+      return IntegerCollection.fromLiteral(value);
+    }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return value;
+    }
+  }
+
+  /**
+   * Decimal literal.
+   */
+  @Value
+  public static class DecimalLiteral implements FhirPath {
+
+    @Nonnull
+    String value;
+
+    @Override
+    public DecimalCollection apply(@Nonnull final Collection input,
+        @Nonnull final EvaluationContext context) {
+      return DecimalCollection.fromLiteral(value);
     }
 
     @Nonnull
