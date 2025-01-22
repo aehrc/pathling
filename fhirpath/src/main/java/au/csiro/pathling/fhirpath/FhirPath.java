@@ -71,11 +71,21 @@ public interface FhirPath {
       throw new IllegalArgumentException("Non-empty child list passed to zero arg FhirPath");
     }
   }
-  
+
 
   @Nonnull
   default String toExpression() {
     return toString();
+  }
+
+  /**
+   * Converts the FHIRPath expression that can be uses a term in a FHIRPath expression.
+   *
+   * @return the FHIRPath expression
+   */
+  @Nonnull
+  default String toTermExpression() {
+    return toExpression();
   }
 
   @Nonnull
@@ -199,7 +209,7 @@ public interface FhirPath {
     @Override
     public String toExpression() {
       return elements.stream()
-          .map(FhirPath::toExpression)
+          .map(FhirPath::toTermExpression)
           .collect(Collectors.joining("."));
     }
 

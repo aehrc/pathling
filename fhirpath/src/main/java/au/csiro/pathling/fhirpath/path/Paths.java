@@ -23,7 +23,6 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.function.FunctionInput;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
@@ -98,10 +97,15 @@ final public class Paths {
     @Override
     @Nonnull
     public String toExpression() {
-      return leftPath.toExpression() + " " + operator.getOperatorName() + " "
-          + rightPath.toExpression();
+      return leftPath.toTermExpression() + " " + operator.getOperatorName() + " "
+          + rightPath.toTermExpression();
     }
 
+    @Override
+    @Nonnull
+    public String toTermExpression() {
+      return "(" + toExpression() + ")";
+    }
   }
 
   @Value
@@ -220,26 +224,6 @@ final public class Paths {
     @Override
     public String toExpression() {
       return "$this";
-    }
-  }
-
-  // TODO: Replace with Literal::StringLiteral
-  @Value
-  public static class StringLiteral implements FhirPath {
-
-    String value;
-
-    @Override
-    public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      return StringCollection.fromLiteral(value);
-    }
-
-    @Nonnull
-    @Override
-    public String toExpression() {
-      // TODO: use a better conversion
-      return "'" + value + "'";
     }
   }
 }
