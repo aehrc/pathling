@@ -138,4 +138,9 @@ public class DateCollection extends Collection implements Materializable<DateTyp
     return map(ColumnRepresentation::asString, StringCollection::build);
   }
 
+  @Override
+  @Nonnull
+  public String toLiteral(@Nonnull final DateType value) {
+    return "@" + value.getValueAsString();
+  }
 }

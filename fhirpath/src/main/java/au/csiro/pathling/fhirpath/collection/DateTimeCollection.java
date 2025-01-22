@@ -186,4 +186,9 @@ public class DateTimeCollection extends Collection implements
     return StringCollection.build(valueColumn);
   }
 
+  @Override
+  @Nonnull
+  public String toLiteral(@Nonnull final BaseDateTimeType value) {
+    return "@" + value.getValueAsString();
+  }
 }

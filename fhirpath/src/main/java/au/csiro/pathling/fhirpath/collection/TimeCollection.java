@@ -116,4 +116,9 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
     return path instanceof TimeCollection || super.isComparableTo(path);
   }
 
+  @Override
+  @Nonnull
+  public String toLiteral(@Nonnull final TimeType value) {
+    return "@T" + value.getValueAsString();
+  }
 }
