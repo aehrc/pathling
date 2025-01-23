@@ -21,23 +21,21 @@ import static au.csiro.pathling.utilities.Strings.randomAlias;
 
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
-import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator.ManyFactory;
+import au.csiro.pathling.fhirpath.execution.SingleFhirpathEvaluator;
+import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.fhirpath.path.Literals.LiteralPath;
-import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
+import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -54,7 +52,6 @@ import org.apache.spark.sql.types.ArrayType;
  * @author John Grimes
  */
 @Slf4j
-@NotImplemented
 public class AggregateQueryExecutor extends QueryExecutor {
 
   @Nonnull
@@ -123,10 +120,13 @@ public class AggregateQueryExecutor extends QueryExecutor {
     // TODO: for now assume that the last element on the path is the aggregation function
 
     final List<EvaluatedPath> evaluatedGoupings = evalPaths(grouppingPaths, fhirEvaluator);
-    final List<EvaluatedPath> evaluatedAggs = evalPaths(aggPaths, fhirEvaluator);
+
+    // get the current resource
+    final List<EvaluatedPath> evaluatedValues = evalPaths(List.of(new Paths.This()),
+        fhirEvaluator);
 
     final Dataset<Row> inputDataset = filteredDataset.select(
-        Stream.of(evaluatedGoupings, evaluatedAggs)
+        Stream.of(evaluatedValues, evaluatedGoupings)
             .flatMap(List::stream)
             .map(c -> c.getColumnValue().alias(randomAlias()))
             .toArray(Column[]::new)
@@ -146,25 +146,31 @@ public class AggregateQueryExecutor extends QueryExecutor {
     // The combiner function is used to aggregate partial aggregation results from agg fhirpaths.
     // For example for `count()` the aggregation is SQL SUM(), for 
 
-    final Column[] groupingColumms = Stream.of(expandeDataset.columns())
-        .limit(evaluatedGoupings.size())
+    final Column[] expandedColumns = Stream.of(expandeDataset.columns())
         .map(expandeDataset::col)
         .toArray(Column[]::new);
 
-    final Column[] aggColumns = Stream.of(expandeDataset.columns())
-        .skip(evaluatedGoupings.size())
-        .map(expandeDataset::col)
+    final Column[] groupingColumns = Stream.of(expandedColumns)
+        .skip(1)
         .toArray(Column[]::new);
 
-    // apply the appropriate combiner functions to each of the aggregation columns
-    final List<Column> aggExpr =
-        IntStream.range(0, aggColumns.length)
-            .mapToObj(i -> getCombiner(aggPaths.get(i)).apply(aggColumns[i]))
-            .toList();
+    final FhirpathEvaluator aggEvaluator = SingleFhirpathEvaluator.of(query.getSubjectResource(),
+        fhirContext,
+        StaticFunctionRegistry.getInstance(),
+        Map.of(), dataSource);
 
-    final Dataset<Row> resultDataset = expandeDataset
-        .groupBy(groupingColumms)
-        .agg(aggExpr.get(0), aggExpr.subList(1, aggExpr.size()).toArray(new Column[0]));
+    //then we need to group by the grouping columns and collect the resource column to a list
+    final Dataset<Row> grouppedAggSource = expandeDataset.groupBy(groupingColumns)
+        .agg(functions.collect_list(expandedColumns[0]).alias(query.getSubjectResource().toCode()));
+
+    final List<EvaluatedPath> evaluatedAggs = evalPaths(aggPaths, aggEvaluator);
+    final Column[] aggColumns = evaluatedAggs.stream()
+        .map(c -> c.getColumnValue().alias(randomAlias()))
+        .toArray(Column[]::new);
+
+    final Dataset<Row> resultDataset = grouppedAggSource
+        .select(Stream.concat(Stream.of(groupingColumns), Stream.of(aggColumns))
+            .toArray(Column[]::new));
 
     return new ResultWithExpressions(resultDataset,
         evaluatedAggs.stream().map(p -> p.bind(filteredDataset)).toList(),
@@ -172,30 +178,7 @@ public class AggregateQueryExecutor extends QueryExecutor {
         evaluatedFilters
     );
   }
-
-
-  @Nonnull
-  static Function<Column, Column> getCombiner(@Nonnull final FhirPath path) {
-    // TODO: include somehow in the definition of the function
-    // TODO: include all aggregation functions
-    final FhirPath tail = path.last();
-    if (tail instanceof final EvalFunction evalFunction) {
-      switch (evalFunction.getFunctionIdentifier()) {
-        case "count", "sum" -> {
-          return functions::sum;
-        }
-        case "first" -> {
-          return functions::first;
-        }
-      }
-    } else if (tail instanceof LiteralPath) {
-      return functions::first;
-    }
-    // by default collect all the values to a list
-    return c -> ValueFunctions.unnest(functions.collect_list(c));
-  }
-
-
+  
   @Nonnull
   List<EvaluatedPath> evalPaths(@Nonnull final List<FhirPath> paths,
       @Nonnull final FhirpathEvaluator fhirEvaluator) {
