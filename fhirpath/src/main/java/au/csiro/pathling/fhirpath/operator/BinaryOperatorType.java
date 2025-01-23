@@ -74,4 +74,67 @@ public enum BinaryOperatorType {
     return operatorType;
   }
 
+  // #01 . (path/function invocation)
+  // #02 [] (indexer)
+  // #03 unary + and -
+  // #04: *, /, div, mod
+  // #05: +, -, &
+  // #06: is, as
+  // #07: |
+  // #08: >, <, >=, <=
+  // #09: =, ~, !=, !~
+  // #10: in, contains
+  // #11: and
+  // #12: xor, or
+  // #13: implies  
+
+  private static final Map<String, Integer> PRECEDENCE =
+      new ImmutableMap.Builder<String, Integer>()
+          .put("*", 4)
+          .put("/", 4)
+          .put("div", 4)
+          .put("mod", 4)
+          .put("+", 5)
+          .put("-", 5)
+          .put("&", 5)
+          .put("is", 6)
+          .put("as", 6)
+          .put("|", 7)
+          .put("combine", 7)
+          .put(">", 8)
+          .put("<", 8)
+          .put(">=", 8)
+          .put("<=", 8)
+          .put("=", 9)
+          .put("~", 9)
+          .put("!=", 9)
+          .put("!~", 9)
+          .put("in", 10)
+          .put("contains", 10)
+          .put("and", 11)
+          .put("xor", 12)
+          .put("or", 12)
+          .put("implies", 13)
+          .build();
+
+  /**
+   * Compares the precedence of two operators. The result is negative if {@code op1} higher
+   * precedence than {@code op2}, zero if they have the same precedence, and positive if {@code op1}
+   * has lower precedence than {@code op2}.
+   * <p>
+   * Operators with higher precedence are evaluated before operators with lower and can be used in
+   * expressions without parentheses.
+   * <p>
+   * For example, {@code comparePrecedence("*", "+")} returns a negative value because the
+   * multiplication operator has higher precedence than the addition operator. This means that the
+   * expression {@code 1 + 2 * 3} is evaluated as {@code 1 + (2 * 3)}.
+   *
+   * @param op1 the symbol of the first operator
+   * @param op2 the symbol of the second operator
+   * @return an integer representing the relative precedence of the two operators
+   */
+  public static int comparePrecedence(@Nonnull final String op1,
+      @Nonnull final String op2) {
+    return PRECEDENCE.get(op1) - PRECEDENCE.get(op2);
+  }
 }

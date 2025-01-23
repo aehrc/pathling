@@ -28,6 +28,7 @@ import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
 import au.csiro.pathling.fhirpath.operator.BinaryOperator;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorInput;
+import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import jakarta.annotation.Nonnull;
 import java.util.Collections;
 import java.util.List;
@@ -97,14 +98,29 @@ final public class Paths {
     @Override
     @Nonnull
     public String toExpression() {
-      return leftPath.toTermExpression() + " " + operator.getOperatorName() + " "
-          + rightPath.toTermExpression();
+      return argToExpression(leftPath)
+          + " "
+          + operator.getOperatorName()
+          + " "
+          + argToExpression(rightPath);
     }
 
     @Override
     @Nonnull
     public String toTermExpression() {
       return "(" + toExpression() + ")";
+    }
+
+    @Nonnull
+    private String argToExpression(@Nonnull final FhirPath arg) {
+      if (arg instanceof EvalOperator opArg) {
+        return BinaryOperatorType.comparePrecedence(operator.getOperatorName(),
+            opArg.operator.getOperatorName()) >= 0
+               ? arg.toExpression()
+               : arg.toTermExpression();
+      } else {
+        return arg.toExpression();
+      }
     }
   }
 
