@@ -141,7 +141,7 @@ public class CodingCollection extends Collection implements Materializable<Codin
   public boolean isComparableTo(@Nonnull final Comparable path) {
     return path instanceof CodingCollection || super.isComparableTo(path);
   }
-  
+
   @Override
   @Nonnull
   public BiFunction<Column, Column, Column> getSqlComparator(@Nonnull final Comparable other,
@@ -160,5 +160,10 @@ public class CodingCollection extends Collection implements Materializable<Codin
   public StringCollection asStringPath() {
     return map(c -> c.transformWithUdf(CodingToLiteral.FUNCTION_NAME), StringCollection::build);
   }
-
+  
+  @Override
+  @Nonnull
+  public String toLiteral(@Nonnull final Coding value) {
+    return CodingLiteral.toLiteral(value);
+  }
 }
