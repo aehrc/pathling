@@ -372,6 +372,22 @@ public abstract class ColumnRepresentation {
     );
   }
 
+
+  /**
+   * Counts the distinct values in the current {@link ColumnRepresentation}.
+   *
+   * @return A new {@link ColumnRepresentation} that is the count of values
+   */
+  @Nonnull
+  public ColumnRepresentation countDistinct() {
+
+    return vectorize(
+        c -> when(c.isNull(), 0).otherwise(size(functions.array_distinct(c))),
+        c -> when(c.isNull(), 0).otherwise(1)
+    );
+  }
+
+
   /**
    * Checks if the current {@link ColumnRepresentation} is empty.
    *

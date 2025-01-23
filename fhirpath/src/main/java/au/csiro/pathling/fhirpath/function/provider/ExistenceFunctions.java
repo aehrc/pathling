@@ -5,6 +5,7 @@ import static java.util.Objects.nonNull;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
@@ -74,7 +75,13 @@ public class ExistenceFunctions {
   @FhirPathFunction
   @Nonnull
   public static IntegerCollection count(@Nonnull final Collection input) {
-    return IntegerCollection.buildUnsigned(input.getColumn().count());
+
+    // TODO: Review if this is really necessary and correct
+    return IntegerCollection.buildUnsigned(
+        input instanceof ResourceCollection
+        ? input.getColumn().traverse("id").countDistinct()
+        : input.getColumn().count()
+    );
   }
 
 
