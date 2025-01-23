@@ -111,14 +111,16 @@ class SingleResourceFhirpathTest {
         .hasRowsUnordered(expected);
   }
 
+
   @Test
   void nullHandlingTests() {
 
     final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
         List.of(
             new Patient()
-                .addName(new HumanName().setFamily("Kay").addGiven("Awee").setText("Awee Kay"))
-                .addName(new HumanName().setFamily("Kay").addGiven("Awee"))
+                .addName(new HumanName().setFamily("Kay").addGiven("Adam").addGiven("John"))
+                .addName(new HumanName().setFamily("Kay").addGiven("Peter"))
+                .addName(new HumanName().setFamily("Kay"))
                 .setId("1"),
             new Patient()
                 .addName(new HumanName().setFamily("Kay").addGiven("Awee"))
@@ -127,11 +129,11 @@ class SingleResourceFhirpathTest {
         ));
 
     final Dataset<Row> result = selectExpression(dataSource, ResourceType.PATIENT,
-        "name.text");
+        "name.given");
     new DatasetAssert(result)
         .hasRowsUnordered(
-            RowFactory.create("1", sql_array("Awee Kay")),
-            RowFactory.create("2", null),
+            RowFactory.create("1", sql_array("Adam", "John", "Peter")),
+            RowFactory.create("2", sql_array("Awee")),
             RowFactory.create("3", null)
         );
   }
