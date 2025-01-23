@@ -25,6 +25,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Describes a path that represents a numeric value, and can be the subject of math operations.
@@ -72,6 +73,16 @@ public interface Numeric {
    */
   @Nonnull
   Optional<FhirPathType> getType();
+
+
+  /**
+   * The FHIR type of the result of this Numeric, if known.
+   *
+   * @return The FHIR type of the result of this Numeric, if known.
+   */
+  @Nonnull
+  Optional<FHIRDefinedType> getFhirType();
+
 
   /**
    * Represents a type of math operator.

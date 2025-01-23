@@ -32,6 +32,7 @@ import au.csiro.pathling.fhirpath.operator.Comparable;
 import com.google.common.collect.ImmutableSet;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
@@ -51,6 +52,10 @@ import org.hl7.fhir.r4.model.UnsignedIntType;
 public class IntegerCollection extends Collection implements
     Materializable<PrimitiveType<?>>, Comparable, Numeric, StringCoercible {
 
+
+  private static final Set<FHIRDefinedType> INTEGER_TYPES = Set.of(FHIRDefinedType.INTEGER,
+      FHIRDefinedType.UNSIGNEDINT, FHIRDefinedType.POSITIVEINT);
+
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(IntegerCollection.class, DecimalCollection.class);
 
@@ -60,6 +65,11 @@ public class IntegerCollection extends Collection implements
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
+    fhirType.ifPresent(t -> {
+      if (!INTEGER_TYPES.contains(t)) {
+        throw new IllegalArgumentException("FHIR type must be an integer type");
+      }
+    });
   }
 
   /**
@@ -96,8 +106,20 @@ public class IntegerCollection extends Collection implements
    */
   @Nonnull
   public static IntegerCollection buildUnsigned(final ColumnRepresentation columnRepresentation) {
+    return build(columnRepresentation, FHIRDefinedType.UNSIGNEDINT);
+  }
+
+  /**
+   * Returns a new instance with the specified column representation and no definition with
+   * speficied FHIR type.
+   *
+   * @return A new instance of {@link IntegerCollection}
+   */
+  @Nonnull
+  public static IntegerCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
+      @Nonnull final FHIRDefinedType fhirType) {
     return new IntegerCollection(columnRepresentation, Optional.of(FhirPathType.INTEGER),
-        Optional.of(FHIRDefinedType.UNSIGNEDINT), Optional.empty(), Optional.empty());
+        Optional.of(fhirType), Optional.empty(), Optional.empty());
   }
 
   /**
@@ -251,7 +273,10 @@ public class IntegerCollection extends Collection implements
           if (target instanceof DecimalCollection) {
             valueColumn = valueColumn.cast(DataTypes.LongType);
           }
-          return IntegerCollection.build(new DefaultRepresentation(valueColumn));
+          // TODO: This is not correct as the FHIR type is not always the source type
+          //  and sometime cannot be detertmined  - most likely we should return this alwyas as INTEGER.
+          return IntegerCollection.build(new DefaultRepresentation(valueColumn),
+              source.getFhirType().orElse(FHIRDefinedType.INTEGER));
         case DIVISION:
           final Column numerator = source.getColumn().cast(DecimalCollection.getDecimalType())
               .getValue();
