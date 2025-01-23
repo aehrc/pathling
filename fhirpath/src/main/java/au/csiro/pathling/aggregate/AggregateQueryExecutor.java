@@ -30,6 +30,7 @@ import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.sql.SqlExpressions;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
@@ -134,6 +135,7 @@ public class AggregateQueryExecutor extends QueryExecutor {
 
     // now we need to explode all array columns in the dataset
     final Dataset<Row> expandeDataset = Stream.of(inputDataset.schema().fields())
+        .skip(1)
         .reduce(inputDataset, (dataset, field) -> {
           if (field.dataType() instanceof ArrayType) {
             return dataset.withColumn(field.name(),
@@ -146,12 +148,14 @@ public class AggregateQueryExecutor extends QueryExecutor {
     // The combiner function is used to aggregate partial aggregation results from agg fhirpaths.
     // For example for `count()` the aggregation is SQL SUM(), for 
 
-    final Column[] expandedColumns = Stream.of(expandeDataset.columns())
+    final Column valueColumn = Stream.of(expandeDataset.columns())
+        .limit(1)
         .map(expandeDataset::col)
-        .toArray(Column[]::new);
+        .findFirst().orElseThrow();
 
-    final Column[] groupingColumns = Stream.of(expandedColumns)
+    final Column[] groupingColumns = Stream.of(expandeDataset.columns())
         .skip(1)
+        .map(c -> SqlExpressions.pruneSyntheticFields(functions.col(c)).alias(c))
         .toArray(Column[]::new);
 
     final FhirpathEvaluator aggEvaluator = SingleFhirpathEvaluator.of(query.getSubjectResource(),
@@ -161,7 +165,7 @@ public class AggregateQueryExecutor extends QueryExecutor {
 
     //then we need to group by the grouping columns and collect the resource column to a list
     final Dataset<Row> grouppedAggSource = expandeDataset.groupBy(groupingColumns)
-        .agg(functions.collect_list(expandedColumns[0]).alias(query.getSubjectResource().toCode()));
+        .agg(functions.collect_list(valueColumn).alias(query.getSubjectResource().toCode()));
 
     final List<EvaluatedPath> evaluatedAggs = evalPaths(aggPaths, aggEvaluator);
     final Column[] aggColumns = evaluatedAggs.stream()
@@ -178,7 +182,7 @@ public class AggregateQueryExecutor extends QueryExecutor {
         evaluatedFilters
     );
   }
-  
+
   @Nonnull
   List<EvaluatedPath> evalPaths(@Nonnull final List<FhirPath> paths,
       @Nonnull final FhirpathEvaluator fhirEvaluator) {

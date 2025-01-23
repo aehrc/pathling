@@ -110,8 +110,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
         response);
   }
 
-  @Disabled("TODO: strong FHIR typing for mathematical operations, e.g: "
-      + "positiveInteger + positiveInteger = positiveInteger")
   @Test
   void queryWithMathExpression() {
     subjectResource = ResourceType.CLAIM;
@@ -142,7 +140,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
         response);
   }
 
-  @Disabled("TODO: toExpression() - parentheses and operator precedence")
   @Test
   void queryWithDateComparison() {
     subjectResource = ResourceType.PATIENT;
@@ -329,7 +326,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
         response);
   }
 
-  @Disabled("TODO: toExpression() - parentheses and operator precedence")
   @Test
   void queryWithAmbiguousSelfJoin() {
     subjectResource = ResourceType.MEDICATIONREQUEST;
@@ -362,7 +358,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
         response);
   }
 
-  @Disabled("TODO: toExpression() - parentheses and operator precedence")
   @Test
   void queryWithWhereAndBoolean() {
     subjectResource = ResourceType.PATIENT;
