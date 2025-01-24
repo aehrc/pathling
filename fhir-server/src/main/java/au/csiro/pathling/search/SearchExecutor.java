@@ -17,13 +17,20 @@
 
 package au.csiro.pathling.search;
 
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.annotations.NotImplemented;
+import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.execution.EvaluatedPath;
+import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
+import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator.ManyFactory;
+import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.fhirpath.path.Paths.This;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -35,11 +42,10 @@ import ca.uhn.fhir.rest.param.StringOrListParam;
 import ca.uhn.fhir.rest.param.StringParam;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
@@ -47,6 +53,9 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
+import org.apache.spark.sql.expressions.Window;
+import org.apache.spark.sql.expressions.WindowSpec;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.instance.model.api.IPrimitiveType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -62,6 +71,9 @@ import org.hl7.fhir.r4.model.InstantType;
 public class SearchExecutor extends QueryExecutor implements IBundleProvider {
 
   @Nonnull
+  private final Parser parser = new Parser();
+
+  @Nonnull
   private final FhirEncoders fhirEncoders;
 
   @Nonnull
@@ -71,10 +83,11 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   private final Optional<StringAndListParam> filters;
 
   @Nonnull
-  private final Dataset<Row> result;
+  private Dataset<Row> result;
 
   @Nonnull
   private Optional<Integer> count;
+
 
   /**
    * @param configuration A {@link QueryConfiguration} object to control the behaviour of the
@@ -109,80 +122,83 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
 
   }
 
+
   @Nonnull
-  @NotImplemented
+  private FhirPath toFilter(@Nonnull final StringParam param) {
+    final String filterExpression = requireNonNull(param.getValue());
+    checkUserInput(!filterExpression.isBlank(), "Filter expression cannot be blank");
+    return parser.parse(filterExpression);
+  }
+
+
+  @Nonnull
+  private static Consumer<EvaluatedPath> checkValidFilter(
+      @Nonnull final Dataset<Row> contextDataset) {
+    return evaluatedPath -> {
+      checkUserInput(evaluatedPath.getResult() instanceof BooleanCollection,
+          "Filter expression must be a Boolean: " + evaluatedPath.toExpression());
+      checkUserInput(evaluatedPath.bind(contextDataset).isSingular(),
+          "Filter expression must evaluate to a singular Boolean value: "
+              + evaluatedPath.toExpression());
+    };
+  }
+
+  @Nonnull
   private Dataset<Row> initializeDataset() {
-    // final ResourceCollection resourceCollection = ResourceCollection
-    //     .build(getFhirContext(), getDataSource(), subjectResource);
-    // final Dataset<Row> subjectDataset = resourceCollection.getDataset();
-    // final Dataset<Row> dataset;
-    //
-    // if (filters.isEmpty() || filters.get().getValuesAsQueryTokens().isEmpty()) {
-    //   // If there are no filters, return all resources.
-    //   dataset = subjectDataset;
-    //
-    // } else {
-    //   final ParserContext parserContext = new ParserContext(resourceCollection,
-    //       resourceCollection,
-    //       fhirContext, sparkSession,
-    //       dataSource,
-    //       StaticFunctionRegistry.getInstance(),
-    //       terminologyServiceFactory,
-    //       Optional.empty()
-    //   );
-    //   Dataset<Row> currentDataset = subjectDataset;
-    //   @Nullable Column filterCondition = null;
-    //
-    //   // Parse each of the supplied filter expressions, building up a filter column. This captures 
-    //   // the AND/OR conditions possible through the FHIR API, see 
-    //   // https://hl7.org/fhir/R4/search.html#combining.
-    //   for (final StringOrListParam orParam : filters.get().getValuesAsQueryTokens()) {
-    //
-    //     // Parse all the filter expressions within this AND condition.
-    //     final List<String> filterExpressions = orParam.getValuesAsQueryTokens().stream()
-    //         .map(StringParam::getValue)
-    //         .collect(toList());
-    //     checkUserInput(filterExpressions.stream().noneMatch(String::isBlank),
-    //         "Filter expression cannot be blank");
-    //     final List<Collection> filters = parseExpressions(parserContext, filterExpressions,
-    //         Optional.of(currentDataset));
-    //     validateFilters(filters);
-    //
-    //     // Get the dataset from the last filter.
-    //     currentDataset = filters.get(filters.size() - 1).getDataset();
-    //
-    //     // Combine all the columns with OR logic.
-    //     final Column orColumn = filters.stream()
-    //         .map(Collection::getValueColumn)
-    //         .reduce(Column::or)
-    //         .orElseThrow();
-    //
-    //     // Combine OR-grouped columns with AND logic.
-    //     filterCondition = filterCondition == null
-    //                       ? orColumn
-    //                       : filterCondition.and(orColumn);
-    //   }
-    //   dataset = currentDataset.filter(filterCondition);
-    // }
-    //
-    // final Column[] resourceColumns = resourceCollection.getElementsToColumns().keySet().stream()
-    //     .map(colName -> resourceCollection.getElementsToColumns().get(colName).alias(colName))
-    //     .toArray(Column[]::new);
-    // // Resources are ordered by ID to ensure consistent paging.
-    // final Dataset<Row> result = dataset.select(resourceColumns);
-    // final WindowSpec window = Window.orderBy(col("id"));
-    // final Dataset<Row> withRowNumbers = result.withColumn("row_number",
-    //     row_number().over(window));
-    //
-    // if (getConfiguration().getCacheResults()) {
-    //   // We cache the dataset because we know it will be accessed for both the total and the record
-    //   // retrieval.
-    //   log.debug("Caching search dataset");
-    //   withRowNumbers.cache();
-    // }
-    //
-    // return withRowNumbers;
-    return null;
+
+    // Parse the filter expressions into the list of lists
+    // the outer list is combined with and 
+    // the inner list is combined with or
+    final List<List<FhirPath>> andPlusOrFilters = filters.stream()
+        .flatMap(f -> f.getValuesAsQueryTokens().stream())
+        .map(StringOrListParam::getValuesAsQueryTokens)
+        .map(l -> l.stream().map(this::toFilter).toList())
+        .toList();
+
+    final List<FhirPath> filterPaths = andPlusOrFilters.stream()
+        .flatMap(List::stream)
+        .toList();
+
+    final FhirpathEvaluator fhirEvaluator = ManyFactory.fromPaths(
+        subjectResource,
+        fhirContext, dataSource,
+        filterPaths).create(subjectResource);
+
+    final Dataset<Row> initialDataset = fhirEvaluator.createInitialDataset();
+
+    final List<List<EvaluatedPath>> evaluatedAndPlusOrFilters =
+        andPlusOrFilters.stream().map(fhirEvaluator::evaluateWithPath)
+            .toList();
+
+    // validate the filter components
+    evaluatedAndPlusOrFilters.stream()
+        .flatMap(List::stream).forEach(checkValidFilter(initialDataset));
+
+    Optional<Column> filterColumn = evaluatedAndPlusOrFilters.stream()
+        .flatMap(ors -> ors.stream().map(EvaluatedPath::getColumnValue).reduce(Column::or)
+            .stream())
+        .reduce(Column::and);
+
+    final Dataset<Row> filteredDataset = filterColumn.map(initialDataset::where)
+        .orElse(initialDataset);
+
+    // I think I just need to inline the main resource
+    // TODO: there might be a better way to do this just by looking at the structur
+    final Dataset<Row> resourceDataset = filteredDataset.select(functions.inline(
+        fhirEvaluator.evaluate(new This()).getColumn().toArray().getValue()
+    ));
+
+    final WindowSpec window = Window.orderBy(col("id"));
+    final Dataset<Row> withRowNumbers = resourceDataset.withColumn("row_number",
+        functions.row_number().over(window));
+    if (getConfiguration().getCacheResults()) {
+      // We cache the dataset because we know it will be accessed for both the total and the record
+      // retrieval.
+      log.debug("Caching search dataset");
+      withRowNumbers.cache();
+    }
+
+    return withRowNumbers;
   }
 
   @Override
