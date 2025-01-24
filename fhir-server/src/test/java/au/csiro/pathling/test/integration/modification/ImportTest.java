@@ -185,8 +185,7 @@ class ImportTest extends ModificationTest {
   @Test
   void throwsOnUnsupportedResourceType() {
     final List<ResourceType> resourceTypes = Arrays.asList(ResourceType.PARAMETERS,
-        ResourceType.TASK, ResourceType.STRUCTUREDEFINITION, ResourceType.STRUCTUREMAP,
-        ResourceType.BUNDLE);
+        ResourceType.STRUCTUREDEFINITION, ResourceType.STRUCTUREMAP, ResourceType.BUNDLE);
     for (final ResourceType resourceType : resourceTypes) {
       final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
           () -> importExecutor.execute(
