@@ -64,7 +64,7 @@ public class AbstractParserTest {
   TerminologyServiceFactory terminologyServiceFactory;
 
   @MockBean
-  protected DataSource dataSource;
+  private DataSource dataSource;
 
   FhirpathExecutor executor;
 
@@ -85,7 +85,6 @@ public class AbstractParserTest {
 
   @Nonnull
   protected FhirpathExecutor createExecutor() {
-    // TODO: Select one
     return FhirpathExecutor.of(new Parser(), new ManyProvider(fhirContext,
         StaticFunctionRegistry.getInstance(), Map.of(), dataSource));
   }
@@ -94,6 +93,11 @@ public class AbstractParserTest {
   @SuppressWarnings("SameParameterValue")
   void setSubjectResource(@Nonnull final ResourceType resourceType) {
     subjectResource = resourceType;
+  }
+
+  protected void setDataSource(@Nonnull final DataSource dataSource) {
+    this.dataSource = dataSource;
+    this.executor = createExecutor();
   }
 
   void mockResource(final ResourceType... resourceTypes) {
