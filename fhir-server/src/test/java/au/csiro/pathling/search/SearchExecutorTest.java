@@ -23,6 +23,8 @@ import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import au.csiro.pathling.UnitTestDependencies;
+import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -53,12 +55,31 @@ import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Bean;
 
 /**
  * @author John Grimes
  */
 @SpringBootUnitTest
+@SpringBootTest(classes = {SearchExecutorTest.MyConfig.class, UnitTestDependencies.class})
 class SearchExecutorTest {
+
+  public static class MyConfig {
+
+    @Bean
+    @Nonnull
+    public static FhirEncoders fhirEncoders() {
+      // TODO: this needs to be synchronized with the TestImporter configuration
+      final EncodingConfiguration defConfiguration = EncodingConfiguration.builder().build();
+
+      return FhirEncoders.forR4()
+          .withExtensionsEnabled(defConfiguration.isEnableExtensions())
+          .withOpenTypes(defConfiguration.getOpenTypes())
+          .withMaxNestingLevel(defConfiguration.getMaxNestingLevel())
+          .getOrCreate();
+    }
+  }
 
   @Autowired
   QueryConfiguration configuration;

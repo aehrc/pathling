@@ -17,7 +17,6 @@
 
 package au.csiro.pathling;
 
-import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
@@ -112,13 +111,9 @@ public class UnitTestDependencies {
   @ConditionalOnMissingBean
   @Nonnull
   static FhirEncoders fhirEncoders() {
-    // TODO: this needs to be synchronized with the TestImporter configuration
-    final EncodingConfiguration defConfiguration = EncodingConfiguration.builder().build();
-
     return FhirEncoders.forR4()
-        .withExtensionsEnabled(defConfiguration.isEnableExtensions())
-        .withOpenTypes(defConfiguration.getOpenTypes())
-        .withMaxNestingLevel(defConfiguration.getMaxNestingLevel())
+        .withExtensionsEnabled(true)
+        .withAllOpenTypes()
         .getOrCreate();
   }
 
