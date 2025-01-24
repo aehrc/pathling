@@ -18,6 +18,8 @@
 package au.csiro.pathling.aggregate;
 
 import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static java.util.Objects.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
@@ -29,12 +31,14 @@ import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator.ManyFactory;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.query.ExpressionWithLabel;
 import au.csiro.pathling.sql.SqlExpressions;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -80,9 +84,6 @@ public class AggregateQueryExecutor extends QueryExecutor {
   @SuppressWarnings("WeakerAccess")
   @Nonnull
   public ResultWithExpressions buildQuery(@Nonnull final AggregateRequest query) {
-
-    // TODO: I think the current implementation does not do implicit unnesting of grouping and aggregation expressions
-    // but that needs to be verified.
 
     final List<FhirPath> grouppingPaths = query.getGroupings().stream()
         .map(parser::parse)
@@ -163,14 +164,31 @@ public class AggregateQueryExecutor extends QueryExecutor {
         .toArray(Column[]::new);
 
     final Dataset<Row> resultDataset = grouppedAggSource
-        .select(Stream.concat(Stream.of(normalizedGroupingColumns), Stream.of(aggColumns))
-            .toArray(Column[]::new));
+        .select(Stream.concat(
+            alias(normalizedGroupingColumns, toLabels(query.getGroupingsWithLabels())),
+            alias(aggColumns, toLabels(query.getAggregationsWithLabels()))
+        ).toArray(Column[]::new));
 
     return new ResultWithExpressions(resultDataset,
         evaluatedAggs.stream().map(p -> p.bind(filteredDataset)).toList(),
         evaluatedGoupings.stream().map(p -> p.bind(filteredDataset)).toList(),
         evaluatedFilters
     );
+  }
+
+  @Nonnull
+  private static List<String> toLabels(@Nonnull final List<ExpressionWithLabel> expressions) {
+    return expressions.stream()
+        .map(ExpressionWithLabel::getLabel).toList();
+  }
+
+  @Nonnull
+  private static Stream<Column> alias(Column[] columns, List<String> labels) {
+    return IntStream.range(0, columns.length)
+        .mapToObj(i -> nonNull(labels.get(i))
+                       ? columns[i].alias(requireNonNull(labels.get(i)))
+                       : columns[i]
+        );
   }
 
   @Value
