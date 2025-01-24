@@ -21,6 +21,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Strings.parentheses;
 
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.execution.EvaluatedPath;
 import au.csiro.pathling.utilities.Strings;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;

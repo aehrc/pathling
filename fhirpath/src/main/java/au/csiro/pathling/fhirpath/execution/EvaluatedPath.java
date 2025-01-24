@@ -1,4 +1,4 @@
-package au.csiro.pathling.aggregate;
+package au.csiro.pathling.fhirpath.execution;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -55,7 +55,7 @@ public class EvaluatedPath {
    * @return a new {@link EvaluatedPath} with the dataset bound
    */
   @Nonnull
-  EvaluatedPath bind(@Nonnull final Dataset<Row> dataset) {
+  public EvaluatedPath bind(@Nonnull final Dataset<Row> dataset) {
     return new EvaluatedPath(path, result, dataset);
   }
 
@@ -67,7 +67,7 @@ public class EvaluatedPath {
    * @return a new unbound {@link EvaluatedPath}
    */
   @Nonnull
-  static EvaluatedPath of(@Nonnull final FhirPath path, @Nonnull final Collection result) {
+  public static EvaluatedPath of(@Nonnull final FhirPath path, @Nonnull final Collection result) {
     return new EvaluatedPath(path, result, null);
   }
 }

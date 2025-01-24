@@ -21,6 +21,7 @@ import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.execution.EvaluatedPath;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -104,8 +105,8 @@ public class AggregateExecutor extends AggregateQueryExecutor {
   @Nonnull
   @SuppressWarnings("unchecked")
   private Function<Row, AggregateResponse.Grouping> mapRowToGrouping(
-      @Nonnull final List<EvaluatedPath> aggregations, @Nonnull final List<EvaluatedPath> groupings,
-      @Nonnull final List<EvaluatedPath> filters) {
+          @Nonnull final List<EvaluatedPath> aggregations, @Nonnull final List<EvaluatedPath> groupings,
+          @Nonnull final List<EvaluatedPath> filters) {
     return row -> {
       final List<Optional<Type>> labels = new ArrayList<>();
       final List<Optional<Type>> results = new ArrayList<>();

@@ -22,6 +22,7 @@ import static au.csiro.pathling.utilities.Strings.randomAlias;
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.execution.EvaluatedPath;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.execution.JoinResolver;
 import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator.ManyFactory;
@@ -104,7 +105,7 @@ public class AggregateQueryExecutor extends QueryExecutor {
         fhirContext, dataSource,
         contextPaths).create(query.getSubjectResource());
 
-    final List<EvaluatedPath> evaluatedFilters = evalPaths(filterPaths, fhirEvaluator);
+    final List<EvaluatedPath> evaluatedFilters = fhirEvaluator.evaluateWithPath(filterPaths);
 
     final Optional<Column> maybeFilter = evaluatedFilters.stream()
         .map(EvaluatedPath::getColumnValue)
@@ -117,7 +118,7 @@ public class AggregateQueryExecutor extends QueryExecutor {
     // compute aggregation bases 
     // TODO: for now assume that the last element on the path is the aggregation function
 
-    final List<EvaluatedPath> evaluatedGoupings = evalPaths(grouppingPaths, fhirEvaluator);
+    final List<EvaluatedPath> evaluatedGoupings = fhirEvaluator.evaluateWithPath(grouppingPaths);
 
     // prepend the materialized grouping columns to the dataset
     final Dataset<Row> inputDataset = filteredDataset.select(
@@ -156,7 +157,7 @@ public class AggregateQueryExecutor extends QueryExecutor {
     final Dataset<Row> grouppedAggSource = expandeDataset.groupBy(normalizedGroupingColumns)
         .agg(dataColumns.get(0), dataColumns.subList(1, dataColumns.size()).toArray(Column[]::new));
 
-    final List<EvaluatedPath> evaluatedAggs = evalPaths(aggPaths, fhirEvaluator);
+    final List<EvaluatedPath> evaluatedAggs = fhirEvaluator.evaluateWithPath(aggPaths);
     final Column[] aggColumns = evaluatedAggs.stream()
         .map(c -> c.getColumnValue().alias(randomAlias()))
         .toArray(Column[]::new);
@@ -171,15 +172,6 @@ public class AggregateQueryExecutor extends QueryExecutor {
         evaluatedFilters
     );
   }
-
-  @Nonnull
-  List<EvaluatedPath> evalPaths(@Nonnull final List<FhirPath> paths,
-      @Nonnull final FhirpathEvaluator fhirEvaluator) {
-    return paths.stream()
-        .map(p -> EvaluatedPath.of(p, fhirEvaluator.evaluate(p)))
-        .toList();
-  }
-
 
   @Value
   public static class ResultWithExpressions {

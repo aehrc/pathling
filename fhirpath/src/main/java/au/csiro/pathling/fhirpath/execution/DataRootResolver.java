@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
@@ -44,7 +45,8 @@ public class DataRootResolver {
 
   @Nonnull
   public Set<DataRoot> findDataRoots(@Nonnull final Collection<FhirPath> paths) {
-    return paths.stream()
+    // always include this as  context path
+    return Stream.concat(Stream.of(new Paths.This()), paths.stream())
         .map(this::findDataRoots)
         .flatMap(Collection::stream)
         .collect(Collectors.toUnmodifiableSet());

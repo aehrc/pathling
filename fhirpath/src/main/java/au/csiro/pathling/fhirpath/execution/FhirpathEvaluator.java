@@ -38,8 +38,9 @@ public interface FhirpathEvaluator {
     FhirpathEvaluator create(@Nonnull final ResourceType subjectResource,
         @Nonnull final Supplier<List<FhirPath>> contextPathsSupplier);
   }
-  
+
   interface Factory {
+
     @Nonnull
     FhirpathEvaluator create(@Nonnull final ResourceType subjectResource, @Nonnull final
     FunctionRegistry<?> functionRegistry, @Nonnull final Map<String, Collection> variables);
@@ -53,6 +54,13 @@ public interface FhirpathEvaluator {
   @Nonnull
   default Collection evaluate(@Nonnull final FhirPath path) {
     return evaluate(path, createDefaultInputContext());
+  }
+
+  @Nonnull
+  default List<EvaluatedPath> evaluateWithPath(@Nonnull final List<FhirPath> paths) {
+    return paths.stream()
+        .map(path -> EvaluatedPath.of(path, evaluate(path)))
+        .toList();
   }
 
   @Nonnull
