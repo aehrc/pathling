@@ -8,12 +8,15 @@ import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import java.util.stream.Stream;
+
+import static java.util.Objects.isNull;
 
 
 public abstract class BaseResourceResolver implements ResourceResolver {
@@ -74,7 +77,14 @@ public abstract class BaseResourceResolver implements ResourceResolver {
   @Nonnull
   protected static Dataset<Row> resourceDataset(@Nonnull final DataSource dataSource,
       @Nonnull final ResourceType resourceType) {
+
+    @Nullable
     final Dataset<Row> dataset = dataSource.read(resourceType);
+    // Despite DataSource.read() annotation, this method can return null sometime
+    // which leads to an obscure NullPointerException in SparkSQL
+    if (isNull(dataset)) {
+      throw new IllegalArgumentException("Resource type not found: " + resourceType);
+    }
     return dataset.select(
         dataset.col("id"),
         dataset.col("id_versioned").alias("key"),
