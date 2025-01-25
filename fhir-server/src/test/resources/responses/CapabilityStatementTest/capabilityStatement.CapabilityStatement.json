@@ -3910,6 +3910,35 @@
           ]
         },
         {
+          "type": "Task",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Task",
+          "interaction": [
+            {
+              "code": "search-type"
+            },
+            {
+              "code": "create"
+            },
+            {
+              "code": "update"
+            }
+          ],
+          "operation": [
+            {
+              "name": "aggregate",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-7"
+            },
+            {
+              "name": "extract",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/extract-7"
+            },
+            {
+              "name": "fhirPath",
+              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-7"
+            }
+          ]
+        },
+        {
           "type": "TerminologyCapabilities",
           "profile": "http://hl7.org/fhir/StructureDefinition/TerminologyCapabilities",
           "interaction": [
