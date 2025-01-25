@@ -88,7 +88,7 @@ class ExtractTest extends IntegrationTest {
       throw new RuntimeException("Problem retrieving extract result", e);
     }
 
-    final String expected = getResourceAsString("responses/ExtractTest/extract.csv");
+    final String expected = getResourceAsString("responses/ExtractTest/extract.tsv");
     assertEquals(expected, actual);
   }
 
