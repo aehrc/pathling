@@ -66,6 +66,34 @@
         },
         {
           "name": "label",
+          "valueCode": "87915002"
+        },
+        {
+          "name": "label"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 16
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((gender) = 'female') and ((maritalStatus.coding.code) contains '87915002') and ((active).empty())"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCode": "female"
+        },
+        {
+          "name": "label",
           "valueCode": "M"
         },
         {
