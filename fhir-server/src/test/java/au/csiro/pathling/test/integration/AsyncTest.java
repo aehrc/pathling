@@ -20,6 +20,7 @@ package au.csiro.pathling.test.integration;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.test.helpers.TestHelpers;
@@ -36,9 +37,10 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -60,7 +62,7 @@ class AsyncTest extends IntegrationTest {
   @Autowired
   SparkSession spark;
 
-  @MockBean
+  @Autowired
   CacheableDatabase database;
 
   @LocalServerPort
@@ -69,9 +71,20 @@ class AsyncTest extends IntegrationTest {
   @Autowired
   TestRestTemplate restTemplate;
 
+  @TestConfiguration
+  public static class TestConfig {
+
+    @Bean
+    public CacheableDatabase cacheableDatabase(@Autowired final SparkSession spark) {
+      final CacheableDatabase database = mock(CacheableDatabase.class);
+      TestHelpers.mockResource(database, spark, ResourceType.OBSERVATION, ResourceType.PATIENT);
+      return database;
+    }
+  }
+
   @Test
   void asyncExtract() throws URISyntaxException, MalformedURLException, InterruptedException {
-    TestHelpers.mockResource(database, spark, ResourceType.OBSERVATION);
+    assertNotNull(database.read(ResourceType.OBSERVATION));
     final String uri = "http://localhost:" + port + "/fhir/Observation/$extract?column=id&"
         + "column=code.coding&column=valueQuantity.value&column=valueQuantity.unit";
     final RequestEntity<Void> request = RequestEntity.get(new URI(uri))
@@ -86,7 +99,6 @@ class AsyncTest extends IntegrationTest {
 
   @Test
   void enabledNotRequested() throws URISyntaxException {
-    TestHelpers.mockResource(database, spark, ResourceType.PATIENT);
     final String uri = "http://localhost:" + port + "/fhir/Patient/$aggregate?aggregation=count()";
     final ResponseEntity<String> response = restTemplate
         .exchange(uri, HttpMethod.GET, RequestEntity.get(new URI(uri)).build(), String.class);
@@ -95,7 +107,6 @@ class AsyncTest extends IntegrationTest {
 
   @Test
   void error() throws URISyntaxException, MalformedURLException, InterruptedException {
-    TestHelpers.mockResource(database, spark, ResourceType.PATIENT);
     final String uri = "http://localhost:" + port + "/fhir/Patient/$aggregate";
     final RequestEntity<Void> request = RequestEntity.get(new URI(uri))
         .header("Prefer", "respond-async")
@@ -171,7 +182,7 @@ class AsyncTest extends IntegrationTest {
   @Test
   void identicalAsyncRequestsReturnTheSameJobId()
       throws URISyntaxException {
-    TestHelpers.mockResource(database, spark, ResourceType.OBSERVATION);
+    assertNotNull(database.read(ResourceType.OBSERVATION));
     final String uri = "http://localhost:" + port + "/fhir/Observation/$extract?column=id&"
         + "column=code.coding&column=valueQuantity.value&column=valueQuantity.unit";
     final RequestEntity<Void> request = RequestEntity.get(new URI(uri))
@@ -186,6 +197,4 @@ class AsyncTest extends IntegrationTest {
     assertEquals(HttpStatus.ACCEPTED, response1.getStatusCode());
     assertEquals(getContentLocation(response1), getContentLocation(response2));
   }
-
-
 }
