@@ -239,6 +239,8 @@ jobs:
   fhir-server-3:
     name: FHIR server (tranche 3)
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
