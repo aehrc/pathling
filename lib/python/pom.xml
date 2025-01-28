@@ -228,6 +228,8 @@
                     <argument>spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension</argument>
                     <argument>--conf</argument>
                     <argument>spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog</argument>
+                    <argument>--conf</argument>
+                    <argument>spark.sql.mapKeyDedupPolicy=LAST_WIN</argument>
                     <argument>${project.basedir}/examples/query.py</argument>
                   </arguments>
                 </configuration>
