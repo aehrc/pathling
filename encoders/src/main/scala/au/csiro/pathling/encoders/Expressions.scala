@@ -23,6 +23,7 @@
 
 package au.csiro.pathling.encoders
 
+import org.apache.spark.SparkException
 import org.apache.spark.sql.Column
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
@@ -341,6 +342,45 @@ case class UnresolvedIfArray(value: Expression, arrayExpressions: Expression => 
   }
 }
 
+case class UnresolvedIfArray2(value: Expression, arrayExpressions: Expression => Expression,
+                              elseExpression: Expression => Expression)
+  extends Expression with Unevaluable with NonSQLExpression {
+
+  override def mapChildren(f: Expression => Expression): Expression = {
+
+    val newValue = f(value)
+
+    if (newValue.resolved) {
+      newValue.dataType match {
+        case ArrayType(ArrayType(_, _), _) => f(arrayExpressions(newValue))
+        case ArrayType(_, _) => f(elseExpression(newValue))
+        case _ => throw new SparkException(
+          errorClass = "ARRAY_TYPE_EXPECTED",
+          messageParameters = Map(
+            "actualType" -> newValue.dataType.toString),
+          cause = null)
+      }
+    }
+    else {
+      copy(value = newValue)
+    }
+  }
+
+  override def dataType: DataType = throw new UnresolvedException("dataType")
+
+  override def nullable: Boolean = throw new UnresolvedException("nullable")
+
+  override lazy val resolved = false
+
+  override def toString: String = s"$value"
+
+  override def children: Seq[Expression] = value :: Nil
+
+  override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    UnresolvedIfArray2(newChildren.head, arrayExpressions, elseExpression)
+  }
+}
+
 
 case class UnresolvedUnnest(value: Expression)
   extends Expression with Unevaluable with NonSQLExpression {
@@ -388,6 +428,22 @@ object ValueFunctions {
   def ifArray(value: Column, arrayExpression: Column => Column,
               elseExpression: Column => Column): Column = {
     val expr = UnresolvedIfArray(value.expr,
+      e => arrayExpression(new Column(e)).expr, e => elseExpression(new Column(e)).expr)
+    new Column(expr)
+  }
+
+  /**
+   * Applies an expression to  array of arrays value, or an else expression if the value is an array.
+   * Throws an exception if the value is not an array.
+   *
+   * @param value           The value to check
+   * @param arrayExpression The expression to apply to the array of arrays value
+   * @param elseExpression  The expression to apply to the arrays of non array values
+   * @return
+   */
+  def ifArray2(value: Column, arrayExpression: Column => Column,
+               elseExpression: Column => Column): Column = {
+    val expr = UnresolvedIfArray2(value.expr,
       e => arrayExpression(new Column(e)).expr, e => elseExpression(new Column(e)).expr)
     new Column(expr)
   }

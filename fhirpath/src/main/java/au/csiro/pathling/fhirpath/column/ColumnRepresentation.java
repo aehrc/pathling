@@ -128,7 +128,7 @@ public abstract class ColumnRepresentation {
 
   /**
    * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
-   * field within the current representation.
+   * field within the current representation. The result is flattened.
    *
    * @param fieldName The name of the field to traverse to
    * @return A new {@link ColumnRepresentation} representing the result of the traversal
@@ -136,6 +136,16 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public abstract ColumnRepresentation traverse(@Nonnull final String fieldName);
 
+  /**
+   * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
+   * field within the current representation. The results can be nested.
+   *
+   * @param fieldName The name of the field to traverse to
+   * @return A new {@link ColumnRepresentation} representing the result of the traversal
+   */
+  @Nonnull
+  public abstract ColumnRepresentation getField(@Nonnull final String fieldName);
+  
   /**
    * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
    * field within the current representation. This method also takes the FHIR type of the field into

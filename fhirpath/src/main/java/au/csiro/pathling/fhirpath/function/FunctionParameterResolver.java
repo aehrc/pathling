@@ -2,10 +2,10 @@ package au.csiro.pathling.fhirpath.function;
 
 import static java.util.Objects.isNull;
 
+import au.csiro.pathling.fhirpath.Concepts;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
-import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.path.ParserPaths;
 import jakarta.annotation.Nonnull;
@@ -37,7 +37,8 @@ class FunctionParameterResolver {
       // return Optional.ofNullable(parameter.getAnnotation(Nullable.class))
       //     .map(__ -> null).orElseThrow(() -> new RuntimeException(
       //         "Parameter " + parameter + " is not nullable and no argument was provided"));
-    } else if (Collection.class.isAssignableFrom(parameter.getType())) {
+    } else if (Collection.class.isAssignableFrom(parameter.getType())
+        || Concepts.class.isAssignableFrom(parameter.getType())) {
       // evaluate collection types 
       return resolveCollection(argument.apply(input, evaluationContext),
           parameter);
@@ -47,6 +48,8 @@ class FunctionParameterResolver {
     } else if (TypeSpecifier.class.isAssignableFrom(parameter.getType())) {
       // bind type specifier
       return ((ParserPaths.TypeSpecifierPath) argument).getValue();
+
+
     } else if (FhirPath.class.isAssignableFrom(parameter.getType())) {
       // bind type specifier
       return argument;
@@ -57,9 +60,11 @@ class FunctionParameterResolver {
 
   public Object resolveCollection(@Nonnull final Collection collection,
       @Nonnull final Parameter parameter) {
-    if (CodingCollection.class.isAssignableFrom(parameter.getType())) {
+    if (Concepts.class.isAssignableFrom(parameter.getType())) {
       // evaluate collection types 
-      return collection.asCoding().orElseThrow();
+      return collection.toConcepts().orElseThrow(
+          () -> new IllegalArgumentException("Cannot convert collection to concepts")
+      );
     } else if (Collection.class.isAssignableFrom(parameter.getType())) {
       // evaluate collection types 
       return collection;

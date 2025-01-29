@@ -63,4 +63,10 @@ public class EmptyRepresentation extends ColumnRepresentation {
     return traverse(fieldName);
   }
 
+  @Nonnull
+  @Override
+  public EmptyRepresentation getField(@Nonnull final String fieldName) {
+    return this;
+  }
+  
 }

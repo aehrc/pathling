@@ -115,4 +115,10 @@ public class DefaultRepresentation extends ColumnRepresentation {
     return ValueFunctions.unnest(value.getField(fieldName));
   }
 
+  @Override
+  @Nonnull
+  public ColumnRepresentation getField(@Nonnull final String fieldName) {
+    return copyOf(value.getField(fieldName));
+  }
+  
 }

@@ -20,6 +20,8 @@ package au.csiro.pathling.fhirpath.function.provider;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.config.TerminologyConfiguration;
+import au.csiro.pathling.fhirpath.Concepts;
+import au.csiro.pathling.fhirpath.Concepts.Set;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -184,10 +186,10 @@ public abstract class TerminologyFunctions {
    */
   @FhirPathFunction
   @Nonnull
-  public static BooleanCollection memberOf(@Nonnull final CodingCollection input,
+  public static BooleanCollection memberOf(@Nonnull final Concepts input,
       @Nonnull final StringCollection valueSetURL) {
     return BooleanCollection.build(
-        input.getColumn().callUdf("member_of", valueSetURL.getColumn().singular())
+        input.apply("member_of", valueSetURL.getColumn().singular())
     );
   }
 
@@ -205,12 +207,13 @@ public abstract class TerminologyFunctions {
    */
   @FhirPathFunction
   @Nonnull
-  public static BooleanCollection subsumes(@Nonnull final CodingCollection input,
-      @Nonnull final CodingCollection codes) {
-    return input.map(ctx ->
-            ctx.transformWithUdf("subsumes", codes.getColumn(),
-                DefaultRepresentation.literal(false)),
-        BooleanCollection::build);
+  public static BooleanCollection subsumes(@Nonnull final Concepts input,
+      @Nonnull final Concepts codes) {
+
+    return BooleanCollection.build(
+        input.apply("subsumes", codes.flatten().getCodings(),
+            DefaultRepresentation.literal(false))
+    );
   }
 
   /**
@@ -225,12 +228,12 @@ public abstract class TerminologyFunctions {
    */
   @FhirPathFunction
   @Nonnull
-  public static BooleanCollection subsumedBy(@Nonnull final CodingCollection input,
-      @Nonnull final CodingCollection codes) {
-    return input.map(ctx ->
-            ctx.transformWithUdf("subsumes", codes.getColumn(),
-                DefaultRepresentation.literal(true)),
-        BooleanCollection::build);
+  public static BooleanCollection subsumedBy(@Nonnull final Concepts input,
+      @Nonnull final Concepts codes) {
+    return BooleanCollection.build(
+        input.apply("subsumes", codes.flatten().getCodings(),
+            DefaultRepresentation.literal(true))
+    );
   }
 
   /**
@@ -258,12 +261,14 @@ public abstract class TerminologyFunctions {
    */
   @FhirPathFunction
   @Nonnull
-  public static CodingCollection translate(@Nonnull final CodingCollection input,
+  public static CodingCollection translate(@Nonnull final Concepts input,
       @Nonnull final StringCollection conceptMapUrl,
       @Nullable final BooleanCollection reverse, @Nullable final StringCollection equivalence,
       @Nullable final StringCollection target) {
-    return (CodingCollection) input.copyWith(
-        input.getColumn().callUdf("translate_coding",
+
+    final Set codings = input.flatten();
+    return (CodingCollection) codings.getCodingTemplate().copyWith(
+        codings.getCodings().callUdf("translate_coding",
             conceptMapUrl.getColumn().singular(),
             Optional.ofNullable(reverse).map(BooleanCollection::getColumn)
                 .map(ColumnRepresentation::singular)

@@ -20,10 +20,8 @@ package au.csiro.pathling.test.integration;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.io.CacheableDatabase;
-import au.csiro.pathling.test.helpers.TestHelpers;
 import jakarta.annotation.Nonnull;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -37,10 +35,8 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -71,16 +67,16 @@ class AsyncTest extends IntegrationTest {
   @Autowired
   TestRestTemplate restTemplate;
 
-  @TestConfiguration
-  public static class TestConfig {
-
-    @Bean
-    public CacheableDatabase cacheableDatabase(@Autowired final SparkSession spark) {
-      final CacheableDatabase database = mock(CacheableDatabase.class);
-      TestHelpers.mockResource(database, spark, ResourceType.OBSERVATION, ResourceType.PATIENT);
-      return database;
-    }
-  }
+  // @TestConfiguration
+  // private static class TestConfig {
+  //
+  //   @Bean
+  //   CacheableDatabase cacheableDatabase(@Autowired final SparkSession spark) {
+  //     final CacheableDatabase database = mock(CacheableDatabase.class);
+  //     TestHelpers.mockResource(database, spark, ResourceType.OBSERVATION, ResourceType.PATIENT);
+  //     return database;
+  //   }
+  // }
 
   @Test
   void asyncExtract() throws URISyntaxException, MalformedURLException, InterruptedException {

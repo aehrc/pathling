@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.collection;
 import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.encoders.ExtensionSupport;
+import au.csiro.pathling.fhirpath.Concepts;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
@@ -479,14 +480,19 @@ public class Collection implements Comparable, Numeric {
     return true;
   }
 
+
+  /**
+   * Returns an optional {@link Concepts} representation of this collection.
+   *
+   * @return An optional {@link Concepts} representation of this collection
+   */
   @Nonnull
-  public Optional<CodingCollection> asCoding() {
-    // TODO: This can potentially be removed after reviewing whether we need WrappedFunction.
+  public Optional<Concepts> toConcepts() {
     return getFhirType()
         .filter(FHIRDefinedType.CODEABLECONCEPT::equals)
-        .map(__ -> (CodingCollection) traverse("coding").orElseThrow());
+        .map(__ -> Concepts.union(getColumn().getField("coding"),
+            (CodingCollection) traverse("coding").orElseThrow()));
   }
-
 
   /**
    * This collection can be converted to the other collection type

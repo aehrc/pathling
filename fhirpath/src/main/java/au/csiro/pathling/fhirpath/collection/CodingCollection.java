@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.collection;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
+import au.csiro.pathling.fhirpath.Concepts;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
@@ -64,7 +65,7 @@ public class CodingCollection extends Collection implements Materializable<Codin
    */
   @Nonnull
   public static CodingCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
-      @Nonnull final Optional<NodeDefinition> definition) {
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
     return new CodingCollection(columnRepresentation, Optional.of(FhirPathType.CODING),
         Optional.of(FHIRDefinedType.CODING), definition, Optional.empty());
   }
@@ -149,10 +150,10 @@ public class CodingCollection extends Collection implements Materializable<Codin
     return CodingComparator.buildSqlComparator(this, other, operation);
   }
 
-  @Nonnull
   @Override
-  public Optional<CodingCollection> asCoding() {
-    return Optional.of(this);
+  @Nonnull
+  public Optional<Concepts> toConcepts() {
+    return Optional.of(Concepts.set(this.getColumn(), this));
   }
 
   @Nonnull
@@ -160,7 +161,7 @@ public class CodingCollection extends Collection implements Materializable<Codin
   public StringCollection asStringPath() {
     return map(c -> c.transformWithUdf(CodingToLiteral.FUNCTION_NAME), StringCollection::build);
   }
-  
+
   @Override
   @Nonnull
   public String toLiteral(@Nonnull final Coding value) {

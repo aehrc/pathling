@@ -263,9 +263,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
     assertResponse("AggregateQueryTest/queryWithWhere.Parameters.json", response);
   }
 
-  @Disabled("TODO: Fix the implementation of 'memberOf' in the terminology service"
-      + "to produce a boolean results for each codeble concept in the input."
-      + "Also most likely the expectations are incorrect.")
   @Test
   void queryWithMemberOf() {
     subjectResource = ResourceType.PATIENT;

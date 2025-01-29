@@ -13,11 +13,13 @@ import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator.ManyProvider;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.assertions.Assertions;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
+import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +61,8 @@ class SingleResourceFhirpathTest {
   @Autowired
   FhirEncoders encoders;
 
+  @Autowired
+  TerminologyService terminologyService;
 
   @Nonnull
   CollectionDataset evalExpression(@Nonnull final ObjectDataSource dataSource,
@@ -382,6 +386,125 @@ class SingleResourceFhirpathTest {
             RowFactory.create("1", null),
             RowFactory.create("2", null)
         );
+  }
+
+
+  @Test
+  void testSubsumesSingularCodeableConcept() {
+
+    TerminologyServiceHelpers.setupSubsumes(terminologyService);
+    final ObjectDataSource dataSource = codedObservations();
+
+    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.OBSERVATION,
+        "code.subsumes(http://loinc.org|LA11165-0||Platelet%20anisocytosis)");
+
+    Assertions.assertThat(evalResult)
+        .isElementPath(BooleanCollection.class)
+        .toCanonicalResult()
+        .hasRowsUnordered(
+            RowFactory.create("1", true)
+        );
+  }
+
+
+  @Test
+  void testSubsumesPluralCodeableConcept() {
+
+    TerminologyServiceHelpers.setupSubsumes(terminologyService);
+    final ObjectDataSource dataSource = codedObservations();
+
+    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.OBSERVATION,
+        "category.subsumes(http://terminology.hl7.org/CodeSystem/v3-ObservationCategory|vital-signs||Vital%20Signs)");
+
+    Assertions.assertThat(evalResult)
+        .isElementPath(BooleanCollection.class)
+        .toCanonicalResult()
+        .hasRowsUnordered(
+            RowFactory.create("1", sql_array(true, false))
+        );
+  }
+
+
+  @Test
+  void testSubsumesPluralCoding() {
+
+    TerminologyServiceHelpers.setupSubsumes(terminologyService);
+    final ObjectDataSource dataSource = codedObservations();
+
+    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.OBSERVATION,
+        "code.coding.subsumes(http://loinc.org|LA11165-0||Platelet%20anisocytosis)");
+
+    Assertions.assertThat(evalResult)
+        .isElementPath(BooleanCollection.class)
+        .toCanonicalResult()
+        .hasRowsUnordered(
+            RowFactory.create("1", sql_array(true, false))
+        );
+  }
+
+
+  @Test
+  void testSubsumesSingularCoding() {
+
+    TerminologyServiceHelpers.setupSubsumes(terminologyService);
+    final ObjectDataSource dataSource = codedObservations();
+
+    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.OBSERVATION,
+        "code.coding.first().subsumes(http://loinc.org|LA11165-0||Platelet%20anisocytosis)");
+
+    Assertions.assertThat(evalResult)
+        .isElementPath(BooleanCollection.class)
+        .toCanonicalResult()
+        .hasRowsUnordered(
+            RowFactory.create("1", true)
+        );
+  }
+
+
+  @Nonnull
+  private ObjectDataSource codedObservations() {
+    return new ObjectDataSource(spark, encoders,
+        List.of(
+            new Observation()
+                .setCode(new CodeableConcept()
+                    .addCoding(new Coding()
+                        .setSystem("http://loinc.org")
+                        .setCode("LA11165-0")
+                        .setDisplay("Platelet anisocytosis"))
+                    .addCoding(new Coding()
+                        .setSystem("uuid:1")
+                        .setCode("M")
+                        .setDisplay("M"))
+                )
+                .addCategory(new CodeableConcept()
+                    .addCoding(new Coding()
+                        .setSystem("http://terminology.hl7.org/CodeSystem/v3-ObservationCategory")
+                        .setCode("vital-signs")
+                        .setDisplay("Vital Signs")
+                    )
+                    .addCoding(new Coding()
+                        .setSystem("uuid:2")
+                        .setCode("foo")
+                        .setDisplay("Foo")
+                    )
+                )
+                .addCategory(
+                    new CodeableConcept()
+                        .addCoding(new Coding()
+                            .setSystem(
+                                "http://terminology.hl7.org/CodeSystem/v3-ObservationCategory")
+                            .setCode("laboratory")
+                            .setDisplay("Laboratory")
+                        )
+                        .addCoding(new Coding()
+                            .setSystem("uuid:2")
+                            .setCode("bar")
+                            .setDisplay("Bar")
+                        )
+                )
+                .setId("Observation/1")
+        )
+    );
   }
 
   @Nonnull
