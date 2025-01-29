@@ -89,7 +89,7 @@ public class ExistenceFunctions {
    * Returns the sum of the numbers input collection. Returns 0 when the input collection is empty.
    *
    * @param input The input collection
-   * @return An {@link Collection} containing the result count</a>
+   * @return An {@link Collection} containing the result sum
    */
   // TODO: Update documentation and move to a separate class
   @FhirPathFunction

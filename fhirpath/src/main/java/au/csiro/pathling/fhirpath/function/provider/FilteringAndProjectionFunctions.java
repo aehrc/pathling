@@ -45,9 +45,10 @@ public class FilteringAndProjectionFunctions {
 
   /**
    * Evaluates the projection expression for each item in the input collection. The result of each
-   * evaluation is added to the output collection. <p If the evaluation results in a collection with
-   * multiple items, all items are added to the output collection (collections resulting from
-   * evaluation of projection are flattened).
+   * evaluation is added to the output collection.
+   * <p>
+   * If the evaluation results in a collection with multiple items, all items are added to the
+   * output collection (collections resulting from evaluation of projection are flattened).
    * <p>
    * This means that if the evaluation for an element results in the empty collection ({ }), no
    * element is added to the result, and that if the input collection is empty ({ }), the result is
