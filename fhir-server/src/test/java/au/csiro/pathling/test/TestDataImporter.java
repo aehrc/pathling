@@ -39,7 +39,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Profile;
 
 /**
@@ -49,7 +51,9 @@ import org.springframework.context.annotation.Profile;
  * @author Piotr Szul
  */
 @SpringBootApplication
-@ComponentScan(basePackages = "au.csiro.pathling")
+@ComponentScan(basePackages = "au.csiro.pathling",
+    excludeFilters = @ComponentScan.Filter(type = FilterType.ANNOTATION,
+        classes = TestConfiguration.class))
 @Profile("cli")
 @Slf4j
 public class TestDataImporter implements CommandLineRunner {
