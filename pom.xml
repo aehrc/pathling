@@ -80,7 +80,7 @@
     <pathling.hadoopMajorVersion>3</pathling.hadoopMajorVersion>
     <pathling.hapiFhirVersion>7.0.2</pathling.hapiFhirVersion>
     <pathling.springBootVersion>3.2.0</pathling.springBootVersion>
-    <pathling.springSecurityVersion>6.2.0</pathling.springSecurityVersion>
+    <pathling.springSecurityVersion>6.2.7</pathling.springSecurityVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.3.4</pathling.dockerJavaVersion>
     <pathling.awsSdkVersion>1.12.603</pathling.awsSdkVersion>
@@ -641,6 +641,19 @@
         <version>3.7.2</version>
       </dependency>
 
+      <!-- CVE-2024-47561 -->
+      <dependency>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro</artifactId>
+        <version>1.11.4</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro-mapred</artifactId>
+        <version>1.11.4</version>
+      </dependency>
+      
+      
     </dependencies>
   </dependencyManagement>
 
