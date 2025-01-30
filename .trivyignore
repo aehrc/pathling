@@ -64,3 +64,7 @@ CVE-2022-1471
 # This vulnerability relates to privilege management using spark-submit, which is outside of the
 # scope of this solution.
 CVE-2023-22946
+
+
+# This vulnerability relates to WebFlex applications, which are not used in Pathling.
+CVE-2024-38821

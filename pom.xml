@@ -79,8 +79,8 @@
     <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
     <pathling.hadoopMajorVersion>3</pathling.hadoopMajorVersion>
     <pathling.hapiFhirVersion>7.0.2</pathling.hapiFhirVersion>
-    <pathling.springBootVersion>3.2.12</pathling.springBootVersion>
-    <pathling.springSecurityVersion>6.2.8</pathling.springSecurityVersion>
+    <pathling.springBootVersion>3.2.0</pathling.springBootVersion>
+    <pathling.springSecurityVersion>6.2.0</pathling.springSecurityVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.3.4</pathling.dockerJavaVersion>
     <pathling.awsSdkVersion>1.12.603</pathling.awsSdkVersion>
