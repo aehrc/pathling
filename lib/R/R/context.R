@@ -135,6 +135,7 @@ pathling_connect <- function(
 
   new_spark_connection <- function() {
     sparklyr::spark_connect(master = "local[*]", config = list("sparklyr.shell.conf" = c(
+        "spark.sql.mapKeyDedupPolicy=LAST_WIN",
         "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
         "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
     )), version = spark_info$spark_version)
