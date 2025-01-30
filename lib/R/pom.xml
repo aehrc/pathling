@@ -252,6 +252,8 @@
               <workingDirectory>${project.basedir}</workingDirectory>
               <arguments>
                 <argument>-e</argument>
+                <argument>library(sparklyr)</argument>
+                <argument>-e</argument>
                 <argument>devtools::test(stop_on_failure = TRUE)</argument>
               </arguments>
             </configuration>
