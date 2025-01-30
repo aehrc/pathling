@@ -68,3 +68,8 @@ CVE-2023-22946
 
 # This vulnerability relates to WebFlex applications, which are not used in Pathling.
 CVE-2024-38821
+
+# This vulnerability relates to avro support in hadoop client runtime, which is not shipped 
+# with pathling but with Spark. The server docker image which used this version does not use 
+# avro.
+CVE-2024-47561
