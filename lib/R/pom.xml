@@ -363,10 +363,19 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-jar-plugin</artifactId>
-            <configuration>
-              <classesDirectory>${project.build.directory}/docs</classesDirectory>
-              <classifier>docs</classifier>
-            </configuration>
+            <executions>
+              <execution>
+                <id>doc-jar</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+                <configuration>
+                  <classesDirectory>${project.build.directory}/docs</classesDirectory>
+                  <classifier>docs</classifier>
+                </configuration>
+              </execution>
+            </executions>
           </plugin>
         </plugins>
       </build>
