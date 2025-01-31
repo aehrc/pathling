@@ -72,20 +72,33 @@ class ImportTest extends ModificationTest {
 
   @SuppressWarnings("SameParameterValue")
   @Nonnull
-  Parameters buildImportParameters(@Nonnull final URL jsonURL,
+  Parameters buildImportParameters(@Nonnull final URL url,
       @Nonnull final ResourceType resourceType) {
     final Parameters parameters = new Parameters();
     final ParametersParameterComponent sourceParam = parameters.addParameter().setName("source");
     sourceParam.addPart().setName("resourceType").setValue(new CodeType(resourceType.toCode()));
-    sourceParam.addPart().setName("url").setValue(new UrlType(jsonURL.toExternalForm()));
+    sourceParam.addPart().setName("url").setValue(new UrlType(url.toExternalForm()));
     return parameters;
   }
 
   @SuppressWarnings("SameParameterValue")
   @Nonnull
-  Parameters buildImportParameters(@Nonnull final URL jsonURL,
-      @Nonnull final ResourceType resourceType, @Nonnull final ImportMode mode) {
-    final Parameters parameters = buildImportParameters(jsonURL, resourceType);
+  Parameters buildImportParameters(@Nonnull final URL url,
+      @Nonnull final ResourceType resourceType, @Nonnull final String format) {
+    final Parameters parameters = new Parameters();
+    final ParametersParameterComponent sourceParam = parameters.addParameter().setName("source");
+    sourceParam.addPart().setName("resourceType").setValue(new CodeType(resourceType.toCode()));
+    sourceParam.addPart().setName("url").setValue(new UrlType(url.toExternalForm()));
+    sourceParam.addPart().setName("format").setValue(new CodeType(format));
+    return parameters;
+  }
+
+  @SuppressWarnings("SameParameterValue")
+  @Nonnull
+  Parameters buildImportParameters(@Nonnull final URL url,
+      @Nonnull final ResourceType resourceType, @Nonnull final String format,
+      @Nonnull final ImportMode mode) {
+    final Parameters parameters = buildImportParameters(url, resourceType, format);
     final ParametersParameterComponent sourceParam = parameters.getParameter().stream()
         .filter(p -> p.getName().equals("source")).findFirst()
         .orElseThrow();
@@ -96,30 +109,26 @@ class ImportTest extends ModificationTest {
   @Test
   void importJsonFile() {
     final URL jsonURL = getResourceAsUrl("import/Patient.ndjson");
+    importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT, "ndjson"));
+
+    final Dataset<Row> result = database.read(ResourceType.PATIENT);
+    assertPatientDatasetMatches(result);
+  }
+
+  @Test
+  void importJsonFileUsingDefault() {
+    final URL jsonURL = getResourceAsUrl("import/Patient.ndjson");
     importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT));
 
     final Dataset<Row> result = database.read(ResourceType.PATIENT);
-    final Dataset<Row> expected = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withRow("121503c8-9564-4b48-9086-a22df717948e")
-        .withRow("2b36c1e2-bbe1-45ae-8124-4adad2677702")
-        .withRow("7001ad9c-34d2-4eb5-8165-5fdc2147f469")
-        .withRow("8ee183e2-b3c0-4151-be94-b945d6aa8c6d")
-        .withRow("9360820c-8602-4335-8b50-c88d627a0c20")
-        .withRow("a7eb2ce7-1075-426c-addd-957b861b0e55")
-        .withRow("bbd33563-70d9-4f6d-a79a-dd1fc55f5ad9")
-        .withRow("beff242e-580b-47c0-9844-c1a68c36c5bf")
-        .withRow("e62e52ae-2d75-4070-a0ae-3cc78d35ed08")
-        .build();
-
-    DatasetAssert.of(result.select("id")).hasRows(expected);
+    assertPatientDatasetMatches(result);
   }
 
   @Test
   void mergeJsonFile() {
     final URL jsonURL = getResourceAsUrl("import/Patient_updates.ndjson");
     importExecutor.execute(
-        buildImportParameters(jsonURL, ResourceType.PATIENT, ImportMode.MERGE));
+        buildImportParameters(jsonURL, ResourceType.PATIENT, "ndjson", ImportMode.MERGE));
 
     final Dataset<Row> result = database.read(ResourceType.PATIENT);
     final Dataset<Row> expected = new DatasetBuilder(spark)
@@ -143,14 +152,14 @@ class ImportTest extends ModificationTest {
   @Test
   void importJsonFileWithBlankLines() {
     final URL jsonURL = getResourceAsUrl("import/Patient_with_eol.ndjson");
-    importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT));
+    importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT, "ndjson"));
     assertEquals(9, database.read(ResourceType.PATIENT).count());
   }
 
   @Test
   void importJsonFileWithRecursiveDatatype() {
     final URL jsonURL = getResourceAsUrl("import/Questionnaire.ndjson");
-    importExecutor.execute(buildImportParameters(jsonURL, ResourceType.QUESTIONNAIRE));
+    importExecutor.execute(buildImportParameters(jsonURL, ResourceType.QUESTIONNAIRE, "ndjson"));
     final Dataset<Row> questionnaireDataset = database.read(ResourceType.QUESTIONNAIRE);
     assertEquals(1, questionnaireDataset.count());
 
@@ -183,6 +192,24 @@ class ImportTest extends ModificationTest {
   }
 
   @Test
+  void importParquetFile() {
+    final URL parquetURL = getResourceAsUrl("import/Patient.parquet");
+    importExecutor.execute(buildImportParameters(parquetURL, ResourceType.PATIENT, "parquet"));
+
+    final Dataset<Row> result = database.read(ResourceType.PATIENT);
+    assertPatientDatasetMatches(result);
+  }
+
+  @Test
+  void importDeltaFile() {
+    final URL deltaURL = getResourceAsUrl("import/Patient.delta");
+    importExecutor.execute(buildImportParameters(deltaURL, ResourceType.PATIENT, "delta"));
+
+    final Dataset<Row> result = database.read(ResourceType.PATIENT);
+    assertPatientDatasetMatches(result);
+  }
+
+  @Test
   void throwsOnUnsupportedResourceType() {
     final List<ResourceType> resourceTypes = Arrays.asList(ResourceType.PARAMETERS,
         ResourceType.TASK, ResourceType.STRUCTUREDEFINITION, ResourceType.STRUCTUREMAP,
@@ -190,8 +217,8 @@ class ImportTest extends ModificationTest {
     for (final ResourceType resourceType : resourceTypes) {
       final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
           () -> importExecutor.execute(
-              buildImportParameters(new URL("file://some/url"),
-                  resourceType)), "Unsupported resource type: " + resourceType.toCode());
+              buildImportParameters(getResourceAsUrl("import/Patient.ndjson"),
+                  resourceType, "ndjson")), "Unsupported resource type: " + resourceType.toCode());
       assertEquals("Unsupported resource type: " + resourceType.toCode(), error.getMessage());
     }
   }
@@ -200,11 +227,37 @@ class ImportTest extends ModificationTest {
   void throwsOnMissingId() {
     final URL jsonURL = getResourceAsUrl("import/Patient_missing_id.ndjson");
     final Exception error = assertThrows(Exception.class,
-        () -> importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT)));
+        () -> importExecutor.execute(
+            buildImportParameters(jsonURL, ResourceType.PATIENT, "ndjson")));
     final BaseServerResponseException convertedError =
         ErrorHandlingInterceptor.convertError(error);
     assertInstanceOf(InvalidRequestException.class, convertedError);
     assertEquals("Encountered a resource with no ID", convertedError.getMessage());
+  }
+
+  @Test
+  void throwsOnUnsupportedFormat() {
+    assertThrows(InvalidUserInputError.class,
+        () -> importExecutor.execute(
+            buildImportParameters(getResourceAsUrl("import/Patient.ndjson"),
+                ResourceType.PATIENT, "foo")), "Unsupported format: foo");
+  }
+
+  private void assertPatientDatasetMatches(@Nonnull final Dataset<Row> result) {
+    final Dataset<Row> expected = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withRow("121503c8-9564-4b48-9086-a22df717948e")
+        .withRow("2b36c1e2-bbe1-45ae-8124-4adad2677702")
+        .withRow("7001ad9c-34d2-4eb5-8165-5fdc2147f469")
+        .withRow("8ee183e2-b3c0-4151-be94-b945d6aa8c6d")
+        .withRow("9360820c-8602-4335-8b50-c88d627a0c20")
+        .withRow("a7eb2ce7-1075-426c-addd-957b861b0e55")
+        .withRow("bbd33563-70d9-4f6d-a79a-dd1fc55f5ad9")
+        .withRow("beff242e-580b-47c0-9844-c1a68c36c5bf")
+        .withRow("e62e52ae-2d75-4070-a0ae-3cc78d35ed08")
+        .build();
+
+    DatasetAssert.of(result.select("id")).hasRows(expected);
   }
 
 }
