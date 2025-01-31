@@ -126,6 +126,18 @@ class DataSource(SparkConversionsMixin):
         where: Optional[Sequence[Dict]] = None,
         json: Optional[str] = None,
     ) -> DataFrame:
+        """
+        Executes a SQL on FHIR view definition and returns the result as a Spark DataFrame.
+
+        :param resource: The FHIR resource that the view is based upon, e.g. 'Patient' or
+               'Observation'.
+        :param select: A list of columns and nested selects to include in the view.
+        :param constants: A list of constants that can be used in FHIRPath expressions.
+        :param where: A list of FHIRPath expressions that can be used to filter the view.
+        :param json: A JSON string representing the view definition, as an alternative to providing
+               the parameters as Python objects.
+        :return: A Spark DataFrame containing the results of the view.
+        """
         if json:
             query_json = json
             parsed = loads(json)
