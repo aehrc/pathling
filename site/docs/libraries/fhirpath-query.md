@@ -319,6 +319,114 @@ display(result)
 ```
 
 </TabItem>
+<TabItem value="java" label="Java">
+
+```java
+import au.csiro.pathling.library.PathlingContext;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import au.csiro.pathling.library.io.source.NdjsonSource;
+
+class MyApp {
+
+    public static void main(String[] args) {
+        PathlingContext pc = PathlingContext.create();
+        NdjsonSource data = pc.read.ndjson("s3://somebucket/synthea/ndjson");
+
+        Dataset<Row> result = data.view(ResourceType.PATIENT)
+                .json("{\n" +
+                        "  \"resource\": \"Patient\",\n" +
+                        "  \"select\": [\n" +
+                        "    {\n" +
+                        "      \"column\": [\n" +
+                        "        {\n" +
+                        "          \"path\": \"getResourceKey()\",\n" +
+                        "          \"name\": \"patient_id\"\n" +
+                        "        }\n" +
+                        "      ]\n" +
+                        "    },\n" +
+                        "    {\n" +
+                        "      \"forEach\": \"address\",\n" +
+                        "      \"column\": [\n" +
+                        "        {\n" +
+                        "          \"path\": \"line.join('\\\\n')\",\n" +
+                        "          \"name\": \"street\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "          \"path\": \"use\",\n" +
+                        "          \"name\": \"use\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "          \"path\": \"city\",\n" +
+                        "          \"name\": \"city\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "          \"path\": \"postalCode\",\n" +
+                        "          \"name\": \"zip\"\n" +
+                        "        }\n" +
+                        "      ]\n" +
+                        "    }\n" +
+                        "  ]\n" +
+                        "}")
+                .execute();
+
+        result.show();
+    }
+}
+```
+
+</TabItem>
+<TabItem value="scala" label="Scala">
+
+```scala
+import au.csiro.pathling.library.PathlingContext
+import org.hl7.fhir.r4.model.Enumerations.ResourceType
+
+val pc = PathlingContext.create()
+val data = pc.read.ndjson("s3://somebucket/synthea/ndjson")
+
+val result = data.view(ResourceType.PATIENT)
+        .json("""{
+    "resource": "Patient",
+    "select": [
+      {
+        "column": [
+          {
+            "path": "getResourceKey()",
+            "name": "patient_id"
+          }
+        ]
+      },
+      {
+        "forEach": "address",
+        "column": [
+          {
+            "path": "line.join('\\n')",
+            "name": "street"
+          },
+          {
+            "path": "use",
+            "name": "use"
+          },
+          {
+            "path": "city",
+            "name": "city"
+          },
+          {
+            "path": "postalCode",
+            "name": "zip"
+          }
+        ]
+      }
+    ]
+  }""")
+        .execute()
+
+display(result)
+```
+
+</TabItem>
 </Tabs>
 
 The result of this query would look something like this:
