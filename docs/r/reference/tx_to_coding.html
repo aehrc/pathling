@@ -3,7 +3,7 @@
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]--></head><body data-spy="scroll" data-target="#toc">
-    
+
 
     <div class="container template-reference-topic">
       <header><div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -31,20 +31,20 @@
       </ul><ul class="nav navbar-nav navbar-right"><li>
   <a href="https://github.com/aehrc/pathling/" class="external-link">
     <span class="fab fa-github fa-lg"></span>
-     
+
   </a>
 </li>
       </ul></div><!--/.nav-collapse -->
   </div><!--/.container -->
 </div><!--/.navbar -->
 
-      
+
 
       </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>Convert codes to Coding structures</h1>
-    <small class="dont-index">Source: <a href="https://github.com/aehrc/pathling/blob/HEAD/R/functions.R" class="external-link"><code>R/functions.R</code></a></small>
+    <small class="dont-index">Source: <a href="https://github.com/aehrc/pathling/blob/main/R/functions.R" class="external-link"><code>R/functions.R</code></a></small>
     <div class="hidden name"><code>tx_to_coding.Rd</code></div>
     </div>
 
@@ -58,35 +58,35 @@
 
     <div id="arguments">
     <h2>Arguments</h2>
-    <dl><dt>coding_column</dt>
+
+
+<dl><dt id="arg-coding-column">coding_column<a class="anchor" aria-label="anchor" href="#arg-coding-column"></a></dt>
 <dd><p>The Column containing the codes.</p></dd>
 
 
-<dt>system</dt>
+<dt id="arg-system">system<a class="anchor" aria-label="anchor" href="#arg-system"></a></dt>
 <dd><p>The URI of the system the codes belong to.</p></dd>
 
 
-<dt>version</dt>
+<dt id="arg-version">version<a class="anchor" aria-label="anchor" href="#arg-version"></a></dt>
 <dd><p>The version of the code system.</p></dd>
 
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    
-
-<p>A Column containing a Coding struct.</p>
+    <p>A Column containing a Coding struct.</p>
     </div>
     <div id="details">
     <h2>Details</h2>
-    <p>The Coding struct Column can be used as an input to terminology functions such as 
-<code><a href="tx_member_of.html">tx_member_of</a></code> and <code><a href="tx_translate.html">tx_translate</a></code>. Please note that inside 
-<code>sparklyr</code> verbs such as <code>mutate</code> the functions calls need to be preceded with 
+    <p>The Coding struct Column can be used as an input to terminology functions such as
+<code><a href="tx_member_of.html">tx_member_of</a></code> and <code><a href="tx_translate.html">tx_translate</a></code>. Please note that inside
+<code>sparklyr</code> verbs such as <code>mutate</code> the functions calls need to be preceded with
 <code>!!</code>, e.g: <code>!!tx_to_coding(CODE, SNOMED_URI)</code>.</p>
     </div>
     <div id="see-also">
     <h2>See also</h2>
     <div class="dont-index"><p><a href="https://hl7.org/fhir/R4/datatypes.html#Coding" class="external-link">FHIR R4 - Coding</a></p>
-<p>Other terminology helpers: 
+<p>Other terminology helpers:
 <code><a href="tx_to_ecl_value_set.html">tx_to_ecl_value_set</a>()</code>,
 <code><a href="tx_to_loinc_coding.html">tx_to_loinc_coding</a>()</code>,
 <code><a href="tx_to_snomed_coding.html">tx_to_snomed_coding</a>()</code></p></div>
@@ -132,15 +132,15 @@
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.9.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
 </div>
 
       </footer></div>
 
-  
 
 
-  
+
+
 
   </body></html>
 

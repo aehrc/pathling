@@ -3,7 +3,7 @@
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]--></head><body data-spy="scroll" data-target="#toc">
-    
+
 
     <div class="container template-reference-topic">
       <header><div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -31,20 +31,20 @@
       </ul><ul class="nav navbar-nav navbar-right"><li>
   <a href="https://github.com/aehrc/pathling/" class="external-link">
     <span class="fab fa-github fa-lg"></span>
-     
+
   </a>
 </li>
       </ul></div><!--/.nav-collapse -->
   </div><!--/.container -->
 </div><!--/.navbar -->
 
-      
+
 
       </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>Read resource from Pathling example data</h1>
-    <small class="dont-index">Source: <a href="https://github.com/aehrc/pathling/blob/HEAD/R/etc.R" class="external-link"><code>R/etc.R</code></a></small>
+    <small class="dont-index">Source: <a href="https://github.com/aehrc/pathling/blob/main/R/etc.R" class="external-link"><code>R/etc.R</code></a></small>
     <div class="hidden name"><code>pathling_example_resource.Rd</code></div>
     </div>
 
@@ -58,28 +58,28 @@
 
     <div id="arguments">
     <h2>Arguments</h2>
-    <dl><dt>pc</dt>
+
+
+<dl><dt id="arg-pc">pc<a class="anchor" aria-label="anchor" href="#arg-pc"></a></dt>
 <dd><p>The PathlingContext object.</p></dd>
 
 
-<dt>resource_name</dt>
+<dt id="arg-resource-name">resource_name<a class="anchor" aria-label="anchor" href="#arg-resource-name"></a></dt>
 <dd><p>The name of the resource to read.</p></dd>
 
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    
-
-<p>A Spark DataFrame containing the resource data.</p>
+    <p>A Spark DataFrame containing the resource data.</p>
     </div>
     <div id="details">
     <h2>Details</h2>
-    <p>The resources are read from the package example data in the <code>extdata/parquet</code> directory. 
+    <p>The resources are read from the package example data in the <code>extdata/parquet</code> directory.
 Currently the following resources are available: 'Patient' and 'Condition'.</p>
     </div>
     <div id="see-also">
     <h2>See also</h2>
-    <div class="dont-index"><p>Other example functions: 
+    <div class="dont-index"><p>Other example functions:
 <code><a href="pathling_examples.html">pathling_examples</a>()</code></p></div>
     </div>
 
@@ -87,7 +87,7 @@ Currently the following resources are available: 'Patient' and 'Condition'.</p>
     <h2>Examples</h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">pc</span> <span class="op">&lt;-</span> <span class="fu"><a href="pathling_connect.html">pathling_connect</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">pathling_example_resource</span><span class="op">(</span><span class="va">pc</span>, <span class="st">'Condition'</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Source:   table&lt;`Condition_f6f07760_6502_4d6c_8d02_3e7a392f7a40`&gt; [?? x 33]</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Source:   table&lt;`Condition_3c6415d4_a3f0_494b_98a6_d0c2f1e66e5f`&gt; [?? x 33]</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Database: spark_connection</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    id              id_versioned meta         implicitRules language text        </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>      </span>
@@ -123,15 +123,15 @@ Currently the following resources are available: 'Patient' and 'Condition'.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.9.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
 </div>
 
       </footer></div>
 
-  
 
 
-  
+
+
 
   </body></html>
 

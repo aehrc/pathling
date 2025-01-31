@@ -1,162 +1,56 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>/404.html</loc>
-  </url>
-  <url>
-    <loc>/authors.html</loc>
-  </url>
-  <url>
-    <loc>/index.html</loc>
-  </url>
-  <url>
-    <loc>/news/index.html</loc>
-  </url>
-  <url>
-    <loc>/reference/Equivalence.html</loc>
-  </url>
-  <url>
-    <loc>/reference/ImportMode.html</loc>
-  </url>
-  <url>
-    <loc>/reference/LOINC_URI.html</loc>
-  </url>
-  <url>
-    <loc>/reference/MimeType.html</loc>
-  </url>
-  <url>
-    <loc>/reference/PropertyType.html</loc>
-  </url>
-  <url>
-    <loc>/reference/SNOMED_URI.html</loc>
-  </url>
-  <url>
-    <loc>/reference/SaveMode.html</loc>
-  </url>
-  <url>
-    <loc>/reference/StorageType.html</loc>
-  </url>
-  <url>
-    <loc>/reference/Version.html</loc>
-  </url>
-  <url>
-    <loc>/reference/conditions.html</loc>
-  </url>
-  <url>
-    <loc>/reference/ds_aggregate.html</loc>
-  </url>
-  <url>
-    <loc>/reference/ds_extract.html</loc>
-  </url>
-  <url>
-    <loc>/reference/ds_read.html</loc>
-  </url>
-  <url>
-    <loc>/reference/ds_write_delta.html</loc>
-  </url>
-  <url>
-    <loc>/reference/ds_write_ndjson.html</loc>
-  </url>
-  <url>
-    <loc>/reference/ds_write_parquet.html</loc>
-  </url>
-  <url>
-    <loc>/reference/ds_write_tables.html</loc>
-  </url>
-  <url>
-    <loc>/reference/index.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pathling_connect.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pathling_disconnect.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pathling_disconnect_all.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pathling_encode.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pathling_encode_bundle.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pathling_example_resource.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pathling_examples.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pathling_install_spark.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pathling_is_spark_installed.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pathling_read_bundles.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pathling_read_datasets.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pathling_read_delta.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pathling_read_ndjson.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pathling_read_parquet.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pathling_read_tables.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pathling_spark.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pathling_spark_info.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pathling_version.html</loc>
-  </url>
-  <url>
-    <loc>/reference/reexports.html</loc>
-  </url>
-  <url>
-    <loc>/reference/to_array.html</loc>
-  </url>
-  <url>
-    <loc>/reference/tx_designation.html</loc>
-  </url>
-  <url>
-    <loc>/reference/tx_display.html</loc>
-  </url>
-  <url>
-    <loc>/reference/tx_member_of.html</loc>
-  </url>
-  <url>
-    <loc>/reference/tx_property_of.html</loc>
-  </url>
-  <url>
-    <loc>/reference/tx_subsumed_by.html</loc>
-  </url>
-  <url>
-    <loc>/reference/tx_subsumes.html</loc>
-  </url>
-  <url>
-    <loc>/reference/tx_to_coding.html</loc>
-  </url>
-  <url>
-    <loc>/reference/tx_to_ecl_value_set.html</loc>
-  </url>
-  <url>
-    <loc>/reference/tx_to_loinc_coding.html</loc>
-  </url>
-  <url>
-    <loc>/reference/tx_to_snomed_coding.html</loc>
-  </url>
-  <url>
-    <loc>/reference/tx_translate.html</loc>
-  </url>
+<urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
+<url><loc>/404.html</loc></url>
+<url><loc>/authors.html</loc></url>
+<url><loc>/index.html</loc></url>
+<url><loc>/news/index.html</loc></url>
+<url><loc>/reference/Equivalence.html</loc></url>
+<url><loc>/reference/ImportMode.html</loc></url>
+<url><loc>/reference/LOINC_URI.html</loc></url>
+<url><loc>/reference/MimeType.html</loc></url>
+<url><loc>/reference/PropertyType.html</loc></url>
+<url><loc>/reference/SNOMED_URI.html</loc></url>
+<url><loc>/reference/SaveMode.html</loc></url>
+<url><loc>/reference/StorageType.html</loc></url>
+<url><loc>/reference/Version.html</loc></url>
+<url><loc>/reference/conditions.html</loc></url>
+<url><loc>/reference/ds_aggregate.html</loc></url>
+<url><loc>/reference/ds_extract.html</loc></url>
+<url><loc>/reference/ds_read.html</loc></url>
+<url><loc>/reference/ds_write_delta.html</loc></url>
+<url><loc>/reference/ds_write_ndjson.html</loc></url>
+<url><loc>/reference/ds_write_parquet.html</loc></url>
+<url><loc>/reference/ds_write_tables.html</loc></url>
+<url><loc>/reference/index.html</loc></url>
+<url><loc>/reference/pathling_connect.html</loc></url>
+<url><loc>/reference/pathling_disconnect.html</loc></url>
+<url><loc>/reference/pathling_disconnect_all.html</loc></url>
+<url><loc>/reference/pathling_encode.html</loc></url>
+<url><loc>/reference/pathling_encode_bundle.html</loc></url>
+<url><loc>/reference/pathling_example_resource.html</loc></url>
+<url><loc>/reference/pathling_examples.html</loc></url>
+<url><loc>/reference/pathling_install_spark.html</loc></url>
+<url><loc>/reference/pathling_is_spark_installed.html</loc></url>
+<url><loc>/reference/pathling_read_bundles.html</loc></url>
+<url><loc>/reference/pathling_read_datasets.html</loc></url>
+<url><loc>/reference/pathling_read_delta.html</loc></url>
+<url><loc>/reference/pathling_read_ndjson.html</loc></url>
+<url><loc>/reference/pathling_read_parquet.html</loc></url>
+<url><loc>/reference/pathling_read_tables.html</loc></url>
+<url><loc>/reference/pathling_spark.html</loc></url>
+<url><loc>/reference/pathling_spark_info.html</loc></url>
+<url><loc>/reference/pathling_version.html</loc></url>
+<url><loc>/reference/reexports.html</loc></url>
+<url><loc>/reference/to_array.html</loc></url>
+<url><loc>/reference/tx_designation.html</loc></url>
+<url><loc>/reference/tx_display.html</loc></url>
+<url><loc>/reference/tx_member_of.html</loc></url>
+<url><loc>/reference/tx_property_of.html</loc></url>
+<url><loc>/reference/tx_subsumed_by.html</loc></url>
+<url><loc>/reference/tx_subsumes.html</loc></url>
+<url><loc>/reference/tx_to_coding.html</loc></url>
+<url><loc>/reference/tx_to_ecl_value_set.html</loc></url>
+<url><loc>/reference/tx_to_loinc_coding.html</loc></url>
+<url><loc>/reference/tx_to_snomed_coding.html</loc></url>
+<url><loc>/reference/tx_translate.html</loc></url>
 </urlset>
+

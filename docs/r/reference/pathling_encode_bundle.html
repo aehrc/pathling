@@ -4,7 +4,7 @@ a dataframe of encoded resources."><!-- mathjax --><script src="https://cdnjs.cl
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]--></head><body data-spy="scroll" data-target="#toc">
-    
+
 
     <div class="container template-reference-topic">
       <header><div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -32,20 +32,20 @@ a dataframe of encoded resources."><!-- mathjax --><script src="https://cdnjs.cl
       </ul><ul class="nav navbar-nav navbar-right"><li>
   <a href="https://github.com/aehrc/pathling/" class="external-link">
     <span class="fab fa-github fa-lg"></span>
-     
+
   </a>
 </li>
       </ul></div><!--/.nav-collapse -->
   </div><!--/.container -->
 </div><!--/.navbar -->
 
-      
+
 
       </header><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>Encode FHIR Bundles to a dataframe</h1>
-    <small class="dont-index">Source: <a href="https://github.com/aehrc/pathling/blob/HEAD/R/encoding.R" class="external-link"><code>R/encoding.R</code></a></small>
+    <small class="dont-index">Source: <a href="https://github.com/aehrc/pathling/blob/main/R/encoding.R" class="external-link"><code>R/encoding.R</code></a></small>
     <div class="hidden name"><code>pathling_encode_bundle.Rd</code></div>
     </div>
 
@@ -60,36 +60,36 @@ a dataframe of encoded resources.</p>
 
     <div id="arguments">
     <h2>Arguments</h2>
-    <dl><dt>pc</dt>
+
+
+<dl><dt id="arg-pc">pc<a class="anchor" aria-label="anchor" href="#arg-pc"></a></dt>
 <dd><p>A Pathling context object.</p></dd>
 
 
-<dt>df</dt>
+<dt id="arg-df">df<a class="anchor" aria-label="anchor" href="#arg-df"></a></dt>
 <dd><p>A Spark DataFrame containing the bundles with the resources to encode.</p></dd>
 
 
-<dt>resource_name</dt>
+<dt id="arg-resource-name">resource_name<a class="anchor" aria-label="anchor" href="#arg-resource-name"></a></dt>
 <dd><p>The name of the FHIR resource to extract (Condition, Observation, etc.).</p></dd>
 
 
-<dt>input_type</dt>
+<dt id="arg-input-type">input_type<a class="anchor" aria-label="anchor" href="#arg-input-type"></a></dt>
 <dd><p>The MIME type of the input string encoding. Defaults to 'application/fhir+json'.</p></dd>
 
 
-<dt>column</dt>
+<dt id="arg-column">column<a class="anchor" aria-label="anchor" href="#arg-column"></a></dt>
 <dd><p>The column in which the resources to encode are stored. If 'NULL', then the
 input DataFrame is assumed to have one column of type string.</p></dd>
 
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    
-
-<p>A Spark DataFrame containing the given type of resources encoded into Spark columns.</p>
+    <p>A Spark DataFrame containing the given type of resources encoded into Spark columns.</p>
     </div>
     <div id="see-also">
     <h2>See also</h2>
-    <div class="dont-index"><p>Other encoding functions: 
+    <div class="dont-index"><p>Other encoding functions:
 <code><a href="pathling_encode.html">pathling_encode</a>()</code></p></div>
     </div>
 
@@ -101,7 +101,7 @@ input DataFrame is assumed to have one column of type string.</p></dd>
 <span class="r-in"><span>         whole <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">pc</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu">pathling_encode_bundle</span><span class="op">(</span><span class="va">json_resources_df</span>, <span class="st">'Condition'</span>,</span></span>
 <span class="r-in"><span>     input_type <span class="op">=</span> <span class="va">MimeType</span><span class="op">$</span><span class="va">FHIR_XML</span>, column <span class="op">=</span> <span class="st">'contents'</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Source:   table&lt;`sparklyr_tmp_0e92cbd4_cc5d_46bc_a67a_60d7f209a923`&gt; [?? x 31]</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Source:   table&lt;`sparklyr_tmp_5e1b5318_99b2_4029_8915_83091342c215`&gt; [?? x 31]</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Database: spark_connection</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    id                 id_versioned meta  implicitRules language text  identifier</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>              <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;lis&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;lis&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>    </span>
@@ -137,15 +137,15 @@ input DataFrame is assumed to have one column of type string.</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.9.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
 </div>
 
       </footer></div>
 
-  
 
 
-  
+
+
 
   </body></html>
 
