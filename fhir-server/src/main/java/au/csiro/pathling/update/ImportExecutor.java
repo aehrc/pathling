@@ -58,7 +58,7 @@ import org.springframework.stereotype.Component;
  * Encapsulates the execution of an import operation.
  *
  * @author John Grimes
- * @see <a href="https://pathling.csiro.au/docs/import.html">Import</a>
+ * @see <a href="https://pathling.csiro.au/docs/server/operations/import">Import</a>
  */
 @Component
 @Profile({"core", "import"})
