@@ -283,6 +283,54 @@ The result of this query would look something like this:
 | Type 1 diabetes mellitus                 | 14                 |
 | NULL                                     | 1472               |
 
+## SQL on FHIR views
+
+Pathling is capable of executing SQL on FHIR view definitions and providing the 
+result back as a Spark dataframe. These dataframes can then be joined and 
+composed into more complex Spark queries as required.
+
+<!--suppress CheckEmptyScriptTag -->
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+from pathling import PathlingContext
+
+pc = PathlingContext.create()
+data = pc.read.ndjson("s3://somebucket/synthea/ndjson")
+
+result = data.view(
+        resource="Patient",
+        select=[
+            {"column": [{"path": "getResourceKey()", "name": "patient_id"}]},
+            {
+                "forEach": "address",
+                "column": [
+                    {"path": "line.join('\\n')", "name": "street"},
+                    {"path": "use", "name": "use"},
+                    {"path": "city", "name": "city"},
+                    {"path": "postalCode", "name": "zip"},
+                ],
+            },
+        ],
+)
+
+display(result)
+```
+
+</TabItem>
+</Tabs>
+
+The result of this query would look something like this:
+
+| patient_id | street                     | use  | city       | zip   |
+|------------|----------------------------|------|------------|-------|
+| 1          | 398 Kautzer Walk Suite 62  | home | Barnstable | 02675 |
+| 1          | 186 Nitzsche Forge         | work | Revere     | 02151 |
+| 2          | 1087 Quitzon Club          | home | Plymouth   | NULL  |
+| 3          | 442 Bruen Arcade           | home | Nantucket  | NULL  |
+| 4          | 858 Miller Junction Apt 61 | work | Brockton   | 02301 |
+
 ## Reading FHIR data
 
 There are several ways of making FHIR data available for FHIRPath query.
