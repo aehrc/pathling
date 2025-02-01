@@ -63,8 +63,6 @@ public class AllResourcesEncodingTest {
   final static Set<String> EXCLUDED_RESOURCES = ImmutableSet.of(
       "Parameters",
       // Collections are not supported for custom encoders for: condition-> RuntimeIdDatatypeDefinition[id, IdType]
-      "Task",
-      // Collections are not supported for custom encoders for: condition-> RuntimeIdDatatypeDefinition[id, IdType]
       "StructureDefinition",
       // Collections are not supported for custom encoders for: condition-> RuntimeIdDatatypeDefinition[id, IdType]
       "StructureMap",

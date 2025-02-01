@@ -17,17 +17,12 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static java.util.Objects.requireNonNull;
+import static java.util.function.Predicate.not;
+import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
-import au.csiro.pathling.fhirpath.operator.PathTraversalInput;
-import au.csiro.pathling.fhirpath.operator.PathTraversalOperator;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.FunctionInvocationContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.IndexInvocationContext;
@@ -35,13 +30,19 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.MemberInvocati
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParamListContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ThisInvocationContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TotalInvocationContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathVisitor;
+import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
+import au.csiro.pathling.fhirpath.path.Paths.Resource;
+import au.csiro.pathling.fhirpath.path.Paths.This;
+import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
-import org.apache.spark.sql.Column;
-import org.hl7.fhir.exceptions.FHIRException;
+import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -52,34 +53,25 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
-  @Nonnull
-  private final ParserContext context;
 
-  @Nullable
-  private final FhirPath invoker;
+  private static final Set<String> RESOURCE_TYPES = Stream.of(ResourceType.values())
+      .filter(not(ResourceType.NULL::equals))
+      .map(ResourceType::toCode).collect(
+          Collectors.toUnmodifiableSet());
 
-  /**
-   * This constructor is used when there is no explicit invoker, i.e. an invocation is made without
-   * an expression on the left-hand side of the dot notation. In this case, the invoker is taken to
-   * be either the root node, or the `$this` node in the context of functions that support it.
-   *
-   * @param context The {@link ParserContext} to use when parsing the invocation
-   */
-  InvocationVisitor(@Nonnull final ParserContext context) {
-    this.context = context;
-    this.invoker = null;
+
+  final boolean isRoot;
+
+  public InvocationVisitor(final boolean isRoot) {
+    this.isRoot = isRoot;
   }
 
-  /**
-   * This constructor is used when there is an explicit invoker on the left-hand side of the dot
-   * notation.
-   *
-   * @param context The {@link ParserContext} to use when parsing the invocation
-   * @param invoker A {@link FhirPath} representing the invoking expression
-   */
-  InvocationVisitor(@Nonnull final ParserContext context, @Nonnull final FhirPath invoker) {
-    this.context = context;
-    this.invoker = invoker;
+  public InvocationVisitor() {
+    this(false);
+  }
+
+  private static boolean isTypeSpecifierFunction(@Nonnull final String functionName) {
+    return "ofType".equals(functionName) || "getReferenceKey".equals(functionName);
   }
 
   /**
@@ -91,61 +83,13 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
    */
   @Override
   @Nonnull
-  public FhirPath visitMemberInvocation(@Nullable final MemberInvocationContext ctx) {
-    @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    requireNonNull(fhirPath);
-
-    if (invoker != null) {
-      // If there is an invoker, we treat this as a path traversal from the invoker.
-      final PathTraversalInput pathTraversalInput = new PathTraversalInput(context, invoker,
-          fhirPath);
-      return new PathTraversalOperator().invoke(pathTraversalInput);
-
+  public FhirPath visitMemberInvocation(
+      @Nullable final MemberInvocationContext ctx) {
+    final String fhirPath = requireNonNull(ctx).getText();
+    if (isRoot && RESOURCE_TYPES.contains(fhirPath)) {
+      return new Resource(ResourceType.fromCode(fhirPath));
     } else {
-      // If there is no invoker, we need to interpret what the expression means, based on its
-      // content and context.
-
-      if (context.getThisContext().isEmpty()) {
-        // If we're at the root of the expression, this could be:
-        // (1) a path traversal from the input context; or
-        // (2) a reference to the subject resource.
-
-        // The only type of resource reference that is allowed at the root a reference to the
-        // subject resource.
-        // See https://hl7.org/fhirpath/2018Sep/index.html#path-selection.
-        if (fhirPath.equals(context.getInputContext().getExpression())) {
-          return context.getInputContext();
-
-        } else {
-          // If the expression is not a reference to the subject resource, treat it as a path
-          // traversal from the input context.
-          final PathTraversalInput pathTraversalInput = new PathTraversalInput(context,
-              context.getInputContext(), fhirPath);
-          return new PathTraversalOperator().invoke(pathTraversalInput);
-        }
-      } else {
-        // If we're in the context of a function's arguments, there are two valid things this
-        // could be:
-        // (1) a path traversal from the input context;
-        // (2) a reference to a resource type.
-
-        // Check if the expression is a reference to a known resource type.
-        final ResourceType resourceType;
-        try {
-          resourceType = ResourceType.fromCode(fhirPath);
-        } catch (final FHIRException e) {
-          // If the expression is not a resource reference, treat it as a path traversal from the
-          // input context.
-          final PathTraversalInput pathTraversalInput = new PathTraversalInput(context,
-              context.getThisContext().get(), fhirPath);
-          return new PathTraversalOperator().invoke(pathTraversalInput);
-        }
-
-        // If the expression is a resource reference, we build a ResourcePath for it - we call this
-        // the current resource reference.
-        return ResourcePath
-            .build(context.getFhirContext(), context.getDataSource(), resourceType, fhirPath, true);
-      }
+      return new Traversal(fhirPath);
     }
   }
 
@@ -158,79 +102,52 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
    */
   @Override
   @Nonnull
-  public FhirPath visitFunctionInvocation(@Nullable final FunctionInvocationContext ctx) {
-    @Nullable final String functionIdentifier = requireNonNull(ctx).function().identifier()
-        .getText();
-    requireNonNull(functionIdentifier);
-    final NamedFunction function = NamedFunction.getInstance(functionIdentifier);
+  public FhirPath visitFunctionInvocation(
+      @Nullable final FunctionInvocationContext ctx) {
 
-    // If there is no invoker, we use either the input context or the this context, depending on
-    // whether we are in the context of function arguments.
-    final FhirPath input = invoker == null
-                           ? context.getThisContext().orElse(context.getInputContext())
-                           : invoker;
-
-    // A literal cannot be used as a function input.
-    checkUserInput(input instanceof NonLiteralPath,
-        "Literal expression cannot be used as input to a function invocation: " + input
-            .getExpression());
-    final NonLiteralPath nonLiteral = (NonLiteralPath) input;
-
+    final String functionIdentifier = requireNonNull(ctx).function().identifier().getText();
     @Nullable final ParamListContext paramList = ctx.function().paramList();
 
-    final List<FhirPath> arguments = new ArrayList<>();
-    if (paramList != null) {
-      // The `$this` path will be the same as the input, but with a different expression, and it 
-      // will be singular as it represents a single item.
-      // NOTE: This works because for $this the context for aggregation grouping on elements
-      // includes `id` and `this` columns.
+    // NOTE: Here we assume that a function is either a type specifier function 
+    // (and all the arguments are type specifiers) or regular function 
+    // (none of the arguments are type specifiers).
+    final FhirPathVisitor<FhirPath> paramListVisitor =
+        isTypeSpecifierFunction(functionIdentifier)
+        ? new TypeSpecifierVisitor()
+        : new Visitor();
 
-      // Create and alias the $this column.
-      final NonLiteralPath thisPath = nonLiteral.toThisPath();
+    final List<FhirPath> arguments = Optional.ofNullable(paramList)
+        .map(ParamListContext::expression)
+        .map(p -> p.stream()
+            .map(paramListVisitor::visit)
+            .collect(toList())
+        ).orElse(Collections.emptyList());
 
-      // If the this context has an element ID, we need to add this to the grouping columns so that
-      // aggregations that occur within the arguments are in the context of an element. Otherwise,
-      // we add the resource ID column to the groupings.
-      final List<Column> argumentGroupings = new ArrayList<>(context.getGroupingColumns());
-      thisPath.getEidColumn().ifPresentOrElse(argumentGroupings::add,
-          () -> argumentGroupings.add(thisPath.getIdColumn()));
-
-      // Create a new ParserContext, which includes information about how to evaluate the `$this`
-      // expression.
-      final ParserContext argumentContext = new ParserContext(context.getInputContext(),
-          context.getFhirContext(), context.getSparkSession(), context.getDataSource(),
-          context.getTerminologyServiceFactory(), argumentGroupings, context.getNodeIdColumns());
-      argumentContext.setThisContext(thisPath);
-
-      // Parse each of the expressions passed as arguments to the function.
-      arguments.addAll(
-          paramList.expression().stream()
-              .map(expression -> new Visitor(argumentContext).visit(expression))
-              .collect(Collectors.toList())
-      );
-    }
-
-    final NamedFunctionInput functionInput = new NamedFunctionInput(context, nonLiteral, arguments);
-    return function.invoke(functionInput);
+    // if ("resolve".equals(functionIdentifier)) {
+    //   return ResolvePath.of(arguments);
+    // } else {
+      return new EvalFunction(functionIdentifier, arguments);
+    // }
   }
 
   @Override
   @Nonnull
-  public FhirPath visitThisInvocation(@Nullable final ThisInvocationContext ctx) {
-    checkUserInput(context.getThisContext().isPresent(),
-        "$this can only be used within the context of arguments to a function");
-    return context.getThisContext().get();
+  public FhirPath visitThisInvocation(
+      @Nullable final ThisInvocationContext ctx) {
+    return new This();
   }
 
   @Override
   @Nonnull
-  public FhirPath visitIndexInvocation(@Nullable final IndexInvocationContext ctx) {
+  public FhirPath visitIndexInvocation(
+      @Nullable final IndexInvocationContext ctx) {
     throw new InvalidUserInputError("$index is not supported");
   }
 
   @Override
   @Nonnull
-  public FhirPath visitTotalInvocation(@Nullable final TotalInvocationContext ctx) {
+  public FhirPath visitTotalInvocation(
+      @Nullable final TotalInvocationContext ctx) {
     throw new InvalidUserInputError("$total is not supported");
   }
 

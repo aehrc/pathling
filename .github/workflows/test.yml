@@ -239,12 +239,23 @@ jobs:
   fhir-server-3:
     name: FHIR server (tranche 3)
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      actions: write
+      checks: write
     steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::865780493209:role/PathlingBenchmarkUpload
+          aws-region: ap-southeast-2
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
+          submodules: recursive
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
@@ -324,6 +335,8 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: FHIR server test report 3
           fail_on_test_failures: true
+      - name: Upload SQL on FHIR test report to S3
+        run: aws s3 cp fhirpath/target/fhir-view-compliance-test.json s3://pathling-benchmark/test-reports/${{ github.ref }}/sof-test-results.json
 
   # This job builds, tests and scans the FHIR server Docker image.
   docker-image:
@@ -591,7 +604,7 @@ jobs:
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 60
       - name: Upload check logs
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: r-check-logs
@@ -600,7 +613,7 @@ jobs:
             lib/R/target/pathling.Rcheck/*.out
             lib/R/target/pathling.Rcheck/*.fail
       - name: Upload package as artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: r-package
           path: lib/R/target/pathling_*.tar.gz

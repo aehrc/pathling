@@ -26,7 +26,7 @@ import au.csiro.pathling.errors.DiagnosticContextInterceptor;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ErrorReportingInterceptor;
 import au.csiro.pathling.extract.ResultProvider;
-import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.update.BatchProvider;
 import au.csiro.pathling.update.ImportProvider;
@@ -325,7 +325,7 @@ public class FhirServer extends RestfulServer {
    */
   @Nonnull
   public static Set<Enumerations.ResourceType> supportedResourceTypes() {
-    return ResourcePath.supportedResourceTypes();
+    return ResourceCollection.supportedResourceTypes();
   }
 
 }

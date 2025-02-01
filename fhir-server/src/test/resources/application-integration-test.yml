@@ -18,6 +18,7 @@ spark:
   sql:
     shuffle:
       partitions: 1
+    mapKeyDedupPolicy: LAST_WIN      
   network:
     timeout: 600s
   ui:

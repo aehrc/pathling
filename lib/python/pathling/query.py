@@ -17,7 +17,7 @@ from typing import Optional, Sequence, Tuple
 
 from py4j.java_gateway import JavaObject
 
-from pathling.core import ExpOrStr, Expression
+from pathling.core import ExpOrStr, Expression, VariableExpression
 from pathling.datasource import DataSource
 
 

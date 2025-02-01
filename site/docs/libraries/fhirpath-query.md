@@ -283,6 +283,162 @@ The result of this query would look something like this:
 | Type 1 diabetes mellitus                 | 14                 |
 | NULL                                     | 1472               |
 
+## SQL on FHIR views
+
+Pathling is capable of executing SQL on FHIR view definitions and providing the 
+result back as a Spark dataframe. These dataframes can then be joined and 
+composed into more complex Spark queries as required.
+
+<!--suppress CheckEmptyScriptTag -->
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+from pathling import PathlingContext
+
+pc = PathlingContext.create()
+data = pc.read.ndjson("s3://somebucket/synthea/ndjson")
+
+result = data.view(
+        resource="Patient",
+        select=[
+            {"column": [{"path": "getResourceKey()", "name": "patient_id"}]},
+            {
+                "forEach": "address",
+                "column": [
+                    {"path": "line.join('\\n')", "name": "street"},
+                    {"path": "use", "name": "use"},
+                    {"path": "city", "name": "city"},
+                    {"path": "postalCode", "name": "zip"},
+                ],
+            },
+        ],
+)
+
+display(result)
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+```java
+import au.csiro.pathling.library.PathlingContext;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import au.csiro.pathling.library.io.source.NdjsonSource;
+
+class MyApp {
+
+    public static void main(String[] args) {
+        PathlingContext pc = PathlingContext.create();
+        NdjsonSource data = pc.read.ndjson("s3://somebucket/synthea/ndjson");
+
+        Dataset<Row> result = data.view(ResourceType.PATIENT)
+                .json("{\n" +
+                        "  \"resource\": \"Patient\",\n" +
+                        "  \"select\": [\n" +
+                        "    {\n" +
+                        "      \"column\": [\n" +
+                        "        {\n" +
+                        "          \"path\": \"getResourceKey()\",\n" +
+                        "          \"name\": \"patient_id\"\n" +
+                        "        }\n" +
+                        "      ]\n" +
+                        "    },\n" +
+                        "    {\n" +
+                        "      \"forEach\": \"address\",\n" +
+                        "      \"column\": [\n" +
+                        "        {\n" +
+                        "          \"path\": \"line.join('\\\\n')\",\n" +
+                        "          \"name\": \"street\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "          \"path\": \"use\",\n" +
+                        "          \"name\": \"use\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "          \"path\": \"city\",\n" +
+                        "          \"name\": \"city\"\n" +
+                        "        },\n" +
+                        "        {\n" +
+                        "          \"path\": \"postalCode\",\n" +
+                        "          \"name\": \"zip\"\n" +
+                        "        }\n" +
+                        "      ]\n" +
+                        "    }\n" +
+                        "  ]\n" +
+                        "}")
+                .execute();
+
+        result.show();
+    }
+}
+```
+
+</TabItem>
+<TabItem value="scala" label="Scala">
+
+```scala
+import au.csiro.pathling.library.PathlingContext
+import org.hl7.fhir.r4.model.Enumerations.ResourceType
+
+val pc = PathlingContext.create()
+val data = pc.read.ndjson("s3://somebucket/synthea/ndjson")
+
+val result = data.view(ResourceType.PATIENT)
+        .json("""{
+    "resource": "Patient",
+    "select": [
+      {
+        "column": [
+          {
+            "path": "getResourceKey()",
+            "name": "patient_id"
+          }
+        ]
+      },
+      {
+        "forEach": "address",
+        "column": [
+          {
+            "path": "line.join('\\n')",
+            "name": "street"
+          },
+          {
+            "path": "use",
+            "name": "use"
+          },
+          {
+            "path": "city",
+            "name": "city"
+          },
+          {
+            "path": "postalCode",
+            "name": "zip"
+          }
+        ]
+      }
+    ]
+  }""")
+        .execute()
+
+display(result)
+```
+
+</TabItem>
+</Tabs>
+
+The result of this query would look something like this:
+
+| patient_id | street                     | use  | city       | zip   |
+|------------|----------------------------|------|------------|-------|
+| 1          | 398 Kautzer Walk Suite 62  | home | Barnstable | 02675 |
+| 1          | 186 Nitzsche Forge         | work | Revere     | 02151 |
+| 2          | 1087 Quitzon Club          | home | Plymouth   | NULL  |
+| 3          | 442 Bruen Arcade           | home | Nantucket  | NULL  |
+| 4          | 858 Miller Junction Apt 61 | work | Brockton   | 02301 |
+
 ## Reading FHIR data
 
 There are several ways of making FHIR data available for FHIRPath query.

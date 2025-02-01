@@ -23,6 +23,8 @@ import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import au.csiro.pathling.UnitTestDependencies;
+import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -53,12 +55,31 @@ import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Bean;
 
 /**
  * @author John Grimes
  */
 @SpringBootUnitTest
+@SpringBootTest(classes = {SearchExecutorTest.MyConfig.class, UnitTestDependencies.class})
 class SearchExecutorTest {
+
+  public static class MyConfig {
+
+    @Bean
+    @Nonnull
+    public static FhirEncoders fhirEncoders() {
+      // TODO: this needs to be synchronized with the TestImporter configuration
+      final EncodingConfiguration defConfiguration = EncodingConfiguration.builder().build();
+
+      return FhirEncoders.forR4()
+          .withExtensionsEnabled(defConfiguration.isEnableExtensions())
+          .withOpenTypes(defConfiguration.getOpenTypes())
+          .withMaxNestingLevel(defConfiguration.getMaxNestingLevel())
+          .getOrCreate();
+    }
+  }
 
   @Autowired
   QueryConfiguration configuration;
@@ -91,7 +112,7 @@ class SearchExecutorTest {
   void simpleSearchWithMemberOf() {
     final StringAndListParam params = new StringAndListParam();
     params.addAnd(new StringParam(
-        "reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=ecl/^ 32570581000036105 : << 263502005 = << 90734009')"));
+        "reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=ecl/^ 32570581000036105 : << 263502005 = << 90734009').anyTrue()"));
     final SearchExecutorBuilder builder = searchBuilder()
         .withSubjectResource(ResourceType.PATIENT)
         .withFilters(params);
@@ -107,6 +128,16 @@ class SearchExecutorTest {
 
     final SearchExecutor executor = builder.build();
     assertResponse("SearchExecutorTest/simpleSearchWithMemberOf.Bundle.json", executor);
+  }
+
+  @Test
+  void searchWithOffset() {
+    final SearchExecutorBuilder builder = searchBuilder()
+        .withSubjectResource(ResourceType.PATIENT);
+    TestHelpers.mockResource(builder.getDatabase(), sparkSession, ResourceType.PATIENT);
+
+    final SearchExecutor executor = builder.build();
+    assertResponse("SearchExecutorTest/searchWithOffset.Bundle.json", executor, 3, 5);
   }
 
   @Test
@@ -143,7 +174,7 @@ class SearchExecutorTest {
             .withSubjectResource(ResourceType.CAREPLAN)
             .withFilters(params)
             .build());
-    assertEquals("Filter expression must be of Boolean type: category.coding", error.getMessage());
+    assertEquals("Filter expression must be a Boolean: category.coding", error.getMessage());
   }
 
   @Test
@@ -165,15 +196,18 @@ class SearchExecutorTest {
         fhirEncoders, terminologyServiceFactory);
   }
 
-  @SuppressWarnings("SameParameterValue")
-  void assertResponse(@Nonnull final String expectedPath,
-      @Nonnull final IBundleProvider executor) {
+  void assertResponse(@Nonnull final String expectedPath, @Nonnull final IBundleProvider executor) {
+    assertResponse(expectedPath, executor, 0, 0);
+  }
+
+  void assertResponse(@Nonnull final String expectedPath, @Nonnull final IBundleProvider executor,
+      final int fromIndex, final int toIndex) {
 
     final String expectedJson = getResourceAsString("responses/" + expectedPath);
     final Bundle expectedBundle = (Bundle) jsonParser.parseResource(expectedJson);
     assertEquals(expectedBundle.getTotal(), executor.size());
 
-    final List<IBaseResource> actualResources = executor.getResources(0, expectedBundle.getTotal());
+    final List<IBaseResource> actualResources = executor.getResources(fromIndex, toIndex);
     final Bundle actualBundle = new Bundle();
     actualBundle.setEntry(actualResources.stream().map(resource -> {
       final BundleEntryComponent entry = new BundleEntryComponent();
@@ -184,6 +218,6 @@ class SearchExecutorTest {
     actualBundle.setType(BundleType.SEARCHSET);
     final String actualJson = jsonParser.encodeResourceToString(actualBundle);
 
-    JSONAssert.assertEquals(expectedJson, actualJson, JSONCompareMode.LENIENT);
+    JSONAssert.assertEquals(expectedJson, actualJson, JSONCompareMode.STRICT_ORDER);
   }
 }

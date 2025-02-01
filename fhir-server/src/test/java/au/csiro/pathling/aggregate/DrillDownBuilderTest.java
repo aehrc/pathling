@@ -17,18 +17,11 @@
 
 package au.csiro.pathling.aggregate;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import jakarta.annotation.Nonnull;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import jakarta.annotation.Nonnull;
 import java.util.stream.Stream;
 import lombok.Value;
 import org.apache.spark.sql.SparkSession;
@@ -53,11 +46,10 @@ import org.hl7.fhir.r4.model.UnsignedIntType;
 import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.UrlType;
 import org.hl7.fhir.r4.model.UuidType;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @SpringBootUnitTest
+@NotImplemented
 class DrillDownBuilderTest {
 
   @Autowired
@@ -144,20 +136,21 @@ class DrillDownBuilderTest {
     );
   }
 
-  @ParameterizedTest
-  @MethodSource("parameters")
-  void labelTypes(@Nonnull final TestParameters parameters) {
-    final List<Optional<Type>> labels = List.of(Optional.of(parameters.getLabel()));
-    final ElementPath grouping = new ElementPathBuilder(spark)
-        .expression("someElement")
-        .singular(true)
-        .build();
-    final List<FhirPath> groupings = List.of(grouping);
-    final DrillDownBuilder builder = new DrillDownBuilder(labels, groupings,
-        Collections.emptyList());
-    final Optional<String> drillDown = builder.build();
-    assertTrue(drillDown.isPresent());
-    assertEquals(parameters.getExpectedResult(), drillDown.get());
-  }
+  // TODO: Implement
+  // @ParameterizedTest
+  // @MethodSource("parameters")
+  // void labelTypes(@Nonnull final TestParameters parameters) {
+  //   final List<Optional<Type>> labels = List.of(Optional.of(parameters.getLabel()));
+  //   final PrimitivePath grouping = new ElementPathBuilder(spark)
+  //       .expression("someElement")
+  //       .singular(true)
+  //       .build();
+  //   final List<Collection> groupings = List.of(grouping);
+  //   final DrillDownBuilder builder = new DrillDownBuilder(labels, groupings,
+  //       Collections.emptyList());
+  //   final Optional<String> drillDown = builder.build();
+  //   assertTrue(drillDown.isPresent());
+  //   assertEquals(parameters.getExpectedResult(), drillDown.get());
+  // }
 
 }

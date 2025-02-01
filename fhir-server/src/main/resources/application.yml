@@ -34,6 +34,9 @@ pathling:
   spark:
     # The name that Pathling will be identified as within the Spark cluster.
     appName: pathling
+    # Needed for map merging in the Spark SQL engine.
+    sql:
+      mapKeyDedupPolicy: LAST_WIN
 
   storage:
     # The base URL at which Pathling will look for data files, and where it will save data received
