@@ -64,8 +64,6 @@ class ExtractTest {
         ), Collections.emptyList(), Optional.empty());
 
     final Dataset<Row> result = executor.buildQuery(request);
-    result.show();
-
     final Dataset<Row> expected = DatasetBuilder.of(spark)
         .withColumn("id", DataTypes.StringType)
         .withColumn("given_name", DataTypes.StringType)

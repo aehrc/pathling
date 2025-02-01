@@ -52,6 +52,25 @@ import org.apache.spark.sql.SparkSession;
 @SuppressWarnings("UnusedReturnValue")
 public class DatasetAssert {
 
+  public static boolean LOG_PHYSICAL_PLAN =
+      Boolean.parseBoolean(System.getProperty("pathling.test.ds.logPhysicalPlan", "false"));
+
+  public static boolean LOG_DATASET =
+      Boolean.parseBoolean(System.getProperty("pathling.test.ds.logRows", "false"));
+
+  public static void logDataset(@Nonnull final Dataset<Row> dataset) {
+    if (LOG_PHYSICAL_PLAN) {
+      log.info("Physical plan:\n {}", dataset.queryExecution().executedPlan().toString());
+    }
+    if (LOG_DATASET) {
+      log.info("Dataset:");
+      if (log.isInfoEnabled()) {
+        // OK: show allowed here
+        dataset.show();
+      }
+    }
+  }
+
   public static DatasetAssert of(@Nonnull final Dataset<Row> dataset) {
     return new DatasetAssert(dataset);
   }
@@ -62,6 +81,7 @@ public class DatasetAssert {
 
   public DatasetAssert(@Nonnull final Dataset<Row> dataset) {
     this.dataset = dataset;
+    logDataset(dataset);
   }
 
   @Nonnull
@@ -94,8 +114,6 @@ public class DatasetAssert {
 
   public DatasetAssert hasRows(@Nonnull final SparkSession spark,
       @Nonnull final String expectedCsvPath, final boolean header) {
-    dataset.explain();
-    dataset.show(1000, false);
     Assertions.assertDatasetAgainstTsv(spark, expectedCsvPath, dataset, header);
     return this;
   }
@@ -194,6 +212,7 @@ public class DatasetAssert {
   @Nonnull
   @SuppressWarnings("unused")
   public DatasetAssert debugRows() {
+    // OK: show allowed here
     dataset.show();
     return this;
   }

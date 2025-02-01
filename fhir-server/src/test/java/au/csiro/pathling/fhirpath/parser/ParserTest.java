@@ -589,7 +589,6 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.designation(http://terminology.hl7.org/CodeSystem/designation-usage|display)")
         .selectOrderedResult()
-        .debugAllRows()
         .hasRows(spark, "responses/ParserTest/testDesignationFunctionWithNoLanguage.tsv");
   }
 

@@ -99,7 +99,6 @@ class AggregateQueryExecutorTest {
     assertArrayEquals(new String[]{"patient_gender", "patient_count"},
         result.columns());
     assertThat(result)
-        .debugAllRows()
         .hasRows(spark, "responses/AggregateQueryExecutorTest/simpleQuery.tsv");
   }
 
@@ -116,7 +115,6 @@ class AggregateQueryExecutorTest {
     final Dataset<Row> result = executor.buildQuery(request).getDataset();
     //assertTrue(Stream.of(result.columns()).allMatch(Strings::looksLikeAlias));
     assertThat(result)
-        .debugAllRows()
         .hasRows(spark, "responses/AggregateQueryExecutorTest/simpleQuery.tsv");
   }
 

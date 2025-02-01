@@ -68,9 +68,10 @@ class FhirpathTest {
       @Nonnull final ResourceType subjectResource,
       @Nonnull final String fhirExpression) {
 
-    return createEvaluator(subjectResource, dataSource)
+    final Dataset<Row> resultDataset = createEvaluator(subjectResource, dataSource)
         .evaluate(subjectResource, fhirExpression)
         .toIdValueDataset();
+    return resultDataset;
   }
 
   @Nonnull
@@ -86,8 +87,6 @@ class FhirpathTest {
     final ObjectDataSource dataSource = getPatientsWithConditions();
     final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
         "reverseResolve(Condition.subject).code.coding.subsumes(%resource.reverseResolve(Condition.subject).code)");
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", sql_array(true, true, true, true)),
@@ -111,9 +110,6 @@ class FhirpathTest {
         "where($this.reverseResolve(Condition.subject).code"
             + ".subsumedBy(system-x|code-xx) contains true).gender"
     );
-    System.out.println(resultDataset.logicalPlan());
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", "female"),
@@ -128,8 +124,6 @@ class FhirpathTest {
     final ObjectDataSource dataSource = getPatientsWithConditions();
     final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
         "reverseResolve(Condition.subject).id");
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", sql_array("x", "y")),
@@ -143,7 +137,6 @@ class FhirpathTest {
     final ObjectDataSource dataSource = getPatientsWithConditions();
     final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
         "reverseResolve(Condition.subject).code.coding.code");
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", sql_array("code-xx", "code-xy", "code-yx", "code-yy")),
@@ -159,8 +152,6 @@ class FhirpathTest {
         "reverseResolve(Condition.subject).code.coding.code.count()");
 
     // TODO: should be 0 in the last row
-
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", 4),
@@ -174,10 +165,7 @@ class FhirpathTest {
     final ObjectDataSource dataSource = getPatientsWithConditions();
     final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
         "reverseResolve(Condition.subject).count()");
-
     // TODO: should be 0 in the last row
-
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", 2),
@@ -191,10 +179,7 @@ class FhirpathTest {
     final ObjectDataSource dataSource = getPatientsWithConditions();
     final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
         "where(reverseResolve(Condition.subject).count() = 2).id");
-
     // TODO: should be 0 in the last row
-
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", "1"),
@@ -209,8 +194,6 @@ class FhirpathTest {
     final ObjectDataSource dataSource = getPatientsWithConditions();
     final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
         "reverseResolve(Condition.subject).code.coding.code.first()");
-
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", "code-xx"),
@@ -225,8 +208,6 @@ class FhirpathTest {
     final ObjectDataSource dataSource = getPatientsWithConditions();
     final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
         "reverseResolve(Condition.subject).code.coding.code.count().first()");
-
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", 4),
@@ -241,8 +222,6 @@ class FhirpathTest {
     final ObjectDataSource dataSource = getPatientsWithConditions();
     final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
         "reverseResolve(Condition.subject).code.coding.code.first().count()");
-
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", 1),
@@ -258,8 +237,6 @@ class FhirpathTest {
         ResourceType.PATIENT,
         "where(gender='female').reverseResolve(Condition.subject).id"
     );
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", sql_array("x", "y")),
@@ -270,12 +247,10 @@ class FhirpathTest {
 
   @Test
   void multipleReverseResolveInOperator() {
-    // TODO: Implement
     final ObjectDataSource dataSource = getPatientsWithConditions();
     final Dataset<Row> resultDataset = evalExpression(dataSource, ResourceType.PATIENT,
         "reverseResolve(Condition.subject).code.coding.count() + reverseResolve(Condition.subject).id.count()");
 
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", 6),
@@ -292,8 +267,6 @@ class FhirpathTest {
         ResourceType.PATIENT,
         "reverseResolve(Encounter.subject).reverseResolve(Condition.encounter).id"
     );
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", sql_array("1.1.1", "1.1.2", "1.1.3", "1.2.1")),
@@ -310,8 +283,6 @@ class FhirpathTest {
         ResourceType.PATIENT,
         "reverseResolve(Encounter.subject).reverseResolve(Condition.encounter).id.count()"
     );
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", 4),
@@ -329,11 +300,6 @@ class FhirpathTest {
         ResourceType.CONDITION,
         "encounter.resolve().subject.resolve().ofType(Patient).id"
     );
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
-
-    // TODO: should be 0 in the last row
-
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1.1.1", "1"),
@@ -381,8 +347,6 @@ class FhirpathTest {
         ResourceType.CONDITION,
         "subject.resolve().ofType(Patient).gender"
     );
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("x", "female"),
@@ -400,9 +364,6 @@ class FhirpathTest {
         ResourceType.ENCOUNTER,
         "episodeOfCare.resolve().status"
     );
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
-
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("01", sql_array("active", "finished")),
@@ -422,9 +383,6 @@ class FhirpathTest {
         ResourceType.ENCOUNTER,
         "episodeOfCare.resolve().count()"
     );
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
-
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("01", 2),
@@ -457,7 +415,6 @@ class FhirpathTest {
 
   @Test
   void resolveToManyWithSimpleValueAndWhereInPath() {
-
     final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
         List.of(
             new Patient().setGender(AdministrativeGender.MALE).setId("Patient/1"),
@@ -486,9 +443,6 @@ class FhirpathTest {
         ResourceType.ENCOUNTER,
         "where(subject.resolve().ofType(Patient).gender = 'male').episodeOfCare.resolve().status"
     );
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
-
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("01", sql_array("active", "finished")),
@@ -545,8 +499,6 @@ class FhirpathTest {
         ResourceType.CONDITION,
         "subject.resolve().ofType(Patient).reverseResolve(Condition.subject).id"
     );
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("x", sql_array("x", "y")),
@@ -563,8 +515,6 @@ class FhirpathTest {
         ResourceType.PATIENT,
         "reverseResolve(Condition.subject).subject.resolve().ofType(Patient).id"
     );
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", sql_array("1", "1")),
@@ -605,9 +555,6 @@ class FhirpathTest {
         "hospitalization.origin.resolve().ofType(Location).count()"
             + "=hospitalization.destination.resolve().ofType(Location).count()"
     );
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", true),
@@ -645,7 +592,6 @@ class FhirpathTest {
         "appointment.resolve().reasonReference.resolve().ofType(Condition).id.first()"
             + " = reasonReference.resolve().ofType(Condition).id.first()"
     );
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", true),
@@ -680,7 +626,6 @@ class FhirpathTest {
             + " + hasMember.resolve().ofType(Observation).count()"
             + " + hasMember.resolve().ofType(Observation).hasMember.resolve().ofType(Observation).count()"
     );
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", 3),
@@ -706,7 +651,6 @@ class FhirpathTest {
         ResourceType.ENCOUNTER,
         "extension('urn:goal').value.ofType(Reference).resolve().ofType(Goal).id"
     );
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", sql_array("1")),
@@ -733,7 +677,6 @@ class FhirpathTest {
         "(reverseResolve(Condition.subject).subject.resolve() combine "
             + "reverseResolve(DiagnosticReport.subject).subject.resolve()).ofType(Patient).id"
     );
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", sql_array("1", "1"))
@@ -765,8 +708,6 @@ class FhirpathTest {
             + "link.where(type = 'replaces').other.resolve()).ofType(Patient).gender"
     );
 
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", sql_array("unknown")),
@@ -784,8 +725,6 @@ class FhirpathTest {
         ResourceType.PATIENT,
         "reverseResolve(Condition.subject).subject.resolve().ofType(Patient).reverseResolve(Condition.subject).id"
     );
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", sql_array("x", "y", "x", "y")),
@@ -828,10 +767,6 @@ class FhirpathTest {
             + ".value.ofType(Reference).resolve().ofType(Goal).description.text"
 
     );
-    resultDataset.printSchema();
-    System.out.println(resultDataset.logicalPlan());
-    System.out.println(resultDataset.queryExecution().executedPlan().toString());
-    resultDataset.show();
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
             RowFactory.create("1", sql_array("Goal_1")),
@@ -839,6 +774,4 @@ class FhirpathTest {
             RowFactory.create("3", null)
         );
   }
-
-
 }

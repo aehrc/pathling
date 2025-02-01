@@ -66,7 +66,6 @@ class DefaultRepresentationTest {
       for (int i = 0; i < result.size(); i++) {
         assertTrue(result.getBoolean(i), "Test " + i + " failed: " + tests.get(i));
       }
-      System.out.println(result);
     }
   }
 
@@ -116,13 +115,6 @@ class DefaultRepresentationTest {
         .assertEquals(13, valueOf(13).singular())
         .assertEquals("a", arrayOfOne("a").singular())
         .check();
-
-    // final SparkException ex = assertThrows(SparkException.class, () ->
-    //     spark.range(1).select(
-    //         ColumnHelpers.singular(functions.array(functions.lit("a"), functions.lit("b")))
-    //     ).collect());
-    // System.out.println(ex.getCause().getMessage());
-
   }
 
   @Test

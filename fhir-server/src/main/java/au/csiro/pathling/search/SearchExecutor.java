@@ -230,8 +230,6 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
         .of(subjectResource.toCode());
     requireNonNull(encoder);
     reportQueryPlan(resources);
-    resources.explain();
-
     return resources.as(encoder).collectAsList();
   }
 

@@ -31,10 +31,11 @@
   <logger level="INFO" name="au.csiro.pathling.test.TimingExtension">
     <appender-ref ref="TIMING"/>
   </logger>
-  <logger level="DEBUG" name="au.csiro"/>
+  <logger level="INFO" name="au.csiro"/>
   <logger level="ERROR" name="org.apache.spark.sql.catalyst.util.SparkStringUtils"/>
   <logger level="ERROR" name="org.apache.spark.sql.catalyst.analysis.SimpleFunctionRegistry"/>
   <logger level="ERROR" name="org.apache.hadoop.util.NativeCodeLoader"/>
+  <logger level="ERROR" name="org.apache.spark.scheduler.DAGScheduler"/>
   <root level="WARN">
     <appender-ref ref="STDOUT"/>
   </root>

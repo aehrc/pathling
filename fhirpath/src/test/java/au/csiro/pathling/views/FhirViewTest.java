@@ -239,8 +239,8 @@ abstract class FhirViewTest {
 
   @BeforeAll
   static void beforeAll() throws IOException {
-    System.out.println("Creating temp directory");
     tempDir = Files.createTempDirectory("pathling-fhir-view-test");
+    log.debug("Created temporary directory: " + tempDir);
   }
 
   @Nonnull

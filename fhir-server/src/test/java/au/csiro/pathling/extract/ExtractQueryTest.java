@@ -169,7 +169,6 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
-        .debugAllRows()
         .hasRows(spark, "responses/ExtractQueryTest/multiplePolymorphicResolves.tsv");
   }
 
@@ -469,7 +468,6 @@ class ExtractQueryTest {
     );
 
     assertThat(result)
-        .debugAllRows()
         .hasRows(spark, "responses/ExtractQueryTest/structuredResult.tsv");
   }
 

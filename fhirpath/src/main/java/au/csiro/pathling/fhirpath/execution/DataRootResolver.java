@@ -23,9 +23,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 @Value
+@Slf4j
 public class DataRootResolver {
 
   ResourceType subjectResource;
@@ -108,7 +110,7 @@ public class DataRootResolver {
       }
     } else if (headPath instanceof Paths.ExternalConstantPath ecp) {
       // we do not need to do anything here
-      System.out.println("External constant path" + ecp);
+      log.debug("External constant path: {}", ecp);
       if ("resource".equals(ecp.getName()) || "rootResource".equals(ecp.getName())) {
         // this root should already be addded here
         collectDataRoots(ResourceRoot.of(subjectResource), fhirPath.suffix(), FhirPath.nullPath(),

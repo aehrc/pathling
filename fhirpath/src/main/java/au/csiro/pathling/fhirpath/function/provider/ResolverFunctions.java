@@ -28,9 +28,7 @@ public class ResolverFunctions {
     final ReverseResolveRoot root = ReverseResolveRoot.ofResource(input.getResourceType(),
         childResourceType, childPath);
 
-    log.info("Reverse resolve root: {}", root);
-    System.out.println("Reverse resolve root: " + root);
-
+    log.debug("Reverse resolve root: {}", root);
     return evaluationContext.resolveReverseJoin(input, subjectPath.toExpression());
   }
 
