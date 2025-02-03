@@ -24,8 +24,8 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
+import au.csiro.pathling.fhirpath.definition.fhir.FhirDefinitionContext;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.EnumSet;
 import java.util.Optional;
@@ -84,11 +84,8 @@ public class ResourceCollection extends Collection {
   public static ResourceCollection build(@Nonnull final FhirContext fhirContext,
       @Nonnull final ResourceType resourceType) {
 
-    // Get the resource definition from HAPI.
-    final String resourceCode = resourceType.toCode();
-    final RuntimeResourceDefinition hapiDefinition = fhirContext.getResourceDefinition(
-        resourceCode);
-    final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
+    final ResourceDefinition definition = FhirDefinitionContext.of(fhirContext)
+        .findResourceDefinition(resourceType);
 
     // We use a literal column as the resource value - the actual value is not important.
     // But the non-null value indicates that the resource should be included in any result.
@@ -111,10 +108,8 @@ public class ResourceCollection extends Collection {
       @Nonnull final FhirContext fhirContext,
       @Nonnull final ResourceType resourceType) {
     // Get the resource definition from HAPI.
-    final String resourceCode = resourceType.toCode();
-    final RuntimeResourceDefinition hapiDefinition = fhirContext.getResourceDefinition(
-        resourceCode);
-    final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
+    final ResourceDefinition definition = FhirDefinitionContext.of(fhirContext)
+        .findResourceDefinition(resourceType);
 
     // We use a literal column as the resource value - the actual value is not important.
     // But the non-null value indicates that the resource should be included in any result.

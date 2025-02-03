@@ -28,8 +28,7 @@ import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
-import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
-import au.csiro.pathling.fhirpath.definition.ElementChildDefinition;
+import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
@@ -269,10 +268,10 @@ public class Collection implements Comparable, Numeric {
     // 1. If the child is a choice, we have special behaviour for traversing to the choice that 
     //    results in a mixed collection.
     // 2. If the child is a regular element, we use the standard traversal method.
-    if (childDef instanceof ChoiceChildDefinition) {
-      return MixedCollection.buildElement(this, (ChoiceChildDefinition) childDef);
-    } else if (childDef instanceof ElementChildDefinition) {
-      return traverseElement((ElementChildDefinition) childDef);
+    if (childDef instanceof ChoiceDefinition) {
+      return MixedCollection.buildElement(this, (ChoiceDefinition) childDef);
+    } else if (childDef instanceof ElementDefinition) {
+      return traverseElement((ElementDefinition) childDef);
     } else {
       throw new IllegalArgumentException("Unsupported child definition type: " + childDef
           .getClass().getSimpleName());

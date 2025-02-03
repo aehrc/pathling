@@ -15,14 +15,18 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.definition;
+package au.csiro.pathling.fhirpath.definition.fhir;
 
 import static au.csiro.pathling.utilities.Functions.maybeCast;
 
+import au.csiro.pathling.fhirpath.definition.ChildDefinition;
+import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
+import ca.uhn.fhir.model.api.annotation.Block;
+import ca.uhn.fhir.model.api.annotation.DatatypeDef;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import java.util.Optional;
@@ -37,7 +41,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  * @author Piotr Szul
  */
-abstract public class BaseNodeDefinition<ED extends BaseRuntimeElementDefinition<?>> implements
+abstract class BaseFhirNodeDefinition<ED extends BaseRuntimeElementDefinition<?>> implements
     NodeDefinition {
 
   @Nonnull
@@ -46,7 +50,7 @@ abstract public class BaseNodeDefinition<ED extends BaseRuntimeElementDefinition
   @Nonnull
   final Map<String, RuntimeChildChoiceDefinition> nestedChildElementsByName;
 
-  protected BaseNodeDefinition(@Nonnull final ED elementDefinition) {
+  protected BaseFhirNodeDefinition(@Nonnull final ED elementDefinition) {
     this.elementDefinition = elementDefinition;
 
     // Create a stream of all the definitions of the children of this element.
@@ -60,7 +64,7 @@ abstract public class BaseNodeDefinition<ED extends BaseRuntimeElementDefinition
     // correct child definition when a qualified choice element is traversed.
     nestedChildElementsByName = allChildren
         // Filter out non-choice children, then cast to choice definitions.
-        .filter(ChildDefinition::isChildChoiceDefinition)
+        .filter(FhirDefinitionContext::isChildChoiceDefinition)
         .map(RuntimeChildChoiceDefinition.class::cast)
         .flatMap(
             // Create a stream of pairs of child names and their respective choice definitions.
@@ -76,7 +80,7 @@ abstract public class BaseNodeDefinition<ED extends BaseRuntimeElementDefinition
     // definition using the pre-built map.
     final RuntimeChildChoiceDefinition choiceChild = nestedChildElementsByName.get(name);
     if (choiceChild != null) {
-      return ChildDefinition.build(choiceChild, name);
+      return FhirDefinitionContext.build(choiceChild, name);
     }
 
     // If the child is not a qualified choice, look for the child definition by name.
@@ -89,12 +93,23 @@ abstract public class BaseNodeDefinition<ED extends BaseRuntimeElementDefinition
             .or(() -> Optional.ofNullable(compElementDef.getChildByName(name + "[x]"))))
         // The ChildDefinition.build method is a factory method that creates the correct
         // implementation of ChildDefinition based on the type of the child.
-        .flatMap(cd -> ChildDefinition.build(cd, name));
+        .flatMap(cd -> FhirDefinitionContext.build(cd, name));
   }
 
   @Nonnull
   public Optional<FHIRDefinedType> getFhirType() {
-    return ElementDefinition.getFhirTypeFromElementDefinition(elementDefinition);
+    return getFhirTypeFromElementDefinition(elementDefinition);
   }
 
+  @Nonnull
+  public static Optional<FHIRDefinedType> getFhirTypeFromElementDefinition(
+      @Nonnull final BaseRuntimeElementDefinition<?> elementDefinition) {
+    final Class<?> elementClass = elementDefinition.getImplementingClass();
+    return Optional.ofNullable(elementClass.getAnnotation(DatatypeDef.class))
+        .map(DatatypeDef::name)
+        .map(FHIRDefinedType::fromCode)
+        // special case for backbone elements
+        .or(() -> Optional.ofNullable(elementClass.getAnnotation(Block.class))
+            .map(__ -> FHIRDefinedType.BACKBONEELEMENT));
+  }
 }

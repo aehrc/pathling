@@ -21,7 +21,7 @@ import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
+import au.csiro.pathling.fhirpath.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.security.OperationAccess;
@@ -134,7 +134,7 @@ public class SearchProvider implements IResourceProvider {
   @OperationAccess("search")
   @SuppressWarnings({"UnusedReturnValue"})
   public IBundleProvider search() {
-    final ResourceType subjectResource = ResourceDefinition.getResourceTypeFromClass(resourceClass);
+    final ResourceType subjectResource = FhirDefinitionContext.getResourceTypeFromClass(resourceClass);
     return buildSearchExecutor(subjectResource, Optional.empty());
   }
 
