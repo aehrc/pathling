@@ -49,7 +49,7 @@ class OperationDefinitionTest extends IntegrationTest {
 
   private static final List<String> OPERATIONS = List.of("aggregate", "search", "extract", "import",
       "result", "job");
-  private static final String SUFFIX = "7";
+  private static final String SUFFIX = "8";
 
   @Test
   void operationDefinitions() throws MalformedURLException, URISyntaxException {
