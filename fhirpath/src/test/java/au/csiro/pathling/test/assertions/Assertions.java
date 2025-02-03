@@ -19,15 +19,15 @@ package au.csiro.pathling.test.assertions;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsUrl;
 
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.execution.CollectionDataset;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nonnull;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -37,19 +37,20 @@ import org.opentest4j.AssertionFailedError;
 public abstract class Assertions {
 
   @Nonnull
-  public static FhirPathAssertion assertThat(@Nonnull final FhirPath fhirPath) {
-    return new FhirPathAssertion(fhirPath);
+  public static FhirPathAssertion assertThat(@Nonnull final CollectionDataset datasetResult) {
+    return new FhirPathAssertion(datasetResult);
   }
 
-  @Nonnull
-  public static ResourcePathAssertion assertThat(@Nonnull final ResourcePath fhirPath) {
-    return new ResourcePathAssertion(fhirPath);
-  }
+  // @Nonnull
+  // public static ResourcePathAssertion assertThat(@Nonnull final ResourceCollection fhirPath,
+  //     @Nonnull final EvaluationContext evaluationContext) {
+  //   return new ResourcePathAssertion(fhirPath, evaluationContext);
+  // }
 
-  @Nonnull
-  public static ElementPathAssertion assertThat(@Nonnull final ElementPath fhirPath) {
-    return new ElementPathAssertion(fhirPath);
-  }
+  // @Nonnull
+  // public static ElementPathAssertion assertThat(@Nonnull final PrimitivePath fhirPath) {
+  //   return new ElementPathAssertion(fhirPath);
+  // }
 
   @Nonnull
   public static DatasetAssert assertThat(@Nonnull final Dataset<Row> rowDataset) {
@@ -65,13 +66,23 @@ public abstract class Assertions {
     }
   }
 
-  public static void assertDatasetAgainstCsv(@Nonnull final SparkSession spark,
+  public static void assertDatasetAgainstTsv(@Nonnull final SparkSession spark,
       @Nonnull final String expectedCsvPath, @Nonnull final Dataset<Row> actualDataset) {
+    assertDatasetAgainstTsv(spark, expectedCsvPath, actualDataset, false);
+  }
+
+  public static void assertDatasetAgainstTsv(@Nonnull final SparkSession spark,
+      @Nonnull final String expectedCsvPath, @Nonnull final Dataset<Row> actualDataset,
+      final boolean header) {
     final URL url = getResourceAsUrl(expectedCsvPath);
     final String decodedUrl = URLDecoder.decode(url.toString(), StandardCharsets.UTF_8);
-    final Dataset<Row> expectedDataset = spark.read()
+    final DataFrameReader reader = spark.read()
         .schema(actualDataset.schema())
-        .csv(decodedUrl);
+        .option("delimiter", "\t");
+    if (header) {
+      reader.option("header", true);
+    }
+    final Dataset<Row> expectedDataset = reader.csv(decodedUrl);
     new DatasetAssert(actualDataset)
         .hasRowsUnordered(expectedDataset);
   }

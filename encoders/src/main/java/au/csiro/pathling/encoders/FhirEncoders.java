@@ -42,6 +42,37 @@ import scala.collection.JavaConverters;
 public class FhirEncoders {
 
   /**
+   * The reasonable default set of open types to encode with extension values.
+   */
+  public static final Set<String> STANDARD_OPEN_TYPES = Set.of(
+      "boolean",
+      "code",
+      "date",
+      "dateTime",
+      "decimal",
+      "integer",
+      "string",
+      "Coding",
+      "CodeableConcept",
+      "Address",
+      "Identifier",
+      "Reference"
+  );
+
+  /**
+   * All possible open types in FHIR R4.
+   */
+  public static final Set<String> ALL_OPEN_TYPES = Set.of("base64Binary", "boolean", "canonical",
+      "code", "date", "dateTime", "decimal", "id", "instant", "integer", "markdown", "oid",
+      "positiveInt", "string", "time", "unsignedInt", "uri", "url", "uuid", "Address", "Age",
+      "Annotation", "Attachment", "CodeableConcept", "Coding", "ContactPoint", "Count", "Distance",
+      "Duration", "HumanName", "Identifier", "Money", "Period", "Quantity", "Range", "Ratio",
+      "Reference", "SampledData", "Signature", "Timing", "ContactDetail", "Contributor",
+      "DataRequirement", "Expression", "ParameterDefinition", "RelatedArtifact",
+      "TriggerDefinition", "UsageContext", "Dosage", "Meta");
+
+
+  /**
    * Cache of Encoders instances.
    */
   private static final Map<EncodersKey, FhirEncoders> ENCODERS = new HashMap<>();
@@ -306,6 +337,24 @@ public class FhirEncoders {
     public Builder withOpenTypes(final Set<String> openTypes) {
       this.openTypes = openTypes;
       return this;
+    }
+
+    /**
+     * Sets the reasonable default list of types to be encoded for open types, such as extensions.
+     *
+     * @return this builder
+     */
+    public Builder withStandardOpenTypes() {
+      return withOpenTypes(STANDARD_OPEN_TYPES);
+    }
+
+    /**
+     * Sets the list of all types to be encoded for open types, such as extensions.
+     *
+     * @return this builder
+     */
+    public Builder withAllOpenTypes() {
+      return withOpenTypes(ALL_OPEN_TYPES);
     }
 
     /**

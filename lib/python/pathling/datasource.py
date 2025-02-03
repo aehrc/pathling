@@ -14,14 +14,18 @@
 #  limitations under the License.
 
 
-from typing import Dict, Sequence, Optional, Callable
-
+from json import dumps, loads
 from py4j.java_collections import SetConverter
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame
+from typing import Dict, Sequence, Optional, Callable
 
 from pathling import PathlingContext
-from pathling.core import ExpOrStr, StringToStringSetMapper, SparkConversionsMixin
+from pathling.core import (
+    ExpOrStr,
+    StringToStringSetMapper,
+    SparkConversionsMixin,
+)
 from pathling.fhir import MimeType
 
 
@@ -44,6 +48,9 @@ class DataSource(SparkConversionsMixin):
         :return: A Spark DataFrame containing the data for the given resource type.
         """
         return self._wrap_df(self._jds.read(resource_code))
+
+    def resource_types(self):
+        return [r.toCode() for r in self._jds.getResourceTypes()]
 
     @property
     def write(self) -> "DataSinks":
@@ -110,6 +117,42 @@ class DataSource(SparkConversionsMixin):
         return AggregateQuery(resource_type, aggregations, groupings, filters).execute(
             self
         )
+
+    def view(
+        self,
+        resource: Optional[str] = None,
+        select: Optional[Sequence[Dict]] = None,
+        constants: Optional[Sequence[Dict]] = None,
+        where: Optional[Sequence[Dict]] = None,
+        json: Optional[str] = None,
+    ) -> DataFrame:
+        """
+        Executes a SQL on FHIR view definition and returns the result as a Spark DataFrame.
+
+        :param resource: The FHIR resource that the view is based upon, e.g. 'Patient' or
+               'Observation'.
+        :param select: A list of columns and nested selects to include in the view.
+        :param constants: A list of constants that can be used in FHIRPath expressions.
+        :param where: A list of FHIRPath expressions that can be used to filter the view.
+        :param json: A JSON string representing the view definition, as an alternative to providing
+               the parameters as Python objects.
+        :return: A Spark DataFrame containing the results of the view.
+        """
+        if json:
+            query_json = json
+            parsed = loads(json)
+            resource = parsed.get("resource")
+        else:
+            args = locals()
+            query = {
+                key: args[key]
+                for key in ["resource", "select", "constants", "where"]
+                if args[key] is not None
+            }
+            query_json = dumps(query)
+        jquery = self._jds.view(resource)
+        jquery.json(query_json)
+        return self._wrap_df(jquery.execute())
 
 
 class DataSources(SparkConversionsMixin):

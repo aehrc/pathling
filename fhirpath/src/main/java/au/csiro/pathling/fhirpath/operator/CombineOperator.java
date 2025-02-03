@@ -17,18 +17,16 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.QueryHelpers.createColumn;
-import static org.apache.spark.sql.functions.array;
-import static org.apache.spark.sql.functions.monotonically_increasing_id;
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.EmptyCollection;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import jakarta.annotation.Nonnull;
-import java.util.Optional;
+import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
 
 /**
  * Merges the left and right operands into a single collection.
@@ -36,32 +34,46 @@ import org.apache.spark.sql.Row;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#combine">combine</a>
  */
-public class CombineOperator implements Operator {
+public class CombineOperator implements BinaryOperator {
 
   private static final String NAME = "combine";
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final OperatorInput input) {
-    final String expression = Operator.buildExpression(input, NAME);
-    final FhirPath left = input.getLeft();
-    final FhirPath right = input.getRight();
+  public Collection invoke(@Nonnull final BinaryOperatorInput input) {
+    final Collection left = input.getLeft();
+    final Collection right = input.getRight();
 
-    final Dataset<Row> leftTrimmed = left.getUnionableDataset(right);
-    final Dataset<Row> rightTrimmed = right.getUnionableDataset(left);
-    // the value column is always the last column
-    final int valueColumnIndex = leftTrimmed.columns().length - 1;
-    final Dataset<Row> dataset = leftTrimmed.union(rightTrimmed);
-    final String valueColumnName = dataset.columns()[valueColumnIndex];
-    final DatasetWithColumn datasetWithColumn = createColumn(dataset,
-        dataset.col(valueColumnName));
-    final Optional<Column> eidColumn = Optional.of(array(monotonically_increasing_id()));
-    final Optional<Column> thisColumn = left instanceof NonLiteralPath
-                                        ? ((NonLiteralPath) left).getThisColumn()
-                                        : Optional.empty();
-    return left
-        .combineWith(right, datasetWithColumn.getDataset(), expression, left.getIdColumn(),
-            eidColumn, datasetWithColumn.getColumn(), false, thisColumn);
+    // TODO: check the condition
+    checkUserInput(left.getType().equals(right.getType()),
+        "Collection must have the same type");
+    // and also need to
+
+    // if at least one is not empty then the result is of the type of the non-empty one and we can cast the other one to that type
+
+    // just handle empty collections
+    final Collection resultCollection = left instanceof EmptyCollection
+                                        ? right
+                                        : left;
+
+    final Column[] concatColumns = Stream.of(left, right)
+        .filter(c -> !(c instanceof EmptyCollection))
+        .map(Collection::getColumn)
+        .map(ColumnRepresentation::plural)
+        .map(ColumnRepresentation::getValue)
+        .toArray(Column[]::new);
+
+    return resultCollection.copyWith(
+        new DefaultRepresentation(
+            functions.concat(concatColumns)
+        ));
   }
+
+  @Override
+  @Nonnull
+  public String getOperatorName() {
+    return NAME;
+  }
+
 
 }

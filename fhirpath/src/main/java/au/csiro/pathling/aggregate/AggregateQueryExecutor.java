@@ -17,40 +17,48 @@
 
 package au.csiro.pathling.aggregate;
 
-import static au.csiro.pathling.QueryHelpers.createColumns;
-import static au.csiro.pathling.query.ExpressionWithLabel.labelsAsStream;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static java.util.Objects.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.QueryExecutor;
-import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Materializable;
-import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.execution.EvaluatedPath;
+import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
+import au.csiro.pathling.fhirpath.execution.JoinResolver;
+import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator.ManyFactory;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.query.ExpressionWithLabel;
 import au.csiro.pathling.sql.SqlExpressions;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
+import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import jakarta.annotation.Nonnull;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.ArrayType;
 
+/**
+ * Builds the overall query responsible for executing an aggregate request.
+ *
+ * @author John Grimes
+ */
 @Slf4j
 public class AggregateQueryExecutor extends QueryExecutor {
+
+  @Nonnull
+  private final Parser parser = new Parser();
 
   /**
    * Constructs a new {@link AggregateQueryExecutor}.
@@ -76,97 +84,111 @@ public class AggregateQueryExecutor extends QueryExecutor {
   @SuppressWarnings("WeakerAccess")
   @Nonnull
   public ResultWithExpressions buildQuery(@Nonnull final AggregateRequest query) {
-    log.info("Executing request: {}", query);
 
-    // Build a new expression parser, and parse all of the filter and grouping expressions within
-    // the query.
-    final ResourcePath inputContext = ResourcePath
-        .build(getFhirContext(), getDataSource(), query.getSubjectResource(),
-            query.getSubjectResource().toCode(), true);
-    final ParserContext groupingAndFilterContext = buildParserContext(inputContext,
-        Collections.singletonList(inputContext.getIdColumn()));
-    final Parser parser = new Parser(groupingAndFilterContext);
-    final List<FhirPath> filters = parseFilters(parser, query.getFilters());
-    final List<FhirPathAndContext> groupingParseResult = parseMaterializableExpressions(
-        groupingAndFilterContext, query.getGroupings(), "Grouping");
-    final List<FhirPath> groupings = groupingParseResult.stream()
-        .map(FhirPathAndContext::getFhirPath)
-        .collect(Collectors.toList());
+    final List<FhirPath> grouppingPaths = query.getGroupings().stream()
+        .map(parser::parse)
+        .toList();
 
-    // Join all filter and grouping expressions together.
-    final Column idColumn = inputContext.getIdColumn();
-    Dataset<Row> groupingsAndFilters = joinExpressionsAndFilters(inputContext, groupings, filters,
-        idColumn);
-    // Apply filters.
-    groupingsAndFilters = applyFilters(groupingsAndFilters, filters);
+    final List<FhirPath> filterPaths = query.getFilters().stream()
+        .map(parser::parse)
+        .toList();
 
-    // Remove synthetic fields from struct values (such as _fid) before grouping.
-    final QueryHelpers.DatasetWithColumnMap datasetWithNormalizedGroupings = createColumns(
-        groupingsAndFilters, groupings.stream().map(FhirPath::getValueColumn)
-            .map(SqlExpressions::pruneSyntheticFields).toArray(Column[]::new));
+    final List<FhirPath> aggPaths = query.getAggregations().stream()
+        .map(parser::parse)
+        .toList();
 
-    groupingsAndFilters = datasetWithNormalizedGroupings.getDataset();
+    final List<FhirPath> contextPaths = Stream.of(grouppingPaths, filterPaths, aggPaths)
+        .flatMap(List::stream)
+        .toList();
 
-    final List<Column> groupingColumns = new ArrayList<>(
-        datasetWithNormalizedGroupings.getColumnMap().values());
+    final FhirpathEvaluator fhirEvaluator = ManyFactory.fromPaths(
+        query.getSubjectResource(),
+        fhirContext, dataSource,
+        contextPaths).create(query.getSubjectResource());
 
-    // The input context will be identical to that used for the groupings and filters, except that
-    // it will use the dataset that resulted from the parsing of the groupings and filters,
-    // instead of just the raw resource. This is so that any aggregations that are performed
-    // during the parse can use these columns for grouping, rather than the identity of each
-    // resource.
-    final ResourcePath aggregationContext = inputContext
-        .copy(inputContext.getExpression(), groupingsAndFilters, idColumn,
-            inputContext.getEidColumn(), inputContext.getValueColumn(), inputContext.isSingular(),
-            Optional.empty());
-    final ParserContext aggregationParserContext = buildParserContext(aggregationContext,
-        groupingColumns);
-    final Parser aggregationParser = new Parser(aggregationParserContext);
+    final List<EvaluatedPath> evaluatedFilters = fhirEvaluator.evaluateWithPath(filterPaths);
 
-    // Parse the aggregations, and grab the updated grouping columns. When aggregations are
-    // performed during an aggregation parse, the grouping columns need to be updated, as any
-    // aggregation operation erases the previous columns that were built up within the dataset.
-    final List<FhirPath> aggregations = parseAggregations(aggregationParser,
-        query.getAggregations());
+    final Optional<Column> maybeFilter = evaluatedFilters.stream()
+        .map(EvaluatedPath::getColumnValue)
+        .reduce(Column::and);
 
-    // Join the aggregations together, using equality of the grouping column values as the join
-    // condition.
-    final List<Column> aggregationColumns =
-        aggregations.stream().map(FhirPath::getValueColumn).collect(Collectors.toList());
-    Dataset<Row> joinedAggregations = joinExpressionsByColumns(aggregations, groupingColumns);
-    if (groupingColumns.isEmpty()) {
-      joinedAggregations = joinedAggregations.limit(1);
-    }
+    final Dataset<Row> filteredDataset = maybeFilter.map(
+            fhirEvaluator.createInitialDataset()::filter)
+        .orElse(fhirEvaluator.createInitialDataset());
 
-    // The final column selection will be the grouping columns, followed by the aggregation
-    // columns.
-    final Column[] finalSelection = Stream.concat(
-            labelColumns(groupingColumns.stream(), labelsAsStream(query.getGroupingsWithLabels())),
-            labelColumns(aggregationColumns.stream(), labelsAsStream(query.getAggregationsWithLabels()))
-        )
+    // compute aggregation bases 
+    // TODO: for now assume that the last element on the path is the aggregation function
+
+    final List<EvaluatedPath> evaluatedGoupings = fhirEvaluator.evaluateWithPath(grouppingPaths);
+
+    // prepend the materialized grouping columns to the dataset
+    final Dataset<Row> inputDataset = filteredDataset.select(
+        Stream.concat(
+            evaluatedGoupings.stream().map(c -> c.getColumnValue().alias(randomAlias())),
+            Stream.of(filteredDataset.columns()).map(functions::col)
+        ).toArray(Column[]::new)
+    );
+
+    // explode the grouping columns
+    final Dataset<Row> expandeDataset = Stream.of(inputDataset.schema().fields())
+        .limit(evaluatedGoupings.size())
+        .reduce(inputDataset, (dataset, field) -> {
+          if (field.dataType() instanceof ArrayType) {
+            return dataset.withColumn(field.name(),
+                functions.explode_outer(functions.col(field.name())));
+          }
+          return dataset;
+        }, (dataset1, dataset2) -> dataset1);
+
+    // normalize the grouping columns (prune the synthetic fields)
+    final Column[] normalizedGroupingColumns = Stream.of(expandeDataset.columns())
+        .limit(evaluatedGoupings.size())
+        .map(c -> SqlExpressions.pruneSyntheticFields(functions.col(c)).alias(c))
         .toArray(Column[]::new);
 
-    final Dataset<Row> finalDataset = joinedAggregations
-        .select(finalSelection)
-        // This is needed to cater for the scenario where a literal value is used within an
-        // aggregation expression.
-        .distinct();
-    return new ResultWithExpressions(finalDataset, aggregations, groupings, filters);
+    // compute the aggregation from the initial dataset
+    final List<Column> dataColumns = Stream.of(filteredDataset.columns())
+        // for external referenced use collect map otherwise use collect list
+        .map(c -> c.contains("@")
+                  ? JoinResolver.collect_map(functions.col(c)).alias(c)
+                  : functions.collect_list(functions.col(c)).alias(c))
+        .toList();
+
+    //then we need to group by the grouping columns and collect the resource column to a list
+    final Dataset<Row> grouppedAggSource = expandeDataset.groupBy(normalizedGroupingColumns)
+        .agg(dataColumns.get(0), dataColumns.subList(1, dataColumns.size()).toArray(Column[]::new));
+
+    final List<EvaluatedPath> evaluatedAggs = fhirEvaluator.evaluateWithPath(aggPaths);
+    final Column[] aggColumns = evaluatedAggs.stream()
+        .map(c -> c.getColumnValue().alias(randomAlias()))
+        .toArray(Column[]::new);
+
+    final Dataset<Row> resultDataset = grouppedAggSource
+        .select(Stream.concat(
+            alias(normalizedGroupingColumns, toLabels(query.getGroupingsWithLabels())),
+            alias(aggColumns, toLabels(query.getAggregationsWithLabels()))
+        ).toArray(Column[]::new));
+
+    return new ResultWithExpressions(resultDataset,
+        evaluatedAggs.stream().map(p -> p.bind(filteredDataset)).toList(),
+        evaluatedGoupings.stream().map(p -> p.bind(filteredDataset)).toList(),
+        evaluatedFilters
+    );
   }
 
   @Nonnull
-  private List<FhirPath> parseAggregations(@Nonnull final Parser parser,
-      @Nonnull final Collection<String> aggregations) {
-    return aggregations.stream().map(aggregation -> {
-      final FhirPath result = parser.parse(aggregation);
-      // Aggregation expressions must evaluate to a singular, Materializable path, or a user error
-      // will be returned.
-      checkUserInput(result instanceof Materializable,
-          "Aggregation expression is not of a supported type: " + aggregation);
-      checkUserInput(result.isSingular(),
-          "Aggregation expression does not evaluate to a singular value: " + aggregation);
-      return result;
-    }).collect(Collectors.toList());
+  private static List<String> toLabels(@Nonnull final List<ExpressionWithLabel> expressions) {
+    return expressions.stream()
+        .map(ExpressionWithLabel::getLabel).toList();
+  }
+
+  @Nonnull
+  private static Stream<Column> alias(Column[] columns, List<String> labels) {
+    return IntStream.range(0, columns.length)
+        .mapToObj(i -> nonNull(labels.get(i))
+                       ? columns[i].alias(requireNonNull(labels.get(i)))
+                       : columns[i]
+        );
   }
 
   @Value
@@ -176,13 +198,13 @@ public class AggregateQueryExecutor extends QueryExecutor {
     Dataset<Row> dataset;
 
     @Nonnull
-    List<FhirPath> parsedAggregations;
+    List<EvaluatedPath> parsedAggregations;
 
     @Nonnull
-    List<FhirPath> parsedGroupings;
+    List<EvaluatedPath> parsedGroupings;
 
     @Nonnull
-    Collection<FhirPath> parsedFilters;
+    List<EvaluatedPath> parsedFilters;
 
   }
 }

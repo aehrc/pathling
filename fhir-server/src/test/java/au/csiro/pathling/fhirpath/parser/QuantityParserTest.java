@@ -17,10 +17,7 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
-import au.csiro.pathling.test.builders.ParserContextBuilder;
-import java.util.Collections;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
 
@@ -28,40 +25,18 @@ public class QuantityParserTest extends AbstractParserTest {
 
   @Test
   void lengthObservationComparison() {
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, dataSource, ResourceType.OBSERVATION, ResourceType.OBSERVATION.toCode(),
-            true);
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .database(dataSource)
-        .inputContext(subjectResource)
-        .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
-        .build();
-    parser = new Parser(parserContext);
-
-    assertThatResultOf("valueQuantity < 1.5 'm'")
-        .isElementPath(BooleanPath.class)
+    assertThatResultOf(ResourceType.OBSERVATION, "valueQuantity < 1.5 'm'")
+        .isElementPath(BooleanCollection.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/lengthObservationComparison.csv");
+        .hasRows(spark, "responses/ParserTest/lengthObservationComparison.tsv");
   }
 
   @Test
   void lengthObservationSubtraction() {
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, dataSource, ResourceType.OBSERVATION, ResourceType.OBSERVATION.toCode(),
-            true);
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .database(dataSource)
-        .inputContext(subjectResource)
-        .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
-        .build();
-    parser = new Parser(parserContext);
-
-    assertThatResultOf("valueQuantity > (valueQuantity - 2 'g/dL')")
-        .isElementPath(BooleanPath.class)
+    assertThatResultOf(ResourceType.OBSERVATION, "valueQuantity > (valueQuantity - 2 'g/dL')")
+        .isElementPath(BooleanCollection.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/lengthObservationSubtraction.csv");
+        .hasRows(spark, "responses/ParserTest/lengthObservationSubtraction.tsv");
   }
 
 }

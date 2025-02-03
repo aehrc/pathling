@@ -17,20 +17,15 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.QueryHelpers.join;
-import static au.csiro.pathling.fhirpath.operator.Operator.buildExpression;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import au.csiro.pathling.QueryHelpers.JoinType;
-import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.Temporal;
-import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import jakarta.annotation.Nonnull;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 
 /**
  * Provides the functionality of the family of math operators within FHIRPath, i.e. +, -, *, / and
@@ -39,7 +34,8 @@ import org.apache.spark.sql.Row;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#math">Math</a>
  */
-public class MathOperator implements Operator {
+@NotImplemented
+public class MathOperator implements BinaryOperator {
 
   @Nonnull
   private final MathOperation type;
@@ -51,14 +47,15 @@ public class MathOperator implements Operator {
     this.type = type;
   }
 
+
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final OperatorInput input) {
-    final FhirPath left = input.getLeft();
-    final FhirPath right = input.getRight();
+  public Collection invoke(@Nonnull final BinaryOperatorInput input) {
+    final Collection left = input.getLeft();
+    final Collection right = input.getRight();
 
     // Check whether this needs to be delegated off to the DateArithmeticOperator.
-    if (left instanceof Temporal && right instanceof QuantityLiteralPath) {
+    if (left instanceof Temporal && right instanceof QuantityCollection) {
       return new DateArithmeticOperator(type).invoke(input);
     }
 
@@ -75,16 +72,20 @@ public class MathOperator implements Operator {
             + type + " " + right.getExpression());
     final Comparable comparableLeft = (Comparable) left;
     final Comparable comparableRight = (Comparable) right;
-    checkUserInput(comparableLeft.isComparableTo(comparableRight.getClass()),
+    checkUserInput(comparableLeft.isComparableTo(right),
         "Left and right operands are not comparable: " + left.getExpression() + " "
             + type + " " + right.getExpression());
 
-    final String expression = buildExpression(input, type.toString());
-    final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
+    //final String expression = buildExpression(input, type.toString());
 
     final Numeric leftNumeric = (Numeric) left;
     final Numeric rightNumeric = (Numeric) right;
-    return leftNumeric.getMathOperation(type, expression, dataset).apply(rightNumeric);
+    return leftNumeric.getMathOperation(type).apply(rightNumeric);
   }
-
+  
+  @Override
+  @Nonnull
+  public String getOperatorName() {
+    return type.toString();
+  }
 }

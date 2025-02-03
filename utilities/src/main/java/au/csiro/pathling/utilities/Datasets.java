@@ -47,7 +47,7 @@ public abstract class Datasets {
   public static String writeCsv(@Nonnull final Dataset<?> result, @Nonnull final String fileUrl,
       @Nonnull final SaveMode saveMode) {
 
-    Preconditions.check(fileUrl.endsWith(".csv"), "fileUrl must have .cvs extension");
+    Preconditions.check(fileUrl.endsWith(".csv"), "fileUrl must have .csv extension");
 
     final SparkSession spark = result.sparkSession();
 

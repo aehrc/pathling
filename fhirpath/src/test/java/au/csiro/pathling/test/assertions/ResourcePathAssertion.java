@@ -19,8 +19,10 @@ package au.csiro.pathling.test.assertions;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.execution.CollectionDataset;
 import jakarta.annotation.Nonnull;
+import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -29,13 +31,20 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public class ResourcePathAssertion extends BaseFhirPathAssertion<ResourcePathAssertion> {
 
   @Nonnull
-  private final ResourcePath fhirPath;
+  private final ResourceCollection fhirPath;
 
-  ResourcePathAssertion(@Nonnull final ResourcePath fhirPath) {
-    super(fhirPath);
+  ResourcePathAssertion(@Nonnull final ResourceCollection fhirPath,
+      @Nonnull final CollectionDataset datasetResult) {
+    super(datasetResult);
     this.fhirPath = fhirPath;
   }
 
+  @Override
+  @Nonnull
+  protected Column getValueColumn() {
+    return fhirPath.getColumnValue().getField("id");
+  }
+  
   @Nonnull
   public ResourcePathAssertion hasResourceType(@Nonnull final ResourceType type) {
     assertEquals(type, fhirPath.getResourceType());

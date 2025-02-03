@@ -1,47 +1,75 @@
 package au.csiro.pathling.extract;
 
-import static au.csiro.pathling.QueryHelpers.join;
-import static au.csiro.pathling.query.ExpressionWithLabel.labelsAsStream;
-import static au.csiro.pathling.utilities.Preconditions.check;
-import static au.csiro.pathling.utilities.Preconditions.checkArgument;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.QueryExecutor;
-import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Materializable;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator;
+import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.fhirpath.path.Paths.This;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.query.ExpressionWithLabel;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.view.ColumnSelection;
+import au.csiro.pathling.view.ExecutionContext;
+import au.csiro.pathling.view.GroupingSelection;
+import au.csiro.pathling.view.Projection;
+import au.csiro.pathling.view.ProjectionClause;
+import au.csiro.pathling.view.RequestedColumn;
+import au.csiro.pathling.view.UnnestingSelection;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import lombok.Value;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
+/**
+ * Builds the overall query responsible for executing an extract request.
+ *
+ * @author John Grimes
+ * @see <a href="https://pathling.csiro.au/docs/libraries/fhirpath-query#extract">Pathling
+ * documentation - extract</a>
+ */
 @Slf4j
 public class ExtractQueryExecutor extends QueryExecutor {
 
+  @Nonnull
+  private final FhirContext fhirContext;
+
+  @Nonnull
+  private final SparkSession sparkSession;
+
+  @Nonnull
+  private final DataSource dataSource;
+
+  @Nonnull
+  private final Parser parser;
+
+  /**
+   * @param configuration A {@link QueryConfiguration} that controls the behaviour of the query
+   * @param fhirContext A {@link FhirContext} for querying FHIR definitions
+   * @param sparkSession A {@link SparkSession} for executing the query
+   * @param dataSource A {@link DataSource} for reading data
+   * @param terminologyServiceFactory An optional {@link TerminologyServiceFactory} for resolving
+   * terminology queries
+   */
   public ExtractQueryExecutor(@Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final DataSource dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
     super(configuration, fhirContext, sparkSession, dataSource, terminologyServiceFactory);
+    this.fhirContext = fhirContext;
+    this.sparkSession = sparkSession;
+    this.dataSource = dataSource;
+    this.parser = new Parser();
   }
 
   /**
@@ -53,152 +81,132 @@ public class ExtractQueryExecutor extends QueryExecutor {
   @SuppressWarnings("WeakerAccess")
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query) {
-    // Build a new expression parser, and parse all the column expressions within the query.
-    final ResourcePath inputContext = ResourcePath
-        .build(getFhirContext(), getDataSource(), query.getSubjectResource(),
-            query.getSubjectResource().toCode(), true);
-    // The context of evaluation is a single resource.
-    final ParserContext parserContext = buildParserContext(inputContext,
-        Collections.singletonList(inputContext.getIdColumn()));
-    final List<FhirPathAndContext> columnParseResult =
-        parseMaterializableExpressions(parserContext, query.getColumns(), "Column");
-    final List<FhirPath> columnPaths = columnParseResult.stream()
-        .map(FhirPathAndContext::getFhirPath)
-        .collect(Collectors.toUnmodifiableList());
-
-    // Join all the column expressions together.
-    final FhirPathContextAndResult columnJoinResult = joinColumns(columnParseResult);
-    final Dataset<Row> columnJoinResultDataset = columnJoinResult.getResult();
-    final Dataset<Row> trimmedDataset = trimTrailingNulls(inputContext.getIdColumn(),
-        columnPaths, columnJoinResultDataset);
-
-    // Apply the filters.
-    final List<String> filters = query.getFilters();
-    final Dataset<Row> filteredDataset = filterDataset(inputContext, filters, trimmedDataset,
-        Column::and);
-
-    // Select the column values.
-    final Column idColumn = inputContext.getIdColumn();
-    final Column[] columnValues = labelColumns(
-        columnPaths.stream().map(path -> ((Materializable<?>) path).getExtractableColumn()),
-        labelsAsStream(query.getColumnsWithLabels())
-    ).toArray(Column[]::new);
-    final Dataset<Row> selectedDataset = filteredDataset.select(columnValues)
-        .filter(idColumn.isNotNull());
-
-    // If there is a limit, apply it.
-    return query.getLimit().isPresent()
-           ? selectedDataset.limit(query.getLimit().get())
-           : selectedDataset;
+    return buildQuery(query, ProjectionConstraint.UNCONSTRAINED);
   }
 
+  /**
+   * Builds up the query for an extract request, with a constraint.
+   *
+   * @param query an {@link ExtractRequest}
+   * @param constraint a {@link ProjectionConstraint}
+   * @return an uncollected {@link Dataset}
+   */
   @Nonnull
-  private FhirPathContextAndResult joinColumns(
-      @Nonnull final Collection<FhirPathAndContext> columnsAndContexts) {
-    // Sort the columns in descending order of expression length.
-    final List<FhirPathAndContext> sortedColumnsAndContexts = columnsAndContexts.stream()
-        .sorted(Comparator.<FhirPathAndContext>comparingInt(p ->
-            p.getFhirPath().getExpression().length()).reversed())
-        .collect(Collectors.toList());
+  public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query,
+      @Nonnull final ProjectionConstraint constraint) {
 
-    FhirPathContextAndResult result = null;
-    check(sortedColumnsAndContexts.size() > 0);
-    for (final FhirPathAndContext current : sortedColumnsAndContexts) {
-      if (result != null) {
-        // Get the set of unique prefixes from the two parser contexts, and sort them in descending
-        // order of prefix length.
-        final Set<String> prefixes = new HashSet<>();
-        final Map<String, Column> resultNodeIds = result.getContext().getNodeIdColumns();
-        final Map<String, Column> currentNodeIds = current.getContext().getNodeIdColumns();
-        prefixes.addAll(resultNodeIds.keySet());
-        prefixes.addAll(currentNodeIds.keySet());
-        final List<String> sortedCommonPrefixes = new ArrayList<>(prefixes).stream()
-            .sorted(Comparator.comparingInt(String::length).reversed())
-            .collect(Collectors.toList());
-        final FhirPathContextAndResult finalResult = result;
+    // TODO: optimize so that the parsing happens only one time
+    // all paths
+    final List<FhirPath> contextPaths =
+        Stream.concat(query.getColumns().stream()
+                .map(expression -> parser.parse(expression.getExpression())),
+            query.getFilters().stream().map(parser::parse)
+        ).toList();
 
-        // Find the longest prefix that is common to the two expressions.
-        final Optional<String> commonPrefix = sortedCommonPrefixes.stream()
-            .filter(p -> finalResult.getFhirPath().getExpression().startsWith(p) &&
-                current.getFhirPath().getExpression().startsWith(p))
-            .findFirst();
+    final ExecutionContext executionContext = new ExecutionContext(sparkSession,
+        MultiFhirpathEvaluator.ManyFactory.fromPaths(
+            query.getSubjectResource(),
+            fhirContext, dataSource,
+            contextPaths
+        ));
 
-        if (commonPrefix.isPresent() &&
-            resultNodeIds.containsKey(commonPrefix.get()) &&
-            currentNodeIds.containsKey(commonPrefix.get())) {
-          // If there is a common prefix, we add the corresponding node identifier column to the
-          // join condition.
-          final Column previousNodeId = resultNodeIds
-              .get(commonPrefix.get());
-          final List<Column> previousJoinColumns = Arrays.asList(result.getFhirPath().getIdColumn(),
-              previousNodeId);
-          final Column currentNodeId = currentNodeIds
-              .get(commonPrefix.get());
-          final List<Column> currentJoinColumns = Arrays.asList(current.getFhirPath().getIdColumn(),
-              currentNodeId);
-          final Dataset<Row> dataset = join(result.getResult(), previousJoinColumns,
-              current.getFhirPath().getDataset(),
-              currentJoinColumns, JoinType.LEFT_OUTER);
-          result = new FhirPathContextAndResult(current.getFhirPath(), current.getContext(),
-              dataset);
-        } else {
-          // If there is no common prefix, we join using only the resource ID.
-          final Dataset<Row> dataset = join(result.getResult(), result.getFhirPath().getIdColumn(),
-              current.getFhirPath().getDataset(), current.getFhirPath().getIdColumn(),
-              JoinType.LEFT_OUTER);
-          result = new FhirPathContextAndResult(current.getFhirPath(), current.getContext(),
-              dataset);
-        }
-      } else {
-        result = new FhirPathContextAndResult(current.getFhirPath(), current.getContext(),
-            current.getFhirPath().getDataset());
-      }
+    // Build a Projection from the ExtractRequest.
+    final Projection projection = buildProjection(query, constraint);
+
+    log.debug("Executing projection:\n {}", projection.toTreeString());
+
+    // Execute the Projection to get the result dataset.
+    Dataset<Row> result = projection.execute(executionContext);
+
+    // Rename each column in the result to match the requested column names.
+    final List<String> requestedColumnNames = query.getColumns().stream()
+        .map(ExpressionWithLabel::getLabel)
+        .toList();
+    final List<String> resultColumnNames = Arrays.asList(result.columns());
+
+    for (int i = 0; i < requestedColumnNames.size(); i++) {
+      final String requestedName = requestedColumnNames.get(i);
+      final String resultName = resultColumnNames.get(i);
+      result = requestedName != null
+               ? result.withColumnRenamed(resultName, requestedName)
+               : result;
     }
-    return result;
+
+    final Dataset<Row> finalResult = result;
+    return query.getLimit().map(finalResult::limit).orElse(finalResult);
   }
 
   @Nonnull
-  private Dataset<Row> trimTrailingNulls(final @Nonnull Column idColumn,
-      @Nonnull final List<FhirPath> expressions, @Nonnull final Dataset<Row> dataset) {
-    checkArgument(!expressions.isEmpty(), "At least one expression is required");
+  private Projection buildProjection(@Nonnull final ExtractRequest query,
+      final ProjectionConstraint constraint) {
+    // Parse each column in the query into a FhirPath object.
+    final List<FhirPath> columns = query.getColumns().stream()
+        .map(expression -> parser.parse(expression.getExpression()))
+        .collect(toList());
 
-    final Column[] nonSingularColumns = expressions.stream()
-        .filter(fhirPath -> !fhirPath.isSingular())
-        .map(FhirPath::getValueColumn)
-        .toArray(Column[]::new);
+    // Build the column selection.
+    final ProjectionClause selection = buildSelectClause(columns);
 
-    if (nonSingularColumns.length == 0) {
-      return dataset;
+    // Build the filters.
+    final Optional<ProjectionClause> filters = buildFilterClause(query.getFilters());
+
+    // Return the final Projection object.
+    return new Projection(query.getSubjectResource(), Collections.emptyList(), selection, filters,
+        constraint);
+  }
+
+  static UnnestingSelection fromTree(@Nonnull final Tree<FhirPath> tree) {
+    if (tree instanceof Tree.Leaf<FhirPath> leaf) {
+      // for each leaf we create an unnesting selection with $this as the path
+      return new UnnestingSelection(leaf.getValue(), List.of(
+          new ColumnSelection(
+              List.of(
+                  new RequestedColumn(new This(), randomAlias(), false, Optional.empty())
+              ))
+      ), true);
+    } else if (tree instanceof Tree.Node<FhirPath> node) {
+      // each node represents an unnesting selection of its children
+      return new UnnestingSelection(node.getValue(), node.getChildren().stream()
+          .map(ExtractQueryExecutor::fromTree)
+          .collect(toList()), true);
     } else {
-      final Column additionalCondition = Arrays.stream(nonSingularColumns)
-          .map(Column::isNotNull)
-          .reduce(Column::or)
-          .get();
-      final List<Column> filteringColumns = new ArrayList<>();
-      filteringColumns.add(idColumn);
-      final List<Column> singularColumns = expressions.stream()
-          .filter(FhirPath::isSingular)
-          .map(FhirPath::getValueColumn)
-          .collect(Collectors.toList());
-      filteringColumns.addAll(singularColumns);
-      final Dataset<Row> filteringDataset = dataset
-          .select(filteringColumns.toArray(new Column[0]))
-          .distinct();
-      return join(dataset, filteringColumns, filteringDataset, filteringColumns,
-          additionalCondition, JoinType.RIGHT_OUTER);
+      throw new IllegalArgumentException("Unknown tree type: " + tree.getClass());
     }
   }
 
-  @Value
-  private static class FhirPathContextAndResult {
-
-    @Nonnull
-    FhirPath fhirPath;
-
-    @Nonnull
-    ParserContext context;
-
-    @Nonnull
-    Dataset<Row> result;
+  @Nonnull
+  static ProjectionClause buildSelectClause(@Nonnull final List<FhirPath> paths) {
+    if (paths.isEmpty()) {
+      throw new IllegalArgumentException("Empty column list");
+    }
+    final Tree<FhirPath> unnestingTree = new ImplicitUnnester().unnestPaths(paths);
+    log.debug("Unnested tree:\n{}", unnestingTree.map(FhirPath::toExpression).toTreeString());
+    // this should be a selection for the resource with the unnesting tree
+    final UnnestingSelection resourceSelection = fromTree(unnestingTree);
+    final List<ProjectionClause> selects = resourceSelection.getComponents();
+    // If there is more than one select, return a GroupingSelection.
+    // Otherwise, return the single select by itself.
+    return selects.size() > 1
+           ? new GroupingSelection(selects)
+           : selects.get(0);
   }
+
+  @Nonnull
+  private Optional<ProjectionClause> buildFilterClause(@Nonnull final List<String> filters) {
+    // If there are no filters, return an empty result.
+    if (filters.isEmpty()) {
+      return Optional.empty();
+    }
+
+    // Parse each filter into a FhirPath object.
+    final List<RequestedColumn> selections = filters.stream()
+        .map(parser::parse)
+        .map(expression ->
+            new RequestedColumn(expression, randomAlias(), false, Optional.empty()))
+        .collect(toList());
+
+    // Return a ColumnSelection object containing all the filters.
+    return Optional.of(new ColumnSelection(selections));
+  }
+
 }

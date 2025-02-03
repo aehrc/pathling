@@ -67,6 +67,7 @@ def pathling_ctx(request, temp_warehouse_dir):
         SparkSession.builder.appName("pathling-test")
         .master("local[1]")
         .config("spark.driver.memory", "4g")
+        .config("spark.sql.mapKeyDedupPolicy", "LAST_WIN")
         .config(
             "spark.driver.extraJavaOptions",
             "-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=7896",

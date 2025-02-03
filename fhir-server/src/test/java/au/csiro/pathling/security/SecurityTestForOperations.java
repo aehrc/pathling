@@ -32,6 +32,7 @@ import au.csiro.pathling.update.ImportProvider;
 import au.csiro.pathling.update.UpdateProvider;
 import ca.uhn.fhir.parser.IParser;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Parameters;
@@ -67,7 +68,10 @@ abstract class SecurityTestForOperations extends SecurityTest {
   @BeforeEach
   void setUp() {
     when(database.read(any(Enumerations.ResourceType.class)))
-        .thenReturn(new ResourceDatasetBuilder(sparkSession).withIdColumn().build());
+        .thenReturn(new ResourceDatasetBuilder(sparkSession)
+            .withIdColumn()
+            .withColumn("id_versioned", DataTypes.StringType)
+            .build());
   }
 
   void assertImportSuccess() {
