@@ -94,6 +94,19 @@ public class ResourceCollection extends Collection {
         getFhirType(resourceType), Optional.of(definition), definition);
   }
 
+
+  @Nonnull
+  public static ResourceCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
+      @Nonnull final ResourceDefinition definition) {
+
+    // We use a literal column as the resource value - the actual value is not important.
+    // But the non-null value indicates that the resource should be included in any result.
+    return new ResourceCollection(columnRepresentation,
+        Optional.empty(), Optional.empty(), Optional.of(definition),
+        definition);
+  }
+
+
   /**
    * Build a new ResourcePath using the supplied {@link ColumnRepresentation}, {@link FhirContext},
    * and {@link ResourceType}.

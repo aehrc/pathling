@@ -11,6 +11,9 @@ import java.util.Optional;
 @Value(staticConstructor = "of")
 public class DefResourceDefinition implements ResourceDefinition {
 
+  @Nonnull
+  DefResourceTag resourceTag;
+  @Nonnull
   List<ChildDefinition> children;
 
   @Override
@@ -28,7 +31,9 @@ public class DefResourceDefinition implements ResourceDefinition {
   }
 
   @Nonnull
-  public DefResourceDefinition of(ChildDefinition... children) {
-    return DefResourceDefinition.of(List.of(children));
+  public static DefResourceDefinition of(
+      @Nonnull DefResourceTag resourceTag,
+      ChildDefinition... children) {
+    return DefResourceDefinition.of(resourceTag, List.of(children));
   }
 }

@@ -8,7 +8,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import java.util.List;
 import java.util.Optional;
 
-@Value
+@Value(staticConstructor = "of")
 public class DefCompositeDefinition implements ElementDefinition {
 
   String name;
@@ -30,12 +30,14 @@ public class DefCompositeDefinition implements ElementDefinition {
   @Override
   @Nonnull
   public Optional<? extends ChildDefinition> getChildElement(@Nonnull String name) {
-    return Optional.empty();
+    return children.stream()
+        .filter(child -> child.getName().equals(name))
+        .findFirst();
   }
 
   @Override
   @Nonnull
   public Optional<FHIRDefinedType> getFhirType() {
-    return Optional.empty();
+    return Optional.of(FHIRDefinedType.BACKBONEELEMENT);
   }
 }

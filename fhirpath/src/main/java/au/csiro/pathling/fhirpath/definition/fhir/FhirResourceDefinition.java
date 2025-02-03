@@ -39,6 +39,12 @@ class FhirResourceDefinition extends
   @Nonnull
   private final ResourceType resourceType;
 
+  @Override
+  @Nonnull
+  public FhirResourceTag getResourceTag() {
+    return FhirResourceTag.of(resourceType);
+  }
+
   /**
    * @param resourceType The {@link ResourceType} that describes this resource
    * @param definition The HAPI {@link RuntimeResourceDefinition} for this resource

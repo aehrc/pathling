@@ -16,7 +16,7 @@ public class DefPrimitiveDefinition implements ElementDefinition {
 
   String name;
   FHIRDefinedType type;
-  int cardinalit;
+  int cardinality;
 
   @Override
   @Nonnull
@@ -27,7 +27,7 @@ public class DefPrimitiveDefinition implements ElementDefinition {
   @Override
   @Nonnull
   public Optional<Integer> getMaxCardinality() {
-    return Optional.of(cardinalit);
+    return Optional.of(cardinality);
   }
 
   @Override

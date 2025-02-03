@@ -57,7 +57,7 @@ public class SingleFhirpathEvaluator {
       );
     }
   }
-  
+
   @Value
   public static class SingleProvider implements FhirpathEvaluator.Provider {
 
@@ -100,5 +100,5 @@ public class SingleFhirpathEvaluator {
         variables
     );
   }
-
+  
 }
