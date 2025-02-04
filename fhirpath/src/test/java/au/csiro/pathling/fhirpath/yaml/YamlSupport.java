@@ -57,13 +57,13 @@ public class YamlSupport {
   }
 
   @Nonnull
-  private static List<ChildDefinition> elementsFromYaml(@Nonnull final Map<String, Object> data) {
+  static List<ChildDefinition> elementsFromYaml(@Nonnull final Map<String, Object> data) {
     return data.entrySet().stream()
         .map(entry -> elementFromYaml(entry.getKey(), entry.getValue()))
         .toList();
   }
 
-  private static ChildDefinition elementFromYaml(String key, Object value) {
+  static ChildDefinition elementFromYaml(String key, Object value) {
     if (value instanceof List<?> list) {
       return elementFromValues(key, list);
     } else {
@@ -71,7 +71,7 @@ public class YamlSupport {
     }
   }
 
-  private static ChildDefinition elementFromValues(@Nonnull String key, @Nonnull List<?> values) {
+  static ChildDefinition elementFromValues(@Nonnull String key, @Nonnull List<?> values) {
 
     // the problem here is that we only want to support lists of the same types.
     // we need to check the first element and then check the rest of the elements
@@ -119,7 +119,7 @@ public class YamlSupport {
   }
 
   @Nonnull
-  private static StructType childrendToStruct(
+  static StructType childrendToStruct(
       @Nonnull final List<ChildDefinition> childDefinitions) {
     return new StructType(
         childDefinitions.stream()

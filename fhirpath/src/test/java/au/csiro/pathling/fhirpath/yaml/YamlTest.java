@@ -1,8 +1,12 @@
 package au.csiro.pathling.fhirpath.yaml;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.DefinitionContext;
-import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefDefinitionContext;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceTag;
@@ -20,6 +24,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -50,46 +55,50 @@ public class YamlTest {
   @Test
   void testSimpleYaml() throws Exception {
 
-    String x =
+    String subjectString =
         """
-            resourceType: MathTestData
-            n1: 2
-            n2: 5
-            a3:
-              - 1
-              - 2
-            i: null
-            _i:
-              id: nullId
-            n4: []
-            s5: "one"
-            s6: "two"
-            b1: true
-            f1: 1.0
+              el:
+                a: 2
+              not_el:
+                a: 4
+              coll2:
+                - a: 3
+                - a: 4
+                - a: 5
+              coll:
+                - a: 1
+                - a: 2
+                - a: 3
+              emptycoll: []
+              il: 2
+              icoll:
+                - 1
+                - 2
+                - 3
             """;
 
-    final Map<String, Object> yamlData = YAML_PARSER.load(x);
-    DefResourceDefinition def = (DefResourceDefinition) YamlSupport.yamlToDefinition("Test",
-        yamlData);
+    final Map<String, Object> subjectYamlModel = YAML_PARSER.load(subjectString);
+    DefResourceDefinition subjectDefinition = (DefResourceDefinition) YamlSupport.yamlToDefinition(
+        "Test",
+        subjectYamlModel);
+
     System.out.println("Yaml definition:");
-    System.out.println(def);
+    System.out.println(subjectDefinition);
 
-    final StructType struct = YamlSupport.defnitiontoStruct(def);
+    final StructType subjectSchema = YamlSupport.defnitiontoStruct(subjectDefinition);
     System.out.println("Struct definition:");
-    struct.printTreeString();
+    subjectSchema.printTreeString();
 
-    System.out.println(yamlToJsonResource(x));
+    System.out.println(yamlToJsonResource(subjectString));
 
-    final Dataset<Row> inputDS = spark.read().schema(struct)
-        .json(spark.createDataset(List.of(yamlToJsonResource(x)),
+    final Dataset<Row> inputDS = spark.read().schema(subjectSchema)
+        .json(spark.createDataset(List.of(yamlToJsonResource(subjectString)),
             Encoders.STRING()));
 
     inputDS.printSchema();
     inputDS.show();
 
-    final ResourceDefinition resouceDefinition = def;
-    final DefinitionContext definitionContext = DefDefinitionContext.of(resouceDefinition);
-
+    final DefinitionContext definitionContext = DefDefinitionContext.of(subjectDefinition);
     final FhirpathEvaluator evaluator = new StdFhirpathEvaluator(
         DefResourceResolver.of(
             DefResourceTag.of("Test"),
@@ -103,21 +112,61 @@ public class YamlTest {
     final Dataset<Row> ds = evaluator.createInitialDataset().cache();
     final Parser parser = new Parser();
 
-    System.out.println("Evaluating expression: a3.first() * n2");
-    for (int i = 0; i < 10; i++) {
-      final Collection result = evaluator.evaluate(
-          parser.parse("a3.first() * n2 + " + i));
-      ds.select(result.getColumnValue().alias("result")).first();
-    }
-    System.out.println("End expression: a3.first() * n2");
+    final String testCaseStr = """
+        desc: '6.4.2 in'
+        expression: 'il combine icoll'
+        result: [2,1,2,3]
+        """;
 
-    // final Column[] columns = IntStream.range(0, 1000).mapToObj(i -> "a3.first() * n2 + " + i)
-    //     .map(parser::parse)
-    //     .map(evaluator::evaluate)
-    //     .map(Collection::getColumnValue)
-    //     .toArray(Column[]::new);
-    // ds.select(columns).first();
-    // System.out.println("End batched: a3.first() * n2");
+    final Map<String, Object> testCase = YAML_PARSER.load(testCaseStr);
+
+    final String expression = (String) testCase.get("expression");
+    final String desc = (String) testCase.get("desc");
+
+    // lets try something different here
+    // pethaps I couild flatten the result representation here as well
+
+    final Object result = testCase.get("result");
+    final Object resultRepresentation = result instanceof List<?> list && list.size() == 1
+                                        ? list.get(0)
+                                        : result;
+
+    final ChildDefinition resultDefinition = YamlSupport.elementFromYaml(
+        "result",
+        resultRepresentation);
+    // now lets create child schema
+    final StructType resultSchema = YamlSupport.childrendToStruct(List.of(resultDefinition));
+    System.out.println("Result schema:");
+    resultSchema.printTreeString();
+    // now we will need to create a column out of it based on the json mapping.
+    final String resultJson = OBJECT_MAPPER.writeValueAsString(
+        Map.of("result", resultRepresentation));
+    System.out.println("Result json: " + resultJson);
+
+    final ColumnRepresentation expectedRepresentation = new DefaultRepresentation(
+        functions.from_json(functions.lit(resultJson),
+            resultSchema).getField("result"));
+
+    System.out.println("Evaluating: `" + desc + "` with: `" + expression + "`");
+    final Collection evalResult = evaluator.evaluate(
+        parser.parse(expression));
+    final Row resultRow = ds.select(
+        evalResult.getColumn().asCanonical().getValue().alias("actual"),
+        expectedRepresentation.getValue().alias("expected")
+    ).first();
+
+    resultRow.schema().printTreeString();
+    System.out.println("Result row: " + resultRow);
+
+    final Object actual = resultRow.isNullAt(0)
+                          ? null
+                          : resultRow.get(0);
+
+    final Object expected = resultRow.isNullAt(1)
+                            ? null
+                            : resultRow.get(1);
+
+    assertEquals(expected, actual, "Expected: " + expected + " but got: " + actual);
 
   }
 
