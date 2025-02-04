@@ -30,6 +30,9 @@ public class DefResourceResolver implements ResourceResolver {
   @Nonnull
   DefinitionContext definitionContext;
 
+  @Nonnull
+  Dataset<Row> subjectDataset;
+
   @Override
   public @Nonnull ResourceCollection resolveResource(
       @Nonnull final ResourceType resourceType) {
@@ -70,25 +73,13 @@ public class DefResourceResolver implements ResourceResolver {
 
   @Nonnull
   public Dataset<Row> createView() {
-    throw new UnsupportedOperationException("createView() is not supported");
-  }
-
-  @Nonnull
-  static Dataset<Row> resourceDataset(@Nonnull final DataSource dataSource,
-      @Nonnull final ResourceTag resourceType) {
-
-    @Nullable final Dataset<Row> dataset = dataSource.read(resourceType.toCode());
-    // Despite DataSource.read() annotation, this method can return null sometime
-    // which leads to an obscure NullPointerException in SparkSQL
-    if (isNull(dataset)) {
-      throw new IllegalArgumentException("Resource type not found: " + resourceType);
-    }
-    return dataset.select(
-        dataset.col("id"),
-        dataset.col("id_versioned").alias("key"),
+    return subjectDataset.select(
+        subjectDataset.col("id"),
+        subjectDataset.col("id_versioned").alias("key"),
         functions.struct(
-            Stream.of(dataset.columns())
-                .map(dataset::col).toArray(Column[]::new)
-        ).alias(resourceType.toCode()));
+            Stream.of(subjectDataset.columns())
+                .map(subjectDataset::col).toArray(Column[]::new)
+        ).alias(subjectResource.toCode()));
   }
+  
 }

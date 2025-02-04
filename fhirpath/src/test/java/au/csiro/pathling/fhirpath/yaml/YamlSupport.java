@@ -1,0 +1,207 @@
+package au.csiro.pathling.fhirpath.yaml;
+
+import au.csiro.pathling.fhirpath.definition.ChildDefinition;
+import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
+import au.csiro.pathling.fhirpath.definition.def.DefCompositeDefinition;
+import au.csiro.pathling.fhirpath.definition.def.DefPrimitiveDefinition;
+import au.csiro.pathling.fhirpath.definition.def.DefResourceDefinition;
+import au.csiro.pathling.fhirpath.definition.def.DefResourceTag;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+import lombok.experimental.UtilityClass;
+import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.util.Objects.isNull;
+import static java.util.Objects.requireNonNull;
+
+@UtilityClass
+public class YamlSupport {
+
+  static Map<FHIRDefinedType, DataType> FHIR_TO_SQL = Map.of(
+      FHIRDefinedType.STRING, org.apache.spark.sql.types.DataTypes.StringType,
+      FHIRDefinedType.INTEGER, DataTypes.IntegerType,
+      FHIRDefinedType.BOOLEAN, DataTypes.BooleanType,
+      FHIRDefinedType.DECIMAL, DataTypes.createDecimalType(),
+      FHIRDefinedType.NULL, DataTypes.NullType
+  );
+
+  @Nonnull
+  public static ResourceDefinition yamlToDefinition(@Nonnull final String resourcCode,
+      @Nonnull final Map<String, Object> data) {
+    final List<ChildDefinition> definedFields = elementsFromYaml(data);
+    final Set<String> definedFieldNames = definedFields.stream()
+        .map(ChildDefinition::getName)
+        .collect(Collectors.toUnmodifiableSet());
+
+    return DefResourceDefinition.of(
+        DefResourceTag.of(resourcCode),
+        Stream.concat(
+            Stream.of(
+                    DefPrimitiveDefinition.single("id", FHIRDefinedType.STRING),
+                    DefPrimitiveDefinition.single("id_versioned", FHIRDefinedType.STRING))
+                .filter(field -> !definedFieldNames.contains(field.getName())),
+            definedFields.stream()
+        ).toList()
+    );
+  }
+
+  @Nonnull
+  private static List<ChildDefinition> elementsFromYaml(@Nonnull final Map<String, Object> data) {
+    return data.entrySet().stream()
+        .map(entry -> elementFromYaml(entry.getKey(), entry.getValue()))
+        .toList();
+  }
+
+  private static ChildDefinition elementFromYaml(String key, Object value) {
+    if (value instanceof List<?> list) {
+      return elementFromValues(key, list);
+    } else {
+      return elementFromValue(key, value, 1);
+    }
+  }
+
+  private static ChildDefinition elementFromValues(@Nonnull String key, @Nonnull List<?> values) {
+
+    // the problem here is that we only want to support lists of the same types.
+    // we need to check the first element and then check the rest of the elements
+    // and not nested 
+    // also how do we represent an empty list of a certain type?
+
+    final Set<Class<?>> types = values.stream().map(Object::getClass)
+        .collect(Collectors.toUnmodifiableSet());
+
+    if (types.size() == 1) {
+      return elementFromValue(key, values.get(0), -1);
+    } else if (types.size() > 1) {
+      throw new IllegalArgumentException("Unsupported list with multiple types: " + types);
+    } else {
+      return elementFromValue(key, null, -1);
+    }
+  }
+
+  @Nonnull
+  private static ChildDefinition elementFromValue(@Nonnull final String key,
+      @Nullable final Object value, final int cardinality) {
+    if (isNull(value)) {
+      return DefPrimitiveDefinition.of(key, FHIRDefinedType.NULL, cardinality);
+    } else if (value instanceof String) {
+      return DefPrimitiveDefinition.of(key, FHIRDefinedType.STRING, cardinality);
+    } else if (value instanceof Integer) {
+      return DefPrimitiveDefinition.of(key, FHIRDefinedType.INTEGER, cardinality);
+    } else if (value instanceof Boolean) {
+      return DefPrimitiveDefinition.of(key, FHIRDefinedType.BOOLEAN, cardinality);
+    } else if (value instanceof Double) {
+      return DefPrimitiveDefinition.of(key, FHIRDefinedType.DECIMAL, cardinality);
+    } else if (value instanceof Map<?, ?> map) {
+      return DefCompositeDefinition.of(key, elementsFromYaml((Map<String, Object>) map),
+          cardinality);
+    } else {
+      throw new IllegalArgumentException("Unsupported data type: " + value + " (" + value.getClass()
+          .getName() + ")");
+    }
+  }
+
+  @Nonnull
+  public static StructType defnitiontoStruct(
+      @Nonnull final DefResourceDefinition resourceDefinition) {
+    return childrendToStruct(resourceDefinition.getChildren());
+  }
+
+  @Nonnull
+  private static StructType childrendToStruct(
+      @Nonnull final List<ChildDefinition> childDefinitions) {
+    return new StructType(
+        childDefinitions.stream()
+            .map(YamlSupport::elementToStructField)
+            .toArray(StructField[]::new)
+    );
+  }
+
+  private static StructField elementToStructField(ChildDefinition childDefinition) {
+    if (childDefinition instanceof DefPrimitiveDefinition primitiveDefinition) {
+      final DataType elementType = requireNonNull(
+          FHIR_TO_SQL.get(primitiveDefinition.getType()),
+          "No SQL type for " + primitiveDefinition.getFhirType());
+      return new StructField(
+          primitiveDefinition.getName(),
+          primitiveDefinition.getCardinality() < 0
+          ? new ArrayType(elementType, true)
+          : elementType,
+          true, Metadata.empty()
+      );
+    } else if (childDefinition instanceof DefCompositeDefinition compositeDefinition) {
+      final StructType elementType = childrendToStruct(compositeDefinition.getChildren());
+      return new StructField(
+          compositeDefinition.getName(),
+          compositeDefinition.getCardinality() < 0
+          ? new ArrayType(elementType, true)
+          : elementType,
+          true, Metadata.empty()
+      );
+    } else {
+      throw new IllegalArgumentException("Unsupported child definition: " + childDefinition);
+    }
+  }
+
+  //
+  //
+  // @Nonnull
+  // static ResourceDefinition fromStruct(@Nonnull final String resourcCode,
+  //     @Nonnull final StructType resourceSchema) {
+  //   return DefResourceDefinition.of(
+  //       DefResourceTag.of(resourcCode),
+  //       elementsFromTypes(resourceSchema.fields())
+  //   );
+  // }
+  //
+  //
+  // @Nonnull
+  // static List<ChildDefinition> elementsFromTypes(StructField[] fields) {
+  //   return Stream.of(fields)
+  //       .map(YamlTest::elementFromType)
+  //       .toList();
+  // }
+  //
+  //
+  // @Nonnull
+  // private static ChildDefinition elementFromType(@Nonnull final String name,
+  //     @Nonnull final DataType dataType, int cardinality) {
+  //   if (dataType instanceof StructType structType) {
+  //     return DefCompositeDefinition.of(name, elementsFromTypes(structType.fields()), cardinality);
+  //   } else {
+  //     switch (dataType.typeName()) {
+  //       case "string":
+  //         return DefPrimitiveDefinition.of(name, FHIRDefinedType.STRING, cardinality);
+  //       case "long":
+  //       case "integer":
+  //         return DefPrimitiveDefinition.of(name, FHIRDefinedType.INTEGER, cardinality);
+  //       case "boolean":
+  //         return DefPrimitiveDefinition.of(name, FHIRDefinedType.BOOLEAN, cardinality);
+  //       default:
+  //         throw new IllegalArgumentException("Unsupported data type: " + dataType);
+  //     }
+  //   }
+  // }
+  //
+  // @Nonnull
+  // private static ChildDefinition elementFromType(@Nonnull final StructField structField) {
+  //   final DataType dataType = structField.dataType();
+  //   if (dataType instanceof ArrayType arrayType) {
+  //     return elementFromType(structField.name(), arrayType.elementType(), -1);
+  //   } else {
+  //     return elementFromType(structField.name(), dataType, 1);
+  //   }
+  // }
+
+}
