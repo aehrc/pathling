@@ -1,7 +1,5 @@
 package au.csiro.pathling.fhirpath.execution;
 
-import static java.util.Objects.isNull;
-
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
@@ -9,16 +7,13 @@ import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.fhirpath.definition.DefinitionContext;
 import au.csiro.pathling.fhirpath.definition.ResourceTag;
-import au.csiro.pathling.io.source.DataSource;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.util.stream.Stream;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 
 @Value(staticConstructor = "of")
@@ -35,8 +30,12 @@ public class DefResourceResolver implements ResourceResolver {
 
   @Override
   public @Nonnull ResourceCollection resolveResource(
-      @Nonnull final ResourceType resourceType) {
-    throw new UnsupportedOperationException("resolveForeignResource() is not supported");
+      @Nonnull final String resourceCode) {
+    if (subjectResource.toCode().equals(resourceCode)) {
+      return resolveSubjectResource();
+    } else {
+      return resolveForeignResource(resourceCode);
+    }
   }
 
   @Override
@@ -46,7 +45,7 @@ public class DefResourceResolver implements ResourceResolver {
   }
 
   @Nonnull
-  ResourceCollection resolveForeignResource(@Nonnull final ResourceType resourceType) {
+  ResourceCollection resolveForeignResource(@Nonnull final String resourceCode) {
     throw new UnsupportedOperationException("resolveForeignResource() is not supported");
   }
 
@@ -81,5 +80,5 @@ public class DefResourceResolver implements ResourceResolver {
                 .map(subjectDataset::col).toArray(Column[]::new)
         ).alias(subjectResource.toCode()));
   }
-  
+
 }

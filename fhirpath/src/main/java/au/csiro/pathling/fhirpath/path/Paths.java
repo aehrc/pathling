@@ -196,18 +196,23 @@ final public class Paths {
   public static class Resource implements FhirPath {
 
     @Nonnull
-    ResourceType resourceType;
+    String resourceCode;
+
+    @Nonnull
+    public ResourceType getResourceType() {
+      return ResourceType.fromCode(resourceCode);
+    }
 
     @Override
     public Collection apply(@Nonnull final Collection input,
         @Nonnull final EvaluationContext context) {
-      return context.resolveResource(resourceType);
+      return context.resolveResource(resourceCode);
     }
 
     @Nonnull
     @Override
     public String toExpression() {
-      return resourceType.toCode();
+      return resourceCode;
     }
   }
 

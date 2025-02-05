@@ -29,11 +29,11 @@ public abstract class BaseResourceResolver implements ResourceResolver {
 
   @Override
   public @Nonnull ResourceCollection resolveResource(
-      @Nonnull final ResourceType resourceType) {
-    if (resourceType.equals(getSubjectResource())) {
+      @Nonnull final String resourceCode) {
+    if (resourceCode.equals(getSubjectResource())) {
       return resolveSubjectResource();
     } else {
-      return resolveForeignResource(resourceType);
+      return resolveForeignResource(resourceCode);
     }
   }
 
@@ -44,7 +44,7 @@ public abstract class BaseResourceResolver implements ResourceResolver {
   }
 
   @Nonnull
-  ResourceCollection resolveForeignResource(@Nonnull final ResourceType resourceType) {
+  ResourceCollection resolveForeignResource(@Nonnull final String resourceCode) {
     throw new UnsupportedOperationException("resolveForeignResource() is not supported");
   }
 

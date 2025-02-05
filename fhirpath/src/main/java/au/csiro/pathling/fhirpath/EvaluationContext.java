@@ -23,13 +23,12 @@ import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
 import jakarta.annotation.Nonnull;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 public interface EvaluationContext {
 
 
   @Nonnull
-  ResourceCollection resolveResource(@Nonnull final ResourceType resourceType);
+  ResourceCollection resolveResource(@Nonnull final String resourceCode);
 
   @Nonnull
   Collection resolveJoin(@Nonnull final ReferenceCollection referenceCollection);

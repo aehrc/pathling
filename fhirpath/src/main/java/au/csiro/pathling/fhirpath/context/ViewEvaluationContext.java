@@ -26,8 +26,6 @@ import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
 import jakarta.annotation.Nonnull;
 import lombok.Value;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.jetbrains.annotations.NotNull;
 
 @Value
 public class ViewEvaluationContext implements EvaluationContext {
@@ -43,8 +41,8 @@ public class ViewEvaluationContext implements EvaluationContext {
 
   @Nonnull
   @Override
-  public ResourceCollection resolveResource(@Nonnull final ResourceType resourceType) {
-    return resourceResolver.resolveResource(resourceType);
+  public ResourceCollection resolveResource(@Nonnull final String resourceCode) {
+    return resourceResolver.resolveResource(resourceCode);
   }
 
   @Override

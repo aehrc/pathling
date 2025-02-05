@@ -34,7 +34,6 @@ import lombok.Getter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -177,7 +176,7 @@ public class LegacyEvaluationContext implements EvaluationContext {
 
   @Nonnull
   @Override
-  public ResourceCollection resolveResource(@Nonnull final ResourceType resourceType) {
+  public ResourceCollection resolveResource(@Nonnull final String resourceCode) {
     throw new UnsupportedOperationException("resolveResource() not supported in this context");
   }
 

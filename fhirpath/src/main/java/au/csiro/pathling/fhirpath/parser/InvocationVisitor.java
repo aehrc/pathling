@@ -52,12 +52,11 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * @author John Grimes
  */
 class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
-
-
-  private static final Set<String> RESOURCE_TYPES = Stream.of(ResourceType.values())
-      .filter(not(ResourceType.NULL::equals))
-      .map(ResourceType::toCode).collect(
-          Collectors.toUnmodifiableSet());
+  
+  private static boolean isResourceType(@Nonnull final String identifier) {
+    // check if starts with capital letter
+    return !identifier.isEmpty() && Character.isUpperCase(identifier.charAt(0));
+  }
 
 
   final boolean isRoot;
@@ -86,8 +85,8 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
   public FhirPath visitMemberInvocation(
       @Nullable final MemberInvocationContext ctx) {
     final String fhirPath = requireNonNull(ctx).getText();
-    if (isRoot && RESOURCE_TYPES.contains(fhirPath)) {
-      return new Resource(ResourceType.fromCode(fhirPath));
+    if (isRoot && isResourceType(fhirPath)) {
+      return new Resource(fhirPath);
     } else {
       return new Traversal(fhirPath);
     }
@@ -126,7 +125,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
     // if ("resolve".equals(functionIdentifier)) {
     //   return ResolvePath.of(arguments);
     // } else {
-      return new EvalFunction(functionIdentifier, arguments);
+    return new EvalFunction(functionIdentifier, arguments);
     // }
   }
 
