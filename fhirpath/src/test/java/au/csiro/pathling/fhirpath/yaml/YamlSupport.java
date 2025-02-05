@@ -28,11 +28,14 @@ import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.yaml.snakeyaml.Yaml;
 
 @UtilityClass
 public class YamlSupport {
 
+  static final Yaml YAML = new Yaml();
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  
   static Map<FHIRDefinedType, DataType> FHIR_TO_SQL = Map.of(
       FHIRDefinedType.STRING, org.apache.spark.sql.types.DataTypes.StringType,
       FHIRDefinedType.INTEGER, DataTypes.IntegerType,

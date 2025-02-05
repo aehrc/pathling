@@ -28,6 +28,10 @@ public class FhipathTestSpec {
     boolean error;
     @Nullable
     Object result;
+    @Nullable
+    String inputFile;
+    @Nullable
+    String model;
   }
 
   @Nonnull
@@ -44,7 +48,9 @@ public class FhipathTestSpec {
           (String) caseOrGroup.get("desc"),
           (String) requireNonNull(caseOrGroup.get("expression")),
           (boolean) caseOrGroup.computeIfAbsent("error", k -> false),
-          caseOrGroup.get("result")
+          caseOrGroup.get("result"),
+          (String) caseOrGroup.get("inputfile"),
+          (String) caseOrGroup.get("model")
       ));
     } else if (caseOrGroup.size() == 1) {
       final Object singleValue = caseOrGroup.values().iterator().next();

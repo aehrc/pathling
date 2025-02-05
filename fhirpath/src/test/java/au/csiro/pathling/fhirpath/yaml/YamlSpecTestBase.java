@@ -4,15 +4,17 @@ import static au.csiro.pathling.test.TestResources.getResourceAsString;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
-import au.csiro.pathling.fhirpath.definition.DefinitionContext;
 import au.csiro.pathling.fhirpath.definition.def.DefDefinitionContext;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceTag;
+import au.csiro.pathling.fhirpath.definition.fhir.FhirDefinitionContext;
+import au.csiro.pathling.fhirpath.definition.fhir.FhirResourceTag;
 import au.csiro.pathling.fhirpath.execution.DefResourceResolver;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.execution.StdFhirpathEvaluator;
@@ -20,6 +22,7 @@ import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.yaml.FhipathTestSpec.TestCase;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +37,8 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
@@ -47,6 +52,17 @@ public abstract class YamlSpecTestBase {
   @Autowired
   SparkSession spark;
 
+  @Autowired
+  FhirEncoders fhirEncoders;
+
+  @Value(staticConstructor = "of")
+  static class RuntimeContext {
+
+    @Nonnull
+    SparkSession spark;
+    @Nonnull
+    FhirEncoders fhirEncoders;
+  }
 
   @Value(staticConstructor = "of")
   public static class RuntimeCase {
@@ -57,7 +73,7 @@ public abstract class YamlSpecTestBase {
     FhipathTestSpec.TestCase spec;
 
     @Nonnull
-    Function<SparkSession, ? extends ResourceResolver> resolverFactory;
+    Function<RuntimeContext, ResourceResolver> resolverFactory;
 
     @Nonnull
     @Override
@@ -81,9 +97,9 @@ public abstract class YamlSpecTestBase {
               resultSchema).getField("result")).asCanonical();
     }
 
-    void check(@Nonnull final SparkSession spark) {
+    void check(@Nonnull final RuntimeContext rt) {
       final FhirpathEvaluator evaluator = new StdFhirpathEvaluator(
-          resolverFactory.apply(spark),
+          resolverFactory.apply(rt),
           StaticFunctionRegistry.getInstance(),
           Map.of()
       );
@@ -121,6 +137,69 @@ public abstract class YamlSpecTestBase {
     }
   }
 
+  @Value(staticConstructor = "of")
+  static class OMResolverFactory implements Function<RuntimeContext, ResourceResolver> {
+
+    @Nonnull
+    Map<Object, Object> subjectOM;
+
+    @Override
+    @Nonnull
+    public ResourceResolver apply(@Nonnull final RuntimeContext rt) {
+
+      final String subjectResourceCode = Optional.ofNullable(subjectOM.get("resourceType"))
+          .map(String.class::cast)
+          .orElse("Test");
+
+      final DefResourceDefinition subjectDefinition = (DefResourceDefinition) YamlSupport
+          .yamlToDefinition(subjectResourceCode, subjectOM);
+      final StructType subjectSchema = YamlSupport.defnitiontoStruct(subjectDefinition);
+      final Dataset<Row> inputDS = rt.getSpark().read().schema(subjectSchema)
+          .json(rt.getSpark().createDataset(List.of(YamlSupport.omToJson(subjectOM)),
+              Encoders.STRING()));
+
+      log.trace("Yaml definition: {}", subjectDefinition);
+      log.trace("Subject schema: {}", subjectSchema.treeString());
+
+      return DefResourceResolver.of(
+          DefResourceTag.of(subjectResourceCode),
+          DefDefinitionContext.of(subjectDefinition),
+          inputDS
+      );
+    }
+
+    @Override
+    @Nonnull
+    public String toString() {
+      return YamlSupport.YAML.dump(subjectOM);
+    }
+  }
+
+
+  @Value(staticConstructor = "of")
+  static class FhirResolverFactory implements Function<RuntimeContext, ResourceResolver> {
+
+    @Nonnull
+    String resourceJson;
+
+    @Override
+    @Nonnull
+    public ResourceResolver apply(@Nonnull final RuntimeContext rt) {
+
+      final IParser jsonParser = rt.getFhirEncoders().getContext().newJsonParser();
+      final IBaseResource resource = jsonParser.parseResource(
+          resourceJson);
+      final Dataset<Row> resourceDS = rt.getSpark().createDataset(List.of(resource),
+          rt.getFhirEncoders().of(resource.fhirType())).toDF();
+
+      return DefResourceResolver.of(
+          FhirResourceTag.of(ResourceType.fromCode(resource.fhirType())),
+          FhirDefinitionContext.of(rt.getFhirEncoders().getContext()),
+          resourceDS
+      );
+    }
+  }
+
   static class FhirpathArgumentProvider implements ArgumentsProvider {
 
     @Override
@@ -140,32 +219,8 @@ public abstract class YamlSpecTestBase {
       // create the default model (or not)
 
       final Map<Object, Object> subjectOM = spec.getSubject();
-      final String subjectResourceCode = Optional.ofNullable(subjectOM.get("resourceType"))
-          .map(String.class::cast)
-          .orElse("Test");
-      final DefResourceDefinition subjectDefinition = (DefResourceDefinition) YamlSupport.yamlToDefinition(
-          subjectResourceCode,
+      final Function<RuntimeContext, ResourceResolver> defaultResolverFactory = OMResolverFactory.of(
           subjectOM);
-      final StructType subjectSchema = YamlSupport.defnitiontoStruct(subjectDefinition);
-      final String subjectJson = YamlSupport.omToJson(subjectOM);
-      final DefinitionContext definitionContext = DefDefinitionContext.of(subjectDefinition);
-
-      log.trace("Yaml definition: {}", subjectDefinition);
-      log.trace("Subject schema: {}", subjectSchema.treeString());
-      log.trace("Subject json: {}", subjectJson);
-
-      // so the first problem is here how do I create this dataset without spark sessio
-
-      final Function<SparkSession, ? extends ResourceResolver> resolverFactory = sparkSession -> {
-        final Dataset<Row> inputDS = sparkSession.read().schema(subjectSchema)
-            .json(sparkSession.createDataset(List.of(subjectJson),
-                Encoders.STRING()));
-        return DefResourceResolver.of(
-            DefResourceTag.of(subjectResourceCode),
-            definitionContext,
-            inputDS
-        );
-      };
 
       return spec.getCases()
           .stream()
@@ -173,7 +228,12 @@ public abstract class YamlSpecTestBase {
             final Optional<String> exclusion = excluder.apply(ts);
             exclusion.ifPresent(s -> log.info("Excluding test case: {} becasue {}", ts, s));
             return exclusion.isEmpty();
-          }).map(ts -> RuntimeCase.of(ts, resolverFactory))
+          }).map(ts -> RuntimeCase.of(ts,
+              Optional.ofNullable(ts.getInputFile())
+                  .map(f -> (Function<RuntimeContext, ResourceResolver>) FhirResolverFactory.of(
+                      getResourceAsString("fhirpath/resources/" + f)))
+                  .orElse(defaultResolverFactory)
+          ))
           .map(Arguments::of);
     }
   }
@@ -186,7 +246,7 @@ public abstract class YamlSpecTestBase {
     } else {
       log.info("Result: {}", testCase.spec.getResult());
     }
-    testCase.check(spark);
+    log.info("Subject:\n{}", testCase.resolverFactory);
+    testCase.check(RuntimeContext.of(spark, fhirEncoders));
   }
-
 }

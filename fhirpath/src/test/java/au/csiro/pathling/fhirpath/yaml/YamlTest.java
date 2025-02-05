@@ -3,6 +3,7 @@ package au.csiro.pathling.fhirpath.yaml;
 import static au.csiro.pathling.test.TestResources.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -11,12 +12,16 @@ import au.csiro.pathling.fhirpath.definition.DefinitionContext;
 import au.csiro.pathling.fhirpath.definition.def.DefDefinitionContext;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceTag;
+import au.csiro.pathling.fhirpath.definition.fhir.FhirDefinitionContext;
+import au.csiro.pathling.fhirpath.definition.fhir.FhirResourceTag;
 import au.csiro.pathling.fhirpath.execution.DefResourceResolver;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.execution.StdFhirpathEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.IParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -27,6 +32,8 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +47,12 @@ public class YamlTest {
 
   @Autowired
   SparkSession spark;
+
+  @Autowired
+  FhirContext fhirContext;
+
+  @Autowired
+  FhirEncoders fhirEncoders;
 
   private static final Yaml YAML_PARSER = new Yaml();
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -185,5 +198,37 @@ public class YamlTest {
     testConfig.toPredicates().forEach(System.out::println);
   }
 
+
+  @Test
+  void testJsonModel() throws Exception {
+    final String testPatient = getResourceAsString("fhirpath/resources/patient-example-2.json");
+    System.out.println(testPatient);
+
+    final IParser jsonParser = fhirContext.newJsonParser();
+    final IBaseResource resource = jsonParser.parseResource(
+        testPatient);
+    System.out.println(resource);
+    System.out.println(resource.fhirType());
+    final Dataset<Row> inputDS = spark.createDataset(List.of(resource),
+        fhirEncoders.of(resource.fhirType())).toDF();
+
+    DefResourceResolver resolver = DefResourceResolver.of(
+        FhirResourceTag.of(ResourceType.fromCode(resource.fhirType())),
+        FhirDefinitionContext.of(fhirContext),
+        inputDS
+    );
+
+    final FhirpathEvaluator evaluator = new StdFhirpathEvaluator(
+        resolver,
+        StaticFunctionRegistry.getInstance(),
+        Map.of()
+    );
+
+    final Dataset<Row> ds = evaluator.createInitialDataset().cache();
+    final Parser parser = new Parser();
+
+    final Collection result = evaluator.evaluate(parser.parse("Patient.name"));
+    ds.select(result.getColumn().asCanonical().getValue().alias("actual")).show();
+  }
 
 }
