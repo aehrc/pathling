@@ -23,16 +23,16 @@ import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
 import jakarta.annotation.Nonnull;
+import org.checkerframework.checker.units.qual.N;
 
 public interface EvaluationContext {
-
-
+  
   @Nonnull
   ResourceCollection resolveResource(@Nonnull final String resourceCode);
 
   @Nonnull
   Collection resolveJoin(@Nonnull final ReferenceCollection referenceCollection);
-  
+
   @Nonnull
   ResourceCollection resolveReverseJoin(@Nonnull final ResourceCollection parentResource,
       @Nonnull final String expression);
@@ -44,4 +44,8 @@ public interface EvaluationContext {
   @Nonnull
   Collection resolveVariable(@Nonnull final String name);
 
+  @Nonnull
+  default EvalOptions getEvalOptions() {
+    return EvalOptions.getDefaults();
+  }
 }
