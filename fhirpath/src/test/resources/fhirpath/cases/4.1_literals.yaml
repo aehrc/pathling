@@ -1,0 +1,40 @@
+tests:
+  - expression: '{}'
+    result: []
+  - expression: "'a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065'" # double escape for YAML
+    result: ["a\\b'\"`\r\n\te"]
+  - expression: "\"a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065\"" # using " to wrap a string is not allowed by grammar
+    error: true
+  - expression: "`a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065`" # using ` to wrap a string is not allowed by grammar
+    error: true
+  - expression: "2 'mo'"
+    result: ["2 'mo'"]
+  - expression: "2 years"
+    result: ["2 years"]
+  - expression: "(2 years).value" # test of internal structure, not FHIRPath
+    result: [2]
+  - expression: "@2019"
+    result: ["2019"]
+  - expression: "@2019-02-03T01:00Z = @2019-02-02T21:00-04:00"
+    result: [true]
+  - expression: "@2019-02-03T02:00Z = @2019-02-02T21:00-04:00"
+    result: [false]
+  - expression: '-7'
+    result: [-7]
+  - expression: '-7.3'
+    result: [-7.3]
+  - expression: '+7'
+    result: [+7]
+  - expression: '(-7).combine(3)'
+    result: [-7, 3]
+  - expression: '-7.combine(3)' # same as next case
+    error: true
+  - expression: '-((7).combine(3))'
+    error: true # per Bryn
+  - expression: '-true'
+    error: true
+  - expression: "-'zzz'"
+    error: true
+
+subject:
+  prop: val

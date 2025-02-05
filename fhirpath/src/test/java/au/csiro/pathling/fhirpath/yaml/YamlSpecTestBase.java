@@ -113,6 +113,8 @@ public abstract class YamlSpecTestBase {
                                 ? null
                                 : resultRow.get(1);
 
+        
+        log.info("Result schema: {}" , resultRow.schema().treeString());
         log.debug("Expected: " + expected + " but got: " + actual);
         assertEquals(expected, actual, "Expected: " + expected + " but got: " + actual);
       }

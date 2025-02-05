@@ -1,0 +1,279 @@
+tests:
+  - desc: '5. Functions'
+  - desc: '5.5. Conversion'
+  - desc: '5.5.1. iif(criterium: expression, true-result: collection [, otherwise-result:
+ collection]) : collection'
+# If criterium is true, the function returns the value
+# of true-result parameter.
+
+# If criterium is false or an empty collection, the function returns
+# otherwise-result, unless the optional otherwise-expression is not given, in
+# which case the function returns an empty collection.
+
+  - desc: '** boolean - true'
+    expression: 'true'
+    result: [true]
+
+  - desc: '** boolean - false'
+    expression: 'false'
+    result: [false]
+
+  - desc: '** iif'
+    expression: Functions.iif(true, 'a', 'b')
+    result: ['a']
+
+  - desc: '** iif 2'
+    expression: Functions.iif(false, 'a', 'b')
+    result: ['b']
+
+  - desc: '** iif 3'
+    expression: Functions.iif(coll1[0].coll2[0].attr = 1, coll1[0].coll2[0].attr, coll1[0].coll2[1].attr)
+    result: [1]
+
+  - desc: '** iif 4'
+    expression: Functions.iif(true, 'a')
+    result: ['a']
+
+  - desc: '** iif 5'
+    expression: Functions.iif(false, 'a')
+    result: []
+
+  - desc: '** iif for collection with null values'
+    expression: Functions.iif(collWithNullsAndTrue[1], collWithNullsAndTrue[0], collWithNullsAndTrue[2]).id
+    result:
+      - nullId
+
+
+  - desc: '5.5.2. toInteger() : integer'
+    # If the input collection contains a single item, this functio# n will return a single integer if:
+    # the item in the input collection is an integer
+    # the item in the input collection is a string and is convertible to an integer
+    # the item is a boolean, where true results in a 1 and false results in a 0.
+    # If the item is not one the above types, the evaluation of the expression will end and signal an error to the calling environment.
+    # If the item is a string, but the string is not convertible to an integer (using the regex format (\\+|-)?\d+), the evaluation of the expression will end and signal an error to the calling environment.
+
+    # In all other cases, the function will return an empty collection.
+  - desc: '** Bool to int'
+    expression: Functions.attrtrue.toInteger()
+    result: [1]
+
+  - desc: '** str to int'
+    expression: intstr.toInteger()
+    result: [101]
+
+  - desc: '** Null to int'
+    expression: Functions.collWithNullsAndTrue[0].toInteger()
+    result: []
+
+  - desc: '5.5.3. toDecimal() : decimal'
+# If the input collection contains a single item, this function will return a single decimal if:
+# the item in the input collection is an integer or decimal
+# the item in the input collection is a string and is convertible to a decimal
+# the item is a boolean, where true results in a 1.0 and false results in a 0.0.
+# If the item is not one of the above types, the evaluation of the expression will end and signal an error to the calling environment.
+# If the item is a string, but the string is not convertible to a decimal (using the regex format (\\+|-)?\d+('.' \d+)?), the evaluation of the expression will end and signal an error to the calling environment.
+# In all other cases, the function will return an empty collection.
+  - desc: '** Bool to decimal'
+    expression: Functions.attrtrue.toDecimal()
+    result: [1.0]
+
+  - desc: '** str to decimal'
+    expression: decstr.toDecimal()
+    result: [101.99]
+
+  - desc: '** Null to decimal'
+    expression: Functions.collWithNullsAndTrue[0].toDecimal()
+    result: []
+
+  - 'group: toDateTime':
+    - desc: equality
+      expression: "datetime.toDateTime() = @2019-02-06T19:17-05:00"
+      result: [true]
+
+    - desc: inequality
+      expression: "datetime.toDateTime() = @2010-02-06T19:17-05:00"
+      result: [false]
+
+  - desc: '** Null to dateTime'
+    expression: Functions.collWithNullsAndTrue[0].toDateTime()
+    result: []
+
+  - 'group: toTime':
+    - desc: equality
+      expression: "time.toTime() = @T19:15-05:00"
+      result: [true]
+
+    - desc: inequality
+      expression: "time.toTime() = @T18:15-05:00"
+      result: [false]
+
+    - desc: inequality operator
+      expression: "time.toTime() != @T18:15-05:00"
+      result: [true]
+
+  - desc: '** Null to time'
+    expression: Functions.collWithNullsAndTrue[0].toTime()
+    result: []
+
+  - desc: '** Null to date'
+    expression: Functions.collWithNullsAndTrue[0].toDate()
+    result: []
+
+  - desc: '** Null to boolean'
+    expression: Functions.collWithNullsAndTrue[0].toBoolean()
+    result: []
+
+
+  - desc: '5.5.4. toString() : string'
+# If the input collection contains a single item, this function will return a single string if:
+# the item in the input collection is a string
+# the item in the input collection is an integer, decimal, time or dateTime the output will contain its string representation
+# the item is a boolean, where true results in 'true' and false in 'false'.
+# If the item is not one of the above types, the evaluation of the expression will end and signal an error to the calling environment.
+# The string representation uses the following formats:
+# Type	Representation
+# boolean
+# true or false
+
+# integer
+# (\\+|-)?\d+
+
+# decimal
+# (\\+|-)?\d+(.\d+)?
+
+# quantity
+# (\\+|-)?\d+(.\d+)? '<unit>'
+
+# dateTime
+# YYYY-MM-DDThh:mm:ss.fff(+/-)hh:mm
+
+# time
+# Thh:mm:ss.fff(+/-)hh:mm
+
+# Note that for partial dates and times, the result will only be specified to the level of precision in the value being converted.
+# In all other cases, the function will return an empty collection.
+
+  - desc: '** bool to string'
+    expression: attrtrue.toString()
+    result: ['true']
+
+  - desc: '** bool to string'
+    expression: attrdec.toString()
+    result: ['101.99']
+
+  - desc: '** null to string'
+    inputfile: patient-example-2.json
+    model: r4
+    expression: Patient.name.given[0].toString()
+    result: []
+
+
+  - desc: '5.5.7. toQuantity([unit:string]) : Quantity'
+  - desc: '** string to Quantity'
+    inputfile: patient-example.json
+    expression: '''1 \''wk\''''.toQuantity() = 7 days'
+    result: []
+  - desc: '** string to Quantity'
+    inputfile: patient-example.json
+    expression: '''1 \''wk\''''.toQuantity(''days'')'
+    result: []
+  - desc: '** string to Quantity'
+    inputfile: patient-example.json
+    expression: "'1 \\'wk\\''.toQuantity('d') = 7 days"
+    result: []
+  - desc: '** string to Quantity - result UCUM unit code must be surrounded with single quotes'
+    inputfile: patient-example.json
+    expression: "'1 \\'wk\\''.toQuantity('d').toString() = '7 \\'d\\''"
+    result:
+      - true
+  - desc: '** calendar duration conversion factor'
+    inputfile: patient-example.json
+    expression: '''1 year''.toQuantity() != 1 ''a'''
+    result:
+      - true
+  - desc: '** calendar duration conversion factor'
+    inputfile: patient-example.json
+    expression: '''1 year''.toQuantity() ~ 1 ''a'''
+    result:
+      - true
+  - desc: '** Duration to Quantity'
+    inputfile: medicationrequest-example.json
+    expression: "MedicationRequest.dispenseRequest.expectedSupplyDuration.toQuantity() = 3 days"
+    model: 'r4'
+    result:
+      - true
+  - desc: '** UCUM units'
+    inputfile: patient-example.json
+    expression: "'1 \\'cm\\''.toQuantity('mm').value = 10"
+    result:
+      - true
+  - desc: '** Invalid conversion'
+    inputfile: patient-example.json
+    expression: "'1 \\'cm\\''.toQuantity('g')"
+    result: []
+  - desc: '** Implicit to quantity + toQuantity'
+    inputfile: observation-example.json
+    model: 'r4'
+    expression: Observation.value.toQuantity('kg') ~ 84 'kg'
+    result:
+      - true
+  - desc: '** Invalid conversion'
+    inputfile: patient-example.json
+    expression: '''1 \''wk\''''.toQuantity(''nonexistent-unit'')'
+    result: []
+  - desc: '** Invalid conversion'
+    inputfile: patient-example.json
+    expression: '''some not quantity string''.toQuantity()'
+    result: []
+
+  - desc: '** Null to Quantity'
+    expression: Functions.collWithNullsAndTrue[0].toQuantity()
+    result: []
+
+subject:
+  resourceType: Functions
+  attrempty: []
+  attrtrue: true
+  attrfalse: false
+  intstr: '101'
+  decstr: '101.99'
+  attrdec: 101.99
+  datetime:  "2019-02-06T19:17-05:00"
+  time:  "T19:15-05:00"
+  attrsingle:
+    - 1
+  collWithNullsAndTrue:
+    - null
+    - true
+    - null
+  _collWithNullsAndTrue:
+    - id: nullId
+    - id: trueId
+    - id: lastNullId
+  coll1:
+    - coll2:
+        - attr: 1
+        - attr: 2
+        - attr: 3
+    - coll2:
+        - attr: 4
+        - attr: 5
+    - colltrue:
+        - attr: true
+        - attr: true
+        - attr: true
+    - collwithfalse:
+        - attr: false
+        - attr: true
+    - collfalse:
+        - attr: false
+        - attr: false
+    - mixed:
+        - attr: true
+        - attr: false
+        - attr: 'test string'
+        - attr: 999
+        - attr: 3.14159
+        - attr: '@2015-02-04T14:34:28Z'
+        - attr: '@T14:34:28+09:00'
+        - attr: 4 days
