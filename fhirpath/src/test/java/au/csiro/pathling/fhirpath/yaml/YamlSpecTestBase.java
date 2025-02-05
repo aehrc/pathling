@@ -86,27 +86,36 @@ public abstract class YamlSpecTestBase {
           StaticFunctionRegistry.getInstance(),
           Map.of()
       );
-      final Collection evalResult = evaluator.evaluate(
-          PARSER.parse(spec.getExpression()));
+      if (spec.isError()) {
+        try {
+          final Collection evalResult = evaluator.evaluate(PARSER.parse(spec.getExpression()));
+          throw new AssertionError("Expected error but got none: " + evalResult);
+        } catch (Exception e) {
+          log.info("Expected error: {}", e.getMessage());
+        }
+      } else {
+        final Collection evalResult = evaluator.evaluate(
+            PARSER.parse(spec.getExpression()));
 
-      final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
-      final ColumnRepresentation expectedRepresentation = getResultRepresentation();
+        final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
+        final ColumnRepresentation expectedRepresentation = getResultRepresentation();
 
-      final Row resultRow = evaluator.createInitialDataset().select(
-          actualRepresentation.getValue().alias("actual"),
-          expectedRepresentation.getValue().alias("expected")
-      ).first();
+        final Row resultRow = evaluator.createInitialDataset().select(
+            actualRepresentation.getValue().alias("actual"),
+            expectedRepresentation.getValue().alias("expected")
+        ).first();
 
-      final Object actual = resultRow.isNullAt(0)
-                            ? null
-                            : resultRow.get(0);
-
-      final Object expected = resultRow.isNullAt(1)
+        final Object actual = resultRow.isNullAt(0)
                               ? null
-                              : resultRow.get(1);
+                              : resultRow.get(0);
 
-      System.out.println("Expected: " + expected + " but got: " + actual);
-      assertEquals(expected, actual, "Expected: " + expected + " but got: " + actual);
+        final Object expected = resultRow.isNullAt(1)
+                                ? null
+                                : resultRow.get(1);
+
+        log.debug("Expected: " + expected + " but got: " + actual);
+        assertEquals(expected, actual, "Expected: " + expected + " but got: " + actual);
+      }
     }
   }
 
