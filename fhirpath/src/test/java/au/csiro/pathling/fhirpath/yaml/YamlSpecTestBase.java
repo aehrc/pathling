@@ -18,6 +18,7 @@ import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.execution.StdFhirpathEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.fhirpath.yaml.FhipathTestSpec.TestCase;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -113,8 +114,7 @@ public abstract class YamlSpecTestBase {
                                 ? null
                                 : resultRow.get(1);
 
-        
-        log.info("Result schema: {}" , resultRow.schema().treeString());
+        log.info("Result schema: {}", resultRow.schema().treeString());
         log.debug("Expected: " + expected + " but got: " + actual);
         assertEquals(expected, actual, "Expected: " + expected + " but got: " + actual);
       }
@@ -125,6 +125,11 @@ public abstract class YamlSpecTestBase {
 
     @Override
     public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
+
+      final String testConfigYaml = getResourceAsString("fhirpath/config.yaml");
+      final Function<TestCase, Optional<String>> excluder = TestConfig.fromYaml(
+          testConfigYaml).toExcluder();
+
       final String yamlSpecLocation = context.getTestMethod().orElseThrow()
           .getAnnotation(YamlSpec.class)
           .value();
@@ -164,7 +169,11 @@ public abstract class YamlSpecTestBase {
 
       return spec.getCases()
           .stream()
-          .map(ts -> RuntimeCase.of(ts, resolverFactory))
+          .filter(ts -> {
+            final Optional<String> exclusion = excluder.apply(ts);
+            exclusion.ifPresent(s -> log.info("Excluding test case: {} becasue {}", ts, s));
+            return exclusion.isEmpty();
+          }).map(ts -> RuntimeCase.of(ts, resolverFactory))
           .map(Arguments::of);
     }
   }

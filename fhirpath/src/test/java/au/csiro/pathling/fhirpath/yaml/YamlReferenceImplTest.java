@@ -129,7 +129,7 @@ public class YamlReferenceImplTest extends YamlSpecTestBase {
   }
 
   @YamlSpec("fhirpath/cases/6.6_math.yaml")
-  void testMath(@Nonnull final RuntimeCase testCase) {
+  void testMath6(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }
 

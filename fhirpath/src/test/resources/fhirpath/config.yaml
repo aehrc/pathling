@@ -1,0 +1,54 @@
+# Specify the exclutions for the test cases
+excludeSet:
+  - comment: Global exclusions
+    glob: '*.yaml'
+    exclude:
+      - comment: 'Not supported subsetting functions'
+        function:
+          - single
+          - tail
+          - take
+          - skip
+          - last
+          - exclude
+          - intersect
+      - comment: 'Not supported string functions'
+        function:
+          - indexOf
+          - substring
+          - startsWith
+          - endsWith
+          - contains
+          - upper
+          - lower
+          - replace
+          - matches
+          - replaceMatches
+          - length
+          - split
+          - toChars
+          - trim
+          - encode
+          - decode
+          - escape
+          - unescape
+      - comment: 'Not supported math5 functions'
+        function:
+          - abs
+          - ceiling
+          - floor
+          - exp
+          - ln
+          - log
+          - power
+          - round
+          - sqrt
+          - truncate
+      - comment: 'Not supported expressions'
+        expression: # regex matching expressoin
+          - '*.'
+      - comment:
+        desc:
+          - '*.toQuantity()'
+            
+  
