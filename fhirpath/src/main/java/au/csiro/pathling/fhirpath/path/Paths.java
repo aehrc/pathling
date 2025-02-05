@@ -215,22 +215,7 @@ final public class Paths {
       return resourceCode;
     }
   }
-
-
-  @Value
-  public static class Invocation implements FhirPath {
-
-    FhirPath invocationSubject;
-    FhirPath invocationVerb;
-
-    @Override
-    public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      return invocationVerb.apply(invocationSubject.apply(input, context),
-          context);
-    }
-  }
-
+  
   // TODO: replace with FhirPath::This
   @Value
   public static class This implements FhirPath {

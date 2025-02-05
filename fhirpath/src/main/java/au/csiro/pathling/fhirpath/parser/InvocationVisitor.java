@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.parser;
 
 import static java.util.Objects.requireNonNull;
-import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -40,10 +39,6 @@ import jakarta.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * This class is invoked on the right-hand side of the invocation expression, and can optionally be

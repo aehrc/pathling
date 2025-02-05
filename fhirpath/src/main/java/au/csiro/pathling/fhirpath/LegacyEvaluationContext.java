@@ -181,8 +181,9 @@ public class LegacyEvaluationContext implements EvaluationContext {
   }
 
   @Override
+  @Nonnull
   public Collection resolveJoin(
-      @NotNull final ReferenceCollection referenceCollection) {
+      @Nonnull final ReferenceCollection referenceCollection) {
     throw new UnsupportedOperationException("resolveJoin() not supported in this context");
   }
 

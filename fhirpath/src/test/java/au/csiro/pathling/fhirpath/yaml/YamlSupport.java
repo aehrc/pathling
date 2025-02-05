@@ -1,13 +1,24 @@
 package au.csiro.pathling.fhirpath.yaml;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefCompositeDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceTag;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
@@ -16,18 +27,11 @@ import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static java.util.Objects.isNull;
-import static java.util.Objects.requireNonNull;
 
 @UtilityClass
 public class YamlSupport {
 
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   static Map<FHIRDefinedType, DataType> FHIR_TO_SQL = Map.of(
       FHIRDefinedType.STRING, org.apache.spark.sql.types.DataTypes.StringType,
       FHIRDefinedType.INTEGER, DataTypes.IntegerType,
@@ -38,7 +42,7 @@ public class YamlSupport {
 
   @Nonnull
   public static ResourceDefinition yamlToDefinition(@Nonnull final String resourcCode,
-      @Nonnull final Map<String, Object> data) {
+      @Nonnull final Map<Object, Object> data) {
     final List<ChildDefinition> definedFields = elementsFromYaml(data);
     final Set<String> definedFieldNames = definedFields.stream()
         .map(ChildDefinition::getName)
@@ -49,7 +53,12 @@ public class YamlSupport {
         Stream.concat(
             Stream.of(
                     DefPrimitiveDefinition.single("id", FHIRDefinedType.STRING),
-                    DefPrimitiveDefinition.single("id_versioned", FHIRDefinedType.STRING))
+                    DefPrimitiveDefinition.single("id_versioned", FHIRDefinedType.STRING),
+
+                    // seems like we also need ups and nothing
+                    DefPrimitiveDefinition.single("ups", FHIRDefinedType.NULL),
+                    DefPrimitiveDefinition.single("nothing", FHIRDefinedType.NULL)
+                )
                 .filter(field -> !definedFieldNames.contains(field.getName())),
             definedFields.stream()
         ).toList()
@@ -57,9 +66,9 @@ public class YamlSupport {
   }
 
   @Nonnull
-  static List<ChildDefinition> elementsFromYaml(@Nonnull final Map<String, Object> data) {
+  static List<ChildDefinition> elementsFromYaml(@Nonnull final Map<Object, Object> data) {
     return data.entrySet().stream()
-        .map(entry -> elementFromYaml(entry.getKey(), entry.getValue()))
+        .map(entry -> elementFromYaml(entry.getKey().toString(), entry.getValue()))
         .toList();
   }
 
@@ -78,7 +87,11 @@ public class YamlSupport {
     // and not nested 
     // also how do we represent an empty list of a certain type?
 
-    final Set<Class<?>> types = values.stream().map(Object::getClass)
+    // TODO: what do do with null values in lists
+
+    final Set<Class<?>> types = values.stream()
+        .filter(Objects::nonNull)
+        .map(Object::getClass)
         .collect(Collectors.toUnmodifiableSet());
 
     if (types.size() == 1) {
@@ -90,6 +103,7 @@ public class YamlSupport {
     }
   }
 
+  @SuppressWarnings("unchecked")
   @Nonnull
   private static ChildDefinition elementFromValue(@Nonnull final String key,
       @Nullable final Object value, final int cardinality) {
@@ -104,7 +118,7 @@ public class YamlSupport {
     } else if (value instanceof Double) {
       return DefPrimitiveDefinition.of(key, FHIRDefinedType.DECIMAL, cardinality);
     } else if (value instanceof Map<?, ?> map) {
-      return DefCompositeDefinition.of(key, elementsFromYaml((Map<String, Object>) map),
+      return DefCompositeDefinition.of(key, elementsFromYaml((Map<Object, Object>) map),
           cardinality);
     } else {
       throw new IllegalArgumentException("Unsupported data type: " + value + " (" + value.getClass()
@@ -151,6 +165,15 @@ public class YamlSupport {
       );
     } else {
       throw new IllegalArgumentException("Unsupported child definition: " + childDefinition);
+    }
+  }
+
+  @Nonnull
+  static String omToJson(@Nonnull final Map<Object, Object> objectModel) {
+    try {
+      return OBJECT_MAPPER.writeValueAsString(objectModel);
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
     }
   }
 

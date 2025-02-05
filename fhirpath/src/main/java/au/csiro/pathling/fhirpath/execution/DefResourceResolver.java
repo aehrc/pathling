@@ -45,7 +45,7 @@ public class DefResourceResolver implements ResourceResolver {
   }
 
   @Nonnull
-  ResourceCollection resolveForeignResource(@Nonnull final String resourceCode) {
+  ResourceCollection resolveForeignResource(@Nonnull final String ignoredResourceCode) {
     throw new UnsupportedOperationException("resolveForeignResource() is not supported");
   }
 

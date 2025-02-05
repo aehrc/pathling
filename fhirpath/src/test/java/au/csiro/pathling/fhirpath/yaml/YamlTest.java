@@ -1,5 +1,6 @@
 package au.csiro.pathling.fhirpath.yaml;
 
+import static au.csiro.pathling.test.TestResources.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -15,11 +16,13 @@ import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.execution.StdFhirpathEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.fhirpath.yaml.FhipathTestSpec.TestCase;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
@@ -28,6 +31,8 @@ import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.yaml.snakeyaml.Yaml;
 
@@ -46,7 +51,7 @@ public class YamlTest {
 
   @Nonnull
   static String yamlToJsonResource(@Nonnull final String yamlData) throws Exception {
-    final Map<String, Object> data = YAML_PARSER.load(yamlData);
+    final Map<Object, Object> data = YAML_PARSER.load(yamlData);
     // Serialize the data map into a JSON string
     return OBJECT_MAPPER.writeValueAsString(data);
   }
@@ -77,7 +82,7 @@ public class YamlTest {
                 - 3
             """;
 
-    final Map<String, Object> subjectYamlModel = YAML_PARSER.load(subjectString);
+    final Map<Object, Object> subjectYamlModel = YAML_PARSER.load(subjectString);
     DefResourceDefinition subjectDefinition = (DefResourceDefinition) YamlSupport.yamlToDefinition(
         "Test",
         subjectYamlModel);
@@ -167,7 +172,30 @@ public class YamlTest {
                             : resultRow.get(1);
 
     assertEquals(expected, actual, "Expected: " + expected + " but got: " + actual);
-
   }
 
+  @Test
+  void testLoad() {
+    final String testSpec = getResourceAsString("fhirpath/cases/5.1_existence.yaml");
+    final FhipathTestSpec spec = FhipathTestSpec.fromYaml(testSpec);
+    System.out.println(spec);
+  }
+
+  @Nonnull
+  static Stream<TestCase> parameters() {
+    final String testSpec = getResourceAsString("fhirpath/cases/5.1_existence.yaml");
+    final FhipathTestSpec spec = FhipathTestSpec.fromYaml(testSpec);
+    return spec.getCases().stream();
+  }
+
+  @ParameterizedTest
+  @MethodSource("parameters")
+  void testExistence(TestCase testCase) {
+    System.out.println("Running test: " + testCase.getDescription());
+    System.out.println("Expression: " + testCase.getExpression());
+    System.out.println("Error: " + testCase.isError());
+    System.out.println("Result: " + testCase.getResult());
+  }
+  
+  
 }
