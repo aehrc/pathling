@@ -6,6 +6,7 @@ import lombok.Value;
 import org.yaml.snakeyaml.Yaml;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
 
@@ -34,18 +35,32 @@ public class FhipathTestSpec {
 
   @Nonnull
   List<TestCase> cases;
-  
+
+
+  @Nonnull
+  static Stream<TestCase> mapCaseOrGroup(@Nonnull final Map<Object, Object> caseOrGroup) {
+    if (caseOrGroup.containsKey("expression")) {
+      return Stream.of(new TestCase(
+          (String) caseOrGroup.get("desc"),
+          (String) requireNonNull(caseOrGroup.get("expression")),
+          (boolean) caseOrGroup.computeIfAbsent("error", k -> false),
+          caseOrGroup.get("result")
+      ));
+    } else if (caseOrGroup.size() == 1) {
+      final Object singleValue = caseOrGroup.values().iterator().next();
+      return singleValue instanceof List<?> lst
+             ? buildCases((List<Object>) lst).stream()
+             : Stream.empty();
+    } else {
+      return Stream.empty();
+    }
+  }
+
   @Nonnull
   static List<TestCase> buildCases(@Nonnull final List<Object> cases) {
     return cases.stream()
         .map(c -> (Map<Object, Object>) c)
-        .filter(caseMap -> caseMap.containsKey("expression"))
-        .map(caseMap -> new TestCase(
-            (String) caseMap.get("desc"),
-            (String) requireNonNull(caseMap.get("expression")),
-            (boolean) caseMap.computeIfAbsent("error", k -> false),
-            caseMap.get("result")
-        ))
+        .flatMap(FhipathTestSpec::mapCaseOrGroup)
         .toList();
   }
 

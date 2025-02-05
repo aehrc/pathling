@@ -34,7 +34,6 @@ import lombok.Getter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Context and dependencies used in the evaluation of a FHIRPath expression.
