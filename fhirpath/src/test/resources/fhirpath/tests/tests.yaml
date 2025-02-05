@@ -1,0 +1,66 @@
+tests:
+  - 'Testing the empty() function in various scenarios':
+      - desc: '** Empty litera should return true **'
+        expression: '{}.empty()'
+        result: [ ]
+      - desc: '** Empty collection should return true **'
+        expression: 'nothing.empty()'
+        result: [ ]
+      - desc: '** Singular integer is not empty **'
+        expression: 'n1.empty()'
+        result: [ false ]
+      - desc: '** Plural integer is not empty **'
+        expression: 'an1.empty()'
+        result: [ false ]
+      - desc: '** Plural integer collection is not empty **'
+        expression: 'an2.empty()'
+        result: [ false ]
+      - desc: '** Singular string is not empty **'
+        expression: 's1.empty()'
+        result: [ false ]
+      - desc: '** Plural string is not empty **'
+        expression: 'sn1.empty()'
+        result: [ false ]
+      - desc: '** Plural string collection is not empty **'
+        expression: 'sn2.empty()'
+        result: [ false ]
+      - desc: '** Complete traversed collection is not empty **'
+        expression: 'e1.xy.x.empty()'
+        result: [ false ]
+      - desc: '** Incomplete traversed collection is not empty **'
+        expression: 'e1.xy.y.empty()'
+        result: [ false ]
+  - 'Testing the count() function in various scenarios':
+      - desc: '** Empty literal should return 0 **'
+        expression: '{}.count()'
+        result: [ 0 ]
+      - desc: '** Empty collection should return 0 **'
+        expression: 'nothing.count()'
+        result: [ 0 ]
+      - desc: '** Empty Collection should return 0 **'
+        expression: '{}.count()'
+        result: [ 0 ]
+      - desc: '** Singular integer should return 1 **'
+        expression: 'n1.count()'
+        result: [ 1 ]
+      - desc: '** Plural integer should return 1 **'
+        expression: 'an1.count()'
+        result: [ 1 ]
+      - desc: '** Plural integer collection should return 2 **'
+        expression: 'an2.count()'
+        result: [ 2 ]
+subject:
+  resourceType: Test
+  n1: 1
+  an1: [ 1 ]
+  an2: [ 1, 2 ]
+  s1: 'a'
+  sn1: [ 'a' ]
+  sn2: [ 'a', 'b' ]
+  e1:
+    - xy:
+        - x: 1
+        - y: 2
+    - xy:
+        - x: 3
+        

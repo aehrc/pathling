@@ -5,6 +5,7 @@ import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhirpath.EvalOptions;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -18,7 +19,6 @@ import au.csiro.pathling.fhirpath.definition.fhir.FhirResourceTag;
 import au.csiro.pathling.fhirpath.execution.DefResourceResolver;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.execution.StdFhirpathEvaluator;
-import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.yaml.FhipathTestSpec.TestCase;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -98,11 +98,10 @@ public abstract class YamlSpecTestBase {
     }
 
     void check(@Nonnull final RuntimeContext rt) {
-      final FhirpathEvaluator evaluator = new StdFhirpathEvaluator(
-          resolverFactory.apply(rt),
-          StaticFunctionRegistry.getInstance(),
-          Map.of()
-      );
+      final FhirpathEvaluator evaluator = StdFhirpathEvaluator
+          .fromResolver(resolverFactory.apply(rt))
+          .evalOptions(EvalOptions.builder().allowUndefinedFields(true).build())
+          .build();
       if (spec.isError()) {
         try {
           final Collection evalResult = evaluator.evaluate(PARSER.parse(spec.getExpression()));

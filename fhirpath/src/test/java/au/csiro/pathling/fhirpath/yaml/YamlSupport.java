@@ -57,11 +57,7 @@ public class YamlSupport {
         Stream.concat(
             Stream.of(
                     DefPrimitiveDefinition.single("id", FHIRDefinedType.STRING),
-                    DefPrimitiveDefinition.single("id_versioned", FHIRDefinedType.STRING),
-
-                    // seems like we also need ups and nothing
-                    DefPrimitiveDefinition.single("ups", FHIRDefinedType.NULL),
-                    DefPrimitiveDefinition.single("nothing", FHIRDefinedType.NULL)
+                    DefPrimitiveDefinition.single("id_versioned", FHIRDefinedType.STRING)
                 )
                 .filter(field -> !definedFieldNames.contains(field.getName())),
             definedFields.stream()
