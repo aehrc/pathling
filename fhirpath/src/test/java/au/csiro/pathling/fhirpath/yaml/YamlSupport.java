@@ -3,6 +3,7 @@ package au.csiro.pathling.fhirpath.yaml;
 import static java.util.Objects.isNull;
 import static java.util.Objects.requireNonNull;
 
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefCompositeDefinition;
@@ -36,7 +37,7 @@ public class YamlSupport {
       FHIRDefinedType.STRING, org.apache.spark.sql.types.DataTypes.StringType,
       FHIRDefinedType.INTEGER, DataTypes.IntegerType,
       FHIRDefinedType.BOOLEAN, DataTypes.BooleanType,
-      FHIRDefinedType.DECIMAL, DataTypes.createDecimalType(),
+      FHIRDefinedType.DECIMAL, DecimalCollection.DECIMAL_TYPE,
       FHIRDefinedType.NULL, DataTypes.NullType
   );
 

@@ -31,4 +31,10 @@ public class YamlReferenceImplTest extends YamlSpecTestBase {
   void testBooleanLogic(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }
+
+  @YamlSpec("fhirpath/cases/6.6_math.yaml")
+  void testMath(@Nonnull final RuntimeCase testCase) {
+    run(testCase);
+  }
+
 }

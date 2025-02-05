@@ -77,7 +77,7 @@ public abstract class YamlSpecTestBase {
           Map.of("result", resultRepresentation));
       return new DefaultRepresentation(
           functions.from_json(functions.lit(resultJson),
-              resultSchema).getField("result"));
+              resultSchema).getField("result")).asCanonical();
     }
 
     void check(@Nonnull final SparkSession spark) {
@@ -114,12 +114,6 @@ public abstract class YamlSpecTestBase {
 
     @Override
     public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-      // Accessing information from the ExtensionContext
-      System.out.println("Test Class: " + context.getTestClass().orElse(null));
-      System.out.println("Test Method: " + context.getTestMethod().orElse(null));
-      System.out.println("Display Name: " + context.getDisplayName());
-      System.out.println("Tags: " + context.getTags());
-
       final String yamlSpecLocation = context.getTestMethod().orElseThrow()
           .getAnnotation(YamlSpec.class)
           .value();
@@ -165,6 +159,13 @@ public abstract class YamlSpecTestBase {
   }
 
   protected void run(@Nonnull final RuntimeCase testCase) {
+    log.info("Description: {}", testCase.spec.getDescription());
+    log.info("Expression: {}", testCase.spec.getExpression());
+    if (testCase.spec.isError()) {
+      log.info("Expecting error");
+    } else {
+      log.info("Result: {}", testCase.spec.getResult());
+    }
     testCase.check(spark);
   }
 

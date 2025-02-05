@@ -50,13 +50,13 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class DecimalCollection extends Collection implements Materializable<DecimalType>,
     StringCoercible {
 
-  private static final org.apache.spark.sql.types.DecimalType DECIMAL_TYPE = DataTypes
+  public static final org.apache.spark.sql.types.DecimalType DECIMAL_TYPE = DataTypes
       .createDecimalType(DecimalCustomCoder.precision(), DecimalCustomCoder.scale());
 
   protected DecimalCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> fhirPathType,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<NodeDefinition> definition, 
+      @Nonnull final Optional<NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(columnRepresentation, fhirPathType, fhirType, definition, extensionMapColumn);
   }
