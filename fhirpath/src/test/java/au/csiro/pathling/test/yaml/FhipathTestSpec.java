@@ -1,4 +1,4 @@
-package au.csiro.pathling.fhirpath.yaml;
+package au.csiro.pathling.test.yaml;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;

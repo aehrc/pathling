@@ -1,4 +1,4 @@
-package au.csiro.pathling.fhirpath.yaml;
+package au.csiro.pathling.test.yaml;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsString;
 import static java.util.Objects.requireNonNull;
@@ -20,7 +20,7 @@ import au.csiro.pathling.fhirpath.execution.DefResourceResolver;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.execution.StdFhirpathEvaluator;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.fhirpath.yaml.FhipathTestSpec.TestCase;
+import au.csiro.pathling.test.yaml.FhipathTestSpec.TestCase;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;

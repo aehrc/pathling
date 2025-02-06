@@ -1,4 +1,4 @@
-package au.csiro.pathling.fhirpath.yaml;
+package au.csiro.pathling.test.yaml;
 
 import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.INTEGER;
 import static org.junit.jupiter.api.Assertions.assertEquals;

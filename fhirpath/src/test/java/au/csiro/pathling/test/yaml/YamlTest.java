@@ -1,4 +1,4 @@
-package au.csiro.pathling.fhirpath.yaml;
+package au.csiro.pathling.test.yaml;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;

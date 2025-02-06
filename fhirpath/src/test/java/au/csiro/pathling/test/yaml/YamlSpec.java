@@ -1,6 +1,6 @@
-package au.csiro.pathling.fhirpath.yaml;
+package au.csiro.pathling.test.yaml;
 
-import au.csiro.pathling.fhirpath.yaml.YamlSpecTestBase.FhirpathArgumentProvider;
+import au.csiro.pathling.test.yaml.YamlSpecTestBase.FhirpathArgumentProvider;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import java.lang.annotation.Retention;
