@@ -129,7 +129,7 @@ public abstract class YamlSpecTestBase {
                                 ? null
                                 : resultRow.get(1);
 
-        log.info("Result schema: {}", resultRow.schema().treeString());
+        log.trace("Result schema: {}", resultRow.schema().treeString());
         log.debug("Expected: " + expected + " but got: " + actual);
         assertEquals(expected, actual, "Expected: " + expected + " but got: " + actual);
       }
@@ -157,8 +157,8 @@ public abstract class YamlSpecTestBase {
           .json(rt.getSpark().createDataset(List.of(YamlSupport.omToJson(subjectOM)),
               Encoders.STRING()));
 
-      log.debug("Yaml definition: {}", subjectDefinition);
-      log.debug("Subject schema: {}", subjectSchema.treeString());
+      log.trace("Yaml definition: {}", subjectDefinition);
+      log.trace("Subject schema: {}", subjectSchema.treeString());
 
       return DefResourceResolver.of(
           DefResourceTag.of(subjectResourceCode),
@@ -241,11 +241,11 @@ public abstract class YamlSpecTestBase {
     log.info("Description: {}", testCase.spec.getDescription());
     log.info("Expression: {}", testCase.spec.getExpression());
     if (testCase.spec.isError()) {
-      log.info("Expecting error");
+      log.debug("Expecting error");
     } else {
-      log.info("Result: {}", testCase.spec.getResult());
+      log.debug("Result: {}", testCase.spec.getResult());
     }
-    log.info("Subject:\n{}", testCase.resolverFactory);
+    log.debug("Subject:\n{}", testCase.resolverFactory);
     testCase.check(RuntimeContext.of(spark, fhirEncoders));
   }
 }
