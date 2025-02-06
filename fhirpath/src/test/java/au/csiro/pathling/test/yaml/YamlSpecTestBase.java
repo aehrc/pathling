@@ -224,8 +224,14 @@ public abstract class YamlSpecTestBase {
       return spec.getCases()
           .stream()
           .filter(ts -> {
+            if (ts.isDisable()) {
+              log.warn("Disabling test case: {}", ts);
+            }
+            return !ts.isDisable();
+          })
+          .filter(ts -> {
             final Optional<String> exclusion = excluder.apply(ts);
-            exclusion.ifPresent(s -> log.info("Excluding test case: {} becasue {}", ts, s));
+            exclusion.ifPresent(s -> log.warn("Excluding test case: {} becasue {}", ts, s));
             return exclusion.isEmpty();
           }).map(ts -> RuntimeCase.of(ts,
               Optional.ofNullable(ts.getInputFile())

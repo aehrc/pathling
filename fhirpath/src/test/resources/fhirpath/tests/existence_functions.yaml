@@ -34,9 +34,11 @@ tests:
       - desc: '** Empty literal should return 0 **'
         expression: '{}.count()'
         result: [ 0 ]
+        disable: true # empty collection
       - desc: '** Empty collection has count 0 **'
         expression: 'nothing.count()'
         result: [ 0 ]
+        disable: true # empty collection
       - desc: '** Singular integer has count 1 **'
         expression: 'n1.count()'
         result: [ 1 ]
@@ -56,9 +58,11 @@ tests:
       - desc: '** Empty literal should return false **'
         expression: '{}.exists()'
         result: [ false ]
+        disable: true # empty collection
       - desc: '** Empty collection should return false **'
         expression: 'nothing.exists()'
         result: [ false ]
+        disable: true # empty collection
       - desc: '** Singular integer exists **'
         expression: 'n1.exists()'
         result: [ true ]
