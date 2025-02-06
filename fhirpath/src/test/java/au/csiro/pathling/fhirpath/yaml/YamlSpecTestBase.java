@@ -157,8 +157,8 @@ public abstract class YamlSpecTestBase {
           .json(rt.getSpark().createDataset(List.of(YamlSupport.omToJson(subjectOM)),
               Encoders.STRING()));
 
-      log.trace("Yaml definition: {}", subjectDefinition);
-      log.trace("Subject schema: {}", subjectSchema.treeString());
+      log.debug("Yaml definition: {}", subjectDefinition);
+      log.debug("Subject schema: {}", subjectSchema.treeString());
 
       return DefResourceResolver.of(
           DefResourceTag.of(subjectResourceCode),

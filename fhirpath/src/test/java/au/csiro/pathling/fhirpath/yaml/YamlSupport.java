@@ -14,6 +14,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -35,7 +36,7 @@ public class YamlSupport {
 
   static final Yaml YAML = new Yaml();
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-  
+
   static Map<FHIRDefinedType, DataType> FHIR_TO_SQL = Map.of(
       FHIRDefinedType.STRING, org.apache.spark.sql.types.DataTypes.StringType,
       FHIRDefinedType.INTEGER, DataTypes.IntegerType,
@@ -92,10 +93,24 @@ public class YamlSupport {
     final Set<Class<?>> types = values.stream()
         .filter(Objects::nonNull)
         .map(Object::getClass)
+        .map(clazz -> Map.class.isAssignableFrom(clazz)
+                      ? Map.class
+                      : clazz)
         .collect(Collectors.toUnmodifiableSet());
 
     if (types.size() == 1) {
-      return elementFromValue(key, values.get(0), -1);
+      if (types.contains(Map.class)) {
+        final Map<Object, Object> mergedValues = values.stream()
+            .map(Map.class::cast)
+            .reduce(new HashMap(), (acc, m) -> {
+              acc.putAll(m);
+              return acc;
+            });
+        return elementFromValue(key, mergedValues, -1);
+
+      } else {
+        return elementFromValue(key, values.get(0), -1);
+      }
     } else if (types.size() > 1) {
       throw new IllegalArgumentException("Unsupported list with multiple types: " + types);
     } else {

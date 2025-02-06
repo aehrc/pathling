@@ -23,7 +23,6 @@ import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
 import jakarta.annotation.Nonnull;
-import org.checkerframework.checker.units.qual.N;
 
 public interface EvaluationContext {
   

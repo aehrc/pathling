@@ -10,8 +10,9 @@ import org.junit.jupiter.api.Tag;
 @Tag("WorkTest")
 @Disabled
 public class YamlFhirpathTest extends YamlSpecTestBase {
-  @YamlSpec("fhirpath/tests/tests.yaml")
-  void testTest(@Nonnull final RuntimeCase testCase) {
+
+  @YamlSpec("fhirpath/tests/existence_functions.yaml")
+  void testExistenceFunctions(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }
 
