@@ -2,16 +2,16 @@ package au.csiro.pathling.test.yaml;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.Value;
-import org.yaml.snakeyaml.Yaml;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.Value;
+import org.yaml.snakeyaml.Yaml;
 
 @Data
 @NoArgsConstructor
@@ -24,10 +24,27 @@ public class TestConfig {
 
     @Nonnull
     String function;
-    
+
     @Override
     public boolean test(@Nonnull final FhipathTestSpec.TestCase testCase) {
-      return testCase.getExpression().contains(function);
+      return testCase.getExpression().contains(function + "(");
+    }
+  }
+
+
+  @Value(staticConstructor = "of")
+  static class ExpressionPredicate implements Predicate<FhipathTestSpec.TestCase> {
+
+    @Nonnull
+    Pattern regex;
+
+    @Override
+    public boolean test(@Nonnull final FhipathTestSpec.TestCase testCase) {
+      return regex.asPredicate().test(testCase.getExpression());
+    }
+
+    public static ExpressionPredicate of(@Nonnull final String expression) {
+      return new ExpressionPredicate(Pattern.compile(expression));
     }
   }
 
@@ -47,8 +64,13 @@ public class TestConfig {
 
     @Nonnull
     Stream<Predicate<FhipathTestSpec.TestCase>> toPredicates() {
-      return Optional.ofNullable(function).stream().flatMap(List::stream)
-          .map(FunctionPredicate::of);
+      return Stream.of(
+          Optional.ofNullable(function).stream().flatMap(List::stream)
+              .map(FunctionPredicate::of),
+          Optional.ofNullable(expression).stream().flatMap(List::stream)
+              .map(ExpressionPredicate::of)
+      ).flatMap(Function.identity());
+
     }
   }
 
