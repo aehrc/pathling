@@ -44,11 +44,62 @@ excludeSet:
           - round
           - sqrt
           - truncate
-      - comment: 'Not supported expressions'
+      - comment: 'Not supported path functions'
+        function:
+          - descendants
+          - children
+      - comment: 'Not supported types functions'
+        function:
+          - is
+          - as
+      - comment: 'Not supported combining functions'
+        function:
+          - union
+      - comment: 'Not supported existence functions'
+        function:
+          - all
+          - subsetOf
+          - supersetOf
+          - isDistinct
+          - distinct
+      - comment: 'Not supported conversion functions'
+        function:
+          - toBoolean
+          - toDateTime
+          - toDate
+          - toDecimal
+          - toInteger
+          - toQuantity
+          #- toString
+          - toTime
+          - toType
+      - comment: 'Not supported equality'
+        expression:
+          - " !~ " # not equals operator
+          - " ~ " # ~ operator
+      - comment: 'Not supported utility functions'
+        function:
+          - trace
+          - timeOfDay
+      - comment: 'Not supported misc functions'
+        function:
+          - repeat
+          - combine
+          - now
+      - comment: 'Not supported operators'
         expression: # regex matching expressoin
-          - '*.'
-      - comment:
-        desc:
-          - '*.toQuantity()'
+          - ".+\\|.+" # union operator
+          - " is " # is operator
+          - " as " # as operator
+          - " & " # & operator
+          - " div " # div operator
+      - comment: 'Unsupported callendar durations'
+        expression: # regex matching expressoin
+          - " weeks"
+          - " week"
+          
+          
+          
+          
             
   
