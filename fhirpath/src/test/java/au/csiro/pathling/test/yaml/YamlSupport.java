@@ -101,6 +101,7 @@ public class YamlSupport {
     if (types.size() == 1) {
       if (types.contains(Map.class)) {
         final Map<Object, Object> mergedValues = values.stream()
+            .filter(Objects::nonNull)
             .map(Map.class::cast)
             .reduce(new HashMap(), (acc, m) -> {
               acc.putAll(m);
@@ -112,7 +113,9 @@ public class YamlSupport {
         return elementFromValue(key, values.get(0), -1);
       }
     } else if (types.size() > 1) {
-      throw new IllegalArgumentException("Unsupported list with multiple types: " + types);
+      // TODO: represnet this as a string for now
+      return elementFromValue(key, values.get(0), -1);
+      //throw new IllegalArgumentException("Unsupported list with multiple types: " + types);
     } else {
       return elementFromValue(key, null, -1);
     }

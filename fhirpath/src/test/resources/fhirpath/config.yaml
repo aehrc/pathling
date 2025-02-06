@@ -62,6 +62,17 @@ excludeSet:
           - supersetOf
           - isDistinct
           - distinct
+      - comment: 'Unsupported filtering and projection constructs'
+        expression:
+          - "\\$index "
+      - comment: 'Not supported aggregate constructs'
+        function:
+          - aggregate
+          - min
+          - max
+          - avg
+        expression:
+          - "\\$total"
       - comment: 'Not supported conversion functions'
         function:
           - toBoolean
@@ -97,9 +108,3 @@ excludeSet:
         expression: # regex matching expressoin
           - " weeks"
           - " week"
-          
-          
-          
-          
-            
-  

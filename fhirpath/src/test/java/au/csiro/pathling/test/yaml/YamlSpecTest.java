@@ -14,7 +14,7 @@ public class YamlSpecTest {
 
 
   @Test
-  void testDefinitionOfListOfMaps() {
+  void testMergeDefinitionOfListOfMaps() {
 
     final List<Object> testData = List.of(
         Map.of("a", 3),
@@ -32,4 +32,5 @@ public class YamlSpecTest {
             ), -1)
         , defintion);
   }
+  
 }
