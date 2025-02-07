@@ -20,8 +20,9 @@ import au.csiro.pathling.fhirpath.execution.DefResourceResolver;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.execution.StdFhirpathEvaluator;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.test.yaml.FhipathTestSpec.TestCase;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.test.TestResources;
+import au.csiro.pathling.test.yaml.FhipathTestSpec.TestCase;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -29,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
+import lombok.EqualsAndHashCode.Exclude;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
@@ -73,6 +75,7 @@ public abstract class YamlSpecTestBase {
     FhipathTestSpec.TestCase spec;
 
     @Nonnull
+    @Exclude
     Function<RuntimeContext, ResourceResolver> resolverFactory;
 
     @Nonnull
@@ -204,9 +207,15 @@ public abstract class YamlSpecTestBase {
     @Override
     public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
 
-      final String testConfigYaml = getResourceAsString("fhirpath/config.yaml");
-      final Function<TestCase, Optional<String>> excluder = TestConfig.fromYaml(
-          testConfigYaml).toExcluder();
+      final Optional<String> testConfigPath = context.getTestClass()
+          .flatMap(c -> Optional.ofNullable(c.getAnnotation(YamlConfig.class)))
+          .map(YamlConfig::value);
+      testConfigPath.ifPresent(s -> log.info("Loading test config from: {}", s));
+      final TestConfig testConfig = testConfigPath
+          .map(TestResources::getResourceAsString)
+          .map(TestConfig::fromYaml)
+          .orElse(TestConfig.getDefault());
+      final Function<TestCase, Optional<String>> excluder = testConfig.toExcluder();
 
       final String yamlSpecLocation = context.getTestMethod().orElseThrow()
           .getAnnotation(YamlSpec.class)

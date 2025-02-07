@@ -17,6 +17,8 @@ import org.yaml.snakeyaml.Yaml;
 @NoArgsConstructor
 public class TestConfig {
 
+  private static final TestConfig DEFAULT = new TestConfig();
+
   private static final Yaml YAML_PARSER = new Yaml();
 
   @Value(staticConstructor = "of")
@@ -92,7 +94,7 @@ public class TestConfig {
 
 
   @Nonnull
-  List<ExcludeSet> excludeSet;
+  List<ExcludeSet> excludeSet = List.of();
 
   @Nonnull
   Stream<Predicate<FhipathTestSpec.TestCase>> toPredicates() {
@@ -112,6 +114,11 @@ public class TestConfig {
   @Nonnull
   public static TestConfig fromYaml(@Nonnull final String yamlData) {
     return YAML_PARSER.loadAs(yamlData, TestConfig.class);
+  }
+
+  @Nonnull
+  public static TestConfig getDefault() {
+    return DEFAULT;
   }
 
 }

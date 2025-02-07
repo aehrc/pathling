@@ -1,5 +1,6 @@
 package au.csiro.pathling.fhirpath.yaml;
 
+import au.csiro.pathling.test.yaml.YamlConfig;
 import au.csiro.pathling.test.yaml.YamlSpec;
 import au.csiro.pathling.test.yaml.YamlSpecTestBase;
 import jakarta.annotation.Nonnull;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Tag;
 @Slf4j
 @Tag("WorkTest")
 @Disabled
+@YamlConfig("fhirpath/config.yaml")
 public class YamlReferenceImplTest extends YamlSpecTestBase {
 
   //   From: https://github.com/hl7/fhirpath.js/
@@ -144,5 +146,5 @@ public class YamlReferenceImplTest extends YamlSpecTestBase {
   void testVariables(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }
-  
+
 }
