@@ -2,7 +2,7 @@
 Sphinx>=1.6,<8
 sphinx-rtd-theme==1.2.2
 pytest==8.2.0
-ipython==8.10.0
+ipython==8.32.0
 wheel==0.43.0
 twine==5.0.0
 build==1.2.1
