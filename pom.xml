@@ -89,7 +89,7 @@
     <pathling.infinispanVersion>15.0.3.Final</pathling.infinispanVersion>
     <pathling.jacksonVersion>2.16.1</pathling.jacksonVersion>
     <pathling.jerseyVersion>2.40</pathling.jerseyVersion>
-    <pathling.surefireVersion>3.2.5</pathling.surefireVersion>
+    <pathling.surefireVersion>3.5.2</pathling.surefireVersion>
     <pathling.logbackVersion>1.4.14</pathling.logbackVersion>
     <pathling.slf4jVersion>2.0.9</pathling.slf4jVersion>
     <pathling.derbyVersion>10.14.2.0</pathling.derbyVersion>
