@@ -624,7 +624,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-text</artifactId>
-        <version>1.12.0</version>
+        <version>1.13.0</version>
       </dependency>
 
       <!-- CVE-2022-25857, CVE-2022-1471, CVE-2022-41854  -->
