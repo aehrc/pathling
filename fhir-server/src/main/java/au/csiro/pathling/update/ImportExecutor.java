@@ -29,6 +29,7 @@ import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.FileSystemPersistence;
 import au.csiro.pathling.io.ImportMode;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
+import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -39,6 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.api.java.function.FilterFunction;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -50,6 +52,7 @@ import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UrlType;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -110,7 +113,7 @@ public class ImportExecutor {
   public OperationOutcome execute(@Nonnull @ResourceParam final Parameters inParams) {
     // Parse and validate the JSON request.
     final List<ParametersParameterComponent> sourceParams = inParams.getParameter().stream()
-        .filter(param -> "source".equals(param.getName())).collect(Collectors.toList());
+        .filter(param -> "source".equals(param.getName())).toList();
     if (sourceParams.isEmpty()) {
       throw new InvalidUserInputError("Must provide at least one source parameter");
     }
@@ -137,6 +140,21 @@ public class ImportExecutor {
           .map(param -> ImportMode.fromCode(
               ((CodeType) param.getValue()).asStringValue()))
           .orElse(ImportMode.OVERWRITE);
+
+      // Get the serialized resource type from the source parameter.
+      final ImportFormat format = sourceParam.getPart().stream()
+          .filter(param -> "format".equals(param.getName()))
+          .findFirst()
+          .map(param -> {
+            final String formatCode = ((StringType) param.getValue()).getValue();
+            try {
+              return ImportFormat.fromCode(formatCode);
+            } catch (final IllegalArgumentException e) {
+              throw new InvalidUserInputError("Unsupported format: " + formatCode);
+            }
+          })
+          .orElse(ImportFormat.NDJSON);
+
       final String resourceCode = ((CodeType) resourceTypeParam.getValue()).getCode();
       final ResourceType resourceType = ResourceType.fromCode(resourceCode);
 
@@ -149,17 +167,13 @@ public class ImportExecutor {
       }
 
       // Read the resources from the source URL into a dataset of strings.
-      final Dataset<String> jsonStrings = readStringsFromUrl(urlParam);
-
-      // Parse each line into a HAPI FHIR object, then encode to a Spark dataset.
-      final Dataset<IBaseResource> resources = jsonStrings.map(jsonToResourceConverter(),
-          fhirEncoder);
+      final Dataset<Row> rows = readRowsFromUrl(urlParam, format, fhirEncoder);
 
       log.info("Importing {} resources (mode: {})", resourceType.toCode(), importMode.getCode());
       if (importMode == ImportMode.OVERWRITE) {
-        database.overwrite(resourceType, resources.toDF());
+        database.overwrite(resourceType, rows);
       } else {
-        database.merge(resourceType, resources.toDF());
+        database.merge(resourceType, rows);
       }
     }
 
@@ -177,22 +191,38 @@ public class ImportExecutor {
   }
 
   @Nonnull
-  private Dataset<String> readStringsFromUrl(@Nonnull final ParametersParameterComponent urlParam) {
+  private Dataset<Row> readRowsFromUrl(@Nonnull final ParametersParameterComponent urlParam,
+      final ImportFormat format, final ExpressionEncoder<IBaseResource> fhirEncoder) {
     final String url = ((UrlType) urlParam.getValue()).getValueAsString();
     final String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8);
     final String convertedUrl = FileSystemPersistence.convertS3ToS3aUrl(decodedUrl);
-    final Dataset<String> jsonStrings;
+    final Dataset<Row> rowDataset;
     try {
       // Check that the user is authorized to execute the operation.
       accessRules.ifPresent(ar -> ar.checkCanImportFrom(convertedUrl));
       final FilterFunction<String> nonBlanks = s -> !s.isBlank();
-      jsonStrings = spark.read().textFile(convertedUrl).filter(nonBlanks);
+
+      rowDataset = switch (format) {
+        case NDJSON ->
+            // Parse each line into a HAPI FHIR object, then encode to a Spark dataset.
+            spark.read()
+                .textFile(convertedUrl).filter(nonBlanks)
+                .map(jsonToResourceConverter(), fhirEncoder)
+                .toDF();
+        case PARQUET ->
+            // Use the Spark Parquet reader.
+            spark.read()
+                .parquet(convertedUrl);
+        case DELTA ->
+            // Use the Delta Lake reader.
+            DeltaTable.forPath(spark, convertedUrl).toDF();
+      };
     } catch (final SecurityError e) {
       throw new InvalidUserInputError("Not allowed to import from URL: " + convertedUrl, e);
     } catch (final Exception e) {
       throw new InvalidUserInputError("Error reading from URL: " + convertedUrl, e);
     }
-    return jsonStrings;
+    return rowDataset;
   }
 
   @Nonnull

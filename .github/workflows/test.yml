@@ -245,6 +245,7 @@ jobs:
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
+          submodules: recursive
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
@@ -547,7 +548,7 @@ jobs:
           restore-keys: |-
             ${{ runner.os }}-maven-
       - name: Cache R packages
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/Library
           key: r-packages-${{ runner.os }}-${{ hashFiles('lib/R/DESCRIPTION.src') }}
@@ -560,7 +561,7 @@ jobs:
         run: echo "HADOOP_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.hadoopMajorVersion -q -DforceStdout)" >> $GITHUB_ENV
       - name: Cache Spark
         id: cache-spark
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: /home/runner/spark/spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
           key: spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
@@ -591,7 +592,7 @@ jobs:
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 60
       - name: Upload check logs
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: r-check-logs
@@ -600,7 +601,7 @@ jobs:
             lib/R/target/pathling.Rcheck/*.out
             lib/R/target/pathling.Rcheck/*.fail
       - name: Upload package as artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: r-package
           path: lib/R/target/pathling_*.tar.gz
@@ -634,7 +635,7 @@ jobs:
           restore-keys: |-
             ${{ runner.os }}-maven-
       - name: Cache R packages
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/Library
           key: r-packages-${{ runner.os }}-${{ hashFiles('lib/R/DESCRIPTION.src') }}
@@ -647,7 +648,7 @@ jobs:
         run: echo "HADOOP_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.hadoopMajorVersion -q -DforceStdout)" >> $GITHUB_ENV
       - name: Cache Spark
         id: cache-spark
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: /home/runner/spark/spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
           key: spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}

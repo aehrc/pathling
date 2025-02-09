@@ -47,6 +47,14 @@
           "max": "1",
           "documentation": "A value of 'overwrite' will cause all existing resources of the specified type to be deleted and replaced with the contents of the source file. A value of 'merge' will match existing resources with updated resources in the source file based on their ID, and either update the existing resources or add new resources as appropriate. The default value is 'overwrite'.",
           "type": "code"
+        },
+        {
+          "name": "format",
+          "use": "in",
+          "min": 0,
+          "max": "1",
+          "documentation": "Indicates the format of the source file. Possible values are 'ndjson', 'parquet' and 'delta'. The default value is 'ndjson'.",
+          "type": "code"
         }
       ]
     }
