@@ -638,7 +638,7 @@
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
-        <version>3.7.2</version>
+        <version>3.9.3</version>
       </dependency>
 
       <!-- CVE-2024-47561 -->
