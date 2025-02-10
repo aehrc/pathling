@@ -108,3 +108,61 @@ excludeSet:
         expression: # regex matching expressoin
           - " weeks"
           - " week"
+  - comment: Subsetting exclusions
+    glob: 'fhirpath/cases/5.3_subsetting.yaml'
+    exclude:
+      - comment: 'Primitive attributes'
+        any:
+          - '** first for collection with null values'
+  - comment: String manipulation exclusions
+    glob: 'fhirpath/cases/5.6_string_manipulation.yaml'
+    exclude:
+      - comment: 'empty collection: join'
+        any:
+          - '** join on empty input collection'
+  - comment: Math 6 exclusions
+    glob: 'fhirpath/cases/6.6_math.yaml'
+    exclude:
+      - comment: 'Math operations on integers'
+        any:
+          - '** Can multiply two numbers'
+          - '** Can multiply two number literals'
+  - comment: Boolean exclusions
+    glob: 'fhirpath/cases/6.5_boolean_logic.yaml'
+    exclude:
+      - comment: 'empty collection: and'
+        any:
+          - '* and ({} and true)'
+          - '* and (true and {})'
+          - '* and ({} and false)'
+          - '* and (false and {})'
+          - '* and (true and null)'
+          - '* and (false and null)'
+      - comment: 'empty collection: or'
+        any:
+          - '* or ({} or true)'
+          - '* or (true or {})'
+          - '* or ({} or false)'
+          - '* or (false or {})'
+          - '* or ({} or {})'
+          - '* or (true or null)'
+          - '* or (false or null)'
+      - comment: 'empty collection: xor'
+        any:
+          - '* xor (true xor {})'
+          - '* xor ({} xor false)'
+          - '* xor (false xor {})'
+          - '* xor ({} xor {})'
+          - '* xor (true xor null)'
+          - '* xor (false xor null)'
+          - '* xor ({} xor true)'
+      - comment: 'empty collection: implies'
+        any:
+            - '* implies ({} implies true)'
+            - '* implies (true implies {})'
+            - '* implies ({} implies false)'
+            - '* implies (false implies {})'
+            - '* implies ({} implies {})'
+      - comment: 'boolean eval of collections: not'
+        any:
+          - '** not() for non-empty collection'

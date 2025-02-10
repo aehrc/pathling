@@ -51,6 +51,22 @@ public class TestConfig {
   }
 
 
+  @Value(staticConstructor = "of")
+  static class AnyPredicate implements Predicate<FhipathTestSpec.TestCase> {
+
+    @Nonnull
+    String substring;
+
+    @Override
+    public boolean test(@Nonnull final FhipathTestSpec.TestCase testCase) {
+      return Stream.of(
+          Stream.of(testCase.getExpression()),
+          Stream.ofNullable(testCase.getDescription())
+      ).flatMap(Function.identity()).anyMatch(s -> s.contains(substring));
+    }
+  }
+
+
   @Data
   @NoArgsConstructor
   public static class Exclude {
@@ -63,16 +79,19 @@ public class TestConfig {
     List<String> expression;
     @Nullable
     List<String> desc;
+    @Nullable
+    List<String> any;
 
     @Nonnull
     Stream<Predicate<FhipathTestSpec.TestCase>> toPredicates() {
       return Stream.of(
-          Optional.ofNullable(function).stream().flatMap(List::stream)
+          Stream.ofNullable(function).flatMap(List::stream)
               .map(FunctionPredicate::of),
-          Optional.ofNullable(expression).stream().flatMap(List::stream)
-              .map(ExpressionPredicate::of)
+          Stream.ofNullable(expression).flatMap(List::stream)
+              .map(ExpressionPredicate::of),
+          Stream.ofNullable(any).flatMap(List::stream)
+              .map(AnyPredicate::of)
       ).flatMap(Function.identity());
-
     }
   }
 
