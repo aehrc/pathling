@@ -24,7 +24,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>7.0.1</version>
+    <version>7.1.0</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>r</artifactId>
@@ -216,6 +216,8 @@
               <workingDirectory>${project.basedir}</workingDirectory>
               <arguments>
                 <argument>--verbose</argument>
+                <argument>-e</argument>
+                <argument>Sys.setenv(CXX11="clang++", CXX11STD="-std=c++11", CXXFLAGS="-std=c++11")</argument>
                 <argument>-e</argument>
                 <argument>install.packages("devtools")</argument>
                 <argument>-e</argument>

@@ -19,7 +19,7 @@ resource type code and must have the ".ndjson" extension, e.g. "Patient.ndjson" 
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">pathling</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">7.0.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">7.1.0</span>
       </span>
     </div>
 
@@ -99,10 +99,16 @@ that it contains. Currently not implemented.</p></dd>
     <div id="ref-examples">
     <h2>Examples</h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">pc</span> <span class="op">&lt;-</span> <span class="fu"><a href="pathling_connect.html">pathling_connect</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in spark_connect_gateway(gatewayAddress, gatewayPort, sessionId,     config = config, isStarting = TRUE):</span> Gateway in localhost:8880 did not respond.</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Try running `options(sparklyr.log.console = TRUE)` followed by `sc &lt;- spark_connect(...)` for more debugging info.</span>
 <span class="r-in"><span><span class="va">data_source</span> <span class="op">&lt;-</span> <span class="va">pc</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu">pathling_read_ndjson</span><span class="op">(</span><span class="fu"><a href="pathling_examples.html">pathling_examples</a></span><span class="op">(</span><span class="st">'ndjson'</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in spark_connection(jobj):</span> object 'pc' not found</span>
 <span class="r-in"><span><span class="va">data_source</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="ds_read.html">ds_read</a></span><span class="op">(</span><span class="st">'Patient'</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu">sparklyr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/sparklyr/man/sdf_dim.html" class="external-link">sdf_nrow</a></span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 9</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in spark_connection(jobj):</span> object 'data_source' not found</span>
 <span class="r-in"><span><span class="fu"><a href="pathling_disconnect.html">pathling_disconnect</a></span><span class="op">(</span><span class="va">pc</span><span class="op">)</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in sparklyr::spark_connection(pc):</span> object 'pc' not found</span>
 </code></pre></div>
     </div>
   </div>
