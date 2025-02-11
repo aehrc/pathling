@@ -196,6 +196,52 @@ excludeSet:
         type: bug
         any:
           - "(2 years).value"
+  - comment: Existence exclusions
+    glob: 'fhirpath/cases/5.1_existence.yaml'
+    exclude:
+      - comment: 'Support for null values with in exising primitive elements'
+        type: ???
+        any:
+          - "** null is not empty"
+          - "** exists for null should return true"
+      - comment: 'BUG: exist() for empty collections'
+        type: bug
+        any:
+          - "** empty nothing"
+      - comment: 'BUG: not() for empty collections'
+        type: bug
+        any:
+          - "** empty coll with not() is empty coll"
+          - "** not nothing is empty coll"
+      - comment: "BUG: exist() for empty collections"
+        type: bug
+        any:
+          - "** exists for undefined coll should return false"
+          - "** exists with criteria should work for not exists coll"
+      - comment: "BUG: allTrue() for empty collections"
+        type: bug
+        any:
+          - "** allTrue for empty coll is true"
+          - "** allTrue for non exists coll is true"
+      - comment: "BUG: anyTrue() for empty collections"
+        type: bug
+        any:
+          - "** anyTrue for empty coll is false"
+          - "** anyTrue for non-exists coll is false"
+      - comment: "BUG: allFalse() for empty collections"
+        type: bug
+        any:
+          - "** allFalse for empty coll is true"
+          - "** allFalse for non-exists coll is true"
+      - comment: "BUG: anyFalse() for empty collections"
+        type: bug
+        any:
+          - "** anyFalse for empty coll is false"
+          - "** anyFalse for non-exists coll is false"
+      - comment: "BUG: count() for empty collections"
+        type: bug
+        any:
+          - "** 0 if nothing"
   - comment: Literal exclusions
     glob: 'fhirpath/cases/5.5_conversion.yaml'
     exclude:
