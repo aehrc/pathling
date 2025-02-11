@@ -64,7 +64,7 @@ excludeSet:
           - distinct
       - comment: 'Unsupported filtering and projection constructs'
         expression:
-          - "\\$index "
+          - "(^|\\W)\\$index($|\\W)"
       - comment: 'Not supported aggregate constructs'
         function:
           - aggregate
@@ -242,6 +242,16 @@ excludeSet:
         type: bug
         any:
           - "** 0 if nothing"
+  - comment: Filtering and projection exclusions
+    glob: "fhirpath/cases/5.2_filtering_and_projection.yaml"
+    exclude:
+      - comment: 'Unsupported polymorphic collection'
+        type: framework-gap
+        any:
+          - "heteroattr.ofType(String)"
+          - "heteroattr.ofType(Integer)"
+          - "heteroattr.ofType(Decimal)"
+          - "heteroattr.ofType(Boolean)"
   - comment: Literal exclusions
     glob: 'fhirpath/cases/5.5_conversion.yaml'
     exclude:
@@ -249,6 +259,10 @@ excludeSet:
         type: ???
         any:
           - '** iif for collection with null values'
+      - comment: "Unsupported primitive ids"
+        type: feature
+        any:
+          - "** where for a collection with a null value that has an id"
       - comment: 'BUG: boolean not convertible to string'
         type: bug
         expression:
@@ -257,6 +271,10 @@ excludeSet:
         type: bug
         expression:
           - '^attrdec\.toString\(\)$'
+      - comment: "BUG: Filter on empty collections"
+        type: bug
+        any:
+          - "** filter empty coll"
   - comment: Equality exclusions
     glob: 'fhirpath/cases/6.1_equality.yaml'
     exclude:
@@ -356,6 +374,3 @@ excludeSet:
         type: bug
         any:
           - "sum() function calculates the sum of input collection with null elements"
-          
-   
-                
