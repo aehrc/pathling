@@ -158,11 +158,40 @@ excludeSet:
           - '* xor ({} xor true)'
       - comment: 'empty collection: implies'
         any:
-            - '* implies ({} implies true)'
-            - '* implies (true implies {})'
-            - '* implies ({} implies false)'
-            - '* implies (false implies {})'
-            - '* implies ({} implies {})'
+          - '* implies ({} implies true)'
+          - '* implies (true implies {})'
+          - '* implies ({} implies false)'
+          - '* implies (false implies {})'
+          - '* implies ({} implies {})'
       - comment: 'boolean eval of collections: not'
         any:
           - '** not() for non-empty collection'
+  - comment: Literal exclusions
+    glob: 'fhirpath/cases/4.1_literals.yaml'
+    exclude:
+      - comment: 'Non issues'
+        type: non-issue
+        any:
+          - "`a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065`"
+      - comment: "Framework gaps"
+        type: framework-gap
+        expression:
+          # assertions on quantity values
+          - "2 'mo'"
+          - "^2 years$"
+      - comment: 'Unsupported polarity operator'
+        type: feature
+        expression:
+          - '^[+-]7(.3)?$'
+      - comment: 'BUG: escape sequences in string literal'
+        type: bug
+        any: [ "'a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065'" ]
+      - comment: 'BUG: datetime literals with minute precision'
+        type: bug
+        any:
+          - "@2019-02-03T01:00Z = @2019-02-02T21:00-04:00"
+          - "@2019-02-03T02:00Z = @2019-02-02T21:00-04:00"
+      - comment: 'BUG: traversal into quantity literals'
+        type: bug
+        any:
+          - "(2 years).value"

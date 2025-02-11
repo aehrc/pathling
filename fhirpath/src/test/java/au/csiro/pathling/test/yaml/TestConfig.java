@@ -74,6 +74,8 @@ public class TestConfig {
     @Nullable
     String comment;
     @Nullable
+    String type;
+    @Nullable
     List<String> function;
     @Nullable
     List<String> expression;
