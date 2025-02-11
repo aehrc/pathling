@@ -309,6 +309,42 @@ excludeSet:
           - "** two objects not"
           - "** two colls"
           - "** two colls not"
+  - comment: 'Comparison exlusions'
+    glob: "fhirpath/cases/6.2_comparision.yaml"
+    exclude:
+      - comment: "BUG: comparison for empty collections"
+        type: bug
+        any:
+          - "less than, with empty value"
+          - "less than, with null value"
+          - "greater than, with empty value"
+          - "greater than, with null value"
+          - "greater or equal than, with empty value"
+          - "greater or equal than, with null value"
+          - "less or equal than, with empty value"
+          - "less or equal than, with null value"
+      - comment: "BUG: comparision for non-singular collections"
+        type: bug
+        any:
+          - "less than, with too many values"
+          - "greater than, with too many values"
+          - "greater or equal than, with too many values"
+      - comment: "BUG: comparison for time quantities returns null"
+        type: bug
+        any:
+          - "1 year > 12 months"
+          - "1 year < 12 months"
+          - "1 minute > 59 seconds"
+          - "1 minute < 61 seconds"
+      - comment: "BUG: Comparison based on the lesser precision"
+        type: bug
+        any:
+          - "@2018-12-31 > @2018"
+          - "@T12:01 > @T12"
+      - comment: 'Time literals with timezone'
+        type: ??? # non-issue
+        expression:
+          - "@T\\d{2}:\\d{2}:\\d{2}(\\.\\d{3})?[-+]\\d{2}:\\d{2}"
   - comment: Aggregate exclusions
     glob: 'fhirpath/cases/7_aggregate.yaml'
     exclude:
