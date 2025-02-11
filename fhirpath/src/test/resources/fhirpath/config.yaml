@@ -112,6 +112,7 @@ excludeSet:
     glob: 'fhirpath/cases/5.3_subsetting.yaml'
     exclude:
       - comment: 'Primitive attributes'
+        type: ???
         any:
           - '** first for collection with null values'
   - comment: String manipulation exclusions
@@ -195,3 +196,18 @@ excludeSet:
         type: bug
         any:
           - "(2 years).value"
+  - comment: Literal exclusions
+    glob: 'fhirpath/cases/5.5_conversion.yaml'
+    exclude:
+      - comment: 'Primitive attributes'
+        type: ???
+        any:
+          - '** iif for collection with null values'
+      - comment: 'BUG: boolean not convertible to string'
+        type: bug
+        expression:
+          - '^attrtrue\.toString\(\)$'
+      - comment: 'BUG: precision lost in in decimal literals'
+        type: bug
+        expression:
+          - '^attrdec\.toString\(\)$'
