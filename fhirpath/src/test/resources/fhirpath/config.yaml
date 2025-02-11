@@ -187,7 +187,7 @@ excludeSet:
       - comment: 'BUG: escape sequences in string literal'
         type: bug
         any: [ "'a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065'" ]
-      - comment: 'BUG: datetime literals with minute precision'
+      - comment: 'BUG: datetime literals with non-second precision'
         type: bug
         any:
           - "@2019-02-03T01:00Z = @2019-02-02T21:00-04:00"
@@ -211,3 +211,57 @@ excludeSet:
         type: bug
         expression:
           - '^attrdec\.toString\(\)$'
+  - comment: Equality exclusions
+    glob: 'fhirpath/cases/6.1_equality.yaml'
+    exclude:
+      - comment: "Bundles are not supported"
+        type: framwork-gap
+        expression:
+          - "(^|\\W)Bundle(\\W|$)"
+      - comment: 'Time literals with timezone'
+        type: ??? # non-issue
+        expression:
+          - "@T\\d{2}:\\d{2}:\\d{2}[-+]\\d{2}:\\d{2}"
+      - comment: 'Equality for empty values'
+        type: ??? # non-issue
+        any:
+          - "** equality for null values"
+          - "** inequality for null values"
+      - comment: 'BUG: datetime literals with non-second precision'
+        type: bug
+        expression:
+          - "@\\d{4}-\\d{2}-\\d{2}T\\d{2}[^:]"
+          - "@\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}[^:]"
+      - comment: 'BUG: equality for quantity literals'
+        type: bug
+        any:
+          - "1 year != 1 'a'"
+          - "12 months = 1 year"
+          - "1 year = 1 year"
+          - "1 month != 1 'mo'"
+          - "1 month = 30 days"
+          - "1 day = 24 hours"
+          - "10 'kg.m/s2' = 5 'kg' * 4 'm' / (2 seconds * 1000 'ms')"
+      - comment: "BUG: Equality for different primitive types"
+        type: ??? # bug
+        any:
+          - "DateTime literal compared with a number"
+          - "DateTime literal compared with a string literal"
+      - comment: "BUG: Equality for complex types"
+        type: bug
+        any:
+          - "** two objects"
+          - "** two objects not"
+          - "** two colls"
+          - "** two colls not"
+      - comment: "BUG: Equality for non singular elements"
+        type: BUG
+        any:
+          - "** length mismatch"
+          # also the complex type tests above
+          - "** two objects"
+          - "** two objects not"
+          - "** two colls"
+          - "** two colls not"            
+          
+                
