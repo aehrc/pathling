@@ -44,6 +44,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 
@@ -66,8 +67,28 @@ public abstract class YamlSpecTestBase {
     FhirEncoders fhirEncoders;
   }
 
+  public interface RuntimeCase {
+
+    void log(@Nonnull Logger log);
+
+    void check(@Nonnull final RuntimeContext rt);
+  }
+
   @Value(staticConstructor = "of")
-  public static class RuntimeCase {
+  public static class NoTestRuntimeCase implements RuntimeCase {
+
+    public void log(@Nonnull Logger log) {
+      log.info("No tests");
+    }
+
+    @Override
+    public void check(@Nonnull final RuntimeContext rt) {
+
+    }
+  }
+  
+  @Value(staticConstructor = "of")
+  public static class StdRuntimeCase implements RuntimeCase {
 
     private static final Parser PARSER = new Parser();
 
@@ -100,7 +121,20 @@ public abstract class YamlSpecTestBase {
               resultSchema).getField("result")).asCanonical();
     }
 
-    void check(@Nonnull final RuntimeContext rt) {
+    @Override
+    public void log(@Nonnull Logger log) {
+      log.info("Description: {}", spec.getDescription());
+      log.info("Expression: {}", spec.getExpression());
+      if (spec.isError()) {
+        log.info("Expecting error");
+      } else {
+        log.info("Result: {}", spec.getResult());
+      }
+      log.debug("Subject:\n{}", resolverFactory);
+    }
+
+    @Override
+    public void check(@Nonnull final RuntimeContext rt) {
       final FhirpathEvaluator evaluator = StdFhirpathEvaluator
           .fromResolver(resolverFactory.apply(rt))
           .evalOptions(EvalOptions.builder().allowUndefinedFields(true).build())
@@ -230,7 +264,7 @@ public abstract class YamlSpecTestBase {
       final Function<RuntimeContext, ResourceResolver> defaultResolverFactory = OMResolverFactory.of(
           subjectOM);
 
-      return spec.getCases()
+      List<Arguments> cases = spec.getCases()
           .stream()
           .filter(ts -> {
             if (ts.isDisable()) {
@@ -242,25 +276,22 @@ public abstract class YamlSpecTestBase {
             final Optional<String> exclusion = excluder.apply(ts);
             exclusion.ifPresent(s -> log.warn("Excluding test case: {} becasue {}", ts, s));
             return exclusion.isEmpty();
-          }).map(ts -> RuntimeCase.of(ts,
+          }).map(ts -> StdRuntimeCase.of(ts,
               Optional.ofNullable(ts.getInputFile())
                   .map(f -> (Function<RuntimeContext, ResourceResolver>) FhirResolverFactory.of(
                       getResourceAsString("fhirpath/resources/" + f)))
                   .orElse(defaultResolverFactory)
           ))
-          .map(Arguments::of);
+          .map(Arguments::of)
+          .toList();
+      return cases.isEmpty()
+             ? Stream.of(Arguments.of(NoTestRuntimeCase.of()))
+             : cases.stream();
     }
   }
 
   protected void run(@Nonnull final RuntimeCase testCase) {
-    log.info("Description: {}", testCase.spec.getDescription());
-    log.info("Expression: {}", testCase.spec.getExpression());
-    if (testCase.spec.isError()) {
-      log.info("Expecting error");
-    } else {
-      log.info("Result: {}", testCase.spec.getResult());
-    }
-    log.debug("Subject:\n{}", testCase.resolverFactory);
+    testCase.log(log);
     testCase.check(RuntimeContext.of(spark, fhirEncoders));
   }
 }

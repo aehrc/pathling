@@ -5,13 +5,11 @@ import au.csiro.pathling.test.yaml.YamlSpec;
 import au.csiro.pathling.test.yaml.YamlSpecTestBase;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 
 
 @Slf4j
-@Tag("WorkTest")
-@Disabled
+@Tag("YamlTest")
 @YamlConfig("fhirpath/config.yaml")
 public class YamlReferenceImplTest extends YamlSpecTestBase {
 
