@@ -256,9 +256,9 @@ public abstract class YamlSpecTestBase {
     log.info("Description: {}", testCase.spec.getDescription());
     log.info("Expression: {}", testCase.spec.getExpression());
     if (testCase.spec.isError()) {
-      log.debug("Expecting error");
+      log.info("Expecting error");
     } else {
-      log.debug("Result: {}", testCase.spec.getResult());
+      log.info("Result: {}", testCase.spec.getResult());
     }
     log.debug("Subject:\n{}", testCase.resolverFactory);
     testCase.check(RuntimeContext.of(spark, fhirEncoders));
