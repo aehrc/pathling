@@ -262,6 +262,18 @@ excludeSet:
           - "** two objects"
           - "** two objects not"
           - "** two colls"
-          - "** two colls not"            
+          - "** two colls not"
+  - comment: Aggregate exclusions
+    glob: 'fhirpath/cases/7_aggregate.yaml'
+    exclude:
+      - comment: 'BUG: Traversal into non-resource root properties (uppercase)'
+        type: bug
+        any:
+          - "sum() function calculates the sum of undefined input collection"
+      - comment: 'BUG: Sum on non-numeric collection'
+        type: bug
+        any:
+          - "sum() function calculates the sum of input collection with null elements"
           
+   
                 
