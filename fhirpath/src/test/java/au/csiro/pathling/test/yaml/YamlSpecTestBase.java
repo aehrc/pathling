@@ -86,7 +86,7 @@ public abstract class YamlSpecTestBase {
 
     }
   }
-  
+
   @Value(staticConstructor = "of")
   public static class StdRuntimeCase implements RuntimeCase {
 
@@ -142,7 +142,15 @@ public abstract class YamlSpecTestBase {
       if (spec.isError()) {
         try {
           final Collection evalResult = evaluator.evaluate(PARSER.parse(spec.getExpression()));
-          throw new AssertionError("Expected error but got none: " + evalResult);
+          final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
+          final Row resultRow = evaluator.createInitialDataset().select(
+              actualRepresentation.getValue().alias("actual")
+          ).first();
+          final Object actual = resultRow.isNullAt(0)
+                                ? null
+                                : resultRow.get(0);
+          throw new AssertionError(
+              "Expected error but got value: " + actual + " (" + evalResult + ")");
         } catch (Exception e) {
           log.info("Expected error: {}", e.getMessage());
         }
