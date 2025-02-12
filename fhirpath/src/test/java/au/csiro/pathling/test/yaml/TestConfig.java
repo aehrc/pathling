@@ -93,7 +93,7 @@ public class TestConfig {
   public static class Exclude {
 
     @Nullable
-    String comment;
+    String title;
     @Nullable
     String type;
     @Nullable
@@ -127,7 +127,7 @@ public class TestConfig {
   public static class ExcludeSet {
 
     @Nullable
-    String comment;
+    String title;
     String glob;
     @Nonnull
     List<Exclude> exclude;

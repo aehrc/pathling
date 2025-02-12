@@ -60,7 +60,7 @@ public abstract class YamlSpecTestBase {
   FhirEncoders fhirEncoders;
 
   @Value(staticConstructor = "of")
-  static class RuntimeContext {
+  protected static class RuntimeContext {
 
     @Nonnull
     SparkSession spark;
@@ -68,7 +68,7 @@ public abstract class YamlSpecTestBase {
     FhirEncoders fhirEncoders;
   }
 
-  public interface RuntimeCase {
+  protected interface RuntimeCase {
 
     void log(@Nonnull Logger log);
 
@@ -76,7 +76,7 @@ public abstract class YamlSpecTestBase {
   }
 
   @Value(staticConstructor = "of")
-  public static class NoTestRuntimeCase implements RuntimeCase {
+  protected static class NoTestRuntimeCase implements RuntimeCase {
 
     public void log(@Nonnull Logger log) {
       log.info("No tests");
@@ -89,7 +89,7 @@ public abstract class YamlSpecTestBase {
   }
 
   @Value(staticConstructor = "of")
-  public static class StdRuntimeCase implements RuntimeCase {
+  protected static class StdRuntimeCase implements RuntimeCase {
 
     private static final Parser PARSER = new Parser();
 
