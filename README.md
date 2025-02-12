@@ -7,7 +7,7 @@
 <br/>
 <br/>
 
-[![Test](https://github.com/aehrc/pathling/workflows/Test/badge.svg)](https://github.com/aehrc/pathling/actions?query=workflow%3ATest) [![CodeFactor](https://www.codefactor.io/repository/github/aehrc/pathling/badge)](https://www.codefactor.io/repository/github/aehrc/pathling) [![codecov](https://codecov.io/gh/aehrc/pathling/branch/main/graph/badge.svg?token=A2RDYU05DT)](https://codecov.io/gh/aehrc/pathling)
+[![Test](https://github.com/aehrc/pathling/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/aehrc/pathling/actions/workflows/test.yml) [![CodeFactor](https://www.codefactor.io/repository/github/aehrc/pathling/badge)](https://www.codefactor.io/repository/github/aehrc/pathling) [![codecov](https://codecov.io/gh/aehrc/pathling/branch/main/graph/badge.svg?token=A2RDYU05DT)](https://codecov.io/gh/aehrc/pathling)
 
 Pathling is a set of tools that make it easier to
 use [FHIR&reg;](https://hl7.org/fhir/R4) and clinical terminology within health
