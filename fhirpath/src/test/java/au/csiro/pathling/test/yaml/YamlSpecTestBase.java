@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.EvalOptions;
+import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -141,7 +142,10 @@ public abstract class YamlSpecTestBase {
           .build();
       if (spec.isError()) {
         try {
-          final Collection evalResult = evaluator.evaluate(PARSER.parse(spec.getExpression()));
+          final FhirPath fhipath = PARSER.parse(spec.getExpression());
+          log.trace("FhirPath: {}", fhipath);
+          final Collection evalResult = evaluator.evaluate(fhipath);
+          log.trace("Evaluated: {}", evalResult);
           final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
           final Row resultRow = evaluator.createInitialDataset().select(
               actualRepresentation.getValue().alias("actual")
@@ -155,8 +159,10 @@ public abstract class YamlSpecTestBase {
           log.info("Expected error: {}", e.getMessage());
         }
       } else {
-        final Collection evalResult = evaluator.evaluate(
-            PARSER.parse(spec.getExpression()));
+        final FhirPath fhipath = PARSER.parse(spec.getExpression());
+        log.trace("FhirPath: {}", fhipath);
+        final Collection evalResult = evaluator.evaluate(fhipath);
+        log.trace("Evaluated: {}", evalResult);
 
         final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
         final ColumnRepresentation expectedRepresentation = getResultRepresentation();
