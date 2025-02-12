@@ -200,7 +200,7 @@ public class YamlTest {
 
 
   @Test
-  void testJsonModel() throws Exception {
+  void testJsonModel() {
     final String testPatient = getResourceAsString("fhirpath-js/resources/patient-example-2.json");
     System.out.println(testPatient);
 
