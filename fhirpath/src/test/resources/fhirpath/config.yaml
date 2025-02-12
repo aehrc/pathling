@@ -395,3 +395,19 @@ excludeSet:
         type: bug
         any:
           - "sum() function calculates the sum of input collection with null elements"
+  - comment: Variable exlusions
+    glob: 'fhirpath/cases/8_variables.yaml'
+    exclude:
+      - comment: 'Custom variables not supported'
+        type: framework-gap
+        any:
+          - "%a - 1"
+          - "Empty variable"
+          - "Null variable"
+          - "Undefined variable"
+          - "Back-quoted variable name"
+          - "Single-quoted variable name"
+      - comment: 'Custom context defintion'
+        type: framework-gap
+        spel:
+          - "#testCase.context == 'g1'"
