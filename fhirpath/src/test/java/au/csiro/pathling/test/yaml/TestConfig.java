@@ -11,6 +11,10 @@ import java.util.stream.Stream;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.Value;
+import org.springframework.expression.Expression;
+import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.yaml.snakeyaml.Yaml;
 
 @Data
@@ -66,6 +70,23 @@ public class TestConfig {
     }
   }
 
+  @Value(staticConstructor = "of")
+  static class SpELPredicate implements Predicate<FhipathTestSpec.TestCase> {
+
+    private static final ExpressionParser PARSER = new SpelExpressionParser();
+
+    @Nonnull
+    String spELExpression;
+
+    @Override
+    public boolean test(@Nonnull final FhipathTestSpec.TestCase testCase) {
+      StandardEvaluationContext context = new StandardEvaluationContext();
+      context.setVariable("testCase", testCase);
+      Expression exp = PARSER.parseExpression(spELExpression);
+      return Boolean.TRUE.equals(exp.getValue(context, Boolean.class));
+    }
+  }
+
 
   @Data
   @NoArgsConstructor
@@ -83,6 +104,8 @@ public class TestConfig {
     List<String> desc;
     @Nullable
     List<String> any;
+    @Nonnull
+    List<String> spel;
 
     @Nonnull
     Stream<Predicate<FhipathTestSpec.TestCase>> toPredicates() {
@@ -92,7 +115,9 @@ public class TestConfig {
           Stream.ofNullable(expression).flatMap(List::stream)
               .map(ExpressionPredicate::of),
           Stream.ofNullable(any).flatMap(List::stream)
-              .map(AnyPredicate::of)
+              .map(AnyPredicate::of),
+          Stream.ofNullable(spel).flatMap(List::stream)
+              .map(SpELPredicate::of)
       ).flatMap(Function.identity());
     }
   }

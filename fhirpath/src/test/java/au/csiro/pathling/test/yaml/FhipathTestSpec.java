@@ -32,6 +32,8 @@ public class FhipathTestSpec {
     String inputFile;
     @Nullable
     String model;
+    @Nullable
+    String context;
     boolean disable;
   }
 
@@ -52,6 +54,7 @@ public class FhipathTestSpec {
           caseOrGroup.get("result"),
           (String) caseOrGroup.get("inputfile"),
           (String) caseOrGroup.get("model"),
+          (String) caseOrGroup.get("context"),
           (boolean) caseOrGroup.computeIfAbsent("disable", k -> false)
       ));
     } else if (caseOrGroup.size() == 1) {
