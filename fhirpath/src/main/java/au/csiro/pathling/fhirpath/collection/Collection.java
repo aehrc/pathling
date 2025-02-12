@@ -82,6 +82,7 @@ public class Collection implements Comparable, Numeric {
           .put(FHIRDefinedType.QUANTITY, QuantityCollection.class)
           .put(FHIRDefinedType.SIMPLEQUANTITY, QuantityCollection.class)
           .put(FHIRDefinedType.REFERENCE, ReferenceCollection.class)
+          .put(FHIRDefinedType.NULL, EmptyCollection.class)
           .build();
 
   /**
