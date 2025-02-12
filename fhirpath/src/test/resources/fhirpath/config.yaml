@@ -104,11 +104,12 @@ excludeSet:
           - " as " # as operator
           - " & " # & operator
           - " div " # div operator
-      - comment: 'Unsupported callendar durations'
+      - comment: "BUG: Unsupported week(s) duration"
+        type: bug
         expression: # regex matching expressoin
           - " weeks"
           - " week"
-  - comment: Collection exlusions
+  - comment: Collection exclusions
     glob: "fhirpath/cases/3.2_paths.yaml"
     exclude:
       - comment: "Support for models"
@@ -412,6 +413,112 @@ excludeSet:
           - "coll contains empty"
           - "coll contains ups"
           - "emptycoll contains ups"
+  - comment: Math 6 exclusions
+    glob: "fhirpath/cases/6.6_math.yaml"
+    exclude:
+      - comment: "Only create FHIR resource whem model defined"
+        type: framework-gap
+        any:
+          - "** Do not convert a resource node value to Date without model"
+      - comment: "Incorrect comparison of DateTime values in with different offsets"
+        type: framework-gap
+        any:
+          - "@2018-02-18T12:23:45-05:00 + 2 years"
+      - comment: "Comparison of decimal values"
+        type: ??? # framework-gap
+        any:
+          - "** Can divide two numbers"
+          - "** Can divide two number literals"
+      - comment: "BUG: '*' operator works on strings"
+        type: bug
+        any:
+          - "** Error multiplying string (3)"
+      - comment: "BUG: '*' operator does not singularise arguments"
+        type: bug
+        any:
+          - "** Error multiplying multi-valued collection (1)"
+          - "** Error multiplying multi-valued collection (2)"
+      - comment: "BUG: '*' operator fails when right argument is empty"
+        type: bug
+        any:
+          - "** Empty result multiplying empty collection (1)"
+          - "** Empty result when one of the operands is null"
+      - comment: "BUG: '-' operator incorrect when right argument is empty"
+        type: bug
+        any:
+          - "** Empty result when one of the operands is empty"
+      - comment: "BUG: '*' operator incorrect for quantities"
+        type: bug
+        any:
+          - "** Can multiply two quantities"
+          - "** Can multiply a quantity by a number"
+          - "** Can multiply a number by a quantity"
+          - "** Empty result when one of the operands has a special unit"
+      - comment: "BUG: '/' operator incorrect for quantities"
+        type: bug
+        any:
+          - "** Can divide two quantities"
+          - "** Can divide a quantity by a number"
+          - "** Can divide a number by a quantity"
+          - "** Allow division of a UCUM duration quantity"
+      - comment: "BUG: '+' and '-' operators fail for mix of numbers and unit quantities"
+        type: bug
+        any:
+          - "** Can add a number to a quantity"
+          - "** Can add a quantity to a number"
+          - "** Can subtract a quantity from a number"
+          - "** Can subtract a number from a quantity"
+      - comment: "BUG: '/' operator incorrect for time quantities"
+        type: bug
+        any:
+          - "** Empty result when one of the operands is a calendar duration quantity greater than seconds (5)"
+          - "** Can divide when both operands are calendar duration quantities"
+          - "** Can divide a calendar duration quantity by a number"
+          - "** Can divide System.Quantity (converted from FHIR.Quantity) by System.Quantity"
+          - "** Empty result when one of the operands is a calendar duration quantity greater than seconds (6)"
+      - comment: "math operators produces long value for int arguments"
+        type: ??? # bug
+        any:
+          - "** Can add two numbers"
+          - "** Can add two number literals"
+          - "** Can subtract two numbers"
+          - "** Can subtract two number literals"
+          - "** Can mod two numbers"
+      - comment: "BUG: '+' should produce {} if any argument is empty"
+        type: bug
+        any:
+          - "** Empty result if one or both operands is empty (1b)"
+      - comment: "BUG: Time literals with Z timezone break parsing"
+        type: bug
+        expression:
+          - "@T\\d{2}:\\d{2}(:\\d{2})?Z"
+      - comment: "BUG: Incorrect '+' operator for strings"
+        type: bug
+        any:
+          - "** Can concatenate two strings with +"
+          - "** Null in concatenation is treated as an empty collection (2)"
+      - comment: "BUG: Incorrect Math operations on calendar quantities with limited precision"
+        type: bug
+        any:
+          - "@2016-01 + 30 days" # 30 days should be converted to 1 month
+          - "@2016 - 364 days" # 364 days should be converted to 0 years
+          - "@2016 + 365 days" # 365 days should be converted to 1 year
+      - comment: "BUG: Math operations on calendar quantities fail or incorrect"
+        type: bug
+        any:
+          - "2 years + 6 months = 2.5 year"
+          - "3 year - 1 year = 2 year"
+          - "1 year + @2016-02-29"
+          - "@2016-02-29 + @2016-02-29"
+          - "1 year - 6 months - 1 year + 18 months = 1 year"
+          - "1 year * 2 = 2 year"
+          - "2 * 5 months = 10 months"
+          - "1 year / 6 months = 2"
+      - comment: "BUG: Addition of time quantities with decimal portion"
+        type: bug
+        any:
+          - "@2016-02-29 + 1.5 year"
+          - "@2016-02-28 + 1.5 day"
   - comment: Aggregate exclusions
     glob: 'fhirpath/cases/7_aggregate.yaml'
     exclude:
