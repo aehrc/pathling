@@ -108,6 +108,27 @@ excludeSet:
         expression: # regex matching expressoin
           - " weeks"
           - " week"
+  - comment: Collection exlusions
+    glob: "fhirpath/cases/3.2_paths.yaml"
+    exclude:
+      - comment: "Support for models"
+        type: framework-gap
+        any:
+          - "Observation.value with an R4 FHIR model"
+      - comment: "Contained resources not supported"
+        type: feature
+        expression:
+          - "(^|\\W)contained(\\W|$)"
+      - comment: "DSTU2, STU3, R5 not supported"
+        type: feature
+        any:
+          - "Observation.value with an R5 FHIR model"
+          - "Observation.value with an STU3 FHIR model"
+          - "Observation.value with an DSTU2 FHIR model"
+      - comment: 'BUG: Traversal into non-resource root properties (uppercase)'
+        type: bug
+        any:
+          - "CustomField = 'test'"
   - comment: Subsetting exclusions
     glob: 'fhirpath/cases/5.3_subsetting.yaml'
     exclude:
