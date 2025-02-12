@@ -90,19 +90,12 @@ existing data, "merge" will merge the new data with the existing data based on r
     <div id="ref-examples">
     <h2>Examples</h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">pc</span> <span class="op">&lt;-</span> <span class="fu"><a href="pathling_connect.html">pathling_connect</a></span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in spark_connect_gateway(gatewayAddress, gatewayPort, sessionId,     config = config, isStarting = TRUE):</span> Gateway in localhost:8880 did not respond.</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> Try running `options(sparklyr.log.console = TRUE)` followed by `sc &lt;- spark_connect(...)` for more debugging info.</span>
 <span class="r-in"><span><span class="va">data_source</span> <span class="op">&lt;-</span> <span class="va">pc</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="pathling_read_ndjson.html">pathling_read_ndjson</a></span><span class="op">(</span><span class="fu"><a href="pathling_examples.html">pathling_examples</a></span><span class="op">(</span><span class="st">'ndjson'</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in spark_connection(jobj):</span> object 'pc' not found</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Write the data to a directory of Delta files.</span></span></span>
 <span class="r-in"><span><span class="va">data_source</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu">ds_write_delta</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">'delta'</span><span class="op">)</span>, import_mode <span class="op">=</span> <span class="va">ImportMode</span><span class="op">$</span><span class="va">OVERWRITE</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in spark_connection(jobj):</span> object 'data_source' not found</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pathling_disconnect.html">pathling_disconnect</a></span><span class="op">(</span><span class="va">pc</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in sparklyr::spark_connection(pc):</span> object 'pc' not found</span>
 </code></pre></div>
     </div>
   </div>
