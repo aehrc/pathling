@@ -384,6 +384,34 @@ excludeSet:
         type: ??? # non-issue
         expression:
           - "@T\\d{2}:\\d{2}:\\d{2}(\\.\\d{3})?[-+]\\d{2}:\\d{2}"
+  - comment: Collections exclusions
+    glob: "fhirpath/cases/6.4_collections.yaml"
+    exclude:
+      - comment: "Create correct empty collection in ad hoc resources"
+        type: framework-gap
+        any:
+          - "el in emptycoll"
+      - comment: "BUG: 'in' operator on element types fails"
+        type: bug
+        any:
+          - "el in coll"
+          - "not_el in coll"
+      - comment: "BUG: 'in' operator should return empty when left argument is empty"
+        type: bug
+        any:
+          - "ups in coll"
+          - "ups in emptycoll"
+      - comment: "BUG: 'contains' operator on element types fails"
+        type: bug
+        any:
+          - "coll contains el"
+          - "coll contains not_el"
+      - comment: "BUG: 'contains' operator should return empty when right argument is empty"
+        type: bug
+        any:
+          - "coll contains empty"
+          - "coll contains ups"
+          - "emptycoll contains ups"
   - comment: Aggregate exclusions
     glob: 'fhirpath/cases/7_aggregate.yaml'
     exclude:
