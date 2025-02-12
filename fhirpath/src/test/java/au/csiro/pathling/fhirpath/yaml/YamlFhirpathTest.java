@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Tag;
 @Tag("UnitTest")
 public class YamlFhirpathTest extends YamlSpecTestBase {
 
-  @YamlSpec("fhirpath/tests/existence_functions.yaml")
+  @YamlSpec("fhirpath-ptl/cases/existence_functions.yaml")
   void testExistenceFunctions(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }

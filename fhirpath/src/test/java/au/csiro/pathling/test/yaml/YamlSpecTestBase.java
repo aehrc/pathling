@@ -293,7 +293,7 @@ public abstract class YamlSpecTestBase {
           }).map(ts -> StdRuntimeCase.of(ts,
               Optional.ofNullable(ts.getInputFile())
                   .map(f -> (Function<RuntimeContext, ResourceResolver>) FhirResolverFactory.of(
-                      getResourceAsString("fhirpath/resources/" + f)))
+                      getResourceAsString("fhirpath-js/resources/" + f)))
                   .orElse(defaultResolverFactory)
           ))
           .map(Arguments::of)

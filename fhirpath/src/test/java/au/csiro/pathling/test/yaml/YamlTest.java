@@ -185,14 +185,14 @@ public class YamlTest {
 
   @Test
   void testLoad() {
-    final String testSpec = getResourceAsString("fhirpath/cases/5.1_existence.yaml");
+    final String testSpec = getResourceAsString("fhirpath-js/cases/5.1_existence.yaml");
     final FhipathTestSpec spec = FhipathTestSpec.fromYaml(testSpec);
     System.out.println(spec);
   }
 
   @Test
   void testLoadAndRun() {
-    final String testConfigYaml = getResourceAsString("fhirpath/config.yaml");
+    final String testConfigYaml = getResourceAsString("fhirpath-js/config.yaml");
     final TestConfig testConfig = YAML_PARSER.loadAs(testConfigYaml, TestConfig.class);
     System.out.println(testConfig);
     testConfig.toPredicates().forEach(System.out::println);
@@ -201,7 +201,7 @@ public class YamlTest {
 
   @Test
   void testJsonModel() throws Exception {
-    final String testPatient = getResourceAsString("fhirpath/resources/patient-example-2.json");
+    final String testPatient = getResourceAsString("fhirpath-js/resources/patient-example-2.json");
     System.out.println(testPatient);
 
     final IParser jsonParser = fhirContext.newJsonParser();

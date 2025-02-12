@@ -110,7 +110,7 @@ excludeSet:
           - " weeks"
           - " week"
   - title: Collection exclusions
-    glob: "fhirpath/cases/3.2_paths.yaml"
+    glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
       - title: "Support for models"
         type: framework-gap
@@ -131,27 +131,27 @@ excludeSet:
         any:
           - "CustomField = 'test'"
   - title: Subsetting exclusions
-    glob: 'fhirpath/cases/5.3_subsetting.yaml'
+    glob: 'fhirpath-js/cases/5.3_subsetting.yaml'
     exclude:
       - title: 'Primitive attributes'
         type: ???
         any:
           - '** first for collection with null values'
   - title: String manipulation exclusions
-    glob: 'fhirpath/cases/5.6_string_manipulation.yaml'
+    glob: 'fhirpath-js/cases/5.6_string_manipulation.yaml'
     exclude:
       - title: 'empty collection: join'
         any:
           - '** join on empty input collection'
   - title: Math 6 exclusions
-    glob: 'fhirpath/cases/6.6_math.yaml'
+    glob: 'fhirpath-js/cases/6.6_math.yaml'
     exclude:
       - title: 'Math operations on integers'
         any:
           - '** Can multiply two numbers'
           - '** Can multiply two number literals'
   - title: Boolean exclusions
-    glob: 'fhirpath/cases/6.5_boolean_logic.yaml'
+    glob: 'fhirpath-js/cases/6.5_boolean_logic.yaml'
     exclude:
       - title: 'empty collection: and'
         any:
@@ -190,7 +190,7 @@ excludeSet:
         any:
           - '** not() for non-empty collection'
   - title: Literal exclusions
-    glob: 'fhirpath/cases/4.1_literals.yaml'
+    glob: 'fhirpath-js/cases/4.1_literals.yaml'
     exclude:
       - title: 'Non issues'
         type: non-issue
@@ -219,7 +219,7 @@ excludeSet:
         any:
           - "(2 years).value"
   - title: Existence exclusions
-    glob: 'fhirpath/cases/5.1_existence.yaml'
+    glob: 'fhirpath-js/cases/5.1_existence.yaml'
     exclude:
       - title: 'Support for null values with in exising primitive elements'
         type: ???
@@ -265,7 +265,7 @@ excludeSet:
         any:
           - "** 0 if nothing"
   - title: Filtering and projection exclusions
-    glob: "fhirpath/cases/5.2_filtering_and_projection.yaml"
+    glob: "fhirpath-js/cases/5.2_filtering_and_projection.yaml"
     exclude:
       - title: 'Unsupported polymorphic collection'
         type: framework-gap
@@ -275,7 +275,7 @@ excludeSet:
           - "heteroattr.ofType(Decimal)"
           - "heteroattr.ofType(Boolean)"
   - title: Literal exclusions
-    glob: 'fhirpath/cases/5.5_conversion.yaml'
+    glob: 'fhirpath-js/cases/5.5_conversion.yaml'
     exclude:
       - title: 'Primitive attributes'
         type: ???
@@ -298,7 +298,7 @@ excludeSet:
         any:
           - "** filter empty coll"
   - title: Equality exclusions
-    glob: 'fhirpath/cases/6.1_equality.yaml'
+    glob: 'fhirpath-js/cases/6.1_equality.yaml'
     exclude:
       - title: "Bundles are not supported"
         type: framwork-gap
@@ -350,7 +350,7 @@ excludeSet:
           - "** two colls"
           - "** two colls not"
   - title: 'Comparison exlusions'
-    glob: "fhirpath/cases/6.2_comparision.yaml"
+    glob: "fhirpath-js/cases/6.2_comparision.yaml"
     exclude:
       - title: "BUG: comparison for empty collections"
         type: bug
@@ -386,7 +386,7 @@ excludeSet:
         expression:
           - "@T\\d{2}:\\d{2}:\\d{2}(\\.\\d{3})?[-+]\\d{2}:\\d{2}"
   - title: Collections exclusions
-    glob: "fhirpath/cases/6.4_collections.yaml"
+    glob: "fhirpath-js/cases/6.4_collections.yaml"
     exclude:
       - title: "Create correct empty collection in ad hoc resources"
         type: framework-gap
@@ -414,7 +414,7 @@ excludeSet:
           - "coll contains ups"
           - "emptycoll contains ups"
   - title: Math 6 exclusions
-    glob: "fhirpath/cases/6.6_math.yaml"
+    glob: "fhirpath-js/cases/6.6_math.yaml"
     exclude:
       - title: "Only create FHIR resource whem model defined"
         type: framework-gap
@@ -520,7 +520,7 @@ excludeSet:
           - "@2016-02-29 + 1.5 year"
           - "@2016-02-28 + 1.5 day"
   - title: Aggregate exclusions
-    glob: 'fhirpath/cases/7_aggregate.yaml'
+    glob: 'fhirpath-js/cases/7_aggregate.yaml'
     exclude:
       - title: 'BUG: Traversal into non-resource root properties (uppercase)'
         type: bug
@@ -531,7 +531,7 @@ excludeSet:
         any:
           - "sum() function calculates the sum of input collection with null elements"
   - title: Variable exlusions
-    glob: 'fhirpath/cases/8_variables.yaml'
+    glob: 'fhirpath-js/cases/8_variables.yaml'
     exclude:
       - title: 'Custom variables not supported'
         type: framework-gap
