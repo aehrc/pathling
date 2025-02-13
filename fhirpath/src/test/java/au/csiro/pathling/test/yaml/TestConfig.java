@@ -95,8 +95,11 @@ public class TestConfig {
     @Nullable
     String title;
     @Nullable
+    String comment;
+    @Nullable
     String type;
     @Nullable
+    boolean disabled = false;
     List<String> function;
     @Nullable
     List<String> expression;
@@ -109,16 +112,20 @@ public class TestConfig {
 
     @Nonnull
     Stream<Predicate<FhipathTestSpec.TestCase>> toPredicates() {
-      return Stream.of(
-          Stream.ofNullable(function).flatMap(List::stream)
-              .map(FunctionPredicate::of),
-          Stream.ofNullable(expression).flatMap(List::stream)
-              .map(ExpressionPredicate::of),
-          Stream.ofNullable(any).flatMap(List::stream)
-              .map(AnyPredicate::of),
-          Stream.ofNullable(spel).flatMap(List::stream)
-              .map(SpELPredicate::of)
-      ).flatMap(Function.identity());
+      if (!disabled) {
+        return Stream.of(
+            Stream.ofNullable(function).flatMap(List::stream)
+                .map(FunctionPredicate::of),
+            Stream.ofNullable(expression).flatMap(List::stream)
+                .map(ExpressionPredicate::of),
+            Stream.ofNullable(any).flatMap(List::stream)
+                .map(AnyPredicate::of),
+            Stream.ofNullable(spel).flatMap(List::stream)
+                .map(SpELPredicate::of)
+        ).flatMap(Function.identity());
+      } else {
+        return Stream.empty();
+      }
     }
   }
 
@@ -128,6 +135,9 @@ public class TestConfig {
 
     @Nullable
     String title;
+    @Nullable
+    String comment;
+    @Nullable
     String glob;
     @Nonnull
     List<Exclude> exclude;

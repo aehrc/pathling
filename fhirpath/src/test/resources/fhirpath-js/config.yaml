@@ -109,7 +109,7 @@ excludeSet:
         expression: # regex matching expressoin
           - " weeks"
           - " week"
-  - title: Collection exclusions
+  - title: Path exclusions
     glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
       - title: "Support for models"
