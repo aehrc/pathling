@@ -546,6 +546,33 @@ excludeSet:
         type: framework-gap
         spel:
           - "#testCase.context == 'g1'"
+  - title: Extension exclusions
+    glob: 'fhirpath-js/cases/extensions.yaml'
+    exclude:
+      - title: 'ID on primitive types not supported'
+        comment: "That also includes the case of an empty primitive value with non-empty attributes"
+        type: feature
+        any:
+          - "** id for primitive type"
+          - "Patient.address[1].id = 'someId'"
+          - "** count nodes without value, but with extensions"
+      - title: 'extensions on primitive types not supported'
+        type: feature
+        any:
+          - "** expression with extension for primitive type 1"
+          - "** expression with extension for primitive type 3"
+          - "Patient.communication.preferred.extension('test').value.id"
+          - "Patient.communication.preferred.extension('test').exists()"
+          - "Patient.name.given[0].extension('http://hl7.org/fhir/StructureDefinition/display').value = 'Jacomus1'"
+          - "Patient.name.given[3].extension('http://hl7.org/fhir/StructureDefinition/display').value = 'Jacomus2'"
+          - "** expression with extension() for primitive type (using FHIR model data)"
+          - "** value of extension of extension (using FHIR model data)"
+          - "** id of extension of extension"
+      - title: "BUG: empty() should be true for empty collections"
+        type: bug
+        any:
+          - "** empty url"
+          - "** empty input collection"
   - title: Factory exclusions
     glob: 'fhirpath-js/cases/factory.yaml'
     exclude:

@@ -150,7 +150,6 @@ public class YamlReferenceImplTest extends YamlSpecTestBase {
   //   hasValue.yaml
   //   simple.yaml
 
-  @Disabled
   @YamlSpec("fhirpath-js/cases/extensions.yaml")
   void testExtension(@Nonnull final RuntimeCase testCase) {
     run(testCase);
