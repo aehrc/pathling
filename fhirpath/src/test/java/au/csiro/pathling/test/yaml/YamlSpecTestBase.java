@@ -26,6 +26,7 @@ import au.csiro.pathling.test.TestResources;
 import au.csiro.pathling.test.yaml.FhipathTestSpec.TestCase;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -48,6 +49,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import scala.collection.mutable.WrappedArray;
 
 
 @SpringBootUnitTest
@@ -135,6 +137,18 @@ public abstract class YamlSpecTestBase {
       log.debug("Subject:\n{}", resolverFactory);
     }
 
+    @Nullable
+    Object getResult(@Nonnull final Row row, final int index) {
+      final Object actualRaw = row.isNullAt(index)
+                               ? null
+                               : row.get(index);
+      return actualRaw instanceof WrappedArray<?> wrappedArray
+             ? (wrappedArray.length() == 1
+                ? wrappedArray.apply(0)
+                : wrappedArray)
+             : actualRaw;
+    }
+
     @Override
     public void check(@Nonnull final RuntimeContext rt) {
       final FhirpathEvaluator evaluator = StdFhirpathEvaluator
@@ -151,9 +165,7 @@ public abstract class YamlSpecTestBase {
           final Row resultRow = evaluator.createInitialDataset().select(
               actualRepresentation.getValue().alias("actual")
           ).first();
-          final Object actual = resultRow.isNullAt(0)
-                                ? null
-                                : resultRow.get(0);
+          final Object actual = getResult(resultRow, 0);
           throw new AssertionError(
               "Expected error but got value: " + actual + " (" + evalResult + ")");
         } catch (Exception e) {
@@ -173,13 +185,8 @@ public abstract class YamlSpecTestBase {
             expectedRepresentation.getValue().alias("expected")
         ).first();
 
-        final Object actual = resultRow.isNullAt(0)
-                              ? null
-                              : resultRow.get(0);
-
-        final Object expected = resultRow.isNullAt(1)
-                                ? null
-                                : resultRow.get(1);
+        final Object actual = getResult(resultRow, 0);
+        final Object expected = getResult(resultRow, 1);
 
         log.trace("Result schema: {}", resultRow.schema().treeString());
         log.debug("Expected: " + expected + " but got: " + actual);
