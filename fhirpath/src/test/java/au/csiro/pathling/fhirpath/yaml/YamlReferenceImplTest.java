@@ -5,6 +5,7 @@ import au.csiro.pathling.test.yaml.YamlSpec;
 import au.csiro.pathling.test.yaml.YamlSpecTestBase;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 
 
@@ -37,13 +38,6 @@ public class YamlReferenceImplTest extends YamlSpecTestBase {
   // 6.6_math.yaml
   // 7_aggregate.yaml
   // 8_variables.yaml
-  //   extensions.yaml
-  //   factory.yaml
-  //   fhir-quantity.yaml
-  //   fhir-r4.yaml
-  //   hasValue.yaml
-  //   simple.yaml
-
 
   @YamlSpec("fhirpath-js/cases/3.2_paths.yaml")
   void testPaths(@Nonnull final RuntimeCase testCase) {
@@ -142,6 +136,51 @@ public class YamlReferenceImplTest extends YamlSpecTestBase {
 
   @YamlSpec("fhirpath-js/cases/8_variables.yaml")
   void testVariables(@Nonnull final RuntimeCase testCase) {
+    run(testCase);
+  }
+
+  //
+  // OTHER TEST CASES
+  //
+
+  //   extensions.yaml
+  //   factory.yaml
+  //   fhir-quantity.yaml
+  //   fhir-r4.yaml
+  //   hasValue.yaml
+  //   simple.yaml
+
+  @Disabled
+  @YamlSpec("fhirpath-js/cases/extensions.yaml")
+  void testExtension(@Nonnull final RuntimeCase testCase) {
+    run(testCase);
+  }
+
+  @YamlSpec("fhirpath-js/cases/factory.yaml")
+  void testFactory(@Nonnull final RuntimeCase testCase) {
+    run(testCase);
+  }
+
+  @Disabled
+  @YamlSpec("fhirpath-js/cases/fhir-r4.yaml")
+  void testFhirR4(@Nonnull final RuntimeCase testCase) {
+    run(testCase);
+  }
+
+  @Disabled
+  @YamlSpec("fhirpath-js/cases/fhir-quantity.yaml")
+  void testFhirQuantity(@Nonnull final RuntimeCase testCase) {
+    run(testCase);
+  }
+
+  @YamlSpec("fhirpath-js/cases/hasValue.yaml")
+  void testHasValue(@Nonnull final RuntimeCase testCase) {
+    run(testCase);
+  }
+
+  @Disabled
+  @YamlSpec("fhirpath-js/cases/simple.yaml")
+  void testSimple(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }
 

@@ -546,3 +546,18 @@ excludeSet:
         type: framework-gap
         spel:
           - "#testCase.context == 'g1'"
+  - title: Factory exclusions
+    glob: 'fhirpath-js/cases/factory.yaml'
+    exclude:
+      - title: 'Custom factory not supported'
+        type: feature
+        expression:
+          - "%factory(\\W|$)"
+  - title: Has Value Exclusions
+    glob: 'fhirpath-js/cases/hasValue.yaml'
+    exclude:
+      - title: 'hasValue() not supported'
+        type: ???
+        comment: "hasValue() is not defined in FHIRSpec ???"
+        function:
+          - "hasValue"
