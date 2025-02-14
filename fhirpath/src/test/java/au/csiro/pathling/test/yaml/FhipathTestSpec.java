@@ -1,18 +1,20 @@
 package au.csiro.pathling.test.yaml;
 
+import static java.util.Objects.requireNonNull;
+
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import lombok.Value;
-import org.yaml.snakeyaml.Yaml;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-
-import static java.util.Objects.requireNonNull;
+import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
+import org.yaml.snakeyaml.Yaml;
 
 
 @SuppressWarnings("unchecked")
 @Value
+@Slf4j
 public class FhipathTestSpec {
 
 
@@ -47,16 +49,19 @@ public class FhipathTestSpec {
   @Nonnull
   static Stream<TestCase> mapCaseOrGroup(@Nonnull final Map<Object, Object> caseOrGroup) {
     if (caseOrGroup.containsKey("expression")) {
-      return Stream.of(new TestCase(
-          (String) caseOrGroup.get("desc"),
-          (String) requireNonNull(caseOrGroup.get("expression")),
-          (boolean) caseOrGroup.computeIfAbsent("error", k -> false),
-          caseOrGroup.get("result"),
-          (String) caseOrGroup.get("inputfile"),
-          (String) caseOrGroup.get("model"),
-          (String) caseOrGroup.get("context"),
-          (boolean) caseOrGroup.computeIfAbsent("disable", k -> false)
-      ));
+      // some cases contain multiple expressions,
+      final List<String> expressions = toExpressions(requireNonNull(caseOrGroup.get("expression")));
+      return expressions.stream()
+          .map(expr -> new TestCase(
+              (String) caseOrGroup.get("desc"),
+              expr,
+              (boolean) caseOrGroup.computeIfAbsent("error", k -> false),
+              caseOrGroup.get("result"),
+              (String) caseOrGroup.get("inputfile"),
+              (String) caseOrGroup.get("model"),
+              (String) caseOrGroup.get("context"),
+              (boolean) caseOrGroup.computeIfAbsent("disable", k -> false)
+          ));
     } else if (caseOrGroup.size() == 1) {
       final Object singleValue = caseOrGroup.values().iterator().next();
       return singleValue instanceof List<?> lst
@@ -64,6 +69,17 @@ public class FhipathTestSpec {
              : Stream.empty();
     } else {
       return Stream.empty();
+    }
+  }
+
+  private static @Nonnull List<String> toExpressions(@Nonnull final Object expressionObj) {
+    if (expressionObj instanceof String) {
+      return List.of((String) expressionObj);
+    } else if (expressionObj instanceof List<?>) {
+      return (List<String>) expressionObj;
+    } else {
+      log.warn("Unexpected expression object: {}", expressionObj);
+      return List.of("FAIL: " + expressionObj);
     }
   }
 
