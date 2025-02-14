@@ -602,3 +602,46 @@ excludeSet:
         comment: "hasValue() is not defined in FHIRSpec ???"
         function:
           - "hasValue"
+  - title: Simple Exclusions
+    glob: 'fhirpath-js/cases/simple.yaml'
+    exclude:
+      - title: "BUG: Quoted (`) identifiers not supported"
+        type: bug
+        any:
+          - "name.`family`"
+      - title: "Custom fields with uppercase names not supported"
+        comment: "Unresolved resources should ??? be treated as empty collections"
+        type: ???
+        expression:
+          - "^Encounter\\.id$"
+      - title: "Boolean evaluation of collections"
+        type: feature
+        any:
+          - "Patient.name.exists(given)"
+      - title: "BUG: empty() and exist() should return true/false for empty collections"
+        type: bug
+        any:
+          - "Patient.ups.exists()"
+          - "Patient.ups.empty()"
+      - title: "Unsupported function type()"
+        type: feature
+        any:
+          - "Patient.name.given.type()"
+      - title: "Not supported expression maps"
+        type: framework-gap
+        any:
+          - "Evaluating expression for a part of a resource"
+      - title: "BUG: ofType() on monomorphic collections"
+        type: bug
+        any:
+          - "Patient.name.given.ofType(string)"
+      - title: "Comparison of element types"
+        type: framework-gap
+        any:
+          - "Patient.telecom.where($this.use = 'work')"
+      - title: "unsupported lenght property on strings"
+        type: ???
+        any:
+          - "Patient.name.given.select($this.length) = Patient.name.given.select(length)"
+
+        
