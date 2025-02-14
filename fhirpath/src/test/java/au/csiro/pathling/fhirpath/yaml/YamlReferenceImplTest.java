@@ -165,8 +165,7 @@ public class YamlReferenceImplTest extends YamlSpecTestBase {
   void testFhirR4(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }
-
-  @Disabled
+  
   @YamlSpec("fhirpath-js/cases/fhir-quantity.yaml")
   void testFhirQuantity(@Nonnull final RuntimeCase testCase) {
     run(testCase);

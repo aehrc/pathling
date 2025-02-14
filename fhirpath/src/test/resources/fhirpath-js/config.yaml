@@ -580,6 +580,20 @@ excludeSet:
         type: feature
         expression:
           - "%factory(\\W|$)"
+  - title: Quantity Exclusions
+    glob: "fhirpath-js/cases/fhir-quantity.yaml"
+    exclude:
+      - title: "Implicit conversion of polymophic types not supported"
+        comment: "Should the value be implicitly converted to a quantity?"
+        type: ???
+        any:
+          - "After converting 'a' to year it is equal to year"
+          - "After converting 'a' to year it isn't equal to 'a'"
+          - "After converting 'min' to minutes it is equal to minutes"
+      - title: "Untyped access to polymorphic collections"
+        type: ???
+        any:
+          - "Can access the comparator field when there isn't a need to convert"
   - title: Has Value Exclusions
     glob: 'fhirpath-js/cases/hasValue.yaml'
     exclude:
