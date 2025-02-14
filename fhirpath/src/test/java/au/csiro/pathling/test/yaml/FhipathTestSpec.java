@@ -37,7 +37,7 @@ public class FhipathTestSpec {
     boolean disable;
   }
 
-  @Nonnull
+  @Nullable
   Map<Object, Object> subject;
 
   @Nonnull

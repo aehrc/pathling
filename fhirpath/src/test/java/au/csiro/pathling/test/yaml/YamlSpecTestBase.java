@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
+import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode.Exclude;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -187,6 +188,31 @@ public abstract class YamlSpecTestBase {
     }
   }
 
+
+  @Value
+  @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
+  static class EmptyResolverFactory implements Function<RuntimeContext, ResourceResolver> {
+
+
+    // singleton
+    private static final EmptyResolverFactory INSTANCE = new EmptyResolverFactory();
+
+    static EmptyResolverFactory getInstance() {
+      return INSTANCE;
+    }
+
+    @Override
+    public ResourceResolver apply(final RuntimeContext runtimeContext) {
+
+      DefResourceTag subjectResourceTag = DefResourceTag.of("Empty");
+      return DefResourceResolver.of(
+          subjectResourceTag,
+          DefDefinitionContext.of(DefResourceDefinition.of(subjectResourceTag)),
+          runtimeContext.getSpark().emptyDataFrame()
+      );
+    }
+  }
+
   @Value(staticConstructor = "of")
   static class OMResolverFactory implements Function<RuntimeContext, ResourceResolver> {
 
@@ -274,9 +300,10 @@ public abstract class YamlSpecTestBase {
 
       // create the default model (or not)
 
-      final Map<Object, Object> subjectOM = spec.getSubject();
-      final Function<RuntimeContext, ResourceResolver> defaultResolverFactory = OMResolverFactory.of(
-          subjectOM);
+      final Function<RuntimeContext, ResourceResolver> defaultResolverFactory =
+          Optional.ofNullable(spec.getSubject())
+              .<Function<RuntimeContext, ResourceResolver>>map(OMResolverFactory::of)
+              .orElse(EmptyResolverFactory.getInstance());
 
       List<Arguments> cases = spec.getCases()
           .stream()
