@@ -17,9 +17,10 @@ public abstract class YamlSpecCachedTestBase extends YamlSpecTestBase {
     Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> cache;
 
     @Override
-    public ResourceResolver create(Function<RuntimeContext, ResourceResolver> resolveFactory) {
-      return cache.computeIfAbsent(resolveFactory,
-          k -> delegate.create(k));
+    @Nonnull
+    public ResourceResolver create(
+        @Nonnull final Function<RuntimeContext, ResourceResolver> resolveFactory) {
+      return cache.computeIfAbsent(resolveFactory, delegate::create);
     }
   }
 

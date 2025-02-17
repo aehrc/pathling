@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 
 
@@ -175,7 +174,6 @@ public class YamlReferenceImplTest extends YamlSpecCachedTestBase {
     run(testCase);
   }
 
-  @Disabled
   @YamlSpec("fhirpath-js/cases/fhir-r4.yaml")
   void testFhirR4(@Nonnull final RuntimeCase testCase) {
     run(testCase);
@@ -191,7 +189,6 @@ public class YamlReferenceImplTest extends YamlSpecCachedTestBase {
     run(testCase);
   }
 
-  @Disabled
   @YamlSpec("fhirpath-js/cases/simple.yaml")
   void testSimple(@Nonnull final RuntimeCase testCase) {
     run(testCase);
