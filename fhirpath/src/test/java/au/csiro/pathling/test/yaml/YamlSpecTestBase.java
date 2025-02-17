@@ -62,20 +62,36 @@ public abstract class YamlSpecTestBase {
   @Autowired
   FhirEncoders fhirEncoders;
 
+
+  @FunctionalInterface
+  protected interface ResolverBuilder {
+
+    @Nonnull
+    ResourceResolver create(
+        @Nonnull final Function<RuntimeContext, ResourceResolver> resolveFactory);
+  }
+
   @Value(staticConstructor = "of")
-  protected static class RuntimeContext {
+  protected static class RuntimeContext implements ResolverBuilder {
 
     @Nonnull
     SparkSession spark;
     @Nonnull
     FhirEncoders fhirEncoders;
+
+    @Override
+    @Nonnull
+    public ResourceResolver create(
+        @Nonnull final Function<RuntimeContext, ResourceResolver> resolveFactory) {
+      return resolveFactory.apply(this);
+    }
   }
 
   protected interface RuntimeCase {
 
     void log(@Nonnull Logger log);
 
-    void check(@Nonnull final RuntimeContext rt);
+    void check(@Nonnull final ResolverBuilder rb);
   }
 
   @Value(staticConstructor = "of")
@@ -86,7 +102,7 @@ public abstract class YamlSpecTestBase {
     }
 
     @Override
-    public void check(@Nonnull final RuntimeContext rt) {
+    public void check(@Nonnull final ResolverBuilder rb) {
 
     }
   }
@@ -150,9 +166,9 @@ public abstract class YamlSpecTestBase {
     }
 
     @Override
-    public void check(@Nonnull final RuntimeContext rt) {
+    public void check(@Nonnull final ResolverBuilder rb) {
       final FhirpathEvaluator evaluator = StdFhirpathEvaluator
-          .fromResolver(resolverFactory.apply(rt))
+          .fromResolver(rb.create(resolverFactory))
           .evalOptions(EvalOptions.builder().allowUndefinedFields(true).build())
           .build();
       if (spec.isError()) {
@@ -337,9 +353,14 @@ public abstract class YamlSpecTestBase {
              : cases.stream();
     }
   }
+  
+  @Nonnull
+  protected ResolverBuilder createResolverBuilder() {
+    return RuntimeContext.of(spark, fhirEncoders);
+  }
 
   protected void run(@Nonnull final RuntimeCase testCase) {
     testCase.log(log);
-    testCase.check(RuntimeContext.of(spark, fhirEncoders));
+    testCase.check(createResolverBuilder());
   }
 }
