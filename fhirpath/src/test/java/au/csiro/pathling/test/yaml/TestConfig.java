@@ -2,6 +2,10 @@ package au.csiro.pathling.test.yaml;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import jakarta.xml.bind.DatatypeConverter;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -87,6 +91,44 @@ public class TestConfig {
     }
   }
 
+  @Value(staticConstructor = "of")
+  static class TagggedPredicate implements Predicate<FhipathTestSpec.TestCase> {
+
+    @Nonnull
+    Predicate<FhipathTestSpec.TestCase> predicate;
+
+    @Nonnull
+    String tag;
+
+    @Override
+    public boolean test(@Nonnull final FhipathTestSpec.TestCase testCase) {
+      return predicate.test(testCase);
+    }
+
+    @Override
+    @Nonnull
+    public String toString() {
+      return predicate + "#" + tag;
+    }
+
+    @Nonnull
+    static TagggedPredicate of(@Nonnull final Predicate<FhipathTestSpec.TestCase> predicate,
+        @Nonnull final String title, @Nonnull final String category) {
+      try {
+        // Create a MessageDigest instance for MD5
+        final MessageDigest digest = MessageDigest.getInstance("MD5");
+        // Update the digest with the bytes of the data
+        final String data = category + title;
+        byte[] hashBytes = digest.digest(data.getBytes(StandardCharsets.UTF_8));
+        // Convert the hash bytes to a hexadecimal string
+        return TagggedPredicate.of(predicate,
+            DatatypeConverter.printHexBinary(hashBytes).toLowerCase());
+      } catch (NoSuchAlgorithmException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
 
   @Data
   @NoArgsConstructor
@@ -111,18 +153,20 @@ public class TestConfig {
     List<String> spel;
 
     @Nonnull
-    Stream<Predicate<FhipathTestSpec.TestCase>> toPredicates() {
+    Stream<Predicate<FhipathTestSpec.TestCase>> toPredicates(@Nonnull final String category) {
       if (!disabled) {
         return Stream.of(
-            Stream.ofNullable(function).flatMap(List::stream)
-                .map(FunctionPredicate::of),
-            Stream.ofNullable(expression).flatMap(List::stream)
-                .map(ExpressionPredicate::of),
-            Stream.ofNullable(any).flatMap(List::stream)
-                .map(AnyPredicate::of),
-            Stream.ofNullable(spel).flatMap(List::stream)
-                .map(SpELPredicate::of)
-        ).flatMap(Function.identity());
+                Stream.ofNullable(function).flatMap(List::stream)
+                    .map(FunctionPredicate::of),
+                Stream.ofNullable(expression).flatMap(List::stream)
+                    .map(ExpressionPredicate::of),
+                Stream.ofNullable(any).flatMap(List::stream)
+                    .map(AnyPredicate::of),
+                Stream.ofNullable(spel).flatMap(List::stream)
+                    .map(SpELPredicate::of)
+            ).flatMap(Function.identity())
+            .map(
+                p -> TagggedPredicate.of((Predicate<FhipathTestSpec.TestCase>) p, title, category));
       } else {
         return Stream.empty();
       }
@@ -144,7 +188,7 @@ public class TestConfig {
 
     @Nonnull
     Stream<Predicate<FhipathTestSpec.TestCase>> toPredicates() {
-      return exclude.stream().flatMap(Exclude::toPredicates);
+      return exclude.stream().flatMap(ex -> ex.toPredicates(title));
     }
   }
 

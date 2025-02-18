@@ -313,7 +313,7 @@ excludeSet:
     glob: 'fhirpath-js/cases/6.1_equality.yaml'
     exclude:
       - title: "Bundles are not supported"
-        type: framwork-gap
+        type: framework-gap
         expression:
           - "(^|\\W)Bundle(\\W|$)"
       - title: 'Time literals with timezone'
@@ -353,7 +353,7 @@ excludeSet:
           - "** two colls"
           - "** two colls not"
       - title: "BUG: Equality for non singular elements"
-        type: BUG
+        type: bug
         any:
           - "** length mismatch"
           # also the complex type tests above

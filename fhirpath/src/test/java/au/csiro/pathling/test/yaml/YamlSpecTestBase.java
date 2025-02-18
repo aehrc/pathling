@@ -120,6 +120,10 @@ public abstract class YamlSpecTestBase {
     Function<RuntimeContext, ResourceResolver> resolverFactory;
 
     @Nonnull
+    @Exclude
+    Optional<String> exclusion;
+
+    @Nonnull
     @Override
     public String toString() {
       return spec.toString();
@@ -145,6 +149,7 @@ public abstract class YamlSpecTestBase {
     public void log(@Nonnull Logger log) {
       log.info("Description: {}", spec.getDescription());
       log.info("Expression: {}", spec.getExpression());
+      exclusion.ifPresent(s -> log.info("Exclusion: {}", s));
       if (spec.isError()) {
         log.info("Expecting error");
       } else {
@@ -304,6 +309,13 @@ public abstract class YamlSpecTestBase {
     @Override
     public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
 
+      final boolean exclusionsOnly = "true".equals(
+          System.getProperty("au.csiro.pathling.test.yaml.exclusionsOnly"));
+      if (exclusionsOnly) {
+        log.warn(
+            "Running excluded test only (`au.csiro.pathling.test.yaml.exclusionsOnly` is set)!!!");
+      }
+
       final Optional<String> testConfigPath = context.getTestClass()
           .flatMap(c -> Optional.ofNullable(c.getAnnotation(YamlConfig.class)))
           .map(YamlConfig::value);
@@ -336,16 +348,22 @@ public abstract class YamlSpecTestBase {
             }
             return !ts.isDisable();
           })
-          .filter(ts -> {
-            final Optional<String> exclusion = excluder.apply(ts);
-            exclusion.ifPresent(s -> log.warn("Excluding test case: {} becasue {}", ts, s));
-            return exclusion.isEmpty();
-          }).map(ts -> StdRuntimeCase.of(ts,
+          .map(ts -> StdRuntimeCase.of(ts,
               Optional.ofNullable(ts.getInputFile())
                   .map(f -> (Function<RuntimeContext, ResourceResolver>) FhirResolverFactory.of(
                       getResourceAsString("fhirpath-js/resources/" + f)))
-                  .orElse(defaultResolverFactory)
+                  .orElse(defaultResolverFactory),
+              excluder.apply(ts)
           ))
+          .filter(rtc -> {
+            if (exclusionsOnly) {
+              return rtc.getExclusion().isPresent();
+            } else {
+              rtc.getExclusion()
+                  .ifPresent(s -> log.warn("Excluding test case: {} becasue {}", rtc.getSpec(), s));
+              return rtc.getExclusion().isEmpty();
+            }
+          })
           .map(Arguments::of)
           .toList();
       return cases.isEmpty()
@@ -353,7 +371,7 @@ public abstract class YamlSpecTestBase {
              : cases.stream();
     }
   }
-  
+
   @Nonnull
   protected ResolverBuilder createResolverBuilder() {
     return RuntimeContext.of(spark, fhirEncoders);
