@@ -50,6 +50,11 @@ class DataSource(SparkConversionsMixin):
         return self._wrap_df(self._jds.read(resource_code))
 
     def resource_types(self):
+        """
+        Returns a list of the resource types that are available in the data source.
+        
+        :return: A list of strings representing the resource types.
+        """
         return [r.toCode() for r in self._jds.getResourceTypes()]
 
     @property
