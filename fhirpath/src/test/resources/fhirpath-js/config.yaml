@@ -434,7 +434,8 @@ excludeSet:
         any:
           - "@2018-02-18T12:23:45-05:00 + 2 years"
       - title: "Comparison of decimal values"
-        type: ??? # framework-gap
+        type: framework-gap
+        disabled: true
         any:
           - "** Can divide two numbers"
           - "** Can divide two number literals"
@@ -487,6 +488,7 @@ excludeSet:
           - "** Empty result when one of the operands is a calendar duration quantity greater than seconds (6)"
       - title: "math operators produces long value for int arguments"
         type: ??? # bug
+        disabled: true
         any:
           - "** Can add two numbers"
           - "** Can add two number literals"

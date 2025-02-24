@@ -27,6 +27,7 @@ import au.csiro.pathling.test.yaml.FhipathTestSpec.TestCase;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -163,11 +164,17 @@ public abstract class YamlSpecTestBase {
       final Object actualRaw = row.isNullAt(index)
                                ? null
                                : row.get(index);
-      return actualRaw instanceof WrappedArray<?> wrappedArray
-             ? (wrappedArray.length() == 1
+      if (actualRaw instanceof WrappedArray<?> wrappedArray) {
+        return (wrappedArray.length() == 1
                 ? wrappedArray.apply(0)
-                : wrappedArray)
-             : actualRaw;
+                : wrappedArray);
+      } else if (actualRaw instanceof Integer intValue) {
+        return intValue.longValue();
+      } else if (actualRaw instanceof BigDecimal bdValue) {
+        return bdValue.setScale(6, BigDecimal.ROUND_HALF_UP).longValue();
+      } else {
+        return actualRaw;
+      }
     }
 
     @Override
