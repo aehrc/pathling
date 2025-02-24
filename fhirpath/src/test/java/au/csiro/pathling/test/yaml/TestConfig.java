@@ -135,6 +135,8 @@ public class TestConfig {
   public static class Exclude {
 
     @Nullable
+    String id;
+    @Nullable
     String title;
     @Nullable
     String comment;
