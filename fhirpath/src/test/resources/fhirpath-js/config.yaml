@@ -116,7 +116,7 @@ excludeSet:
           - " as " # as operator
           - " & " # & operator
           - " div " # div operator
-      - title: "BUG: Unsupported week(s) duration"
+      - title: "Unsupported week(s) duration"
         type: bug
         expression: # regex matching expressoin
           - " weeks"
@@ -138,7 +138,7 @@ excludeSet:
           - "Observation.value with an R5 FHIR model"
           - "Observation.value with an STU3 FHIR model"
           - "Observation.value with an DSTU2 FHIR model"
-      - title: 'BUG: Traversal into non-resource root properties (uppercase)'
+      - title: 'Traversal into non-resource root properties (uppercase) fails'
         type: bug
         any:
           - "CustomField = 'test'"
@@ -218,15 +218,15 @@ excludeSet:
         type: feature
         expression:
           - '^[+-]7(.3)?$'
-      - title: 'BUG: escape sequences in string literal'
+      - title: 'Unsupported escape sequences in string literal'
         type: bug
         any: [ "'a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065'" ]
-      - title: 'BUG: datetime literals with non-second precision'
+      - title: 'Unsupported datetime literals with non-second precision'
         type: bug
         any:
           - "@2019-02-03T01:00Z = @2019-02-02T21:00-04:00"
           - "@2019-02-03T02:00Z = @2019-02-02T21:00-04:00"
-      - title: 'BUG: traversal into quantity literals'
+      - title: 'Traversal into quantity literals fails'
         type: bug
         any:
           - "(2 years).value"
@@ -238,41 +238,38 @@ excludeSet:
         any:
           - "** null is not empty"
           - "** exists for null should return true"
-      - title: 'BUG: exist() for empty collections'
+      - title: 'Incorrect exist() for empty collections'
         type: bug
         any:
           - "** empty nothing"
-      - title: 'BUG: not() for empty collections'
+          - "** exists for undefined coll should return false"
+          - "** exists with criteria should work for not exists coll"
+      - title: 'Incorrect not() for empty collections'
         type: bug
         any:
           - "** empty coll with not() is empty coll"
           - "** not nothing is empty coll"
-      - title: "BUG: exist() for empty collections"
-        type: bug
-        any:
-          - "** exists for undefined coll should return false"
-          - "** exists with criteria should work for not exists coll"
-      - title: "BUG: allTrue() for empty collections"
+      - title: "Incorrect allTrue() for empty collections"
         type: bug
         any:
           - "** allTrue for empty coll is true"
           - "** allTrue for non exists coll is true"
-      - title: "BUG: anyTrue() for empty collections"
+      - title: "Incorrect anyTrue() for empty collections"
         type: bug
         any:
           - "** anyTrue for empty coll is false"
           - "** anyTrue for non-exists coll is false"
-      - title: "BUG: allFalse() for empty collections"
+      - title: "Incorrect allFalse() for empty collections"
         type: bug
         any:
           - "** allFalse for empty coll is true"
           - "** allFalse for non-exists coll is true"
-      - title: "BUG: anyFalse() for empty collections"
+      - title: "Incorrect anyFalse() for empty collections"
         type: bug
         any:
           - "** anyFalse for empty coll is false"
           - "** anyFalse for non-exists coll is false"
-      - title: "BUG: count() for empty collections"
+      - title: "Incorrect count() for empty collections"
         type: bug
         any:
           - "** 0 if nothing"
@@ -297,15 +294,15 @@ excludeSet:
         type: feature
         any:
           - "** where for a collection with a null value that has an id"
-      - title: 'BUG: boolean not convertible to string'
+      - title: 'Boolean not convertible to string'
         type: bug
         expression:
           - '^attrtrue\.toString\(\)$'
-      - title: 'BUG: precision lost in in decimal literals'
+      - title: 'Precision lost in in decimal literals'
         type: bug
         expression:
           - '^attrdec\.toString\(\)$'
-      - title: "BUG: Filter on empty collections"
+      - title: "Incorrect filter() on empty collections"
         type: bug
         any:
           - "** filter empty coll"
@@ -325,12 +322,12 @@ excludeSet:
         any:
           - "** equality for null values"
           - "** inequality for null values"
-      - title: 'BUG: datetime literals with non-second precision'
+      - title: 'Unsupported datetime literals with non-second precision'
         type: bug
         expression:
           - "@\\d{4}-\\d{2}-\\d{2}T\\d{2}[^:]"
           - "@\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}[^:]"
-      - title: 'BUG: equality for quantity literals'
+      - title: 'Equality for quantity literals fails'
         type: bug
         any:
           - "1 year != 1 'a'"
@@ -340,19 +337,19 @@ excludeSet:
           - "1 month = 30 days"
           - "1 day = 24 hours"
           - "10 'kg.m/s2' = 5 'kg' * 4 'm' / (2 seconds * 1000 'ms')"
-      - title: "BUG: Equality for different primitive types"
+      - title: "Equality for different primitive types fails"
         type: ??? # bug
         any:
           - "DateTime literal compared with a number"
           - "DateTime literal compared with a string literal"
-      - title: "BUG: Equality for complex types"
+      - title: "Equality for complex types fails"
         type: bug
         any:
           - "** two objects"
           - "** two objects not"
           - "** two colls"
           - "** two colls not"
-      - title: "BUG: Equality for non singular elements"
+      - title: "Equality for non singular elements fails"
         type: bug
         any:
           - "** length mismatch"
@@ -364,7 +361,7 @@ excludeSet:
   - title: 'Comparison exlusions'
     glob: "fhirpath-js/cases/6.2_comparision.yaml"
     exclude:
-      - title: "BUG: comparison for empty collections"
+      - title: "Comparison for empty collections fails"
         type: bug
         any:
           - "less than, with empty value"
@@ -375,20 +372,20 @@ excludeSet:
           - "greater or equal than, with null value"
           - "less or equal than, with empty value"
           - "less or equal than, with null value"
-      - title: "BUG: comparision for non-singular collections"
+      - title: "Comparision for non-singular collections fails"
         type: bug
         any:
           - "less than, with too many values"
           - "greater than, with too many values"
           - "greater or equal than, with too many values"
-      - title: "BUG: comparison for time quantities returns null"
+      - title: "Comparison for time quantities returns null"
         type: bug
         any:
           - "1 year > 12 months"
           - "1 year < 12 months"
           - "1 minute > 59 seconds"
           - "1 minute < 61 seconds"
-      - title: "BUG: Comparison based on the lesser precision"
+      - title: "Comparison based on the lesser precision fails"
         type: bug
         any:
           - "@2018-12-31 > @2018"
@@ -404,22 +401,22 @@ excludeSet:
         type: framework-gap
         any:
           - "el in emptycoll"
-      - title: "BUG: 'in' operator on element types fails"
+      - title: "'in' operator on element types fails"
         type: bug
         any:
           - "el in coll"
           - "not_el in coll"
-      - title: "BUG: 'in' operator should return empty when left argument is empty"
+      - title: "'in' operator should return empty when left argument is empty"
         type: bug
         any:
           - "ups in coll"
           - "ups in emptycoll"
-      - title: "BUG: 'contains' operator on element types fails"
+      - title: "'contains' operator on element types fails"
         type: bug
         any:
           - "coll contains el"
           - "coll contains not_el"
-      - title: "BUG: 'contains' operator should return empty when right argument is empty"
+      - title: "'contains' operator should return empty when right argument is empty"
         type: bug
         any:
           - "coll contains empty"
@@ -441,46 +438,46 @@ excludeSet:
         any:
           - "** Can divide two numbers"
           - "** Can divide two number literals"
-      - title: "BUG: '*' operator works on strings"
+      - title: "'*' operator should fail on Strings"
         type: bug
         any:
           - "** Error multiplying string (3)"
-      - title: "BUG: '*' operator does not singularise arguments"
+      - title: "'*' operator does not singularise arguments"
         type: bug
         any:
           - "** Error multiplying multi-valued collection (1)"
           - "** Error multiplying multi-valued collection (2)"
-      - title: "BUG: '*' operator fails when right argument is empty"
+      - title: "'*' operator fails when right argument is empty"
         type: bug
         any:
           - "** Empty result multiplying empty collection (1)"
           - "** Empty result when one of the operands is null"
-      - title: "BUG: '-' operator incorrect when right argument is empty"
+      - title: "'-' operator incorrect when right argument is empty"
         type: bug
         any:
           - "** Empty result when one of the operands is empty"
-      - title: "BUG: '*' operator incorrect for quantities"
+      - title: "'*' operator incorrect for quantities"
         type: bug
         any:
           - "** Can multiply two quantities"
           - "** Can multiply a quantity by a number"
           - "** Can multiply a number by a quantity"
           - "** Empty result when one of the operands has a special unit"
-      - title: "BUG: '/' operator incorrect for quantities"
+      - title: "'/' operator incorrect for quantities"
         type: bug
         any:
           - "** Can divide two quantities"
           - "** Can divide a quantity by a number"
           - "** Can divide a number by a quantity"
           - "** Allow division of a UCUM duration quantity"
-      - title: "BUG: '+' and '-' operators fail for mix of numbers and unit quantities"
+      - title: "'+' and '-' operators fail for mix of numbers and unit quantities"
         type: bug
         any:
           - "** Can add a number to a quantity"
           - "** Can add a quantity to a number"
           - "** Can subtract a quantity from a number"
           - "** Can subtract a number from a quantity"
-      - title: "BUG: '/' operator incorrect for time quantities"
+      - title: "'/' operator incorrect for time quantities"
         type: bug
         any:
           - "** Empty result when one of the operands is a calendar duration quantity greater than seconds (5)"
@@ -496,26 +493,26 @@ excludeSet:
           - "** Can subtract two numbers"
           - "** Can subtract two number literals"
           - "** Can mod two numbers"
-      - title: "BUG: '+' should produce {} if any argument is empty"
+      - title: "'+' should produce {} if any argument is empty"
         type: bug
         any:
           - "** Empty result if one or both operands is empty (1b)"
-      - title: "BUG: Time literals with Z timezone break parsing"
+      - title: "Time literals with Z timezone break parsing"
         type: bug
         expression:
           - "@T\\d{2}:\\d{2}(:\\d{2})?Z"
-      - title: "BUG: Incorrect '+' operator for strings"
+      - title: "Incorrect '+' operator for strings"
         type: bug
         any:
           - "** Can concatenate two strings with +"
           - "** Null in concatenation is treated as an empty collection (2)"
-      - title: "BUG: Incorrect Math operations on calendar quantities with limited precision"
+      - title: "Incorrect Math operations on calendar quantities with limited precision"
         type: bug
         any:
           - "@2016-01 + 30 days" # 30 days should be converted to 1 month
           - "@2016 - 364 days" # 364 days should be converted to 0 years
           - "@2016 + 365 days" # 365 days should be converted to 1 year
-      - title: "BUG: Math operations on calendar quantities fail or incorrect"
+      - title: "Math operations on calendar quantities fail or incorrect"
         type: bug
         any:
           - "2 years + 6 months = 2.5 year"
@@ -526,7 +523,7 @@ excludeSet:
           - "1 year * 2 = 2 year"
           - "2 * 5 months = 10 months"
           - "1 year / 6 months = 2"
-      - title: "BUG: Addition of time quantities with decimal portion"
+      - title: "Addition of time quantities with decimal portion incorrect"
         type: bug
         any:
           - "@2016-02-29 + 1.5 year"
@@ -534,11 +531,11 @@ excludeSet:
   - title: Aggregate exclusions
     glob: 'fhirpath-js/cases/7_aggregate.yaml'
     exclude:
-      - title: 'BUG: Traversal into non-resource root properties (uppercase)'
+      - title: 'Traversal into non-resource root properties (uppercase) fails'
         type: bug
         any:
           - "sum() function calculates the sum of undefined input collection"
-      - title: 'BUG: Sum on non-numeric collection'
+      - title: 'Sum on non-numeric collection fails'
         type: bug
         any:
           - "sum() function calculates the sum of input collection with null elements"
@@ -580,7 +577,7 @@ excludeSet:
           - "** expression with extension() for primitive type (using FHIR model data)"
           - "** value of extension of extension (using FHIR model data)"
           - "** id of extension of extension"
-      - title: "BUG: empty() should be true for empty collections"
+      - title: "empty() should be true for empty collections"
         type: bug
         any:
           - "** empty url"
@@ -617,7 +614,7 @@ excludeSet:
   - title: Simple Exclusions
     glob: 'fhirpath-js/cases/simple.yaml'
     exclude:
-      - title: "BUG: Tick quotes identifiers not supported"
+      - title: "Tick quotes identifiers not supported"
         type: bug
         any:
           - "name.`family`"
@@ -630,7 +627,7 @@ excludeSet:
         type: feature
         any:
           - "Patient.name.exists(given)"
-      - title: "BUG: empty() and exist() should return true/false for empty collections"
+      - title: "empty() and exist() should return true/false for empty collections"
         type: bug
         any:
           - "Patient.ups.exists()"
@@ -643,7 +640,7 @@ excludeSet:
         type: framework-gap
         any:
           - "Evaluating expression for a part of a resource"
-      - title: "BUG: ofType() on monomorphic collections"
+      - title: "ofType() fails on monomorphic collections"
         type: bug
         any:
           - "Patient.name.given.ofType(string)"
@@ -658,12 +655,12 @@ excludeSet:
   - title: FHIR R4 Exclusions
     glob: 'fhirpath-js/cases/fhir-r4.yaml'
     exclude:
-      - title: "BUG: Tick quotes identifiers not supported"
+      - title: "Tick quotes identifiers not supported"
         type: bug
         any:
           - "** testEscapedIdentifier"
           - "** testSimpleBackTick1"
-      - title: "BUG: Polarity operator not supported"
+      - title: "Polarity operator not supported"
         type: bug
         any:
           - "** testLiteralIntegerNotEqual"
@@ -687,7 +684,7 @@ excludeSet:
         any:
           - "** testDateNotEqualTimeSecond"
           - "** testDateNotEqualTimeMinute"
-      - title: "BUG: unicode escape sequences not supporter in string literals"
+      - title: "unicode escape sequences not supporter in string literals"
         comment: "E.g: 'P\u0065ter' should be equal to 'Peter' but is not"
         type: bug
         any:
@@ -730,15 +727,15 @@ excludeSet:
           - "({} implies true) = true"
           - "({} implies false).empty()"
           - "({} implies {}).empty()"
-      - title: "BUG: toString() not supported for boolean collections/literals"
+      - title: "toString() not supported for boolean collections/literals"
         type: bug
         any:
           - "** testBooleanLiteralToString"
-      - title: "BUG: toString() not supported for Quantity collections/literals"
+      - title: "toString() not supported for Quantity collections/literals"
         type: bug
         any:
           - "** testQuantityLiteralWkToString"
-      - title: "BUG: incorrect multiplication/division of quantity literals"
+      - title: "incorrect multiplication/division of quantity literals"
         comment: "E.g: 2.0 'cm' * 2.0 'm' = 0.040 'm2'"
         type: bug
         any:
@@ -750,7 +747,7 @@ excludeSet:
         any:
           - "** testCollectionBoolean5"
           - "** testCollectionBoolean6"
-      - title: "BUG: where() results in SQL runtime singularity exception"
+      - title: "where() results in SQL runtime singularity exception"
         comment: "'java.lang.RuntimeException: Expected a single value, but found multiple values thrown' in evaluation"
         type: bug
         any:
@@ -772,7 +769,7 @@ excludeSet:
         any:
           - "** testNEquality22"
           - "1.2 / 1.8 = 0.66666667"
-      - title: "BUG: Incorrect comparison of time values with different precisions"
+      - title: "Incorrect comparison of time values with different precisions"
         type: bug
         any:
           - "** testLessThan23"
@@ -783,15 +780,15 @@ excludeSet:
           - "@T10:30:00 >= @T10:30:00.0"
           - "@2018-03 > @2018-03-01"
           - "@T10 > @T10:30"
-      - title: "BUG: addition '+' operator on strings incorrect"
+      - title: "addition '+' operator on strings incorrect"
         type: bug
         any:
           - "'a'+'b' = 'ab'"
-      - title: "BUG: subtraction '-' operator on strings should fail"
+      - title: "subtraction '-' operator on strings should fail"
         type: bug
         any:
           - "'a'-'b' = 'ab'"
-      - title: "BUG: 'mod' operator incorrect for decimals"
+      - title: "'mod' operator incorrect for decimals"
         type: bug
         any:
           - "2.2 mod 1.8 = 0.4"

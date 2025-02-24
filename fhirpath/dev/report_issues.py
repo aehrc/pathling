@@ -63,8 +63,7 @@ SUMMARY_TEMPLATE = """<!DOCTYPE html>
             <th>Title</th>
             <th>Category</th>
             <th>Comment</th>
-            <th>#Warning</th>
-            <th>#Info</th>
+            <th>Details</th>
         </tr>
         {% for issue in group[1] %}
             <tr>
@@ -73,7 +72,6 @@ SUMMARY_TEMPLATE = """<!DOCTYPE html>
                 <td>{{issue.category}}</td>
                 <td>{{issue.comment}}</td>
                 <td><a href="#{{issue.tag}}">{{issue.tag}}<a></td>
-                <td>&nbsp;</td>
             </tr>
         {% endfor %}       
     </table>
@@ -97,6 +95,22 @@ SUMMARY_TEMPLATE = """<!DOCTYPE html>
                     <ul>{% for r in items %}
                       <li>{{r.expr}} <span class="desc">[{{r.desc}}]</span></li>
                     {% endfor %}</ul>
+                {% endfor %}
+                </code>
+            {% else %}
+                <p>No test result</p>
+            {% endif %}
+            <h5>Markdown</h5>
+            {% set result = results.get(issue.tag) %}
+            {% if result %}
+                <code>
+                <p>**Details**</p>
+                {% for error, items in result|groupby("error") %}
+                  <p>```{{ error }}```
+                  {% for r in items %}
+                      <br/>- ```{{r.expr}} [{{r.desc}}]```
+                  {% endfor %}
+                  </p>
                 {% endfor %}
                 </code>
             {% else %}
