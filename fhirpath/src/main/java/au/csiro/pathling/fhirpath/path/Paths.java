@@ -211,7 +211,9 @@ final public class Paths {
     @Override
     public Collection apply(@Nonnull final Collection input,
         @Nonnull final EvaluationContext context) {
-      return context.resolveResource(resourceCode);
+      return context.resolveResource(resourceCode)
+          .map(Collection.class::cast)
+          .orElseGet(() -> new Traversal(resourceCode).apply(input, context));
     }
 
     @Nonnull

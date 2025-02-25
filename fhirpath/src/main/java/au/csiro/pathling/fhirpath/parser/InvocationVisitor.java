@@ -48,7 +48,7 @@ import java.util.Optional;
  */
 class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
   
-  private static boolean isResourceType(@Nonnull final String identifier) {
+  private static boolean canBeResourceType(@Nonnull final String identifier) {
     // check if starts with capital letter
     return !identifier.isEmpty() && Character.isUpperCase(identifier.charAt(0));
   }
@@ -80,7 +80,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
   public FhirPath visitMemberInvocation(
       @Nullable final MemberInvocationContext ctx) {
     final String fhirPath = requireNonNull(ctx).getText();
-    if (isRoot && isResourceType(fhirPath)) {
+    if (isRoot && canBeResourceType(fhirPath)) {
       return new Resource(fhirPath);
     } else {
       return new Traversal(fhirPath);

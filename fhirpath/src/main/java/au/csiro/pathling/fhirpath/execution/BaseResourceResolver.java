@@ -14,6 +14,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.util.Objects.isNull;
@@ -28,10 +29,10 @@ public abstract class BaseResourceResolver implements ResourceResolver {
   public abstract FhirContext getFhirContext();
 
   @Override
-  public @Nonnull ResourceCollection resolveResource(
+  public @Nonnull Optional<ResourceCollection> resolveResource(
       @Nonnull final String resourceCode) {
     if (resourceCode.equals(getSubjectResource())) {
-      return resolveSubjectResource();
+      return Optional.of(resolveSubjectResource());
     } else {
       return resolveForeignResource(resourceCode);
     }
@@ -44,8 +45,8 @@ public abstract class BaseResourceResolver implements ResourceResolver {
   }
 
   @Nonnull
-  ResourceCollection resolveForeignResource(@Nonnull final String resourceCode) {
-    throw new UnsupportedOperationException("resolveForeignResource() is not supported");
+  Optional<ResourceCollection> resolveForeignResource(@Nonnull final String resourceCode) {
+    return Optional.empty();
   }
 
   @Override
@@ -78,8 +79,7 @@ public abstract class BaseResourceResolver implements ResourceResolver {
   protected static Dataset<Row> resourceDataset(@Nonnull final DataSource dataSource,
       @Nonnull final ResourceType resourceType) {
 
-    @Nullable
-    final Dataset<Row> dataset = dataSource.read(resourceType);
+    @Nullable final Dataset<Row> dataset = dataSource.read(resourceType);
     // Despite DataSource.read() annotation, this method can return null sometime
     // which leads to an obscure NullPointerException in SparkSQL
     if (isNull(dataset)) {

@@ -28,6 +28,7 @@ import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
 import jakarta.annotation.Nonnull;
 import lombok.AllArgsConstructor;
 import lombok.Value;
+import java.util.Optional;
 
 @Value
 @AllArgsConstructor
@@ -44,16 +45,16 @@ public class ViewEvaluationContext implements EvaluationContext {
 
   @Nonnull
   EvalOptions evalOptions;
-  
+
   public ViewEvaluationContext(@Nonnull final FhirPathContext fhirPathContext,
       @Nonnull final FunctionRegistry<?> functionRegistry,
       @Nonnull final ResourceResolver resourceResolver) {
     this(fhirPathContext, functionRegistry, resourceResolver, EvalOptions.getDefaults());
   }
-  
+
   @Nonnull
   @Override
-  public ResourceCollection resolveResource(@Nonnull final String resourceCode) {
+  public Optional<ResourceCollection> resolveResource(@Nonnull final String resourceCode) {
     return resourceResolver.resolveResource(resourceCode);
   }
 

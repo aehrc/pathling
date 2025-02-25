@@ -139,11 +139,6 @@ excludeSet:
           - "Observation.value with an R5 FHIR model"
           - "Observation.value with an STU3 FHIR model"
           - "Observation.value with an DSTU2 FHIR model"
-      - title: 'Traversal into non-resource root properties (uppercase) fails'
-        id: '#2165'
-        type: bug
-        any:
-          - "CustomField = 'test'"
   - title: Subsetting exclusions
     glob: 'fhirpath-js/cases/5.3_subsetting.yaml'
     exclude:
@@ -566,11 +561,6 @@ excludeSet:
   - title: Aggregate exclusions
     glob: 'fhirpath-js/cases/7_aggregate.yaml'
     exclude:
-      - title: 'Traversal into non-resource root properties (uppercase) fails'
-        id: '#2165'
-        type: bug
-        any:
-          - "sum() function calculates the sum of undefined input collection"
       - title: 'Sum on non-numeric collection fails'
         type: bug
         any:
@@ -657,12 +647,6 @@ excludeSet:
         type: bug
         any:
           - "name.`family`"
-      - title: "Custom fields with uppercase names not supported"
-        id: '#2165'
-        comment: "Unresolved resources should ??? be treated as empty collections"
-        type: ???
-        expression:
-          - "^Encounter\\.id$"
       - title: "Boolean evaluation of collections"
         type: feature
         any:

@@ -23,6 +23,7 @@ import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import java.util.Optional;
 
 public interface ResourceResolver {
 
@@ -30,7 +31,7 @@ public interface ResourceResolver {
   ResourceCollection resolveSubjectResource();
 
   @Nonnull
-  ResourceCollection resolveResource(@Nonnull final String resourceCode);
+  Optional<ResourceCollection> resolveResource(@Nonnull final String resourceCode);
 
   @Nonnull
   Collection resolveJoin(@Nonnull final ReferenceCollection referenceCollection);

@@ -175,7 +175,7 @@ public class LegacyEvaluationContext implements EvaluationContext {
 
   @Nonnull
   @Override
-  public ResourceCollection resolveResource(@Nonnull final String resourceCode) {
+  public Optional<ResourceCollection> resolveResource(@Nonnull final String resourceCode) {
     throw new UnsupportedOperationException("resolveResource() not supported in this context");
   }
 
