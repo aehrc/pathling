@@ -221,7 +221,6 @@ excludeSet:
         expression:
           - '^[+-]7(.3)?$'
       - title: 'Unsupported escape sequences in string literal'
-        id: '#2146'
         type: bug
         any: [ "'a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065'" ]
       - title: 'Unsupported datetime literals with non-second precision'

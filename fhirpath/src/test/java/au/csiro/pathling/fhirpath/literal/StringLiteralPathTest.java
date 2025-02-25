@@ -68,9 +68,16 @@ class StringLiteralPathTest {
 
   @Test
   void unescapeSingleQuote() {
+    final String result = unescapeFhirPathString("Some \\\"test\\\"");
+    assertEquals("Some \"test\"", result);
+  }
+
+  @Test
+  void unescapeDoubleQuote() {
     final String result = unescapeFhirPathString("Some string and it\\'s problems");
     assertEquals("Some string and it's problems", result);
   }
+
 
   @Test
   void unescapeBackSlash() {

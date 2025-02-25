@@ -1,0 +1,7 @@
+tests:
+  - 'String literals':
+      - desc: '** Escape sequences **'
+        expression: "'a\\\\b\\'\\\"\\`\\r\\n\\t'"
+        result: ["a\\b'\"`\r\n\t"] 
+subject:
+  prop: val
