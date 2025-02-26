@@ -550,7 +550,7 @@ pathling_read_bulk <- function(pc,
     builder <- builder %>% j_invoke("withOutputExtension", as.character(output_extension))
   }
   if (!is.null(timeout)) {
-    j_object = j_invoke_static(sc, "java.time.Duration", "ofSeconds", as.numeric(duration))
+    j_object = j_invoke_static(sc, "java.time.Duration", "ofSeconds", as.numeric(timeout))
     builder <- builder %>% j_invoke("withTimeout", j_object)
   }
   if (!is.null(max_concurrent_downloads)) {
