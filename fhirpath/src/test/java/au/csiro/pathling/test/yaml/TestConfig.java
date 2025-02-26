@@ -8,6 +8,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -20,6 +21,8 @@ import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.yaml.snakeyaml.Yaml;
+
+import static java.util.Objects.isNull;
 
 @Data
 @NoArgsConstructor
@@ -92,7 +95,7 @@ public class TestConfig {
   }
 
   @Value(staticConstructor = "of")
-  static class TagggedPredicate implements Predicate<FhipathTestSpec.TestCase> {
+  static class TaggedPredicate implements Predicate<FhipathTestSpec.TestCase> {
 
     @Nonnull
     Predicate<FhipathTestSpec.TestCase> predicate;
@@ -112,7 +115,7 @@ public class TestConfig {
     }
 
     @Nonnull
-    static TagggedPredicate of(@Nonnull final Predicate<FhipathTestSpec.TestCase> predicate,
+    static TaggedPredicate of(@Nonnull final Predicate<FhipathTestSpec.TestCase> predicate,
         @Nonnull final String title, @Nonnull final String category) {
       try {
         // Create a MessageDigest instance for MD5
@@ -121,7 +124,7 @@ public class TestConfig {
         final String data = category + title;
         byte[] hashBytes = digest.digest(data.getBytes(StandardCharsets.UTF_8));
         // Convert the hash bytes to a hexadecimal string
-        return TagggedPredicate.of(predicate,
+        return TaggedPredicate.of(predicate,
             DatatypeConverter.printHexBinary(hashBytes).toLowerCase());
       } catch (NoSuchAlgorithmException e) {
         throw new RuntimeException(e);
@@ -136,13 +139,13 @@ public class TestConfig {
 
     @Nullable
     String id;
-    @Nullable
+    @Nonnull
     String title;
     @Nullable
     String comment;
     @Nullable
     String type;
-    @Nullable
+
     boolean disabled = false;
     List<String> function;
     @Nullable
@@ -168,7 +171,7 @@ public class TestConfig {
                     .map(SpELPredicate::of)
             ).flatMap(Function.identity())
             .map(
-                p -> TagggedPredicate.of((Predicate<FhipathTestSpec.TestCase>) p, title, category));
+                p -> TaggedPredicate.of((Predicate<FhipathTestSpec.TestCase>) p, title, category));
       } else {
         return Stream.empty();
       }
@@ -179,7 +182,7 @@ public class TestConfig {
   @NoArgsConstructor
   public static class ExcludeSet {
 
-    @Nullable
+    @Nonnull
     String title;
     @Nullable
     String comment;
@@ -189,23 +192,34 @@ public class TestConfig {
     List<Exclude> exclude;
 
     @Nonnull
-    Stream<Predicate<FhipathTestSpec.TestCase>> toPredicates() {
-      return exclude.stream().flatMap(ex -> ex.toPredicates(title));
+    Stream<Predicate<FhipathTestSpec.TestCase>> toPredicates(
+        @Nonnull final Set<String> disabledExclusionIds) {
+      return exclude.stream()
+          .filter(ex -> isNull(ex.getId()) || !disabledExclusionIds.contains(ex.id))
+          .flatMap(ex -> ex.toPredicates(title));
     }
   }
-
 
   @Nonnull
   List<ExcludeSet> excludeSet = List.of();
 
   @Nonnull
-  Stream<Predicate<FhipathTestSpec.TestCase>> toPredicates() {
-    return excludeSet.stream().flatMap(ExcludeSet::toPredicates);
+  Stream<Predicate<FhipathTestSpec.TestCase>> toPredicates(
+      @Nonnull final Set<String> disabledExclusionIds) {
+    return excludeSet.stream().flatMap(es -> es.toPredicates(disabledExclusionIds));
   }
+
 
   @Nonnull
   public Function<FhipathTestSpec.TestCase, Optional<String>> toExcluder() {
-    final List<Predicate<FhipathTestSpec.TestCase>> predicates = toPredicates().toList();
+    return toExcluder(Set.of());
+  }
+
+  @Nonnull
+  public Function<FhipathTestSpec.TestCase, Optional<String>> toExcluder(
+      @Nonnull final Set<String> disabledExclusionIds) {
+    final List<Predicate<FhipathTestSpec.TestCase>> predicates = toPredicates(
+        disabledExclusionIds).toList();
     return testCase -> predicates
         .stream()
         .filter(p -> p.test(testCase))
