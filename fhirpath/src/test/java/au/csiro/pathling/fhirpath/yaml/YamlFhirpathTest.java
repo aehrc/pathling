@@ -15,10 +15,14 @@ public class YamlFhirpathTest extends YamlSpecTestBase {
   void testLiterals(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }
-  
+
   @YamlSpec("fhirpath-ptl/cases/existence_functions.yaml")
   void testExistenceFunctions(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }
 
+  @YamlSpec("fhirpath-ptl/cases/quantities.yaml")
+  void testQuantities(@Nonnull final RuntimeCase testCase) {
+    run(testCase);
+  }
 }

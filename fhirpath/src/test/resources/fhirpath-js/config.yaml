@@ -368,6 +368,11 @@ excludeSet:
           - "** two objects not"
           - "** two colls"
           - "** two colls not"
+      - title: "Comparison for time quantities returns null"
+        id: '#2172'
+        type: bug
+        any:
+            - "1 week = 7 days"
   - title: 'Comparison exlusions'
     glob: "fhirpath-js/cases/6.2_comparision.yaml"
     exclude:
@@ -837,3 +842,10 @@ excludeSet:
         any:
           - "Patient.birthDate.extension('http://hl7.org/fhir/StructureDefinition/patient-birthTime').exists()"
           - "Patient.birthDate.extension('http://hl7.org/fhir/StructureDefinition/patient-birthTime1').empty()"
+      - title: "Comparison for time quantities returns null"
+        id: '#2172'
+        type: bug
+        any:
+          - "7 days = 1 week"
+          - "6 days < 1 week"
+          - "8 days > 1"

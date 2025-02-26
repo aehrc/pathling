@@ -18,11 +18,12 @@
 package au.csiro.pathling.sql.dates;
 
 import au.csiro.pathling.fhirpath.CalendarDurationUtils;
+import au.csiro.pathling.fhirpath.FhirPathDurationUnit;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.udf.SqlFunction2;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.math.RoundingMode;
+import java.io.Serial;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import org.apache.spark.sql.Row;
@@ -39,6 +40,7 @@ import org.hl7.fhir.r4.model.Quantity;
 public abstract class TemporalArithmeticFunction<StoredType, IntermediateType extends BaseDateTimeType> implements
     SqlFunction2<StoredType, Row, String> {
 
+  @Serial
   private static final long serialVersionUID = -5016153440496309996L;
 
   @Nonnull
@@ -57,15 +59,17 @@ public abstract class TemporalArithmeticFunction<StoredType, IntermediateType ex
   private IntermediateType performArithmetic(final @Nonnull IntermediateType temporal,
       final @Nonnull Quantity calendarDuration,
       final boolean subtract) {
-    final int amountToAdd = calendarDuration.getValue().setScale(0, RoundingMode.HALF_UP)
-        .intValue();
-    final int temporalUnit = CalendarDurationUtils.getTemporalUnit(calendarDuration);
+
+    final FhirPathDurationUnit durationUnit = CalendarDurationUtils.getTemporalUnit(
+        calendarDuration);
+
+    final int amountToAdd = durationUnit.convertValueToUnit(calendarDuration.getValue());
 
     @SuppressWarnings("unchecked")
     final IntermediateType result = (IntermediateType) temporal.copy();
-    result.add(temporalUnit, subtract
-                             ? -amountToAdd
-                             : amountToAdd);
+    result.add(durationUnit.getCalendarDuration(), subtract
+                                                   ? -amountToAdd
+                                                   : amountToAdd);
     return result;
   }
 
