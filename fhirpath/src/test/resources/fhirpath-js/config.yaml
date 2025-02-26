@@ -116,12 +116,6 @@ excludeSet:
           - " as " # as operator
           - " & " # & operator
           - " div " # div operator
-      - title: "Unsupported week(s) duration"
-        id: '#2145'
-        type: bug
-        expression: # regex matching expressoin
-          - " weeks"
-          - " week"
   - title: Path exclusions
     glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
@@ -832,11 +826,6 @@ excludeSet:
         type: bug
         any:
           - "'a'-'b' = 'ab'"
-      - title: "'mod' operator incorrect for decimals"
-        id: '#2169'
-        type: bug
-        any:
-          - "2.2 mod 1.8 = 0.4"
       - title: "Extensions on primitive types not supported"
         type: feature
         any:
