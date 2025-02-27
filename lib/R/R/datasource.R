@@ -543,8 +543,11 @@ pathling_read_bulk <- function(pc,
     builder <- builder %>% j_invoke("withTypeFilters", to_java_list(sc, type_filters))
   }
   if (!is.null(include_associated_data)) {
-    builder <- builder %>% j_invoke("withIncludeAssociatedData", 
-                                   to_java_list(sc, include_associated_data))
+    # Create a list of AssociatedData objects using the fromCode static method
+    associated_data_objects <- purrr::map(include_associated_data, function(code) {
+      j_invoke_static(sc, "au.csiro.fhir.export.ws.AssociatedData", "fromCode", as.character(code))
+    })
+    builder <- builder %>% j_invoke("withIncludeAssociatedData", to_java_list(sc, associated_data_objects))
   }
   if (!is.null(output_extension)) {
     builder <- builder %>% j_invoke("withOutputExtension", as.character(output_extension))
