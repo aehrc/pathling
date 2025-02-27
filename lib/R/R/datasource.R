@@ -559,7 +559,7 @@ pathling_read_bulk <- function(pc,
 
   # Configure authentication if provided.
   if (!is.null(auth_config)) {
-    auth_builder <- j_invoke_new(sc, "au.csiro.pathling.auth.AuthConfig$AuthConfigBuilder")
+    auth_builder <- j_invoke_static(sc, "au.csiro.fhir.auth.AuthConfig", "builder")
 
     # Set defaults to match Java class.
     auth_builder <- auth_builder %>%
