@@ -141,7 +141,7 @@ class IssueInfo(NamedTuple):
 
 def main():
     # load yaml from "../src/test/resources/fhirpath-js/config.yaml"
-    with open("../src/test/resources/fhirpath-js/config.yaml", 'r') as stream:
+    with open("../resources/fhirpath-js/config.yaml", 'r') as stream:
         config = yaml.full_load(stream)
 
     def to_definition(ex):
@@ -164,7 +164,7 @@ def main():
     issues = list(to_issue_info(config))
     issues_by_type = [(key, list(group)) for key, group in
                       itertools.groupby(sorted(issues, key=lambda x: x.type), key=lambda x: x.type)]
-    file_report = "../target/validation-report.html"
+    file_report = "../../../target/validation-report.html"
 
     # Load and parse the Surefire XML report
     tree = ET.parse(
