@@ -289,60 +289,27 @@ class DataSources(SparkConversionsMixin):
         """
         from pathling.bulk import BulkExportClient
 
-        # Create appropriate client based on parameters
-        if group_id is not None:
-            client = BulkExportClient.for_group(
-                self.spark._jvm,
-                fhir_endpoint_url=fhir_endpoint_url,
-                output_dir=output_dir,
-                group_id=group_id,
-                output_format=output_format,
-                since=since,
-                types=types,
-                elements=elements,
-                include_associated_data=include_associated_data,
-                type_filters=type_filters,
-                output_extension=output_extension,
-                timeout=timeout,
-                max_concurrent_downloads=max_concurrent_downloads,
-                auth_config=auth_config
-            )
-        elif patients is not None:
-            client = BulkExportClient.for_patient(
-                self.spark._jvm,
-                fhir_endpoint_url=fhir_endpoint_url,
-                output_dir=output_dir,
-                patients=patients,
-                output_format=output_format,
-                since=since,
-                types=types,
-                elements=elements,
-                include_associated_data=include_associated_data,
-                type_filters=type_filters,
-                output_extension=output_extension,
-                timeout=timeout,
-                max_concurrent_downloads=max_concurrent_downloads,
-                auth_config=auth_config
-            )
-        else:
-            client = BulkExportClient.for_system(
-                self.spark._jvm,
-                fhir_endpoint_url=fhir_endpoint_url,
-                output_dir=output_dir,
-                output_format=output_format,
-                since=since,
-                types=types,
-                elements=elements,
-                include_associated_data=include_associated_data,
-                type_filters=type_filters,
-                output_extension=output_extension,
-                timeout=timeout,
-                max_concurrent_downloads=max_concurrent_downloads,
-                auth_config=auth_config
-            )
+        # Create client using the simplified API
+        client = BulkExportClient.create(
+            self.spark._jvm,
+            fhir_endpoint_url=fhir_endpoint_url,
+            output_dir=output_dir,
+            group_id=group_id,
+            patients=patients,
+            output_format=output_format,
+            since=since,
+            types=types,
+            elements=elements,
+            include_associated_data=include_associated_data,
+            type_filters=type_filters,
+            output_extension=output_extension,
+            timeout=timeout,
+            max_concurrent_downloads=max_concurrent_downloads,
+            auth_config=auth_config
+        )
 
         # Perform the export
-        result = client.export()
+        client.export()
 
         # Return a DataSource that reads from the exported files
         return self.ndjson(output_dir)
