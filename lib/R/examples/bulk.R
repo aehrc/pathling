@@ -38,9 +38,10 @@ client_id <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InJlZ2lzdHJhdGlvbi10b2
 test_bulk_exports <- function() {
   # Initialize PathlingContext
   pc <- pathling_connect()
+  pathling_spark(pc) %>% spark_context() %>% invoke("setLogLevel", "DEBUG")
 
   # Base parameters from the demo server
-  fhir_server <- "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwidGx0IjoxNSwibSI6MSwiZGVsIjowLCJzZWN1cmUiOjEsIm9wcCI6MTB9/fhir"
+  fhir_server <- "https://bulk-data.smarthealthit.org/fhir"
   output_base <- file.path(tempdir(), "bulk_export_test")
 
   if (dir.exists(output_base)) {
@@ -70,7 +71,7 @@ test_bulk_exports <- function() {
       use_smart = TRUE,
       use_form_for_basic_auth = FALSE,
       scope = "system/Patient.r system/Observation.r",
-      token_expiry_tolerance = 120
+      token_expiry_tolerance = 30
     )
   )
   cat("System export completed successfully\n")

@@ -25,14 +25,6 @@ invoke_datasource <- function(pc, name, ...) {
       j_invoke(name, ...)
 }
 
-to_java_list <- function(sc, elements) {
-  list <- j_invoke_new(sc, "java.util.ArrayList")
-  for (e in elements) {
-    j_invoke(list, "add", e)
-  }
-  list
-}
-
 #' ImportMode
 #' 
 #' The following import modes are supported:
@@ -520,8 +512,10 @@ pathling_read_bulk <- function(pc,
   # Configure the basic parameters.
   builder <- builder %>%
       j_invoke("withFhirEndpointUrl", as.character(fhir_endpoint_url)) %>%
-      j_invoke("withOutputDir", as.character(output_dir)) %>%
-      j_invoke("withTypes", to_java_list(sc, types))
+      j_invoke("withOutputDir", as.character(output_dir))
+  for (t in types) {
+    builder <- builder %>% j_invoke("withType", as.character(t))
+  }
 
   # Configure optional parameters if provided.
   if (!is.null(output_format)) {
@@ -532,22 +526,26 @@ pathling_read_bulk <- function(pc,
     builder <- builder %>% j_invoke("withSince", instant)
   }
   if (!is.null(patients)) {
-    j_objects <- purrr::map(patients, function(r) j_invoke_static(sc, "au.csiro.fhir.model.Reference", 
-                                                           "of", r))
-    builder <- builder %>% j_invoke("withPatients", to_java_list(sc, j_objects))
+    for (p in patients) {
+      j_object <- j_invoke_static(sc, "au.csiro.fhir.model.Reference", "of", p)
+      builder <- builder %>% j_invoke("withPatient", j_object)
+    }
   }
   if (!is.null(elements)) {
-    builder <- builder %>% j_invoke("withElements", to_java_list(sc, elements))
+    for (e in elements) {
+      builder <- builder %>% j_invoke("withElement", as.character(e))
+    }
   }
   if (!is.null(type_filters)) {
-    builder <- builder %>% j_invoke("withTypeFilters", to_java_list(sc, type_filters))
+    for (f in type_filters) {
+      builder <- builder %>% j_invoke("withTypeFilter", as.character(f))
+    }
   }
   if (!is.null(include_associated_data)) {
-    # Create a list of AssociatedData objects using the fromCode static method
-    associated_data_objects <- purrr::map(include_associated_data, function(code) {
-      j_invoke_static(sc, "au.csiro.fhir.export.ws.AssociatedData", "fromCode", as.character(code))
-    })
-    builder <- builder %>% j_invoke("withIncludeAssociatedData", to_java_list(sc, associated_data_objects))
+    for (d in include_associated_data) {
+      j_object <- j_invoke_static(sc, "au.csiro.fhir.export.ws.AssociatedData", "fromCode", d)
+      builder <- builder %>% j_invoke("withIncludeAssociatedDatum", j_object)
+    }
   }
   if (!is.null(output_extension)) {
     builder <- builder %>% j_invoke("withOutputExtension", as.character(output_extension))
