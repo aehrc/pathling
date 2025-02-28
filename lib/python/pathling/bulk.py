@@ -108,24 +108,22 @@ class BulkExportClient:
             for element in elements:
                 builder.withElement(element)
         if include_associated_data is not None:
-            # Convert Python list to Java List<String>
-            java_list = jvm.java.util.ArrayList()
             for data in include_associated_data:
-                java_list.add(data)
-            builder.withIncludeAssociatedData(java_list)
+                j_object = jvm.au.csiro.fhir.export.ws.AssociatedData.fromCode(data)
+                builder.withIncludeAssociatedDatum(j_object)
         if type_filters is not None:
             for filter_ in type_filters:
                 builder.withTypeFilter(filter_)
+                
+        auth_builder = jvm.au.csiro.fhir.auth.AuthConfig.builder()
+
+        # Set defaults to match Java class
+        auth_builder.enabled(False)
+        auth_builder.useSMART(True)
+        auth_builder.useFormForBasicAuth(False)
+        auth_builder.tokenExpiryTolerance(120)
 
         if auth_config is not None:
-            auth_builder = jvm.au.csiro.fhir.auth.AuthConfig.builder()
-            
-            # Set defaults to match Java class
-            auth_builder.enabled(False)
-            auth_builder.useSMART(True)
-            auth_builder.useFormForBasicAuth(False)
-            auth_builder.tokenExpiryTolerance(120)
-
             # Map Python config to Java builder methods
             if 'enabled' in auth_config:
                 auth_builder.enabled(auth_config['enabled'])
@@ -146,8 +144,8 @@ class BulkExportClient:
             if 'token_expiry_tolerance' in auth_config:
                 auth_builder.tokenExpiryTolerance(auth_config['token_expiry_tolerance'])
 
-            auth_config_obj = auth_builder.build()
-            builder.withAuthConfig(auth_config_obj)
+        auth_config_obj = auth_builder.build()
+        builder.withAuthConfig(auth_config_obj)
 
     @classmethod
     def for_system(cls, jvm, *args, **kwargs) -> 'BulkExportClient':
