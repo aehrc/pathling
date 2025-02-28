@@ -38,7 +38,6 @@ client_id <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InJlZ2lzdHJhdGlvbi10b2
 test_bulk_exports <- function() {
   # Initialize PathlingContext
   pc <- pathling_connect()
-  pathling_spark(pc) %>% spark_context() %>% invoke("setLogLevel", "DEBUG")
 
   # Base parameters from the demo server
   fhir_server <- "https://bulk-data.smarthealthit.org/fhir"
