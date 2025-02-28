@@ -54,7 +54,7 @@
     <dependency>
       <groupId>au.csiro.fhir</groupId>
       <artifactId>bulk-export</artifactId>
-      <version>1.0.2-SNAPSHOT</version>
+      <version>1.0.2</version>
     </dependency>
 
     <!-- Apache Spark -->
