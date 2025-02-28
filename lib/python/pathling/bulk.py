@@ -78,29 +78,59 @@ class BulkExportClient:
             - scope: The scope to request
             - token_expiry_tolerance: The token expiry tolerance in seconds (default: 120)
         """
+        cls._configure_basic_settings(builder, fhir_endpoint_url, output_dir, output_format, 
+                                     output_extension, max_concurrent_downloads)
+        
+        if timeout is not None:
+            cls._configure_timeout(jvm, builder, timeout)
+            
+        if since is not None:
+            cls._configure_since(jvm, builder, since)
+            
+        cls._configure_resource_settings(jvm, builder, types, elements, 
+                                        include_associated_data, type_filters)
+        
+        cls._configure_auth(jvm, builder, auth_config)
+
+    @staticmethod
+    def _configure_basic_settings(builder, fhir_endpoint_url: str, output_dir: str,
+                                 output_format: str, output_extension: str,
+                                 max_concurrent_downloads: int):
+        """Configure the basic settings for the builder."""
         builder.withFhirEndpointUrl(fhir_endpoint_url)
         builder.withOutputDir(output_dir)
         builder.withOutputFormat(output_format)
         builder.withOutputExtension(output_extension)
         builder.withMaxConcurrentDownloads(max_concurrent_downloads)
 
-        if timeout is not None:
-            java_duration = jvm.java.time.Duration.ofSeconds(timeout)
-            builder.withTimeout(java_duration)
+    @staticmethod
+    def _configure_timeout(jvm, builder, timeout: int):
+        """Configure the timeout for the builder."""
+        java_duration = jvm.java.time.Duration.ofSeconds(timeout)
+        builder.withTimeout(java_duration)
 
-        if since is not None:
-            if since.tzinfo is None:
-                raise ValueError("datetime must include timezone information")
-            # Format with microsecond precision and timezone offset
-            instant_str = since.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]  # Truncate to milliseconds
-            if since.utcoffset() is None:
-                instant_str += 'Z'
-            else:
-                offset = since.strftime('%z')
-                # Insert colon in timezone offset
-                instant_str += f"{offset[:3]}:{offset[3:]}"
-            java_instant = jvm.java.time.Instant.parse(instant_str)
-            builder.withSince(java_instant)
+    @staticmethod
+    def _configure_since(jvm, builder, since: datetime):
+        """Configure the since timestamp for the builder."""
+        if since.tzinfo is None:
+            raise ValueError("datetime must include timezone information")
+        # Format with microsecond precision and timezone offset
+        instant_str = since.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]  # Truncate to milliseconds
+        if since.utcoffset() is None:
+            instant_str += 'Z'
+        else:
+            offset = since.strftime('%z')
+            # Insert colon in timezone offset
+            instant_str += f"{offset[:3]}:{offset[3:]}"
+        java_instant = jvm.java.time.Instant.parse(instant_str)
+        builder.withSince(java_instant)
+
+    @staticmethod
+    def _configure_resource_settings(jvm, builder, types: Optional[List[str]],
+                                    elements: Optional[List[str]],
+                                    include_associated_data: Optional[List[str]],
+                                    type_filters: Optional[List[str]]):
+        """Configure resource-related settings for the builder."""
         if types is not None:
             for type_ in types:
                 builder.withType(type_)
@@ -114,7 +144,10 @@ class BulkExportClient:
         if type_filters is not None:
             for filter_ in type_filters:
                 builder.withTypeFilter(filter_)
-                
+
+    @staticmethod
+    def _configure_auth(jvm, builder, auth_config: Optional[dict]):
+        """Configure authentication settings for the builder."""
         auth_builder = jvm.au.csiro.fhir.auth.AuthConfig.builder()
 
         # Set defaults to match Java class
