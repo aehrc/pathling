@@ -8,6 +8,10 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * The default implementation of a composite data type allowing for explicit definition of its
+ * children and other properties.
+ */
 @Value(staticConstructor = "of")
 public class DefCompositeDefinition implements ElementDefinition {
 

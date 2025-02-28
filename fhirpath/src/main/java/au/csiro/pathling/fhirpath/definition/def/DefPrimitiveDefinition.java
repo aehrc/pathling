@@ -7,6 +7,11 @@ import java.util.Optional;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
+
+/**
+ * The default implementation of a primitive data type allowing for explicit definition of its
+ * properties.
+ */
 @Value(staticConstructor = "of")
 public class DefPrimitiveDefinition implements ElementDefinition {
 

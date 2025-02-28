@@ -22,6 +22,10 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.ListResource;
 
+/**
+ * The definition context that encapsulates a {@link FhirContext} and provides access to all FHIR
+ * resource definitions within it.
+ */
 @Value(staticConstructor = "of")
 public class FhirDefinitionContext implements DefinitionContext {
 

@@ -2,6 +2,9 @@ package au.csiro.pathling.fhirpath.definition;
 
 import jakarta.annotation.Nonnull;
 
+/**
+ * A context for finding definitions of resource types.
+ */
 public interface DefinitionContext {
 
   /**

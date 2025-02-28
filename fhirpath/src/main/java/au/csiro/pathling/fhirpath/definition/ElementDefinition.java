@@ -5,7 +5,7 @@ import java.util.Optional;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
- * Encapsulates the FHIR definitions for a child resolved to specific element.
+ * Represents a definition of a FHIR-like element.
  */
 public interface ElementDefinition extends ChildDefinition {
 

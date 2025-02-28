@@ -8,6 +8,10 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * The default implementation of {@link ResourceDefinition} allowing for explicit definition of its
+ * children.
+ */
 @Value(staticConstructor = "of")
 public class DefResourceDefinition implements ResourceDefinition {
 

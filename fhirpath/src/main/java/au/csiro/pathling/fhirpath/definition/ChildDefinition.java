@@ -5,12 +5,12 @@ import java.util.Optional;
 
 
 /**
- * Encapsulates the FHIR definitions for a child.
+ * Represents of a named child in a FHIR-like schema.
  *
  * @author Piotr Szul
  */
 public interface ChildDefinition extends NodeDefinition {
-  
+
   /**
    * @return the name of this child
    */

@@ -12,6 +12,11 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 
+
+/**
+ * A default implementation of {@link DefinitionContext} that allows for explicit definition of
+ * resource types.
+ */
 @Value
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class DefDefinitionContext implements DefinitionContext {
@@ -26,7 +31,7 @@ public class DefDefinitionContext implements DefinitionContext {
         .orElseThrow(
             () -> new IllegalArgumentException("Resource type not found: " + resourceType));
   }
-  
+
   @Nonnull
   public static DefDefinitionContext of(ResourceDefinition... resourceDefinitions) {
     return new DefDefinitionContext(

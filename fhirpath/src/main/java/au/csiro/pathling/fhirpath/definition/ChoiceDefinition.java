@@ -4,6 +4,9 @@ import jakarta.annotation.Nonnull;
 import java.util.Optional;
 
 
+/**
+ * Represents a choice child elements in a FHIR-like schema.
+ */
 public interface ChoiceDefinition extends ChildDefinition {
 
   /**

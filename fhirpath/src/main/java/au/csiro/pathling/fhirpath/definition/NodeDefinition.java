@@ -4,7 +4,8 @@ import jakarta.annotation.Nonnull;
 import java.util.Optional;
 
 /**
- * Base abstractions for FHIR defintions.
+ * Base class for FHIR-like schema definitions. The schema is capable or representing a subset all
+ * FHIR schema concepts such as elements, choices, and resources.
  */
 public interface NodeDefinition {
 
