@@ -160,7 +160,7 @@
     <dependency>
       <groupId>com.auth0</groupId>
       <artifactId>java-jwt</artifactId>
-      <version>4.4.0</version>
+      <version>4.5.0</version>
     </dependency>
     <dependency>
       <groupId>com.auth0</groupId>
@@ -190,7 +190,7 @@
     <dependency>
       <groupId>io.micrometer</groupId>
       <artifactId>micrometer-registry-prometheus</artifactId>
-      <version>1.13.0</version>
+      <version>1.14.4</version>
     </dependency>
 
     <!-- Testing -->
@@ -367,7 +367,7 @@
         <plugin>
           <groupId>com.google.cloud.tools</groupId>
           <artifactId>jib-maven-plugin</artifactId>
-          <version>3.4.2</version>
+          <version>3.4.4</version>
           <configuration>
             <from>
               <image>${pathling.dockerBaseImage}</image>
