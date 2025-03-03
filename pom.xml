@@ -78,21 +78,13 @@
     <pathling.deltaVersion>3.3.0</pathling.deltaVersion>
     <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
     <pathling.hadoopMajorVersion>3</pathling.hadoopMajorVersion>
-    <pathling.hapiFhirVersion>7.0.2</pathling.hapiFhirVersion>
-    <pathling.springBootVersion>3.4.3</pathling.springBootVersion>
-    <pathling.springSecurityVersion>6.2.0</pathling.springSecurityVersion>
+    <pathling.hapiFhirVersion>7.6.1</pathling.hapiFhirVersion>
+    <pathling.springBootVersion>3.3.5</pathling.springBootVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.3.4</pathling.dockerJavaVersion>
     <pathling.awsSdkVersion>1.12.782</pathling.awsSdkVersion>
-    <pathling.lombokVersion>1.18.36</pathling.lombokVersion>
     <pathling.guavaVersion>32.1.3-jre</pathling.guavaVersion>
-    <pathling.infinispanVersion>15.1.5.Final</pathling.infinispanVersion>
-    <pathling.jacksonVersion>2.16.1</pathling.jacksonVersion>
-    <pathling.jerseyVersion>2.40</pathling.jerseyVersion>
     <pathling.surefireVersion>3.5.2</pathling.surefireVersion>
-    <pathling.logbackVersion>1.5.16</pathling.logbackVersion>
-    <pathling.slf4jVersion>2.0.16</pathling.slf4jVersion>
-    <pathling.derbyVersion>10.17.1.0</pathling.derbyVersion>
   </properties>
 
   <modules>
@@ -254,22 +246,6 @@
         <version>${project.version}</version>
       </dependency>
 
-      <!-- Ensure that consistent and correct versions of Jackson and Jersey are used. -->
-      <dependency>
-        <groupId>com.fasterxml.jackson</groupId>
-        <artifactId>jackson-bom</artifactId>
-        <version>${pathling.jacksonVersion}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.jersey</groupId>
-        <artifactId>jersey-bom</artifactId>
-        <version>${pathling.jerseyVersion}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-
       <!-- Apache Spark -->
       <dependency>
         <groupId>org.apache.spark</groupId>
@@ -343,16 +319,6 @@
         <artifactId>scala-library</artifactId>
         <version>${pathling.scalaFullVersion}</version>
       </dependency>
-      <dependency>
-        <groupId>org.apache.derby</groupId>
-        <artifactId>derby</artifactId>
-        <version>${pathling.derbyVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.derby</groupId>
-        <artifactId>derbytools</artifactId>
-        <version>${pathling.derbyVersion}</version>
-      </dependency>
       <!-- This is required for Spark UI, which still has some expectations that a legacy 
       javax.servlet API is present -->
       <dependency>
@@ -360,6 +326,15 @@
         <artifactId>javax.servlet-api</artifactId>
         <version>4.0.1</version>
         <scope>runtime</scope>
+      </dependency>
+
+      <!-- Spring -->
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${pathling.springBootVersion}</version>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
 
       <!-- HAPI FHIR -->
@@ -375,77 +350,6 @@
         <groupId>com.fasterxml.woodstox</groupId>
         <artifactId>woodstox-core</artifactId>
         <version>6.4.0</version>
-      </dependency>
-
-      <!-- Spring -->
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter</artifactId>
-        <version>${pathling.springBootVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-web</artifactId>
-        <version>${pathling.springBootVersion}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-tomcat</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-jetty</artifactId>
-        <version>${pathling.springBootVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-aop</artifactId>
-        <version>${pathling.springBootVersion}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>*</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-configuration-processor</artifactId>
-        <version>${pathling.springBootVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-security</artifactId>
-        <version>${pathling.springBootVersion}</version>
-      </dependency>
-      <dependency>
-      <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-actuator</artifactId>
-        <version>${pathling.springBootVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.security</groupId>
-        <artifactId>spring-security-oauth2-resource-server</artifactId>
-        <version>${pathling.springSecurityVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.security</groupId>
-        <artifactId>spring-security-oauth2-jose</artifactId>
-        <version>${pathling.springSecurityVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.security</groupId>
-        <artifactId>spring-security-test</artifactId>
-        <version>${pathling.springSecurityVersion}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-test</artifactId>
-        <version>${pathling.springBootVersion}</version>
-        <scope>test</scope>
       </dependency>
 
       <!-- ANTLR -->
@@ -532,14 +436,6 @@
         <scope>test</scope>
       </dependency>
 
-      <!-- Lombok -->
-      <dependency>
-        <groupId>org.projectlombok</groupId>
-        <artifactId>lombok</artifactId>
-        <version>${pathling.lombokVersion}</version>
-        <scope>provided</scope>
-      </dependency>
-
       <!-- Misc -->
       <dependency>
         <groupId>com.google.code.gson</groupId>
@@ -586,43 +482,6 @@
         <groupId>commons-lang</groupId>
         <artifactId>commons-lang</artifactId>
         <version>2.6</version>
-      </dependency>
-      <dependency>
-        <groupId>org.infinispan</groupId>
-        <artifactId>infinispan-bom</artifactId>
-        <version>${pathling.infinispanVersion}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
-        <version>${pathling.slf4jVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>log4j-over-slf4j</artifactId>
-        <version>${pathling.slf4jVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>jcl-over-slf4j</artifactId>
-        <version>${pathling.slf4jVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>jul-to-slf4j</artifactId>
-        <version>${pathling.slf4jVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback-classic</artifactId>
-        <version>${pathling.logbackVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback-core</artifactId>
-        <version>${pathling.logbackVersion}</version>
       </dependency>
 
       <!-- CVE-2022-42889-->
