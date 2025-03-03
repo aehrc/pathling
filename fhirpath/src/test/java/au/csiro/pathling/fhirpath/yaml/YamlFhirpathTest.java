@@ -25,4 +25,9 @@ public class YamlFhirpathTest extends YamlSpecTestBase {
   void testQuantities(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }
+
+  @YamlSpec("fhirpath-ptl/cases/math.yaml")
+  void testMath(@Nonnull final RuntimeCase testCase) {
+    run(testCase);
+  }
 }

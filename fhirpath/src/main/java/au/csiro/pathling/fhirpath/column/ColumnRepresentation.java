@@ -262,6 +262,17 @@ public abstract class ColumnRepresentation {
   }
 
   /**
+   * Inverts the current {@link ColumnRepresentation} (applies unary minus).
+   *
+   * @return A new {@link ColumnRepresentation} that is inverted
+   */
+  @Nonnull
+  public ColumnRepresentation inverse() {
+    return map(Column::unary_$minus);
+  }
+
+
+  /**
    * Checks if the current {@link ColumnRepresentation} matches a regular expression.
    *
    * @param regex The regular expression to match against
@@ -306,7 +317,7 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation asCanonical() {
     return removeNulls().normaliseNull();
   }
-  
+
   /**
    * Transforms the current {@link ColumnRepresentation} in a way that only affects a singular value
    * if it is not null.

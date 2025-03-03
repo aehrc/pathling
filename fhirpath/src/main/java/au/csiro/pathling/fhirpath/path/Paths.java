@@ -30,6 +30,7 @@ import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
 import au.csiro.pathling.fhirpath.operator.BinaryOperator;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorInput;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
+import au.csiro.pathling.fhirpath.operator.UnaryOperator;
 import jakarta.annotation.Nonnull;
 import java.util.Collections;
 import java.util.List;
@@ -124,6 +125,43 @@ final public class Paths {
       }
     }
   }
+
+  @Value
+  public static class EvalUnaryOperator implements FhirPath {
+
+    @Nonnull
+    FhirPath path;
+
+    @Nonnull
+    UnaryOperator operator;
+
+    @Override
+    public Collection apply(@Nonnull final Collection input,
+        @Nonnull final EvaluationContext context) {
+      return operator.invoke(new UnaryOperator.UnaryOperatorInput(path.apply(input, context)));
+    }
+
+    @Override
+    @Nonnull
+    public String toExpression() {
+      return operator.getOperatorName() + path.toTermExpression();
+    }
+
+    @Override
+    public Stream<FhirPath> children() {
+      return Stream.of(path);
+    }
+
+    @Override
+    @Nonnull
+    public FhirPath withNewChildren(@Nonnull final List<FhirPath> newChildren) {
+      if (newChildren.size() != 1) {
+        throw new IllegalArgumentException("EvalUnaryOperator must have exactly one child");
+      }
+      return new EvalUnaryOperator(newChildren.get(0), operator);
+    }
+  }
+
 
   @Value
   public static class EvalFunction implements FhirPath {

@@ -21,6 +21,7 @@ import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;

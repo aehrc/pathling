@@ -22,7 +22,6 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.Concepts;
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
@@ -53,7 +52,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 @Getter
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
-public class Collection implements Comparable, Numeric {
+public class Collection implements Comparable {
 
   // See https://hl7.org/fhir/fhirpath.html#types.
   @Nonnull
@@ -321,25 +320,7 @@ public class Collection implements Comparable, Numeric {
   public boolean isComparableTo(@Nonnull final Comparable path) {
     return path instanceof EmptyCollection;
   }
-
-  @Nonnull
-  @Override
-  public Function<Numeric, Collection> getMathOperation(@Nonnull final MathOperation operation) {
-    return input -> this;
-  }
-
-  @Nonnull
-  @Override
-  public Optional<Column> getNumericValue() {
-    return Optional.empty();
-  }
-
-  @Nonnull
-  @Override
-  public Optional<Column> getNumericContext() {
-    return Optional.empty();
-  }
-
+  
   /**
    * Returns a new {@link Collection} with the specified {@link ColumnRepresentation}.
    *

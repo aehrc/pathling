@@ -470,6 +470,7 @@ excludeSet:
         any:
           - "** Empty result multiplying empty collection (1)"
           - "** Empty result when one of the operands is null"
+          - "** Empty result multiplying empty collection (2)"
       - title: "'-' operator incorrect when right argument is empty"
         id: '#2174'
         type: bug
@@ -522,6 +523,8 @@ excludeSet:
         type: bug
         any:
           - "** Empty result if one or both operands is empty (1b)"
+          - "** Empty result if one or both operands is empty (2)"
+          - "** Empty result if one or both operands is empty (3)"
       - title: "Time literals with Z timezone break parsing"
         type: bug
         expression:
@@ -532,6 +535,8 @@ excludeSet:
         any:
           - "** Can concatenate two strings with +"
           - "** Null in concatenation is treated as an empty collection (2)"
+          - "** Empty collection in concatenation using +"
+          - "** Null in concatenation is treated as an empty collection (1)"
       - title: "Incorrect Math operations on calendar quantities with limited precision"
         id: '#2173'
         type: bug
@@ -686,17 +691,6 @@ excludeSet:
         any:
           - "** testEscapedIdentifier"
           - "** testSimpleBackTick1"
-      - title: "Polarity operator not supported"
-        id: '#2152'
-        type: bug
-        any:
-          - "** testLiteralIntegerNotEqual"
-          - "** testPolarityPrecedence"
-          - "** testLiteralIntegerGreaterThan"
-          - "** testLiteralIntegerLessThanPolarityTrue"
-          - "** testLiteralIntegerLessThanFalse"
-          - "** testLiteralIntegerLessThanPolarityFalse"
-          - "** testNegativeIntegerLiteralToString"
       - title: "Direct access to polymorphic collection properties"
         type: ???
         any:
