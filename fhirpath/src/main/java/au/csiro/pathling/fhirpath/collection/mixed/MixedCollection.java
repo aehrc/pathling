@@ -2,7 +2,7 @@ package au.csiro.pathling.fhirpath.collection.mixed;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.EmptyRepresentation;
-import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
+import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.Getter;
@@ -29,7 +29,7 @@ public abstract class MixedCollection extends Collection {
    */
   @Nonnull
   public static MixedCollection buildElement(@Nonnull final Collection parent,
-      @Nonnull final ChoiceChildDefinition definition) {
+      @Nonnull final ChoiceDefinition definition) {
     return new ChoiceElementCollection(definition, parent);
   }
 

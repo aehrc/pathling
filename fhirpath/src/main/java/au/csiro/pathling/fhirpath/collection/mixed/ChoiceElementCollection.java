@@ -2,7 +2,7 @@ package au.csiro.pathling.fhirpath.collection.mixed;
 
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
+import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
 import jakarta.annotation.Nonnull;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
@@ -15,7 +15,7 @@ public class ChoiceElementCollection extends MixedCollection {
    * The definition of this choice element.
    */
   @Nonnull
-  ChoiceChildDefinition choiceDefinition;
+  ChoiceDefinition choiceDefinition;
 
   @Nonnull
   Collection parent;

@@ -1,0 +1,45 @@
+{
+  "resourceType": "QuestionnaireResponse",
+  "item": [{
+    "linkId": "1",
+    "answer": {
+      "valueQuantity": {
+        "value": 2,
+        "unit": "year(real UCUM code in field 'code')",
+        "system": "http://unitsofmeasure.org",
+        "code": "a"
+      }
+    }
+  },{
+    "linkId": "2",
+    "answer": {
+      "valueQuantity": {
+        "value": 3,
+        "unit": "year(real UCUM code in field 'code')",
+        "system": "http://unitsofmeasure.org",
+        "code": "min"
+      }
+    }
+  },{
+    "linkId": "3",
+    "answer": {
+      "valueQuantity": {
+        "value": 4,
+        "unit": "year(real UCUM code in field 'code')",
+        "system": "http://othersystemofmeasure.org",
+        "code": "min"
+      }
+    }
+  },{
+    "linkId": "4",
+    "answer": {
+      "valueQuantity": {
+        "value": 1,
+        "comparator": ">",
+        "unit": "year(real UCUM code in field 'code')",
+        "system": "http://unitsofmeasure.org",
+        "code": "min"
+      }
+    }
+  }]
+}

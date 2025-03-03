@@ -1,0 +1,135 @@
+tests:
+  - 'group: Paths with choice types':
+    - desc: 'Observation.value with an R5 FHIR model'
+      expression: 'Observation.value'
+      result: ["high"]
+      model: 'r5'
+
+    - desc: 'Observation.value with an R4 FHIR model'
+      expression: 'Observation.value'
+      result: ["high"]
+      model: 'r4'
+
+    - desc: 'Observation.value with an STU3 FHIR model'
+      expression: 'Observation.value'
+      result: ["high"]
+      model: 'stu3'
+
+    - desc: 'Observation.value with an DSTU2 FHIR model'
+      expression: 'Observation.value'
+      result: ["high"]
+      model: 'dstu2'
+
+    - desc: 'Observation.value without a model'
+      expression: 'Observation.value'
+      result: []
+
+    - desc: 'Observation.value contained in another resource (1)'
+      expression: 'Observation.contained[0].value'
+      model: 'r4'
+      result: ['medium']
+
+    - desc: 'Observation.value contained in another resource (2)'
+      expression: 'Observation.contained.value'
+      model: 'r4'
+      result: ['medium', 'low']
+
+    - desc: 'Type of Observation contained in another resource'
+      expression: 'Observation.contained[0] is Observation'
+      model: 'r4'
+      result: [true]
+
+    - desc: 'Getting choice type fields via children()'
+      expression: 'Observation.children().value'
+      model: 'r4'
+      result: ['medium', 'low']
+
+    - desc: 'Getting choice type fields via children() (2)'
+      expression: 'Observation.children().children().value'
+      model: 'r4'
+      result: ['zero']
+
+    - desc: 'Getting choice type fields via descendants()'
+      expression: 'Observation.descendants().value'
+      model: 'r4'
+      result: ['medium', 'low', 'zero', 'Red', 'Blue', 'Green']
+
+    - desc: 'Getting choice type fields via descendants() and where()'
+      expression: "Observation.descendants().where(resourceType = 'Observation').value"
+      model: 'r4'
+      result: ['medium', 'low', 'zero']
+
+    - desc: "QR with where()"
+      expression: "contained.where(resourceType = 'QuestionnaireResponse').item.where(linkId = '1').answer.value"
+      model: 'r4'
+      result: ['Red']
+
+    - desc: "QR with descendants() and where() (1)"
+      expression: "contained.where(resourceType = 'QuestionnaireResponse').descendants().where(linkId = '1').answer.value"
+      model: 'r4'
+      result: ['Red']
+
+    - desc: "QR with descendants() and where() (2)"
+      expression: "contained.where(resourceType = 'QuestionnaireResponse').descendants().where(linkId = '1.0').answer.value"
+      model: 'r4'
+      result: ['Green']
+
+    - desc: "QR with descendants() and where() (3)"
+      expression: "contained.where(resourceType = 'QuestionnaireResponse').descendants().where(linkId = '1.1').answer.value"
+      model: 'r4'
+      result: ['Blue']
+
+    - desc: "QR with item.answer.value"
+      expression: "contained.where(resourceType = 'QuestionnaireResponse').item.answer.value"
+      model: 'r4'
+      result: ['Red']
+
+    - desc: "QR with item.item.answer.value"
+      expression: "contained.where(resourceType = 'QuestionnaireResponse').item.item.answer.value"
+      model: 'r4'
+      result: ['Blue']
+
+    - desc: "QR with item.answer.item.answer.value"
+      expression: "contained.where(resourceType = 'QuestionnaireResponse').item.answer.item.answer.value"
+      model: 'r4'
+      result: ['Green']
+
+    - desc: "QR with item.answer.item.answer.value (STU3)"
+      expression: "contained.where(resourceType = 'QuestionnaireResponse').item.answer.item.answer.value"
+      model: 'stu3'
+      result: ['Green']
+
+    - desc: "Access a custom field starting with a capital letter (1)"
+      expression: CustomField = 'test'
+      result: [true]
+
+    - desc: "Access a custom field starting with a capital letter (2)"
+      expression: Observation.CustomField = 'test'
+      result: [true]
+
+
+subject:
+  resourceType: Observation
+  CustomField: "test"
+  valueString: "high"
+  contained:
+    - resourceType: Observation
+      valueString: "medium"
+    - resourceType: Observation
+      valueString: "low"
+      contained:
+      - resourceType: Observation
+        valueString: "zero"
+    - resourceType: QuestionnaireResponse
+      item:
+        - linkId: "1"
+          answer:
+            - valueString: "Red"
+              item:
+                - linkId: "1.0"
+                  answer:
+                  - valueString: "Green"
+          item:
+            - linkId: "1.1"
+              answer:
+                - valueString: "Blue"

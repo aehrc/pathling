@@ -1,15 +1,18 @@
-package au.csiro.pathling.fhirpath.definition;
+package au.csiro.pathling.fhirpath.definition.fhir;
 
 import static au.csiro.pathling.utilities.Functions.maybeCast;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
+import au.csiro.pathling.fhirpath.definition.ChildDefinition;
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
+import au.csiro.pathling.fhirpath.definition.ResourceTypeSet;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Patient;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -25,13 +28,13 @@ class NodeDefinitionTest {
     // test that choice with reference type returns the correct type of definition
   void testSimpleReference() {
 
-    final ResourceDefinition conditionDefinition = new ResourceDefinition(
+    final FhirResourceDefinition conditionDefinition = new FhirResourceDefinition(
         ResourceType.CONDITION,
         fhirContext.getResourceDefinition(ResourceType.CONDITION.toCode()));
 
     final ChildDefinition referenceDefinition = conditionDefinition.getChildElement("subject")
         .orElseThrow();
-    assertInstanceOf(ReferenceDefinition.class, referenceDefinition);
+    assertInstanceOf(FhirReferenceDefinition.class, referenceDefinition);
   }
 
 
@@ -39,19 +42,19 @@ class NodeDefinitionTest {
     // test that choice with reference type returns the correct type of definition
   void testReferenceInChoiceValue() {
 
-    final ResourceDefinition observationDefinition = new ResourceDefinition(
+    final FhirResourceDefinition observationDefinition = new FhirResourceDefinition(
         ResourceType.MEDICATIONDISPENSE,
         fhirContext.getResourceDefinition(ResourceType.MEDICATIONDISPENSE.toCode()));
 
     final ChildDefinition medicationValue = observationDefinition.getChildElement("medication")
         .orElseThrow();
-    assertInstanceOf(ChoiceChildDefinition.class, medicationValue);
-    final ElementDefinition referenceDefinition = ((ChoiceChildDefinition) medicationValue).getChildByType(
+    assertInstanceOf(FhirChoiceDefinition.class, medicationValue);
+    final ElementDefinition referenceDefinition = ((FhirChoiceDefinition) medicationValue).getChildByType(
             "Reference")
         .orElseThrow();
-    assertInstanceOf(ReferenceDefinition.class, referenceDefinition);
-    assertEquals(ResourceTypeSet.of(ResourceType.MEDICATION),
-        ((ReferenceDefinition) referenceDefinition).getReferenceTypes());
+    assertInstanceOf(FhirReferenceDefinition.class, referenceDefinition);
+    Assertions.assertEquals(ResourceTypeSet.of(ResourceType.MEDICATION),
+        ((FhirReferenceDefinition) referenceDefinition).getReferenceTypes());
     assertEquals("medicationReference", referenceDefinition.getElementName());
   }
 
@@ -59,18 +62,18 @@ class NodeDefinitionTest {
   void testReferenceInExtensionValue() {
     // test that choice with reference type returns the correct type of definition in extension
 
-    final ResourceDefinition patientDefinition = new ResourceDefinition(ResourceType.PATIENT,
+    final FhirResourceDefinition patientDefinition = new FhirResourceDefinition(ResourceType.PATIENT,
         fhirContext.getResourceDefinition(Patient.class));
 
     // test that choice with reference type returns the correct type of definition in extensionp
     final ElementDefinition referenceDefinition = patientDefinition.getChildElement("extension")
         .flatMap(extension -> extension.getChildElement("value"))
-        .flatMap(maybeCast(ChoiceChildDefinition.class))
+        .flatMap(maybeCast(FhirChoiceDefinition.class))
         .flatMap(value -> value.getChildByType("Reference"))
         .orElseThrow();
-    assertInstanceOf(ReferenceDefinition.class, referenceDefinition);
+    assertInstanceOf(FhirReferenceDefinition.class, referenceDefinition);
     assertEquals("valueReference", referenceDefinition.getElementName());
     assertEquals(ResourceTypeSet.allResourceTypes(),
-        ((ReferenceDefinition) referenceDefinition).getReferenceTypes());
+        ((FhirReferenceDefinition) referenceDefinition).getReferenceTypes());
   }
 }

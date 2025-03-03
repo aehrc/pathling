@@ -1,0 +1,311 @@
+# Tests for 6.2 Comparisons
+
+tests:
+  - desc: less than, expecting true
+    expression: a < b
+    result: [true]
+  - desc: less than, expecting false
+    expression: b < a
+    result: [false]
+  - desc: less than, with mismatched types
+    expression: c < d
+    error: true
+  - desc: less than, with empty value
+    expression: c < e
+    result: []
+  - desc: less than, with null value
+    expression: c < i
+    result: []
+  - desc: less than, with too many values
+    expression: c < g
+    error: true
+  - desc: less than, expecting true
+    expression: a < h
+    result: [true]
+  - desc: less than, expecting false
+    expression: j < d
+    result: [false]
+
+  - desc: greater than, expecting true
+    expression: b > a
+    result: [true]
+  - desc: greater than, expecting false
+    expression: a > b
+    result: [false]
+  - desc: greater than, with mismatched types
+    expression: d > c
+    error: true
+  - desc: greater than, with empty value
+    expression: e > a
+    result: []
+  - desc: greater than, with null value
+    expression: c > i
+    result: []
+  - desc: greater than, with too many values
+    expression: c > g
+    error: true
+  - desc: greater than, expecting true
+    expression: h > a
+    result: [true]
+  - desc: greater than, expecting false
+    expression: d > j
+    result: [false]
+
+  - desc: greater or equal than, expecting true
+    expression: b >= c
+    result: [true]
+  - desc: greater or equal than, expecting false
+    expression: a >= b
+    result: [false]
+  - desc: greater or equal than, with mismatched types
+    expression: d >= c
+    error: true
+  - desc: greater or equal than, with empty value
+    expression: e >= a
+    result: []
+  - desc: greater or equal than, with null value
+    expression: c >= i
+    result: []
+  - desc: greater or equal than, with too many values
+    expression: c >= g
+    error: true
+  - desc: greater or equal than, expecting true
+    expression: c >= h
+    result: [true]
+  - desc: greater or equal than, expecting false
+    expression: d >= j
+    result: [false]
+
+  - desc: less or equal than, expecting true
+    expression: b <= c
+    result: [true]
+  - desc: less than or equal, expecting false
+    expression: b <= a
+    result: [false]
+  - desc: less or equal than, with mismatched types
+    expression: c <= d
+    error: true
+  - desc: less or equal than, with empty value
+    expression: c <= e
+    result: []
+  - desc: less or equal than, with null value
+    expression: c <= i
+    result: []
+  - desc: less than equal, with too many values
+    disable: true
+    expression: a <= h
+    error: true
+  - desc: less or equal than, expecting true
+    expression: a <= h
+    result: [true]
+  - desc: less than or equal, expecting false
+    expression: j <= d
+    result: [false]
+  - 'group: Quantities':
+    - expression: 1 year > 1 'a'
+      result: []
+    - expression: 1 's' > 1 year
+      result: []
+    - expression: 1 'min' < 2 minutes
+      result: []
+    - expression: 1 'kg' < 2 's'
+      result: []
+    - expression: 1 year > 12 months
+      result: [false]
+    - expression: 1 year < 12 months
+      result: [false]
+    - expression: 1 minute > 59 seconds
+      result: [true]
+    - expression: 1 minute < 61 seconds
+      result: [true]
+    - expression: 1 'min' < 61 seconds
+      result: [true]
+    - expression: 10 seconds > 1 's'
+      result: [true]
+    - expression: 10 seconds < 1 's'
+      result: [false]
+    - expression: 1 's' > 10 seconds
+      result: [false]
+    - expression: 1 's' < 10 seconds
+      result: [true]
+    - expression: 999 'g' < 1 'kg'
+      result: [true]
+    - expression: 999 'g' > 1 'kg'
+      result: [false]
+    - expression: 1001 'g' > 1 'kg'
+      result: [true]
+    - expression: 1001 'g' < 1 'kg'
+      result: [false]
+  - 'group: Dates & Times':
+    - 'group:  Date >':
+      - expression: '@2018 > @2019'
+        result: [false]
+      - expression: '@2018 > @2017'
+        result: [true]
+      - desc: Raise error on type comparison with string
+        expression: '@2018 > d'
+        error: true
+      - desc: Raise error on type comparison with integer
+        expression: '@2018 > a'
+        error: true
+      - desc: Raise error on type comparison with Time
+        expression: '@2018 > @T12:34'
+        error: true
+      - desc: Comparison based on the lesser precision (1)
+        expression: '@2018-12-31 > @2018'
+        result: []
+      - desc: Comparison based on the lesser precision (2)
+        expression: '@2018 > @2017-01'
+        result: [true]
+      - desc: Comparison with later Date from resource
+        expression: '@2018-12-21 > date.toDate()'
+        result: [false]
+    - 'group:  Date >=':
+      - desc: Comparison with earlier Date
+        expression: '@2018 >= @2017'
+        result: [true]
+      - desc: Comparison with equal Date
+        expression: '@2018 >= @2018'
+        result: [true]
+      - desc: Comparison with later Date
+        expression: '@2018 >= @2019'
+        result: [false]
+      - desc: Comparison with earlier Date from resource
+        expression: '@2020 >= date.toDate()'
+        result: [true]
+      - desc: Comparison with equal Date from resource
+        expression: '@2019-02-25 >= date.toDate()'
+        result: [true]
+      - desc: Comparison with later Date from resource
+        expression: '@2018 >= date.toDate()'
+        result: [false]
+    - 'group:  Date <=':
+      - desc: Comparison with earlier Date
+        expression: '@2018 <= @2017'
+        result: [false]
+      - desc: Comparison with equal Date
+        expression: '@2018 <= @2018'
+        result: [true]
+      - desc: Comparison with later Date
+        expression: '@2018 <= @2019'
+        result: [true]
+    - 'group:  Date <':
+      - desc: Comparison with earlier Date
+        expression: '@2018 < @2017'
+        result: [false]
+      - desc: Comparison with equal Date
+        expression: '@2018 < @2018'
+        result: [false]
+      - desc: Comparison with later Date
+        expression: '@2018 < @2019'
+        result: [true]
+    - 'group:  DateTime':
+      - desc: Same date, same time
+        expression: '@2018-12-21T12:01 > @2018-12-21T12:01'
+        result: [false]
+      - desc: Same date, different time (1)
+        expression: '@2018-12-21T12:01 > @2018-12-21T12:02'
+        result: [false]
+      - desc: Same date, different time (2)
+        expression: '@2018-12-21T12:02 > @2018-12-21T12:01'
+        result: [true]
+      - desc: Different dates & times (1)
+        expression: '@2018-12-22T12:02 > @2018-12-21T12:01'
+        result: [true]
+      - desc: Different dates & times (1)
+        expression: '@2018-12-20T12:02 > @2018-12-21T12:01'
+        result: [false]
+      - desc: Comparison with differnet precision (1)
+        expression: '@2018-12-20T12 > @2018-12-20T12:01'
+        result: []
+      - desc: Comparison with differnet precision (2)
+        expression: '@2018-12-20T12 > @2018-12-20T11:01'
+        result: [true]
+      - desc: Time zone differences (1)
+        expression: '@2018-12-21T12:02+03:00 > @2018-12-21T12:01+02:00'
+        result: [false]
+      - desc: Time zone differences (2)
+        expression: '@2018-12-21T12:02+02:00 > @2018-12-21T12:01+03:00'
+        result: [true]
+      - desc: Comparison with later Date from resource
+        expression: '@2018-12-21 < date.toDate()'
+        result: [true]
+      - desc: Comparison with later DateTime from resource
+        expression: '@2018-12-21T12:02+02:00 < dateTime.toDateTime()'
+        result: [true]
+      - desc: Comparison with later DateTime from resource (2)
+        expression: '@2018-12-21T12:02+02:00 > dateTime.toDateTime()'
+        result: [false]
+      - expression: '@2020-08-04T12:34 < @2020'
+        result: []
+    - 'group:  Time':
+      - desc: Time comparison; GT (1)
+        expression: '@T12:03 > @T12:01'
+        result: [true]
+      - desc: Time comparison; GT (2)
+        expression: '@T12:01 > @T12:03'
+        result: [false]
+      - desc: Time comparison; GT (3)
+        expression: '@T12:01:34.123 > @T12:01:34.122'
+        result: [true]
+      - desc: Time comparison with based on lesser precision (1)
+        expression: '@T12:01 > @T12'
+        result: []
+      - desc: Time comparison with based on lesser precision (2)
+        expression: '@T12:02:34.324 > @T12:01'
+        result: [true]
+      - desc: Time comparison with based on lesser precision (3)
+        expression: '@T12+04:00 > @T12:02:34.324+05:00'
+        result: [true]
+      - desc: Time comparison with based on lesser precision (4)
+        expression: '@T12:02:34.324+05:00 > @T12+05:00'
+        result: []
+      - desc: Comparison with later time in resource (1)
+        expression: '@T17:00-05:00 < timeWithT.toTime()'
+        result: [true]
+      - desc: Comparison with later time in resource (2)
+        expression: '@T17:00-05:00 > timeWithT.toTime()'
+        result: [false]
+      - desc: Comparison with later time in resource (3)
+        expression: '@T17:00-05:00 < timeWithOutT.toTime()'
+        result: [true]
+      - desc: Comparison with later time in resource (4)
+        expression: '@T17:00-05:00 > timeWithOutT.toTime()'
+        result: [false]
+    - 'group:  Instant':
+      - desc: Comparison using the greater than operator
+        inputfile: diagnosticreport-example.json
+        expression: 'now() > DiagnosticReport.issued'
+        model: r4
+        result: [true]
+      - desc: Comparison using the less than operator
+        inputfile: diagnosticreport-example.json
+        expression: 'DiagnosticReport.issued < DiagnosticReport.effectiveDateTime'
+        model: r4
+        result: [true]
+      - desc: Comparison using the equality operator
+        inputfile: diagnosticreport-example.json
+        expression: 'DiagnosticReport.issued = @2005-01-27T06:40:01Z'
+        model: r4
+        result: [true]
+
+subject:
+  date: "2019-02-25"
+  dateTime: "2019-02-25T17:01-05:00"
+  timeWithT: "T17:01-05:00"
+  timeWithOutT: "17:01-05:00"
+  a: 1
+  b: 2
+  c: 2
+  d: "Hydrogen"
+  e: []
+  f:
+    - 1
+  g:
+    - 1
+    - 2
+  h: 2.0
+  i: null
+  _i:
+    id: nullId
+  j: "Oxygen"

@@ -1,0 +1,106 @@
+tests:
+  - 'Testing the empty() function in various scenarios':
+      - desc: '** Empty litera should return true **'
+        expression: '{}.empty()'
+        result: [ ]
+      - desc: '** Empty collection should return true **'
+        expression: 'nothing.empty()'
+        result: [ ]
+      - desc: '** Singular integer is not empty **'
+        expression: 'n1.empty()'
+        result: [ false ]
+      - desc: '** Plural integer is not empty **'
+        expression: 'an1.empty()'
+        result: [ false ]
+      - desc: '** Plural integer collection is not empty **'
+        expression: 'an2.empty()'
+        result: [ false ]
+      - desc: '** Singular string is not empty **'
+        expression: 's1.empty()'
+        result: [ false ]
+      - desc: '** Plural string is not empty **'
+        expression: 'sn1.empty()'
+        result: [ false ]
+      - desc: '** Plural string collection is not empty **'
+        expression: 'sn2.empty()'
+        result: [ false ]
+      - desc: '** Complete traversed collection is not empty **'
+        expression: 'e1.xy.x.empty()'
+        result: [ false ]
+      - desc: '** Incomplete traversed collection is not empty **'
+        expression: 'e1.xy.y.empty()'
+        result: [ false ]
+  - 'Testing the count() function in various scenarios':
+      - desc: '** Empty literal should return 0 **'
+        expression: '{}.count()'
+        result: [ 0 ]
+        disable: true # empty collection
+      - desc: '** Empty collection has count 0 **'
+        expression: 'nothing.count()'
+        result: [ 0 ]
+        disable: true # empty collection
+      - desc: '** Singular integer has count 1 **'
+        expression: 'n1.count()'
+        result: [ 1 ]
+      - desc: '** Plural integer has count 1 **'
+        expression: 'an1.count()'
+        result: [ 1 ]
+      - desc: '** Plural integer collection has count 2 **'
+        expression: 'an2.count()'
+        result: [ 2 ]
+      - desc: '** Complete traversed collection has count 2 **'
+        expression: 'e1.xy.x.count()'
+        result: [ 2 ]
+      - desc: '** Incomplete traversed collection has count 1 **'
+        expression: 'e1.xy.y.count()'
+        result: [ 1 ]
+  - 'Testing the exists() function in various scenarios':
+      - desc: '** Empty literal should return false **'
+        expression: '{}.exists()'
+        result: [ false ]
+        disable: true # empty collection
+      - desc: '** Empty collection should return false **'
+        expression: 'nothing.exists()'
+        result: [ false ]
+        disable: true # empty collection
+      - desc: '** Singular integer exists **'
+        expression: 'n1.exists()'
+        result: [ true ]
+      - desc: '** Plural integer exists **'
+        expression: 'an1.exists()'
+        result: [ true ]
+      - desc: '** Plural integer collection exists **'
+        expression: 'an2.exists()'
+        result: [ true ]
+      - desc: '** Incomplete traversed collection exists **'
+        expression: 'e1.xy.y.exists()'
+        result: [ true ]
+      - desc: '** Complete traversed collection exists **'
+        expression: 'e1.xy.x.exists()'
+        result: [ true ]
+      - desc: '** No matches exits in singular integer **'
+        expression: 'n1.exists($this < 0)'
+        result: [ false ]
+      - desc: '** Some matches exits in string collection **'
+        expression: "sn2.exists($this = 'a')"
+        result: [ true ]
+      - desc: '** Some matches exits in incomplete  traversed collection **'
+        expression: "e1.xy.exists($this.y = 2)"
+        result: [ true ]
+      - desc: '** No matches exits in complete  traversed collection **'
+        expression: "e1.xy.exists($this.x < 0)"
+        result: [ false ]
+subject:
+  resourceType: Test
+  n1: 1
+  an1: [ 1 ]
+  an2: [ 1, 2 ]
+  s1: 'a'
+  sn1: [ 'a' ]
+  sn2: [ 'a', 'b' ]
+  e1:
+    - xy:
+        - x: 1
+          y: 2
+        - x: 3
+          # y is missing

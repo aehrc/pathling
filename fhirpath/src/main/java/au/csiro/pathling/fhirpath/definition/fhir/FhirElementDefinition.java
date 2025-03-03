@@ -15,8 +15,9 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.definition;
+package au.csiro.pathling.fhirpath.definition.fhir;
 
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import jakarta.annotation.Nonnull;
@@ -28,8 +29,8 @@ import java.util.Optional;
  *
  * @author John Grimes
  */
-public class ElementChildDefinition extends
-    BaseNodeDefinition<BaseRuntimeElementDefinition<?>> implements
+class FhirElementDefinition extends
+    BaseFhirNodeDefinition<BaseRuntimeElementDefinition<?>> implements
     ElementDefinition {
 
   @Nonnull
@@ -38,7 +39,7 @@ public class ElementChildDefinition extends
   @Nonnull
   protected final String elementName;
 
-  protected ElementChildDefinition(
+  protected FhirElementDefinition(
       @Nonnull final BaseRuntimeElementDefinition<?> elementDefinition,
       @Nonnull final BaseRuntimeChildDefinition childDefinition,
       @Nonnull final String elementName) {
@@ -47,13 +48,13 @@ public class ElementChildDefinition extends
     this.elementName = elementName;
   }
 
-  protected ElementChildDefinition(@Nonnull final BaseRuntimeChildDefinition childDefinition,
-      @Nonnull final String elementName) {
+  protected FhirElementDefinition(@Nonnull final BaseRuntimeChildDefinition childDefinition,
+                                  @Nonnull final String elementName) {
     this(Objects.requireNonNull(childDefinition.getChildByName(elementName)), childDefinition,
         elementName);
   }
 
-  protected ElementChildDefinition(
+  protected FhirElementDefinition(
       @Nonnull final BaseRuntimeChildDefinition childDefinition) {
     this(childDefinition, childDefinition.getElementName());
   }

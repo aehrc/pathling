@@ -17,15 +17,12 @@
 
 package au.csiro.pathling.test.helpers;
 
-import static java.util.Objects.requireNonNull;
-
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
+import au.csiro.pathling.fhirpath.definition.fhir.FhirDefinitionContext;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.stereotype.Component;
 
 /**
@@ -38,11 +35,8 @@ public class FhirHelpers {
   public static Optional<? extends ChildDefinition> getChildOfResource(
       @Nonnull final FhirContext fhirContext, @Nonnull final String resourceCode,
       @Nonnull final String elementName) {
-    final RuntimeResourceDefinition hapiDefinition = fhirContext
-        .getResourceDefinition(resourceCode);
-    requireNonNull(hapiDefinition);
-    final ResourceDefinition definition = new ResourceDefinition(
-        ResourceType.fromCode(resourceCode), hapiDefinition);
+    final ResourceDefinition definition = FhirDefinitionContext.of(fhirContext)
+        .findResourceDefinition(resourceCode);
     return definition.getChildElement(elementName);
   }
 

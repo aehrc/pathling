@@ -320,6 +320,22 @@
         </plugins>
       </build>
     </profile>
+    <profile>
+      <id>yaml-report</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <systemPropertyVariables>
+                <au.csiro.pathling.test.yaml.exclusionsOnly>true</au.csiro.pathling.test.yaml.exclusionsOnly>
+              </systemPropertyVariables>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 
 </project>

@@ -1,0 +1,813 @@
+tests:
+# 6.1. Equality
+
+  - desc: '6.1 Equality'
+
+  - 'group: 6.1.1. = (Equals)':
+
+# Returns true if the left collection is equal to the right collection:
+# If both operands are collections with a single item:
+# For primitives:
+
+    - desc: '* string: comparison is based on Unicode values'
+    - desc: '** strings equals'
+      expression: "'abc' = 'abc'"
+      result: [true]
+
+    - desc: '** strings equals'
+      expression: "Ops.str1 = Ops.str1"
+      result: [true]
+
+    - desc: '** strings not equals'
+      expression: "'abc' = 'abcd'"
+      result: [false]
+
+    - desc: '** strings not equals'
+      expression: "Ops.str1 = Ops.str2"
+      result: [false]
+
+    - desc: '** utf8 strings'
+      expression: "'ɐ ɑ ɒ ɓ ɔ ɕ ɖ ɗ ɘ ə ɚ ɛ ɜ ɝ ɞ ɟ ɠ' = 'ɐ ɑ ɒ ɓ ɔ ɕ ɖ ɗ ɘ ə ɚ ɛ ɜ ɝ ɞ ɟ ɠ'"
+      result: [true]
+
+    - desc: '** utf8 strings'
+      expression: "'ɐ ɑ ɒ ɓ ɔ ɕ ɖ ɗ ɘ ə ɚ ɛ ɜ ɝ ɞ ɟ ɠ' = 'ə ɚ ɛ ɜ ɝ ɞ ɟ ɠɐ ɑ ɒ ɓ ɔ ɕ ɖ ɗ ɘ '"
+      result: [false]
+
+    - desc: '* integer: values must be exactly equal'
+
+    - desc: '** equal'
+      expression: "1 = 1"
+      result: [true]
+
+    - desc: '** equal'
+      expression: "Ops.int1 = Ops.int1"
+      result: [true]
+
+    - desc: '** not equal'
+      expression: "1 = 2"
+      result: [false]
+
+    - desc: '** not equal'
+      expression: "Ops.int1 = Ops.int2"
+      result: [false]
+
+    - desc: '* decimal: values must be equal, trailing zeroes are ignored'
+    - desc: '** decimals equal'
+      expression: "1.01 = 1.01"
+      result: [true]
+
+    - desc: '** decimals equal, trailing zeroes are ignored'
+      expression: "0.01 = 00.01"
+      result: [true]
+
+    - desc: 'decimal not equal'
+      expression: "1.01 = 1.02"
+      result: [false]
+
+    - desc: 'decimal values should not be compared beyond the maximum precision'
+      expression: '0.1 + 0.1 + 0.1 = 0.3'
+      result: [true]
+
+    - desc: '* boolean: values must be the same'
+
+    - desc: '** equal'
+      expression: "true = true"
+      result: [true]
+
+    - desc: '** not equal'
+      expression: "true = false"
+      result: [false]
+
+    - desc: '** propagate empty coll'
+      expression: "true = Ops.unexists"
+      result: []
+
+    - desc: '** equality for null values'
+      inputfile: patient-example-2.json
+      model: r4
+      # Patient.name.given[0].empty() = false
+      # and
+      # Patient.name.given[3].empty() = false
+      # So, these are not empty collections and the result should not be empty.
+      expression: Patient.name.given[0] = Patient.name.given[3]
+      result: [true]
+
+    - 'group: Quantity Equality':
+      - expression: 1 year != 1 'a'
+        result: [true]
+
+      - expression: 12 months = 1 year
+        result: [true]
+
+      - expression: 12 'mo' = 1 'a'
+        result: [true]
+
+      - expression: 1 year = 1 year
+        result: [true]
+
+      - expression: 1 month != 1 'mo'
+        result: [true]
+
+      - expression: 1 month = 30 'd'
+        result: []
+
+      - expression: 1 month = 30 days
+        result: [true]
+
+      - expression: 1 week = 1 'wk'
+        result: []
+
+      - expression: 1 week = 7 days
+        result: [true]
+
+      - expression: 1 day = 1 'd'
+        result: []
+
+      - expression: 1 day = 24 hours
+        result: [true]
+
+      - expression: 1 day = 24 'h'
+        result: []
+
+      - expression: 1 second = 1 's'
+        result: [true]
+
+      - expression: 10 'kg.m/s2' = 5 'kg' * 4 'm' / (2 seconds * 1000 'ms')
+        result: [true]
+
+
+    - desc: '* For complex types, equality requires all child properties to be equal, recursively.'
+
+    - desc: '** two objects'
+      expression: "Ops.complex = Ops.complexsame"
+      result: [true]
+
+    - desc: '** two objects not'
+      expression: "Ops.complex = Ops.complexother"
+      result: [false]
+
+    - desc: '** two colls'
+      expression: "Ops.coll = Ops.collsame"
+      result: [true]
+
+    - desc: '** two colls not'
+      expression: "Ops.coll = Ops.collother"
+      result: [false]
+
+    - desc: '** two colls + empty'
+      expression: "Ops.coll = Ops.ups"
+      result: []
+
+  # If both operands are collections with multiple items:
+
+  # Each item must be equal
+
+  # Comparison is order dependent
+
+  # Otherwise, equals returns false.
+
+  # Note that this implies that if the collections have a different number of
+  # items to compare, the result will be false.
+
+  # Typically, this operator is used with single fixed values as operands. This
+  # means that Patient.telecom.system = 'phone' will return false if there is more
+  # than one telecom with a use. Typically, you’d want
+  # Patient.telecom.where(system = 'phone')
+
+    - desc: '** length mismatch'
+      expression: "Ops.coll.a = 1"
+      result: [false]
+
+    - desc: '** length match'
+      expression: "Ops.coll.a.first() = 1"
+      result: [true]
+
+  # If one or both of the operands is the empty collection, this operation returns
+  # an empty collection.
+
+    - desc: '** empty right'
+      expression: "Ops.coll.a.first() = Ops.unexists"
+      result: []
+
+    - desc: '** empty left'
+      expression: "Ops.unexists = Ops.coll.a.first()"
+      result: []
+
+  # For dateTime and time comparisons with partial values (e.g. dateTimes
+  # specified only to the day, or times specified only to the hour), the
+  # comparison returns empty ({ }), not false.
+  # time: must be exactly the same, respecting the timezone (though +24:00 = +00:00 = Z)
+
+  # If a time or dateTime has no indication of timezone, the timezone of the
+  # evaluating machine is assumed.
+    - 'group: Dates & Times':
+      - desc:  'DateTime literal compared with DateTime'
+        expression: '@2018 = @2018'
+        result: [true]
+
+      - desc:  'DateTime literal compared with different DateTime'
+        expression: '@2018 = @2017'
+        result: [false]
+
+      - desc: 'DateTime literal compared with different precision DateTime (1)'
+        expression: '@2018 = @2018-02'
+        result: []
+
+      - desc: 'DateTime literal compared with different precision DateTime (2)'
+        expression: '@2018 = @2019-02'
+        result: [false]
+
+      - desc:  'DateTime literal compared with DateTime (month)'
+        expression: '@2018-02 = @2018-02'
+        result: [true]
+
+      - desc:  'DateTime literal compared with different DateTime (month)'
+        expression: '@2018-02 = @2018-03'
+        result: [false]
+
+      - desc:  'DateTime literal compared with DateTime (day)'
+        expression: '@2018-02-02 = @2018-02-02'
+        result: [true]
+
+      - desc:  'DateTime literal compared with different DateTime (day)'
+        expression: '@2018-02-02 = @2018-02-03'
+        result: [false]
+
+      - desc:  'DateTime literal compared with DateTime (hour)'
+        expression: '@2018-02-02T11 = @2018-02-02T11'
+        result: [true]
+
+      - desc:  'DateTime literal compared with different DateTime (hour)'
+        expression: '@2018-02-02T11 = @2018-02-02T12'
+        result: [false]
+
+      - desc:  'DateTime literal compared with same time, diff. precision (hour)'
+        expression: '@2018-02-02T11 = @2018-02-02T11:00'
+        result: []
+
+      - desc:  'DateTime literal compared with DateTime (hour, tz)'
+        expression: '@2018-02-02T11+04:00 = @2018-02-02T11+04:00'
+        result: [true]
+
+      - desc:  'DateTime literal compared with same DateTime (hour, tz different)'
+        expression: '@2018-02-02T22-04:00 = @2018-02-03T06+04:00'
+        result: [true]
+
+      - desc:  'DateTime literal compared with different precision DateTime (hour, tz diff)'
+        expression: '@2018-02-02T22-04:00 = @2018-02-03T06:03+04:00'
+        result: []
+
+      - desc:  'DateTime literal compared with different precision DateTime (hour, tz diff)'
+        expression: '@2018-02-02T22-04:00 = @2018-02-03T05:03+04:00'
+        result: [false]
+
+      - desc:  'DateTime literal compared with different DateTime (hour,tz)'
+        expression: '@2018-02-02T11+04:00 = @2018-02-02T12+04:00'
+        result: [false]
+
+      - desc:  'DateTime literal compared with DateTime (minute)'
+        expression: '@2018-02-02T11:01 = @2018-02-02T11:01'
+        result: [true]
+
+      - desc:  'DateTime literal compared with different DateTime (minute)'
+        expression: '@2018-02-02T11:01 = @2018-02-02T11:02'
+        result: [false]
+
+      - desc:  'DateTime literal compared with DateTime (minute, tz)'
+        expression: '@2018-02-02T11:01+04:00 = @2018-02-02T11:01+04:00'
+        result: [true]
+
+      - desc:  'DateTime literal compared with different DateTime (minute, tz)'
+        expression: '@2018-02-02T11:01+04:00 = @2018-02-02T11:02+04:00'
+        result: [false]
+
+      - desc:  'DateTime literal compared with DateTime (second)'
+        expression: '@2018-02-02T11:01:03 = @2018-02-02T11:01:03'
+        result: [true]
+
+      - desc:  'DateTime literal compared with different DateTime (second)'
+        expression: '@2018-02-02T11:01:03 = @2018-02-02T11:01:04'
+        result: [false]
+
+      - desc:  'DateTime literal compared with DateTime (millisecond)'
+        expression: '@2018-02-02T11:01:03.123 = @2018-02-02T11:01:03.123'
+        result: [true]
+
+      - desc:  'DateTime literal compared with different DateTime (millisecond)'
+        expression: '@2018-02-02T11:01:03.123 = @2018-02-02T11:01:03.124'
+        result: [false]
+
+      - desc:  'DateTime literal compared with different DateTime (timezone)'
+        expression: '@2018-02-02T11:01:03.123+02:00 = @2018-02-02T11:01:03.123+04:00'
+        result: [false]
+
+      - desc: 'DateTime literal compared with same DateTime in resource (1)'
+        expression: '@2018-02 = date1.toDate()'
+        result: [true]
+
+      - desc: 'DateTime literal compared with same DateTime in resource (2)'
+        expression: 'date1.toDate() = @2018-02'
+        result: [true]
+
+      - desc: 'DateTime literal compared with different DateTime in resource'
+        expression: '@2018-01 = date1.toDate()'
+        result: [false]
+
+      - desc: 'DateTime literal compared with different precision DateTime in resource'
+        expression: '@2018-02-02 = date1.toDate()'
+        result: []
+
+      - desc: 'DateTime literal compared with a number'
+        expression: '@2018 = int1'
+        result: [false]
+
+      - desc: 'DateTime literal compared with a string literal'
+        expression: "@2018 = 'zzz'"
+        result: [false]
+
+      - desc: 'Time literal compared with same time in different timezone'
+        expression: '@T10:04:23-04:00 = @T18:04:23+04:00'
+        result: [true]
+
+      - expression: '@T19:01:23-05:00 = @T00:01:23-00:00'
+        result: [true]
+
+      - desc: 'Time literal compared with different time'
+        expression: '@T10:04:23-04:00 = @T18:04:24+04:00'
+        result: [false]
+
+      - desc: 'Time literal, comparing timezone and Z (same time)'
+        expression: '@T10:04:23-04:00 = @T14:04:23Z'
+        result: [true]
+
+      - desc: 'Time literal, comparing timezone and Z (different time)'
+        expression: '@T10:04:23-04:00 = @T14:04:24Z'
+        result: [false]
+
+      - desc: 'Same time, different timezone and precision'
+        expression: '@T10:04:23-04:00 = @T14:04Z'
+        result: []
+
+      - desc: 'Different time and different precision'
+        expression: '@T10:05:23-04:00 = @T14:04Z'
+        result: [false]
+
+      - desc: 'Time literal compared with same time in resource'
+        expression: '@T12:34:45 = time1.toTime()'
+        result: [true]
+
+      - desc: 'Time literal compared with different time in resource'
+        expression: '@T12:34:46 = time1.toTime()'
+        result: [false]
+
+      - desc: 'Time literal compared with different precision time in resource'
+        expression: '@T12 = time1.toTime()'
+        result: []
+
+      - desc: '** should not ignore null properties in arrays'
+        inputfile: patient-bundle.json
+        model: r4
+        expression: >-
+          Bundle.entry[1] != Bundle.entry[2]
+        result:
+          - true
+
+
+  - 'group: 6.1.2. ~ (Equivalent)':
+
+  # Returns true if the collections are the same. In particular, comparing empty
+  # collections for equivalence { } ~ { } will result in true.
+
+    - desc: '* collections for equivalence { } ~ { } will result in true.'
+      expression: "Ops.unexists ~ Ops.unexists"
+      result: [true]
+
+  # If both operands are collections with a single item:
+
+  # For primitives
+
+    - desc: '* string: the strings must be the same while ignoring case and normalizing whitespace.'
+      expression: "'ab c' ~ 'Ab  C'"
+      result: [true]
+
+  # integer: exactly equal
+
+    - desc: |
+        decimal: values must be equal, comparison is done on values rounded
+        to the precision of the least precise operand.
+        Trailing zeroes are ignored in  determining precision.
+      expression: "1.001 ~ 01.0012"
+      result: [true]
+
+    - 'group: trailing zeros after decimal':
+      - expression: 1.100 ~ 1.1
+        result: [true]
+      - expression: 1.100 ~ 1.101 # rounded, ignoring trailing zeros
+        result: [true]
+      - expression: 1.1 ~ 1.0 # rounded, ignoring trailing zeros
+        result: [true]
+      - expression: 1.1 ~ 1.00 # rounded, ignoring trailing zeros
+        result: [true]
+      - expression: 1.10 ~ 1.00 # rounded, ignoring trailing zeros
+        result: [true]
+      - expression: 11 ~ 10 # digits before decimal are not trailing zeros
+        result: [false]
+      - expression: 12 ~ 11
+        result: [false]
+    - expression: 1.1 ~ 1.2
+      result: [false]
+    - expression: 0.00000011 ~ 0.00000012
+      result: [false]
+    - expression: 0.00000011 ~ 0.00000010
+      result: [true]
+    - expression: 0 ~ 0.00000010
+      result: [true]
+    - expression: 1 ~ 0.00000010
+      result: [false]
+    - expression: 0.010 ~ 0.00000010
+      result: [false]
+
+    - 'group: Quantity Equivalence':
+      - expression: 1 year ~ 1 'a'
+        result: [true]
+
+      - expression: 12 months ~ 1 'a'
+        result: [true]
+
+      - expression: 1 month ~ 1 'mo'
+        result: [true]
+
+      - expression: 30 days ~ 1 'mo'
+        result: [true]
+
+  # dateTime and time: values must be equal, except that for partial date/time
+  # values, the comparison returns false, not empty ({ }). If one operand has less
+  # precision than the other, comparison is done at the lowest precision.
+
+  # boolean: the values must be the same
+  # The above comments, taken from the 1.0 spec, are contradictory.  The version
+  # from the "Normative Ballot 2" says this:
+  #  if the input values have different levels of precision, the comparison
+  #  returns false, not empty ({ }).
+
+    - 'group: Dates & Times':
+      - desc:  'DateTime literal compared with DateTime'
+        expression: '@2018 ~ @2018'
+        result: [true]
+
+      - desc:  'DateTime literal compared with different DateTime'
+        expression: '@2018 ~ @2017'
+        result: [false]
+
+      - desc: 'DateTime literal compared with different precision DateTime'
+        expression: '@2018 ~ @2018-02'
+        result: [false]
+
+      - desc: 'DateTime literal compared with same DateTime in resource'
+        expression: '@2018-02 ~ date1.toDate()'
+        result: [true]
+
+      - desc: 'DateTime literal compared with different DateTime in resource'
+        expression: '@2018-01 ~ date1.toDate()'
+        result: [false]
+
+      - desc: 'DateTime literal compared with different precision DateTime in resource'
+        expression: '@2018-02-02 ~ date1.toDate()'
+        result: [false]
+
+      - desc: 'Time literal compared with same time in different timezone'
+        expression: '@T10:04:23-04:00 ~ @T18:04:23+04:00'
+        result: [true]
+
+      - desc: 'Time literal compared with different time'
+        expression: '@T10:04:23-04:00 ~ @T18:04:24+04:00'
+        result: [false]
+
+      - desc: 'Time literal, comparing timezone and Z (same time)'
+        expression: '@T10:04:23-04:00 ~ @T14:04:23Z'
+        result: [true]
+
+      - desc: 'Time literal, comparing timezone and Z (different time)'
+        expression: '@T10:04:23-04:00 ~ @T14:04:24Z'
+        result: [false]
+
+      - desc: 'Time literal compared with same time in resource'
+        expression: '@T12:34:45 ~ time1.toTime()'
+        result: [true]
+
+      - desc: 'Time literal compared with different time in resource'
+        expression: '@T12:35:46 ~ time1.toTime()'
+        result: [false]
+
+      - desc: 'Time literal compared with different precision time in resource'
+        expression: '@T12:34:46.123 ~ time1.toTime()'
+        result: [false]
+
+  # If both operands are collections with multiple items:
+
+  # Each item must be equivalent
+
+  # Comparison is not order dependent
+
+  # Note that this implies that if the collections have a different number of
+  # items to compare, the result will be false.
+
+    - desc: '* For complex types, equivalence requires all child properties to be equivalent, recursively.'
+      expression: "Ops.complex ~ Ops.complexsimilar"
+      result: [true]
+
+    - desc: '* For complex types, equivalence requires all child properties to be equivalent, recursively.'
+      expression: "Ops.complex ~ Ops.complexother"
+      result: [false]
+
+    - desc: '** equivalence for null values'
+      inputfile: patient-example-2.json
+      model: r4
+      expression: Patient.name.given[0] ~ Patient.name.given[3]
+      result: [true]
+
+
+  - 'group: 6.1.3. != (Not Equals)':
+# The inverse of the equals operator.
+
+    - desc: '* string: comparison is based on Unicode values'
+    - desc: '** strings equals'
+      expression: "'abc' != 'abc'"
+      result: [false]
+
+    - desc: '** strings equals'
+      expression: "Ops.str1 != Ops.str1"
+      result: [false]
+
+    - desc: '** strings not equals'
+      expression: "'abc' != 'abcd'"
+      result: [true]
+
+    - desc: '** strings not equals'
+      expression: "Ops.str1 != Ops.str2"
+      result: [true]
+
+    - desc: '** utf8 strings'
+      expression: "'ɐ ɑ ɒ ɓ ɔ ɕ ɖ ɗ ɘ ə ɚ ɛ ɜ ɝ ɞ ɟ ɠ' != 'ɐ ɑ ɒ ɓ ɔ ɕ ɖ ɗ ɘ ə ɚ ɛ ɜ ɝ ɞ ɟ ɠ'"
+      result: [false]
+
+    - desc: '** utf8 strings'
+      expression: "'ɐ ɑ ɒ ɓ ɔ ɕ ɖ ɗ ɘ ə ɚ ɛ ɜ ɝ ɞ ɟ ɠ' != 'ə ɚ ɛ ɜ ɝ ɞ ɟ ɠɐ ɑ ɒ ɓ ɔ ɕ ɖ ɗ ɘ '"
+      result: [true]
+
+    - desc: '* integer: values must be exactly equal'
+
+    - desc: '** equal'
+      expression: "1 != 1"
+      result: [false]
+
+    - desc: '** equal'
+      expression: "Ops.int1 != Ops.int1"
+      result: [false]
+
+    - desc: '** not equal'
+      expression: "1 != 2"
+      result: [true]
+
+    - desc: '** not equal'
+      expression: "Ops.int1 != Ops.int2"
+      result: [true]
+
+    - desc: '* decimal: values must be equal, trailing zeroes are ignored'
+    - desc: '** decimals equal'
+      expression: "1.01 != 1.01"
+      result: [false]
+
+    - desc: '** decimals equal, trailing zeroes are ignored'
+      expression: "0.01 != 00.01"
+      result: [false]
+
+    - desc: 'decimal not equal'
+      expression: "1.01 != 1.02"
+      result: [true]
+
+    - desc: '* boolean: values must be the same'
+
+    - desc: '** equal'
+      expression: "true != true"
+      result: [false]
+
+    - desc: '** not equal'
+      expression: "true != false"
+      result: [true]
+
+    - desc: '** propagate empty coll'
+      expression: "true != Ops.unexists"
+      result: []
+
+    - desc: '** inequality for null values'
+      inputfile: patient-example-2.json
+      model: r4
+      # Patient.name.given[0].empty() = false
+      # and
+      # Patient.name.given[3].empty() = false
+      # So, these are not empty collections and the result should not be empty.
+      expression: Patient.name.given[0] != Patient.name.given[3]
+      result: [false]
+
+    - 'group: Dates & Times':
+      - desc:  'DateTime literal compared with DateTime'
+        expression: '@2018 != @2018'
+        result: [false]
+
+      - desc:  'DateTime literal compared with different DateTime'
+        expression: '@2018 != @2017'
+        result: [true]
+
+      - desc: 'DateTime literal compared with different precision DateTime (1)'
+        expression: '@2018 != @2018-02'
+        result: []
+
+      - desc: 'DateTime literal compared with different precision DateTime (2)'
+        expression: '@2018 != @2018-01'
+        result: []
+
+      - desc: 'DateTime literal compared with different precision DateTime (3)'
+        expression: '@2018-02-03 != @2018-01'
+        result: [true]
+
+      - desc: 'DateTime literal compared with same DateTime in resource'
+        expression: '@2018-02 != date1.toDate()'
+        result: [false]
+
+      - desc: 'DateTime literal compared with different DateTime in resource'
+        expression: '@2018-01 != date1.toDate()'
+        result: [true]
+
+      - desc: 'DateTime literal compared with different precision DateTime in resource'
+        expression: '@2018-02-02 != date1.toDate()'
+        result: []
+
+      - desc: 'Time literal compared with same time in different timezone'
+        expression: '@T10:04:23-04:00 != @T18:04:23+04:00'
+        result: [false]
+
+      - desc: 'Time literal compared with different time'
+        expression: '@T10:04:23-04:00 != @T18:04:24+04:00'
+        result: [true]
+
+      - desc: 'Time literal, comparing timezone and Z (same time)'
+        expression: '@T10:04:23-04:00 != @T14:04:23Z'
+        result: [false]
+
+      - desc: 'Time literal, comparing timezone and Z (different time)'
+        expression: '@T10:04:23-04:00 != @T14:04:24Z'
+        result: [true]
+
+      - desc: 'Time literal compared with same time in resource'
+        expression: '@T12:34:45 != time1.toTime()'
+        result: [false]
+
+      - desc: 'Time literal compared with different time in resource'
+        expression: '@T12:35:46 != time1.toTime()'
+        result: [true]
+
+      - desc: 'Time literal compared with different precision time in resource (1)'
+        expression: '@T12:34 != time1.toTime()'
+        result: []
+      - desc: 'Time literal compared with different precision time in resource (2)'
+        expression: '@T12:35 != time1.toTime()'
+        result: [true]
+
+  - 'group: 6.1.4. !~ (Not Equivalent)':
+# The inverse of the equivalent operator.
+    - 'group: Dates & Times':
+      - desc:  'DateTime literal compared with DateTime'
+        expression: '@2018 !~ @2018'
+        result: [false]
+
+      - desc:  'DateTime literal compared with different DateTime'
+        expression: '@2018 !~ @2017'
+        result: [true]
+
+      - desc: 'DateTime literal compared with different precision DateTime (1)'
+        expression: '@2018 !~ @2018-02'
+        result: [true]
+
+      - desc: 'DateTime literal compared with different precision DateTime (2)'
+        expression: '@2019 !~ @2018-02'
+        result: [true]
+
+      - desc: 'DateTime literal compared with same DateTime in resource'
+        expression: '@2018-02 !~ date1.toDate()'
+        result: [false]
+
+      - desc: 'DateTime literal compared with different DateTime in resource'
+        expression: '@2018-01 !~ date1.toDate()'
+        result: [true]
+
+      - desc: 'DateTime literal compared with different precision DateTime in resource'
+        expression: '@2018-02-02 !~ date1.toDate()'
+        result: [true]
+
+      - desc: 'Time literal compared with same time in different timezone'
+        expression: '@T10:04:23-04:00 !~ @T18:04:23+04:00'
+        result: [false]
+
+      - desc: 'Time literal compared with different time'
+        expression: '@T10:04:23-04:00 !~ @T18:04:24+04:00'
+        result: [true]
+
+      - desc: 'Time literal, comparing timezone and Z (same time)'
+        expression: '@T10:04:23-04:00 !~ @T14:04:23Z'
+        result: [false]
+
+      - desc: 'Time literal, comparing timezone and Z (different time)'
+        expression: '@T10:04:23-04:00 !~ @T14:04:24Z'
+        result: [true]
+
+      - desc: 'Time literal compared with same time in resource'
+        expression: '@T12:34:45 !~ time1.toTime()'
+        result: [false]
+
+      - desc: 'Time literal compared with different time in resource'
+        expression: '@T12:35:46 !~ time1.toTime()'
+        result: [true]
+
+      - desc: 'Time literal compared with different precision time in resource (1)'
+        expression: '@T12:34 !~ time1.toTime()'
+        result: [true]
+      - desc: 'Time literal compared with different precision time in resource (2)'
+        expression: '@T12:35 !~ time1.toTime()'
+        result: [true]
+
+
+    - desc: '* collections for equivalence { } !~ { } will result in true.'
+      expression: "Ops.unexists !~ Ops.unexists"
+      result: [false]
+
+    - desc: '** non-equivalence for null values'
+      inputfile: patient-example-2.json
+      model: r4
+      expression: Patient.name.given[0] !~ Patient.name.given[3]
+      result: [false]
+
+  # If both operands are collections with a single item:
+
+  # For primitives
+
+    - desc: '* string: the strings must be the same while ignoring case and normalizing whitespace.'
+      expression: "'ab c' !~ 'Ab  C'"
+      result: [false]
+
+  # integer: exactly equal
+
+    - desc: |
+        decimal: values must be equal, comparison is done on values rounded
+        to the precision of the least precise operand.
+        Trailing zeroes are ignored in  determining precision.
+      expression: "1.001 !~ 01.0012"
+      result: [false]
+
+subject:
+  resourceType: Ops
+  date1: "2018-02"
+  time1: "12:34:45"
+  str1: string1
+  str2: string2
+  int1: 1
+  int2: 2
+  coll:
+    - a: 1
+    - a: 2
+    - a: 3
+  collsame:
+    - a: 1
+    - a: 2
+    - a: 3
+  collother:
+    - a: 1
+    - a: 2
+    - a: 3
+    - a: 4
+  complex:
+    a: 1
+    b:
+      c: str
+    d:
+      - e: 1
+  complexsame:
+    a: 1
+    b:
+      c: str
+    d:
+      - e: 1
+  complexsimilar:
+    a: 1
+    b:
+      c: Str
+    d:
+      - e: 1.1
+  complexother:
+    a: 1
+    b:
+      c: str
+    d:
+      - e: 2
+

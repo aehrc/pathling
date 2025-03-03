@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.parser;
 
 import static java.util.Objects.requireNonNull;
-import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -40,10 +39,6 @@ import jakarta.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * This class is invoked on the right-hand side of the invocation expression, and can optionally be
@@ -52,12 +47,11 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * @author John Grimes
  */
 class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
-
-
-  private static final Set<String> RESOURCE_TYPES = Stream.of(ResourceType.values())
-      .filter(not(ResourceType.NULL::equals))
-      .map(ResourceType::toCode).collect(
-          Collectors.toUnmodifiableSet());
+  
+  private static boolean isResourceType(@Nonnull final String identifier) {
+    // check if starts with capital letter
+    return !identifier.isEmpty() && Character.isUpperCase(identifier.charAt(0));
+  }
 
 
   final boolean isRoot;
@@ -86,8 +80,8 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
   public FhirPath visitMemberInvocation(
       @Nullable final MemberInvocationContext ctx) {
     final String fhirPath = requireNonNull(ctx).getText();
-    if (isRoot && RESOURCE_TYPES.contains(fhirPath)) {
-      return new Resource(ResourceType.fromCode(fhirPath));
+    if (isRoot && isResourceType(fhirPath)) {
+      return new Resource(fhirPath);
     } else {
       return new Traversal(fhirPath);
     }
@@ -126,7 +120,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
     // if ("resolve".equals(functionIdentifier)) {
     //   return ResolvePath.of(arguments);
     // } else {
-      return new EvalFunction(functionIdentifier, arguments);
+    return new EvalFunction(functionIdentifier, arguments);
     // }
   }
 

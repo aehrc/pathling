@@ -1,0 +1,15 @@
+package au.csiro.pathling.test.yaml;
+
+import au.csiro.pathling.test.yaml.YamlSpecTestBase.FhirpathArgumentProvider;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ArgumentsSource;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
+@Retention(RetentionPolicy.RUNTIME)
+@ArgumentsSource(FhirpathArgumentProvider.class)
+@ParameterizedTest
+public @interface YamlSpec {
+
+  String value();
+}

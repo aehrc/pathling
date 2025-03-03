@@ -1,0 +1,49 @@
+tests:
+  - 'group: 5. Functions':
+    - 'group: 5.9. Utility functions':
+      - 'group: 5.9.1. trace(name : string) : collection':
+    # Add a string representation of the input collection to the diagnostic log, using the parameter name as the name in the log. This log should be made available to the user in some appropriate fashion. Does not change the input, so returns the input collection as output.
+
+        - desc: '** trace'
+          expression: coll.attr.trace('coll')
+          disableConsoleLog: true
+          result: [1, 2, 3, 4, 5, 6]
+
+        - desc: '** trace for collection with null values'
+          inputfile: patient-example-2.json
+          model: r4
+          expression: Patient.name.given.trace('coll')[0].id
+          disableConsoleLog: true
+          result:
+            - Jacomus1Id
+
+      - 'group: 5.9.2. Current date and time functions':
+        - 'group: now(): DateTime':
+
+          - desc: '** should return the same date as today()'
+            expression: now().toString().substring(0,10) = today().toString()
+            result:
+              - true
+
+          - desc: '** should return the same time as timeOfDay()'
+            expression: now().toString().substring(11,12) = timeOfDay().toString()
+            result:
+              - true
+
+        - 'group: timeOfDay(): Time':
+
+          - desc: '** should return the full time'
+            expression: timeOfDay().toString().length() = 12
+            result:
+              - true
+
+          - desc: '** should return type System.Time'
+            expression: timeOfDay().is(System.Time)
+            result:
+              - true
+
+subject:
+  coll:
+    - attr: [1,2,3]
+    - attr: [4,5,6]
+  test: 1

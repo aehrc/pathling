@@ -1,10 +1,9 @@
-package au.csiro.pathling.fhirpath.definition;
+package au.csiro.pathling.fhirpath.definition.fhir;
 
-import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
+import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import jakarta.annotation.Nonnull;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import org.apache.commons.lang.WordUtils;
 
@@ -15,12 +14,12 @@ import org.apache.commons.lang.WordUtils;
  * @author John Grimes
  * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#polymorphism">Polymorphism in FHIR</a>
  */
-public class ChoiceChildDefinition implements ChildDefinition {
+class FhirChoiceDefinition implements ChoiceDefinition {
 
   @Nonnull
   private final RuntimeChildChoiceDefinition childDefinition;
-  
-  protected ChoiceChildDefinition(@Nonnull final RuntimeChildChoiceDefinition childDefinition) {
+
+  protected FhirChoiceDefinition(@Nonnull final RuntimeChildChoiceDefinition childDefinition) {
     this.childDefinition = childDefinition;
   }
 
@@ -64,7 +63,7 @@ public class ChoiceChildDefinition implements ChildDefinition {
    */
   @Nonnull
   public Optional<ElementDefinition> getChildByType(@Nonnull final String type) {
-    final String key = ChoiceChildDefinition.getColumnName(getName(), type);
+    final String key = FhirChoiceDefinition.getColumnName(getName(), type);
     return getChildByElementName(key);
   }
 
@@ -76,7 +75,7 @@ public class ChoiceChildDefinition implements ChildDefinition {
    */
   @Nonnull
   private Optional<ElementDefinition> getChildByElementName(final String name) {
-    return ChildDefinition.buildElement(childDefinition, name);
+    return FhirDefinitionContext.buildElement(childDefinition, name);
   }
 
 }

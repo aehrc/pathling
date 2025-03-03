@@ -23,6 +23,7 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.function.FunctionInput;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
@@ -181,8 +182,12 @@ final public class Paths {
     public Collection apply(@Nonnull final Collection input,
         @Nonnull final EvaluationContext context) {
       final Optional<Collection> result = input.traverse(propertyName);
-      checkUserInput(result.isPresent(), "No such child: " + propertyName);
-      return result.get();
+      if (context.getEvalOptions().isAllowUndefinedFields()) {
+        return result.orElse(EmptyCollection.getInstance());
+      } else {
+        checkUserInput(result.isPresent(), "No such child: " + propertyName);
+        return result.get();
+      }
     }
 
     @Nonnull
@@ -196,33 +201,23 @@ final public class Paths {
   public static class Resource implements FhirPath {
 
     @Nonnull
-    ResourceType resourceType;
+    String resourceCode;
+
+    @Nonnull
+    public ResourceType getResourceType() {
+      return ResourceType.fromCode(resourceCode);
+    }
 
     @Override
     public Collection apply(@Nonnull final Collection input,
         @Nonnull final EvaluationContext context) {
-      return context.resolveResource(resourceType);
+      return context.resolveResource(resourceCode);
     }
 
     @Nonnull
     @Override
     public String toExpression() {
-      return resourceType.toCode();
-    }
-  }
-
-
-  @Value
-  public static class Invocation implements FhirPath {
-
-    FhirPath invocationSubject;
-    FhirPath invocationVerb;
-
-    @Override
-    public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      return invocationVerb.apply(invocationSubject.apply(input, context),
-          context);
+      return resourceCode;
     }
   }
 

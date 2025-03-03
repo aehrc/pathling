@@ -145,7 +145,7 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public abstract ColumnRepresentation getField(@Nonnull final String fieldName);
-  
+
   /**
    * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
    * field within the current representation. This method also takes the FHIR type of the field into
@@ -306,8 +306,7 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation asCanonical() {
     return removeNulls().normaliseNull();
   }
-
-
+  
   /**
    * Transforms the current {@link ColumnRepresentation} in a way that only affects a singular value
    * if it is not null.
