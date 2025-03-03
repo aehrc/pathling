@@ -23,11 +23,12 @@ import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
 import jakarta.annotation.Nonnull;
+import java.util.Optional;
 
 public interface EvaluationContext {
   
   @Nonnull
-  ResourceCollection resolveResource(@Nonnull final String resourceCode);
+  Optional<ResourceCollection> resolveResource(@Nonnull final String resourceCode);
 
   @Nonnull
   Collection resolveJoin(@Nonnull final ReferenceCollection referenceCollection);

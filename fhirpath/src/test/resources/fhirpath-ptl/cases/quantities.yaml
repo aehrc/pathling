@@ -1,0 +1,10 @@
+tests:
+  - 'Time quantities':
+      - desc: '** Correct flooring of decimal weekly quantities **'
+        expression: "@2016-02-28 + 1.5 weeks"
+        result: ['2016-03-06'] 
+      - desc: '** Correct flooring of decimal second quantities **'
+        expression: "@2016-02-28T00:00:00.000 + 1.7006 seconds"
+        result: ['2016-02-28T00:00:01.700+00:00']
+subject:
+  prop: val

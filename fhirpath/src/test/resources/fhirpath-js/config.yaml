@@ -116,12 +116,6 @@ excludeSet:
           - " as " # as operator
           - " & " # & operator
           - " div " # div operator
-      - title: "Unsupported week(s) duration"
-        id: '#2145'
-        type: bug
-        expression: # regex matching expressoin
-          - " weeks"
-          - " week"
   - title: Path exclusions
     glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
@@ -139,11 +133,6 @@ excludeSet:
           - "Observation.value with an R5 FHIR model"
           - "Observation.value with an STU3 FHIR model"
           - "Observation.value with an DSTU2 FHIR model"
-      - title: 'Traversal into non-resource root properties (uppercase) fails'
-        id: '#2165'
-        type: bug
-        any:
-          - "CustomField = 'test'"
   - title: Subsetting exclusions
     glob: 'fhirpath-js/cases/5.3_subsetting.yaml'
     exclude:
@@ -221,7 +210,6 @@ excludeSet:
         expression:
           - '^[+-]7(.3)?$'
       - title: 'Unsupported escape sequences in string literal'
-        id: '#2146'
         type: bug
         any: [ "'a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065'" ]
       - title: 'Unsupported datetime literals with non-second precision'
@@ -374,6 +362,11 @@ excludeSet:
           - "** two objects not"
           - "** two colls"
           - "** two colls not"
+      - title: "Comparison for time quantities returns null"
+        id: '#2172'
+        type: bug
+        any:
+            - "1 week = 7 days"
   - title: 'Comparison exlusions'
     glob: "fhirpath-js/cases/6.2_comparision.yaml"
     exclude:
@@ -567,11 +560,6 @@ excludeSet:
   - title: Aggregate exclusions
     glob: 'fhirpath-js/cases/7_aggregate.yaml'
     exclude:
-      - title: 'Traversal into non-resource root properties (uppercase) fails'
-        id: '#2165'
-        type: bug
-        any:
-          - "sum() function calculates the sum of undefined input collection"
       - title: 'Sum on non-numeric collection fails'
         type: bug
         any:
@@ -658,12 +646,6 @@ excludeSet:
         type: bug
         any:
           - "name.`family`"
-      - title: "Custom fields with uppercase names not supported"
-        id: '#2165'
-        comment: "Unresolved resources should ??? be treated as empty collections"
-        type: ???
-        expression:
-          - "^Encounter\\.id$"
       - title: "Boolean evaluation of collections"
         type: feature
         any:
@@ -844,13 +826,15 @@ excludeSet:
         type: bug
         any:
           - "'a'-'b' = 'ab'"
-      - title: "'mod' operator incorrect for decimals"
-        id: '#2169'
-        type: bug
-        any:
-          - "2.2 mod 1.8 = 0.4"
       - title: "Extensions on primitive types not supported"
         type: feature
         any:
           - "Patient.birthDate.extension('http://hl7.org/fhir/StructureDefinition/patient-birthTime').exists()"
           - "Patient.birthDate.extension('http://hl7.org/fhir/StructureDefinition/patient-birthTime1').empty()"
+      - title: "Comparison for time quantities returns null"
+        id: '#2172'
+        type: bug
+        any:
+          - "7 days = 1 week"
+          - "6 days < 1 week"
+          - "8 days > 1"

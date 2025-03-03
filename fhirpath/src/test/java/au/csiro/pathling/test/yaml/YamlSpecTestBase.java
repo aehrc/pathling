@@ -28,10 +28,13 @@ import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode.Exclude;
@@ -56,6 +59,9 @@ import scala.collection.mutable.WrappedArray;
 @SpringBootUnitTest
 @Slf4j
 public abstract class YamlSpecTestBase {
+
+  public static final String PROPERTY_DISABLED_EXCLUSIONS = "au.csiro.pathling.test.yaml.disabledExclusions";
+  public static final String PROPERTY_EXCLUSIONS_ONLY = "au.csiro.pathling.test.yaml.exclusionsOnly";
 
   @Autowired
   SparkSession spark;
@@ -171,7 +177,7 @@ public abstract class YamlSpecTestBase {
       } else if (actualRaw instanceof Integer intValue) {
         return intValue.longValue();
       } else if (actualRaw instanceof BigDecimal bdValue) {
-        return bdValue.setScale(6, BigDecimal.ROUND_HALF_UP).longValue();
+        return bdValue.setScale(6, RoundingMode.HALF_UP).longValue();
       } else {
         return actualRaw;
       }
@@ -317,10 +323,21 @@ public abstract class YamlSpecTestBase {
     public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
 
       final boolean exclusionsOnly = "true".equals(
-          System.getProperty("au.csiro.pathling.test.yaml.exclusionsOnly"));
+          System.getProperty(PROPERTY_EXCLUSIONS_ONLY));
       if (exclusionsOnly) {
         log.warn(
             "Running excluded test only (`au.csiro.pathling.test.yaml.exclusionsOnly` is set)!!!");
+      }
+
+      final Set<String> disabledExlusionIds = Optional.ofNullable(
+              System.getProperty(PROPERTY_DISABLED_EXCLUSIONS)).stream()
+          .flatMap(s -> Stream.of(s.split(",")))
+          .map(String::trim)
+          .filter(s -> !s.isBlank())
+          .collect(Collectors.toUnmodifiableSet());
+
+      if (!disabledExlusionIds.isEmpty()) {
+        log.warn("Disabling exclusions with ids: {}", disabledExlusionIds);
       }
 
       final Optional<String> testConfigPath = context.getTestClass()
@@ -331,7 +348,8 @@ public abstract class YamlSpecTestBase {
           .map(TestResources::getResourceAsString)
           .map(TestConfig::fromYaml)
           .orElse(TestConfig.getDefault());
-      final Function<TestCase, Optional<String>> excluder = testConfig.toExcluder();
+      final Function<TestCase, Optional<String>> excluder = testConfig.toExcluder(
+          disabledExlusionIds);
 
       final String yamlSpecLocation = context.getTestMethod().orElseThrow()
           .getAnnotation(YamlSpec.class)

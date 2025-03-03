@@ -8,6 +8,7 @@ import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.fhirpath.definition.DefinitionContext;
 import au.csiro.pathling.fhirpath.definition.ResourceTag;
 import jakarta.annotation.Nonnull;
+import java.util.Optional;
 import java.util.stream.Stream;
 import lombok.Value;
 import org.apache.spark.sql.Column;
@@ -29,12 +30,12 @@ public class DefResourceResolver implements ResourceResolver {
   Dataset<Row> subjectDataset;
 
   @Override
-  public @Nonnull ResourceCollection resolveResource(
+  public @Nonnull Optional<ResourceCollection> resolveResource(
       @Nonnull final String resourceCode) {
     if (subjectResource.toCode().equals(resourceCode)) {
-      return resolveSubjectResource();
+      return Optional.of(resolveSubjectResource());
     } else {
-      return resolveForeignResource(resourceCode);
+      return Optional.empty();
     }
   }
 
@@ -42,11 +43,6 @@ public class DefResourceResolver implements ResourceResolver {
   @Nonnull
   public ResourceCollection resolveSubjectResource() {
     return createResource(getSubjectResource());
-  }
-
-  @Nonnull
-  ResourceCollection resolveForeignResource(@Nonnull final String ignoredResourceCode) {
-    throw new UnsupportedOperationException("resolveForeignResource() is not supported");
   }
 
   @Override

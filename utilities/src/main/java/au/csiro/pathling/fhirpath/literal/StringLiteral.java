@@ -47,6 +47,8 @@ public abstract class StringLiteral {
     value = value.replaceAll("\\\\t", "\u0009");
     value = value.replaceAll("\\\\`", "`");
     value = value.replaceAll("\\\\'", "'");
+    value = value.replaceAll("\\\\\"", "\"");
+
     return value.replaceAll("\\\\\\\\", "\\\\");
   }
 

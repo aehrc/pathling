@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
@@ -195,7 +196,7 @@ public class YamlTest {
     final String testConfigYaml = getResourceAsString("fhirpath-js/config.yaml");
     final TestConfig testConfig = YAML_PARSER.loadAs(testConfigYaml, TestConfig.class);
     System.out.println(testConfig);
-    testConfig.toPredicates().forEach(System.out::println);
+    testConfig.toPredicates(Set.of()).forEach(System.out::println);
   }
 
 

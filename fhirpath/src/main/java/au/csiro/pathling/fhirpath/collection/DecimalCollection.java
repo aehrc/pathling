@@ -164,11 +164,9 @@ public class DecimalCollection extends Collection implements Materializable<Deci
         case SUBTRACTION:
         case MULTIPLICATION:
         case DIVISION:
+        case MODULUS:
           result = result.cast(getDecimalType());
           return DecimalCollection.build(new DecimalRepresentation(result));
-        case MODULUS:
-          result = result.cast(DataTypes.LongType);
-          return IntegerCollection.build(new DefaultRepresentation(result));
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }

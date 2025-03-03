@@ -17,15 +17,11 @@
 
 package au.csiro.pathling.fhirpath;
 
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-
-import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
-import java.util.Calendar;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.experimental.UtilityClass;
 import org.hl7.fhir.r4.model.Quantity;
 
 /**
@@ -33,31 +29,11 @@ import org.hl7.fhir.r4.model.Quantity;
  *
  * @author Piotr Szul
  */
+@UtilityClass
 public final class CalendarDurationUtils {
-
-  private CalendarDurationUtils() {
-    // Toolkit class 
-  }
-
+  
   public static final String FHIRPATH_CALENDAR_DURATION_URI = "https://hl7.org/fhirpath/N1/calendar-duration";
   private static final Pattern CALENDAR_DURATION_PATTERN = Pattern.compile("([0-9.]+) (\\w+)");
-
-  private static final Map<String, Integer> CALENDAR_DURATION_TO_UCUM = new ImmutableMap.Builder<String, Integer>().put(
-          "year", Calendar.YEAR).put("years", Calendar.YEAR).put("month", Calendar.MONTH)
-      .put("months", Calendar.MONTH).put("day", Calendar.DATE).put("days", Calendar.DATE)
-      .put("hour", Calendar.HOUR).put("hours", Calendar.HOUR).put("minute", Calendar.MINUTE)
-      .put("minutes", Calendar.MINUTE).put("second", Calendar.SECOND)
-      .put("seconds", Calendar.SECOND).put("millisecond", Calendar.MILLISECOND)
-      .put("milliseconds", Calendar.MILLISECOND).build();
-
-
-  public static int ucumToCalendarTemporalUnit(@Nonnull final String ucumTemporalUnit) {
-    final Integer temporalUnit = CALENDAR_DURATION_TO_UCUM.get(
-        ucumTemporalUnit);
-    checkUserInput(temporalUnit != null,
-        "Unsupported calendar duration unit: " + ucumTemporalUnit);
-    return temporalUnit;
-  }
 
   public static boolean isCalendarDuration(@Nonnull final Quantity maybeCalendarDuration) {
     return maybeCalendarDuration.getSystem()
@@ -73,8 +49,8 @@ public final class CalendarDurationUtils {
     return maybeCalendarDuration;
   }
 
-  public static int getTemporalUnit(@Nonnull final Quantity calendarDuration) {
-    return ucumToCalendarTemporalUnit(ensureCalendarDuration(calendarDuration).getCode());
+  public static FhirPathDurationUnit getTemporalUnit(@Nonnull final Quantity calendarDuration) {
+    return FhirPathDurationUnit.fromUnitName(ensureCalendarDuration(calendarDuration).getCode());
   }
 
   @Nonnull
