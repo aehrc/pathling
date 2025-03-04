@@ -16,8 +16,9 @@
 import glob
 import os
 import sys
-from setuptools import setup
 from typing import Union
+
+from setuptools import setup
 
 HERE = os.path.dirname(__file__)
 ROOT_DIR = os.path.abspath(HERE)
@@ -60,7 +61,8 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
     ],
-    license="Apache License, version 2.0",
+    license="Apache-2.0",
+    license_files=["LICENSE"],
     python_requires=">=3.8",
     install_requires=["pyspark>=3.5.3,<3.6.0", "deprecated>=1.2.13"],
     include_package_data=True,
