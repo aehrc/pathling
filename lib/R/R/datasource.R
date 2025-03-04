@@ -437,7 +437,7 @@ ds_write_tables <- function(ds, schema = NULL, import_mode = ImportMode$OVERWRIT
 #'
 #' @family data source functions
 #'
-#' @examplesIf pathling_is_spark_installed()
+#' @examples \dontrun{
 #' pc <- pathling_connect()
 #' 
 #' # Basic system-level export
