@@ -27,6 +27,7 @@ import au.csiro.pathling.fhirpath.operator.BinaryOperator;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import au.csiro.pathling.fhirpath.operator.CollectionOperations;
 import au.csiro.pathling.fhirpath.operator.MethodDefinedOperator;
+import au.csiro.pathling.fhirpath.operator.PolarityOperator;
 import au.csiro.pathling.fhirpath.operator.SubsettingOperations;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AdditiveExpressionContext;
@@ -44,6 +45,7 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.PolarityExpres
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TermExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TypeExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.UnionExpressionContext;
+import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.path.Paths.EvalOperator;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -209,7 +211,10 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
   @Nonnull
   public FhirPath visitPolarityExpression(
       final PolarityExpressionContext ctx) {
-    throw new InvalidUserInputError("Polarity operator is not supported");
+    return new Paths.EvalUnaryOperator(
+        ctx.expression().accept(this),
+        PolarityOperator.fromSymbol(ctx.children.get(0).toString())
+    );
   }
 
   @Override

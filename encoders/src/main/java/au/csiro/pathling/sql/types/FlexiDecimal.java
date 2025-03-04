@@ -140,6 +140,15 @@ public class FlexiDecimal {
            : null;
   }
 
+
+  @Nullable
+  private static Row negate(@Nullable final Row row) {
+    final BigDecimal value = fromValue(row);
+    return value == null
+           ? null
+           : toValue(value.negate());
+  }
+
   @Nullable
   public static BigDecimal normalize(@Nullable final BigDecimal decimal) {
     if (decimal == null) {
@@ -178,6 +187,11 @@ public class FlexiDecimal {
   private static final UserDefinedFunction TO_DECIMAL = functions.udf(
       (UDF1<Row, BigDecimal>) FlexiDecimal::fromValue,
       DecimalCustomCoder.decimalType());
+
+  private static final UserDefinedFunction NEGATE_UDF = functions.udf(
+      (UDF1<Row, Row>) FlexiDecimal::negate,
+      DATA_TYPE);
+
 
   @Nonnull
   public static Column equals(@Nonnull final Column left, @Nonnull final Column right) {
@@ -228,4 +242,16 @@ public class FlexiDecimal {
   public static Column toDecimal(@Nonnull final Column flexiDecimal) {
     return TO_DECIMAL.apply(flexiDecimal);
   }
+
+  /**
+   * Negates (applied unary `-`) the value of the specified flexible decimal.
+   *
+   * @param flexiDecimal the flexible decimal to negate
+   * @return the negated value
+   */
+  @Nonnull
+  public static Column negate(@Nonnull final Column flexiDecimal) {
+    return NEGATE_UDF.apply(flexiDecimal);
+  }
+
 }

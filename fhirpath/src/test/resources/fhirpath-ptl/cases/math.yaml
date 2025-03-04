@@ -1,0 +1,22 @@
+tests:
+  - 'Polarity operator':
+      - desc: '** Integer negation **'
+        expression: "-10"
+        result: [ -10 ]
+      - desc: '** Integer positive **'
+        expression: "+7"
+        result: [ 7 ]
+      - desc: '** Decimal negation **'
+        expression: "-10.23"
+        result: [ -10.23 ]
+      - desc: '** Integer positive **'
+        expression: "+7.3"
+        result: [ 7.3 ]
+      - desc: '** Quantity positive] **'
+        expression: "+10.23 'm'= 10.23 'm'"
+        result: [ true ]
+      - desc: '** Quantity negation **'
+        expression: "0 'm' - 7.2 'm'= -7.2 'm'"
+        result: [ true ]
+subject:
+  prop: val

@@ -33,6 +33,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Map;
 import java.util.Optional;
+import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -49,11 +50,29 @@ import org.hl7.fhir.r4.model.Quantity.QuantityComparator;
  *
  * @author Piotr Szul
  */
-public final class QuantityEncoding {
+@Value(staticConstructor = "of")
+public class QuantityEncoding {
 
-  private QuantityEncoding() {
-    // Utility class
-  }
+  @Nonnull
+  Column id;
+  @Nonnull
+  Column value;
+  @Nonnull
+  Column value_scale;
+  @Nonnull
+  Column comparator;
+  @Nonnull
+  Column unit;
+  @Nonnull
+  Column system;
+  @Nonnull
+  Column code;
+  @Nonnull
+  Column canonicalizedValue;
+  @Nonnull
+  Column canonicalizedCode;
+  @Nonnull
+  Column _fid;
 
   private static final Map<String, String> CALENDAR_DURATION_TO_UCUM = new ImmutableMap.Builder<String, String>()
       .put("second", "s")
@@ -67,6 +86,62 @@ public final class QuantityEncoding {
   public static final String CANONICALIZED_CODE_COLUMN = QuantitySupport
       .CODE_CANONICALIZED_FIELD_NAME();
 
+
+  /**
+   * Converts this quantity to a struct column.
+   *
+   * @return the struct column representing the quantity.
+   */
+  @Nonnull
+  public Column toStruct() {
+    return struct(
+        id.as("id"),
+        value.cast(DecimalCustomCoder.decimalType()).as("value"),
+        value_scale.as("value_scale"),
+        comparator.as("comparator"),
+        unit.as("unit"),
+        system.as("system"),
+        code.as("code"),
+        canonicalizedValue.as(CANONICALIZED_VALUE_COLUMN),
+        canonicalizedCode.as(CANONICALIZED_CODE_COLUMN),
+        _fid.as("_fid")
+    );
+  }
+
+  /**
+   * Populates the quantity from a struct column.
+   *
+   * @return the {@link QuantityEncoding} object representing the quantity.
+   */
+  @Nonnull
+  public static QuantityEncoding fromStruct(@Nonnull final Column quantityColumn) {
+    return of(
+        quantityColumn.getField("id"),
+        quantityColumn.getField("value"),
+        quantityColumn.getField("value_scale"),
+        quantityColumn.getField("comparator"),
+        quantityColumn.getField("unit"),
+        quantityColumn.getField("system"),
+        quantityColumn.getField("code"),
+        quantityColumn.getField(CANONICALIZED_VALUE_COLUMN),
+        quantityColumn.getField(CANONICALIZED_CODE_COLUMN),
+        quantityColumn.getField("_fid")
+    );
+  }
+
+  /**
+   * Creates a new QuantityEncoding with the specified value and canonicalized value.
+   *
+   * @param value the value column
+   * @param canonicalizedValue the canonicalized value column
+   * @return the new QuantityEncoding
+   */
+  @Nonnull
+  public QuantityEncoding withValue(@Nonnull final Column value,
+      @Nonnull final Column canonicalizedValue) {
+    return of(id, value, value_scale, comparator, unit, system, code, canonicalizedValue,
+        canonicalizedCode, _fid);
+  }
 
   /**
    * Encodes a Quantity to a Row (spark SQL compatible type)
@@ -206,18 +281,10 @@ public final class QuantityEncoding {
       @Nonnull final Column canonicalizedCode,
       @Nonnull final Column _fid
   ) {
-    return struct(
-        id.as("id"),
-        value.cast(DecimalCustomCoder.decimalType()).as("value"),
-        value_scale.as("value_scale"),
-        comparator.as("comparator"),
-        unit.as("unit"),
-        system.as("system"),
-        code.as("code"),
-        canonicalizedValue.as(CANONICALIZED_VALUE_COLUMN),
-        canonicalizedCode.as(CANONICALIZED_CODE_COLUMN),
-        _fid.as("_fid")
-    );
+    return QuantityEncoding.of(
+            id, value, value_scale, comparator, unit, system, code, canonicalizedValue,
+            canonicalizedCode, _fid)
+        .toStruct();
   }
 
   /**

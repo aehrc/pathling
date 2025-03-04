@@ -132,4 +132,25 @@ public interface Numeric {
     }
 
   }
+
+  /**
+   * Negates the value of this Numeric.
+   *
+   * @return A {@link Collection} containing the negated value.
+   */
+  @Nonnull
+  Collection negate();
+
+  /**
+   * Negates the value of the specified {@link Collection} which representation uses a SQL numeric
+   * type supporting negation.
+   *
+   * @param numericalCollection the {@link Collection} to negate
+   * @return a new {@link Collection} containing the negated value
+   */
+  @Nonnull
+  static Collection defaultNegate(@Nonnull final Collection numericalCollection) {
+    return numericalCollection.map(ColumnRepresentation::negate);
+  }
+
 }

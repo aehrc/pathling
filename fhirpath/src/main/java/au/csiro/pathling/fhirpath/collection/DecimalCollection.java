@@ -48,7 +48,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 public class DecimalCollection extends Collection implements Materializable<DecimalType>,
-    StringCoercible {
+    Numeric, StringCoercible {
 
   public static final org.apache.spark.sql.types.DecimalType DECIMAL_TYPE = DataTypes
       .createDecimalType(DecimalCustomCoder.precision(), DecimalCustomCoder.scale());
@@ -155,7 +155,7 @@ public class DecimalCollection extends Collection implements Materializable<Deci
   @Override
   public Function<Numeric, Collection> getMathOperation(@Nonnull final MathOperation operation) {
     return target -> {
-      final Column sourceNumeric = checkPresent(((Numeric) this).getNumericValue());
+      final Column sourceNumeric = checkPresent(this.getNumericValue());
       final Column targetNumeric = checkPresent(target.getNumericValue());
       Column result = operation.getSparkFunction().apply(sourceNumeric, targetNumeric);
 
@@ -225,4 +225,9 @@ public class DecimalCollection extends Collection implements Materializable<Deci
     return (DecimalCollection) super.copyWith(newValue);
   }
 
+  @Override
+  @Nonnull
+  public Collection negate() {
+    return Numeric.defaultNegate(this);
+  }
 }
