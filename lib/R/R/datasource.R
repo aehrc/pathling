@@ -433,6 +433,8 @@ ds_write_tables <- function(ds, schema = NULL, import_mode = ImportMode$OVERWRIT
 #'
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#fhir-bulk-data-api}{Pathling documentation - Reading from Bulk Data API}
 #'
+#' @importFrom sparklyr spark_connection invoke_static
+#'
 #' @export
 #'
 #' @family data source functions
