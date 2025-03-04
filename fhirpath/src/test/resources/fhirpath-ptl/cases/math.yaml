@@ -17,7 +17,6 @@ tests:
         result: [ true ]
       - desc: '** Quantity negation **'
         expression: "0 'm' - 7.2 'm'= -7.2 'm'"
-        disable: true
         result: [ true ]
 subject:
   prop: val

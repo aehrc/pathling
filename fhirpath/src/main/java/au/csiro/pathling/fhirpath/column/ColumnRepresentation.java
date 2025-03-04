@@ -267,7 +267,7 @@ public abstract class ColumnRepresentation {
    * @return A new {@link ColumnRepresentation} that is inverted
    */
   @Nonnull
-  public ColumnRepresentation inverse() {
+  public ColumnRepresentation negate() {
     return map(Column::unary_$minus);
   }
 

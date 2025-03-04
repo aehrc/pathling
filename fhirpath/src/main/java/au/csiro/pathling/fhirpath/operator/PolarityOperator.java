@@ -2,7 +2,6 @@ package au.csiro.pathling.fhirpath.operator;
 
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.utilities.Preconditions;
 import jakarta.annotation.Nonnull;
 import lombok.Value;
@@ -25,13 +24,11 @@ public class PolarityOperator implements UnaryOperator {
   public Collection invoke(@Nonnull final UnaryOperatorInput input) {
     Preconditions.checkUserInput(input.getInput() instanceof Numeric,
         "Polarity operator can only be applied to numeric types");
-    if (negation) {
-      return input.getInput().asSingular().map(ColumnRepresentation::inverse);
-    } else {
-      return input.getInput().asSingular();
-    }
+    final Collection singularInput = input.getInput().asSingular();
+    return negation
+           ? ((Numeric) singularInput).negate()
+           : singularInput;
   }
-
 
   @Override
   @Nonnull
@@ -40,7 +37,7 @@ public class PolarityOperator implements UnaryOperator {
            ? "-"
            : "+";
   }
-
+  
   /**
    * Returns a new instance of {@link PolarityOperator} from the specified polarity symbol ('+' or
    * '-').

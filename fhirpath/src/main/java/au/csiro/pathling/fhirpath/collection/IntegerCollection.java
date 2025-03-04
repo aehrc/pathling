@@ -294,4 +294,10 @@ public class IntegerCollection extends Collection implements
     return map(ColumnRepresentation::asString, StringCollection::build);
   }
 
+  @Override
+  @Nonnull
+  public Collection negate() {
+    return Numeric.defaultNegate(this);
+  }
+  
 }

@@ -260,9 +260,9 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   public Function<Numeric, Collection> getMathOperation(@Nonnull final MathOperation operation) {
     return target -> {
       final BiFunction<Column, Column, Column> mathOperation = getMathColumnOperation(operation);
-      final Column sourceComparable = checkPresent(((Numeric) this).getNumericValue());
+      final Column sourceComparable = checkPresent(this.getNumericValue());
       final Column targetComparable = checkPresent(target.getNumericValue());
-      final Column sourceContext = checkPresent(((Numeric) this).getNumericContext());
+      final Column sourceContext = checkPresent(this.getNumericContext());
       final Column targetContext = checkPresent(target.getNumericContext());
       final Column resultColumn = mathOperation.apply(sourceComparable, targetComparable);
       final Column sourceCanonicalizedCode = sourceContext.getField(
@@ -296,6 +296,22 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
       return QuantityCollection.build(new DefaultRepresentation(resultQuantityColumn),
           getDefinition());
     };
+  }
+
+
+  @Override
+  @Nonnull
+  public Collection negate() {
+    return this.mapColumn(QuantityCollection::negateQuantityColumn);
+  }
+
+  private static Column negateQuantityColumn(@Nonnull Column quantityColumn) {
+    final QuantityEncoding quantityEncoding = QuantityEncoding.fromStruct(quantityColumn);
+    return quantityEncoding
+        .withValue(
+            quantityEncoding.getValue().unary_$minus(),
+            FlexiDecimal.negate(quantityEncoding.getCanonicalizedValue())
+        ).toStruct();
   }
 
 }

@@ -225,4 +225,9 @@ public class DecimalCollection extends Collection implements Materializable<Deci
     return (DecimalCollection) super.copyWith(newValue);
   }
 
+  @Override
+  @Nonnull
+  public Collection negate() {
+    return Numeric.defaultNegate(this);
+  }
 }
