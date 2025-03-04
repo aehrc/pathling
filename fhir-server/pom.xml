@@ -391,7 +391,7 @@
               <environment>
                 <PATHLING_VERSION>${project.version}</PATHLING_VERSION>
                 <!-- The add-exports and add-opens flags are required for Java 17 -->
-                <JAVA_TOOL_OPTIONS>-Xmx2g -XX:MaxMetaspaceSize=400m -XX:ReservedCodeCacheSize=240m -Xss1m -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED</JAVA_TOOL_OPTIONS>
+                <JAVA_TOOL_OPTIONS>-Xmx2g -XX:MaxMetaspaceSize=400m -XX:ReservedCodeCacheSize=240m -Xss1m -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED</JAVA_TOOL_OPTIONS>
               </environment>
               <labels>
                 <copyright>Copyright © 2018-2023, Commonwealth Scientific and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source Software Licence Agreement.</copyright>
@@ -456,6 +456,7 @@
                     <argument>-Duser.timezone=UTC</argument>
                     <argument>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</argument>
                     <argument>--add-opens=java.base/java.net=ALL-UNNAMED</argument>
+                    <argument>--add-opens=java.base/sun.nio.ch=ALL-UNNAMED</argument>
                     <argument>-Dspring.profiles.active=unit-test</argument>
                     <argument>-Dpathling.storage.warehouseUrl=${pathling.benchmark.warehouseUrl}</argument>
                     <argument>-Dpathling.storage.databaseName=${pathling.benchmark.databaseName}</argument>
@@ -496,6 +497,11 @@
                   <arguments>
                     <argument>-classpath</argument>
                     <classpath/>
+                    <argument>-Xmx4g</argument>
+                    <argument>-Duser.timezone=UTC</argument>
+                    <argument>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</argument>
+                    <argument>--add-opens=java.base/java.net=ALL-UNNAMED</argument>
+                    <argument>--add-opens=java.base/sun.nio.ch=ALL-UNNAMED</argument>
                     <argument>-Dspring.profiles.active=spark,fhir,import,cli</argument>
                     <argument>-Dpathling.version=${project.version}</argument>
                     <argument>-Dpathling.terminology.enabled=false</argument>
@@ -506,7 +512,6 @@
                     <argument>${project.basedir}/src/test/resources/test-data/fhir</argument>
                   </arguments>
                   <classpathScope>test</classpathScope>
-                  <cleanupDaemonThreads>false</cleanupDaemonThreads>
                 </configuration>
               </execution>
             </executions>
