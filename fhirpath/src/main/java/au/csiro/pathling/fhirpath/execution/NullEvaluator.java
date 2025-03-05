@@ -1,7 +1,7 @@
 package au.csiro.pathling.fhirpath.execution;
 
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.column.EmptyRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
@@ -26,7 +26,7 @@ public class NullEvaluator {
     @Nonnull
     protected ResourceCollection createResource(@Nonnull final ResourceType resourceType) {
       return ResourceCollection.build(
-          new EmptyRepresentation(),
+          DefaultRepresentation.empty(),
           getFhirContext(), resourceType);
     }
   }

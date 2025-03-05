@@ -231,13 +231,6 @@ excludeSet:
         any:
           - "** null is not empty"
           - "** exists for null should return true"
-      - title: 'Incorrect exist() for empty collections'
-        id: '#2149'
-        type: bug
-        any:
-          - "** empty nothing"
-          - "** exists for undefined coll should return false"
-          - "** exists with criteria should work for not exists coll"
       - title: 'Incorrect not() for empty collections'
         id: '#2150'
         type: bug
@@ -268,11 +261,6 @@ excludeSet:
         any:
           - "** anyFalse for empty coll is false"
           - "** anyFalse for non-exists coll is false"
-      - title: "Incorrect count() for empty collections"
-        id: '#2149'
-        type: bug
-        any:
-          - "** 0 if nothing"
   - title: Filtering and projection exclusions
     glob: "fhirpath-js/cases/5.2_filtering_and_projection.yaml"
     exclude:
@@ -607,12 +595,6 @@ excludeSet:
           - "** expression with extension() for primitive type (using FHIR model data)"
           - "** value of extension of extension (using FHIR model data)"
           - "** id of extension of extension"
-      - title: "empty() should be true for empty collections"
-        id: '#2149'
-        type: bug
-        any:
-          - "** empty url"
-          - "** empty input collection"
   - title: Factory exclusions
     glob: 'fhirpath-js/cases/factory.yaml'
     exclude:
@@ -655,12 +637,6 @@ excludeSet:
         type: feature
         any:
           - "Patient.name.exists(given)"
-      - title: "empty() and exist() should return true/false for empty collections"
-        id: '#2149'
-        type: bug
-        any:
-          - "Patient.ups.exists()"
-          - "Patient.ups.empty()"
       - title: "Unsupported function type()"
         type: feature
         any:

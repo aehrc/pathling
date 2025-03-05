@@ -28,7 +28,6 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.column.EmptyRepresentation;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import au.csiro.pathling.sql.udf.PropertyUdf;
@@ -71,7 +70,7 @@ public abstract class TerminologyFunctions {
         .transformWithUdf("display", Optional.ofNullable(language)
             .map(StringCollection::getColumn)
             .map(ColumnRepresentation::singular)
-            .orElse(EmptyRepresentation.getInstance()))
+            .orElse(DefaultRepresentation.empty()))
         .removeNulls()
     );
   }
@@ -122,7 +121,7 @@ public abstract class TerminologyFunctions {
             Optional.ofNullable(language)
                 .map(StringCollection::getColumn)
                 .map(ColumnRepresentation::singular)
-                .orElse(EmptyRepresentation.getInstance())
+                .orElse(DefaultRepresentation.empty())
         ).flatten().removeNulls();
 
     return Collection.build(resultCtx, propertyType,
@@ -160,11 +159,11 @@ public abstract class TerminologyFunctions {
             Optional.ofNullable(use)
                 .map(CodingCollection::getColumn)
                 .map(ColumnRepresentation::singular)
-                .orElse(EmptyRepresentation.getInstance()),
+                .orElse(DefaultRepresentation.empty()),
             Optional.ofNullable(language)
                 .map(StringCollection::getColumn)
                 .map(ColumnRepresentation::singular)
-                .orElse(EmptyRepresentation.getInstance())
+                .orElse(DefaultRepresentation.empty())
         )
         .flatten().removeNulls()
     );
@@ -279,7 +278,7 @@ public abstract class TerminologyFunctions {
                 .transform(c -> functions.split(c, ",")),
             Optional.ofNullable(target).map(StringCollection::getColumn)
                 .map(ColumnRepresentation::singular)
-                .orElse(EmptyRepresentation.getInstance())
+                .orElse(DefaultRepresentation.empty())
         ));
   }
 

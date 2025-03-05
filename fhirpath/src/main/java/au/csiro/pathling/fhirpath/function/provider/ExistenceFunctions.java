@@ -60,7 +60,7 @@ public class ExistenceFunctions {
   @FhirPathFunction
   @Nonnull
   public static BooleanCollection empty(@Nonnull final Collection input) {
-    return BooleanCollection.build(input.getColumn().empty());
+    return BooleanCollection.build(input.getColumn().isEmpty());
   }
 
   /**

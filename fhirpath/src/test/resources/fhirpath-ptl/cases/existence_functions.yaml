@@ -2,10 +2,10 @@ tests:
   - 'Testing the empty() function in various scenarios':
       - desc: '** Empty litera should return true **'
         expression: '{}.empty()'
-        result: [ ]
+        result: [ true ]
       - desc: '** Empty collection should return true **'
         expression: 'nothing.empty()'
-        result: [ ]
+        result: [ true ]
       - desc: '** Singular integer is not empty **'
         expression: 'n1.empty()'
         result: [ false ]
@@ -34,11 +34,12 @@ tests:
       - desc: '** Empty literal should return 0 **'
         expression: '{}.count()'
         result: [ 0 ]
-        disable: true # empty collection
       - desc: '** Empty collection has count 0 **'
         expression: 'nothing.count()'
         result: [ 0 ]
-        disable: true # empty collection
+      - desc: '** Empty integer collection **'
+        expression: 'n1.where($this=0).count()'
+        result: [ 0 ]
       - desc: '** Singular integer has count 1 **'
         expression: 'n1.count()'
         result: [ 1 ]
@@ -58,11 +59,9 @@ tests:
       - desc: '** Empty literal should return false **'
         expression: '{}.exists()'
         result: [ false ]
-        disable: true # empty collection
       - desc: '** Empty collection should return false **'
         expression: 'nothing.exists()'
         result: [ false ]
-        disable: true # empty collection
       - desc: '** Singular integer exists **'
         expression: 'n1.exists()'
         result: [ true ]

@@ -54,7 +54,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 public abstract class ColumnRepresentation {
-
+  
   /**
    * Create a new {@link ColumnRepresentation} from the result of a function that takes two
    * {@link Column} operands and returns a single {@link Column} result.
@@ -414,7 +414,7 @@ public abstract class ColumnRepresentation {
    * @return A new {@link ColumnRepresentation} that is the result of the check
    */
   @Nonnull
-  public ColumnRepresentation empty() {
+  public ColumnRepresentation isEmpty() {
     return vectorize(
         c -> when(c.isNotNull(), size(c).equalTo(0)).otherwise(true),
         Column::isNull);

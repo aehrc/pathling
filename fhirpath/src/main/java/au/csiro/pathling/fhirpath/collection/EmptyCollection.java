@@ -2,7 +2,7 @@ package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import au.csiro.pathling.fhirpath.column.EmptyRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.operator.Comparable;
 import jakarta.annotation.Nonnull;
@@ -16,7 +16,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class EmptyCollection extends Collection {
 
   private static final EmptyCollection INSTANCE = new EmptyCollection(
-      EmptyRepresentation.getInstance(), Optional.empty(), Optional.empty(), Optional.empty(),
+      DefaultRepresentation.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
       Optional.empty());
 
   protected EmptyCollection(@Nonnull final ColumnRepresentation column,
