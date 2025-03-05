@@ -22,7 +22,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>7.1.0</version>
+  <version>7.2.0</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -72,27 +72,19 @@
     <project.majorVersion>7</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <pathling.sparkVersion>3.5.0</pathling.sparkVersion>
+    <pathling.sparkVersion>3.5.5</pathling.sparkVersion>
     <pathling.scalaVersion>2.12</pathling.scalaVersion>
     <pathling.scalaFullVersion>2.12.17</pathling.scalaFullVersion>
-    <pathling.deltaVersion>3.2.0</pathling.deltaVersion>
+    <pathling.deltaVersion>3.3.0</pathling.deltaVersion>
     <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
     <pathling.hadoopMajorVersion>3</pathling.hadoopMajorVersion>
-    <pathling.hapiFhirVersion>7.0.2</pathling.hapiFhirVersion>
-    <pathling.springBootVersion>3.2.0</pathling.springBootVersion>
-    <pathling.springSecurityVersion>6.2.0</pathling.springSecurityVersion>
+    <pathling.hapiFhirVersion>7.6.1</pathling.hapiFhirVersion>
+    <pathling.springBootVersion>3.3.5</pathling.springBootVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.3.4</pathling.dockerJavaVersion>
-    <pathling.awsSdkVersion>1.12.603</pathling.awsSdkVersion>
-    <pathling.lombokVersion>1.18.32</pathling.lombokVersion>
+    <pathling.awsSdkVersion>1.12.782</pathling.awsSdkVersion>
     <pathling.guavaVersion>32.1.3-jre</pathling.guavaVersion>
-    <pathling.infinispanVersion>15.0.3.Final</pathling.infinispanVersion>
-    <pathling.jacksonVersion>2.16.1</pathling.jacksonVersion>
-    <pathling.jerseyVersion>2.40</pathling.jerseyVersion>
-    <pathling.surefireVersion>3.2.5</pathling.surefireVersion>
-    <pathling.logbackVersion>1.4.14</pathling.logbackVersion>
-    <pathling.slf4jVersion>2.0.9</pathling.slf4jVersion>
-    <pathling.derbyVersion>10.14.2.0</pathling.derbyVersion>
+    <pathling.surefireVersion>3.5.2</pathling.surefireVersion>
   </properties>
 
   <modules>
@@ -254,22 +246,6 @@
         <version>${project.version}</version>
       </dependency>
 
-      <!-- Ensure that consistent and correct versions of Jackson and Jersey are used. -->
-      <dependency>
-        <groupId>com.fasterxml.jackson</groupId>
-        <artifactId>jackson-bom</artifactId>
-        <version>${pathling.jacksonVersion}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.jersey</groupId>
-        <artifactId>jersey-bom</artifactId>
-        <version>${pathling.jerseyVersion}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-
       <!-- Apache Spark -->
       <dependency>
         <groupId>org.apache.spark</groupId>
@@ -336,22 +312,12 @@
       <dependency>
         <groupId>org.apache.curator</groupId>
         <artifactId>curator-client</artifactId>
-        <version>5.6.0</version>
+        <version>5.7.1</version>
       </dependency>
       <dependency>
         <groupId>org.scala-lang</groupId>
         <artifactId>scala-library</artifactId>
         <version>${pathling.scalaFullVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.derby</groupId>
-        <artifactId>derby</artifactId>
-        <version>${pathling.derbyVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.derby</groupId>
-        <artifactId>derbytools</artifactId>
-        <version>${pathling.derbyVersion}</version>
       </dependency>
       <!-- This is required for Spark UI, which still has some expectations that a legacy 
       javax.servlet API is present -->
@@ -360,6 +326,25 @@
         <artifactId>javax.servlet-api</artifactId>
         <version>4.0.1</version>
         <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.glassfish.jersey.containers</groupId>
+        <artifactId>jersey-container-servlet</artifactId>
+        <version>2.40</version>
+      </dependency>
+      <dependency>
+        <groupId>org.glassfish.jersey.containers</groupId>
+        <artifactId>jersey-container-servlet-core</artifactId>
+        <version>2.40</version>
+      </dependency>
+
+      <!-- Spring -->
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${pathling.springBootVersion}</version>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
 
       <!-- HAPI FHIR -->
@@ -375,77 +360,6 @@
         <groupId>com.fasterxml.woodstox</groupId>
         <artifactId>woodstox-core</artifactId>
         <version>6.4.0</version>
-      </dependency>
-
-      <!-- Spring -->
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter</artifactId>
-        <version>${pathling.springBootVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-web</artifactId>
-        <version>${pathling.springBootVersion}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-tomcat</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-jetty</artifactId>
-        <version>${pathling.springBootVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-aop</artifactId>
-        <version>${pathling.springBootVersion}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>*</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-configuration-processor</artifactId>
-        <version>${pathling.springBootVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-security</artifactId>
-        <version>${pathling.springBootVersion}</version>
-      </dependency>
-      <dependency>
-      <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-actuator</artifactId>
-        <version>${pathling.springBootVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.security</groupId>
-        <artifactId>spring-security-oauth2-resource-server</artifactId>
-        <version>${pathling.springSecurityVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.security</groupId>
-        <artifactId>spring-security-oauth2-jose</artifactId>
-        <version>${pathling.springSecurityVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.security</groupId>
-        <artifactId>spring-security-test</artifactId>
-        <version>${pathling.springSecurityVersion}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-test</artifactId>
-        <version>${pathling.springBootVersion}</version>
-        <scope>test</scope>
       </dependency>
 
       <!-- ANTLR -->
@@ -532,14 +446,6 @@
         <scope>test</scope>
       </dependency>
 
-      <!-- Lombok -->
-      <dependency>
-        <groupId>org.projectlombok</groupId>
-        <artifactId>lombok</artifactId>
-        <version>${pathling.lombokVersion}</version>
-        <scope>provided</scope>
-      </dependency>
-
       <!-- Misc -->
       <dependency>
         <groupId>com.google.code.gson</groupId>
@@ -549,7 +455,7 @@
       <dependency>
         <groupId>joda-time</groupId>
         <artifactId>joda-time</artifactId>
-        <version>2.12.7</version>
+        <version>2.13.1</version>
       </dependency>
       <dependency>
         <groupId>com.google.code.findbugs</groupId>
@@ -559,12 +465,12 @@
       <dependency>
         <groupId>org.json</groupId>
         <artifactId>json</artifactId>
-        <version>20240303</version>
+        <version>20250107</version>
       </dependency>
       <dependency>
         <groupId>commons-beanutils</groupId>
         <artifactId>commons-beanutils</artifactId>
-        <version>1.9.4</version>
+        <version>1.10.1</version>
         <exclusions>
           <exclusion>
             <groupId>commons-logging</groupId>
@@ -575,7 +481,7 @@
       <dependency>
         <groupId>commons-io</groupId>
         <artifactId>commons-io</artifactId>
-        <version>2.16.1</version>
+        <version>2.18.0</version>
       </dependency>
       <dependency>
         <groupId>com.google.guava</groupId>
@@ -587,44 +493,12 @@
         <artifactId>commons-lang</artifactId>
         <version>2.6</version>
       </dependency>
-      <dependency>
-        <groupId>org.infinispan</groupId>
-        <artifactId>infinispan-bom</artifactId>
-        <version>${pathling.infinispanVersion}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
-        <version>${pathling.slf4jVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>log4j-over-slf4j</artifactId>
-        <version>${pathling.slf4jVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>jcl-over-slf4j</artifactId>
-        <version>${pathling.slf4jVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>jul-to-slf4j</artifactId>
-        <version>${pathling.slf4jVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback-classic</artifactId>
-        <version>${pathling.logbackVersion}</version>
-      </dependency>
 
       <!-- CVE-2022-42889-->
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-text</artifactId>
-        <version>1.12.0</version>
+        <version>1.13.0</version>
       </dependency>
 
       <!-- CVE-2022-25857, CVE-2022-1471, CVE-2022-41854  -->
@@ -638,19 +512,19 @@
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
-        <version>3.7.2</version>
+        <version>3.9.3</version>
       </dependency>
 
       <!-- CVE-2024-47561 -->
       <dependency>
         <groupId>org.apache.avro</groupId>
         <artifactId>avro</artifactId>
-        <version>1.11.4</version>
+        <version>1.12.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.avro</groupId>
         <artifactId>avro-mapred</artifactId>
-        <version>1.11.4</version>
+        <version>1.12.0</version>
       </dependency>
       
       
@@ -701,7 +575,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.13.0</version>
+          <version>3.14.0</version>
           <configuration>
             <source>17</source>
             <target>17</target>
@@ -713,7 +587,7 @@
         <plugin>
           <groupId>net.alchim31.maven</groupId>
           <artifactId>scala-maven-plugin</artifactId>
-          <version>4.9.1</version>
+          <version>4.9.2</version>
           <executions>
             <execution>
               <id>scala-compile-first</id>
@@ -748,7 +622,7 @@
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
             <!-- The add-exports and add-opens flags are required for Java 17 -->
-            <argLine>@{argLine} -Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED</argLine>
+            <argLine>@{argLine} -Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED</argLine>
             <forkCount>1C</forkCount>
             <failIfNoTests>false</failIfNoTests>
           </configuration>
@@ -759,7 +633,7 @@
           <version>${pathling.surefireVersion}</version>
           <configuration>
             <!-- The add-exports and add-opens flags are required for Java 17 -->
-            <argLine>-Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED</argLine>
+            <argLine>-Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED</argLine>
           </configuration>
         </plugin>
         <plugin>
@@ -770,7 +644,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>exec-maven-plugin</artifactId>
-          <version>3.2.0</version>
+          <version>3.5.0</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -831,7 +705,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
-          <version>3.6.3</version>
+          <version>3.11.2</version>
           <executions>
             <execution>
               <id>javadoc</id>
@@ -876,7 +750,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-gpg-plugin</artifactId>
-          <version>3.2.4</version>
+          <version>3.2.7</version>
           <executions>
             <execution>
               <id>sign</id>
@@ -889,7 +763,7 @@
         <plugin>
           <groupId>org.sonatype.plugins</groupId>
           <artifactId>nexus-staging-maven-plugin</artifactId>
-          <version>1.6.13</version>
+          <version>1.7.0</version>
           <extensions>true</extensions>
           <configuration>
             <serverId>ossrh</serverId>
@@ -907,7 +781,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-deploy-plugin</artifactId>
-          <version>3.1.2</version>
+          <version>3.1.4</version>
           <configuration>
             <skip>true</skip>
           </configuration>
@@ -915,7 +789,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.5.3</version>
+          <version>3.6.0</version>
           <configuration>
             <filters>
               <filter>
@@ -930,7 +804,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-dependency-plugin</artifactId>
-          <version>3.6.1</version>
+          <version>3.8.1</version>
           <goals>
             <goal>analyze-only</goal>
           </goals>
@@ -949,12 +823,12 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>3.4.1</version>
+          <version>3.4.2</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-clean-plugin</artifactId>
-          <version>3.3.2</version>
+          <version>3.4.1</version>
           <configuration>
             <filesets>
               <fileset>

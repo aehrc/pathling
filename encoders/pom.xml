@@ -30,7 +30,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>7.1.0</version>
+    <version>7.2.0</version>
   </parent>
   <artifactId>encoders</artifactId>
   <packaging>jar</packaging>

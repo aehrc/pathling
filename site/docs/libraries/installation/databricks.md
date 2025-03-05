@@ -6,7 +6,7 @@ description: Instructions for installing the Pathling library on a Databricks cl
 # Databricks installation
 
 Pathling has been tested
-on [Databricks Runtime 14.3 LTS](https://docs.databricks.com/en/release-notes/runtime/14.3lts.html).
+on [Databricks Runtime 15.4 LTS](https://docs.databricks.com/aws/en/release-notes/runtime/15.4lts).
 
 To install the Pathling library on a [Databricks](https://www.databricks.com/)
 cluster, navigate to the "Compute" section and click on the cluster. Click on

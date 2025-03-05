@@ -24,7 +24,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>7.1.0</version>
+    <version>7.2.0</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>r</artifactId>
@@ -59,11 +59,11 @@
     <pathling.Rapi.version.qualifier/>
     <pathling.Rapi.version>${pathling.Rapi.version.base}${pathling.Rapi.version.qualifier}</pathling.Rapi.version>
     <!-- 
-      This needs to maintained as the most recent version of Spark that is in the versions manifest
-      of the sparklyr version that we depend upon that is on the archive site. The reason we can't 
-      use the latest from the CDN is that the files drop off the CDN when a new version is released.
+      This needs to maintained as a version of Spark that is in the versions manifest of the 
+      sparklyr version that we depend upon that is on the archive site. The reason we can't use the 
+      latest from the CDN is that the files drop off the CDN when a new version is released.
     -->
-    <pathling.Rapi.sparkVersion>3.5.1</pathling.Rapi.sparkVersion>
+    <pathling.Rapi.sparkVersion>3.5.3</pathling.Rapi.sparkVersion>
     <pathling.Rapi.scalaVersion>${pathling.scalaVersion}</pathling.Rapi.scalaVersion>
     <pathling.Rapi.hadoopMajorVersion>${pathling.hadoopMajorVersion}</pathling.Rapi.hadoopMajorVersion>
     <pathling.Rapi.hadoopVersion>${pathling.hadoopVersion}</pathling.Rapi.hadoopVersion>

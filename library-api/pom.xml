@@ -25,7 +25,7 @@
   <parent>
     <artifactId>pathling</artifactId>
     <groupId>au.csiro.pathling</groupId>
-    <version>7.1.0</version>
+    <version>7.2.0</version>
   </parent>
   <artifactId>library-api</artifactId>
   <packaging>jar</packaging>
@@ -50,6 +50,11 @@
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>utilities</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>au.csiro.fhir</groupId>
+      <artifactId>bulk-export</artifactId>
+      <version>1.0.2</version>
     </dependency>
 
     <!-- Apache Spark -->
