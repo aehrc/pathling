@@ -15,7 +15,10 @@ import org.junit.jupiter.api.Tag;
 
 @Slf4j
 @Tag("YamlTest")
-@YamlConfig("fhirpath-js/config.yaml")
+@YamlConfig(
+    config = "fhirpath-js/config.yaml",
+    resourceBase = "fhirpath-js/resources"
+)
 public class YamlReferenceImplTest extends YamlSpecCachedTestBase {
 
 

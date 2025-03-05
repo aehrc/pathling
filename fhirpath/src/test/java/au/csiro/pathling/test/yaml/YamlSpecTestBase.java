@@ -27,6 +27,7 @@ import au.csiro.pathling.test.yaml.FhipathTestSpec.TestCase;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.File;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
@@ -342,8 +343,17 @@ public abstract class YamlSpecTestBase {
 
       final Optional<String> testConfigPath = context.getTestClass()
           .flatMap(c -> Optional.ofNullable(c.getAnnotation(YamlConfig.class)))
-          .map(YamlConfig::value);
+          .map(YamlConfig::config)
+          .filter(s -> !s.isBlank());
+
+      final Optional<String> resourceBase = context.getTestClass()
+          .flatMap(c -> Optional.ofNullable(c.getAnnotation(YamlConfig.class)))
+          .map(YamlConfig::resourceBase)
+          .filter(s -> !s.isBlank());
+      
       testConfigPath.ifPresent(s -> log.info("Loading test config from: {}", s));
+      resourceBase.ifPresent(s -> log.info("Resource base : {}", s));
+
       final TestConfig testConfig = testConfigPath
           .map(TestResources::getResourceAsString)
           .map(TestConfig::fromYaml)
@@ -376,7 +386,7 @@ public abstract class YamlSpecTestBase {
           .map(ts -> StdRuntimeCase.of(ts,
               Optional.ofNullable(ts.getInputFile())
                   .map(f -> (Function<RuntimeContext, ResourceResolver>) FhirResolverFactory.of(
-                      getResourceAsString("fhirpath-js/resources/" + f)))
+                      getResourceAsString(resourceBase.orElse("") + File.separator + f)))
                   .orElse(defaultResolverFactory),
               excluder.apply(ts)
           ))
