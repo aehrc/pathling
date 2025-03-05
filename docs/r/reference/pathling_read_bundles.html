@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">pathling</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">7.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">7.2.0</span>
       </span>
     </div>
 
@@ -84,6 +84,7 @@
     <h2>See also</h2>
     <div class="dont-index"><p><a href="https://pathling.csiro.au/docs/libraries/fhirpath-query#fhir-bundles" class="external-link">Pathling documentation - Reading Bundles</a></p>
 <p>Other data source functions:
+<code><a href="pathling_read_bulk.html">pathling_read_bulk</a>()</code>,
 <code><a href="pathling_read_datasets.html">pathling_read_datasets</a>()</code>,
 <code><a href="pathling_read_delta.html">pathling_read_delta</a>()</code>,
 <code><a href="pathling_read_ndjson.html">pathling_read_ndjson</a>()</code>,
@@ -94,6 +95,7 @@
     <div id="ref-examples">
     <h2>Examples</h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">pc</span> <span class="op">&lt;-</span> <span class="fu"><a href="pathling_connect.html">pathling_connect</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>2 arguments not used by format 'spark-3.5.3-bin-hadoop3'</span>
 <span class="r-in"><span><span class="va">data_source</span> <span class="op">&lt;-</span> <span class="va">pc</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu">pathling_read_bundles</span><span class="op">(</span><span class="fu"><a href="pathling_examples.html">pathling_examples</a></span><span class="op">(</span><span class="st">'bundle-xml'</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>     <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Patient"</span>, <span class="st">"Observation"</span><span class="op">)</span>, <span class="va">MimeType</span><span class="op">$</span><span class="va">FHIR_XML</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">data_source</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="ds_read.html">ds_read</a></span><span class="op">(</span><span class="st">'Observation'</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu">sparklyr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/sparklyr/man/sdf_dim.html" class="external-link">sdf_nrow</a></span><span class="op">(</span><span class="op">)</span></span></span>

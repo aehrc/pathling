@@ -4,82 +4,90 @@ pathling package
 Submodules
 ----------
 
+pathling.bulk module
+--------------------
+
+.. automodule:: pathling.bulk
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 pathling.coding module
 ----------------------
 
 .. automodule:: pathling.coding
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 pathling.context module
 -----------------------
 
 .. automodule:: pathling.context
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 pathling.core module
 --------------------
 
 .. automodule:: pathling.core
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 pathling.datasink module
 ------------------------
 
 .. automodule:: pathling.datasink
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 pathling.datasource module
 --------------------------
 
 .. automodule:: pathling.datasource
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 pathling.fhir module
 --------------------
 
 .. automodule:: pathling.fhir
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 pathling.functions module
 -------------------------
 
 .. automodule:: pathling.functions
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 pathling.query module
 ---------------------
 
 .. automodule:: pathling.query
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 pathling.udfs module
 --------------------
 
 .. automodule:: pathling.udfs
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 Module contents
 ---------------
 
 .. automodule:: pathling
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:

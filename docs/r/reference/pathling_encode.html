@@ -18,7 +18,7 @@ encodes the resources of the given types as Spark DataFrame."><!-- mathjax --><s
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">pathling</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">7.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">7.2.0</span>
       </span>
     </div>
 
@@ -96,11 +96,12 @@ DataFrame is assumed to have one column of type string.</p></dd>
     <div id="ref-examples">
     <h2>Examples</h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">pc</span> <span class="op">&lt;-</span> <span class="fu"><a href="pathling_connect.html">pathling_connect</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>2 arguments not used by format 'spark-3.5.3-bin-hadoop3'</span>
 <span class="r-in"><span><span class="va">json_resources_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="pathling_spark.html">pathling_spark</a></span><span class="op">(</span><span class="va">pc</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> </span></span>
 <span class="r-in"><span>     <span class="fu">sparklyr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/sparklyr/man/spark_read_text.html" class="external-link">spark_read_text</a></span><span class="op">(</span>path<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">'extdata'</span>,<span class="st">'ndjson'</span>, <span class="st">'Condition.ndjson'</span>, </span></span>
 <span class="r-in"><span>             package<span class="op">=</span><span class="st">'pathling'</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">pc</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu">pathling_encode</span><span class="op">(</span><span class="va">json_resources_df</span>, <span class="st">'Condition'</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Source:   table&lt;`sparklyr_tmp_47b8378d_73da_44ac_892b_bbb88c494868`&gt; [?? x 31]</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Source:   table&lt;`sparklyr_tmp_a7a868fa_db81_4465_9da7_aeeed8f0a7e8`&gt; [?? x 31]</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Database: spark_connection</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    id                 id_versioned meta  implicitRules language text  identifier</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>              <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;lis&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;lis&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>    </span>

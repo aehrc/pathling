@@ -18,7 +18,7 @@ FHIR resources in a tabular format."><!-- mathjax --><script src="https://cdnjs.
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">pathling</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">7.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">7.2.0</span>
       </span>
     </div>
 
@@ -94,12 +94,13 @@ Boolean value. Multiple filters are combined using AND logic.</p></dd>
     <div id="ref-examples">
     <h2>Examples</h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">pc</span> <span class="op">&lt;-</span> <span class="fu"><a href="pathling_connect.html">pathling_connect</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>2 arguments not used by format 'spark-3.5.3-bin-hadoop3'</span>
 <span class="r-in"><span><span class="va">data_source</span> <span class="op">&lt;-</span> <span class="va">pc</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="pathling_read_ndjson.html">pathling_read_ndjson</a></span><span class="op">(</span><span class="fu"><a href="pathling_examples.html">pathling_examples</a></span><span class="op">(</span><span class="st">'ndjson'</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">data_source</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu">ds_extract</span><span class="op">(</span><span class="st">'Patient'</span>,</span></span>
 <span class="r-in"><span>     columns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'gender'</span>, givenName<span class="op">=</span><span class="st">'name.given'</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>     filters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'birthDate &gt; @1950-01-01'</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Source:   table&lt;`sparklyr_tmp_8be68d96_dcaa_4d9d_832e_bba55ee93497`&gt; [?? x 2]</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Source:   table&lt;`sparklyr_tmp_02169dec_eed6_427f_a651_e8500ac9b5e1`&gt; [?? x 2]</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Database: spark_connection</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    gender givenName  </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>      </span>
