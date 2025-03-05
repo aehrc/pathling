@@ -6,7 +6,7 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "dependencies": {
-    "p-retry": "^5.0.0"
+    "p-retry": "^6.2.1"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.16.0",
