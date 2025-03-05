@@ -25,7 +25,6 @@ import static org.apache.spark.sql.functions.transform;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.column.EmptyRepresentation;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -71,7 +70,7 @@ public class UnnestingSelection implements ProjectionClause {
 
     // This is a way to evaluate the expression for the purpose of getting the types of the result.
     final ProjectionContext stubContext = context.withInputContext(
-        unnestingCollection.map(__ -> EmptyRepresentation.getInstance()));
+        unnestingCollection.map(__ -> DefaultRepresentation.empty()));
     final List<ProjectionResult> stubResults = components.stream()
         .map(s -> s.evaluate(stubContext))
         .toList();

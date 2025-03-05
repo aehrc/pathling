@@ -176,11 +176,11 @@ class DefaultRepresentationTest {
   @Test
   void testEmpty() {
     new ColumnAsserts()
-        .assertEquals(true, nullValue().empty())
-        .assertEquals(false, valueOf(17).empty())
-        .assertEquals(true, nullArray().empty())
-        .assertEquals(true, emptyArray().empty())
-        .assertEquals(false, arrayOf(1, 2, 3).empty())
+        .assertEquals(true, nullValue().isEmpty())
+        .assertEquals(false, valueOf(17).isEmpty())
+        .assertEquals(true, nullArray().isEmpty())
+        .assertEquals(true, emptyArray().isEmpty())
+        .assertEquals(false, arrayOf(1, 2, 3).isEmpty())
         .check();
   }
 

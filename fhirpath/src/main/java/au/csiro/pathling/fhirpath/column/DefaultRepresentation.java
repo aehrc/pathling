@@ -30,6 +30,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -44,7 +45,23 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @AllArgsConstructor
 public class DefaultRepresentation extends ColumnRepresentation {
 
-  Column value;
+  private static final DefaultRepresentation EMPTY_REPRESENTATION = new DefaultRepresentation(
+      functions.lit(null));
+
+  /**
+   * Gets the empty representation.
+   *
+   * @return A singleton instance of an empty representation
+   */
+  @Nonnull
+  public static ColumnRepresentation empty() {
+    return EMPTY_REPRESENTATION;
+  }
+
+  /**
+   * The column value represented by this object.
+   */
+  private Column value;
 
   /**
    * Create a new {@link ColumnRepresentation} from a literal value.
@@ -53,7 +70,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
    * @return A new {@link ColumnRepresentation} representing the value
    */
   @Nonnull
-  public static ColumnRepresentation literal(@Nonnull final Object value) {
+  public static DefaultRepresentation literal(@Nonnull final Object value) {
     if (value instanceof BigDecimal) {
       // If the literal is a BigDecimal, represent it as a DecimalRepresentation.
       return new DecimalRepresentation(lit(value));
@@ -120,5 +137,5 @@ public class DefaultRepresentation extends ColumnRepresentation {
   public ColumnRepresentation getField(@Nonnull final String fieldName) {
     return copyOf(value.getField(fieldName));
   }
-  
+
 }

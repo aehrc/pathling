@@ -6,5 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface YamlConfig {
 
-  String value();
+  String config() default "";
+
+  String resourceBase() default "";
 }

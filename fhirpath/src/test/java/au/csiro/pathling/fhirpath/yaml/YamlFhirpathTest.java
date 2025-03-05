@@ -1,5 +1,6 @@
 package au.csiro.pathling.fhirpath.yaml;
 
+import au.csiro.pathling.test.yaml.YamlConfig;
 import au.csiro.pathling.test.yaml.YamlSpec;
 import au.csiro.pathling.test.yaml.YamlSpecTestBase;
 import jakarta.annotation.Nonnull;
@@ -9,6 +10,9 @@ import org.junit.jupiter.api.Tag;
 
 @Slf4j
 @Tag("UnitTest")
+@YamlConfig(
+    resourceBase = "fhirpath-ptl/resources"
+)
 public class YamlFhirpathTest extends YamlSpecTestBase {
 
   @YamlSpec("fhirpath-ptl/cases/literals.yaml")

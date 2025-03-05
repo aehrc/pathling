@@ -2,10 +2,21 @@ tests:
   - 'Testing the empty() function in various scenarios':
       - desc: '** Empty litera should return true **'
         expression: '{}.empty()'
-        result: [ ]
+        result: [ true ]
       - desc: '** Empty collection should return true **'
         expression: 'nothing.empty()'
-        result: [ ]
+        result: [ true ]
+      - desc: '** Computed empty collection is empty **'
+        expression: 'n1.where($this=0).empty()'
+        result: [ true ]
+      - desc: '** Resource singular empty collection is empty **'
+        expression: 'gender.empty()'
+        inputfile: 'Patient-empty.json'
+        result: [ true ]
+      - desc: '** Resource plural empty collection is empty **'
+        expression: 'name.given.empty()'
+        inputfile: 'Patient-empty.json'
+        result: [ true ]
       - desc: '** Singular integer is not empty **'
         expression: 'n1.empty()'
         result: [ false ]
@@ -34,11 +45,20 @@ tests:
       - desc: '** Empty literal should return 0 **'
         expression: '{}.count()'
         result: [ 0 ]
-        disable: true # empty collection
       - desc: '** Empty collection has count 0 **'
         expression: 'nothing.count()'
         result: [ 0 ]
-        disable: true # empty collection
+      - desc: '** Computed empty collection has count 0 **'
+        expression: 'n1.where($this=0).count()'
+        result: [ 0 ]
+      - desc: '** Resource singular empty collection has count 0 **'
+        expression: 'gender.count()'
+        inputfile: 'Patient-empty.json'
+        result: [ 0 ]
+      - desc: '** Resource plural empty collection has count 0 **'
+        expression: 'name.given.count()'
+        inputfile: 'Patient-empty.json'
+        result: [ 0 ]
       - desc: '** Singular integer has count 1 **'
         expression: 'n1.count()'
         result: [ 1 ]
@@ -55,14 +75,23 @@ tests:
         expression: 'e1.xy.y.count()'
         result: [ 1 ]
   - 'Testing the exists() function in various scenarios':
-      - desc: '** Empty literal should return false **'
+      - desc: '** Empty literal should does not exist **'
         expression: '{}.exists()'
         result: [ false ]
-        disable: true # empty collection
-      - desc: '** Empty collection should return false **'
+      - desc: '** Empty collection does not exist **'
         expression: 'nothing.exists()'
         result: [ false ]
-        disable: true # empty collection
+      - desc: '** Computed empty collection does not exist **'
+        expression: 'n1.where($this=0).exists()'
+        result: [ false ]
+      - desc: '** Resource singular empty collection does not exist **'
+        expression: 'gender.exists()'
+        inputfile: 'Patient-empty.json'
+        result: [ false ]
+      - desc: '** Resource plural empty collection does not exist **'
+        expression: 'name.given.exists()'
+        inputfile: 'Patient-empty.json'
+        result: [ false ]
       - desc: '** Singular integer exists **'
         expression: 'n1.exists()'
         result: [ true ]
