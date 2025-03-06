@@ -1,5 +1,6 @@
 package au.csiro.pathling.fhirpath.column;
 
+import au.csiro.pathling.sql.misc.DecimalToLiteral;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.EqualsAndHashCode;
@@ -66,4 +67,11 @@ public class DecimalRepresentation extends DefaultRepresentation {
     this.scaleValue = Optional.of(scaleValue);
   }
 
+  @Override
+  @Nonnull
+  public ColumnRepresentation asString() {
+    return callUdf(DecimalToLiteral.FUNCTION_NAME,
+        scaleValue.map(DefaultRepresentation::new)
+            .orElse(DefaultRepresentation.empty()));
+  }
 }

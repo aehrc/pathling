@@ -21,11 +21,9 @@ tests:
           - desc: "** toString of decimal literal is retains scale **"
             expression: "(1.000).toString()"
             result: [ "1.000" ]
-            disable: true
           - desc: "** toString of decimal value is retains scale **"
             expression: "decimal1.toString()"
             result: [ "1.10" ]
-            disable: true
       - 'Quantity collections':
           - desc: "** ucum quantity literal toString **"
             expression: "(1.10 'm').toString()"
