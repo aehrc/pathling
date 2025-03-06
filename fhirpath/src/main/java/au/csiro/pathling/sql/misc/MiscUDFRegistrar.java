@@ -28,6 +28,7 @@ public class MiscUDFRegistrar extends AbstractUDFRegistrar {
     udfRegistrar
         .register(new CodingToLiteral())
         .register(new TemporalDifferenceFunction())
-        .register(new DecimalToLiteral());
+        .register(new DecimalToLiteral())
+        .register(new QuantityToLiteral());
   }
 }

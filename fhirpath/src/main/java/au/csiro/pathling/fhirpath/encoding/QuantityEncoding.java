@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.encoding;
 
+import static java.util.Objects.nonNull;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
@@ -205,9 +206,11 @@ public class QuantityEncoding {
 
     // The value gets converted to a BigDecimal, taking into account the scale that has been encoded 
     // alongside it.
-    final int scale = row.getInt(2);
+    @Nullable final Integer scale = !row.isNullAt(2)
+                                    ? row.getInt(2)
+                                    : null;
     final BigDecimal value = Optional.ofNullable(row.getDecimal(1))
-        .map(bd -> bd.scale() > DecimalCustomCoder.scale()
+        .map(bd -> nonNull(scale) && bd.scale() > scale
                    ? bd.setScale(scale, RoundingMode.HALF_UP)
                    : bd)
         .orElse(null);

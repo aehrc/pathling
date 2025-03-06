@@ -28,11 +28,9 @@ tests:
           - desc: "** ucum quantity literal toString **"
             expression: "(1.10 'm').toString()"
             result: [ "1.10 'm'" ]
-            disable: true
           - desc: "** time quantity literal toString **"
             expression: "(1 year).toString()"
             result: [ "1 year" ]
-            disable: true
       - 'Complex type collections':
           - desc: "** toString of complex type is {} **"
             expression: "e1.toString()"
