@@ -3,7 +3,6 @@ package au.csiro.pathling.fhirpath.function.provider;
 import static java.util.Objects.isNull;
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
@@ -40,9 +39,7 @@ public class ConversionFunctions {
   @FhirPathFunction
   @Nonnull
   public static Collection toString(@Nonnull final Collection input) {
-    Preconditions.checkUserInput(input instanceof StringCoercible,
-        "toString() can only be applied to a StringCoercible path");
-    return ((StringCoercible) input).asStringPath();
+    return input.asSingular().asStringPath();
   }
 
 

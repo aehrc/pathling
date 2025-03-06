@@ -48,4 +48,10 @@ public class EmptyCollection extends Collection {
   public boolean convertibleTo(@Nonnull final Collection other) {
     return true;
   }
+
+  @Override
+  @Nonnull
+  public StringCollection asStringPath() {
+    return StringCollection.empty();
+  }
 }

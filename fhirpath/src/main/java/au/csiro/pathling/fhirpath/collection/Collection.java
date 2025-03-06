@@ -500,6 +500,6 @@ public class Collection implements Comparable, StringCoercible {
   @Override
   @Nonnull
   public StringCollection asStringPath() {
-    return StringCollection.empty();
+    return map(ColumnRepresentation::asEmpty, StringCollection::build);
   }
 }
