@@ -136,7 +136,7 @@ public class DateCollection extends Collection implements Materializable<DateTyp
   @Nonnull
   @Override
   public StringCollection asStringPath() {
-    return map(ColumnRepresentation::asString, StringCollection::build);
+    return StringCoercible.defaultAsStringPath(this);
   }
 
   @Override

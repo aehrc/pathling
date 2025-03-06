@@ -7,7 +7,6 @@ import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Tag;
 
-
 @Slf4j
 @Tag("UnitTest")
 @YamlConfig(
@@ -34,4 +33,10 @@ public class YamlFhirpathTest extends YamlSpecTestBase {
   void testMath(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }
+
+  @YamlSpec("fhirpath-ptl/cases/conversion_functions.yaml")
+  void testConversionFunctions(@Nonnull final RuntimeCase testCase) {
+    run(testCase);
+  }
+
 }

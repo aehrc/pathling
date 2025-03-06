@@ -2,6 +2,7 @@ package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
 
 /**
@@ -18,4 +19,15 @@ public interface StringCoercible {
   @Nonnull
   StringCollection asStringPath();
 
+  /**
+   * Returns a new {@link StringCollection} representing the String representation of the input
+   * using the Spark SQL cast to string type.
+   *
+   * @param collection The input collection
+   * @return A new {@link StringCollection} representing the String representation of the input
+   */
+  static StringCollection defaultAsStringPath(@Nonnull final Collection collection) {
+    return collection.map(ColumnRepresentation::asString, StringCollection::build);
+  }
+  
 }

@@ -206,14 +206,11 @@ public class IntegerCollection extends Collection implements
     } else {
       value = row.getInt(columnNumber);
     }
-    switch (getFhirType().orElse(FHIRDefinedType.NULL)) {
-      case UNSIGNEDINT:
-        return Optional.of(new UnsignedIntType(value));
-      case POSITIVEINT:
-        return Optional.of(new PositiveIntType(value));
-      default:
-        return Optional.of(new IntegerType(value));
-    }
+    return switch (getFhirType().orElse(FHIRDefinedType.NULL)) {
+      case UNSIGNEDINT -> Optional.of(new UnsignedIntType(value));
+      case POSITIVEINT -> Optional.of(new PositiveIntType(value));
+      default -> Optional.of(new IntegerType(value));
+    };
   }
 
   /**
@@ -291,7 +288,7 @@ public class IntegerCollection extends Collection implements
   @Override
   @Nonnull
   public StringCollection asStringPath() {
-    return map(ColumnRepresentation::asString, StringCollection::build);
+    return StringCoercible.defaultAsStringPath(this);
   }
 
   @Override
@@ -299,5 +296,5 @@ public class IntegerCollection extends Collection implements
   public Collection negate() {
     return Numeric.defaultNegate(this);
   }
-  
+
 }

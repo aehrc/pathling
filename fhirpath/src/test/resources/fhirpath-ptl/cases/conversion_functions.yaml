@@ -1,0 +1,57 @@
+tests:
+  - 'Testing the toString() function in various scenarios':
+      - 'Empty collections':
+          - desc: "** toString of empty literal collection  is {} **"
+            expression: '{}.toString()'
+            result: [ ]
+          - desc: "** toString of empty collection  is {} **"
+            expression: 'empty.toString()'
+            result: [ ]
+      - 'Boolean collections':
+          - desc: "** true literal is 'true' **"
+            expression: 'true.toString()'
+            result: [ 'true' ]
+          - desc: "** false literal is 'true' **"
+            expression: 'false.toString()'
+            result: [ 'false' ]
+          - desc: "** empty boolean collection is {} **"
+            expression: 'false.where($this).toString()'
+            result: [ ]
+      - 'Decimal collections':
+          - desc: "** toString of decimal literal is retains scale **"
+            expression: "(1.000).toString()"
+            result: [ "1.000" ]
+            disable: true
+          - desc: "** toString of decimal value is retains scale **"
+            expression: "decimal1.toString()"
+            result: [ "1.10" ]
+            disable: true
+      - 'Quantity collections':
+          - desc: "** ucum quantity literal toString **"
+            expression: "(1.10 'm').toString()"
+            result: [ "1.10 'm'" ]
+            disable: true
+          - desc: "** time quantity literal toString **"
+            expression: "(1 year).toString()"
+            result: [ "1 year" ]
+            disable: true
+      - 'Complex type collections':
+          - desc: "** toString of complex type is {} **"
+            expression: "e1.toString()"
+            result: [ ]
+subject:
+  resourceType: Test
+  decimal1: 1.10
+  decimal1_scale: 2
+  n1: 1
+  an1: [ 1 ]
+  an2: [ 1, 2 ]
+  s1: 'a'
+  sn1: [ 'a' ]
+  sn2: [ 'a', 'b' ]
+  e1:
+    - xy:
+        - x: 1
+          y: 2
+        - x: 3
+          # y is missing

@@ -22,6 +22,7 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.Concepts;
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
@@ -52,7 +53,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 @Getter
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
-public class Collection implements Comparable {
+public class Collection implements Comparable, StringCoercible {
 
   // See https://hl7.org/fhir/fhirpath.html#types.
   @Nonnull
@@ -320,7 +321,7 @@ public class Collection implements Comparable {
   public boolean isComparableTo(@Nonnull final Comparable path) {
     return path instanceof EmptyCollection;
   }
-  
+
   /**
    * Returns a new {@link Collection} with the specified {@link ColumnRepresentation}.
    *
@@ -496,5 +497,9 @@ public class Collection implements Comparable {
     }
   }
 
-
+  @Override
+  @Nonnull
+  public StringCollection asStringPath() {
+    return StringCollection.empty();
+  }
 }
