@@ -182,6 +182,65 @@ public class ImplicitUnnesterTest {
     //   family
   }
 
+  @Test
+  void testUnnestSimpleOperatorWithCommonPrefix() {
+    final List<String> columns = List.of(
+        "id",
+        "name.family",
+        "name.given = 'John'"
+    );
+    final Tree<FhirPath> projection = toProjection(columns);
+    assertTreeEquals(
+        node("%resource",
+            node("id"),
+            node("name",
+                node("family"),
+                node("given.($this = 'John')")
+            )
+        ),
+        projection
+    );
+  }
+
+  @Test
+  void testUnnestSimpleOperatorWithCommonPrefixInRightArgument() {
+    final List<String> columns = List.of(
+        "id",
+        "name.family",
+        "'John' = name.given"
+    );
+    final Tree<FhirPath> projection = toProjection(columns);
+    assertTreeEquals(
+        node("%resource",
+            node("id"),
+            node("name.family"),
+            node("'John'.($this = name.given)")
+        ),
+        projection
+    );
+  }
+
+  @Test
+  void testUnnestSimpleOperatorWithFullCommonPrefix() {
+    final List<String> columns = List.of(
+        "id",
+        "name.given",
+        "name.given = 'John'"
+    );
+    final Tree<FhirPath> projection = toProjection(columns);
+    assertTreeEquals(
+        node("%resource",
+            node("id"),
+            node("name",
+                node("family"),
+                node("given.($this = 'John')")
+            )
+        ),
+        projection
+    );
+  }
+
+
   @Nonnull
   private Tree<FhirPath> toProjection(@Nonnull final List<String> columns) {
     final Tree<FhirPath> result = unnester.unnestPaths(

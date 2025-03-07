@@ -32,9 +32,9 @@ public class ExecutorUtils {
   public static ReverseResolveRoot fromPath(@Nonnull final DataRoot master,
       @Nonnull final EvalFunction reverseJoin) {
     final FhirPath reference = reverseJoin.getArguments().get(0);
-    final Resource foreingResource = (Resource) reference.first();
+    final Resource foreingResource = (Resource) reference.head();
     // TODO: check that te rest is a valid traveral only path
-    final String foreignResourcePath = reference.suffix().toExpression();
+    final String foreignResourcePath = reference.tail().toExpression();
     return ReverseResolveRoot.of(master, foreingResource.getResourceType(),
         foreignResourcePath);
   }

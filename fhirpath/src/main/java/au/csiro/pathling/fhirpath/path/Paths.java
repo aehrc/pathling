@@ -124,6 +124,18 @@ final public class Paths {
         return arg.toExpression();
       }
     }
+
+    @Override
+    @Nonnull
+    public FhirPath head() {
+      return leftPath.head();
+    }
+
+    @Override
+    @Nonnull
+    public FhirPath tail() {
+      return new EvalOperator(leftPath.tail(), rightPath, operator);
+    }
   }
 
   @Value

@@ -23,8 +23,8 @@ public class ResolverFunctions {
 
     // subject path should be TypeSpecifierPath + traversal path
 
-    final ResourceType childResourceType = ((Resource) subjectPath.first()).getResourceType();
-    final String childPath = subjectPath.suffix().toExpression();
+    final ResourceType childResourceType = ((Resource) subjectPath.head()).getResourceType();
+    final String childPath = subjectPath.tail().toExpression();
     final ReverseResolveRoot root = ReverseResolveRoot.ofResource(input.getResourceType(),
         childResourceType, childPath);
 

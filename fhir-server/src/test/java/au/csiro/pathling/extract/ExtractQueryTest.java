@@ -497,7 +497,6 @@ class ExtractQueryTest {
         .hasRows(spark, "responses/ExtractQueryTest/combineWithLiterals.tsv");
   }
 
-  @Disabled("TODO: Define unnesting rules for operators")
   @Test
   void combineWithUnequalCardinalities() {
     subjectResource = ResourceType.PATIENT;
@@ -506,14 +505,30 @@ class ExtractQueryTest {
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
         .withColumn("id")
         .withColumn("name.given")
-        .withColumn("name.family")
-        .withColumn("name.given combine name.family")
+        .withColumn("name.family combine 'Smith'")
         .build();
 
     final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/combineWithUnequalCardinalities.tsv");
   }
+
+  @Test
+  void singularizeExpressions() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("name.given.first()")
+        .withColumn("name.given = 'Smith'")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/combineWithUnequalCardinalities.tsv");
+  }
+
 
   void mockResource(final ResourceType... resourceTypes) {
     TestHelpers.mockResource(dataSource, spark, resourceTypes);

@@ -22,19 +22,22 @@ public interface FhirPath {
 
   Collection apply(@Nonnull final Collection input, @Nonnull final EvaluationContext context);
 
-  default FhirPath first() {
+  /**
+   * Get the first element of the path.
+   *
+   * @return the first element of the path
+   */
+  default FhirPath head() {
     return this;
   }
 
-  default FhirPath suffix() {
-    return nullPath();
-  }
-
-  default FhirPath last() {
-    return this;
-  }
-
-  default FhirPath prefix() {
+  /**
+   * Get the rest of the path after the first element. If the path has only one element, returns the
+   * null path.
+   *
+   * @return the rest of the path after the first element
+   */
+  default FhirPath tail() {
     return nullPath();
   }
 
@@ -182,27 +185,15 @@ public interface FhirPath {
     }
 
     @Override
-    public FhirPath first() {
+    public FhirPath head() {
       return elements.get(0);
     }
 
     @Override
-    public FhirPath suffix() {
+    public FhirPath tail() {
       return elements.size() > 2
              ? new Composite(elements.subList(1, elements.size()))
              : elements.get(1);
-    }
-
-    @Override
-    public FhirPath last() {
-      return elements.get(elements.size() - 1);
-    }
-
-    @Override
-    public FhirPath prefix() {
-      return elements.size() > 2
-             ? new Composite(elements.subList(0, elements.size() - 1))
-             : elements.get(0);
     }
 
     @Nonnull
@@ -244,7 +235,7 @@ public interface FhirPath {
       if (splitIndex == -1) {
         return Pair.of(nullPath(), this);
       } else if (splitIndex == 0) {
-        return Pair.of(first(), suffix());
+        return Pair.of(head(), tail());
       } else {
         return Pair.of(FhirPath.of(elements.subList(0, splitIndex + 1)),
             FhirPath.of(elements.subList(splitIndex + 1, elements.size())));

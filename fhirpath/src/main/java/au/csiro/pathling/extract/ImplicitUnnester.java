@@ -66,7 +66,7 @@ public class ImplicitUnnester {
     } else {
       final Map<FhirPath, List<FhirPath>> groupedPaths = paths.stream()
           .collect(
-              groupingBy(FhirPath::first, LinkedHashMap::new, mapping(FhirPath::suffix, toList())));
+              groupingBy(FhirPath::head, LinkedHashMap::new, mapping(FhirPath::tail, toList())));
       return groupedPaths.entrySet().stream()
           .flatMap(entry -> {
                 // identify suffices that are aggregate functions and must not be unnested
@@ -99,7 +99,7 @@ public class ImplicitUnnester {
 
   // Quite possibly all functions should be treated as aggregate functions
   static boolean isAggregate(@Nonnull final FhirPath path) {
-    return (path.first() instanceof Paths.EvalFunction evalFunction)
+    return (path.head() instanceof Paths.EvalFunction evalFunction)
         && AGG_FUNCTIONS.contains(evalFunction.getFunctionIdentifier());
   }
 
