@@ -300,7 +300,8 @@ public class QuantityCollection extends Collection implements Comparable,
   @Nonnull
   @Override
   public StringCollection asStringPath() {
-    return map(r -> r.callUdf(QuantityToLiteral.FUNCTION_NAME), StringCollection::build);
+    return asSingular()
+        .map(r -> r.callUdf(QuantityToLiteral.FUNCTION_NAME), StringCollection::build);
   }
 
   private static Column quantityNegate(@Nonnull final Column quantityColumn) {

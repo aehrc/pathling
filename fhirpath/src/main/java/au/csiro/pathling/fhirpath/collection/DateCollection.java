@@ -136,7 +136,7 @@ public class DateCollection extends Collection implements Materializable<DateTyp
   @Nonnull
   @Override
   public StringCollection asStringPath() {
-    return StringCoercible.defaultAsStringPath(this);
+    return Collection.defaultAsStringPath(this);
   }
 
   @Override

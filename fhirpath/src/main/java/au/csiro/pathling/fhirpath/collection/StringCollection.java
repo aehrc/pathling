@@ -286,7 +286,7 @@ public class StringCollection extends Collection implements Materializable<Primi
   @Nonnull
   @Override
   public StringCollection asStringPath() {
-    return this;
+    return (StringCollection) asSingular();
   }
 
   @Override

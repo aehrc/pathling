@@ -126,7 +126,7 @@ public class BooleanCollection extends Collection implements Materializable<Bool
   @Override
   @Nonnull
   public StringCollection asStringPath() {
-    return StringCoercible.defaultAsStringPath(this);
+    return Collection.defaultAsStringPath(this);
   }
 
 }

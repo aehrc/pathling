@@ -22,7 +22,6 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.Concepts;
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
@@ -53,7 +52,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 @Getter
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
-public class Collection implements Comparable, StringCoercible {
+public class Collection implements Comparable {
 
   // See https://hl7.org/fhir/fhirpath.html#types.
   @Nonnull
@@ -228,6 +227,17 @@ public class Collection implements Comparable, StringCoercible {
   public static Optional<Class<? extends Collection>> classForType(
       @Nonnull final FHIRDefinedType fhirType) {
     return Optional.ofNullable(FHIR_TYPE_TO_ELEMENT_PATH_CLASS.get(fhirType));
+  }
+
+  /**
+   * Returns a new {@link StringCollection} representing the String representation of the input
+   * using the Spark SQL cast to string type.
+   *
+   * @param collection The input collection
+   * @return A new {@link StringCollection} representing the String representation of the input
+   */
+  protected static StringCollection defaultAsStringPath(@Nonnull final Collection collection) {
+    return collection.asSingular().map(ColumnRepresentation::asString, StringCollection::build);
   }
 
   /**
@@ -497,9 +507,11 @@ public class Collection implements Comparable, StringCoercible {
     }
   }
 
-  @Override
+  /**
+   * @return a new {@link Collection} representing the String representation of this path
+   */
   @Nonnull
   public StringCollection asStringPath() {
-    return map(ColumnRepresentation::asEmpty, StringCollection::build);
+    return asSingular().map(ColumnRepresentation::asEmpty, StringCollection::build);
   }
 }

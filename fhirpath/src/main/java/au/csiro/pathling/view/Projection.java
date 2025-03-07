@@ -21,6 +21,7 @@ import static au.csiro.pathling.extract.ProjectionConstraint.FLAT;
 import static au.csiro.pathling.utilities.Functions.maybeCast;
 import static org.apache.spark.sql.functions.inline;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.extract.ProjectionConstraint;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
@@ -159,7 +160,10 @@ public class Projection {
       // If we are constrained to a flat result, we need to coerce the collection to a string.
       finalResult = Optional.of(collection)
           .flatMap(maybeCast(StringCoercible.class))
-          .map(StringCoercible::asStringPath).orElseThrow();
+          .map(StringCoercible::asStringPath)
+          .orElseThrow(
+              () -> new InvalidUserInputError(
+                  "Cannot render one of the columns in flat mode"));
     } else {
       // Otherwise, we can use the collection as-is.
       finalResult = collection;
@@ -206,5 +210,5 @@ public class Projection {
   public String toTreeString() {
     return selection.toTreeString(0);
   }
-  
+
 }

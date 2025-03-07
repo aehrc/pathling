@@ -39,7 +39,7 @@ public class ConversionFunctions {
   @FhirPathFunction
   @Nonnull
   public static Collection toString(@Nonnull final Collection input) {
-    return input.asSingular().asStringPath();
+    return input.asStringPath();
   }
 
 

@@ -288,7 +288,7 @@ public class IntegerCollection extends Collection implements
   @Override
   @Nonnull
   public StringCollection asStringPath() {
-    return StringCoercible.defaultAsStringPath(this);
+    return Collection.defaultAsStringPath(this);
   }
 
   @Override

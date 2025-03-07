@@ -211,7 +211,7 @@ public class DecimalCollection extends Collection implements Materializable<Deci
   @Override
   @Nonnull
   public StringCollection asStringPath() {
-    return StringCoercible.defaultAsStringPath(this);
+    return Collection.defaultAsStringPath(this);
   }
 
   @Nonnull

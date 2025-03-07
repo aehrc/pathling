@@ -159,7 +159,8 @@ public class CodingCollection extends Collection implements Materializable<Codin
   @Nonnull
   @Override
   public StringCollection asStringPath() {
-    return map(c -> c.transformWithUdf(CodingToLiteral.FUNCTION_NAME), StringCollection::build);
+    return asSingular()
+        .map(c -> c.transformWithUdf(CodingToLiteral.FUNCTION_NAME), StringCollection::build);
   }
 
   @Override
