@@ -1,6 +1,7 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
@@ -13,7 +14,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 /**
  * Represents an empty collection.
  */
-public class EmptyCollection extends Collection {
+public class EmptyCollection extends Collection implements StringCoercible {
 
   private static final EmptyCollection INSTANCE = new EmptyCollection(
       DefaultRepresentation.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
@@ -47,5 +48,11 @@ public class EmptyCollection extends Collection {
   @Override
   public boolean convertibleTo(@Nonnull final Collection other) {
     return true;
+  }
+
+  @Override
+  @Nonnull
+  public StringCollection asStringPath() {
+    return StringCollection.empty();
   }
 }

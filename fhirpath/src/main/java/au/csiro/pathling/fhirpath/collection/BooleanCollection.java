@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
@@ -36,12 +37,12 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 public class BooleanCollection extends Collection implements Materializable<BooleanType>,
-    Comparable {
+    Comparable, StringCoercible {
 
   protected BooleanCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition, 
+      @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final Optional<Column> extensionMapColumn) {
     super(columnRepresentation, type, fhirType, definition, extensionMapColumn);
   }
@@ -120,6 +121,12 @@ public class BooleanCollection extends Collection implements Materializable<Bool
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
     return path instanceof BooleanCollection || super.isComparableTo(path);
+  }
+
+  @Override
+  @Nonnull
+  public StringCollection asStringPath() {
+    return Collection.defaultAsStringPath(this);
   }
 
 }

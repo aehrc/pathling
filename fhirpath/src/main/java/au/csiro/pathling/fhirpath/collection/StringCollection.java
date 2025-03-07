@@ -84,6 +84,17 @@ public class StringCollection extends Collection implements Materializable<Primi
     return build(columnRepresentation, Optional.empty());
   }
 
+
+  /**
+   * Returns an empty string collection.
+   *
+   * @return A new instance of {@link StringCollection}
+   */
+  @Nonnull
+  public static StringCollection empty() {
+    return build(DefaultRepresentation.empty());
+  }
+
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
    *
@@ -253,24 +264,16 @@ public class StringCollection extends Collection implements Materializable<Primi
     if (fhirType.isEmpty()) {
       return Optional.of(new StringType(row.getString(columnNumber)));
     }
-    switch (fhirType.get()) {
-      case URI:
-        return Optional.of(new UriType(row.getString(columnNumber)));
-      case CODE:
-        return Optional.of(new CodeType(row.getString(columnNumber)));
-      case OID:
-        return Optional.of(new OidType(row.getString(columnNumber)));
-      case ID:
-        return Optional.of(new IdType(row.getString(columnNumber)));
-      case UUID:
-        return Optional.of(new UuidType(row.getString(columnNumber)));
-      case MARKDOWN:
-        return Optional.of(new MarkdownType(row.getString(columnNumber)));
-      case BASE64BINARY:
-        return Optional.of(new Base64BinaryType(row.getString(columnNumber)));
-      default:
-        return Optional.of(new StringType(row.getString(columnNumber)));
-    }
+    return switch (fhirType.get()) {
+      case URI -> Optional.of(new UriType(row.getString(columnNumber)));
+      case CODE -> Optional.of(new CodeType(row.getString(columnNumber)));
+      case OID -> Optional.of(new OidType(row.getString(columnNumber)));
+      case ID -> Optional.of(new IdType(row.getString(columnNumber)));
+      case UUID -> Optional.of(new UuidType(row.getString(columnNumber)));
+      case MARKDOWN -> Optional.of(new MarkdownType(row.getString(columnNumber)));
+      case BASE64BINARY -> Optional.of(new Base64BinaryType(row.getString(columnNumber)));
+      default -> Optional.of(new StringType(row.getString(columnNumber)));
+    };
   }
 
   @Nonnull
@@ -283,14 +286,14 @@ public class StringCollection extends Collection implements Materializable<Primi
   @Nonnull
   @Override
   public StringCollection asStringPath() {
-    return this;
+    return (StringCollection) asSingular();
   }
 
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
     return path instanceof StringCollection || super.isComparableTo(path);
   }
-  
+
   @Override
   @Nonnull
   public String toLiteral(@Nonnull final PrimitiveType value) {

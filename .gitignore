@@ -38,3 +38,4 @@ spark-warehouse
 .Rproj.user
 /lib/R/pathlyr/.Rhistory
 *.Rcheck
+.aider*

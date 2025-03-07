@@ -54,7 +54,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
    * @return A singleton instance of an empty representation
    */
   @Nonnull
-  public static ColumnRepresentation empty() {
+  public static DefaultRepresentation empty() {
     return EMPTY_REPRESENTATION;
   }
 

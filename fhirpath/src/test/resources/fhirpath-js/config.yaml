@@ -282,11 +282,6 @@ excludeSet:
         type: feature
         any:
           - "** where for a collection with a null value that has an id"
-      - title: 'Boolean not convertible to string'
-        id: '#2148'
-        type: bug
-        expression:
-          - '^attrtrue\.toString\(\)$'
       - title: 'Precision lost in in decimal literals'
         type: bug
         expression:
@@ -354,7 +349,7 @@ excludeSet:
         id: '#2172'
         type: bug
         any:
-            - "1 week = 7 days"
+          - "1 week = 7 days"
   - title: 'Comparison exlusions'
     glob: "fhirpath-js/cases/6.2_comparision.yaml"
     exclude:
@@ -726,16 +721,6 @@ excludeSet:
           - "({} implies true) = true"
           - "({} implies false).empty()"
           - "({} implies {}).empty()"
-      - title: "toString() not supported for boolean collections/literals"
-        id: '#2148'
-        type: bug
-        any:
-          - "** testBooleanLiteralToString"
-      - title: "toString() not supported for Quantity collections/literals"
-        id: '#2148'
-        type: bug
-        any:
-          - "** testQuantityLiteralWkToString"
       - title: "incorrect multiplication/division of quantity literals"
         id: '#2168'
         comment: "E.g: 2.0 'cm' * 2.0 'm' = 0.040 'm2'"

@@ -28,12 +28,14 @@ import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.QuantityComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.operator.Comparable;
+import au.csiro.pathling.sql.misc.QuantityToLiteral;
 import au.csiro.pathling.sql.types.FlexiDecimal;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -53,7 +55,8 @@ import org.hl7.fhir.r4.model.Quantity;
  *
  * @author John Grimes
  */
-public class QuantityCollection extends Collection implements Comparable, Numeric {
+public class QuantityCollection extends Collection implements Comparable,
+    Numeric, StringCoercible {
 
   private static final Column NO_UNIT_LITERAL = lit(Ucum.NO_UNIT_CODE);
   private static final Pattern UCUM_PATTERN = Pattern.compile("([0-9.]+) ('[^']+')");
@@ -148,38 +151,30 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   @Nonnull
   private static BiFunction<Column, Column, Column> getMathColumnOperation(
       @Nonnull final MathOperation operation) {
-    switch (operation) {
-      case ADDITION:
-        return FlexiDecimal::plus;
-      case MULTIPLICATION:
-        return FlexiDecimal::multiply;
-      case DIVISION:
-        return FlexiDecimal::divide;
-      case SUBTRACTION:
-        return FlexiDecimal::minus;
-      default:
-        throw new AssertionError("Unsupported math operation encountered: " + operation);
-    }
+    return switch (operation) {
+      case ADDITION -> FlexiDecimal::plus;
+      case MULTIPLICATION -> FlexiDecimal::multiply;
+      case DIVISION -> FlexiDecimal::divide;
+      case SUBTRACTION -> FlexiDecimal::minus;
+      default -> throw new AssertionError("Unsupported math operation encountered: " + operation);
+    };
   }
 
   @Nonnull
   private static Column getResultUnit(
       @Nonnull final MathOperation operation, @Nonnull final Column leftUnit,
       @Nonnull final Column rightUnit) {
-    switch (operation) {
-      case ADDITION:
-      case SUBTRACTION:
-        return leftUnit;
-      case MULTIPLICATION:
+    return switch (operation) {
+      case ADDITION, SUBTRACTION -> leftUnit;
+      case MULTIPLICATION ->
         // we only allow multiplication by dimensionless values at the moment
         // the unit is preserved in this case
-        return when(leftUnit.notEqual(NO_UNIT_LITERAL), leftUnit).otherwise(rightUnit);
-      case DIVISION:
+          when(leftUnit.notEqual(NO_UNIT_LITERAL), leftUnit).otherwise(rightUnit);
+      case DIVISION ->
         // we only allow division by the same unit or a dimensionless value
-        return when(leftUnit.equalTo(rightUnit), NO_UNIT_LITERAL).otherwise(leftUnit);
-      default:
-        throw new AssertionError("Unsupported math operation encountered: " + operation);
-    }
+          when(leftUnit.equalTo(rightUnit), NO_UNIT_LITERAL).otherwise(leftUnit);
+      default -> throw new AssertionError("Unsupported math operation encountered: " + operation);
+    };
   }
 
   @Nonnull
@@ -187,23 +182,20 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
       @Nonnull final MathOperation operation, @Nonnull final Column result,
       @Nonnull final Column leftUnit,
       @Nonnull final Column rightUnit) {
-    switch (operation) {
-      case ADDITION:
-      case SUBTRACTION:
-        return when(leftUnit.equalTo(rightUnit), result)
-            .otherwise(null);
-      case MULTIPLICATION:
+    return switch (operation) {
+      case ADDITION, SUBTRACTION -> when(leftUnit.equalTo(rightUnit), result)
+          .otherwise(null);
+      case MULTIPLICATION ->
         // we only allow multiplication by dimensionless values at the moment
         // the unit is preserved in this case
-        return when(leftUnit.equalTo(NO_UNIT_LITERAL).or(rightUnit.equalTo(NO_UNIT_LITERAL)),
-            result).otherwise(null);
-      case DIVISION:
+          when(leftUnit.equalTo(NO_UNIT_LITERAL).or(rightUnit.equalTo(NO_UNIT_LITERAL)),
+              result).otherwise(null);
+      case DIVISION ->
         // we only allow division by the same unit or a dimensionless value
-        return when(leftUnit.equalTo(rightUnit).or(rightUnit.equalTo(NO_UNIT_LITERAL)),
-            result).otherwise(null);
-      default:
-        throw new AssertionError("Unsupported math operation encountered: " + operation);
-    }
+          when(leftUnit.equalTo(rightUnit).or(rightUnit.equalTo(NO_UNIT_LITERAL)),
+              result).otherwise(null);
+      default -> throw new AssertionError("Unsupported math operation encountered: " + operation);
+    };
   }
 
   @Nonnull
@@ -302,10 +294,17 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   @Override
   @Nonnull
   public Collection negate() {
-    return this.mapColumn(QuantityCollection::negateQuantityColumn);
+    return this.mapColumn(QuantityCollection::quantityNegate);
   }
 
-  private static Column negateQuantityColumn(@Nonnull Column quantityColumn) {
+  @Nonnull
+  @Override
+  public StringCollection asStringPath() {
+    return asSingular()
+        .map(r -> r.callUdf(QuantityToLiteral.FUNCTION_NAME), StringCollection::build);
+  }
+
+  private static Column quantityNegate(@Nonnull final Column quantityColumn) {
     final QuantityEncoding quantityEncoding = QuantityEncoding.fromStruct(quantityColumn);
     return quantityEncoding
         .withValue(

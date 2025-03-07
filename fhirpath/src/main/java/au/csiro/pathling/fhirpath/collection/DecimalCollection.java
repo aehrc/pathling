@@ -159,17 +159,12 @@ public class DecimalCollection extends Collection implements Materializable<Deci
       final Column targetNumeric = checkPresent(target.getNumericValue());
       Column result = operation.getSparkFunction().apply(sourceNumeric, targetNumeric);
 
-      switch (operation) {
-        case ADDITION:
-        case SUBTRACTION:
-        case MULTIPLICATION:
-        case DIVISION:
-        case MODULUS:
+      return switch (operation) {
+        case ADDITION, SUBTRACTION, MULTIPLICATION, DIVISION, MODULUS -> {
           result = result.cast(getDecimalType());
-          return DecimalCollection.build(new DecimalRepresentation(result));
-        default:
-          throw new AssertionError("Unsupported math operation encountered: " + operation);
-      }
+          yield DecimalCollection.build(new DecimalRepresentation(result));
+        }
+      };
     };
   }
 
@@ -216,7 +211,7 @@ public class DecimalCollection extends Collection implements Materializable<Deci
   @Override
   @Nonnull
   public StringCollection asStringPath() {
-    return map(ColumnRepresentation::asString, StringCollection::build);
+    return Collection.defaultAsStringPath(this);
   }
 
   @Nonnull

@@ -230,6 +230,17 @@ public class Collection implements Comparable {
   }
 
   /**
+   * Returns a new {@link StringCollection} representing the String representation of the input
+   * using the Spark SQL cast to string type.
+   *
+   * @param collection The input collection
+   * @return A new {@link StringCollection} representing the String representation of the input
+   */
+  protected static StringCollection defaultAsStringPath(@Nonnull final Collection collection) {
+    return collection.asSingular().map(ColumnRepresentation::asString, StringCollection::build);
+  }
+
+  /**
    * Return the child {@link Collection} that results from traversing to the given elementName.
    *
    * @param elementName the name of the child element
@@ -320,7 +331,7 @@ public class Collection implements Comparable {
   public boolean isComparableTo(@Nonnull final Comparable path) {
     return path instanceof EmptyCollection;
   }
-  
+
   /**
    * Returns a new {@link Collection} with the specified {@link ColumnRepresentation}.
    *
@@ -496,5 +507,11 @@ public class Collection implements Comparable {
     }
   }
 
-
+  /**
+   * @return a new {@link Collection} representing the String representation of this path
+   */
+  @Nonnull
+  public StringCollection asStringPath() {
+    return asSingular().map(ColumnRepresentation::asEmpty, StringCollection::build);
+  }
 }

@@ -28,6 +28,7 @@ import static org.apache.spark.sql.functions.raise_error;
 import static org.apache.spark.sql.functions.size;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.sql.misc.ToNull;
 import jakarta.annotation.Nonnull;
 
 import java.util.Optional;
@@ -54,7 +55,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 public abstract class ColumnRepresentation {
-  
+
   /**
    * Create a new {@link ColumnRepresentation} from the result of a function that takes two
    * {@link Column} operands and returns a single {@link Column} result.
@@ -602,4 +603,12 @@ public abstract class ColumnRepresentation {
     );
   }
 
+  /**
+   * Returns a new {@link ColumnRepresentation} that represents a null value. It triggers the
+   * evaluation of the column so that singularity can be enforced.
+   */
+  @Nonnull
+  public ColumnRepresentation asEmpty() {
+    return callUdf(ToNull.FUNCTION_NAME);
+  }
 }

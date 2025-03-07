@@ -73,13 +73,7 @@ class ExtractQueryTest {
 
   @Autowired
   TerminologyServiceFactory terminologyServiceFactory;
-
-  @Autowired
-  IParser jsonParser;
-
-  @Autowired
-  FhirEncoders fhirEncoders;
-
+  
   @MockBean
   CacheableDatabase dataSource;
 
@@ -406,6 +400,23 @@ class ExtractQueryTest {
             .withFilter("gender = 'female'")
             .build());
     assertEquals("Column expression cannot be blank", error.getMessage());
+  }
+
+
+  @Test
+  void nonStringCoercibleColumn() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(ResourceType.PATIENT);
+
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        () -> executor.buildQuery(
+            new ExtractRequestBuilder(subjectResource)
+                .withColumn("id")
+                .withColumn("name")
+                .build(), ProjectionConstraint.FLAT
+        )
+    );
+    assertEquals("Cannot render one of the columns in flat mode", error.getMessage());
   }
 
   @Test

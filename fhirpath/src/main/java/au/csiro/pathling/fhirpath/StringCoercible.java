@@ -5,7 +5,7 @@ import au.csiro.pathling.fhirpath.collection.StringCollection;
 import jakarta.annotation.Nonnull;
 
 /**
- * Describes a path that can be coerced to a String representation.
+ * Marks a path that can be coerced to a meaningful String representation.
  *
  * @author John Grimes
  * @see <a href="https://hl7.org/fhirpath/N1/#tostring-string">toString</a>
