@@ -14,6 +14,99 @@ public class ImplicitUnnesterTest {
 
   final Parser parser = new Parser();
   final ImplicitUnnester unnester = new ImplicitUnnester();
+  
+  @Test
+  void testSingleThis() {
+    final List<String> columns = List.of(
+        "$this"
+    );
+    final Tree<FhirPath> projection = toProjection(columns);
+    assertTreeEquals(
+        node("%resource",
+            node("$this")
+        ),
+        projection
+    );
+  }
+  
+  @Test
+  void testManyThis() {
+    final List<String> columns = List.of(
+        "$this"
+    );
+    final Tree<FhirPath> projection = toProjection(columns);
+    assertTreeEquals(
+        node("%resource",
+            node("$this"),
+            node("$this")
+        ),
+        projection
+    );
+  }
+  
+  @Test
+  void testSingleAgg() {
+    final List<String> columns = List.of(
+        "count()"
+    );
+    final Tree<FhirPath> projection = toProjection(columns);
+    assertTreeEquals(
+        node("%resource",
+            node("count()")
+        ),
+        projection
+    );
+  }
+  
+  @Test
+  void testManySameAgg() {
+    final List<String> columns = List.of(
+        "count()",
+        "count()"
+    );
+    final Tree<FhirPath> projection = toProjection(columns);
+    assertTreeEquals(
+        node("%resource",
+            node("count()"),
+            node("count()")
+        ),
+        projection
+    );
+  }
+
+
+  @Test
+  void testSingleProperty() {
+    final List<String> columns = List.of(
+        "id"
+    );
+    final Tree<FhirPath> projection = toProjection(columns);
+    assertTreeEquals(
+        node("%resource",
+            node("id")
+        ),
+        projection
+    );
+  }
+
+
+  @Test
+  void testManySameProperties() {
+    final List<String> columns = List.of(
+        "id",
+        "id"
+    );
+    final Tree<FhirPath> projection = toProjection(columns);
+    assertTreeEquals(
+        node("%resource",
+            node("id",
+                node("$this"),
+                node("$this")
+            )
+        ),
+        projection
+    );
+  }
 
   @Test
   void testUnrelatedSimpleColumns() {
@@ -225,6 +318,27 @@ public class ImplicitUnnesterTest {
     final List<String> columns = List.of(
         "id",
         "name.given",
+        "name.given = 'John'"
+    );
+    final Tree<FhirPath> projection = toProjection(columns);
+    assertTreeEquals(
+        node("%resource",
+            node("id"),
+            node("name",
+                node("family"),
+                node("given.($this = 'John')")
+            )
+        ),
+        projection
+    );
+  }
+
+
+  @Test
+  void testUnnestSimpleOperatorWithFullCommonPrefixXXX() {
+    final List<String> columns = List.of(
+        "id",
+        "name.given.first()",
         "name.given = 'John'"
     );
     final Tree<FhirPath> projection = toProjection(columns);

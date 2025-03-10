@@ -26,7 +26,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.config.QueryConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.query.ExpressionWithLabel;
@@ -37,7 +36,6 @@ import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import au.csiro.pathling.utilities.Strings;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.parser.IParser;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -47,7 +45,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -520,8 +517,8 @@ class ExtractQueryTest {
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
         .withColumn("id")
-        .withColumn("name.given.first()")
-        .withColumn("name.given = 'Smith'")
+        .withColumn("name.family.first()")
+        .withColumn("name.family = 'Smith'")
         .build();
 
     final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
