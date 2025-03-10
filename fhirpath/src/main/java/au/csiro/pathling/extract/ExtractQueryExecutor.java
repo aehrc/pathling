@@ -5,6 +5,7 @@ import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
+import au.csiro.pathling.extract.ImplicitUnnester.FhirPathWithTag;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator;
 import au.csiro.pathling.fhirpath.parser.Parser;
@@ -25,10 +26,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 
 /**
  * Builds the overall query responsible for executing an extract request.
@@ -39,6 +43,16 @@ import org.apache.spark.sql.SparkSession;
  */
 @Slf4j
 public class ExtractQueryExecutor extends QueryExecutor {
+
+  @Value(staticConstructor = "of")
+  private static class ProjectionWithColumnAliases {
+
+    @Nonnull
+    Projection projection;
+    @Nonnull
+    List<String> columnAliases;
+  }
+
 
   @Nonnull
   private final FhirContext fhirContext;
@@ -110,22 +124,25 @@ public class ExtractQueryExecutor extends QueryExecutor {
         ));
 
     // Build a Projection from the ExtractRequest.
-    final Projection projection = buildProjection(query, constraint);
-
+    final ProjectionWithColumnAliases projectionWithAliases = buildProjection(query, constraint);
+    final Projection projection = projectionWithAliases.getProjection();
     log.debug("Executing projection:\n {}", projection.toTreeString());
 
     // Execute the Projection to get the result dataset.
-    Dataset<Row> result = projection.execute(executionContext);
+    Dataset<Row> result = projection.execute(executionContext)
+        // reorder the result to match the oder of initial extract expressions
+        .select(projectionWithAliases.getColumnAliases().stream().map(functions::col)
+            .toArray(Column[]::new));
 
     // Rename each column in the result to match the requested column names.
     final List<String> requestedColumnNames = query.getColumns().stream()
         .map(ExpressionWithLabel::getLabel)
         .toList();
-    final List<String> resultColumnNames = Arrays.asList(result.columns());
+    final List<String> resultColumnAliases = projectionWithAliases.getColumnAliases();
 
     for (int i = 0; i < requestedColumnNames.size(); i++) {
       final String requestedName = requestedColumnNames.get(i);
-      final String resultName = resultColumnNames.get(i);
+      final String resultName = resultColumnAliases.get(i);
       result = requestedName != null
                ? result.withColumnRenamed(resultName, requestedName)
                : result;
@@ -136,11 +153,15 @@ public class ExtractQueryExecutor extends QueryExecutor {
   }
 
   @Nonnull
-  private Projection buildProjection(@Nonnull final ExtractRequest query,
+  private ProjectionWithColumnAliases buildProjection(@Nonnull final ExtractRequest query,
       final ProjectionConstraint constraint) {
     // Parse each column in the query into a FhirPath object.
-    final List<FhirPath> columns = query.getColumns().stream()
-        .map(expression -> parser.parse(expression.getExpression()))
+
+    // Mark each path with a random alias so that we can correlate the results
+    // with the original query.
+    final List<FhirPathWithTag> columns = query.getColumns().stream()
+        .map(expression -> FhirPathWithTag.of(parser.parse(expression.getExpression()),
+            randomAlias()))
         .collect(toList());
 
     // Build the column selection.
@@ -150,22 +171,25 @@ public class ExtractQueryExecutor extends QueryExecutor {
     final Optional<ProjectionClause> filters = buildFilterClause(query.getFilters());
 
     // Return the final Projection object.
-    return new Projection(query.getSubjectResource(), Collections.emptyList(), selection, filters,
-        constraint);
+    return ProjectionWithColumnAliases.of(
+        new Projection(query.getSubjectResource(), Collections.emptyList(), selection,
+            filters, constraint),
+        columns.stream().map(FhirPathWithTag::getRequiredTag).toList());
   }
 
-  static ProjectionClause fromTree(@Nonnull final Tree<FhirPath> tree) {
-    if (tree instanceof Tree.Leaf<FhirPath> leaf) {
+  static ProjectionClause fromTree(@Nonnull final Tree<FhirPathWithTag> tree) {
+    if (tree instanceof Tree.Leaf<FhirPathWithTag> leaf) {
       // for each leaf we create column selection of it's value
       // the implicit unnesting of the collection nodes is not explicitly represented in the tree
       return new ColumnSelection(
           List.of(
-              new RequestedColumn(leaf.getValue(), randomAlias(), false, Optional.empty())
+              new RequestedColumn(leaf.getValue().getPath(), leaf.getValue().getRequiredTag(),
+                  false, Optional.empty())
           )
       );
-    } else if (tree instanceof Tree.Node<FhirPath> node) {
+    } else if (tree instanceof Tree.Node<FhirPathWithTag> node) {
       // each node represents an unnesting selection of its children
-      return new UnnestingSelection(node.getValue(), node.getChildren().stream()
+      return new UnnestingSelection(node.getValue().getPath(), node.getChildren().stream()
           .map(ExtractQueryExecutor::fromTree)
           .collect(toList()), true);
     } else {
@@ -174,12 +198,13 @@ public class ExtractQueryExecutor extends QueryExecutor {
   }
 
   @Nonnull
-  static ProjectionClause buildSelectClause(@Nonnull final List<FhirPath> paths) {
+  static ProjectionClause buildSelectClause(@Nonnull final List<FhirPathWithTag> paths) {
     if (paths.isEmpty()) {
       throw new IllegalArgumentException("Empty column list");
     }
-    final Tree<FhirPath> unnestingTree = new ImplicitUnnester().unnestPaths(paths);
-    log.debug("Unnested tree:\n{}", unnestingTree.map(FhirPath::toExpression).toTreeString());
+    final Tree<FhirPathWithTag> unnestingTree = new ImplicitUnnester().unnestPaths(paths);
+    log.debug("Unnested tree:\n{}",
+        unnestingTree.map(FhirPathWithTag::toExpression).toTreeString());
     // this should be a selection for the resource with the unnesting tree
     final UnnestingSelection resourceSelection = (UnnestingSelection) fromTree(unnestingTree);
     final List<ProjectionClause> selects = resourceSelection.getComponents();

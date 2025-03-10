@@ -366,13 +366,14 @@ class ExtractQueryTest {
     mockResource(subjectResource);
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
-        .withColumn("id")
         .withColumn("name.family")
+        .withColumn("id")
         .withColumn("name.given")
         .build();
 
     final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
+        .printAsTsv()
         .hasRows(spark, "responses/ExtractQueryTest/toleranceOfColumnOrdering1.tsv");
 
     final ExtractRequest request2 = new ExtractRequestBuilder(subjectResource)

@@ -1,5 +1,6 @@
 package au.csiro.pathling.extract;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
@@ -16,6 +17,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+import jakarta.annotation.Nullable;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -48,6 +51,49 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ImplicitUnnester {
 
+  @Value(staticConstructor = "of")
+  public static class FhirPathWithTag {
+
+    @Nonnull
+    FhirPath path;
+    @Nullable
+    String tag;
+
+    public static FhirPathWithTag of(@Nonnull final FhirPath path) {
+      return new FhirPathWithTag(path, null);
+    }
+
+    @Nonnull
+    public String toExpression() {
+      return path.toExpression();
+    }
+
+    public boolean isNull() {
+      return path.isNull();
+    }
+
+    @Nonnull
+    public FhirPath head() {
+      return path.head();
+    }
+
+    @Nonnull
+    public FhirPathWithTag tail() {
+      return FhirPathWithTag.of(path.tail(), tag);
+    }
+
+    @Nonnull
+    public FhirPathWithTag withPrefix(@Nonnull final FhirPath prefix) {
+      return FhirPathWithTag.of(prefix.andThen(path), tag);
+    }
+
+    @Nonnull
+    public String getRequiredTag() {
+      return requireNonNull(tag);
+    }
+  }
+
+
   /**
    * Unnests a list of FhirPaths into a tree structure.
    *
@@ -55,11 +101,10 @@ public class ImplicitUnnester {
    * @return The tree structure representing the unnested paths.
    */
   @Nonnull
-  public Tree<FhirPath> unnestPaths(@Nonnull final List<FhirPath> paths) {
+  public Tree<FhirPathWithTag> unnestPaths(@Nonnull final List<FhirPathWithTag> paths) {
     //
     return Tree.node(
-        new ExternalConstantPath("%resource"),
-        unnestPathsInternal(paths)
+        FhirPathWithTag.of(new ExternalConstantPath("%resource")), unnestPathsInternal(paths)
     );
   }
 
@@ -70,27 +115,27 @@ public class ImplicitUnnester {
    * @return The list of expressions.
    */
   @Nonnull
-  private static List<String> asExpressions(@Nonnull final List<FhirPath> paths) {
-    return paths.stream().map(FhirPath::toExpression).toList();
+  private static List<String> asExpressions(@Nonnull final List<FhirPathWithTag> paths) {
+    return paths.stream().map(FhirPathWithTag::toExpression).toList();
   }
 
   @Nonnull
-  private static Tree<FhirPath> maybeUnnestingNode(
+  private static Tree<FhirPathWithTag> maybeUnnestingNode(
       @Nonnull final FhirPath prefix,
-      @Nonnull final List<Tree<FhirPath>> children) {
+      @Nonnull final List<Tree<FhirPathWithTag>> children) {
     if (children.isEmpty()) {
-      return Tree.Leaf.of(prefix);
+      throw new IllegalStateException("Empty children list passed to maybeUnnestingNode");
     } else if (children.size() == 1 && !children.get(0).getValue().isNull()) {
       // TODO: reconsidre where to pefrom traversal optimisation
-      //       for longr common traversal paths
-      return children.get(0).mapValue(prefix::andThen);
+      //       for longer common traversal paths
+      return children.get(0).mapValue(v -> v.withPrefix(prefix));
     } else {
-      return Tree.node(prefix, children);
+      return Tree.node(FhirPathWithTag.of(prefix), children);
     }
   }
 
   @Nonnull
-  List<Tree<FhirPath>> unnestPathsInternal(@Nonnull final List<FhirPath> paths) {
+  List<Tree<FhirPathWithTag>> unnestPathsInternal(@Nonnull final List<FhirPathWithTag> paths) {
     log.trace("Unnesting paths: {}", asExpressions(paths));
     if (paths.isEmpty()) {
       return Collections.emptyList();
@@ -99,40 +144,42 @@ public class ImplicitUnnester {
       // - these that should be returned as is, which include $this and empty paths
       // - these that need to check for common prefixes with other paths
 
-      final List<FhirPath> leafPaths = paths.stream()
-          .filter(FhirPath::isNull)
+      final List<FhirPathWithTag> leafPaths = paths.stream()
+          .filter(FhirPathWithTag::isNull)
           .toList();
 
-      final List<Leaf<FhirPath>> leafNodes = leafPaths.stream().map(Leaf::of).toList();
+      final List<Leaf<FhirPathWithTag>> leafNodes = leafPaths.stream().map(Leaf::of).toList();
 
-      final List<FhirPath> unnestablePaths = paths.stream()
-          .filter(Predicate.not(FhirPath::isNull))
+      final List<FhirPathWithTag> unnestablePaths = paths.stream()
+          .filter(Predicate.not(FhirPathWithTag::isNull))
           .toList();
 
-      final Map<FhirPath, List<FhirPath>> groupedPaths = unnestablePaths.stream()
+      final Map<FhirPath, List<FhirPathWithTag>> groupedPaths = unnestablePaths.stream()
           .collect(
-              groupingBy(FhirPath::head, LinkedHashMap::new, mapping(FhirPath::tail, toList())));
-      final List<Tree<FhirPath>> unnestedNodes = groupedPaths.entrySet().stream()
+              groupingBy(FhirPathWithTag::head, LinkedHashMap::new,
+                  mapping(FhirPathWithTag::tail, toList())));
+      final List<Tree<FhirPathWithTag>> unnestedNodes = groupedPaths.entrySet().stream()
           .flatMap(entry -> {
                 // identify suffices that are aggregate functions and must not be unnested
-                final List<FhirPath> aggSuffixes = entry.getValue().stream()
+                final List<FhirPathWithTag> aggSuffixes = entry.getValue().stream()
                     .filter(ImplicitUnnester::isAggregate)
                     .toList();
                 // for each of the tree nodes append the current head to the path
-                final List<Tree<FhirPath>> aggNodes = unnestPathsInternal(aggSuffixes)
+                final List<Tree<FhirPathWithTag>> aggNodes = unnestPathsInternal(aggSuffixes)
                     .stream()
-                    .map(tn -> tn.mapValue(v -> entry.getKey().andThen(v))).toList();
+                    .map(tn -> tn.mapValue(v -> v.withPrefix(entry.getKey())))
+                    .toList();
                 // identify suffices that need to be unnested
-                final List<FhirPath> suffixesToUnnest = entry.getValue().stream()
-                    .filter(s -> !ImplicitUnnester.isAggregate(s))
+                final List<FhirPathWithTag> suffixesToUnnest = entry.getValue().stream()
+                    .filter(Predicate.not(ImplicitUnnester::isAggregate))
                     .toList();
                 // if needed wrap sub-trees in an unnesting node
-                final Stream<Tree<FhirPath>> unnestedNodesStream =
+                final Stream<Tree<FhirPathWithTag>> unnestedNodesStream =
                     suffixesToUnnest.isEmpty()
                     ? Stream.empty()
                     : Stream.of(maybeUnnestingNode(entry.getKey(),
                         unnestPathsInternal(suffixesToUnnest)));
-                final List<Tree<FhirPath>> unnestNodes = unnestedNodesStream.toList();
+                final List<Tree<FhirPathWithTag>> unnestNodes = unnestedNodesStream.toList();
                 return Stream.concat(unnestNodes.stream(), aggNodes.stream());
               }
           ).toList();
@@ -144,9 +191,8 @@ public class ImplicitUnnester {
       "count", "sum", "first", "exists", "where");
 
   // Quite possibly all functions should be treated as aggregate functions
-  static boolean isAggregate(@Nonnull final FhirPath path) {
+  static boolean isAggregate(@Nonnull final FhirPathWithTag path) {
     return (path.head() instanceof Paths.EvalFunction evalFunction)
         && AGG_FUNCTIONS.contains(evalFunction.getFunctionIdentifier());
   }
-
 }
