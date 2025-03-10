@@ -70,7 +70,7 @@ class ExtractQueryTest {
 
   @Autowired
   TerminologyServiceFactory terminologyServiceFactory;
-  
+
   @MockBean
   CacheableDatabase dataSource;
 
@@ -517,13 +517,31 @@ class ExtractQueryTest {
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
         .withColumn("id")
+        .withColumn("name.family = 'Oberbrunner298'")
         .withColumn("name.family.first()")
-        .withColumn("name.family = 'Smith'")
         .build();
 
     final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/combineWithUnequalCardinalities.tsv");
+        .hasRows(spark, "responses/ExtractQueryTest/singularizeExpression.tsv");
+  }
+
+
+  @Test
+  void aggregations() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("name.family")
+        .withColumn("name.first().family")
+        .withColumn("name.count()")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/aggregations.tsv");
   }
 
 

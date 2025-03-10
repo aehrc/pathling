@@ -8,7 +8,6 @@ import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.fhirpath.path.Paths.This;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.query.ExpressionWithLabel;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -155,15 +154,15 @@ public class ExtractQueryExecutor extends QueryExecutor {
         constraint);
   }
 
-  static UnnestingSelection fromTree(@Nonnull final Tree<FhirPath> tree) {
+  static ProjectionClause fromTree(@Nonnull final Tree<FhirPath> tree) {
     if (tree instanceof Tree.Leaf<FhirPath> leaf) {
-      // for each leaf we create an unnesting selection with $this as the path
-      return new UnnestingSelection(leaf.getValue(), List.of(
-          new ColumnSelection(
-              List.of(
-                  new RequestedColumn(new This(), randomAlias(), false, Optional.empty())
-              ))
-      ), true);
+      // for each leaf we create column selection of it's value
+      // the implicit unnesting of the collection nodes is not explicitly represented in the tree
+      return new ColumnSelection(
+          List.of(
+              new RequestedColumn(leaf.getValue(), randomAlias(), false, Optional.empty())
+          )
+      );
     } else if (tree instanceof Tree.Node<FhirPath> node) {
       // each node represents an unnesting selection of its children
       return new UnnestingSelection(node.getValue(), node.getChildren().stream()
@@ -182,7 +181,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
     final Tree<FhirPath> unnestingTree = new ImplicitUnnester().unnestPaths(paths);
     log.debug("Unnested tree:\n{}", unnestingTree.map(FhirPath::toExpression).toTreeString());
     // this should be a selection for the resource with the unnesting tree
-    final UnnestingSelection resourceSelection = fromTree(unnestingTree);
+    final UnnestingSelection resourceSelection = (UnnestingSelection) fromTree(unnestingTree);
     final List<ProjectionClause> selects = resourceSelection.getComponents();
     // If there is more than one select, return a GroupingSelection.
     // Otherwise, return the single select by itself.

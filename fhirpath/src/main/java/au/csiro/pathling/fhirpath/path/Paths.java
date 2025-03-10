@@ -128,13 +128,17 @@ final public class Paths {
     @Override
     @Nonnull
     public FhirPath head() {
-      return leftPath.head();
+      return leftPath.isNull()
+             ? this
+             : leftPath.head();
     }
 
     @Override
     @Nonnull
     public FhirPath tail() {
-      return new EvalOperator(leftPath.tail(), rightPath, operator);
+      return leftPath.isNull()
+             ? FhirPath.nullPath()
+             : new EvalOperator(leftPath.tail(), rightPath, operator);
     }
   }
 
@@ -287,6 +291,11 @@ final public class Paths {
     @Override
     public String toExpression() {
       return "$this";
+    }
+
+    @Override
+    public boolean isNull() {
+      return true;
     }
   }
 }
