@@ -4,7 +4,6 @@ import static au.csiro.pathling.extract.Tree.node;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.extract.ImplicitUnnester.FhirPathWithTag;
-import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import jakarta.annotation.Nonnull;
 import java.util.List;
