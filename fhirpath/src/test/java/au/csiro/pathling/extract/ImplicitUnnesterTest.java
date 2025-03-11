@@ -7,8 +7,10 @@ import au.csiro.pathling.extract.ImplicitUnnester.FhirPathWithTag;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import jakarta.annotation.Nonnull;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
+@Slf4j
 public class ImplicitUnnesterTest {
 
 
@@ -165,19 +167,39 @@ public class ImplicitUnnesterTest {
   void testCommonAggregateWithProperty() {
     final List<String> columns = List.of(
         "first().id",
-        "first().gender()"
+        "first().gender"
     );
     final Tree<FhirPathWithTag> projection = toProjection(columns);
     assertTreeEquals(
         node("%resource",
             node("first()",
                 leafWithThis("id"),
-                leafWithThis("gender()")
+                leafWithThis("gender")
             )
         ),
         projection
     );
   }
+
+
+  @Test
+  void testCommonAggregatePathWithProperty() {
+    final List<String> columns = List.of(
+        "first().last().id",
+        "first().last().gender"
+    );
+    final Tree<FhirPathWithTag> projection = toProjection(columns);
+    assertTreeEquals(
+        node("%resource",
+            node("first().last()",
+                leafWithThis("id"),
+                leafWithThis("gender")
+            )
+        ),
+        projection
+    );
+  }
+
 
   @Test
   void testCommonPropertyWithAggregate() {
@@ -337,13 +359,6 @@ public class ImplicitUnnesterTest {
         "name.exists()"
     );
     final Tree<FhirPathWithTag> projection = toProjection(columns);
-    // this should be 
-    // id
-    // name
-    //   given
-    //   family
-    // name.count()
-    // name.exists()
     assertTreeEquals(
         node("%resource",
             leafWithThis("id"),
@@ -514,8 +529,7 @@ public class ImplicitUnnesterTest {
             .map(FhirPathWithTag::of)
             .toList()
     );
-
-    System.out.println(result.toTreeString(FhirPathWithTag::toExpression));
+    log.debug(result.toTreeString(FhirPathWithTag::toExpression));
     return result;
   }
 

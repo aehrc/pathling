@@ -10,14 +10,13 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.path.Paths.ExternalConstantPath;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-import jakarta.annotation.Nullable;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 
@@ -73,13 +72,13 @@ public class ImplicitUnnester {
     }
 
     @Nonnull
-    public FhirPath head() {
-      return path.head();
+    public FhirPath prefix() {
+      return path.prefix();
     }
 
     @Nonnull
-    public FhirPathWithTag tail() {
-      return FhirPathWithTag.of(path.tail(), tag);
+    public FhirPathWithTag suffix() {
+      return FhirPathWithTag.of(path.suffix(), tag);
     }
 
     @Nonnull
@@ -126,8 +125,6 @@ public class ImplicitUnnester {
     if (children.isEmpty()) {
       throw new IllegalStateException("Empty children list passed to maybeUnnestingNode");
     } else if (children.size() == 1 && !children.get(0).getValue().isNull()) {
-      // TODO: reconsidre where to pefrom traversal optimisation
-      //       for longer common traversal paths
       return children.get(0).mapValue(v -> v.withPrefix(prefix));
     } else {
       return Tree.node(FhirPathWithTag.of(prefix), children);
@@ -156,22 +153,22 @@ public class ImplicitUnnester {
 
       final Map<FhirPath, List<FhirPathWithTag>> groupedPaths = unnestablePaths.stream()
           .collect(
-              groupingBy(FhirPathWithTag::head, LinkedHashMap::new,
-                  mapping(FhirPathWithTag::tail, toList())));
+              groupingBy(FhirPathWithTag::prefix, LinkedHashMap::new,
+                  mapping(FhirPathWithTag::suffix, toList())));
       final List<Tree<FhirPathWithTag>> unnestedNodes = groupedPaths.entrySet().stream()
           .flatMap(entry -> {
-                // identify suffices that are aggregate functions and must not be unnested
-                final List<FhirPathWithTag> aggSuffixes = entry.getValue().stream()
-                    .filter(ImplicitUnnester::isAggregate)
+                // identify suffices that are  functions and must not be unnested
+                final List<FhirPathWithTag> funcSuffixes = entry.getValue().stream()
+                    .filter(ImplicitUnnester::isFunction)
                     .toList();
                 // for each of the tree nodes append the current head to the path
-                final List<Tree<FhirPathWithTag>> aggNodes = unnestPathsInternal(aggSuffixes)
+                final List<Tree<FhirPathWithTag>> funcNodes = unnestPathsInternal(funcSuffixes)
                     .stream()
                     .map(tn -> tn.mapValue(v -> v.withPrefix(entry.getKey())))
                     .toList();
                 // identify suffices that need to be unnested
                 final List<FhirPathWithTag> suffixesToUnnest = entry.getValue().stream()
-                    .filter(Predicate.not(ImplicitUnnester::isAggregate))
+                    .filter(Predicate.not(ImplicitUnnester::isFunction))
                     .toList();
                 // if needed wrap sub-trees in an unnesting node
                 final Stream<Tree<FhirPathWithTag>> unnestedNodesStream =
@@ -180,19 +177,15 @@ public class ImplicitUnnester {
                     : Stream.of(maybeUnnestingNode(entry.getKey(),
                         unnestPathsInternal(suffixesToUnnest)));
                 final List<Tree<FhirPathWithTag>> unnestNodes = unnestedNodesStream.toList();
-                return Stream.concat(unnestNodes.stream(), aggNodes.stream());
+                return Stream.concat(unnestNodes.stream(), funcNodes.stream());
               }
           ).toList();
       return Stream.concat(leafNodes.stream(), unnestedNodes.stream()).toList();
     }
   }
 
-  private final static Set<String> AGG_FUNCTIONS = Set.of(
-      "count", "sum", "first", "exists", "where");
-
   // Quite possibly all functions should be treated as aggregate functions
-  static boolean isAggregate(@Nonnull final FhirPathWithTag path) {
-    return (path.head() instanceof Paths.EvalFunction evalFunction)
-        && AGG_FUNCTIONS.contains(evalFunction.getFunctionIdentifier());
+  static boolean isFunction(@Nonnull final FhirPathWithTag path) {
+    return (path.getPath().head() instanceof Paths.EvalFunction);
   }
 }

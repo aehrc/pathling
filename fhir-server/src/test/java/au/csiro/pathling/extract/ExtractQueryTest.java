@@ -373,7 +373,6 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
-        .printAsTsv()
         .hasRows(spark, "responses/ExtractQueryTest/toleranceOfColumnOrdering1.tsv");
 
     final ExtractRequest request2 = new ExtractRequestBuilder(subjectResource)

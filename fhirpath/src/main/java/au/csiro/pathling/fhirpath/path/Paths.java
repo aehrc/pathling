@@ -32,7 +32,6 @@ import au.csiro.pathling.fhirpath.operator.BinaryOperatorInput;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import au.csiro.pathling.fhirpath.operator.UnaryOperator;
 import jakarta.annotation.Nonnull;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -84,15 +83,6 @@ final public class Paths {
 
 
     @Override
-    @Nonnull
-    public FhirPath withNewChildren(@Nonnull final List<FhirPath> newChildren) {
-      if (newChildren.size() != 2) {
-        throw new IllegalArgumentException("EvalOperator must have exactly two children");
-      }
-      return new EvalOperator(newChildren.get(0), newChildren.get(1), operator);
-    }
-
-    @Override
     public Stream<FhirPath> children() {
       return Stream.of(leftPath, rightPath);
     }
@@ -127,7 +117,7 @@ final public class Paths {
 
     @Override
     @Nonnull
-    public FhirPath head() {
+    public FhirPath prefix() {
       return leftPath.isNull()
              ? this
              : leftPath.head();
@@ -135,7 +125,7 @@ final public class Paths {
 
     @Override
     @Nonnull
-    public FhirPath tail() {
+    public FhirPath suffix() {
       return leftPath.isNull()
              ? FhirPath.nullPath()
              : new EvalOperator(leftPath.tail(), rightPath, operator);
@@ -168,14 +158,6 @@ final public class Paths {
       return Stream.of(path);
     }
 
-    @Override
-    @Nonnull
-    public FhirPath withNewChildren(@Nonnull final List<FhirPath> newChildren) {
-      if (newChildren.size() != 1) {
-        throw new IllegalArgumentException("EvalUnaryOperator must have exactly one child");
-      }
-      return new EvalUnaryOperator(newChildren.get(0), operator);
-    }
   }
 
 
@@ -215,15 +197,6 @@ final public class Paths {
       return arguments.stream();
     }
 
-    @Override
-    @Nonnull
-    public FhirPath withNewChildren(@Nonnull final List<FhirPath> newChildren) {
-      if (newChildren.size() != arguments.size()) {
-        throw new IllegalArgumentException(
-            "EvalFunction must have exactly " + arguments.size() + " children");
-      }
-      return new EvalFunction(functionIdentifier, Collections.unmodifiableList(newChildren));
-    }
   }
 
   @Value
