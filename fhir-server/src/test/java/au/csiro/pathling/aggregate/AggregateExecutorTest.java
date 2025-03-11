@@ -18,13 +18,16 @@
 package au.csiro.pathling.aggregate;
 
 import static au.csiro.pathling.test.TestResources.assertJson;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.UnitTestDependencies;
 import au.csiro.pathling.aggregate.AggregateResponse.Grouping;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.search.SearchExecutor;
+import au.csiro.pathling.search.SearchExecutorTest.EncoderConfig;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
@@ -45,12 +48,14 @@ import org.hl7.fhir.r4.model.Parameters;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
 /**
  * @author John Grimes
  */
 @SpringBootUnitTest
+@SpringBootTest(classes = {EncoderConfig.class, UnitTestDependencies.class})
 abstract class AggregateExecutorTest {
 
   @Autowired
@@ -92,8 +97,7 @@ abstract class AggregateExecutorTest {
    * Test that the drill-down expression from the first grouping from each aggregate result can be
    * successfully executed using the FHIRPath search.
    */
-  // TODO: enable when the core logic of AggregateExecutor is implemented
-  //@AfterEach
+  @AfterEach
   void runFirstGroupingThroughSearch() {
     if (response != null) {
       final Optional<Grouping> firstGroupingOptional = response.getGroupings()
@@ -111,7 +115,7 @@ abstract class AggregateExecutorTest {
             database, Optional.of(terminologyServiceFactory),
             fhirEncoders, subjectResource, Optional.of(filters));
         final List<IBaseResource> resources = searchExecutor.getResources(0, 100);
-        assertTrue(resources.size() > 0);
+        assertFalse(resources.isEmpty());
       }
     }
   }

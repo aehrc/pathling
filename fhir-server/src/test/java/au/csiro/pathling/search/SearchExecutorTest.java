@@ -28,6 +28,7 @@ import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.search.SearchExecutorTest.EncoderConfig;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
@@ -62,10 +63,10 @@ import org.springframework.context.annotation.Bean;
  * @author John Grimes
  */
 @SpringBootUnitTest
-@SpringBootTest(classes = {SearchExecutorTest.MyConfig.class, UnitTestDependencies.class})
-class SearchExecutorTest {
+@SpringBootTest(classes = {EncoderConfig.class, UnitTestDependencies.class})
+public class SearchExecutorTest {
 
-  public static class MyConfig {
+  public static class EncoderConfig {
 
     @Bean
     @Nonnull
