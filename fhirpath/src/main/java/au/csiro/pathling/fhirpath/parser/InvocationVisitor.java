@@ -30,9 +30,9 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParamListConte
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ThisInvocationContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TotalInvocationContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathVisitor;
+import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
 import au.csiro.pathling.fhirpath.path.Paths.Resource;
-import au.csiro.pathling.fhirpath.path.Paths.This;
 import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -47,7 +47,7 @@ import java.util.Optional;
  * @author John Grimes
  */
 class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
-  
+
   private static boolean canBeResourceType(@Nonnull final String identifier) {
     // check if starts with capital letter
     return !identifier.isEmpty() && Character.isUpperCase(identifier.charAt(0));
@@ -128,7 +128,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Nonnull
   public FhirPath visitThisInvocation(
       @Nullable final ThisInvocationContext ctx) {
-    return new This();
+    return Paths.thisPath();
   }
 
   @Override

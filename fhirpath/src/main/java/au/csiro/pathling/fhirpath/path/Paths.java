@@ -43,6 +43,24 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @UtilityClass
 final public class Paths {
 
+  /**
+   * Gets the `$this` path.
+   * <p>
+   * `$this`   is now represented by the nullPath(). The implication is that  `$this`  will only
+   * appear in fhir paths is explicitly needed. In all cases when $this is followed another path
+   * element it is stripped.
+   * <p>
+   * For example: 
+   * <pre>`where($this.name = 'foo')` is converted to `where(name = 'foo')`</pre>
+   * but:
+   * <pre>`where($this = 'foo')` remains `where($this = 'foo')`</pre>
+   *
+   * @return the `$this` path
+   */
+  public static FhirPath thisPath() {
+    return FhirPath.nullPath();
+  }
+
   @Value
   public static class ExternalConstantPath implements FhirPath {
 
@@ -250,25 +268,4 @@ final public class Paths {
     }
   }
 
-  // TODO: replace with FhirPath::This
-  @Value
-  public static class This implements FhirPath {
-
-    @Override
-    public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      return input;
-    }
-
-    @Nonnull
-    @Override
-    public String toExpression() {
-      return "$this";
-    }
-
-    @Override
-    public boolean isNull() {
-      return true;
-    }
-  }
 }

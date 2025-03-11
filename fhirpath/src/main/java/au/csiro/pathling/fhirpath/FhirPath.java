@@ -81,7 +81,7 @@ public interface FhirPath {
   static FhirPath nullPath() {
     return NULL;
   }
-
+  
   default boolean isNull() {
     return NULL.equals(this);
   }

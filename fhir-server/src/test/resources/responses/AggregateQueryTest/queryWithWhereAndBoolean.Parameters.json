@@ -13,7 +13,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "(where($this.gender = 'male' and $this.birthDate > @1990).communication.language.text).empty()"
+          "valueString": "(where(gender = 'male' and birthDate > @1990).communication.language.text).empty()"
         }
       ]
     },
@@ -30,7 +30,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "(where($this.gender = 'male' and $this.birthDate > @1990).communication.language.text) contains 'Spanish'"
+          "valueString": "(where(gender = 'male' and birthDate > @1990).communication.language.text) contains 'Spanish'"
         }
       ]
     }

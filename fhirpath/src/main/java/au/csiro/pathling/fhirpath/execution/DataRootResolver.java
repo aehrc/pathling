@@ -48,7 +48,7 @@ public class DataRootResolver {
   @Nonnull
   public Set<DataRoot> findDataRoots(@Nonnull final Collection<FhirPath> paths) {
     // always include this as  context path
-    return Stream.concat(Stream.of(new Paths.This()), paths.stream())
+    return Stream.concat(Stream.of(Paths.thisPath()), paths.stream())
         .map(this::findDataRoots)
         .flatMap(Collection::stream)
         .collect(Collectors.toUnmodifiableSet());
