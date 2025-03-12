@@ -11,7 +11,7 @@ import java.util.stream.Stream;
 import lombok.experimental.UtilityClass;
 
 @UtilityClass
-public class PathsUtils {
+public class FhirPathsUtils {
 
   public static boolean isReverseResolve(final FhirPath path) {
     return asReverseResolve(path).isPresent();
@@ -55,10 +55,6 @@ public class PathsUtils {
         .equals("extension");
   }
 
-  public static boolean isTraversal(@Nonnull final FhirPath path) {
-    return path instanceof Paths.Traversal;
-  }
-
   public static boolean isTypeOf(@Nonnull final FhirPath path) {
     return asTypeOf(path).isPresent();
   }
@@ -87,7 +83,6 @@ public class PathsUtils {
     }
   }
 
-
   @Nonnull
   public static Optional<EvalFunction> asTypeOf(@Nonnull final FhirPath path) {
     return path instanceof EvalFunction evalFunction && evalFunction.getFunctionIdentifier()
@@ -96,5 +91,10 @@ public class PathsUtils {
            : Optional.empty();
   }
 
+  public static boolean isResource(@Nonnull final FhirPath path) {
+    // TODO: This is not strictly correct
+    //  we also should check if the name of the resource is valid  
+    return path instanceof Paths.Resource;
+  }
 
 }

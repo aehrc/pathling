@@ -1,8 +1,9 @@
 package au.csiro.pathling.fhirpath.execution;
 
-import static au.csiro.pathling.fhirpath.execution.PathsUtils.asReverseResolve;
-import static au.csiro.pathling.fhirpath.execution.PathsUtils.isResolve;
-import static au.csiro.pathling.fhirpath.execution.PathsUtils.isReverseResolve;
+import static au.csiro.pathling.fhirpath.execution.FhirPathsUtils.asReverseResolve;
+import static au.csiro.pathling.fhirpath.execution.FhirPathsUtils.isResolve;
+import static au.csiro.pathling.fhirpath.execution.FhirPathsUtils.isResource;
+import static au.csiro.pathling.fhirpath.execution.FhirPathsUtils.isReverseResolve;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
@@ -14,6 +15,7 @@ import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.path.ParserPaths.TypeSpecifierPath;
 import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
+import au.csiro.pathling.fhirpath.path.Paths.Resource;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.Collection;
@@ -54,18 +56,23 @@ public class DataRootResolver {
         .collect(Collectors.toUnmodifiableSet());
   }
 
-
   public void collectDataRoots(@Nonnull final DataRoot currentRoot,
       @Nonnull final FhirPath fhirPath,
       @Nonnull final FhirPath traversalPath,
       @Nonnull final Set<DataRoot> dataRoots) {
 
     final FhirPath headPath = fhirPath.first();
-    if (isReverseResolve(headPath)) {
+    if (isResource(headPath)) {
+      // add this resource root and use it as the contex for the rest of the path
+      final ResourceRoot resourceRoot = ResourceRoot.of(
+          ((Resource) headPath).getResourceType());
+      dataRoots.add(resourceRoot);
+      collectDataRoots(resourceRoot, fhirPath.suffix(), traversalPath, dataRoots);
+    } else if (isReverseResolve(headPath)) {
       final ReverseResolveRoot reverseResolveRoot = ExecutorUtils.fromPath(currentRoot,
           asReverseResolve(headPath).orElseThrow());
       dataRoots.add(reverseResolveRoot);
-      // We start with a new tracking contxct
+      // We start with a new tracking context
       collectDataRoots(reverseResolveRoot, fhirPath.suffix(), FhirPath.nullPath(), dataRoots);
     } else if (isResolve(headPath)) {
       // this here is problematic if we need to deal with polymorphic references
@@ -92,8 +99,8 @@ public class DataRootResolver {
         dataRoots.add(resolveRoot);
       }
       collectDataRoots(resolveRoot, fhirPath.suffix(), FhirPath.nullPath(), dataRoots);
-    } else if (PathsUtils.isTypeOf(headPath)) {
-      final EvalFunction evalFunction = PathsUtils.asTypeOf(headPath).orElseThrow();
+    } else if (FhirPathsUtils.isTypeOf(headPath)) {
+      final EvalFunction evalFunction = FhirPathsUtils.asTypeOf(headPath).orElseThrow();
       final TypeSpecifier typeSpecifier = ((TypeSpecifierPath) evalFunction.getArguments()
           .get(0)).getValue();
 
@@ -117,10 +124,10 @@ public class DataRootResolver {
             dataRoots);
       }
       // NOTE: other paths should be literals so we should not need to resolve them
-    } else if (PathsUtils.isMulitPath(headPath)) {
+    } else if (FhirPathsUtils.isMulitPath(headPath)) {
       // combine needs to be processed differentnly 
       // each of the children needs to be processed with the entire suffic
-      PathsUtils.getHeads(headPath)
+      FhirPathsUtils.getHeads(headPath)
           .forEach(head -> collectDataRoots(currentRoot, head.andThen(fhirPath.suffix()),
               traversalPath, dataRoots));
     } else if (!headPath.isNull()) {
@@ -131,7 +138,7 @@ public class DataRootResolver {
 
       // TODO: we should be also need to be abel to check 
       // if the current traversal is to a resource or to a reference
-      final FhirPath newTraversalPath = traversalPath.andThen(PathsUtils.toTraversal(headPath));
+      final FhirPath newTraversalPath = traversalPath.andThen(FhirPathsUtils.toTraversal(headPath));
       collectDataRoots(currentRoot, fhirPath.suffix(), newTraversalPath, dataRoots);
     } else {
       // if we have an untyped resolve root add it here

@@ -1,6 +1,8 @@
 package au.csiro.pathling.fhirpathe.execution;
 
 import static au.csiro.pathling.test.helpers.SqlHelpers.sql_array;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.execution.FhirpathExecutor;
@@ -773,5 +775,20 @@ class FhirpathTest {
             RowFactory.create("2", null),
             RowFactory.create("3", null)
         );
+  }
+
+
+  @Test
+  void unboundResourceReference() {
+    final ObjectDataSource dataSource = getPatientsWithConditions();
+
+    final UnsupportedOperationException ex = assertThrows(UnsupportedOperationException.class,
+        () -> {
+          evalExpression(dataSource,
+              ResourceType.CONDITION,
+              "Condition.subject.resolve().ofType(Patient).id  = Patient.first().id"
+          );
+        });
+    assertEquals("Foreign joins are not supported yet", ex.getMessage());
   }
 }

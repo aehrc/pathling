@@ -73,23 +73,45 @@ public class JoinResolver {
    * Resolve the joins in the given {@link JoinSet} and return the resulting {@link Dataset}.
    */
   @Nonnull
-  public Dataset<Row> resolveJoins(@Nonnull final JoinSet joinSet) {
+  public Dataset<Row> resolveJoins(@Nonnull final List<JoinSet> joinSet) {
     return resolveJoins(joinSet, resourceDataset(dataSource, subjectResource));
   }
 
   @Nonnull
-  public Dataset<Row> resolveJoins(@Nonnull final JoinSet joinSet,
+  public Dataset<Row> resolveJoins(@Nonnull final List<JoinSet> joinSets,
+      @Nonnull final Dataset<Row> parentDataset) {
+    // we need to split the list into the required subject resource joinSet and 
+    // other sets of foreign resources joins
+    // all roots of join sets should be of type ResourceRoot
+
+    final JoinSet subjectJoinsSet = joinSets.stream()
+        .filter(js -> subjectResource.equals(js.getMasterResourceRoot().getResourceType()))
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("No subject resource join set found"));
+
+    final List<JoinSet> foreignJoinsSet = joinSets.stream()
+        .filter(js -> !subjectResource.equals(js.getMasterResourceRoot().getResourceType()))
+        .toList();
+    
+    if (!foreignJoinsSet.isEmpty()) {
+      throw new UnsupportedOperationException("Foreign joins are not supported yet");
+    }
+    return resolveJoinSet(subjectJoinsSet, parentDataset);
+  }
+
+
+  @Nonnull
+  private Dataset<Row> resolveJoinSet(@Nonnull final JoinSet joinSet,
       @Nonnull final Dataset<Row> parentDataset) {
     // now just reduce current children
     return joinSet.getChildren().stream()
         .reduce(parentDataset, (dataset, subset) ->
             // the parent dataset for subjoin should be different
             computeJoin(dataset,
-                resolveJoins(subset,
+                resolveJoinSet(subset,
                     resourceDataset(dataSource, subset.getMaster().getResourceType())),
                 (JoinRoot) subset.getMaster()), (dataset1, dataset2) -> dataset1);
   }
-
 
   @Nonnull
   static Column ns_map_concat(@Nonnull final Column left, @Nonnull final Column right) {

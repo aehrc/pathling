@@ -3,6 +3,7 @@ package au.csiro.pathling.fhirpath.execution;
 import static java.util.stream.Collectors.mapping;
 
 import au.csiro.pathling.fhirpath.execution.DataRoot.JoinRoot;
+import au.csiro.pathling.fhirpath.execution.DataRoot.ResourceRoot;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,11 @@ public class JoinSet {
   @Nonnull
   List<JoinSet> children;
 
+
+  @Nonnull
+  public ResourceRoot getMasterResourceRoot() {
+    return (ResourceRoot) master;
+  }
 
   @Nonnull
   public static JoinSet of(@Nonnull final DataRoot master, @Nonnull final List<JoinSet> children) {

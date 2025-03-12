@@ -31,7 +31,7 @@ public abstract class BaseResourceResolver implements ResourceResolver {
   @Override
   public @Nonnull Optional<ResourceCollection> resolveResource(
       @Nonnull final String resourceCode) {
-    if (resourceCode.equals(getSubjectResource())) {
+    if (resourceCode.equals(getSubjectResource().toCode())) {
       return Optional.of(resolveSubjectResource());
     } else {
       return resolveForeignResource(resourceCode);

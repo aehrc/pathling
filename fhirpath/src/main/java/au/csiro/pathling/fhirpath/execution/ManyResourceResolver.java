@@ -21,9 +21,12 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedResourceCollection;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.ResourceTypeSet;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.RuntimeResourceDefinition;
+import ca.uhn.fhir.parser.DataFormatException;
 import jakarta.annotation.Nonnull;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
@@ -31,6 +34,8 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * A FHIRPath ResourceResolver that can handle joins.
@@ -49,7 +54,7 @@ public class ManyResourceResolver extends BaseResourceResolver {
   DataSource dataSource;
 
   @Nonnull
-  JoinSet subjectJoinSet;
+  List<JoinSet> joinSets;
 
   @Nonnull
   ResourceCollection resolveTypedJoin(
@@ -99,10 +104,27 @@ public class ManyResourceResolver extends BaseResourceResolver {
         fhirContext, childResourceType);
   }
 
+
+  @Override
+  @Nonnull
+  Optional<ResourceCollection> resolveForeignResource(@Nonnull final String resourceCode) {
+    try {
+      final RuntimeResourceDefinition definition = fhirContext.getResourceDefinition(
+          resourceCode);
+      final ResourceType resourceType = ResourceType.fromCode(resourceCode);
+      final ResourceCollection resourcCollecttion = ResourceCollection.build(
+          new DefaultRepresentation(functions.col("@" + resourceType.toCode())),
+          getFhirContext(), resourceType);
+      return Optional.of(resourcCollecttion);
+    } catch (DataFormatException e) {
+      return Optional.empty();
+    }
+  }
+
   @Nonnull
   @Override
   public Dataset<Row> createView() {
     return JoinResolver.of(subjectResource, fhirContext, dataSource)
-        .resolveJoins(subjectJoinSet);
+        .resolveJoins(joinSets);
   }
 }

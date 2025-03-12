@@ -54,7 +54,7 @@ public class MultiFhirpathEvaluator {
     DataSource dataSource;
 
     @Nonnull
-    JoinSet subjectJoinSet;
+    List<JoinSet> joinSets;
 
     @Override
     @Nonnull
@@ -68,7 +68,7 @@ public class MultiFhirpathEvaluator {
             "subjectResource must be the same as the one used to create the factory");
       }
       return new StdFhirpathEvaluator(
-          new ManyResourceResolver(subjectResource, fhirContext, dataSource, subjectJoinSet),
+          new ManyResourceResolver(subjectResource, fhirContext, dataSource, joinSets),
           functionRegistry, variables);
     }
 
@@ -78,12 +78,10 @@ public class MultiFhirpathEvaluator {
         @Nonnull final DataSource dataSource,
         @Nonnull final List<FhirPath> contextPaths) {
 
-      final JoinSet joinSet = fromContextPaths(
-          subjectResource, fhirContext, contextPaths
-      );
+      final List<JoinSet> joinSets = fromContextPaths(subjectResource, fhirContext, contextPaths);
       return of(
           subjectResource,
-          fhirContext, dataSource, joinSet
+          fhirContext, dataSource, joinSets
       );
     }
   }
@@ -108,23 +106,23 @@ public class MultiFhirpathEvaluator {
     public FhirpathEvaluator create(@Nonnull final ResourceType subjectResource,
         @Nonnull final Supplier<List<FhirPath>> contextPathsSupplier) {
       final List<FhirPath> contextPaths = contextPathsSupplier.get();
-      final JoinSet subjectJoinSet = fromContextPaths(subjectResource, fhirContext, contextPaths);
+      final List<JoinSet> joinSets = fromContextPaths(subjectResource, fhirContext, contextPaths);
       return new StdFhirpathEvaluator(
-          new ManyResourceResolver(subjectResource, fhirContext, dataSource, subjectJoinSet),
+          new ManyResourceResolver(subjectResource, fhirContext, dataSource, joinSets),
           functionRegistry, variables);
     }
   }
 
   // TODO: Determine at which stage we actually need the subjectResource
   @Nonnull
-  public static JoinSet fromContextPaths(@Nonnull final ResourceType subjectResource,
+  public static List<JoinSet> fromContextPaths(@Nonnull final ResourceType subjectResource,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final List<FhirPath> contextPaths) {
     final DataRootResolver dataRootResolver = new DataRootResolver(subjectResource, fhirContext);
     final Set<DataRoot> joinRoots = dataRootResolver.findDataRoots(contextPaths);
     log.debug("Join roots: {}", joinRoots);
-    final JoinSet joinSet = JoinSet.mergeRoots(joinRoots).iterator().next();
-    log.debug("Join set:\n{}", joinSet.toTreeString());
-    return joinSet;
+    final List<JoinSet> joinSets = JoinSet.mergeRoots(joinRoots);
+    joinSets.forEach(joinSet -> log.debug("Join set:\n{}", joinSet.toTreeString()));
+    return joinSets;
   }
 }
