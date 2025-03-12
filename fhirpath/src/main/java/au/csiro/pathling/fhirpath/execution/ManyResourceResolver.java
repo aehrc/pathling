@@ -109,11 +109,11 @@ public class ManyResourceResolver extends BaseResourceResolver {
   @Nonnull
   Optional<ResourceCollection> resolveForeignResource(@Nonnull final String resourceCode) {
     try {
-      final RuntimeResourceDefinition definition = fhirContext.getResourceDefinition(
-          resourceCode);
+      // check if the resource code is valid in the FHIR context
+      fhirContext.getResourceDefinition(resourceCode);
       final ResourceType resourceType = ResourceType.fromCode(resourceCode);
       final ResourceCollection resourcCollecttion = ResourceCollection.build(
-          new DefaultRepresentation(functions.col("@" + resourceType.toCode())),
+          new DefaultRepresentation(functions.col(resourceType.toCode())),
           getFhirContext(), resourceType);
       return Optional.of(resourcCollecttion);
     } catch (DataFormatException e) {

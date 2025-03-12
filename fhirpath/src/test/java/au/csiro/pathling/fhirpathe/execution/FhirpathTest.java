@@ -779,16 +779,48 @@ class FhirpathTest {
 
 
   @Test
-  void unboundResourceReference() {
+  void simpleUnboundResourceReference() {
+    final ObjectDataSource dataSource = getPatientsWithConditions();
+
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.CONDITION,
+        "Patient.count()"
+    );
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("x", 3),
+            RowFactory.create("y", 3),
+            RowFactory.create("z", 3)
+        );
+  }
+
+  @Test
+  void complexUnboundResourceReference() {
+    final ObjectDataSource dataSource = getPatientsWithConditions();
+
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.PATIENT,
+        "Condition.where(subject.getReferenceKey()=Patient.getResourceKey()).count()"
+    );
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", 2),
+            RowFactory.create("2", 1),
+            RowFactory.create("3", 0)
+        );
+  }
+
+  @Test
+  void unsupportedResolvesToForeignResources() {
     final ObjectDataSource dataSource = getPatientsWithConditions();
 
     final UnsupportedOperationException ex = assertThrows(UnsupportedOperationException.class,
         () -> {
           evalExpression(dataSource,
               ResourceType.CONDITION,
-              "Condition.subject.resolve().ofType(Patient).id  = Patient.first().id"
+              "Patient.reverseResolve(Condition.subject).count()"
           );
         });
-    assertEquals("Foreign joins are not supported yet", ex.getMessage());
+    assertEquals("Not implemented - nested resolves for foreign resources", ex.getMessage());
   }
 }

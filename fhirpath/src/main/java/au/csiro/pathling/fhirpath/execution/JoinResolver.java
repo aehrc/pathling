@@ -25,6 +25,7 @@ import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.definition.ResourceTypeSet;
 import au.csiro.pathling.fhirpath.execution.DataRoot.JoinRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ResolveRoot;
+import au.csiro.pathling.fhirpath.execution.DataRoot.ResourceRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
@@ -92,13 +93,39 @@ public class JoinResolver {
     final List<JoinSet> foreignJoinsSet = joinSets.stream()
         .filter(js -> !subjectResource.equals(js.getMasterResourceRoot().getResourceType()))
         .toList();
-    
-    if (!foreignJoinsSet.isEmpty()) {
-      throw new UnsupportedOperationException("Foreign joins are not supported yet");
-    }
-    return resolveJoinSet(subjectJoinsSet, parentDataset);
+
+    return foreignJoinsSet.stream()
+        .reduce(resolveJoinSet(subjectJoinsSet, parentDataset), this::resolveForeignJoinSet,
+            (dataset1, dataset2) -> dataset1);
   }
 
+  @Nonnull
+  private Dataset<Row> resolveForeignJoinSet(@Nonnull final Dataset<Row> parentDataset,
+      @Nonnull final JoinSet joinSet) {
+    if (!joinSet.getChildren().isEmpty()) {
+      throw new UnsupportedOperationException(
+          "Not implemented - nested resolves for foreign resources");
+    }
+    log.warn("Cross join with foreign resource {} encountered. This can result in poor performance",
+        joinSet.getMasterResourceRoot().getResourceType().toCode());
+    // minimally add the foreign resources to the parent dataset
+    // as array of structs
+    final ResourceRoot dataRoot = joinSet.getMasterResourceRoot();
+    final Dataset<Row> resourceDataset = resourceDataset(dataSource, dataRoot.getResourceType());
+
+    // cross join with the parent dataset 
+    // this is very inefficient and thus the warning
+    // TODO: not sure if it's better to collect first and then join or the 
+    //  other way around???
+    logDataset("Foreign input", resourceDataset);
+    // collect all the resources  to an array
+    final Dataset<Row> groupedDataset = resourceDataset.groupBy()
+        .agg(functions.collect_list(dataRoot.getTag()).alias(dataRoot.getTag()));
+    logDataset("Grouped resources", groupedDataset);
+    final Dataset<Row> joinedDataset = parentDataset.crossJoin(groupedDataset);
+    logDataset("Joined dataset", joinedDataset);
+    return joinedDataset;
+  }
 
   @Nonnull
   private Dataset<Row> resolveJoinSet(@Nonnull final JoinSet joinSet,
