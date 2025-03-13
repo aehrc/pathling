@@ -177,7 +177,7 @@ public class JoinSet {
    * Prints a string representation of the join set as a tree to the standard output.
    * This is useful for debugging.
    */
-  //noinspection unused
+  @SuppressWarnings("unused")
   public void printTree() {
     System.out.println(toTreeString());
   }
