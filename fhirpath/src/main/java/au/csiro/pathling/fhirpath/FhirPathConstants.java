@@ -26,10 +26,19 @@ public interface FhirPathConstants {
    * Predefined variable names in FHIRPath expressions.
    */
   interface PredefinedVariables {
+
     String RESOURCE = "resource";
     String ROOT_RESOURCE = "rootResource";
     String CONTEXT = "context";
   }
-  
-  // Other constant categories could be added as nested interfaces
+
+  /**
+   * Non-exhaustive list of FHIRPath function names.
+   */
+  interface Functions {
+
+    String RESOLVE = "resolve";
+    String REVERSE_RESOLVE = "reverseResolve";
+  }
+
 }

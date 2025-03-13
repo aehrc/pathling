@@ -1,11 +1,14 @@
 package au.csiro.pathling.fhirpath.execution;
 
+import static au.csiro.pathling.fhirpath.FhirPathConstants.Functions;
+
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.operator.CombineOperator;
 import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
 import au.csiro.pathling.fhirpath.path.Paths.EvalOperator;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Optional;
 import java.util.stream.Stream;
 import lombok.experimental.UtilityClass;
@@ -13,30 +16,25 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class FhirPathsUtils {
 
-  public static boolean isReverseResolve(final FhirPath path) {
-    return asReverseResolve(path).isPresent();
-  }
 
-  public static boolean isResolve(final FhirPath path) {
-    return asResolve(path).isPresent();
-  }
-
-  @Nonnull
-  public static Optional<EvalFunction> asReverseResolve(final FhirPath path) {
+  @Nullable
+  public static FhirPath asFunction(@Nonnull final FhirPath path,
+      @Nonnull final String functionName) {
     if (path instanceof EvalFunction evalFunction && evalFunction.getFunctionIdentifier()
-        .equals("reverseResolve")) {
-      return Optional.of(evalFunction);
+        .equals(functionName)) {
+      return evalFunction;
     }
-    return Optional.empty();
+    return null;
   }
 
-  @Nonnull
-  public static Optional<EvalFunction> asResolve(final FhirPath path) {
-    if (path instanceof EvalFunction evalFunction && evalFunction.getFunctionIdentifier()
-        .equals("resolve")) {
-      return Optional.of(evalFunction);
-    }
-    return Optional.empty();
+  @Nullable
+  public static FhirPath asReverseResolve(@Nonnull final FhirPath path) {
+    return asFunction(path, Functions.REVERSE_RESOLVE);
+  }
+
+  @Nullable
+  public static FhirPath asResolve(@Nonnull final FhirPath path) {
+    return asFunction(path, Functions.RESOLVE);
   }
 
   @Nonnull
@@ -59,7 +57,7 @@ public class FhirPathsUtils {
     return asTypeOf(path).isPresent();
   }
 
-  public static boolean isCombineOperation(@Nonnull final FhirPath path) {
+  public static boolean isCombineOperator(@Nonnull final FhirPath path) {
     return path instanceof EvalOperator evalOperator
         && evalOperator.getOperator() instanceof CombineOperator;
   }
@@ -69,17 +67,17 @@ public class FhirPathsUtils {
         .equals("iif");
   }
 
-  public static boolean isMulitPath(@Nonnull final FhirPath path) {
-    return isCombineOperation(path) || isIif(path);
+  public static boolean isPropagatesArguments(@Nonnull final FhirPath path) {
+    return isCombineOperator(path) || isIif(path);
   }
 
-  public static Stream<FhirPath> getHeads(@Nonnull final FhirPath path) {
-    if (isCombineOperation(path)) {
+  public static Stream<FhirPath> gePropagatesArguments(@Nonnull final FhirPath path) {
+    if (isCombineOperator(path)) {
       return path.children();
     } else if (isIif(path)) {
       return path.children().skip(1);
     } else {
-      throw new IllegalArgumentException("Not a multi-path");
+      throw new IllegalArgumentException("Path does not propagate arguments:" + path);
     }
   }
 
