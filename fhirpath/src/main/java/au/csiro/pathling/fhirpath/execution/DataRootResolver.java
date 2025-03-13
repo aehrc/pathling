@@ -1,5 +1,7 @@
 package au.csiro.pathling.fhirpath.execution;
 
+import static au.csiro.pathling.fhirpath.FhirPathConstants.PredefinedVariables.RESOURCE;
+import static au.csiro.pathling.fhirpath.FhirPathConstants.PredefinedVariables.ROOT_RESOURCE;
 import static au.csiro.pathling.fhirpath.execution.FhirPathsUtils.asReverseResolve;
 import static au.csiro.pathling.fhirpath.execution.FhirPathsUtils.isResolve;
 import static au.csiro.pathling.fhirpath.execution.FhirPathsUtils.isResource;
@@ -32,7 +34,10 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Slf4j
 public class DataRootResolver {
 
+  @Nonnull
   ResourceType subjectResource;
+
+  @Nonnull
   FhirContext fhirContext;
 
 
@@ -56,7 +61,7 @@ public class DataRootResolver {
         .collect(Collectors.toUnmodifiableSet());
   }
 
-  public void collectDataRoots(@Nonnull final DataRoot currentRoot,
+  private void collectDataRoots(@Nonnull final DataRoot currentRoot,
       @Nonnull final FhirPath fhirPath,
       @Nonnull final FhirPath traversalPath,
       @Nonnull final Set<DataRoot> dataRoots) {
@@ -118,7 +123,7 @@ public class DataRootResolver {
     } else if (headPath instanceof Paths.ExternalConstantPath ecp) {
       // we do not need to do anything here
       log.debug("External constant path: {}", ecp);
-      if ("resource".equals(ecp.getName()) || "rootResource".equals(ecp.getName())) {
+      if (RESOURCE.equals(ecp.getName()) || ROOT_RESOURCE.equals(ecp.getName())) {
         // this root should already be addded here
         collectDataRoots(ResourceRoot.of(subjectResource), fhirPath.suffix(), FhirPath.nullPath(),
             dataRoots);

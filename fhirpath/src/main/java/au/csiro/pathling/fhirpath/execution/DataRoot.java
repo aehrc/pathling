@@ -244,6 +244,7 @@ public interface DataRoot {
      * @param masterResourcePath The path in the master resource that references the foreign resource
      * @return A new resolve root
      */
+    //noinspection unused
     public static ResolveRoot ofResource(@Nonnull final ResourceType masterType,
         @Nonnull final ResourceType foreignResourceType,
         @Nonnull final String masterResourcePath) {

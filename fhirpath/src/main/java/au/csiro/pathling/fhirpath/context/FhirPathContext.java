@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.context;
 
+import static au.csiro.pathling.fhirpath.FhirPathConstants.PredefinedVariables.*;
+
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.variable.EnvironmentVariableResolver;
@@ -39,9 +41,9 @@ public class FhirPathContext {
 
   @Nonnull
   public Collection resolveVariable(@Nonnull final String name) {
-    if (name.equals("context")) {
+    if (name.equals(CONTEXT)) {
       return inputContext;
-    } else if (name.equals("resource") || name.equals("rootResource")) {
+    } else if (name.equals(RESOURCE) || name.equals(ROOT_RESOURCE)) {
       return resource;
     } else {
       return variables.get(name)
