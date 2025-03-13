@@ -7,6 +7,8 @@ import au.csiro.pathling.extract.ImplicitUnnester.FhirPathWithTag;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import jakarta.annotation.Nonnull;
 import java.util.List;
+import java.util.function.Supplier;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
@@ -440,6 +442,32 @@ public class ImplicitUnnesterTest {
     );
   }
 
+
+  @Test
+  void testDoubleNestedAggregation() {
+    final List<String> columns = List.of(
+        "id",
+        "name.count()",
+        "name.family",
+        "name.given.count()",
+        "name.given.empty()"
+    );
+    final Tree<FhirPathWithTag> projection = toProjection(columns);
+    assertTreeEquals(
+        node("%resource",
+            leafWithThis("id"),
+            node("name",
+                leafWithThis("family"),
+                leafWithThis("given.count()"),
+                leafWithThis("given.empty()")
+            ),
+            leafWithThis("name.count()")
+        ),
+        projection
+    );
+  }
+
+
   @Test
   void testUnnestSimpleOperatorWithCommonPrefix() {
     final List<String> columns = List.of(
@@ -521,15 +549,30 @@ public class ImplicitUnnesterTest {
   }
 
 
+  @AllArgsConstructor(staticName = "of")
+  static class LazyToString {
+
+    @Nonnull
+    private final Supplier<String> supplier;
+
+    @Override
+    public String toString() {
+      return supplier.get();
+    }
+  }
+
   @Nonnull
   private Tree<FhirPathWithTag> toProjection(@Nonnull final List<String> columns) {
+    log.debug("Columns:\n{}",
+        LazyToString.of(() -> String.join("\n", columns)));
     final Tree<FhirPathWithTag> result = unnester.unnestPaths(
         columns.stream()
             .map(parser::parse)
             .map(FhirPathWithTag::of)
             .toList()
     );
-    log.debug(result.toTreeString(FhirPathWithTag::toExpression));
+    log.debug("Tree:\n{}",
+        LazyToString.of(() -> result.toTreeString(FhirPathWithTag::toExpression)));
     return result;
   }
 
