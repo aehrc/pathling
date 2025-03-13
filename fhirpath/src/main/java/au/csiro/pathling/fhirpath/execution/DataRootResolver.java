@@ -3,8 +3,8 @@ package au.csiro.pathling.fhirpath.execution;
 import static au.csiro.pathling.fhirpath.FhirPathConstants.PredefinedVariables.RESOURCE;
 import static au.csiro.pathling.fhirpath.FhirPathConstants.PredefinedVariables.ROOT_RESOURCE;
 import static au.csiro.pathling.fhirpath.execution.FhirPathsUtils.asResolve;
+import static au.csiro.pathling.fhirpath.execution.FhirPathsUtils.asResource;
 import static au.csiro.pathling.fhirpath.execution.FhirPathsUtils.asReverseResolve;
-import static au.csiro.pathling.fhirpath.execution.FhirPathsUtils.isResource;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
@@ -65,9 +65,9 @@ public class DataRootResolver {
       @Nonnull final Set<DataRoot> dataRoots) {
 
     final FhirPath headPath = fhirPath.first();
-    if (isResource(headPath)) {
+    if (asResource(headPath, fhirContext) instanceof Resource resource) {
       // add this resource root and use it as the contex for the rest of the path
-      final ResourceRoot resourceRoot = ResourceRoot.of(((Resource) headPath).getResourceType());
+      final ResourceRoot resourceRoot = ResourceRoot.of(resource.getResourceType());
       dataRoots.add(resourceRoot);
       collectDataRoots(resourceRoot, fhirPath.suffix(), traversalPath, dataRoots);
     } else if (asReverseResolve(headPath) instanceof EvalFunction reverseResolve) {
@@ -96,16 +96,14 @@ public class DataRootResolver {
           referenceType,
           traversalPath.toExpression());
       // Do not add the untyped root just jest
-      // Pehaps it can be typed later\
+      // Perhaps it can be typed later
       if (referenceType != ResourceType.RESOURCE) {
         dataRoots.add(resolveRoot);
       }
       collectDataRoots(resolveRoot, fhirPath.suffix(), FhirPath.nullPath(), dataRoots);
-    } else if (FhirPathsUtils.isTypeOf(headPath)) {
-      final EvalFunction evalFunction = FhirPathsUtils.asTypeOf(headPath).orElseThrow();
-      final TypeSpecifier typeSpecifier = ((TypeSpecifierPath) evalFunction.getArguments()
+    } else if (FhirPathsUtils.asTypeOf(headPath) instanceof EvalFunction ofType) {
+      final TypeSpecifier typeSpecifier = ((TypeSpecifierPath) ofType.getArguments()
           .get(0)).getValue();
-
       // TODO: check if this is a fhir type
       if (contextRoot instanceof ResolveRoot rr && rr.getResourceType() == ResourceType.RESOURCE) {
         final ResolveRoot typedRoot = ResolveRoot.of(rr.getMaster(), typeSpecifier.toResourceType(),
@@ -124,13 +122,14 @@ public class DataRootResolver {
         collectDataRoots(ResourceRoot.of(subjectResource), fhirPath.suffix(), FhirPath.nullPath(),
             dataRoots);
       }
+      // TODO: not to sure what to do with %context
       // NOTE: other paths should be literals so we should not need to resolve them
     } else if (FhirPathsUtils.isPropagatesArguments(headPath)) {
       // some paths such as combine or iif needs to be processed differently as one of more of 
       // their arguments may need to be further resolved
       // for example `iif(..., resolve().id).ofType(Condition)` the true branch of the iif 
       // needs to be resolved to identyfy the type of the reference
-      FhirPathsUtils.gePropagatesArguments(headPath)
+      FhirPathsUtils.getPropagatesArguments(headPath)
           .forEach(head -> collectDataRoots(contextRoot, head.andThen(fhirPath.suffix()),
               traversalPath, dataRoots));
     } else if (!headPath.isNull()) {
@@ -146,9 +145,8 @@ public class DataRootResolver {
     } else {
       // if we have an untyped resolve root add it here
       if (contextRoot instanceof ResolveRoot rr && rr.getResourceType() == ResourceType.RESOURCE) {
-        throw new IllegalStateException("Unresolved resolve root");
+        throw new IllegalStateException("Unresolved polymorphic resolve root:" + rr);
       }
     }
   }
-
 }

@@ -39,6 +39,9 @@ public interface FhirPathConstants {
 
     String RESOLVE = "resolve";
     String REVERSE_RESOLVE = "reverseResolve";
+    String IIF = "iif";
+    String OF_TYPE = "ofType";
+    String EXTENSION = "extension";
   }
 
 }
