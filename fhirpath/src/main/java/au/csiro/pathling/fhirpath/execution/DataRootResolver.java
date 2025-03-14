@@ -61,6 +61,16 @@ public class DataRootResolver {
   @Nonnull
   FhirContext fhirContext;
 
+  /**
+   * Finds all data roots required to evaluate the given FHIRPath expression.
+   * <p>
+   * This method analyzes the FHIRPath expression and identifies all resource types and join
+   * operations that will be needed during evaluation. It starts with the subject resource as the
+   * initial data root and traverses the expression to find additional data roots.
+   *
+   * @param path The FHIRPath expression to analyze
+   * @return An immutable set of all data roots required to evaluate the expression
+   */
   @Nonnull
   public Set<DataRoot> findDataRoots(@Nonnull final FhirPath path) {
     final ResourceRoot subjectRoot = ResourceRoot.of(subjectResource);
@@ -71,6 +81,16 @@ public class DataRootResolver {
   }
 
 
+  /**
+   * Finds all data roots required to evaluate a collection of FHIRPath expressions.
+   * <p>
+   * This method analyzes each FHIRPath expression in the collection and identifies all resource
+   * types and join operations that will be needed during evaluation. It always includes the
+   * "this" context path in addition to the provided paths.
+   *
+   * @param paths A collection of FHIRPath expressions to analyze
+   * @return An immutable set of all data roots required to evaluate all the expressions
+   */
   @Nonnull
   public Set<DataRoot> findDataRoots(@Nonnull final Collection<FhirPath> paths) {
     // always include this as  context path
@@ -80,6 +100,18 @@ public class DataRootResolver {
         .collect(Collectors.toUnmodifiableSet());
   }
 
+  /**
+   * Recursively collects all data roots required to evaluate a FHIRPath expression.
+   * <p>
+   * This method traverses the FHIRPath expression tree and identifies all resource types and join
+   * operations that will be needed during evaluation. It handles different types of paths such as
+   * resource paths, resolve paths, reverse resolve paths, etc.
+   *
+   * @param contextRoot The current context data root
+   * @param fhirPath The FHIRPath expression to analyze
+   * @param traversalPath The current traversal path (accumulated path from the root)
+   * @param dataRoots The set to collect all identified data roots
+   */
   void collectDataRoots(@Nonnull final DataRoot contextRoot,
       @Nonnull final FhirPath fhirPath,
       @Nonnull final FhirPath traversalPath,
