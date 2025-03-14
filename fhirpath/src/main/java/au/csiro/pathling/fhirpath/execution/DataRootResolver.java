@@ -65,88 +65,148 @@ public class DataRootResolver {
       @Nonnull final Set<DataRoot> dataRoots) {
 
     final FhirPath headPath = fhirPath.first();
+    
     if (asResource(headPath, fhirContext) instanceof Resource resource) {
-      // add this resource root and use it as the contex for the rest of the path
-      final ResourceRoot resourceRoot = ResourceRoot.of(resource.getResourceType());
-      dataRoots.add(resourceRoot);
-      collectDataRoots(resourceRoot, fhirPath.suffix(), traversalPath, dataRoots);
+      handleResourcePath(contextRoot, fhirPath, traversalPath, dataRoots, resource);
     } else if (asReverseResolve(headPath) instanceof EvalFunction reverseResolve) {
-      final ReverseResolveRoot reverseResolveRoot = ExecutorUtils.fromPath(contextRoot,
-          reverseResolve);
-      dataRoots.add(reverseResolveRoot);
-      // switch the context root to the new reverse resolve root
-      collectDataRoots(reverseResolveRoot, fhirPath.suffix(), FhirPath.nullPath(), dataRoots);
+      handleReverseResolvePath(contextRoot, fhirPath, traversalPath, dataRoots, reverseResolve);
     } else if (asResolve(headPath) instanceof EvalFunction) {
-      // this here is problematic if we need to deal with polymorphic references
-      // but in general I need to create a root
-      // TODO: where should we do the validation of reference types? 
-
-      // eval the currenrt reference
-      // TODO: make sure that the current root is typed
-      final FhirpathEvaluator evaluator = NullEvaluator.of(contextRoot.getResourceType(),
-          fhirContext);
-      final ReferenceCollection referenceCollection = (ReferenceCollection) evaluator.evaluate(
-          traversalPath);
-      final ResourceTypeSet referenceTypes = referenceCollection.getReferenceTypes();
-
-      final ResourceType referenceType = referenceTypes.asSingleResourceType()
-          .orElse(ResourceType.RESOURCE);
-
-      final ResolveRoot resolveRoot = ResolveRoot.of(contextRoot,
-          referenceType,
-          traversalPath.toExpression());
-      // Do not add the untyped root just jest
-      // Perhaps it can be typed later
-      if (referenceType != ResourceType.RESOURCE) {
-        dataRoots.add(resolveRoot);
-      }
-      collectDataRoots(resolveRoot, fhirPath.suffix(), FhirPath.nullPath(), dataRoots);
+      handleResolvePath(contextRoot, fhirPath, traversalPath, dataRoots);
     } else if (FhirPathsUtils.asTypeOf(headPath) instanceof EvalFunction ofType) {
-      final TypeSpecifier typeSpecifier = ((TypeSpecifierPath) ofType.getArguments()
-          .get(0)).getValue();
-      // TODO: check if this is a fhir type
-      if (contextRoot instanceof ResolveRoot rr && rr.getResourceType() == ResourceType.RESOURCE) {
-        final ResolveRoot typedRoot = ResolveRoot.of(rr.getMaster(), typeSpecifier.toResourceType(),
-            rr.getMasterResourcePath());
-        dataRoots.add(typedRoot);
-        collectDataRoots(typedRoot, fhirPath.suffix(), traversalPath, dataRoots);
-      } else {
-        // TODO: check if we are in a mixed collection
-        collectDataRoots(contextRoot, fhirPath.suffix(), traversalPath.andThen(headPath),
-            dataRoots);
-      }
+      handleOfTypePath(contextRoot, fhirPath, traversalPath, dataRoots, ofType);
     } else if (headPath instanceof Paths.ExternalConstantPath ecp) {
-      if (RESOURCE.equals(ecp.getName()) || ROOT_RESOURCE.equals(ecp.getName())) {
-        // we do not need to create a new root for this as is the subject root
-        // but we need to switch context
-        collectDataRoots(ResourceRoot.of(subjectResource), fhirPath.suffix(), FhirPath.nullPath(),
-            dataRoots);
-      }
-      // TODO: not to sure what to do with %context
-      // NOTE: other paths should be literals so we should not need to resolve them
+      handleExternalConstantPath(contextRoot, fhirPath, traversalPath, dataRoots, ecp);
     } else if (FhirPathsUtils.isPropagatesArguments(headPath)) {
-      // some paths such as combine or iif needs to be processed differently as one of more of 
-      // their arguments may need to be further resolved
-      // for example `iif(..., resolve().id).ofType(Condition)` the true branch of the iif 
-      // needs to be resolved to identyfy the type of the reference
-      FhirPathsUtils.getPropagatesArguments(headPath)
-          .forEach(head -> collectDataRoots(contextRoot, head.andThen(fhirPath.suffix()),
-              traversalPath, dataRoots));
+      handlePropagatesArgumentsPath(contextRoot, fhirPath, traversalPath, dataRoots, headPath);
     } else if (!headPath.isNull()) {
-      // and also collect the for the children
-      headPath.children()
-          .forEach(child -> collectDataRoots(contextRoot, child, traversalPath, dataRoots));
-      // and then the rest of the path
-
-      // TODO: we should be also need to be abel to check 
-      // if the current traversal is to a resource or to a reference
-      final FhirPath newTraversalPath = traversalPath.andThen(FhirPathsUtils.toTraversal(headPath));
-      collectDataRoots(contextRoot, fhirPath.suffix(), newTraversalPath, dataRoots);
+      handleNonNullPath(contextRoot, fhirPath, traversalPath, dataRoots, headPath);
     } else {
-      // if we have an untyped resolve root add it here
-      if (contextRoot instanceof ResolveRoot rr && rr.getResourceType() == ResourceType.RESOURCE) {
-        throw new IllegalStateException("Unresolved polymorphic resolve root:" + rr);
-      }
+      handleNullPath(contextRoot);
+    }
+  }
+
+  private void handleResourcePath(@Nonnull final DataRoot contextRoot,
+      @Nonnull final FhirPath fhirPath,
+      @Nonnull final FhirPath traversalPath,
+      @Nonnull final Set<DataRoot> dataRoots,
+      @Nonnull final Resource resource) {
+    // add this resource root and use it as the context for the rest of the path
+    final ResourceRoot resourceRoot = ResourceRoot.of(resource.getResourceType());
+    dataRoots.add(resourceRoot);
+    collectDataRoots(resourceRoot, fhirPath.suffix(), traversalPath, dataRoots);
+  }
+
+  private void handleReverseResolvePath(@Nonnull final DataRoot contextRoot,
+      @Nonnull final FhirPath fhirPath,
+      @Nonnull final FhirPath traversalPath,
+      @Nonnull final Set<DataRoot> dataRoots,
+      @Nonnull final EvalFunction reverseResolve) {
+    final ReverseResolveRoot reverseResolveRoot = ExecutorUtils.fromPath(contextRoot,
+        reverseResolve);
+    dataRoots.add(reverseResolveRoot);
+    // switch the context root to the new reverse resolve root
+    collectDataRoots(reverseResolveRoot, fhirPath.suffix(), FhirPath.nullPath(), dataRoots);
+  }
+
+  private void handleResolvePath(@Nonnull final DataRoot contextRoot,
+      @Nonnull final FhirPath fhirPath,
+      @Nonnull final FhirPath traversalPath,
+      @Nonnull final Set<DataRoot> dataRoots) {
+    // this here is problematic if we need to deal with polymorphic references
+    // but in general I need to create a root
+    // TODO: where should we do the validation of reference types? 
+
+    // eval the current reference
+    // TODO: make sure that the current root is typed
+    final FhirpathEvaluator evaluator = NullEvaluator.of(contextRoot.getResourceType(),
+        fhirContext);
+    final ReferenceCollection referenceCollection = (ReferenceCollection) evaluator.evaluate(
+        traversalPath);
+    final ResourceTypeSet referenceTypes = referenceCollection.getReferenceTypes();
+
+    final ResourceType referenceType = referenceTypes.asSingleResourceType()
+        .orElse(ResourceType.RESOURCE);
+
+    final ResolveRoot resolveRoot = ResolveRoot.of(contextRoot,
+        referenceType,
+        traversalPath.toExpression());
+    // Do not add the untyped root just yet
+    // Perhaps it can be typed later
+    if (referenceType != ResourceType.RESOURCE) {
+      dataRoots.add(resolveRoot);
+    }
+    collectDataRoots(resolveRoot, fhirPath.suffix(), FhirPath.nullPath(), dataRoots);
+  }
+
+  private void handleOfTypePath(@Nonnull final DataRoot contextRoot,
+      @Nonnull final FhirPath fhirPath,
+      @Nonnull final FhirPath traversalPath,
+      @Nonnull final Set<DataRoot> dataRoots,
+      @Nonnull final EvalFunction ofType) {
+    final TypeSpecifier typeSpecifier = ((TypeSpecifierPath) ofType.getArguments()
+        .get(0)).getValue();
+    // TODO: check if this is a fhir type
+    if (contextRoot instanceof ResolveRoot rr && rr.getResourceType() == ResourceType.RESOURCE) {
+      final ResolveRoot typedRoot = ResolveRoot.of(rr.getMaster(), typeSpecifier.toResourceType(),
+          rr.getMasterResourcePath());
+      dataRoots.add(typedRoot);
+      collectDataRoots(typedRoot, fhirPath.suffix(), traversalPath, dataRoots);
+    } else {
+      // TODO: check if we are in a mixed collection
+      collectDataRoots(contextRoot, fhirPath.suffix(), traversalPath.andThen(ofType),
+          dataRoots);
+    }
+  }
+
+  private void handleExternalConstantPath(@Nonnull final DataRoot contextRoot,
+      @Nonnull final FhirPath fhirPath,
+      @Nonnull final FhirPath traversalPath,
+      @Nonnull final Set<DataRoot> dataRoots,
+      @Nonnull final Paths.ExternalConstantPath ecp) {
+    if (RESOURCE.equals(ecp.getName()) || ROOT_RESOURCE.equals(ecp.getName())) {
+      // we do not need to create a new root for this as is the subject root
+      // but we need to switch context
+      collectDataRoots(ResourceRoot.of(subjectResource), fhirPath.suffix(), FhirPath.nullPath(),
+          dataRoots);
+    }
+    // TODO: not too sure what to do with %context
+    // NOTE: other paths should be literals so we should not need to resolve them
+  }
+
+  private void handlePropagatesArgumentsPath(@Nonnull final DataRoot contextRoot,
+      @Nonnull final FhirPath fhirPath,
+      @Nonnull final FhirPath traversalPath,
+      @Nonnull final Set<DataRoot> dataRoots,
+      @Nonnull final FhirPath headPath) {
+    // some paths such as combine or iif needs to be processed differently as one of more of 
+    // their arguments may need to be further resolved
+    // for example `iif(..., resolve().id).ofType(Condition)` the true branch of the iif 
+    // needs to be resolved to identify the type of the reference
+    FhirPathsUtils.getPropagatesArguments(headPath)
+        .forEach(head -> collectDataRoots(contextRoot, head.andThen(fhirPath.suffix()),
+            traversalPath, dataRoots));
+  }
+
+  private void handleNonNullPath(@Nonnull final DataRoot contextRoot,
+      @Nonnull final FhirPath fhirPath,
+      @Nonnull final FhirPath traversalPath,
+      @Nonnull final Set<DataRoot> dataRoots,
+      @Nonnull final FhirPath headPath) {
+    // and also collect for the children
+    headPath.children()
+        .forEach(child -> collectDataRoots(contextRoot, child, traversalPath, dataRoots));
+    // and then the rest of the path
+
+    // TODO: we should also need to be able to check 
+    // if the current traversal is to a resource or to a reference
+    final FhirPath newTraversalPath = traversalPath.andThen(FhirPathsUtils.toTraversal(headPath));
+    collectDataRoots(contextRoot, fhirPath.suffix(), newTraversalPath, dataRoots);
+  }
+
+  private void handleNullPath(@Nonnull final DataRoot contextRoot) {
+    // if we have an untyped resolve root add it here
+    if (contextRoot instanceof ResolveRoot rr && rr.getResourceType() == ResourceType.RESOURCE) {
+      throw new IllegalStateException("Unresolved polymorphic resolve root:" + rr);
     }
   }
 }
