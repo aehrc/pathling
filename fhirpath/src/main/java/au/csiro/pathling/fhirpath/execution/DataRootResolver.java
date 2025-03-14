@@ -85,8 +85,8 @@ public class DataRootResolver {
    * Finds all data roots required to evaluate a collection of FHIRPath expressions.
    * <p>
    * This method analyzes each FHIRPath expression in the collection and identifies all resource
-   * types and join operations that will be needed during evaluation. It always includes the
-   * "this" context path in addition to the provided paths.
+   * types and join operations that will be needed during evaluation. It always includes the "this"
+   * context path in addition to the provided paths.
    *
    * @param paths A collection of FHIRPath expressions to analyze
    * @return An immutable set of all data roots required to evaluate all the expressions
@@ -212,13 +212,16 @@ public class DataRootResolver {
       @Nonnull final FhirPath traversalPath,
       @Nonnull final Set<DataRoot> dataRoots,
       @Nonnull final ExternalConstantPath ecp) {
-    if (RESOURCE.equals(ecp.getName()) || ROOT_RESOURCE.equals(ecp.getName())) {
+    if (CONTEXT.equals(ecp.getName())) {
+      // TODO: add support for context variables different than %resource
+      log.warn("%context is always resolved to the %rootResource");
+    }
+    if (RESOURCE.equals(ecp.getName()) || ROOT_RESOURCE.equals(ecp.getName()) || CONTEXT
+        .equals(ecp.getName())) {
       // we do not add a new as the subject root should already be added but 
       // we need to switch context to the subject root and start with the empty traversal path
       collectDataRoots(ResourceRoot.of(subjectResource), fhirPath.suffix(), FhirPath.nullPath(),
           dataRoots);
-    } else if (CONTEXT.equals(ecp.getName())) {
-      throw new UnsupportedOperationException("%context is not supported yet");
     }
     // other variables should be literals so we should not need to resolve them
   }
