@@ -1,10 +1,29 @@
+/*
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.fhirpath.execution;
 
 import static au.csiro.pathling.fhirpath.FhirPathConstants.Functions;
 
 import au.csiro.pathling.fhir.FhirUtils;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.operator.CombineOperator;
+import au.csiro.pathling.fhirpath.path.ParserPaths.TypeSpecifierPath;
 import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
 import au.csiro.pathling.fhirpath.path.Paths.EvalOperator;
@@ -15,16 +34,15 @@ import java.util.stream.Stream;
 import lombok.experimental.UtilityClass;
 
 /**
- * Utility class providing helper methods for working with FHIRPath expressions.
- * These methods assist in analyzing, transforming, and extracting information from
- * FHIRPath expression trees.
+ * Utility class providing helper methods for working with FHIRPath expressions. These methods
+ * assist in analyzing, transforming, and extracting information from FHIRPath expression trees.
  */
 @UtilityClass
 public class FhirPathsUtils {
 
   /**
    * Checks if a path represents a specific function and returns it if it does.
-   * 
+   *
    * @param path The FHIRPath expression to check
    * @param functionName The name of the function to check for
    * @return The path cast to EvalFunction if it matches the function name, null otherwise
@@ -40,9 +58,9 @@ public class FhirPathsUtils {
   }
 
   /**
-   * Checks if a path represents a reverseResolve() function and returns it if it does.
-   * The reverseResolve() function is used to navigate backwards through references.
-   * 
+   * Checks if a path represents a reverseResolve() function and returns it if it does. The
+   * reverseResolve() function is used to navigate backwards through references.
+   *
    * @param path The FHIRPath expression to check
    * @return The path cast to EvalFunction if it's a reverseResolve function, null otherwise
    */
@@ -52,9 +70,9 @@ public class FhirPathsUtils {
   }
 
   /**
-   * Checks if a path represents a resolve() function and returns it if it does.
-   * The resolve() function is used to follow references to their target resources.
-   * 
+   * Checks if a path represents a resolve() function and returns it if it does. The resolve()
+   * function is used to follow references to their target resources.
+   *
    * @param path The FHIRPath expression to check
    * @return The path cast to EvalFunction if it's a resolve function, null otherwise
    */
@@ -64,9 +82,9 @@ public class FhirPathsUtils {
   }
 
   /**
-   * Checks if a path represents an ofType() function and returns it if it does.
-   * The ofType() function is used to filter a collection by resource type.
-   * 
+   * Checks if a path represents an ofType() function and returns it if it does. The ofType()
+   * function is used to filter a collection by resource type.
+   *
    * @param path The FHIRPath expression to check
    * @return The path cast to EvalFunction if it's an ofType function, null otherwise
    */
@@ -76,9 +94,9 @@ public class FhirPathsUtils {
   }
 
   /**
-   * Checks if a path represents a valid FHIR resource type and returns it if it does.
-   * This method validates that the resource type is known in the provided FHIR context.
-   * 
+   * Checks if a path represents a valid FHIR resource type and returns it if it does. This method
+   * validates that the resource type is known in the provided FHIR context.
+   *
    * @param path The FHIRPath expression to check
    * @param fhirContext The FHIR context used to validate the resource type
    * @return The path cast to Resource if it's a valid resource type, null otherwise
@@ -92,9 +110,9 @@ public class FhirPathsUtils {
   }
 
   /**
-   * Checks if a path represents an extension() function.
-   * The extension() function is used to access FHIR extensions.
-   * 
+   * Checks if a path represents an extension() function. The extension() function is used to access
+   * FHIR extensions.
+   *
    * @param path The FHIRPath expression to check
    * @return true if the path is an extension function, false otherwise
    */
@@ -103,9 +121,9 @@ public class FhirPathsUtils {
   }
 
   /**
-   * Checks if a path represents an iif() function.
-   * The iif() function is the FHIRPath conditional operator (if-then-else).
-   * 
+   * Checks if a path represents an iif() function. The iif() function is the FHIRPath conditional
+   * operator (if-then-else).
+   *
    * @param path The FHIRPath expression to check
    * @return true if the path is an iif function, false otherwise
    */
@@ -114,9 +132,9 @@ public class FhirPathsUtils {
   }
 
   /**
-   * Converts a path to a traversal path if possible.
-   * This is used to extract the property name from a path for traversal operations.
-   * 
+   * Converts a path to a traversal path if possible. This is used to extract the property name from
+   * a path for traversal operations.
+   *
    * @param path The FHIRPath expression to convert
    * @return A Traversal path if conversion is possible, or a null path otherwise
    */
@@ -133,9 +151,9 @@ public class FhirPathsUtils {
   }
 
   /**
-   * Checks if a path represents a combine operator (union).
-   * Combine operators join two collections together.
-   * 
+   * Checks if a path represents a combine operator (union). Combine operators join two collections
+   * together.
+   *
    * @param path The FHIRPath expression to check
    * @return true if the path is a combine operator, false otherwise
    */
@@ -145,10 +163,9 @@ public class FhirPathsUtils {
   }
 
   /**
-   * Checks if a path propagates arguments to its children.
-   * This is true for operators like combine and functions like iif that need
-   * to process their arguments in special ways.
-   * 
+   * Checks if a path propagates arguments to its children. This is true for operators like combine
+   * and functions like iif that need to process their arguments in special ways.
+   *
    * @param path The FHIRPath expression to check
    * @return true if the path propagates arguments, false otherwise
    */
@@ -157,10 +174,9 @@ public class FhirPathsUtils {
   }
 
   /**
-   * Gets the arguments that should be propagated from a path.
-   * For combine operators, this returns all children.
-   * For iif functions, this returns all children except the first (condition).
-   * 
+   * Gets the arguments that should be propagated from a path. For combine operators, this returns
+   * all children. For iif functions, this returns all children except the first (condition).
+   *
    * @param path The FHIRPath expression to get arguments from
    * @return A stream of FHIRPath expressions representing the arguments to propagate
    * @throws IllegalArgumentException if the path does not propagate arguments
@@ -174,4 +190,19 @@ public class FhirPathsUtils {
       throw new IllegalArgumentException("Path does not propagate arguments:" + path);
     }
   }
+
+  /**
+   * Gets the type specifier argument from a function at a specific index.
+   *
+   * @param evalFunction The function eval path to get the argument from
+   * @param index The index of the argument to get
+   * @return The type specifier argument at the specified index
+   */
+  @Nonnull
+  public static TypeSpecifier getTypeSpecifierArg(@Nonnull final EvalFunction evalFunction,
+      int index) {
+    return ((TypeSpecifierPath) evalFunction.getArguments()
+        .get(index)).getValue();
+  }
+
 }
