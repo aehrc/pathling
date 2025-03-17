@@ -49,7 +49,6 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.ArrayType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -169,7 +168,7 @@ public class JoinResolver {
     final ReferenceCollection childReferenceInParent = evaluateReference(
         joinRoot.getMasterResourcePath(), joinRoot.getResourceType(), parentExecutor);
 
-    final boolean isSingularReference = isSingular(childReferenceInParent, parentDataset);
+    final boolean isSingularReference = childReferenceInParent.isSingular(parentDataset);
 
     log.debug("Child({}) reference({}) in parent({}) is singular: {} has types: {}",
         joinRoot.getResourceType(),
@@ -398,15 +397,6 @@ public class JoinResolver {
         .map(c -> mapper.apply(functions.col(c)).alias(c));
   }
 
-  boolean isSingular(@Nonnull final Collection collection, @Nonnull final Dataset<Row> dataset) {
-    // unfortunatelly singularity cannot be determined from the reference alone as its parents 
-    // may not be singular
-    // TODO: optimize
-    // for now we will just select the column on the parent dataset to check the representation
-    final Dataset<Row> referenceDataset = dataset.select(
-        collection.getColumnValue().alias("value"));
-    return !(referenceDataset.schema().apply(0).dataType() instanceof ArrayType);
-  }
 
   @Nonnull
   private FhirpathEvaluator createExecutor(@Nonnull final ResourceType subjectResourceType,
