@@ -30,6 +30,7 @@ import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.sql.SqlFunctions;
 import ca.uhn.fhir.context.FhirContext;
 import com.google.common.collect.Streams;
 import jakarta.annotation.Nonnull;
@@ -140,26 +141,7 @@ public class JoinResolver {
                 (JoinRoot) subset.getMaster()), (dataset1, dataset2) -> dataset1);
   }
 
-  @Nonnull
-  static Column ns_map_concat(@Nonnull final Column left, @Nonnull final Column right) {
-    return functions.when(left.isNull(), right)
-        .when(right.isNull(), left)
-        .otherwise(functions.map_concat(left, right));
-  }
-
   // TODO: Move somewhere else
-
-  @Nonnull
-  public static Column collect_map(@Nonnull final Column mapColumn) {
-    // TODO: try to implement this more efficiently and in a way 
-    // that does not require:
-    // .config("spark.sql.mapKeyDedupPolicy", "LAST_WIN")
-    return functions.reduce(
-        functions.collect_list(mapColumn),
-        functions.any_value(mapColumn),
-        (acc, elem) -> functions.when(acc.isNull(), elem).otherwise(ns_map_concat(acc, elem))
-    );
-  }
 
   @Nonnull
   private Dataset<Row> computeJoin(@Nonnull final Dataset<Row> parentDataset,
@@ -254,7 +236,7 @@ public class JoinResolver {
       logDataset("Joined result", joinedDataset);
 
       final Stream<Column> aggForeignResourceColumns = mapForeignColumns(joinedDataset,
-          JoinResolver::collect_map);
+          SqlFunctions::collect_map);
 
       final Stream<Column> aggParentColumns = Stream.of(parentDataset.columns())
           .filter(c -> !"key".equals(c) && !"id".equals(c) && !c.contains("@"))
@@ -311,7 +293,7 @@ public class JoinResolver {
 
     //  aggregate existing foreign resource columns with `collect_map` function 
     final Column[] aggForeignResourceColumns = mapForeignColumns(childInput,
-        JoinResolver::collect_map).toArray(Column[]::new);
+        SqlFunctions::collect_map).toArray(Column[]::new);
 
     final Dataset<Row> childResult = withMapMerge(joinRoot.getValueTag(), tempColumn ->
         childInput
@@ -376,7 +358,7 @@ public class JoinResolver {
     final Column[] uniqueSelection = Stream.concat(
         Stream.of(leftDataset.columns())
             .map(c -> commonMapColumns.contains(c)
-                      ? ns_map_concat(leftDataset.col(c), rightDataset.col(c)).alias(c)
+                      ? SqlFunctions.ns_map_concat(leftDataset.col(c), rightDataset.col(c)).alias(c)
                       : leftDataset.col(c)),
         Stream.of(rightDataset.columns())
             .filter(c -> !commonColumns.contains(c))
@@ -401,7 +383,7 @@ public class JoinResolver {
       @Nonnull final String finalColumn, @Nonnull final String tempColumn) {
     if (List.of(dataset.columns()).contains(finalColumn)) {
       return dataset.withColumn(finalColumn,
-              ns_map_concat(functions.col(finalColumn), functions.col(tempColumn)))
+              SqlFunctions.ns_map_concat(functions.col(finalColumn), functions.col(tempColumn)))
           .drop(tempColumn);
     } else {
       return dataset.withColumnRenamed(tempColumn, finalColumn);
