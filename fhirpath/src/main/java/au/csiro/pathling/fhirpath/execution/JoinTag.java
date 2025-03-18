@@ -8,7 +8,11 @@ public interface JoinTag {
 
   @Nonnull
   String getTag();
-
+  
+  static boolean isJoinTag(@Nonnull final String name) {
+    return name.contains("@");
+  }
+  
   @Value
   class ResourceTag implements JoinTag {
 
@@ -34,7 +38,7 @@ public interface JoinTag {
       return "id" + "@" + childResourceType.toCode();
     }
   }
-  
+
   @Value(staticConstructor = "of")
   class ReverseResolveTag implements JoinTag {
 
