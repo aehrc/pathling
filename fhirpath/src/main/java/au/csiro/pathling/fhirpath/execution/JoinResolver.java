@@ -55,41 +55,55 @@ import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * Given a list of {@link JoinSet}s, creates a {@link Dataset} that include all the date necessary
- * to evaluate are resource reference and forward and reverse resolve joins defined in the
- * {@link JoinSet}s.
+ * Resolves FHIR resource joins and creates datasets that include all necessary data for evaluating
+ * resource references, forward resolves, and reverse resolves defined in {@link JoinSet}s.
  * <p>
- * The subject resource is represented as a column struct column named with the resource type. The
- * struct includes all the columns of the resource. For example for a Patient resource the struct
- * column would be named "Patient" and include all the columns of the Patient resource, such as id,
- * name, etc.
+ * This class is responsible for:
+ * <ul>
+ *   <li>Resolving references between FHIR resources</li>
+ *   <li>Joining datasets based on these references</li>
+ *   <li>Maintaining the correct structure for joined data</li>
+ *   <li>Handling both singular and non-singular references</li>
+ *   <li>Managing the merging of overlapping data during joins</li>
+ * </ul>
+ *
+ * <h2>Data Representation</h2>
+ *
+ * <h3>Subject Resources</h3>
+ * The subject resource (e.g., Patient) is represented as a struct column named with the resource type.
+ * For example, a Patient resource would be in a column named "Patient" containing all fields like id, name, etc.
+ *
+ * <h3>Foreign Resources</h3>
+ * Foreign resources (resources that are neither the subject nor directly related) are represented as
+ * array columns of structs. For example, a Condition resource would be in a column named "Condition"
+ * containing an array of all Condition resources.
  * <p>
- * The foreign resources are represented as an array of structs. Each struct includes all the
- * columns of the resource. For example for a Condition resource the struct column would be named
- * "Condition" and include all the columns of the Condition resource, such as id, code, etc. Note:
- * for each row (representing a subject resource) the foreign resources array contains ALL the
- * instances of the foreign resources as there is no way to filter the foreign resources based on
- * the subject resource. This may lead to poor performance if the foreign resources are large.
- * <p>
- * Forward resolve joins are represented as a map column named with the join tag. The map key is the
- * referenced resource id and the value is the referenced resource as a struct column. The naming
- * convention for the map column is "id@{resourceType}" where resourceType is the referenced
- * resource type. For example for a forward resolve join to Condition the map column would be named
- * "id@Condition". The map column is created by collecting all the id value pairs required by all
- * the forward resolve joins in the context of the subject resource including all nested forward
- * resolve joins. It includes all the resources of the given type referenced by any forward resolve
- * join in the {@link JoinSet}s.
- * <p>
- * Reverse resolve joins are represented as a map column named with the join tag. The map key is the
- * id of master resource, and the value is an array of structs representing the child resources that
- * reference the master resource at specified child reference path. The naming convention for the
- * map column is "{childReferencePath}@{resourceType}" where resourceType is the child resource type
- * and childReferencePath is the path in the child resource to the master resource with dots
- * replaced with underscored. For example for a reverse resolve join  from `Patient`   to
- * 'Condition.subject`  the map column would be named "Condition@subject". The map column is created
- * by collecting all the id value pairs required by all the reverse resolve joins in the context of
- * the subject resource including all nested reverse resolve joins. It includes all the resources of
- * the given type that reference the master resource at the specified child reference path.
+ * <strong>Note:</strong> For each subject resource row, the foreign resources array contains ALL instances
+ * of the foreign resource type, as there is no filtering based on the subject. This can lead to
+ * poor performance with large datasets.
+ *
+ * <h3>Forward Resolve Joins</h3>
+ * Forward resolve joins (e.g., Patient.managingOrganization.resolve()) are represented as map columns
+ * with the naming convention "id@{resourceType}" where:
+ * <ul>
+ *   <li>The map key is the referenced resource ID</li>
+ *   <li>The map value is the referenced resource as a struct</li>
+ * </ul>
+ * For example, a forward resolve to Organization would create a map column named "id@Organization".
+ *
+ * <h3>Reverse Resolve Joins</h3>
+ * Reverse resolve joins (e.g., Patient.reverseResolve(Condition.subject)) are represented as map columns
+ * with the naming convention "{resourceType}@{childReferencePath}" where:
+ * <ul>
+ *   <li>The map key is the master resource ID</li>
+ *   <li>The map value is an array of child resources that reference the master</li>
+ *   <li>childReferencePath is the path in the child that references the master (dots replaced with underscores)</li>
+ * </ul>
+ * For example, a reverse resolve from Patient to Condition.subject would create a map column named "Condition@subject".
+ *
+ * <h2>Map Column Merging</h2>
+ * When joining datasets with overlapping map columns, the columns are merged using {@link SqlFunctions#ns_map_concat},
+ * preserving data from both sources with the right side taking precedence for duplicate keys.
  */
 @Value(staticConstructor = "of")
 @Slf4j
@@ -105,19 +119,41 @@ public class JoinResolver {
   Parser parser = new Parser();
 
   /**
-   * Resolve the joins in the given {@link JoinSet} and return the resulting {@link Dataset}.
+   * Resolves the joins in the given {@link JoinSet}s and returns a dataset containing the subject
+   * resource and all joined resources.
+   * <p>
+   * This method retrieves the subject resource dataset and then resolves all joins defined in the
+   * join sets.
+   *
+   * @param joinSet The join sets to resolve
+   * @return A dataset containing the subject resource and all joined resources
    */
   @Nonnull
   public Dataset<Row> resolveJoins(@Nonnull final List<JoinSet> joinSet) {
     return resolveJoins(joinSet, resourceDataset(dataSource, subjectResource));
   }
 
+  /**
+   * Resolves the joins in the given {@link JoinSet}s using the provided parent dataset.
+   * <p>
+   * This method:
+   * <ol>
+   *   <li>Splits the join sets into subject resource joins and foreign resource joins</li>
+   *   <li>Resolves the subject resource joins first</li>
+   *   <li>Then resolves each foreign resource join and merges the results</li>
+   * </ol>
+   *
+   * @param joinSets The join sets to resolve
+   * @param parentDataset The parent dataset to use as a starting point
+   * @return A dataset containing the parent dataset with all joins resolved
+   * @throws IllegalArgumentException if no subject resource join set is found
+   */
   @Nonnull
   public Dataset<Row> resolveJoins(@Nonnull final List<JoinSet> joinSets,
       @Nonnull final Dataset<Row> parentDataset) {
-    // we need to split the list into the required subject resource joinSet and 
+    // Split the list into the required subject resource joinSet and 
     // other sets of foreign resources joins
-    // all roots of join sets should be of type ResourceRoot
+    // All roots of join sets should be of type ResourceRoot
 
     final JoinSet subjectJoinsSet = joinSets.stream()
         .filter(js -> subjectResource.equals(js.getMasterResourceRoot().getResourceType()))
@@ -135,6 +171,20 @@ public class JoinResolver {
         );
   }
 
+  /**
+   * Resolves a foreign join set and merges it with the parent dataset.
+   * <p>
+   * This method handles joining with resources that are neither the subject nor directly related.
+   * It performs a cross join between the parent dataset and the foreign resource dataset, which can
+   * be inefficient for large datasets (hence the warning log).
+   * <p>
+   * The foreign resources are collected into an array and added as a column to the parent dataset.
+   *
+   * @param parentDataset The parent dataset to join with
+   * @param joinSet The foreign join set to resolve
+   * @return A dataset containing the parent dataset joined with the foreign resources
+   * @throws UnsupportedOperationException if the join set has children (nested resolves)
+   */
   @Nonnull
   private Dataset<Row> resolveForeignJoinSet(@Nonnull final Dataset<Row> parentDataset,
       @Nonnull final JoinSet joinSet) {
@@ -144,15 +194,15 @@ public class JoinResolver {
     }
     log.warn("Cross join with foreign resource {} encountered. This can result in poor performance",
         joinSet.getMasterResourceRoot().getResourceType().toCode());
-    // minimally add the foreign resources to the parent dataset
+    // Minimally add the foreign resources to the parent dataset
     // as array of structs
     final ResourceRoot dataRoot = joinSet.getMasterResourceRoot();
     final Dataset<Row> resourceDataset = resourceDataset(dataSource, dataRoot.getResourceType());
 
-    // cross join with the parent dataset 
-    // this is very inefficient and thus the warning
+    // Cross join with the parent dataset 
+    // This is very inefficient and thus the warning
     logDataset("Foreign input", resourceDataset);
-    // collect all the resources  to an array
+    // Collect all the resources to an array
     final Dataset<Row> groupedDataset = resourceDataset.groupBy()
         .agg(functions.collect_list(dataRoot.getTag()).alias(dataRoot.getTag()));
     logDataset("Grouped resources", groupedDataset);
@@ -161,13 +211,28 @@ public class JoinResolver {
     return joinedDataset;
   }
 
+  /**
+   * Resolves a join set by recursively resolving its children and computing joins.
+   * <p>
+   * This method:
+   * <ol>
+   *   <li>Takes the parent dataset as a starting point</li>
+   *   <li>For each child in the join set, recursively resolves that child's join set</li>
+   *   <li>Computes the join between the parent dataset and the child dataset</li>
+   *   <li>Returns the final dataset with all joins resolved</li>
+   * </ol>
+   *
+   * @param joinSet The join set to resolve
+   * @param parentDataset The parent dataset to use as a starting point
+   * @return A dataset with all joins in the join set resolved
+   */
   @Nonnull
   private Dataset<Row> resolveJoinSet(@Nonnull final JoinSet joinSet,
       @Nonnull final Dataset<Row> parentDataset) {
-    // now just reduce current children
+    // Reduce current children by applying joins sequentially
     return joinSet.getChildren().stream()
         .reduce(parentDataset, (dataset, subset) ->
-                // the parent dataset for subjoin should be different
+                // The parent dataset for subjoin should be different
                 computeJoin(dataset,
                     resolveJoinSet(subset,
                         resourceDataset(dataSource, subset.getMaster().getResourceType())),
@@ -175,6 +240,18 @@ public class JoinResolver {
             unsupportedCombiner());
   }
 
+  /**
+   * Computes a join between a parent dataset and a child dataset based on the join root type.
+   * <p>
+   * This method delegates to the appropriate join computation method based on whether the join root
+   * is a reverse resolve root or a forward resolve root.
+   *
+   * @param parentDataset The parent dataset to join
+   * @param maybeChildDataset The child dataset to join (may be null)
+   * @param joinRoot The join root defining the join relationship
+   * @return A dataset containing the joined data
+   * @throws UnsupportedOperationException if the join root type is not supported
+   */
   @Nonnull
   private Dataset<Row> computeJoin(@Nonnull final Dataset<Row> parentDataset,
       @Nullable final Dataset<Row> maybeChildDataset, @Nonnull final JoinRoot joinRoot) {
@@ -189,6 +266,27 @@ public class JoinResolver {
   }
 
 
+  /**
+   * Computes a forward resolve join between a parent dataset and a child dataset.
+   * <p>
+   * This method handles joining resources referenced by the subject resource (forward references).
+   * For example, in Patient.managingOrganization.resolve(), this method joins Patient resources
+   * with their referenced Organization resources.
+   * <p>
+   * The method:
+   * <ol>
+   *   <li>Evaluates the reference path in the parent resource</li>
+   *   <li>Determines if the reference is singular or non-singular</li>
+   *   <li>Creates a map of child resources indexed by their IDs</li>
+   *   <li>Joins the parent dataset with the child dataset using the reference</li>
+   *   <li>For non-singular references, expands the parent dataset, joins, and then re-groups</li>
+   * </ol>
+   *
+   * @param parentDataset The parent dataset containing the references
+   * @param maybeChildDataset The child dataset containing the referenced resources (may be null)
+   * @param joinRoot The resolve root defining the join relationship
+   * @return A dataset containing the joined data
+   */
   @Nonnull
   private Dataset<Row> computeResolveJoin(@Nonnull final Dataset<Row> parentDataset,
       @Nullable final Dataset<Row> maybeChildDataset,
@@ -300,6 +398,26 @@ public class JoinResolver {
     }
   }
 
+  /**
+   * Computes a reverse resolve join between a parent dataset and a child dataset.
+   * <p>
+   * This method handles joining resources that reference the subject resource (backward
+   * references). For example, in Patient.reverseResolve(Condition.subject), this method joins
+   * Patient resources with Condition resources that reference them.
+   * <p>
+   * The method:
+   * <ol>
+   *   <li>Evaluates the reference path in the child resource that points to the parent</li>
+   *   <li>Groups child resources by their reference to the parent</li>
+   *   <li>Creates a map of child resource arrays indexed by parent resource IDs</li>
+   *   <li>Joins the parent dataset with the grouped child dataset</li>
+   * </ol>
+   *
+   * @param parentDataset The parent dataset being referenced
+   * @param maybeChildDataset The child dataset containing the references (may be null)
+   * @param joinRoot The reverse resolve root defining the join relationship
+   * @return A dataset containing the joined data
+   */
   @Nonnull
   private Dataset<Row> computeReverseJoin(@Nonnull final Dataset<Row> parentDataset,
       @Nullable final Dataset<Row> maybeChildDataset,
@@ -359,6 +477,16 @@ public class JoinResolver {
     return joinedDataset;
   }
 
+  /**
+   * Creates a map column where keys are child resource IDs and values are the child resources.
+   * <p>
+   * This method is used in forward resolve joins to create a map that associates each child
+   * resource with its ID. The resulting map is used to look up referenced resources by their IDs
+   * during the join operation.
+   *
+   * @param childResource The child resource collection
+   * @return A column containing a map from child IDs to child resources
+   */
   @Nonnull
   private static Column createChildByChildIdMap(ResourceCollection childResource) {
     return functions.map_from_arrays(
@@ -368,6 +496,18 @@ public class JoinResolver {
     );
   }
 
+  /**
+   * Creates a map column where keys are parent resource IDs and values are arrays of child
+   * resources.
+   * <p>
+   * This method is used in reverse resolve joins to create a map that associates each parent
+   * resource ID with an array of child resources that reference it. The resulting map is used to
+   * look up all child resources that reference a particular parent during the join operation.
+   *
+   * @param parentKeyInChild The collection containing parent keys in the child resources
+   * @param childResource The child resource collection
+   * @return A column containing a map from parent IDs to arrays of child resources
+   */
   @Nonnull
   private static Column createChildByParentIdMap(@Nonnull final Collection parentKeyInChild,
       @Nonnull final Collection childResource) {
@@ -382,6 +522,26 @@ public class JoinResolver {
     );
   }
 
+  /**
+   * Evaluates a reference expression and validates that it references the required resource type.
+   * <p>
+   * This method:
+   * <ol>
+   *   <li>Parses the reference expression into a FhirPath</li>
+   *   <li>Evaluates the path to get a ReferenceCollection</li>
+   *   <li>Validates that the reference types include the required type</li>
+   * </ol>
+   * <p>
+   * This validation ensures that joins are only performed between compatible resource types.
+   * For example, when joining Patient with Organization via managingOrganization, this method
+   * checks that managingOrganization actually references Organization resources.
+   *
+   * @param referenceExpr The reference expression to evaluate (e.g., "managingOrganization")
+   * @param requiredType The resource type that must be referenced (e.g., Organization)
+   * @param evaluator The FhirpathEvaluator to use for evaluation
+   * @return The evaluated reference collection
+   * @throws IllegalArgumentException if the reference does not match the required type
+   */
   @Nonnull
   private ReferenceCollection evaluateReference(@Nonnull final String referenceExpr,
       @Nonnull final ResourceType requiredType, @Nonnull final FhirpathEvaluator evaluator) {
@@ -401,21 +561,44 @@ public class JoinResolver {
   // I Need to be able to make a smart join where the map columns are merged
   // and the other columns are passed through
 
+  /**
+   * Joins two datasets while properly merging map columns.
+   * <p>
+   * This method:
+   * <ol>
+   *   <li>Identifies common columns between the datasets</li>
+   *   <li>Identifies common map columns (those containing '@')</li>
+   *   <li>Creates a selection that:
+   *     <ul>
+   *       <li>Takes all columns from the left dataset</li>
+   *       <li>Merges map columns that exist in both datasets</li>
+   *       <li>Adds columns from the right dataset that don't exist in the left</li>
+   *     </ul>
+   *   </li>
+   *   <li>Performs a left outer join and applies the selection</li>
+   * </ol>
+   *
+   * @param leftDataset The left dataset in the join
+   * @param rightDataset The right dataset in the join
+   * @param on The join condition
+   * @return A dataset containing the joined data with properly merged map columns
+   */
   @Nonnull
   private static Dataset<Row> joinWithMapMerge(@Nonnull final Dataset<Row> leftDataset,
       @Nonnull final Dataset<Row> rightDataset,
       @Nonnull final Column on) {
 
-    // identify common columns and common map (join) columns between the two datasets 
+    // Identify common columns and common map (join) columns between the two datasets 
     final Set<String> commonColumns = new HashSet<>(List.of(leftDataset.columns()));
     commonColumns.retainAll(Set.of(rightDataset.columns()));
     final Set<String> commonMapColumns = commonColumns.stream()
         .filter(JoinTag::isJoinTag)
         .collect(Collectors.toUnmodifiableSet());
 
-    // create the unique selection of columns for the join geting the columns from the left dataset 
-    // when needed merging the maps columns with their counterparts in the right dataset and 
-    // the appending the columns from the right dataset that are not in the left dataset
+    // Create the unique selection of columns for the join:
+    // - Get columns from the left dataset 
+    // - Merge map columns with their counterparts in the right dataset
+    // - Append columns from the right dataset that are not in the left dataset
     final Column[] uniqueSelection = Stream.concat(
         Stream.of(leftDataset.columns())
             .map(c -> commonMapColumns.contains(c)
@@ -430,6 +613,22 @@ public class JoinResolver {
   }
 
 
+  /**
+   * Creates a dataset with a map column that may be merged with an existing column.
+   * <p>
+   * This method:
+   * <ol>
+   *   <li>Creates a temporary column name</li>
+   *   <li>Applies the producer function to create a dataset with the temporary column</li>
+   *   <li>Merges the temporary column with any existing column of the final name</li>
+   * </ol>
+   * <p>
+   * This is used to safely create or update map columns without overwriting existing data.
+   *
+   * @param columnName The final name of the column
+   * @param producer A function that creates a dataset with a temporary column
+   * @return A dataset with the merged map column
+   */
   @Nonnull
   private static Dataset<Row> withMapMerge(@Nonnull final String columnName,
       @Nonnull final Function<String, Dataset<Row>> producer) {
@@ -437,7 +636,22 @@ public class JoinResolver {
     return mergeMapColumns(producer.apply(tempColumn), columnName, tempColumn);
   }
 
-
+  /**
+   * Merges a temporary map column with an existing map column or renames it if no existing column
+   * exists.
+   * <p>
+   * This method:
+   * <ol>
+   *   <li>Checks if the final column already exists in the dataset</li>
+   *   <li>If it exists, merges the temporary column with the existing column using ns_map_concat</li>
+   *   <li>If it doesn't exist, simply renames the temporary column to the final name</li>
+   * </ol>
+   *
+   * @param dataset The dataset containing the columns
+   * @param finalColumn The name of the final column
+   * @param tempColumn The name of the temporary column to merge or rename
+   * @return A dataset with the merged or renamed column
+   */
   @Nonnull
   private static Dataset<Row> mergeMapColumns(@Nonnull final Dataset<Row> dataset,
       @Nonnull final String finalColumn, @Nonnull final String tempColumn) {
@@ -450,6 +664,23 @@ public class JoinResolver {
     }
   }
 
+  /**
+   * Maps a function across all join columns in a dataset.
+   * <p>
+   * This method:
+   * <ol>
+   *   <li>Identifies all columns in the dataset that contain '@' (join columns)</li>
+   *   <li>Applies the provided mapper function to each column</li>
+   *   <li>Returns a stream of the mapped columns with their original names</li>
+   * </ol>
+   * <p>
+   * This is used for operations that need to be applied to all join columns,
+   * such as aggregation during regrouping.
+   *
+   * @param dataset The dataset containing the join columns
+   * @param mapper The function to apply to each join column
+   * @return A stream of mapped columns
+   */
   @Nonnull
   private static Stream<Column> mapJoinColumns(@Nonnull final Dataset<Row> dataset,
       @Nonnull Function<Column, Column> mapper) {
@@ -459,6 +690,18 @@ public class JoinResolver {
   }
 
 
+  /**
+   * Creates a FhirpathEvaluator for the specified resource type.
+   * <p>
+   * This method creates a new SingleFhirpathEvaluator configured for the given resource type. The
+   * evaluator is used to evaluate FHIRPath expressions in the context of resources of that type.
+   * <p>
+   * For example, when evaluating "Patient.managingOrganization", an evaluator for Patient resources
+   * is created to evaluate the expression.
+   *
+   * @param subjectResourceType The resource type to create an evaluator for
+   * @return A new FhirpathEvaluator for the specified resource type
+   */
   @Nonnull
   private FhirpathEvaluator createEvaluator(@Nonnull final ResourceType subjectResourceType) {
     return SingleFhirpathEvaluator.of(subjectResourceType,
@@ -466,6 +709,15 @@ public class JoinResolver {
         Collections.emptyMap(), dataSource);
   }
 
+  /**
+   * Logs debug information about a dataset.
+   * <p>
+   * This method logs the column names of a dataset with a descriptive message. It's used throughout
+   * the class to provide debugging information about the datasets at various stages of processing.
+   *
+   * @param message A descriptive message about the dataset
+   * @param dataset The dataset to log information about
+   */
   private static void logDataset(@Nonnull final String message,
       @Nonnull final Dataset<Row> dataset) {
     log.debug("{}: {}", message, List.of(dataset.columns()));
