@@ -24,6 +24,7 @@ import static au.csiro.pathling.utilities.Streams.unsupportedCombiner;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.definition.ResourceTypeSet;
 import au.csiro.pathling.fhirpath.execution.DataRoot.JoinRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ResolveRoot;
@@ -150,8 +151,6 @@ public class JoinResolver {
 
     // cross join with the parent dataset 
     // this is very inefficient and thus the warning
-    // TODO: not sure if it's better to collect first and then join or the 
-    //  other way around???
     logDataset("Foreign input", resourceDataset);
     // collect all the resources  to an array
     final Dataset<Row> groupedDataset = resourceDataset.groupBy()
@@ -197,10 +196,13 @@ public class JoinResolver {
 
     log.debug("Computing resolve join for: {}", joinRoot);
 
-    final FhirpathEvaluator parentExecutor = createExecutor(joinRoot.getMaster().getResourceType()
-    );
+    // create the evaluator for parent resource
+    final FhirpathEvaluator parentEvaluator = createEvaluator(
+        joinRoot.getMaster().getResourceType());
+    // evaluate the reference in the parent resource to the child resource 
+    // (e.g. Patient.managingOrganization) validating the reference type
     final ReferenceCollection childReferenceInParent = evaluateReference(
-        joinRoot.getMasterResourcePath(), joinRoot.getResourceType(), parentExecutor);
+        joinRoot.getMasterResourcePath(), joinRoot.getResourceType(), parentEvaluator);
 
     final boolean isSingularReference = childReferenceInParent.isSingular(parentDataset);
 
@@ -211,39 +213,38 @@ public class JoinResolver {
         isSingularReference,
         childReferenceInParent.getReferenceTypes());
 
-    final FhirpathEvaluator childExecutor = createExecutor(
-        joinRoot.getForeignResourceType()
-    );
-
+    // create the child evaluator for the child resource
+    final FhirpathEvaluator childEvaluator = createEvaluator(joinRoot.getForeignResourceType());
+    // this should point to the resource column
+    final ResourceCollection childResource = childEvaluator.createDefaultInputContext();
     final Dataset<Row> childDataset = maybeChildDataset == null
-                                      ? childExecutor.createInitialDataset()
+                                      ? childEvaluator.createInitialDataset()
                                       : maybeChildDataset;
 
     logDataset("Child input", childDataset);
-    // this should point to the resource column
-    final Collection childResource = childExecutor.createDefaultInputContext();
 
     // we essentially need to join the child result (with a map) to the parent dataset
     // using the resolved reference as the joining key
 
-    final Stream<Column> passThroughForeignResourceColumns = mapJoinColumns(childDataset,
-        Function.identity());
-    final Dataset<Row> childResult = withMapMerge(joinRoot.getValueTag(), tempColumn ->
+    // Create the child dataset (singular with respect to the child key) that includes all:
+    // - the join key colum (the child id) to the reference in the parent named  `joinRoot.getChildKeyTag()`
+    // - the map colum for this resolve join and if necessary merge with the exising one name joinRoot.getValueTag()
+    // - all existing map (join) columns passed through
+    final Dataset<Row> childResult = withMapMerge(joinRoot.getValueTag(), thisMapColumn ->
         childDataset.select(
             Streams.concat(
-                    Stream.of(
-                        childDataset.col("key").alias(joinRoot.getChildKeyTag()),
-                        functions.map_from_arrays(
-                            functions.array(childDataset.col("key")),
-                            // maybe need to be wrapped in another array
-                            functions.array(childResource.getColumnValue())
-                        ).alias(tempColumn)
-                    ),
-                    passThroughForeignResourceColumns)
-                .toArray(Column[]::new))
+                Stream.of(
+                    childResource.getKeyCollection().getColumnValue()
+                        .alias(joinRoot.getChildKeyTag()),
+                    createChildByChildIdMap(childResource).alias(thisMapColumn)
+                ),
+                mapJoinColumns(childDataset, Function.identity())
+            ).toArray(Column[]::new)
+        )
     );
-
     logDataset("Child result", childResult);
+
+    // get the child join key from the reference in the parent
     final Collection childKeyInParent = childReferenceInParent.getKeyCollection(Optional.empty());
 
     if (isSingularReference) {
@@ -256,11 +257,15 @@ public class JoinResolver {
       return joinedDataset;
     } else {
 
+      // because the reference key is not singular we need to expand it first 
+      // then join and re-group the result
       final Dataset<Row> expandedParent = parentDataset.withColumn(joinRoot.getParentKeyTag(),
           functions.explode_outer(childKeyInParent.getColumnValue()));
 
       logDataset("Expanded parent", expandedParent);
 
+      // join with the expanded parent dataset using the child key in the parent reference 
+      // and the child ke
       final Dataset<Row> joinedDataset = joinWithMapMerge(expandedParent, childResult,
           expandedParent.col(joinRoot.getParentKeyTag())
               .equalTo(childResult.col(joinRoot.getChildKeyTag())))
@@ -268,17 +273,22 @@ public class JoinResolver {
 
       logDataset("Joined result", joinedDataset);
 
-      final Stream<Column> aggForeignResourceColumns = mapJoinColumns(joinedDataset,
-          SqlFunctions::collect_map);
+      // re-group the result to make it singular with respect to the parent key
 
+      // aggregate all map (join) columns with `collect_map`
+      final Stream<Column> aggJoinColumns = mapJoinColumns(joinedDataset,
+          SqlFunctions::collect_map);
+      // aggregate all other columns with `any_value()' except for the key and id columns
+      // which are explicitly handled in the grouping query
       final Stream<Column> aggParentColumns = Stream.of(parentDataset.columns())
-          .filter(c -> !"key".equals(c) && !"id".equals(c) && !c.contains("@"))
+          .filter(c -> !"key".equals(c) && !"id".equals(c) && !JoinTag.isJoinTag(c))
           .map(c -> functions.any_value(functions.col(c)).alias(c));
 
       final Column[] aggColumns = Stream.concat(
           aggParentColumns,
-          aggForeignResourceColumns).toArray(Column[]::new);
+          aggJoinColumns).toArray(Column[]::new);
 
+      // re-group 
       final Dataset<Row> resultDataset = joinedDataset.groupBy(joinedDataset.col("id"))
           .agg(
               functions.any_value(joinedDataset.col("key")).alias("key"),
@@ -290,7 +300,6 @@ public class JoinResolver {
     }
   }
 
-
   @Nonnull
   private Dataset<Row> computeReverseJoin(@Nonnull final Dataset<Row> parentDataset,
       @Nullable final Dataset<Row> maybeChildDataset,
@@ -299,7 +308,7 @@ public class JoinResolver {
     log.debug("Computing reverse join for: {}", joinRoot);
     // create executor for a child resource  (e.g. for Patient.reverseResolve(Condition.subject))
     // child resource is Condition
-    final FhirpathEvaluator childExecutor = createExecutor(joinRoot.getForeignResourceType());
+    final FhirpathEvaluator childExecutor = createEvaluator(joinRoot.getForeignResourceType());
     // evaluate the child's reference to the parent resource (e.g. Condition.subject)
     // and check that the reference type matches the parent resource type (e.g. Patient)
     final ReferenceCollection parentReferenceInChild = evaluateReference(
@@ -328,12 +337,12 @@ public class JoinResolver {
     // - all existing join columns aggregated with `collect_map`
     // - the map colum for this resolve join and if necessary merge with the exising one name joinRoot.getValueTag()
     // - the join key colum to the parent resource name joinRoot.getChildKeyTag()
-    // The dataset is goup by the parent key in the child resource and so its also singular with respect to the parent key
-    final Dataset<Row> childResult = withMapMerge(joinRoot.getValueTag(), thisJoinColumn ->
+    // The dataset is grouped by the parent key in the child resource and so its also singular with respect to the parent key
+    final Dataset<Row> childResult = withMapMerge(joinRoot.getValueTag(), thisMapColumn ->
         childInput
             .groupBy(parentKeyInChild.getColumnValue().alias(joinRoot.getChildKeyTag()))
             .agg(
-                createChildByParentIdMap(parentKeyInChild, childResource).alias(thisJoinColumn),
+                createChildByParentIdMap(parentKeyInChild, childResource).alias(thisMapColumn),
                 mapJoinColumns(childInput, SqlFunctions::collect_map).toArray(Column[]::new)
             )
     );
@@ -348,6 +357,15 @@ public class JoinResolver {
 
     logDataset("Joined result", joinedDataset);
     return joinedDataset;
+  }
+
+  @Nonnull
+  private static Column createChildByChildIdMap(ResourceCollection childResource) {
+    return functions.map_from_arrays(
+        functions.array(childResource.getKeyCollection().getColumnValue()),
+        // maybe need to be wrapped in another array
+        functions.array(childResource.getColumnValue())
+    );
   }
 
   @Nonnull
@@ -384,7 +402,7 @@ public class JoinResolver {
   // and the other columns are passed through
 
   @Nonnull
-  private Dataset<Row> joinWithMapMerge(@Nonnull final Dataset<Row> leftDataset,
+  private static Dataset<Row> joinWithMapMerge(@Nonnull final Dataset<Row> leftDataset,
       @Nonnull final Dataset<Row> rightDataset,
       @Nonnull final Column on) {
 
@@ -442,13 +460,13 @@ public class JoinResolver {
 
 
   @Nonnull
-  private FhirpathEvaluator createExecutor(@Nonnull final ResourceType subjectResourceType) {
+  private FhirpathEvaluator createEvaluator(@Nonnull final ResourceType subjectResourceType) {
     return SingleFhirpathEvaluator.of(subjectResourceType,
         fhirContext, StaticFunctionRegistry.getInstance(),
         Collections.emptyMap(), dataSource);
   }
 
-  public static void logDataset(@Nonnull final String message,
+  private static void logDataset(@Nonnull final String message,
       @Nonnull final Dataset<Row> dataset) {
     log.debug("{}: {}", message, List.of(dataset.columns()));
   }
