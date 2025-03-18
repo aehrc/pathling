@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.execution;
 
 import static au.csiro.pathling.fhirpath.execution.BaseResourceResolver.resourceDataset;
+import static au.csiro.pathling.utilities.Streams.unsupportedCombiner;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -52,7 +53,41 @@ import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * A FHIRPath ResourceResolver that can handle joins.
+ * Given a list of {@link JoinSet}s, creates a {@link Dataset} that include all the date necessary
+ * to evaluate are resource reference and forward and reverse resolve joins defined in the
+ * {@link JoinSet}s.
+ * <p>
+ * The subject resource is represented as a column struct column named with the resource type. The
+ * struct includes all the columns of the resource. For example for a Patient resource the struct
+ * column would be named "Patient" and include all the columns of the Patient resource, such as id,
+ * name, etc.
+ * <p>
+ * The foreign resources are represented as an array of structs. Each struct includes all the
+ * columns of the resource. For example for a Condition resource the struct column would be named
+ * "Condition" and include all the columns of the Condition resource, such as id, code, etc. Note:
+ * for each row (representing a subject resource) the foreign resources array contains ALL the
+ * instances of the foreign resources as there is no way to filter the foreign resources based on
+ * the subject resource. This may lead to poor performance if the foreign resources are large.
+ * <p>
+ * Forward resolve joins are represented as a map column named with the join tag. The map key is the
+ * referenced resource id and the value is the referenced resource as a struct column. The naming
+ * convention for the map column is "id@{resourceType}" where resourceType is the referenced
+ * resource type. For example for a forward resolve join to Condition the map column would be named
+ * "id@Condition". The map column is created by collecting all the id value pairs required by all
+ * the forward resolve joins in the context of the subject resource including all nested forward
+ * resolve joins. It includes all the resources of the given type referenced by any forward resolve
+ * join in the {@link JoinSet}s.
+ * <p>
+ * Reverse resolve joins are represented as a map column named with the join tag. The map key is the
+ * id of master resource, and the value is an array of structs representing the child resources that
+ * reference the master resource at specified child reference path. The naming convention for the
+ * map column is "{childReferencePath}@{resourceType}" where resourceType is the child resource type
+ * and childReferencePath is the path in the child resource to the master resource with dots
+ * replaced with underscored. For example for a reverse resolve join  from `Patient`   to
+ * 'Condition.subject`  the map column would be named "Condition@subject". The map column is created
+ * by collecting all the id value pairs required by all the reverse resolve joins in the context of
+ * the subject resource including all nested reverse resolve joins. It includes all the resources of
+ * the given type that reference the master resource at the specified child reference path.
  */
 @Value(staticConstructor = "of")
 @Slf4j
@@ -60,13 +95,10 @@ public class JoinResolver {
 
   @Nonnull
   ResourceType subjectResource;
-
   @Nonnull
   FhirContext fhirContext;
-
   @Nonnull
   DataSource dataSource;
-
   @Nonnull
   Parser parser = new Parser();
 
@@ -95,8 +127,10 @@ public class JoinResolver {
         .toList();
 
     return foreignJoinsSet.stream()
-        .reduce(resolveJoinSet(subjectJoinsSet, parentDataset), this::resolveForeignJoinSet,
-            (dataset1, dataset2) -> dataset1);
+        .reduce(resolveJoinSet(subjectJoinsSet, parentDataset),
+            this::resolveForeignJoinSet,
+            unsupportedCombiner()
+        );
   }
 
   @Nonnull
@@ -133,14 +167,13 @@ public class JoinResolver {
     // now just reduce current children
     return joinSet.getChildren().stream()
         .reduce(parentDataset, (dataset, subset) ->
-            // the parent dataset for subjoin should be different
-            computeJoin(dataset,
-                resolveJoinSet(subset,
-                    resourceDataset(dataSource, subset.getMaster().getResourceType())),
-                (JoinRoot) subset.getMaster()), (dataset1, dataset2) -> dataset1);
+                // the parent dataset for subjoin should be different
+                computeJoin(dataset,
+                    resolveJoinSet(subset,
+                        resourceDataset(dataSource, subset.getMaster().getResourceType())),
+                    (JoinRoot) subset.getMaster()),
+            unsupportedCombiner());
   }
-
-  // TODO: Move somewhere else
 
   @Nonnull
   private Dataset<Row> computeJoin(@Nonnull final Dataset<Row> parentDataset,
