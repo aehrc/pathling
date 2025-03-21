@@ -68,8 +68,9 @@ public class ViewEvaluationContext implements EvaluationContext {
   @Nonnull
   @Override
   public ResourceCollection resolveReverseJoin(@Nonnull final ResourceCollection parentResource,
-      @Nonnull final String expression) {
-    return resourceResolver.resolveReverseJoin(parentResource, expression);
+      final @Nonnull String childResourceCode, @Nonnull final String childReferenceToParentFhirpath) {
+    return resourceResolver.resolveReverseJoin(parentResource, childResourceCode,
+        childReferenceToParentFhirpath);
   }
 
   @Nonnull

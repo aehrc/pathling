@@ -17,15 +17,19 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
+import static au.csiro.pathling.fhir.FhirUtils.isKnownResource;
+
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedResourceCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.ResourceTypeSet;
+import au.csiro.pathling.fhirpath.execution.JoinTag.ResolveTag;
+import au.csiro.pathling.fhirpath.execution.JoinTag.ResourceTag;
+import au.csiro.pathling.fhirpath.execution.JoinTag.ReverseResolveTag;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.parser.DataFormatException;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
@@ -33,7 +37,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -65,57 +68,51 @@ public class ManyResourceResolver extends BaseResourceResolver {
           "Reference type does not match. Expected: " + referenceType + " but got: "
               + referenceCollection.getReferenceTypes());
     }
-    // TODO: get from the reference collection
-    final JoinTag valueTag = JoinTag.ResolveTag.of(referenceType);
-
+    final JoinTag resolveTag = ResolveTag.of(referenceType);
     return ResourceCollection.build(
-        referenceCollection.getColumn().traverse("reference")
-            .applyTo(functions.col(valueTag.getTag())),
+        referenceCollection
+            .getKeyCollection(Optional.empty()).getColumn()
+            .applyTo(resolveTag.getTagColumn()),
         fhirContext, referenceType);
   }
 
 
   @Override
-  public @Nonnull Collection resolveJoin(
-      @Nonnull final ReferenceCollection referenceCollection) {
+  public @Nonnull Collection resolveJoin(@Nonnull final ReferenceCollection referenceCollection) {
     final ResourceTypeSet referenceTypes = referenceCollection.getReferenceTypes();
     return referenceTypes.asSingleResourceType()
         .map(referenceType -> (Collection) resolveTypedJoin(referenceCollection, referenceType))
-        .orElseGet(() -> new MixedResourceCollection(referenceCollection,
-            this::resolveTypedJoin));
+        .orElseGet(() -> new MixedResourceCollection(referenceCollection, this::resolveTypedJoin));
   }
 
   @Nonnull
   @Override
   public ResourceCollection resolveReverseJoin(@Nonnull final ResourceCollection parentResource,
+      @Nonnull final String childResourceCode,
       @Nonnull final String childReferenceToParentFhirpath) {
 
-    // TODO: implement this
-    final String resourceName = childReferenceToParentFhirpath.split("\\.")[0];
-    final String masterKeyPath = childReferenceToParentFhirpath.split("\\.")[1];
-    final ResourceType childResourceType = ResourceType.fromCode(resourceName);
-
-    final JoinTag valueTag = JoinTag.ReverseResolveTag.of(childResourceType, masterKeyPath);
-
+    if (!isKnownResource(childResourceCode, fhirContext)) {
+      throw new IllegalArgumentException("Unknown child resource type: " + childResourceCode);
+    }
+    final ResourceType childResourceType = ResourceType.fromCode(childResourceCode);
+    final JoinTag reverseResolveTag = ReverseResolveTag.of(childResourceType,
+        childReferenceToParentFhirpath);
     return ResourceCollection.build(
-        parentResource.getColumn().traverse("id_versioned")
-            .applyTo(functions.col(valueTag.getTag())),
+        parentResource.getKeyCollection()
+            .getColumn().applyTo(reverseResolveTag.getTagColumn()),
         fhirContext, childResourceType);
   }
-
 
   @Override
   @Nonnull
   Optional<ResourceCollection> resolveForeignResource(@Nonnull final String resourceCode) {
-    try {
-      // check if the resource code is valid in the FHIR context
-      fhirContext.getResourceDefinition(resourceCode);
+    if (isKnownResource(resourceCode, fhirContext)) {
       final ResourceType resourceType = ResourceType.fromCode(resourceCode);
-      final ResourceCollection resourcCollecttion = ResourceCollection.build(
-          new DefaultRepresentation(functions.col(resourceType.toCode())),
-          getFhirContext(), resourceType);
-      return Optional.of(resourcCollecttion);
-    } catch (DataFormatException e) {
+      final ResourceTag resourceTag = ResourceTag.of(resourceType);
+      return Optional.of(ResourceCollection.build(
+          new DefaultRepresentation(resourceTag.getTagColumn()),
+          getFhirContext(), resourceType));
+    } else {
       return Optional.empty();
     }
   }

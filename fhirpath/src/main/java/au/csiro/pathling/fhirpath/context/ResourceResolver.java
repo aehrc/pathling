@@ -87,12 +87,14 @@ public interface ResourceResolver {
    * method finds all Condition resources that reference the Patient through their subject field.
    *
    * @param parentResource The parent resource being referenced
+   * @param childResourceCode The FHIR resource type code of the child resources
    * @param childReferenceToParentFhirpath The FHIRPath expression in the child resource that
-   * references the parent including the child resource name (e.g., "Condition.subject")
+   * references the parent exluding the child resource name (e.g., "subject")
    * @return A ResourceCollection containing the child resources that reference the parent
    */
   @Nonnull
   ResourceCollection resolveReverseJoin(@Nonnull final ResourceCollection parentResource,
+      @Nonnull final String childResourceCode,
       @Nonnull final String childReferenceToParentFhirpath);
 
   /**

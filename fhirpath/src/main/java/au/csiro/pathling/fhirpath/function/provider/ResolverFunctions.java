@@ -14,24 +14,22 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 @Slf4j
 public class ResolverFunctions {
-
-
+  
   @FhirPathFunction
   @Nonnull
   public static ResourceCollection reverseResolve(@Nonnull final ResourceCollection input,
       @Nonnull final FhirPath subjectPath, @Nonnull EvaluationContext evaluationContext) {
 
-    // subject path should be TypeSpecifierPath + traversal path
+    // subject path should be Resource + traversal path
 
     final ResourceType childResourceType = ((Resource) subjectPath.first()).getResourceType();
     final String childPath = subjectPath.suffix().toExpression();
     final ReverseResolveRoot root = ReverseResolveRoot.ofResource(input.getResourceType(),
         childResourceType, childPath);
-
     log.debug("Reverse resolve root: {}", root);
-    return evaluationContext.resolveReverseJoin(input, subjectPath.toExpression());
+    return evaluationContext.resolveReverseJoin(input, root.getForeignResourceType().toCode(),
+        root.getForeignKeyPath());
   }
-
 
   @FhirPathFunction
   @Nonnull
@@ -39,6 +37,4 @@ public class ResolverFunctions {
       @Nonnull EvaluationContext evaluationContext) {
     return evaluationContext.resolveJoin(input);
   }
-
-
 }

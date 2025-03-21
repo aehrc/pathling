@@ -149,6 +149,7 @@ public abstract class BaseResourceResolver implements ResourceResolver {
   @Nonnull
   public ResourceCollection resolveReverseJoin(
       @Nonnull final ResourceCollection parentResource,
+      @Nonnull final String childResourceCode,
       @Nonnull final String childReferenceToParentFhirpath) {
     throw new UnsupportedOperationException("resolveReverseJoin() is not supported");
   }
