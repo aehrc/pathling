@@ -72,6 +72,6 @@ public class SingleResourceResolver extends BaseResourceResolver {
   @Override
   @Nonnull
   public Dataset<Row> createView() {
-    return resourceDataset(dataSource, subjectResource);
+    return getResourceDataset(dataSource, subjectResource);
   }
 }

@@ -189,13 +189,7 @@ public abstract class BaseResourceResolver implements ResourceResolver {
    * <ol>
    *   <li>Reads the resource data from the data source</li>
    *   <li>Checks if the resource type exists (throws an exception if not)</li>
-   *   <li>Restructures the dataset to have:
-   *     <ul>
-   *       <li>An "id" column for the resource ID</li>
-   *       <li>A "key" column containing the versioned ID for joining</li>
-   *       <li>A column named after the resource type containing all resource data as a struct</li>
-   *     </ul>
-   *   </li>
+   *   <li>Restructures the dataset in a standardized structure.
    * </ol>
    * <p>
    * This standardized structure is used throughout the resource resolution process.
@@ -206,7 +200,7 @@ public abstract class BaseResourceResolver implements ResourceResolver {
    * @throws IllegalArgumentException if the resource type is not found in the data source
    */
   @Nonnull
-  protected static Dataset<Row> resourceDataset(@Nonnull final DataSource dataSource,
+  protected static Dataset<Row> getResourceDataset(@Nonnull final DataSource dataSource,
       @Nonnull final ResourceType resourceType) {
 
     @Nullable final Dataset<Row> dataset = dataSource.read(resourceType);
@@ -216,12 +210,33 @@ public abstract class BaseResourceResolver implements ResourceResolver {
     if (isNull(dataset)) {
       throw new IllegalArgumentException("Resource type not found: " + resourceType);
     }
-    return dataset.select(
-        dataset.col("id"),
-        dataset.col("id_versioned").alias("key"),
+    return toResourceRepresentation(resourceType.toCode(), dataset);
+  }
+
+  /**
+   * Creates a dataset for a specific resource type with a standardized structure.
+   * <p>
+   * This method restructures the dataset to have:
+   *     <ul>
+   *       <li>An "id" column for the resource ID</li>
+   *       <li>A "key" column containing the versioned ID for joining</li>
+   *       <li>A column named after the resource type containing all resource data as a struct</li>
+   *     </ul>
+   * <p>
+   * This standardized structure is used throughout the resource resolution process.
+   *
+   * @param resourceCode The resource type to read
+   * @param resourceDataset The dataset containing the flat resource data
+   * @return A dataset containing the resource data in a standardized structure
+   */
+  protected static Dataset<Row> toResourceRepresentation(@Nonnull final String resourceCode,
+      @Nonnull final Dataset<Row> resourceDataset) {
+    return resourceDataset.select(
+        resourceDataset.col("id"),
+        resourceDataset.col("id_versioned").alias("key"),
         functions.struct(
-            Stream.of(dataset.columns())
-                .map(dataset::col).toArray(Column[]::new)
-        ).alias(resourceType.toCode()));
+            Stream.of(resourceDataset.columns())
+                .map(resourceDataset::col).toArray(Column[]::new)
+        ).alias(resourceCode));
   }
 }

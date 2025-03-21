@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
-import static au.csiro.pathling.fhirpath.execution.BaseResourceResolver.resourceDataset;
+import static au.csiro.pathling.fhirpath.execution.BaseResourceResolver.getResourceDataset;
 import static au.csiro.pathling.sql.SqlFunctions.ns_map_concat;
 import static au.csiro.pathling.utilities.Streams.unsupportedCombiner;
 
@@ -130,7 +130,7 @@ public class JoinResolver {
    */
   @Nonnull
   public Dataset<Row> resolveJoins(@Nonnull final List<JoinSet> joinSet) {
-    return resolveJoins(joinSet, resourceDataset(dataSource, subjectResource));
+    return resolveJoins(joinSet, getResourceDataset(dataSource, subjectResource));
   }
 
   /**
@@ -197,7 +197,7 @@ public class JoinResolver {
     // Minimally add the foreign resources to the parent dataset
     // as array of structs
     final ResourceRoot dataRoot = joinSet.getMasterResourceRoot();
-    final Dataset<Row> resourceDataset = resourceDataset(dataSource, dataRoot.getResourceType());
+    final Dataset<Row> resourceDataset = getResourceDataset(dataSource, dataRoot.getResourceType());
 
     // Cross join with the parent dataset 
     // This is very inefficient and thus the warning
@@ -235,7 +235,7 @@ public class JoinResolver {
                 // The parent dataset for subjoin should be different
                 computeJoin(dataset,
                     resolveJoinSet(subset,
-                        resourceDataset(dataSource, subset.getMaster().getResourceType())),
+                        getResourceDataset(dataSource, subset.getMaster().getResourceType())),
                     (JoinRoot) subset.getMaster()),
             unsupportedCombiner());
   }

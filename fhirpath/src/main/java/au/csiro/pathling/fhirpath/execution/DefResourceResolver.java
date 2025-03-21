@@ -26,12 +26,11 @@ import au.csiro.pathling.fhirpath.definition.DefinitionContext;
 import au.csiro.pathling.fhirpath.definition.ResourceTag;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import java.util.stream.Stream;
 import lombok.Value;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A specialized implementation of {@link ResourceResolver} that works with definition-based
@@ -49,6 +48,7 @@ import org.apache.spark.sql.functions;
  */
 @Value(staticConstructor = "of")
 public class DefResourceResolver implements ResourceResolver {
+
   /**
    * The resource tag identifying the subject resource.
    * <p>
@@ -61,8 +61,8 @@ public class DefResourceResolver implements ResourceResolver {
   /**
    * The definition context providing resource definitions.
    * <p>
-   * This context contains the definitions for resources that can be resolved,
-   * including their structure, elements, and relationships.
+   * This context contains the definitions for resources that can be resolved, including their
+   * structure, elements, and relationships.
    */
   @Nonnull
   DefinitionContext definitionContext;
@@ -70,8 +70,8 @@ public class DefResourceResolver implements ResourceResolver {
   /**
    * The dataset containing the subject resource data.
    * <p>
-   * This dataset is provided directly rather than being created from a data source,
-   * allowing for more flexibility in how the data is structured and sourced.
+   * This dataset is provided directly rather than being created from a data source, allowing for
+   * more flexibility in how the data is structured and sourced.
    */
   @Nonnull
   Dataset<Row> subjectDataset;
@@ -79,9 +79,9 @@ public class DefResourceResolver implements ResourceResolver {
   /**
    * {@inheritDoc}
    * <p>
-   * This implementation only supports resolving the subject resource. If the requested
-   * resource code matches the subject resource code, it returns the subject resource.
-   * Otherwise, it returns an empty Optional.
+   * This implementation only supports resolving the subject resource. If the requested resource
+   * code matches the subject resource code, it returns the subject resource. Otherwise, it returns
+   * an empty Optional.
    */
   @Override
   public @Nonnull Optional<ResourceCollection> resolveResource(
@@ -96,8 +96,8 @@ public class DefResourceResolver implements ResourceResolver {
   /**
    * {@inheritDoc}
    * <p>
-   * This implementation creates a resource collection for the subject resource
-   * using the {@link #createResource} method.
+   * This implementation creates a resource collection for the subject resource using the
+   * {@link #createResource} method.
    */
   @Override
   @Nonnull
@@ -108,8 +108,8 @@ public class DefResourceResolver implements ResourceResolver {
   /**
    * {@inheritDoc}
    * <p>
-   * This implementation does not support resolving joins between resources.
-   * Attempting to call this method will result in an UnsupportedOperationException.
+   * This implementation does not support resolving joins between resources. Attempting to call this
+   * method will result in an UnsupportedOperationException.
    */
   @Override
   @Nonnull
@@ -120,8 +120,8 @@ public class DefResourceResolver implements ResourceResolver {
   /**
    * {@inheritDoc}
    * <p>
-   * This implementation does not support resolving reverse joins between resources.
-   * Attempting to call this method will result in an UnsupportedOperationException.
+   * This implementation does not support resolving reverse joins between resources. Attempting to
+   * call this method will result in an UnsupportedOperationException.
    */
   @Override
   @Nonnull
@@ -135,8 +135,8 @@ public class DefResourceResolver implements ResourceResolver {
    * Creates a ResourceCollection for the specified resource tag.
    * <p>
    * This method creates a column representation for the resource and builds a ResourceCollection
-   * using the resource definition from the definition context. The column representation uses
-   * the resource tag code as the column name.
+   * using the resource definition from the definition context. The column representation uses the
+   * resource tag code as the column name.
    *
    * @param resourceType The resource tag to create a collection for
    * @return A ResourceCollection for the specified resource tag
@@ -151,26 +151,11 @@ public class DefResourceResolver implements ResourceResolver {
   /**
    * {@inheritDoc}
    * <p>
-   * This implementation creates a view from the subject dataset by:
-   * <ol>
-   *   <li>Selecting the "id" column directly</li>
-   *   <li>Selecting the "id_versioned" column and aliasing it as "key"</li>
-   *   <li>Creating a struct containing all columns from the subject dataset</li>
-   *   <li>Aliasing the struct with the subject resource code</li>
-   * </ol>
-   * <p>
-   * This standardized structure is used throughout the resource resolution process
-   * and matches the structure created by other resolvers.
+   * This implementation creates a view from the subject dataset in the standardized structure.
    */
   @Nonnull
   public Dataset<Row> createView() {
-    return subjectDataset.select(
-        subjectDataset.col("id"),
-        subjectDataset.col("id_versioned").alias("key"),
-        functions.struct(
-            Stream.of(subjectDataset.columns())
-                .map(subjectDataset::col).toArray(Column[]::new)
-        ).alias(subjectResource.toCode()));
+    return BaseResourceResolver.toResourceRepresentation(subjectResource.toCode(), subjectDataset);
   }
 
 }
