@@ -51,6 +51,30 @@ import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
+/**
+ * Analyzes FHIRPath expressions to identify all data roots required for evaluation.
+ * <p>
+ * A data root represents a source of data that needs to be accessed during FHIRPath evaluation.
+ * This class traverses FHIRPath expressions to identify:
+ * <ul>
+ *   <li>Resource roots - direct access to resource types</li>
+ *   <li>Resolve roots - resources accessed through reference resolution</li>
+ *   <li>Reverse resolve roots - resources that reference other resources</li>
+ * </ul>
+ * <p>
+ * The resolver handles various FHIRPath constructs including:
+ * <ul>
+ *   <li>Resource paths (e.g., Patient)</li>
+ *   <li>Reference resolution (e.g., subject.resolve())</li>
+ *   <li>Reverse reference resolution (e.g., reverseResolve(Condition.subject))</li>
+ *   <li>Type filtering (e.g., reference.resolve().ofType(Condition))</li>
+ *   <li>External constants (e.g., %resource, %rootResource)</li>
+ * </ul>
+ * <p>
+ * This class is essential for evaluation of fhirpath expressions by identifying all required
+ * data dependencies before evaluation begins, allowing for creation of the full data view
+ * representation.
+ */
 @Value
 @Slf4j
 public class DataRootResolver {
