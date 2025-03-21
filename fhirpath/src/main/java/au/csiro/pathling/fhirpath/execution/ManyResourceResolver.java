@@ -40,24 +40,65 @@ import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * A FHIRPath ResourceResolver that can handle joins.
+ * A sophisticated implementation of {@link BaseResourceResolver} that supports complex joins
+ * between FHIR resources.
+ * <p>
+ * This resolver is designed for advanced FHIRPath evaluation scenarios where expressions traverse
+ * resource boundaries through references. It supports:
+ * <ul>
+ *   <li>Forward resolves (following references from one resource to another)</li>
+ *   <li>Reverse resolves (finding resources that reference a particular resource)</li>
+ *   <li>Access to foreign resources (resources other than the subject resource)</li>
+ *   <li>Mixed resource collections (collections containing multiple resource types)</li>
+ * </ul>
+ * <p>
+ * The resolver uses {@link JoinSet}s to define the relationships between resources and
+ * {@link JoinResolver} to perform the actual joins between datasets.
  */
 @EqualsAndHashCode(callSuper = true)
 @Value
 public class ManyResourceResolver extends BaseResourceResolver {
 
+  /**
+   * The primary resource type being queried.
+   */
   @Nonnull
   ResourceType subjectResource;
 
+  /**
+   * The FHIR context used for resource definitions.
+   */
   @Nonnull
   FhirContext fhirContext;
 
+  /**
+   * The data source from which to read resource data.
+   */
   @Nonnull
   DataSource dataSource;
 
+  /**
+   * The set of join definitions that describe the relationships between resources.
+   */
   @Nonnull
   List<JoinSet> joinSets;
 
+  /**
+   * Resolves a reference to a specific resource type.
+   * <p>
+   * This method is used to implement the FHIRPath resolve() function for a specific resource type.
+   * It:
+   * <ol>
+   *   <li>Validates that the reference can point to the specified resource type</li>
+   *   <li>Creates a join tag for the reference</li>
+   *   <li>Builds a ResourceCollection that uses the join tag to access the referenced resources</li>
+   * </ol>
+   *
+   * @param referenceCollection The collection of references to resolve
+   * @param referenceType The specific resource type to resolve to
+   * @return A ResourceCollection containing the resolved resources
+   * @throws IllegalArgumentException if the reference cannot point to the specified resource type
+   */
   @Nonnull
   ResourceCollection resolveTypedJoin(
       @Nonnull final ReferenceCollection referenceCollection,
@@ -77,6 +118,16 @@ public class ManyResourceResolver extends BaseResourceResolver {
   }
 
 
+  /**
+   * {@inheritDoc}
+   * <p>
+   * This implementation handles both single-type and mixed-type references:
+   * <ul>
+   *   <li>For references to a single resource type, it delegates to {@link #resolveTypedJoin}</li>
+   *   <li>For references that could point to multiple resource types, it creates a
+   *       {@link MixedResourceCollection} that can handle any of the possible types</li>
+   * </ul>
+   */
   @Override
   public @Nonnull Collection resolveJoin(@Nonnull final ReferenceCollection referenceCollection) {
     final ResourceTypeSet referenceTypes = referenceCollection.getReferenceTypes();
@@ -85,6 +136,19 @@ public class ManyResourceResolver extends BaseResourceResolver {
         .orElseGet(() -> new MixedResourceCollection(referenceCollection, this::resolveTypedJoin));
   }
 
+  /**
+   * {@inheritDoc}
+   * <p>
+   * This implementation:
+   * <ol>
+   *   <li>Validates that the child resource type is known</li>
+   *   <li>Creates a reverse resolve join tag for the relationship</li>
+   *   <li>Builds a ResourceCollection that uses the join tag to access the child resources</li>
+   * </ol>
+   * <p>
+   * For example, in Patient.reverseResolve(Condition.subject), this method creates a collection
+   * of Condition resources that reference each Patient through their subject field.
+   */
   @Nonnull
   @Override
   public ResourceCollection resolveReverseJoin(@Nonnull final ResourceCollection parentResource,
@@ -103,6 +167,20 @@ public class ManyResourceResolver extends BaseResourceResolver {
         fhirContext, childResourceType);
   }
 
+  /**
+   * {@inheritDoc}
+   * <p>
+   * This implementation provides access to foreign resources (resources other than the subject
+   * resource) by:
+   * <ol>
+   *   <li>Validating that the resource type is known</li>
+   *   <li>Creating a resource tag for the resource type</li>
+   *   <li>Building a ResourceCollection that uses the resource tag to access the resources</li>
+   * </ol>
+   * <p>
+   * Foreign resources are represented as arrays of structs in the dataset, with one array
+   * containing all instances of the resource type.
+   */
   @Override
   @Nonnull
   Optional<ResourceCollection> resolveForeignResource(@Nonnull final String resourceCode) {
@@ -117,6 +195,18 @@ public class ManyResourceResolver extends BaseResourceResolver {
     }
   }
 
+  /**
+   * {@inheritDoc}
+   * <p>
+   * This implementation uses {@link JoinResolver} to create a dataset that includes all resources
+   * and joins defined in the {@link #joinSets}. The resulting dataset contains:
+   * <ul>
+   *   <li>The subject resource as a struct column</li>
+   *   <li>Foreign resources as array columns</li>
+   *   <li>Forward resolve joins as map columns with resource IDs as keys</li>
+   *   <li>Reverse resolve joins as map columns with arrays of child resources as values</li>
+   * </ul>
+   */
   @Nonnull
   @Override
   public Dataset<Row> createView() {
