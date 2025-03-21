@@ -54,7 +54,7 @@ public class DefResourceResolver implements ResourceResolver {
   @Override
   @Nonnull
   public ResourceCollection resolveReverseJoin(
-      @Nonnull final ResourceCollection parentResource, @Nonnull final String expression) {
+      @Nonnull final ResourceCollection parentResource, @Nonnull final String childReferenceToParentFhirpath) {
     throw new UnsupportedOperationException("resolveReverseJoin() is not supported");
   }
 

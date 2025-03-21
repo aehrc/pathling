@@ -25,17 +25,16 @@ import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.ResourceTypeSet;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.parser.DataFormatException;
 import jakarta.annotation.Nonnull;
+import java.util.List;
+import java.util.Optional;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import java.util.List;
-import java.util.Optional;
 
 /**
  * A FHIRPath ResourceResolver that can handle joins.
@@ -89,11 +88,11 @@ public class ManyResourceResolver extends BaseResourceResolver {
   @Nonnull
   @Override
   public ResourceCollection resolveReverseJoin(@Nonnull final ResourceCollection parentResource,
-      @Nonnull final String expression) {
+      @Nonnull final String childReferenceToParentFhirpath) {
 
     // TODO: implement this
-    final String resourceName = expression.split("\\.")[0];
-    final String masterKeyPath = expression.split("\\.")[1];
+    final String resourceName = childReferenceToParentFhirpath.split("\\.")[0];
+    final String masterKeyPath = childReferenceToParentFhirpath.split("\\.")[1];
     final ResourceType childResourceType = ResourceType.fromCode(resourceName);
 
     final JoinTag valueTag = JoinTag.ReverseResolveTag.of(childResourceType, masterKeyPath);
