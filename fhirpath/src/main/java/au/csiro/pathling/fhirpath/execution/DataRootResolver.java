@@ -181,7 +181,7 @@ public class DataRootResolver {
       @Nonnull final EvalFunction reverseResolve) {
     // add this reverse resolve root and use it as the context for the rest of the path
     // clear the traversalPath as we are starting from a new root
-    final ReverseResolveRoot reverseResolveRoot = ExecutorUtils.fromPath(contextRoot,
+    final ReverseResolveRoot reverseResolveRoot = ReverseResolveRoot.fromReverseResolve(contextRoot,
         reverseResolve);
     dataRoots.add(reverseResolveRoot);
     collectDataRoots(reverseResolveRoot, fhirPath.suffix(), FhirPath.nullPath(), dataRoots);

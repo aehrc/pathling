@@ -17,6 +17,10 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
+import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.FhirPathConstants.Functions;
+import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
+import au.csiro.pathling.fhirpath.path.Paths.Resource;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import lombok.Value;
@@ -197,6 +201,39 @@ public interface DataRoot {
       return new ReverseResolveRoot(ResourceRoot.of(masterType), foreignResourceType,
           foreignResourcePath);
     }
+
+
+    /**
+     * Creates a new reverse resolve root from {@link EvalFunction} that represents a reverse
+     * resolve function call.
+     *
+     * @param master The master data root
+     * @param reverseJoin The reverse join function call
+     * @return A new reverse resolve root
+     */
+    @Nonnull
+    public static ReverseResolveRoot fromReverseResolve(@Nonnull final DataRoot master,
+        @Nonnull final EvalFunction reverseJoin) {
+      if (!reverseJoin.getFunctionIdentifier()
+          .equals(Functions.REVERSE_RESOLVE)) {
+        throw new IllegalArgumentException("Not a reverse resolve function: " + reverseJoin);
+      }
+      return fromChildPath(master, reverseJoin.getArguments().get(0));
+    }
+
+    @Nonnull
+    public static ReverseResolveRoot fromChildPath(@Nonnull final DataRoot master,
+        @Nonnull final FhirPath childRefToParent) {
+      final Resource foreingResource = (Resource) childRefToParent.first();
+      final FhirPath foreignResourcePath = childRefToParent.suffix();
+      if (foreignResourcePath.isNull() || !FhirPathsUtils.isTraversalOnly(foreignResourcePath)) {
+        throw new IllegalArgumentException(
+            "Invalid reverse resolve path: " + foreignResourcePath.toExpression());
+      }
+      return ReverseResolveRoot.of(master, foreingResource.getResourceType(),
+          foreignResourcePath.toExpression());
+    }
+
 
   }
 
