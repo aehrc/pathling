@@ -79,7 +79,7 @@
     <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
     <pathling.hadoopMajorVersion>3</pathling.hadoopMajorVersion>
     <pathling.hapiFhirVersion>7.6.1</pathling.hapiFhirVersion>
-    <pathling.springBootVersion>3.3.5</pathling.springBootVersion>
+    <pathling.springBootVersion>3.4.4</pathling.springBootVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.3.4</pathling.dockerJavaVersion>
     <pathling.awsSdkVersion>1.12.782</pathling.awsSdkVersion>
