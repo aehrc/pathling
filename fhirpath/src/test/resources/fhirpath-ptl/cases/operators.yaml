@@ -203,6 +203,43 @@ tests:
           - desc: '** Contains empty Boolean in one **'
             expression: "oneBoolean contains {}"
             result: [ ]
+      - 'Decimal type':
+          - desc: '** In for existing Decimal in many **'
+            expression: "2.5 in manyDecimal"
+            result: [ true ]
+          - desc: '** Contains for existing Decimal in many **'
+            expression: "manyDecimal contains 2.5"
+            result: [ true ]
+          - desc: '** In for non-existing Decimal in many **'
+            expression: "4.5 in manyDecimal"
+            result: [ false ]
+          - desc: '** Contains non-existing Decimal in many **'
+            expression: "manyDecimal contains 4.5"
+            result: [ false ]
+          - desc: '** In for empty Decimal in many **'
+            expression: "{} in manyDecimal"
+            result: [ ]
+          - desc: '** Contains empty Decimal in many **'
+            expression: "manyDecimal contains {}"
+            result: [ ]
+          - desc: '** In for existing Decimal in one **'
+            expression: "1.5 in oneDecimal"
+            result: [ true ]
+          - desc: '** Contains for existing Decimal in one **'
+            expression: "oneDecimal contains 1.5"
+            result: [ true ]
+          - desc: '** In for non-existing Decimal in one **'
+            expression: "2.5 in oneDecimal"
+            result: [ false ]
+          - desc: '** Contains non-existing Decimal in one **'
+            expression: "oneDecimal contains 2.5"
+            result: [ false ]
+          - desc: '** In for empty Decimal in one **'
+            expression: "{} in oneDecimal"
+            result: [ ]
+          - desc: '** Contains empty Decimal in one **'
+            expression: "oneDecimal contains {}"
+            result: [ ]
 subject:
   oneInt: 1
   manyInt: [ 1, 2, 3 ]
@@ -210,3 +247,5 @@ subject:
   manyString: [ "test1", "test2", "test3" ]
   oneBoolean: true
   manyBoolean: [ true, false, true ]
+  oneDecimal: 1.5
+  manyDecimal: [ 1.5, 2.5, 3.5 ]
