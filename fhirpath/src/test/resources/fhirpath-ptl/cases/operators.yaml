@@ -172,8 +172,41 @@ tests:
           - desc: '** Contains empty String in one **'
             expression: "oneString contains {}"
             result: [ ]
+      - 'Boolean type':
+          - desc: '** In for existing Boolean in many **'
+            expression: "true in manyBoolean"
+            result: [ true ]
+          - desc: '** Contains for existing Boolean in many **'
+            expression: "manyBoolean contains false"
+            result: [ true ]
+          - desc: '** In for non-existing Boolean in many **'
+            expression: "{} in manyBoolean"
+            result: [ ]
+          - desc: '** Contains non-existing Boolean in many **'
+            expression: "manyBoolean contains {}"
+            result: [ ]
+          - desc: '** In for existing Boolean in one **'
+            expression: "true in oneBoolean"
+            result: [ true ]
+          - desc: '** Contains for existing Boolean in one **'
+            expression: "oneBoolean contains true"
+            result: [ true ]
+          - desc: '** In for non-existing Boolean in one **'
+            expression: "false in oneBoolean"
+            result: [ false ]
+          - desc: '** Contains non-existing Boolean in one **'
+            expression: "oneBoolean contains false"
+            result: [ false ]
+          - desc: '** In for empty Boolean in one **'
+            expression: "{} in oneBoolean"
+            result: [ ]
+          - desc: '** Contains empty Boolean in one **'
+            expression: "oneBoolean contains {}"
+            result: [ ]
 subject:
   oneInt: 1
   manyInt: [ 1, 2, 3 ]
   oneString: "test"
   manyString: [ "test1", "test2", "test3" ]
+  oneBoolean: true
+  manyBoolean: [ true, false, true ]
