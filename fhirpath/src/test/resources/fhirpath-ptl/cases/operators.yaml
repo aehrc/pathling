@@ -98,9 +98,10 @@ tests:
             expression: "code.coding contains {}"
             inputfile: 'Observation_1.json'
             result: [ ]
-          - desc: '** In for coding with display name containing quotes **'
-            expression: "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation|N||Normal in interpretation.coding"
-            inputfile: 'Observation_1.json'
+      - 'Integer type':
+          - desc: '** In for existing Integer in many **'
+            expression: "2 in manyInt"
             result: [ true ]
 subject:
-  prop: val
+  oneInt: 1
+  manyInt: [ 1, 2, 3 ]
