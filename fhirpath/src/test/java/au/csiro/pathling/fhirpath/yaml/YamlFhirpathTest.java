@@ -57,5 +57,4 @@ public class YamlFhirpathTest extends YamlSpecCachedTestBase {
   void testOperators(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }
-
 }

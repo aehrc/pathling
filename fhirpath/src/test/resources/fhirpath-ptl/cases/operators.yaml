@@ -240,6 +240,55 @@ tests:
           - desc: '** Contains empty Decimal in one **'
             expression: "oneDecimal contains {}"
             result: [ ]
+      - 'DateTime type':
+          - desc: '** In for existing DateTime in many **'
+            expression: "@2023-01-02T14:00:00Z in participant.period.start"
+            inputfile: 'Encounter_with_participants.json'
+            result: [ true ]
+          - desc: '** Contains for existing DateTime in many **'
+            expression: "participant.period.start contains @2023-01-03T09:30:00Z"
+            inputfile: 'Encounter_with_participants.json'
+            result: [ true ]
+          - desc: '** In for non-existing DateTime in many **'
+            expression: "@2023-01-04T10:00:00Z in participant.period.start"
+            inputfile: 'Encounter_with_participants.json'
+            result: [ false ]
+          - desc: '** Contains non-existing DateTime in many **'
+            expression: "participant.period.start contains @2023-01-04T10:00:00Z"
+            inputfile: 'Encounter_with_participants.json'
+            result: [ false ]
+          - desc: '** In for empty DateTime in many **'
+            expression: "{} in participant.period.start"
+            inputfile: 'Encounter_with_participants.json'
+            result: [ ]
+          - desc: '** Contains empty DateTime in many **'
+            expression: "participant.period.start contains {}"
+            inputfile: 'Encounter_with_participants.json'
+            result: [ ]
+          - desc: '** In for existing DateTime in one **'
+            expression: "@2023-10-15T09:45:00Z in issued"
+            inputfile: 'Observation_1.json'
+            result: [ true ]
+          - desc: '** Contains for existing DateTime in one **'
+            expression: "issued contains @2023-10-15T09:45:00Z"
+            inputfile: 'Observation_1.json'
+            result: [ true ]
+          - desc: '** In for non-existing DateTime in one **'
+            expression: "@2023-10-16T09:45:00Z in issued"
+            inputfile: 'Observation_1.json'
+            result: [ false ]
+          - desc: '** Contains non-existing DateTime in one **'
+            expression: "issued contains @2023-10-16T09:45:00Z"
+            inputfile: 'Observation_1.json'
+            result: [ false ]
+          - desc: '** In for empty DateTime in one **'
+            expression: "{} in issued"
+            inputfile: 'Observation_1.json'
+            result: [ ]
+          - desc: '** Contains empty DateTime in one **'
+            expression: "issued contains {}"
+            inputfile: 'Observation_1.json'
+            result: [ ]
 subject:
   oneInt: 1
   manyInt: [ 1, 2, 3 ]
