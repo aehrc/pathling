@@ -49,5 +49,58 @@ tests:
             expression: "value.ofType(Quantity) contains {}"
             inputfile: 'Observation_1.json'
             result: [ ]
+      - 'Coding':
+          - desc: '** In for existing coding in many **'
+            expression: "http://loinc.org|8480-6||'Systolic blood pressure' in component.code.coding"
+            inputfile: 'Observation_3_comp.json'
+            result: [ true ]
+          - desc: '** Contains for existing coding in many **'
+            expression: "component.code.coding contains http://loinc.org|8867-4||'Heart rate'"
+            inputfile: 'Observation_3_comp.json'
+            result: [ true ]
+          - desc: '** In for non-existing coding in many **'
+            expression: "http://loinc.org|9999-9||'Non-existent code' in component.code.coding"
+            inputfile: 'Observation_3_comp.json'
+            result: [ false ]
+          - desc: '** Contains non-existing coding in many **'
+            expression: "component.code.coding contains http://loinc.org|9999-9||'Non-existent code'"
+            inputfile: 'Observation_3_comp.json'
+            result: [ false ]
+          - desc: '** In for empty coding in many **'
+            expression: "{} in component.code.coding"
+            inputfile: 'Observation_3_comp.json'
+            result: [ ]
+          - desc: '** Contains empty coding in many **'
+            expression: "component.code.coding contains {}"
+            inputfile: 'Observation_3_comp.json'
+            result: [ ]
+          - desc: '** In for existing coding in one **'
+            expression: "http://loinc.org|8867-4||'Heart rate' in code.coding"
+            inputfile: 'Observation_1.json'
+            result: [ true ]
+          - desc: '** Contains for existing coding in one **'
+            expression: "code.coding contains http://loinc.org|8867-4||'Heart rate'"
+            inputfile: 'Observation_1.json'
+            result: [ true ]
+          - desc: '** In for non-existing coding in one **'
+            expression: "http://loinc.org|9999-9||'Non-existent code' in code.coding"
+            inputfile: 'Observation_1.json'
+            result: [ false ]
+          - desc: '** Contains non-existing coding in one **'
+            expression: "code.coding contains http://loinc.org|9999-9||'Non-existent code'"
+            inputfile: 'Observation_1.json'
+            result: [ false ]
+          - desc: '** In for empty coding in one **'
+            expression: "{} in code.coding"
+            inputfile: 'Observation_1.json'
+            result: [ ]
+          - desc: '** Contains empty coding in one **'
+            expression: "code.coding contains {}"
+            inputfile: 'Observation_1.json'
+            result: [ ]
+          - desc: '** In for coding with display name containing quotes **'
+            expression: "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation|N||Normal in interpretation.coding"
+            inputfile: 'Observation_1.json'
+            result: [ true ]
 subject:
   prop: val
