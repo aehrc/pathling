@@ -1,0 +1,53 @@
+tests:
+  - 'Membership operators':
+      - 'Quantity':
+          - desc: '** In for existing quantity in many **'
+            expression: "80 'mm[Hg]' in component.value.ofType(Quantity)"
+            inputfile: 'Observation_3_comp.json'
+            result: [ true ]
+          - desc: '** Contains for existing quantity in many **'
+            expression: "component.value.ofType(Quantity) contains 72 '/min'"
+            inputfile: 'Observation_3_comp.json'
+            result: [ true ]
+          - desc: '** In for non-existing quantity in many **'
+            expression: "72 'mm[Hg]' in component.value.ofType(Quantity)"
+            inputfile: 'Observation_3_comp.json'
+            result: [ false ]
+          - desc: '** Contains non-for existing quantity in many **'
+            expression: "component.value.ofType(Quantity) contains 80 '/min'"
+            inputfile: 'Observation_3_comp.json'
+            result: [ false ]
+          - desc: '** In for empty quantity in many **'
+            expression: "{} in component.value.ofType(Quantity)"
+            inputfile: 'Observation_3_comp.json'
+            result: [ ]
+          - desc: '** Contains empty quantity in many **'
+            expression: "component.value.ofType(Quantity) contains {}"
+            inputfile: 'Observation_3_comp.json'
+            result: [ ]
+          - desc: '** In for existing quantity in one **'
+            expression: "80 '/min' in value.ofType(Quantity)"
+            inputfile: 'Observation_1.json'
+            result: [ true ]
+          - desc: '** Contains for existing quantity in one **'
+            expression: "value.ofType(Quantity) contains 80 '/min'"
+            inputfile: 'Observation_1.json'
+            result: [ true ]
+          - desc: '** In for non-existing quantity in one **'
+            expression: "80 'mm[Hg]' in value.ofType(Quantity)"
+            inputfile: 'Observation_1.json'
+            result: [ false ]
+          - desc: '** Contains non-for existing quantity in one **'
+            expression: "value.ofType(Quantity) contains 81 '/min'"
+            inputfile: 'Observation_1.json'
+            result: [ false ]
+          - desc: '** In for empty quantity in many **'
+            expression: "{} in value.ofType(Quantity)"
+            inputfile: 'Observation_1.json'
+            result: [ ]
+          - desc: '** Contains empty quantity in many **'
+            expression: "value.ofType(Quantity) contains {}"
+            inputfile: 'Observation_1.json'
+            result: [ ]
+subject:
+  prop: val
