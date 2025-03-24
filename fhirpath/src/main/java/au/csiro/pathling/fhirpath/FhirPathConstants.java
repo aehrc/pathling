@@ -15,26 +15,33 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.sql;
-
-import jakarta.annotation.Nonnull;
-import org.apache.spark.sql.Column;
+package au.csiro.pathling.fhirpath;
 
 /**
- * Pathling specific SQL functions.
+ * Constants for FHIRPath-related values.
  */
-public interface SqlExpressions {
+public interface FhirPathConstants {
 
   /**
-   * A function that removes all fields starting with '_' (underscore) from struct values. Other
-   * types of values are not affected.
-   *
-   * @param col the column to apply the function to
-   * @return the column transformed by the function
+   * Predefined variable names in FHIRPath expressions.
    */
+  interface PredefinedVariables {
 
-  @Nonnull
-  static Column pruneSyntheticFields(@Nonnull final Column col) {
-    return new Column(new PruneSyntheticFields(col.expr()));
+    String RESOURCE = "resource";
+    String ROOT_RESOURCE = "rootResource";
+    String CONTEXT = "context";
   }
+
+  /**
+   * Non-exhaustive list of FHIRPath function names.
+   */
+  interface Functions {
+
+    String RESOLVE = "resolve";
+    String REVERSE_RESOLVE = "reverseResolve";
+    String IIF = "iif";
+    String OF_TYPE = "ofType";
+    String EXTENSION = "extension";
+  }
+
 }

@@ -22,7 +22,7 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.execution.FhirpathExecutor;
-import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator.ManyProvider;
+import au.csiro.pathling.fhirpath.execution.FhirpathEvaluators.MultiEvaluatorProvider;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -85,7 +85,7 @@ public class AbstractParserTest {
 
   @Nonnull
   protected FhirpathExecutor createExecutor() {
-    return FhirpathExecutor.of(new Parser(), new ManyProvider(fhirContext,
+    return FhirpathExecutor.of(new Parser(), new MultiEvaluatorProvider(fhirContext,
         StaticFunctionRegistry.getInstance(), Map.of(), dataSource));
   }
 

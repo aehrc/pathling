@@ -26,13 +26,12 @@ import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.execution.EvaluatedPath;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
-import au.csiro.pathling.fhirpath.execution.JoinResolver;
-import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator.ManyFactory;
+import au.csiro.pathling.fhirpath.execution.FhirpathEvaluators.MultiEvaluatorFactory;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.query.ExpressionWithLabel;
-import au.csiro.pathling.sql.SqlExpressions;
+import au.csiro.pathling.sql.SqlFunctions;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
@@ -101,7 +100,7 @@ public class AggregateQueryExecutor extends QueryExecutor {
         .flatMap(List::stream)
         .toList();
 
-    final FhirpathEvaluator fhirEvaluator = ManyFactory.fromPaths(
+    final FhirpathEvaluator fhirEvaluator = MultiEvaluatorFactory.fromPaths(
         query.getSubjectResource(),
         fhirContext, dataSource,
         contextPaths).create(query.getSubjectResource());
@@ -143,14 +142,14 @@ public class AggregateQueryExecutor extends QueryExecutor {
     // normalize the grouping columns (prune the synthetic fields)
     final Column[] normalizedGroupingColumns = Stream.of(expandeDataset.columns())
         .limit(evaluatedGoupings.size())
-        .map(c -> SqlExpressions.pruneSyntheticFields(functions.col(c)).alias(c))
+        .map(c -> SqlFunctions.prune_annotations(functions.col(c)).alias(c))
         .toArray(Column[]::new);
 
     // compute the aggregation from the initial dataset
     final List<Column> dataColumns = Stream.of(filteredDataset.columns())
         // for external referenced use collect map otherwise use collect list
         .map(c -> c.contains("@")
-                  ? JoinResolver.collect_map(functions.col(c)).alias(c)
+                  ? SqlFunctions.collect_map(functions.col(c)).alias(c)
                   : functions.collect_list(functions.col(c)).alias(c))
         .toList();
 

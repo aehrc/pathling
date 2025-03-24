@@ -26,7 +26,7 @@ import jakarta.annotation.Nonnull;
 import java.util.Optional;
 
 public interface EvaluationContext {
-  
+
   @Nonnull
   Optional<ResourceCollection> resolveResource(@Nonnull final String resourceCode);
 
@@ -35,7 +35,8 @@ public interface EvaluationContext {
 
   @Nonnull
   ResourceCollection resolveReverseJoin(@Nonnull final ResourceCollection parentResource,
-      @Nonnull final String expression);
+      @Nonnull final String childResourceCode,
+      @Nonnull final String childReferenceToParentFhirpath);
 
   @Nonnull
   NamedFunction<Collection> resolveFunction(@Nonnull final String name)

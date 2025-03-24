@@ -16,7 +16,6 @@ import au.csiro.pathling.fhirpath.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.fhirpath.definition.fhir.FhirResourceTag;
 import au.csiro.pathling.fhirpath.execution.DefResourceResolver;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
-import au.csiro.pathling.fhirpath.execution.StdFhirpathEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -114,7 +113,7 @@ public class YamlTest {
     inputDS.show();
 
     final DefinitionContext definitionContext = DefDefinitionContext.of(subjectDefinition);
-    final FhirpathEvaluator evaluator = new StdFhirpathEvaluator(
+    final FhirpathEvaluator evaluator = new FhirpathEvaluator(
         DefResourceResolver.of(
             DefResourceTag.of("Test"),
             definitionContext,
@@ -219,7 +218,7 @@ public class YamlTest {
         inputDS
     );
 
-    final FhirpathEvaluator evaluator = new StdFhirpathEvaluator(
+    final FhirpathEvaluator evaluator = new FhirpathEvaluator(
         resolver,
         StaticFunctionRegistry.getInstance(),
         Map.of()
@@ -231,5 +230,4 @@ public class YamlTest {
     final Collection result = evaluator.evaluate(parser.parse("Patient.name"));
     ds.select(result.getColumn().asCanonical().getValue().alias("actual")).show();
   }
-
 }

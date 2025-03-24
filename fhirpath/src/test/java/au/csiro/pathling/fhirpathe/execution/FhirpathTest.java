@@ -1,10 +1,12 @@
 package au.csiro.pathling.fhirpathe.execution;
 
 import static au.csiro.pathling.test.helpers.SqlHelpers.sql_array;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhirpath.execution.FhirpathEvaluators.MultiEvaluatorProvider;
 import au.csiro.pathling.fhirpath.execution.FhirpathExecutor;
-import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator.ManyProvider;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
@@ -68,16 +70,15 @@ class FhirpathTest {
       @Nonnull final ResourceType subjectResource,
       @Nonnull final String fhirExpression) {
 
-    final Dataset<Row> resultDataset = createEvaluator(subjectResource, dataSource)
+    return createEvaluator(subjectResource, dataSource)
         .evaluate(subjectResource, fhirExpression)
         .toIdValueDataset();
-    return resultDataset;
   }
 
   @Nonnull
   FhirpathExecutor createEvaluator(@Nonnull final ResourceType subjectResource,
       @Nonnull final DataSource datasource) {
-    return FhirpathExecutor.of(new Parser(), new ManyProvider(encoders.getContext(),
+    return FhirpathExecutor.of(new Parser(), new MultiEvaluatorProvider(encoders.getContext(),
         StaticFunctionRegistry.getInstance(), Map.of(), datasource));
   }
 
@@ -773,5 +774,50 @@ class FhirpathTest {
             RowFactory.create("2", null),
             RowFactory.create("3", null)
         );
+  }
+
+
+  @Test
+  void simpleUnboundResourceReference() {
+    final ObjectDataSource dataSource = getPatientsWithConditions();
+
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.CONDITION,
+        "Patient.count()"
+    );
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("x", 3),
+            RowFactory.create("y", 3),
+            RowFactory.create("z", 3)
+        );
+  }
+
+  @Test
+  void complexUnboundResourceReference() {
+    final ObjectDataSource dataSource = getPatientsWithConditions();
+
+    final Dataset<Row> resultDataset = evalExpression(dataSource,
+        ResourceType.PATIENT,
+        "Condition.where(subject.getReferenceKey()=Patient.getResourceKey()).count()"
+    );
+    new DatasetAssert(resultDataset)
+        .hasRowsUnordered(
+            RowFactory.create("1", 2),
+            RowFactory.create("2", 1),
+            RowFactory.create("3", 0)
+        );
+  }
+
+  @Test
+  void unsupportedResolvesToForeignResources() {
+    final ObjectDataSource dataSource = getPatientsWithConditions();
+
+    final UnsupportedOperationException ex = assertThrows(UnsupportedOperationException.class,
+        () -> evalExpression(dataSource,
+            ResourceType.CONDITION,
+            "Patient.reverseResolve(Condition.subject).count()"
+        ));
+    assertEquals("Not implemented - nested resolves for foreign resources", ex.getMessage());
   }
 }

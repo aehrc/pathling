@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
 
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.Concepts;
@@ -43,6 +44,9 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.ArrayType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -464,6 +468,23 @@ public class Collection implements Comparable {
   @Nonnull
   public String getExpression() {
     return "??";
+  }
+
+  /**
+   * Determines if this collection represents a singular value in a context of a dataset.
+   * <p>
+   * This method examines the underlying dataset schema to determine if the column representing this
+   * collection is an array type or not.
+   *
+   * @param dataset The dataset that this collection can evaluate on
+   * @return true if the collection represents a singular value, false if it represents an array
+   */
+  public boolean isSingular(@Nonnull final Dataset<Row> dataset) {
+    // Singularity cannot be determined from the reference alone as its parents may not be singular
+    // Select the column on the parent dataset to check the representation
+    final Dataset<Row> referenceDataset = dataset.select(
+        getColumnValue().alias(randomAlias()));
+    return !(referenceDataset.schema().apply(0).dataType() instanceof ArrayType);
   }
 
   // TODO: Remove this after removing usages.
