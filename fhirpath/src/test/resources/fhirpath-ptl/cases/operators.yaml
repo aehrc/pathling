@@ -135,6 +135,45 @@ tests:
           - desc: '** Contains empty Integer in one **'
             expression: "oneInt contains {}"
             result: [ ]
+      - 'String type':
+          - desc: '** In for existing String in many **'
+            expression: "'test2' in manyString"
+            result: [ true ]
+          - desc: '** Contains for existing String in many **'
+            expression: "manyString contains 'test2'"
+            result: [ true ]
+          - desc: '** In for non-existing String in many **'
+            expression: "'test4' in manyString"
+            result: [ false ]
+          - desc: '** Contains non-existing String in many **'
+            expression: "manyString contains 'test4'"
+            result: [ false ]
+          - desc: '** In for empty String in many **'
+            expression: "{} in manyString"
+            result: [ ]
+          - desc: '** Contains empty String in many **'
+            expression: "manyString contains {}"
+            result: [ ]
+          - desc: '** In for existing String in one **'
+            expression: "'test' in oneString"
+            result: [ true ]
+          - desc: '** Contains for existing String in one **'
+            expression: "oneString contains 'test'"
+            result: [ true ]
+          - desc: '** In for non-existing String in one **'
+            expression: "'test2' in oneString"
+            result: [ false ]
+          - desc: '** Contains non-existing String in one **'
+            expression: "oneString contains 'test2'"
+            result: [ false ]
+          - desc: '** In for empty String in one **'
+            expression: "{} in oneString"
+            result: [ ]
+          - desc: '** Contains empty String in one **'
+            expression: "oneString contains {}"
+            result: [ ]
 subject:
   oneInt: 1
   manyInt: [ 1, 2, 3 ]
+  oneString: "test"
+  manyString: [ "test1", "test2", "test3" ]
