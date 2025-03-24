@@ -437,11 +437,6 @@ excludeSet:
         any:
           - "** Can divide two numbers"
           - "** Can divide two number literals"
-      - title: "'*' operator should fail on Strings"
-        id: '#2155'
-        type: bug
-        any:
-          - "** Error multiplying string (3)"
       - title: "'*' operator does not singularise arguments"
         type: bug
         any:
@@ -512,9 +507,9 @@ excludeSet:
         type: bug
         expression:
           - "@T\\d{2}:\\d{2}(:\\d{2})?Z"
-      - title: "Incorrect '+' operator for strings"
+      - title: "Implement '+' operator for strings"
         id: '#2154'
-        type: bug
+        type: feature
         any:
           - "** Can concatenate two strings with +"
           - "** Null in concatenation is treated as an empty collection (2)"
@@ -776,11 +771,6 @@ excludeSet:
         type: bug
         any:
           - "'a'+'b' = 'ab'"
-      - title: "subtraction '-' operator on strings should fail"
-        id: '#2155'
-        type: bug
-        any:
-          - "'a'-'b' = 'ab'"
       - title: "Extensions on primitive types not supported"
         type: feature
         any:
