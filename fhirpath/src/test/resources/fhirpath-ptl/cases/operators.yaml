@@ -102,6 +102,39 @@ tests:
           - desc: '** In for existing Integer in many **'
             expression: "2 in manyInt"
             result: [ true ]
+          - desc: '** Contains for existing Integer in many **'
+            expression: "manyInt contains 2"
+            result: [ true ]
+          - desc: '** In for non-existing Integer in many **'
+            expression: "5 in manyInt"
+            result: [ false ]
+          - desc: '** Contains non-existing Integer in many **'
+            expression: "manyInt contains 5"
+            result: [ false ]
+          - desc: '** In for empty Integer in many **'
+            expression: "{} in manyInt"
+            result: [ ]
+          - desc: '** Contains empty Integer in many **'
+            expression: "manyInt contains {}"
+            result: [ ]
+          - desc: '** In for existing Integer in one **'
+            expression: "1 in oneInt"
+            result: [ true ]
+          - desc: '** Contains for existing Integer in one **'
+            expression: "oneInt contains 1"
+            result: [ true ]
+          - desc: '** In for non-existing Integer in one **'
+            expression: "2 in oneInt"
+            result: [ false ]
+          - desc: '** Contains non-existing Integer in one **'
+            expression: "oneInt contains 2"
+            result: [ false ]
+          - desc: '** In for empty Integer in one **'
+            expression: "{} in oneInt"
+            result: [ ]
+          - desc: '** Contains empty Integer in one **'
+            expression: "oneInt contains {}"
+            result: [ ]
 subject:
   oneInt: 1
   manyInt: [ 1, 2, 3 ]
