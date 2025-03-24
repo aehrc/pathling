@@ -19,7 +19,6 @@ import au.csiro.pathling.fhirpath.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.fhirpath.definition.fhir.FhirResourceTag;
 import au.csiro.pathling.fhirpath.execution.DefResourceResolver;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
-import au.csiro.pathling.fhirpath.execution.StdFhirpathEvaluator;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.TestResources;
@@ -186,7 +185,7 @@ public abstract class YamlSpecTestBase {
 
     @Override
     public void check(@Nonnull final ResolverBuilder rb) {
-      final FhirpathEvaluator evaluator = StdFhirpathEvaluator
+      final FhirpathEvaluator evaluator = FhirpathEvaluator
           .fromResolver(rb.create(resolverFactory))
           .evalOptions(EvalOptions.builder().allowUndefinedFields(true).build())
           .build();
@@ -350,7 +349,7 @@ public abstract class YamlSpecTestBase {
           .flatMap(c -> Optional.ofNullable(c.getAnnotation(YamlConfig.class)))
           .map(YamlConfig::resourceBase)
           .filter(s -> !s.isBlank());
-      
+
       testConfigPath.ifPresent(s -> log.info("Loading test config from: {}", s));
       resourceBase.ifPresent(s -> log.info("Resource base : {}", s));
 

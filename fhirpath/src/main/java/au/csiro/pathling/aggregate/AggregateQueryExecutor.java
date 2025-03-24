@@ -26,7 +26,7 @@ import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.execution.EvaluatedPath;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
-import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator.ManyFactory;
+import au.csiro.pathling.fhirpath.execution.FhirpathEvaluators.MultiEvaluatorFactory;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
@@ -100,7 +100,7 @@ public class AggregateQueryExecutor extends QueryExecutor {
         .flatMap(List::stream)
         .toList();
 
-    final FhirpathEvaluator fhirEvaluator = ManyFactory.fromPaths(
+    final FhirpathEvaluator fhirEvaluator = MultiEvaluatorFactory.fromPaths(
         query.getSubjectResource(),
         fhirContext, dataSource,
         contextPaths).create(query.getSubjectResource());

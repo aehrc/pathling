@@ -302,7 +302,7 @@ public class DataRootResolver {
       throw new IllegalArgumentException(
           "Cannot resolve reference types for untyped root:" + contextRoot);
     }
-    final FhirpathEvaluator evaluator = NullEvaluator.of(contextRoot.getResourceType(),
+    final FhirpathEvaluator evaluator = FhirpathEvaluators.createNull(contextRoot.getResourceType(),
         fhirContext);
     final ReferenceCollection referenceCollection = Optional.of(evaluator.evaluate(traversalPath))
         .flatMap(maybeCast(ReferenceCollection.class))

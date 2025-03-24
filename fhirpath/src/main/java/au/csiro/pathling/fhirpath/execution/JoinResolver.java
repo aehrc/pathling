@@ -704,7 +704,7 @@ public class JoinResolver {
    */
   @Nonnull
   private FhirpathEvaluator createEvaluator(@Nonnull final ResourceType subjectResourceType) {
-    return SingleFhirpathEvaluator.of(subjectResourceType,
+    return FhirpathEvaluators.createSingle(subjectResourceType,
         fhirContext, StaticFunctionRegistry.getInstance(),
         Collections.emptyMap(), dataSource);
   }
