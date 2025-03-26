@@ -33,6 +33,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MultiSet;
@@ -40,9 +41,11 @@ import org.apache.commons.collections4.multiset.HashMultiSet;
 import org.apache.commons.io.file.SimplePathVisitor;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 
 /**
  * @author Piotr Szul
@@ -240,8 +243,24 @@ public class DatasetAssert {
         "Rows saved to CSV, check that the file is correct and replace this line with an assertion");
   }
 
-  private static class DeleteDirectoryVisitor extends SimplePathVisitor {
 
+  @Nonnull
+  @SuppressWarnings({"unused", "UnusedReturnValue"})
+  public DatasetAssert printAsTsv() {
+    dataset.select(
+            functions.array_join(
+                functions.array(
+                    Stream.of(dataset.columns()).map(functions::col).toArray(Column[]::new)), "\t"
+            ).as("value"))
+        .as(Encoders.STRING())
+        .collectAsList()
+        .forEach(System.out::println);
+    return this;
+  }
+
+
+  private static class DeleteDirectoryVisitor extends SimplePathVisitor {
+    
     @Override
     public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs)
         throws IOException {

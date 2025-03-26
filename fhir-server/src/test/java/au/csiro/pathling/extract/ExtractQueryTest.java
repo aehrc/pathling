@@ -26,7 +26,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.config.QueryConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.query.ExpressionWithLabel;
@@ -37,7 +36,6 @@ import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import au.csiro.pathling.utilities.Strings;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.parser.IParser;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -47,7 +45,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -73,7 +70,7 @@ class ExtractQueryTest {
 
   @Autowired
   TerminologyServiceFactory terminologyServiceFactory;
-  
+
   @MockBean
   CacheableDatabase dataSource;
 
@@ -369,8 +366,8 @@ class ExtractQueryTest {
     mockResource(subjectResource);
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
-        .withColumn("id")
         .withColumn("name.family")
+        .withColumn("id")
         .withColumn("name.given")
         .build();
 
@@ -497,7 +494,6 @@ class ExtractQueryTest {
         .hasRows(spark, "responses/ExtractQueryTest/combineWithLiterals.tsv");
   }
 
-  @Disabled("TODO: Define unnesting rules for operators")
   @Test
   void combineWithUnequalCardinalities() {
     subjectResource = ResourceType.PATIENT;
@@ -506,14 +502,48 @@ class ExtractQueryTest {
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
         .withColumn("id")
         .withColumn("name.given")
-        .withColumn("name.family")
-        .withColumn("name.given combine name.family")
+        .withColumn("name.family combine 'Smith'")
         .build();
 
     final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/combineWithUnequalCardinalities.tsv");
   }
+
+  @Test
+  void singularizeExpressions() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("name.family = 'Oberbrunner298'")
+        .withColumn("name.family.first()")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/singularizeExpression.tsv");
+  }
+
+
+  @Test
+  void aggregations() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("name.family")
+        .withColumn("name.first().family")
+        .withColumn("name.count()")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/aggregations.tsv");
+  }
+
 
   void mockResource(final ResourceType... resourceTypes) {
     TestHelpers.mockResource(dataSource, spark, resourceTypes);

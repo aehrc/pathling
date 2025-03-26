@@ -30,7 +30,7 @@ import au.csiro.pathling.fhirpath.execution.EvaluatedPath;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluators.MultiEvaluatorFactory;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.fhirpath.path.Paths.This;
+import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -185,7 +185,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
     // I think I just need to inline the main resource
     // TODO: there might be a better way to do this just by looking at the structur
     final Dataset<Row> resourceDataset = filteredDataset.select(functions.inline(
-        fhirEvaluator.evaluate(new This()).getColumn().toArray().getValue()
+        fhirEvaluator.evaluate(Paths.thisPath()).getColumn().toArray().getValue()
     ));
 
     final WindowSpec window = Window.orderBy(col("id"));

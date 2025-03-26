@@ -32,7 +32,6 @@ import au.csiro.pathling.fhirpath.operator.BinaryOperatorInput;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import au.csiro.pathling.fhirpath.operator.UnaryOperator;
 import jakarta.annotation.Nonnull;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -43,6 +42,24 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 @UtilityClass
 final public class Paths {
+
+  /**
+   * Gets the `$this` path.
+   * <p>
+   * `$this`   is now represented by the nullPath(). The implication is that  `$this`  will only
+   * appear in fhir paths is explicitly needed. In all cases when $this is followed another path
+   * element it is stripped.
+   * <p>
+   * For example: 
+   * <pre>`where($this.name = 'foo')` is converted to `where(name = 'foo')`</pre>
+   * but:
+   * <pre>`where($this = 'foo')` remains `where($this = 'foo')`</pre>
+   *
+   * @return the `$this` path
+   */
+  public static FhirPath thisPath() {
+    return FhirPath.nullPath();
+  }
 
   @Value
   public static class ExternalConstantPath implements FhirPath {
@@ -84,15 +101,6 @@ final public class Paths {
 
 
     @Override
-    @Nonnull
-    public FhirPath withNewChildren(@Nonnull final List<FhirPath> newChildren) {
-      if (newChildren.size() != 2) {
-        throw new IllegalArgumentException("EvalOperator must have exactly two children");
-      }
-      return new EvalOperator(newChildren.get(0), newChildren.get(1), operator);
-    }
-
-    @Override
     public Stream<FhirPath> children() {
       return Stream.of(leftPath, rightPath);
     }
@@ -124,6 +132,22 @@ final public class Paths {
         return arg.toExpression();
       }
     }
+
+    @Override
+    @Nonnull
+    public FhirPath prefix() {
+      return leftPath.isNull()
+             ? this
+             : leftPath.head();
+    }
+
+    @Override
+    @Nonnull
+    public FhirPath xsuffix() {
+      return leftPath.isNull()
+             ? FhirPath.nullPath()
+             : new EvalOperator(leftPath.tail(), rightPath, operator);
+    }
   }
 
   @Value
@@ -152,14 +176,6 @@ final public class Paths {
       return Stream.of(path);
     }
 
-    @Override
-    @Nonnull
-    public FhirPath withNewChildren(@Nonnull final List<FhirPath> newChildren) {
-      if (newChildren.size() != 1) {
-        throw new IllegalArgumentException("EvalUnaryOperator must have exactly one child");
-      }
-      return new EvalUnaryOperator(newChildren.get(0), operator);
-    }
   }
 
 
@@ -199,15 +215,6 @@ final public class Paths {
       return arguments.stream();
     }
 
-    @Override
-    @Nonnull
-    public FhirPath withNewChildren(@Nonnull final List<FhirPath> newChildren) {
-      if (newChildren.size() != arguments.size()) {
-        throw new IllegalArgumentException(
-            "EvalFunction must have exactly " + arguments.size() + " children");
-      }
-      return new EvalFunction(functionIdentifier, Collections.unmodifiableList(newChildren));
-    }
   }
 
   @Value
@@ -261,20 +268,4 @@ final public class Paths {
     }
   }
 
-  // TODO: replace with FhirPath::This
-  @Value
-  public static class This implements FhirPath {
-
-    @Override
-    public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      return input;
-    }
-
-    @Nonnull
-    @Override
-    public String toExpression() {
-      return "$this";
-    }
-  }
 }

@@ -14,7 +14,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "(reverseResolve(Observation.subject).where($this.code.coding.code contains '8302-2').status) contains 'final'"
+          "valueString": "(reverseResolve(Observation.subject).where(code.coding.code contains '8302-2').status) contains 'final'"
         }
       ]
     }

@@ -40,6 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.StructField;
@@ -155,6 +156,14 @@ public class Projection {
   @Nonnull
   private Column renderColumn(@Nonnull final Collection collection) {
 
+    // These should always be unresolved atttirbute columns
+    // so we can get their names this way
+    final Column collectionColumn = collection.getColumn().getValue();
+    if (!(collectionColumn.expr() instanceof UnresolvedAttribute)) {
+      throw new IllegalStateException("Expected unresolved attribute column");
+    }
+    final String alias = collectionColumn.toString();
+
     final Collection finalResult;
     if (FLAT.equals(constraint)) {
       // If we are constrained to a flat result, we need to coerce the collection to a string.
@@ -168,7 +177,8 @@ public class Projection {
       // Otherwise, we can use the collection as-is.
       finalResult = collection;
     }
-    return finalResult.getColumn().getValue();
+    // re-alias the column
+    return finalResult.getColumn().getValue().alias(alias);
   }
 
 
