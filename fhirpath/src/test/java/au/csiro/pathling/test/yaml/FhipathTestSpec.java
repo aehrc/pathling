@@ -1,5 +1,6 @@
 package au.csiro.pathling.test.yaml;
 
+import static au.csiro.pathling.test.yaml.YamlSupport.YAML;
 import static java.util.Objects.requireNonNull;
 
 import jakarta.annotation.Nonnull;
@@ -9,16 +10,12 @@ import java.util.Map;
 import java.util.stream.Stream;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
-import org.yaml.snakeyaml.Yaml;
 
 
 @SuppressWarnings("unchecked")
 @Value
 @Slf4j
 public class FhipathTestSpec {
-
-
-  private static final Yaml YAML_PARSER = new Yaml();
 
   @Value
   public static class TestCase {
@@ -93,7 +90,7 @@ public class FhipathTestSpec {
 
   @Nonnull
   static FhipathTestSpec fromYaml(@Nonnull final String yamlData) {
-    Map<String, Object> yamlOM = YAML_PARSER.load(yamlData);
+    Map<String, Object> yamlOM = YAML.load(yamlData);
     return new FhipathTestSpec(
         (Map<Object, Object>) yamlOM.get("subject"),
         buildCases((List<Object>) requireNonNull(yamlOM.get("tests")))
