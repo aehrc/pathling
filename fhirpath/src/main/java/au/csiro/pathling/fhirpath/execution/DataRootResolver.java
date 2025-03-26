@@ -118,7 +118,7 @@ public class DataRootResolver {
   @Nonnull
   public Set<DataRoot> findDataRoots(@Nonnull final Collection<FhirPath> paths) {
     // always include this as  context path
-    return Stream.concat(Stream.of(new Paths.This()), paths.stream())
+    return Stream.concat(Stream.of(Paths.thisPath()), paths.stream())
         .map(this::findDataRoots)
         .flatMap(Collection::stream)
         .collect(Collectors.toUnmodifiableSet());
@@ -141,7 +141,7 @@ public class DataRootResolver {
       @Nonnull final FhirPath traversalPath,
       @Nonnull final Set<DataRoot> dataRoots) {
 
-    final FhirPath headPath = fhirPath.first();
+    final FhirPath headPath = fhirPath.head();
 
     if (asResource(headPath, fhirContext) instanceof Resource resource) {
       handleResourcePath(contextRoot, fhirPath, traversalPath, dataRoots, resource);
@@ -171,7 +171,7 @@ public class DataRootResolver {
     // clear the traversalPath as we are starting from a new root
     final ResourceRoot resourceRoot = ResourceRoot.of(resource.getResourceType());
     dataRoots.add(resourceRoot);
-    collectDataRoots(resourceRoot, fhirPath.suffix(), FhirPath.nullPath(), dataRoots);
+    collectDataRoots(resourceRoot, fhirPath.tail(), FhirPath.nullPath(), dataRoots);
   }
 
   private void handleReverseResolvePath(@Nonnull final DataRoot contextRoot,
@@ -184,7 +184,7 @@ public class DataRootResolver {
     final ReverseResolveRoot reverseResolveRoot = ReverseResolveRoot.fromReverseResolve(contextRoot,
         reverseResolve);
     dataRoots.add(reverseResolveRoot);
-    collectDataRoots(reverseResolveRoot, fhirPath.suffix(), FhirPath.nullPath(), dataRoots);
+    collectDataRoots(reverseResolveRoot, fhirPath.tail(), FhirPath.nullPath(), dataRoots);
   }
 
   private void handleResolvePath(@Nonnull final DataRoot contextRoot,
@@ -206,7 +206,7 @@ public class DataRootResolver {
       // untyped resolve roots are added if when their type is resolved with ofType() path
       dataRoots.add(resolveRoot);
     }
-    collectDataRoots(resolveRoot, fhirPath.suffix(), FhirPath.nullPath(), dataRoots);
+    collectDataRoots(resolveRoot, fhirPath.tail(), FhirPath.nullPath(), dataRoots);
   }
 
   private void handleOfTypePath(@Nonnull final DataRoot contextRoot,
@@ -222,11 +222,11 @@ public class DataRootResolver {
       final TypeSpecifier typeSpecifier = getTypeSpecifierArg(ofType, 0);
       final ResolveRoot typedRoot = rr.resolveType(typeSpecifier.toResourceType());
       dataRoots.add(typedRoot);
-      collectDataRoots(typedRoot, fhirPath.suffix(), FhirPath.nullPath(), dataRoots);
+      collectDataRoots(typedRoot, fhirPath.tail(), FhirPath.nullPath(), dataRoots);
     } else {
       // we assume that the path is valid so we just add the ofType to the traversal path
       // to resolve the type of the polymorphic collection
-      collectDataRoots(contextRoot, fhirPath.suffix(), traversalPath.andThen(ofType),
+      collectDataRoots(contextRoot, fhirPath.tail(), traversalPath.andThen(ofType),
           dataRoots);
     }
   }
@@ -244,7 +244,7 @@ public class DataRootResolver {
         .equals(ecp.getName())) {
       // we do not add a new as the subject root should already be added but 
       // we need to switch context to the subject root and start with the empty traversal path
-      collectDataRoots(ResourceRoot.of(subjectResource), fhirPath.suffix(), FhirPath.nullPath(),
+      collectDataRoots(ResourceRoot.of(subjectResource), fhirPath.tail(), FhirPath.nullPath(),
           dataRoots);
     }
     // other variables should be literals so we should not need to resolve them
@@ -260,7 +260,7 @@ public class DataRootResolver {
     // for example `iif(..., resolve().id).ofType(Condition)` the true branch of the iif 
     // needs to be resolved to identify the type of the reference
     FhirPathsUtils.getPropagatesArguments(headPath)
-        .forEach(head -> collectDataRoots(contextRoot, head.andThen(fhirPath.suffix()),
+        .forEach(head -> collectDataRoots(contextRoot, head.andThen(fhirPath.tail()),
             traversalPath, dataRoots));
   }
 
@@ -275,7 +275,7 @@ public class DataRootResolver {
         .forEach(child -> collectDataRoots(contextRoot, child, traversalPath, dataRoots));
     // and then for the rest of the path extending the traversal path if needed
     final FhirPath newTraversalPath = traversalPath.andThen(FhirPathsUtils.toTraversal(headPath));
-    collectDataRoots(contextRoot, fhirPath.suffix(), newTraversalPath, dataRoots);
+    collectDataRoots(contextRoot, fhirPath.tail(), newTraversalPath, dataRoots);
   }
 
   private void handleNullPath(@Nonnull final DataRoot contextRoot) {

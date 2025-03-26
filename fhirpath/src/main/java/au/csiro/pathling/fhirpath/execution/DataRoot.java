@@ -224,8 +224,8 @@ public interface DataRoot {
     @Nonnull
     public static ReverseResolveRoot fromChildPath(@Nonnull final DataRoot master,
         @Nonnull final FhirPath childRefToParent) {
-      final Resource foreingResource = (Resource) childRefToParent.first();
-      final FhirPath foreignResourcePath = childRefToParent.suffix();
+      final Resource foreingResource = (Resource) childRefToParent.head();
+      final FhirPath foreignResourcePath = childRefToParent.tail();
       if (foreignResourcePath.isNull() || !FhirPathsUtils.isTraversalOnly(foreignResourcePath)) {
         throw new IllegalArgumentException(
             "Invalid reverse resolve path: " + foreignResourcePath.toExpression());

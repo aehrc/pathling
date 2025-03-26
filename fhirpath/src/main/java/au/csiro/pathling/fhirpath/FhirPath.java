@@ -56,7 +56,7 @@ public interface FhirPath {
    *
    * @return the rest of the path after the prefix element
    */
-  default FhirPath suffix() {
+  default FhirPath xsuffix() {
     return tail();
   }
 

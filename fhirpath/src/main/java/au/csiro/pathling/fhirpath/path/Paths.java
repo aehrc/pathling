@@ -143,7 +143,7 @@ final public class Paths {
 
     @Override
     @Nonnull
-    public FhirPath suffix() {
+    public FhirPath xsuffix() {
       return leftPath.isNull()
              ? FhirPath.nullPath()
              : new EvalOperator(leftPath.tail(), rightPath, operator);

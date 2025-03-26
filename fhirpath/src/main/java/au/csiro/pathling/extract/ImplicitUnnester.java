@@ -132,7 +132,7 @@ public class ImplicitUnnester {
      */
     @Nonnull
     public FhirPathWithTag suffix() {
-      return FhirPathWithTag.of(path.suffix(), tag);
+      return FhirPathWithTag.of(path.xsuffix(), tag);
     }
 
     /**
