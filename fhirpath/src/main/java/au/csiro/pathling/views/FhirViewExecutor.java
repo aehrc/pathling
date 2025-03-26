@@ -4,7 +4,7 @@ import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.execution.SingleFhirpathEvaluator;
+import au.csiro.pathling.fhirpath.execution.FhirpathEvaluators.SingleEvaluatorFactory;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.utilities.Lists;
@@ -75,7 +75,7 @@ public class FhirViewExecutor {
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final FhirView view) {
     final ExecutionContext executionContext = new ExecutionContext(sparkSession,
-        SingleFhirpathEvaluator.SingleFactory.of(fhirContext, dataSource)
+        SingleEvaluatorFactory.of(fhirContext, dataSource)
     );
     final Projection projection = buildProjection(view);
     return projection.execute(executionContext);

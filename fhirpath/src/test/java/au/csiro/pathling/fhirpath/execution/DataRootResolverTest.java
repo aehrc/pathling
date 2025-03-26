@@ -132,5 +132,25 @@ class DataRootResolverTest {
             "subject")
     ), roots);
   }
-  
+
+  @Test
+  void unboundSubjectResource() {
+    final Set<DataRoot> roots = getDataRoots(ResourceType.PATIENT,
+        "Patient.count())");
+    roots.forEach(System.out::println);
+    assertEquals(Set.of(
+        ResourceRoot.of(ResourceType.PATIENT)
+    ), roots);
+  }
+
+  @Test
+  void unboundForeignResource() {
+    final Set<DataRoot> roots = getDataRoots(ResourceType.PATIENT,
+        "Condition.count())");
+    roots.forEach(System.out::println);
+    assertEquals(Set.of(
+        ResourceRoot.of(ResourceType.PATIENT),
+        ResourceRoot.of(ResourceType.CONDITION)
+    ), roots);
+  }
 }

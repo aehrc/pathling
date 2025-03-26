@@ -28,7 +28,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.execution.EvaluatedPath;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
-import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator.ManyFactory;
+import au.csiro.pathling.fhirpath.execution.FhirpathEvaluators.MultiEvaluatorFactory;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.io.Database;
@@ -159,7 +159,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
         .flatMap(List::stream)
         .toList();
 
-    final FhirpathEvaluator fhirEvaluator = ManyFactory.fromPaths(
+    final FhirpathEvaluator fhirEvaluator = MultiEvaluatorFactory.fromPaths(
         subjectResource,
         fhirContext, dataSource,
         filterPaths).create(subjectResource);

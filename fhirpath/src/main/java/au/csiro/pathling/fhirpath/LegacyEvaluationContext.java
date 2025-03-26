@@ -189,7 +189,8 @@ public class LegacyEvaluationContext implements EvaluationContext {
   @Nonnull
   @Override
   public ResourceCollection resolveReverseJoin(@Nonnull final ResourceCollection parentResource,
-      @Nonnull final String expression) {
+      @Nonnull final String childResourceCode,
+      @Nonnull final String childReferenceToParentFhirpath) {
     throw new UnsupportedOperationException("resolveReverseJoin() not supported in this context");
   }
 }

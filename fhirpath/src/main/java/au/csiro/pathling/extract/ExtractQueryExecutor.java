@@ -7,7 +7,7 @@ import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.extract.ImplicitUnnester.FhirPathWithTag;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.execution.MultiFhirpathEvaluator;
+import au.csiro.pathling.fhirpath.execution.FhirpathEvaluators.MultiEvaluatorFactory;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.query.ExpressionWithLabel;
@@ -116,7 +116,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
         ).toList();
 
     final ExecutionContext executionContext = new ExecutionContext(sparkSession,
-        MultiFhirpathEvaluator.ManyFactory.fromPaths(
+        MultiEvaluatorFactory.fromPaths(
             query.getSubjectResource(),
             fhirContext, dataSource,
             contextPaths
