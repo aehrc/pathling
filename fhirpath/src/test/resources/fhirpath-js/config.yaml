@@ -402,24 +402,11 @@ excludeSet:
         any:
           - "el in coll"
           - "not_el in coll"
-      - title: "'in' operator should return empty when left argument is empty"
-        id: '#2175'
-        type: bug
-        any:
-          - "ups in coll"
-          - "ups in emptycoll"
       - title: "'contains' operator on element types fails"
         type: bug
         any:
           - "coll contains el"
           - "coll contains not_el"
-      - title: "'contains' operator should return empty when right argument is empty"
-        id: '#2175'
-        type: bug
-        any:
-          - "coll contains empty"
-          - "coll contains ups"
-          - "emptycoll contains ups"
   - title: Math 6 exclusions
     glob: "fhirpath-js/cases/6.6_math.yaml"
     exclude:

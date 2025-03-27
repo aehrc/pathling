@@ -30,12 +30,10 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.sql.misc.ToNull;
 import jakarta.annotation.Nonnull;
-
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Stream;
-
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.catalyst.expressions.ArrayJoin;
 import org.apache.spark.sql.catalyst.expressions.Literal;
@@ -570,7 +568,8 @@ public abstract class ColumnRepresentation {
 
   /**
    * Checks if the current {@link ColumnRepresentation} contains to another one using a specified
-   * comparator.
+   * comparator. If the tested element is NULL the reuslt is also NULL. If the tested collection is
+   * NULL the result is false.
    *
    * @param element The element to check for
    * @param comparator The comparator to use
@@ -580,9 +579,11 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation contains(@Nonnull final ColumnRepresentation element,
       @Nonnull final BiFunction<Column, Column, Column> comparator) {
     return vectorize(
-        a -> functions.coalesce(functions.exists(a, e -> comparator.apply(e, element.getValue())),
-            functions.lit(false)),
-        c -> functions.coalesce(comparator.apply(c, element.getValue()), functions.lit(false))
+        a -> functions.when(element.getValue().isNotNull(),
+            functions.coalesce(functions.exists(a, e -> comparator.apply(e, element.getValue())),
+                functions.lit(false))),
+        c -> functions.when(element.getValue().isNotNull(),
+            functions.coalesce(comparator.apply(c, element.getValue()), functions.lit(false)))
     );
   }
 

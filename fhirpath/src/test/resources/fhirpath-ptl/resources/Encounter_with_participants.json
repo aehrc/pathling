@@ -1,0 +1,59 @@
+{
+  "resourceType": "Encounter",
+  "id": "example-with-participants",
+  "status": "finished",
+  "class": {
+    "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+    "code": "AMB",
+    "display": "ambulatory"
+  },
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "participant": [
+    {
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+              "code": "PPRF",
+              "display": "primary performer"
+            }
+          ]
+        }
+      ],
+      "period": {
+        "start": "2023-01-02T14:00:00Z",
+        "end": "2023-01-02T15:30:00Z"
+      },
+      "individual": {
+        "reference": "Practitioner/example"
+      }
+    },
+    {
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+              "code": "SPRF",
+              "display": "secondary performer"
+            }
+          ]
+        }
+      ],
+      "period": {
+        "start": "2023-01-03T09:30:00Z",
+        "end": "2023-01-03T11:00:00Z"
+      },
+      "individual": {
+        "reference": "Practitioner/example-assistant"
+      }
+    }
+  ],
+  "period": {
+    "start": "2023-01-02T14:00:00Z",
+    "end": "2023-01-03T11:00:00Z"
+  }
+}

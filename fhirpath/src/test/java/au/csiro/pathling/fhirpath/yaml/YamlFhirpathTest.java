@@ -1,9 +1,14 @@
 package au.csiro.pathling.fhirpath.yaml;
 
+import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.test.yaml.YamlConfig;
 import au.csiro.pathling.test.yaml.YamlSpec;
-import au.csiro.pathling.test.yaml.YamlSpecTestBase;
+import au.csiro.pathling.test.yaml.YamlSpecCachedTestBase;
 import jakarta.annotation.Nonnull;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Tag;
 
@@ -12,7 +17,16 @@ import org.junit.jupiter.api.Tag;
 @YamlConfig(
     resourceBase = "fhirpath-ptl/resources"
 )
-public class YamlFhirpathTest extends YamlSpecTestBase {
+public class YamlFhirpathTest extends YamlSpecCachedTestBase {
+
+  @Nonnull
+  private static final Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> CACHE =
+      Collections.synchronizedMap(new HashMap<>());
+
+  @Override
+  protected Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> getResolverCache() {
+    return CACHE;
+  }
 
   @YamlSpec("fhirpath-ptl/cases/literals.yaml")
   void testLiterals(@Nonnull final RuntimeCase testCase) {
@@ -39,4 +53,8 @@ public class YamlFhirpathTest extends YamlSpecTestBase {
     run(testCase);
   }
 
+  @YamlSpec("fhirpath-ptl/cases/operators.yaml")
+  void testOperators(@Nonnull final RuntimeCase testCase) {
+    run(testCase);
+  }
 }

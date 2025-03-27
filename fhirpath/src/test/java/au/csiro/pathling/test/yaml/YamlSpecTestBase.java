@@ -271,8 +271,11 @@ public abstract class YamlSpecTestBase {
       final DefResourceDefinition subjectDefinition = (DefResourceDefinition) YamlSupport
           .yamlToDefinition(subjectResourceCode, subjectOM);
       final StructType subjectSchema = YamlSupport.defnitiontoStruct(subjectDefinition);
+      
+      final String subjectOMJson = YamlSupport.omToJson(subjectOM);
+      log.trace("subjectOMJson: \n" + subjectOMJson);
       final Dataset<Row> inputDS = rt.getSpark().read().schema(subjectSchema)
-          .json(rt.getSpark().createDataset(List.of(YamlSupport.omToJson(subjectOM)),
+          .json(rt.getSpark().createDataset(List.of(subjectOMJson),
               Encoders.STRING()));
 
       log.trace("Yaml definition: {}", subjectDefinition);
