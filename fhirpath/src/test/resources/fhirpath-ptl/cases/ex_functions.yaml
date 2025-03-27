@@ -1,0 +1,81 @@
+tests:
+  - 'Testing the anyTrue() function in various scenarios':
+      - desc: '** Empty literal should return false **'
+        expression: '{}.anyTrue()'
+        result: [ false ]
+      - desc: '** Empty collection should return false **'
+        expression: 'nothing.anyTrue()'
+        result: [ false ]
+      - desc: '** Collection with single true value should return true **'
+        expression: 'b1.anyTrue()'
+        result: [ true ]
+      - desc: '** Collection with single false value should return false **'
+        expression: 'b2.anyTrue()'
+        result: [ false ]
+      - desc: '** Collection with all true values should return true **'
+        expression: 'bn1.anyTrue()'
+        result: [ true ]
+      - desc: '** Collection with all false values should return false **'
+        expression: 'bn2.anyTrue()'
+        result: [ false ]
+      - desc: '** Collection with mixed values should return true **'
+        expression: 'bn3.anyTrue()'
+        result: [ true ]
+      - desc: '** Collection with one true among false values should return true **'
+        expression: 'bn4.anyTrue()'
+        result: [ true ]
+      - desc: '** Boolean expressions collection with some true values should return true **'
+        expression: '{1 > 0, 2 < 1, 3 = 3}.anyTrue()'
+        result: [ true ]
+      - desc: '** Boolean expressions collection with all false values should return false **'
+        expression: '{1 < 0, 2 < 1, 3 != 3}.anyTrue()'
+        result: [ false ]
+      - desc: '** Observation component values check **'
+        expression: 'component.select(value.ofType(Quantity) > 90 \'mm[Hg]\').anyTrue()'
+        inputfile: 'Observation_3_comp.json'
+        result: [ true ]
+  - 'Testing the anyFalse() function in various scenarios':
+      - desc: '** Empty literal should return false **'
+        expression: '{}.anyFalse()'
+        result: [ false ]
+      - desc: '** Empty collection should return false **'
+        expression: 'nothing.anyFalse()'
+        result: [ false ]
+      - desc: '** Collection with single true value should return false **'
+        expression: 'b1.anyFalse()'
+        result: [ false ]
+      - desc: '** Collection with single false value should return true **'
+        expression: 'b2.anyFalse()'
+        result: [ true ]
+      - desc: '** Collection with all true values should return false **'
+        expression: 'bn1.anyFalse()'
+        result: [ false ]
+      - desc: '** Collection with all false values should return true **'
+        expression: 'bn2.anyFalse()'
+        result: [ true ]
+      - desc: '** Collection with mixed values should return true **'
+        expression: 'bn3.anyFalse()'
+        result: [ true ]
+      - desc: '** Collection with one false among true values should return true **'
+        expression: 'bn5.anyFalse()'
+        result: [ true ]
+      - desc: '** Boolean expressions collection with some false values should return true **'
+        expression: '{1 > 0, 2 < 1, 3 = 3}.anyFalse()'
+        result: [ true ]
+      - desc: '** Boolean expressions collection with all true values should return false **'
+        expression: '{1 > 0, 2 > 1, 3 = 3}.anyFalse()'
+        result: [ false ]
+      - desc: '** Observation component values check **'
+        expression: 'component.select(value.ofType(Quantity) < 90 \'mm[Hg]\').anyFalse()'
+        inputfile: 'Observation_3_comp.json'
+        result: [ true ]
+subject:
+  resourceType: Test
+  nothing: []
+  b1: true
+  b2: false
+  bn1: [ true, true, true ]
+  bn2: [ false, false, false ]
+  bn3: [ true, false, true ]
+  bn4: [ false, false, true, false ]
+  bn5: [ true, true, false, true ]
