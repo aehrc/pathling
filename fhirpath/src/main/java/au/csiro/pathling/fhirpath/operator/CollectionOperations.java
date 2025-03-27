@@ -73,8 +73,12 @@ public class CollectionOperations {
     final BiFunction<Column, Column, Column> columnComparator = collection.getSqlComparator(
         element, ComparisonOperation.EQUALS);
 
+    // In the future type adjustment may should be done before the operator is called.
+    final Collection typeAdjustedElement = element.convertibleTo(collection)
+                                           ? element.castAs(collection)
+                                           : element;
     return BooleanCollection.build(
-        collection.getColumn().contains(element.getColumn().singular(), columnComparator));
+        collection.getColumn()
+            .contains(typeAdjustedElement.getColumn().singular(), columnComparator));
   }
-
 }

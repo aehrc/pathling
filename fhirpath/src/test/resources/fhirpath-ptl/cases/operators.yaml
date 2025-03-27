@@ -91,7 +91,7 @@ tests:
             result: [ ]
           - desc: '** Contains empty literal in many Coding **'
             expression: "manyCoding contains {}"
-            result: [ ]          
+            result: [ ]
           - desc: '** In for empty Coding in one **'
             expression: "noCoding in oneCoding"
             result: [ ]
@@ -386,7 +386,7 @@ tests:
             result: [ ]
           - desc: '** Contains empty literal in many Time **'
             expression: "manyTime contains {}"
-            result: [ ]  
+            result: [ ]
           - desc: '** In for empty Time in one **'
             expression: "noTime in oneTime"
             result: [ ]
@@ -399,6 +399,27 @@ tests:
           - desc: '** Contains empty Time in many **'
             expression: "manyTime contains noTime"
             result: [ ]
+      - 'Cross type membership':
+          - desc: '** Integer in String one **'
+            expression: "10 in oneString"
+            error: true
+          - desc: '** String in boolean one **'
+            expression: "'true' in manyBoolean"
+            error: true
+          - desc: '** Integer in Decimal one **'
+            disable: true # this should throw an error as there is no implicit conversion between Decimal and Integer
+            expression: "1.1 in manyInteger"
+            error: true
+          - desc: '** Date in DateTime one **'
+            expression: "@2023-10-15 in oneDateTime"
+            result: [ false ]
+          - desc: '** DateTime in Date many **'
+            disable: true # this should throw an error as there is no implicit conversion between Decimal and Integer
+            expression: "@2023-01-02T00:00:00Z in manyDate"
+            error: true
+          - desc: '** String in Coding many **'
+            expression: "'http://loinc.org|8480-6||\\'Systolic blood pressure\\'' in codingMany"
+            result: [ false ]
 subject:
   oneInt: 1
   manyInt: [ 1, 2, 3 ]
