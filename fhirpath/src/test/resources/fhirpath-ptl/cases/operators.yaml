@@ -333,11 +333,29 @@ tests:
           - desc: '** Contains non-existing Time in one **'
             expression: "oneTime contains @T10:45:00"
             result: [ false ]
-          - desc: '** In for empty Time in one **'
+          - desc: '** In for empty literal in one Time **'
             expression: "{} in oneTime"
             result: [ ]
-          - desc: '** Contains empty Time in one **'
+          - desc: '** Contains empty literal in one Time **'
             expression: "oneTime contains {}"
+            result: [ ]
+          - desc: '** In for empty literal in many Time **'
+            expression: "{} in manyTime"
+            result: [ ]
+          - desc: '** Contains empty literal in many Time **'
+            expression: "manyTime contains {}"
+            result: [ ]  
+          - desc: '** In for empty Time in one **'
+            expression: "noTime in oneTime"
+            result: [ ]
+          - desc: '** Contains empty Time in one **'
+            expression: "oneTime contains noTime"
+            result: [ ]
+          - desc: '** In for empty Time in many **'
+            expression: "noTime in manyTime"
+            result: [ ]
+          - desc: '** Contains empty Time in many **'
+            expression: "manyTime contains noTime"
             result: [ ]
 subject:
   oneInt: 1
@@ -358,6 +376,7 @@ subject:
     - !fhir.date "@2023-01-02"
     - !fhir.date "@2023-01-03"
     - !fhir.date "@2023-01-05"
+  noTime: !fhir.time
   oneTime: !fhir.time "@T09:45:00"
   manyTime:
     - !fhir.time "@T14:00:00"
