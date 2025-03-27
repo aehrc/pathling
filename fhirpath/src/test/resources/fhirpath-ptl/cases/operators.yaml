@@ -1,6 +1,6 @@
 tests:
   - 'Membership operators':
-      - 'Quantity':
+      - 'Quantity type':
           - desc: '** In for existing quantity in many **'
             expression: "80 'mm[Hg]' in component.value.ofType(Quantity)"
             inputfile: 'Observation_3_comp.json'
@@ -49,7 +49,7 @@ tests:
             expression: "value.ofType(Quantity) contains {}"
             inputfile: 'Observation_1.json'
             result: [ ]
-      - 'Coding':
+      - 'Coding type':
           - desc: '** In for existing coding in many **'
             expression: "http://loinc.org|8480-6||'Systolic blood pressure' in component.code.coding"
             inputfile: 'Observation_3_comp.json'
@@ -242,52 +242,40 @@ tests:
             result: [ ]
       - 'DateTime type':
           - desc: '** In for existing DateTime in many **'
-            expression: "@2023-01-02T14:00:00Z in participant.period.start"
-            inputfile: 'Encounter_with_participants.json'
+            expression: "@2023-01-02T14:00:00Z in manyDateTime"
             result: [ true ]
           - desc: '** Contains for existing DateTime in many **'
-            expression: "participant.period.start contains @2023-01-03T09:30:00Z"
-            inputfile: 'Encounter_with_participants.json'
+            expression: "manyDateTime contains @2023-01-03T09:30:00Z"
             result: [ true ]
           - desc: '** In for non-existing DateTime in many **'
-            expression: "@2023-01-04T10:00:00Z in participant.period.start"
-            inputfile: 'Encounter_with_participants.json'
+            expression: "@2023-01-04T10:00:00Z in manyDateTime"
             result: [ false ]
           - desc: '** Contains non-existing DateTime in many **'
-            expression: "participant.period.start contains @2023-01-04T10:00:00Z"
-            inputfile: 'Encounter_with_participants.json'
+            expression: "manyDateTime contains @2023-01-04T10:00:00Z"
             result: [ false ]
           - desc: '** In for empty DateTime in many **'
-            expression: "{} in participant.period.start"
-            inputfile: 'Encounter_with_participants.json'
+            expression: "{} in manyDateTime"
             result: [ ]
           - desc: '** Contains empty DateTime in many **'
-            expression: "participant.period.start contains {}"
-            inputfile: 'Encounter_with_participants.json'
+            expression: "manyDateTime contains {}"
             result: [ ]
           - desc: '** In for existing DateTime in one **'
-            expression: "@2023-10-15T09:45:00Z in issued"
-            inputfile: 'Observation_1.json'
+            expression: "@2023-10-15T09:45:00Z in oneDateTime"
             result: [ true ]
           - desc: '** Contains for existing DateTime in one **'
-            expression: "issued contains @2023-10-15T09:45:00Z"
-            inputfile: 'Observation_1.json'
+            expression: "oneDateTime contains @2023-10-15T09:45:00Z"
             result: [ true ]
           - desc: '** In for non-existing DateTime in one **'
-            expression: "@2023-10-16T09:45:00Z in issued"
-            inputfile: 'Observation_1.json'
+            expression: "@2023-10-16T09:45:00Z in oneDateTime"
             result: [ false ]
           - desc: '** Contains non-existing DateTime in one **'
-            expression: "issued contains @2023-10-16T09:45:00Z"
-            inputfile: 'Observation_1.json'
+            expression: "oneDateTime contains @2023-10-16T09:45:00Z"
             result: [ false ]
           - desc: '** In for empty DateTime in one **'
-            expression: "{} in issued"
-            inputfile: 'Observation_1.json'
+            expression: "{} in oneDateTime"
             result: [ ]
           - desc: '** Contains empty DateTime in one **'
-            expression: "issued contains {}"
-            inputfile: 'Observation_1.json'
+            expression: "oneDateTime contains {}"
             result: [ ]
 subject:
   oneInt: 1
@@ -298,3 +286,8 @@ subject:
   manyBoolean: [ true, false, true ]
   oneDecimal: 1.5
   manyDecimal: [ 1.5, 2.5, 3.5 ]
+  oneDateTime: !fhir.dateTime "@2023-10-15T09:45:00Z"
+  manyDateTime:
+    - !fhir.dateTime "@2023-01-02T14:00:00Z"
+    - !fhir.dateTime "@2023-01-03T09:30:00Z"
+    - !fhir.dateTime "@2023-01-03T15:45:00Z"
