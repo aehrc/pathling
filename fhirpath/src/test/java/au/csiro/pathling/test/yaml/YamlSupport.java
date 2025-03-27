@@ -64,8 +64,10 @@ public class YamlSupport {
           break;
         case DATETIME:
         case DATE:
+          writeDate(fhirLiteral, gen);
+          break;
         case TIME:
-          writeDateTime(fhirLiteral, gen);
+          writeTime(fhirLiteral, gen);
           break;
         default:
           throw new IllegalArgumentException("Unsupported FHIR type: " + fhirLiteral.getType());
@@ -83,8 +85,12 @@ public class YamlSupport {
       gen.writeEndObject();
     }
 
-    private void writeDateTime(FhirTypedLiteral fhirLiteral, JsonGenerator gen) throws IOException {
+    private void writeDate(FhirTypedLiteral fhirLiteral, JsonGenerator gen) throws IOException {
       gen.writeString(fhirLiteral.getLiteral().replaceFirst("^@", ""));
+    }
+
+    private void writeTime(FhirTypedLiteral fhirLiteral, JsonGenerator gen) throws IOException {
+      gen.writeString(fhirLiteral.getLiteral().replaceFirst("^@T", ""));
     }
   }
 
