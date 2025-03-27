@@ -1,6 +1,8 @@
 package au.csiro.pathling.test.yaml;
 
+import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
@@ -58,19 +60,23 @@ public class YamlSupport {
     @Override
     public void serialize(FhirTypedLiteral fhirLiteral, JsonGenerator gen,
         SerializerProvider serializers) throws IOException {
-      switch (fhirLiteral.getType()) {
-        case CODING:
-          writeCoding(fhirLiteral, gen);
-          break;
-        case DATETIME:
-        case DATE:
-          writeDate(fhirLiteral, gen);
-          break;
-        case TIME:
-          writeTime(fhirLiteral, gen);
-          break;
-        default:
-          throw new IllegalArgumentException("Unsupported FHIR type: " + fhirLiteral.getType());
+      if (nonNull(fhirLiteral.getLiteral())) {
+        switch (fhirLiteral.getType()) {
+          case CODING:
+            writeCoding(fhirLiteral, gen);
+            break;
+          case DATETIME:
+          case DATE:
+            writeDate(fhirLiteral, gen);
+            break;
+          case TIME:
+            writeTime(fhirLiteral, gen);
+            break;
+          default:
+            throw new IllegalArgumentException("Unsupported FHIR type: " + fhirLiteral.getType());
+        }
+      } else {
+        gen.writeNull();
       }
     }
 
@@ -78,6 +84,7 @@ public class YamlSupport {
       final Coding coding = CodingLiteral.fromString(fhirLiteral.getLiteral());
       // write as object to gen using low level api
       gen.writeStartObject();
+      gen.writeStringField("id", randomAlias());
       gen.writeStringField("system", coding.getSystem());
       gen.writeStringField("version", coding.getVersion());
       gen.writeStringField("code", coding.getCode());
@@ -100,7 +107,7 @@ public class YamlSupport {
 
     @Nonnull
     FHIRDefinedType type;
-    @Nonnull
+    @Nullable
     String literal;
 
     @Nonnull
@@ -139,8 +146,10 @@ public class YamlSupport {
 
       @Override
       public Object construct(Node node) {
-        if (node instanceof ScalarNode) {
-          return FhirTypedLiteral.of(type, ((ScalarNode) node).getValue());
+        if (node instanceof ScalarNode sn) {
+          return FhirTypedLiteral.of(type, sn.getValue().isEmpty()
+                                           ? null
+                                           : sn.getValue());
         }
         throw new IllegalArgumentException("Expected a scalar node for " + type);
       }
