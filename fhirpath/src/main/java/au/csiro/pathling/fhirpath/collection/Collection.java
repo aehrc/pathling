@@ -529,6 +529,29 @@ public class Collection implements Comparable {
   }
 
   /**
+   * Casts this collection to the type of another collection.
+   * <p>
+   * This method attempts to cast the current collection to match the type of the provided collection.
+   * The cast will only succeed if the current collection is convertible to the target collection type
+   * as determined by the {@link #convertibleTo(Collection)} method.
+   *
+   * @param other The collection whose type to cast to
+   * @return A new collection with the same values but cast to the type of the other collection
+   * @throws IllegalArgumentException If this collection cannot be cast to the type of the other collection
+   */
+  @Nonnull
+  public Collection castAs(@Nonnull final Collection other) {
+    if (convertibleTo(other)) {
+      return other.getType()
+          .map(castType ->
+              other.map(__ -> this.getColumn().cast(castType.getSqlDataType())))
+          .orElse(this);
+    } else {
+      throw new IllegalArgumentException("Cannot cast " + this + " to " + other);
+    }
+  }
+
+  /**
    * @return a new {@link Collection} representing the String representation of this path
    */
   @Nonnull

@@ -1,8 +1,13 @@
 package au.csiro.pathling.fhirpath;
 
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.Getter;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -13,21 +18,26 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @Getter
 public enum FhirPathType {
 
-  BOOLEAN("Boolean"),
-  STRING("String"),
-  INTEGER("Integer"),
-  DECIMAL("Decimal"),
-  DATE("Date"),
-  DATETIME("DateTime"),
-  TIME("Time"),
-  QUANTITY("Quantity"),
-  CODING("Coding");
+  BOOLEAN("Boolean", DataTypes.BooleanType),
+  STRING("String", DataTypes.StringType),
+  INTEGER("Integer", DataTypes.IntegerType),
+  DECIMAL("Decimal", DecimalCollection.getDecimalType()),
+  DATE("Date", DataTypes.StringType),
+  DATETIME("DateTime", DataTypes.StringType),
+  TIME("Time", DataTypes.StringType),
+  QUANTITY("Quantity", QuantityEncoding.dataType()),
+  CODING("Coding", CodingEncoding.codingStructType());
 
   @Nonnull
   private final String typeSpecifier;
 
-  FhirPathType(@Nonnull final String typeSpecifier) {
+  @Nonnull
+  private final DataType sqlDataType;
+
+
+  FhirPathType(@Nonnull final String typeSpecifier, @Nonnull final DataType sqlDataType) {
     this.typeSpecifier = typeSpecifier;
+    this.sqlDataType = sqlDataType;
   }
 
   /**
