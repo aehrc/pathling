@@ -265,6 +265,80 @@ tests:
           - desc: '** Contains empty DateTime in one **'
             expression: "oneDateTime contains {}"
             result: [ ]
+      - 'Date type':
+          - desc: '** In for existing Date in many **'
+            expression: "@2023-01-02 in manyDate"
+            result: [ true ]
+          - desc: '** Contains for existing Date in many **'
+            expression: "manyDate contains @2023-01-03"
+            result: [ true ]
+          - desc: '** In for non-existing Date in many **'
+            expression: "@2023-01-04 in manyDate"
+            result: [ false ]
+          - desc: '** Contains non-existing Date in many **'
+            expression: "manyDate contains @2023-01-04"
+            result: [ false ]
+          - desc: '** In for empty Date in many **'
+            expression: "{} in manyDate"
+            result: [ ]
+          - desc: '** Contains empty Date in many **'
+            expression: "manyDate contains {}"
+            result: [ ]
+          - desc: '** In for existing Date in one **'
+            expression: "@2023-10-15 in oneDate"
+            result: [ true ]
+          - desc: '** Contains for existing Date in one **'
+            expression: "oneDate contains @2023-10-15"
+            result: [ true ]
+          - desc: '** In for non-existing Date in one **'
+            expression: "@2023-10-16 in oneDate"
+            result: [ false ]
+          - desc: '** Contains non-existing Date in one **'
+            expression: "oneDate contains @2023-10-16"
+            result: [ false ]
+          - desc: '** In for empty Date in one **'
+            expression: "{} in oneDate"
+            result: [ ]
+          - desc: '** Contains empty Date in one **'
+            expression: "oneDate contains {}"
+            result: [ ]
+      - 'Time type':
+          - desc: '** In for existing Time in many **'
+            expression: "@T14:00:00 in manyTime"
+            result: [ true ]
+          - desc: '** Contains for existing Time in many **'
+            expression: "manyTime contains @T09:30:00"
+            result: [ true ]
+          - desc: '** In for non-existing Time in many **'
+            expression: "@T10:00:00 in manyTime"
+            result: [ false ]
+          - desc: '** Contains non-existing Time in many **'
+            expression: "manyTime contains @T10:00:00"
+            result: [ false ]
+          - desc: '** In for empty Time in many **'
+            expression: "{} in manyTime"
+            result: [ ]
+          - desc: '** Contains empty Time in many **'
+            expression: "manyTime contains {}"
+            result: [ ]
+          - desc: '** In for existing Time in one **'
+            expression: "@T09:45:00 in oneTime"
+            result: [ true ]
+          - desc: '** Contains for existing Time in one **'
+            expression: "oneTime contains @T09:45:00"
+            result: [ true ]
+          - desc: '** In for non-existing Time in one **'
+            expression: "@T10:45:00 in oneTime"
+            result: [ false ]
+          - desc: '** Contains non-existing Time in one **'
+            expression: "oneTime contains @T10:45:00"
+            result: [ false ]
+          - desc: '** In for empty Time in one **'
+            expression: "{} in oneTime"
+            result: [ ]
+          - desc: '** Contains empty Time in one **'
+            expression: "oneTime contains {}"
+            result: [ ]
 subject:
   oneInt: 1
   manyInt: [ 1, 2, 3 ]
@@ -279,6 +353,16 @@ subject:
     - !fhir.dateTime "@2023-01-02T14:00:00Z"
     - !fhir.dateTime "@2023-01-03T09:30:00Z"
     - !fhir.dateTime "@2023-01-03T15:45:00Z"
+  oneDate: !fhir.date "@2023-10-15"
+  manyDate:
+    - !fhir.date "@2023-01-02"
+    - !fhir.date "@2023-01-03"
+    - !fhir.date "@2023-01-05"
+  oneTime: !fhir.time "@T09:45:00"
+  manyTime:
+    - !fhir.time "@T14:00:00"
+    - !fhir.time "@T09:30:00"
+    - !fhir.time "@T15:45:00"
   oneCoding: !fhir.Coding "http://loinc.org|8867-4||'Heart rate'"
   manyCoding:
     - !fhir.Coding "http://loinc.org|8480-6||'Systolic blood pressure'"
