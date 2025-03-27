@@ -51,52 +51,40 @@ tests:
             result: [ ]
       - 'Coding type':
           - desc: '** In for existing coding in many **'
-            expression: "http://loinc.org|8480-6||'Systolic blood pressure' in component.code.coding"
-            inputfile: 'Observation_3_comp.json'
+            expression: "http://loinc.org|8480-6||'Systolic blood pressure' in manyCoding"
             result: [ true ]
           - desc: '** Contains for existing coding in many **'
-            expression: "component.code.coding contains http://loinc.org|8867-4||'Heart rate'"
-            inputfile: 'Observation_3_comp.json'
+            expression: "manyCoding contains http://loinc.org|8867-4||'Heart rate'"
             result: [ true ]
           - desc: '** In for non-existing coding in many **'
-            expression: "http://loinc.org|9999-9||'Non-existent code' in component.code.coding"
-            inputfile: 'Observation_3_comp.json'
+            expression: "http://loinc.org|9999-9||'Non-existent code' in manyCoding"
             result: [ false ]
           - desc: '** Contains non-existing coding in many **'
-            expression: "component.code.coding contains http://loinc.org|9999-9||'Non-existent code'"
-            inputfile: 'Observation_3_comp.json'
+            expression: "manyCoding contains http://loinc.org|9999-9||'Non-existent code'"
             result: [ false ]
           - desc: '** In for empty coding in many **'
-            expression: "{} in component.code.coding"
-            inputfile: 'Observation_3_comp.json'
+            expression: "{} in manyCoding"
             result: [ ]
           - desc: '** Contains empty coding in many **'
-            expression: "component.code.coding contains {}"
-            inputfile: 'Observation_3_comp.json'
+            expression: "manyCoding contains {}"
             result: [ ]
           - desc: '** In for existing coding in one **'
-            expression: "http://loinc.org|8867-4||'Heart rate' in code.coding"
-            inputfile: 'Observation_1.json'
+            expression: "http://loinc.org|8867-4||'Heart rate' in oneCoding"
             result: [ true ]
           - desc: '** Contains for existing coding in one **'
-            expression: "code.coding contains http://loinc.org|8867-4||'Heart rate'"
-            inputfile: 'Observation_1.json'
+            expression: "oneCoding contains http://loinc.org|8867-4||'Heart rate'"
             result: [ true ]
           - desc: '** In for non-existing coding in one **'
-            expression: "http://loinc.org|9999-9||'Non-existent code' in code.coding"
-            inputfile: 'Observation_1.json'
+            expression: "http://loinc.org|9999-9||'Non-existent code' in oneCoding"
             result: [ false ]
           - desc: '** Contains non-existing coding in one **'
-            expression: "code.coding contains http://loinc.org|9999-9||'Non-existent code'"
-            inputfile: 'Observation_1.json'
+            expression: "oneCoding contains http://loinc.org|9999-9||'Non-existent code'"
             result: [ false ]
           - desc: '** In for empty coding in one **'
-            expression: "{} in code.coding"
-            inputfile: 'Observation_1.json'
+            expression: "{} in oneCoding"
             result: [ ]
           - desc: '** Contains empty coding in one **'
-            expression: "code.coding contains {}"
-            inputfile: 'Observation_1.json'
+            expression: "oneCoding contains {}"
             result: [ ]
       - 'Integer type':
           - desc: '** In for existing Integer in many **'
@@ -291,3 +279,8 @@ subject:
     - !fhir.dateTime "@2023-01-02T14:00:00Z"
     - !fhir.dateTime "@2023-01-03T09:30:00Z"
     - !fhir.dateTime "@2023-01-03T15:45:00Z"
+  oneCoding: !fhir.Coding "http://loinc.org|8867-4||'Heart rate'"
+  manyCoding:
+    - !fhir.Coding "http://loinc.org|8480-6||'Systolic blood pressure'"
+    - !fhir.Coding "http://loinc.org|8867-4||'Heart rate'"
+    - !fhir.Coding "http://loinc.org|8462-4||'Diastolic blood pressure'"
