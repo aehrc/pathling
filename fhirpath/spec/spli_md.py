@@ -45,15 +45,30 @@ def extract_sections(content, max_level):
     for i, (level, title, start) in enumerate(headings):
         # Only process headings at or above the max_level
         if level <= max_level:
-            # Determine the end of this section (start of next section at same or higher level)
-            end = None
+            # Find the content end - this is either:
+            # 1. The start of the next subheading (any level)
+            # 2. The start of the next heading at same or higher level
+            # 3. The end of the file
+            
+            # First, find the next heading of any level
+            next_heading_start = None
+            for _, _, next_start in headings[i+1:i+2]:  # Look at just the next heading
+                next_heading_start = next_start
+                break
+            
+            # Then find the end of this section (next heading at same or higher level)
+            section_end = None
             for j, (next_level, _, next_start) in enumerate(headings[i+1:], i+1):
                 if next_level <= level:
-                    end = next_start
+                    section_end = next_start
                     break
             
-            # Extract the section content
-            section_content = content[start:end].strip() if end else content[start:].strip()
+            # Extract just the content directly under this heading
+            # (up to the next heading of any level)
+            if next_heading_start:
+                direct_content = content[start:next_heading_start].strip()
+            else:
+                direct_content = content[start:].strip()
             
             # Build the heading path
             heading_path = []
@@ -63,7 +78,7 @@ def extract_sections(content, max_level):
                         heading_path.pop() if heading_path else None
                     heading_path.append(slugify(prev_title))
             
-            sections.append((heading_path, section_content))
+            sections.append((heading_path, direct_content))
     
     return sections
 
