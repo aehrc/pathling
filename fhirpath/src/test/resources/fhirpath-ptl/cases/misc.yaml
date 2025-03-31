@@ -1,0 +1,72 @@
+#
+# Test related to reported bugs also present in 7.x branch
+#
+tests:
+  - 'AnyTrue on empty collections (#2150)':
+      - desc: 'On empty collection literal'
+        expression: "{}.anyTrue()"
+        error: true # should be : result: [ false ]
+      - desc: 'On empty collection'
+        expression: "missing.anyTrue()"
+        error: true # should be : result: [ false ]
+      - desc: 'On empty int collection'
+        expression: "i1.where($this>0).anyTrue()"
+        error: true # should be : result: [ false ]
+      - desc: 'anyTrue empty boolean collection'
+        expression: "b1.where($this).anyTrue()"
+        result: [ false ]
+      - desc: 'anyFalse for empty boolean collection'
+        expression: "b1.where($this).anyFalse()"
+        result: [ false ]
+      - desc: 'allTrue for empty boolean collection'
+        expression: "b1.where($this).allTrue()"
+        result: [ true ]
+      - desc: 'allFalse for empty  boolean collection'
+        expression: "b1.where($this).allFalse()"
+        result: [ true ]
+  - 'Incorrect math operations on quantity/numerical literals (#2168)':
+      - desc: 'Quantity addition'
+        expression: "200 'cm' + 2.0 'm' = 4.0 'm'"
+        result: [ true ]
+      - desc: 'Unsupported quantity mutliplication'
+        expression: "2.0 'cm' * 2.0 'm' = 0.040 'm2'"
+        result: [ ] # should be [ true ]
+      - desc: 'Supported multiplication by unit'
+        expression: "2.0 'm' * 2.0 '1' = 4.0 'm'"
+        result: [ true ]
+      - desc: 'Quantity multiplication by decimal'
+        expression: "2.0 'm' * 2.0 = 4.0 'm'"
+        error: true # should be: result: [ true ]
+  - 'Math operators incorrect when an argument is empty (#2174)':
+      - desc: 'Empty literal left'
+        expression: "{} + 1"
+        error: true # should be : result: [ ]
+      - desc: 'Empty boolean right'
+        expression: "1 + b1.where($this)"
+        error: true # should be : result: [ ]
+      - desc: 'Empty integer left'
+        expression: "i1.where($this>0) + 1"
+        result: [ ]
+      - desc: 'Empty integer right'
+        expression: "2 * i1.where($this>0)"
+        result: [ ]
+  - 'Equality incorrect for quantity literals (#2151)':
+      - desc: 'Equality of calendar seconds duration quantities'
+        expression: "1 second = 1 second"
+        result: [ true ]
+      - desc: 'Equality of UCUM seconds duration quantities'
+        expression: "1 's' = 1 's'"
+        result: [ true ]
+      - desc: 'Equality of mixed seconds duration quantities'
+        expression: "1 second = 1 's'"
+        result: [ true ]
+      - desc: 'Equality of UCUM duration quantities'
+        expression: "1 'a' = 1 'a'"
+        result: [ true ]
+      - desc: 'Equality of calendar duration quantities'
+        expression: "1 year = 1 year"
+        result: [ ] # should be [ true ]
+subject:
+  prop: val
+  b1: false
+  i1: 0
