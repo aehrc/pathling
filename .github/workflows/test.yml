@@ -723,6 +723,8 @@ jobs:
           path: fhir-server-3-coverage
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   deploy-pre-release:
     name: Pre-release deployment
