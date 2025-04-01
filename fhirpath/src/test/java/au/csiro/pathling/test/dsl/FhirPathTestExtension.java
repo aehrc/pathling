@@ -23,46 +23,28 @@ public class FhirPathTestExtension implements TestTemplateInvocationContextProvi
     @Override
     public Stream<TestTemplateInvocationContext> provideTestTemplateInvocationContexts(ExtensionContext context) {
         Method testMethod = context.getRequiredTestMethod();
-        Object testInstance = context.getRequiredTestInstance();
         
-        // Get or create the test builder
+        // Create a new builder for each test method
+        FhirPathTestBuilder builder = new FhirPathTestBuilder();
+        
+        // Store the builder in the extension context
         Store store = context.getStore(NAMESPACE);
-        FhirPathTestBuilder builder = store.getOrComputeIfAbsent(
-                testMethod.getName(), 
-                key -> {
-                    try {
-                        FhirPathTestBuilder newBuilder = new FhirPathTestBuilder();
-                        testMethod.invoke(testInstance, newBuilder);
-                        return newBuilder;
-                    } catch (Exception e) {
-                        throw new RuntimeException("Failed to invoke test method", e);
-                    }
-                },
-                FhirPathTestBuilder.class);
+        store.put(testMethod.getName(), builder);
         
-        // Get the YamlSpecTestBase instance
-        YamlSpecTestBase testBase = (YamlSpecTestBase) testInstance;
-        
-        // Build the test cases
-        List<YamlSpecTestBase.RuntimeCase> testCases = builder.buildTestCases(testBase);
-        
-        // Create invocation contexts for each test case
-        return testCases.stream()
-                .map(testCase -> new FhirPathTestInvocationContext(testCase, testBase));
+        // Return a single invocation context that will execute the test method with the builder
+        return Stream.of(new FhirPathTestInvocationContext(builder));
     }
 
     private static class FhirPathTestInvocationContext implements TestTemplateInvocationContext {
-        private final YamlSpecTestBase.RuntimeCase testCase;
-        private final YamlSpecTestBase testBase;
+        private final FhirPathTestBuilder builder;
 
-        public FhirPathTestInvocationContext(YamlSpecTestBase.RuntimeCase testCase, YamlSpecTestBase testBase) {
-            this.testCase = testCase;
-            this.testBase = testBase;
+        public FhirPathTestInvocationContext(FhirPathTestBuilder builder) {
+            this.builder = builder;
         }
 
         @Override
         public String getDisplayName(int invocationIndex) {
-            return testCase.toString();
+            return "Configure test cases";
         }
 
         @Override
@@ -70,12 +52,27 @@ public class FhirPathTestExtension implements TestTemplateInvocationContextProvi
             return List.of(new ParameterResolver() {
                 @Override
                 public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
-                    return parameterContext.getParameter().getType().equals(YamlSpecTestBase.RuntimeCase.class);
+                    return parameterContext.getParameter().getType().equals(FhirPathTestBuilder.class);
                 }
 
                 @Override
                 public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
-                    return testCase;
+                    return builder;
+                }
+            }, new InvocationInterceptor() {
+                @Override
+                public void interceptTestTemplateMethod(Invocation<Void> invocation, ReflectiveInvocationContext<Method> invocationContext, ExtensionContext extensionContext) throws Throwable {
+                    // Execute the test method to configure the builder
+                    invocation.proceed();
+                    
+                    // After the test method has executed, get the test instance and run the tests
+                    Object testInstance = extensionContext.getRequiredTestInstance();
+                    if (testInstance instanceof YamlSpecTestBase testBase) {
+                        List<YamlSpecTestBase.RuntimeCase> testCases = builder.buildTestCases(testBase);
+                        for (YamlSpecTestBase.RuntimeCase testCase : testCases) {
+                            testBase.run(testCase);
+                        }
+                    }
                 }
             });
         }

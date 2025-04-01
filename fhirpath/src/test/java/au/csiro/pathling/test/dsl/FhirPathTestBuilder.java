@@ -1,12 +1,10 @@
 package au.csiro.pathling.test.dsl;
 
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
-import au.csiro.pathling.test.TestResources;
 import au.csiro.pathling.test.yaml.YamlSpecTestBase;
 import au.csiro.pathling.test.yaml.YamlSupport;
 import jakarta.annotation.Nonnull;
 import lombok.RequiredArgsConstructor;
-import lombok.Value;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -44,8 +42,11 @@ public class FhirPathTestBuilder {
     @Nonnull
     public List<YamlSpecTestBase.RuntimeCase> buildTestCases(YamlSpecTestBase testBase) {
         Map<Object, Object> subjectOM = buildSubject();
+        Function<YamlSpecTestBase.RuntimeContext, ResourceResolver> resolverFactory = 
+            YamlSpecTestBase.OMResolverFactory.of(subjectOM);
+            
         return testCases.stream()
-                .map(tc -> tc.build(subjectOM, testBase))
+                .map(tc -> tc.build(resolverFactory))
                 .toList();
     }
 
@@ -214,7 +215,6 @@ public class FhirPathTestBuilder {
         private String expression;
         private Object result;
         private boolean expectError = false;
-        private String inputFile;
 
         public TestCaseBuilder expression(String expression) {
             this.expression = expression;
@@ -231,16 +231,11 @@ public class FhirPathTestBuilder {
             return this;
         }
 
-        public TestCaseBuilder inputFile(String inputFile) {
-            this.inputFile = inputFile;
-            return this;
-        }
-
         public FhirPathTestBuilder and() {
             return parent;
         }
 
-        YamlSpecTestBase.RuntimeCase build(Map<Object, Object> subjectOM, YamlSpecTestBase testBase) {
+        YamlSpecTestBase.RuntimeCase build(Function<YamlSpecTestBase.RuntimeContext, ResourceResolver> resolverFactory) {
             // Convert the result to the expected format
             Object formattedResult;
             if (result instanceof Number || result instanceof Boolean || result instanceof String) {
@@ -256,21 +251,11 @@ public class FhirPathTestBuilder {
                     expression,
                     expectError,
                     formattedResult,
-                    inputFile,
-                    null,
-                    null,
-                    false
+                    null, // inputFile
+                    null, // model
+                    null, // context
+                    false // disable
                 );
-
-            // Create the resolver factory
-            Function<YamlSpecTestBase.RuntimeContext, ResourceResolver> resolverFactory;
-            if (inputFile != null) {
-                resolverFactory = YamlSpecTestBase.FhirResolverFactory.of(
-                    TestResources.getResourceAsString(
-                        ((FhirPathDslTestBase)testBase).getResourceBasePath() + "/" + inputFile));
-            } else {
-                resolverFactory = YamlSpecTestBase.OMResolverFactory.of(subjectOM);
-            }
 
             // Create and return the RuntimeCase
             return YamlSpecTestBase.StdRuntimeCase.of(

@@ -13,5 +13,4 @@ import java.lang.annotation.Target;
 @TestTemplate
 @ExtendWith(FhirPathTestExtension.class)
 public @interface FhirPathTest {
-    String resourceBase() default "";
 }
