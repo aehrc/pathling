@@ -32,10 +32,10 @@ public class OperatorsDslTest extends FhirPathDslTestBase {
                 "@2023-01-03", 
                 "@2023-01-05")
             .time("oneTime", "@T09:45:00")
-            .timeArray("manyTime", 
-                "@T14:00:00", 
-                "@T09:30:00", 
-                "@T15:45:00")
+            // .timeArray("manyTime", 
+            //     "@T14:00:00", 
+            //     "@T09:30:00", 
+            //     "@T15:45:00")
             .coding("oneCoding", "http://loinc.org|8867-4||'Heart rate'")
             .codingArray("manyCoding", 
                 "http://loinc.org|8480-6||'Systolic blood pressure'",
