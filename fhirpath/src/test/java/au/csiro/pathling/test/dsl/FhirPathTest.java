@@ -1,6 +1,5 @@
 package au.csiro.pathling.test.dsl;
 
-import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import java.lang.annotation.ElementType;
@@ -10,7 +9,6 @@ import java.lang.annotation.Target;
 
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-@ParameterizedTest(name = "{0}")
 @ArgumentsSource(FhirPathTestExtension.class)
 public @interface FhirPathTest {
 }

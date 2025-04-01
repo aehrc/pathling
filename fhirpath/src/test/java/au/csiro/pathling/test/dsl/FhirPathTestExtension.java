@@ -15,9 +15,6 @@ public class FhirPathTestExtension implements ArgumentsProvider {
     public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
         Method testMethod = context.getRequiredTestMethod();
         
-        // Create a new builder for the test method
-        FhirPathTestBuilder builder = new FhirPathTestBuilder();
-        
         try {
             // Get the test instance if available
             Object testInstance = context.getTestInstance().orElse(null);
@@ -26,6 +23,9 @@ public class FhirPathTestExtension implements ArgumentsProvider {
                 Class<?> testClass = context.getRequiredTestClass();
                 testInstance = testClass.getDeclaredConstructor().newInstance();
             }
+            
+            // Create a new builder for the test method
+            FhirPathTestBuilder builder = new FhirPathTestBuilder();
             
             // Execute the test method to configure the builder
             testMethod.invoke(testInstance, builder);
