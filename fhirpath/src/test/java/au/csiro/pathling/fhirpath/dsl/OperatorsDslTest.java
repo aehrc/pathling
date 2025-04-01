@@ -3,15 +3,18 @@ package au.csiro.pathling.fhirpath.dsl;
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import au.csiro.pathling.test.dsl.FhirPathTestBuilder;
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 
 import java.util.Collections;
+import java.util.stream.Stream;
 
 @Tag("UnitTest")
 public class OperatorsDslTest extends FhirPathDslTestBase {
 
     @FhirPathTest
-    void testMembershipOperators(FhirPathTestBuilder builder) {
+    Stream<DynamicTest> testMembershipOperators() {
+        FhirPathTestBuilder builder = new FhirPathTestBuilder();
         builder.withSubject()
             .integer("oneInt", 1)
             .integerArray("manyInt", 1, 2, 3)
@@ -79,5 +82,7 @@ public class OperatorsDslTest extends FhirPathDslTestBase {
             .test("In for non-existing String in many")
                 .expression("'test4' in manyString")
                 .expectResult(false);
+                
+        return builder.buildDynamicTests(this);
     }
 }

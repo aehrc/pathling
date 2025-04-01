@@ -3,15 +3,18 @@ package au.csiro.pathling.fhirpath.dsl;
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import au.csiro.pathling.test.dsl.FhirPathTestBuilder;
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 
 import java.util.Collections;
+import java.util.stream.Stream;
 
 @Tag("UnitTest")
 public class StringFunctionsDslTest extends FhirPathDslTestBase {
 
     @FhirPathTest
-    void testStringFunctions(FhirPathTestBuilder builder) {
+    Stream<DynamicTest> testStringFunctions() {
+        FhirPathTestBuilder builder = new FhirPathTestBuilder();
         builder.withSubject()
             .string("s1", "hello")
             .stringArray("sn1", "hello", "world")
@@ -29,10 +32,13 @@ public class StringFunctionsDslTest extends FhirPathDslTestBase {
             .test("String with error")
                 .expression("s1.nonExistentFunction()")
                 .expectError();
+                
+        return builder.buildDynamicTests(this);
     }
     
     @FhirPathTest
-    void testExistenceFunctions(FhirPathTestBuilder builder) {
+    Stream<DynamicTest> testExistenceFunctions() {
+        FhirPathTestBuilder builder = new FhirPathTestBuilder();
         builder.withSubject()
             .string("s1", "a")
             .stringArray("sn1", "a")
@@ -58,10 +64,13 @@ public class StringFunctionsDslTest extends FhirPathDslTestBase {
             .test("Plural integer collection is not empty")
                 .expression("an2.empty()")
                 .expectResult(false);
+                
+        return builder.buildDynamicTests(this);
     }
     
     @FhirPathTest
-    void testToStringFunction(FhirPathTestBuilder builder) {
+    Stream<DynamicTest> testToStringFunction() {
+        FhirPathTestBuilder builder = new FhirPathTestBuilder();
         builder.withSubject()
             .string("s1", "a")
             .integer("n1", 1)
@@ -140,5 +149,7 @@ public class StringFunctionsDslTest extends FhirPathDslTestBase {
             .test("toString of non-singular complex type fails")
                 .expression("e2.toString()")
                 .expectError();
+                
+        return builder.buildDynamicTests(this);
     }
 }

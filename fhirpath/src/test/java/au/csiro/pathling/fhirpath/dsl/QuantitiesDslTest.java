@@ -3,13 +3,17 @@ package au.csiro.pathling.fhirpath.dsl;
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import au.csiro.pathling.test.dsl.FhirPathTestBuilder;
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
+
+import java.util.stream.Stream;
 
 @Tag("UnitTest")
 public class QuantitiesDslTest extends FhirPathDslTestBase {
 
     @FhirPathTest
-    void testQuantities(FhirPathTestBuilder builder) {
+    Stream<DynamicTest> testQuantities() {
+        FhirPathTestBuilder builder = new FhirPathTestBuilder();
         builder.withSubject()
             .and()
             .test("Correct flooring of decimal weekly quantities")
@@ -19,10 +23,13 @@ public class QuantitiesDslTest extends FhirPathDslTestBase {
             .test("Correct flooring of decimal second quantities")
                 .expression("@2016-02-28T00:00:00.000 + 1.7006 seconds")
                 .expectResult("2016-02-28T00:00:01.700+00:00");
+                
+        return builder.buildDynamicTests(this);
     }
     
     @FhirPathTest
-    void testMathOperations(FhirPathTestBuilder builder) {
+    Stream<DynamicTest> testMathOperations() {
+        FhirPathTestBuilder builder = new FhirPathTestBuilder();
         builder.withSubject()
             .and()
             .group("Polarity operator")
@@ -49,5 +56,7 @@ public class QuantitiesDslTest extends FhirPathDslTestBase {
             .test("Quantity negation")
                 .expression("0 'm' - 7.2 'm'= -7.2 'm'")
                 .expectResult(true);
+                
+        return builder.buildDynamicTests(this);
     }
 }

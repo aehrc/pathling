@@ -3,12 +3,14 @@ package au.csiro.pathling.test.dsl;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.test.yaml.YamlSpecTestBase;
 import au.csiro.pathling.test.yaml.YamlSupport;
+import org.junit.jupiter.api.DynamicTest;
 import jakarta.annotation.Nonnull;
 import lombok.RequiredArgsConstructor;
 
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 @RequiredArgsConstructor
 public class FhirPathTestBuilder {
@@ -53,6 +55,27 @@ public class FhirPathTestBuilder {
         return testCases.stream()
                 .map(tc -> tc.build(resolverFactory))
                 .toList();
+    }
+    
+    @Nonnull
+    public Stream<DynamicTest> buildDynamicTests(YamlSpecTestBase testBase) {
+        Map<Object, Object> subjectOM = buildSubject();
+        Function<YamlSpecTestBase.RuntimeContext, ResourceResolver> resolverFactory = 
+            YamlSpecTestBase.OMResolverFactory.of(subjectOM);
+            
+        if (testCases.isEmpty()) {
+            // If no test cases were added, return an empty stream
+            return Stream.empty();
+        }
+            
+        return testCases.stream()
+                .map(tc -> {
+                    YamlSpecTestBase.RuntimeCase runtimeCase = tc.build(resolverFactory);
+                    return DynamicTest.dynamicTest(
+                        runtimeCase.getDescription(), 
+                        () -> testBase.run(runtimeCase)
+                    );
+                });
     }
 
     void addToSubject(String key, Object value) {

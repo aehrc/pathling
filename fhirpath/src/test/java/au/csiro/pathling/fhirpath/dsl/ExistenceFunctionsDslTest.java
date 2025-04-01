@@ -3,13 +3,17 @@ package au.csiro.pathling.fhirpath.dsl;
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import au.csiro.pathling.test.dsl.FhirPathTestBuilder;
+import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
+
+import java.util.stream.Stream;
 
 @Tag("UnitTest")
 public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
 
     @FhirPathTest
-    public void testEmptyFunction(FhirPathTestBuilder builder) {
+    public Stream<DynamicTest> testEmptyFunction() {
+        FhirPathTestBuilder builder = new FhirPathTestBuilder();
         builder.withSubject()
             .integer("n1", 1)
             .integerArray("an1", 1)
@@ -57,10 +61,13 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
             .test("Plural integer collection is not empty")
                 .expression("an2.empty()")
                 .expectResult(false);
+                
+        return builder.buildDynamicTests(this);
     }
 
     @FhirPathTest
-    public void testCountFunction(FhirPathTestBuilder builder) {
+    public Stream<DynamicTest> testCountFunction() {
+        FhirPathTestBuilder builder = new FhirPathTestBuilder();
         builder.withSubject()
             .integer("n1", 1)
             .integerArray("an1", 1)
@@ -105,5 +112,6 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
             .test("Plural integer collection has count 2")
                 .expression("an2.count()")
                 .expectResult(2);
+        return builder.buildDynamicTests(this);
     }
 }
