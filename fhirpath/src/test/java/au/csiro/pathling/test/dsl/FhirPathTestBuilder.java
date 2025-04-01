@@ -264,5 +264,10 @@ public class FhirPathTestBuilder {
                 java.util.Optional.empty()
             );
         }
+        
+        @Override
+        public String toString() {
+            return description;
+        }
     }
 }
