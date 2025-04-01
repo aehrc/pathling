@@ -45,6 +45,11 @@ public class FhirPathTestBuilder {
         Function<YamlSpecTestBase.RuntimeContext, ResourceResolver> resolverFactory = 
             YamlSpecTestBase.OMResolverFactory.of(subjectOM);
             
+        if (testCases.isEmpty()) {
+            // If no test cases were added, return an empty list
+            return List.of();
+        }
+            
         return testCases.stream()
                 .map(tc -> tc.build(resolverFactory))
                 .toList();
@@ -240,6 +245,8 @@ public class FhirPathTestBuilder {
             Object formattedResult;
             if (result instanceof Number || result instanceof Boolean || result instanceof String) {
                 formattedResult = List.of(result);
+            } else if (result == null && expectError) {
+                formattedResult = null;
             } else {
                 formattedResult = result;
             }

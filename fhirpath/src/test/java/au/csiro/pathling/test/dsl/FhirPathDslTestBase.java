@@ -22,7 +22,7 @@ public abstract class FhirPathDslTestBase extends YamlSpecTestBase {
         return "fhirpath-ptl/resources";
     }
 
-    @FhirPathTest
+    // This method is used by the parameterized test framework
     void runTest(YamlSpecTestBase.RuntimeCase testCase) {
         run(testCase);
     }
