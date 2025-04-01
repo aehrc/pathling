@@ -5,12 +5,13 @@ import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.yaml.YamlSpecTestBase;
 import jakarta.annotation.Nonnull;
 import lombok.Value;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.TestFactory;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.lang.reflect.Method;
+import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 @SpringBootUnitTest
 public abstract class FhirPathDslTestBase extends YamlSpecTestBase {
@@ -23,11 +24,35 @@ public abstract class FhirPathDslTestBase extends YamlSpecTestBase {
         return "fhirpath-ptl/resources";
     }
 
-    // This method is used by the parameterized test framework
-    @ParameterizedTest
-    @FhirPathTest
-    void runTest(YamlSpecTestBase.RuntimeCase testCase) {
-        run(testCase);
+    @TestFactory
+    public Stream<DynamicTest> generateTests() {
+        List<DynamicTest> allTests = new ArrayList<>();
+        
+        // Find all methods annotated with @FhirPathTest
+        for (Method method : getClass().getDeclaredMethods()) {
+            if (method.isAnnotationPresent(FhirPathTest.class)) {
+                // Create a builder for this test method
+                FhirPathTestBuilder builder = new FhirPathTestBuilder();
+                
+                try {
+                    // Invoke the test method to configure the builder
+                    method.invoke(this, builder);
+                    
+                    // Build test cases
+                    List<YamlSpecTestBase.RuntimeCase> testCases = builder.buildTestCases(this);
+                    
+                    // Create a dynamic test for each test case
+                    for (YamlSpecTestBase.RuntimeCase testCase : testCases) {
+                        String displayName = testCase.toString();
+                        allTests.add(DynamicTest.dynamicTest(displayName, () -> run(testCase)));
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to generate tests for method: " + method.getName(), e);
+                }
+            }
+        }
+        
+        return allTests.stream();
     }
 
     @Nonnull
