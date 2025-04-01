@@ -5,6 +5,7 @@ import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.yaml.YamlSpecTestBase;
 import jakarta.annotation.Nonnull;
 import lombok.Value;
+import org.junit.jupiter.params.ParameterizedTest;
 
 import java.util.Collections;
 import java.util.HashMap;
