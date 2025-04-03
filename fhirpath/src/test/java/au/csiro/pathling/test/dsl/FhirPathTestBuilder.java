@@ -29,8 +29,8 @@ public class FhirPathTestBuilder {
     return this;
   }
 
-  public FhirPathTestBuilder withSubject(Function<SubjectBuilder, SubjectBuilder> builderFunction) {
-    return withSubject(builderFunction.apply(new SubjectBuilder()).subject);
+  public FhirPathTestBuilder withSubject(Function<ModelBuilder, ModelBuilder> builderFunction) {
+    return withSubject(builderFunction.apply(new ModelBuilder()).model);
   }
 
   public FhirPathTestBuilder group(String name) {
@@ -134,158 +134,126 @@ public class FhirPathTestBuilder {
   }
 
   @RequiredArgsConstructor
-  public static class SubjectBuilder {
+  public static class ModelBuilder {
 
-    private final Map<String, Object> subject = new HashMap<>();
+    private final Map<String, Object> model = new HashMap<>();
 
-    public SubjectBuilder string(String name, String value) {
-      subject.put(name, value);
+    public ModelBuilder string(String name, String value) {
+      model.put(name, value);
       return this;
     }
 
-    public SubjectBuilder stringArray(String name, String... values) {
-      subject.put(name, Arrays.asList(values));
+    public ModelBuilder stringArray(String name, String... values) {
+      model.put(name, Arrays.asList(values));
       return this;
     }
 
-    public SubjectBuilder integer(String name, int value) {
-      subject.put(name, value);
+    public ModelBuilder integer(String name, int value) {
+      model.put(name, value);
       return this;
     }
 
-    public SubjectBuilder integerArray(String name, int... values) {
+    public ModelBuilder integerArray(String name, int... values) {
       List<Integer> list = new ArrayList<>();
       for (int value : values) {
         list.add(value);
       }
-      subject.put(name, list);
+      model.put(name, list);
       return this;
     }
 
-    public SubjectBuilder decimal(String name, double value) {
-      subject.put(name, value);
+    public ModelBuilder decimal(String name, double value) {
+      model.put(name, value);
       return this;
     }
 
-    public SubjectBuilder decimalArray(String name, double... values) {
+    public ModelBuilder decimalArray(String name, double... values) {
       List<Double> list = new ArrayList<>();
       for (double value : values) {
         list.add(value);
       }
-      subject.put(name, list);
+      model.put(name, list);
       return this;
     }
 
-    public SubjectBuilder bool(String name, boolean value) {
-      subject.put(name, value);
+    public ModelBuilder bool(String name, boolean value) {
+      model.put(name, value);
       return this;
     }
 
-    public SubjectBuilder boolArray(String name, boolean... values) {
+    public ModelBuilder boolArray(String name, boolean... values) {
       List<Boolean> list = new ArrayList<>();
       for (boolean value : values) {
         list.add(value);
       }
-      subject.put(name, list);
+      model.put(name, list);
       return this;
     }
 
-    public SubjectBuilder dateTime(String name, String value) {
-      subject.put(name, YamlSupport.FhirTypedLiteral.of(
+    public ModelBuilder dateTime(String name, String value) {
+      model.put(name, YamlSupport.FhirTypedLiteral.of(
           org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.DATETIME, value));
       return this;
     }
 
-    public SubjectBuilder dateTimeArray(String name, String... values) {
+    public ModelBuilder dateTimeArray(String name, String... values) {
       List<YamlSupport.FhirTypedLiteral> list = new ArrayList<>();
       for (String value : values) {
         list.add(YamlSupport.FhirTypedLiteral.of(
             org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.DATETIME, value));
       }
-      subject.put(name, list);
+      model.put(name, list);
       return this;
     }
 
-    public SubjectBuilder date(String name, String value) {
-      subject.put(name, YamlSupport.FhirTypedLiteral.of(
+    public ModelBuilder date(String name, String value) {
+      model.put(name, YamlSupport.FhirTypedLiteral.of(
           org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.DATE, value));
       return this;
     }
 
-    public SubjectBuilder time(String name, String value) {
-      subject.put(name, YamlSupport.FhirTypedLiteral.of(
+    public ModelBuilder time(String name, String value) {
+      model.put(name, YamlSupport.FhirTypedLiteral.of(
           org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.TIME, value));
       return this;
     }
 
-    public SubjectBuilder coding(String name, String value) {
-      subject.put(name, YamlSupport.FhirTypedLiteral.of(
+    public ModelBuilder coding(String name, String value) {
+      model.put(name, YamlSupport.FhirTypedLiteral.of(
           org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.CODING, value));
       return this;
     }
 
-    public SubjectBuilder codingArray(String name, String... values) {
+    public ModelBuilder codingArray(String name, String... values) {
       List<YamlSupport.FhirTypedLiteral> list = new ArrayList<>();
       for (String value : values) {
         list.add(YamlSupport.FhirTypedLiteral.of(
             org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.CODING, value));
       }
-      subject.put(name, list);
+      model.put(name, list);
       return this;
     }
 
-    public SubjectBuilder complex(String name, Consumer<ComplexBuilder> builderConsumer) {
-      ComplexBuilder builder = new ComplexBuilder();
+    public ModelBuilder complex(String name, Consumer<ModelBuilder> builderConsumer) {
+      ModelBuilder builder = new ModelBuilder();
       builderConsumer.accept(builder);
-      subject.put(name, builder.build());
+      model.put(name, builder.model);
       return this;
     }
 
-    public SubjectBuilder complexArray(String name, Consumer<ComplexBuilder>... builders) {
+    public ModelBuilder complexArray(String name, Consumer<ModelBuilder>... builders) {
       List<Map<String, Object>> list = new ArrayList<>();
-      for (Consumer<ComplexBuilder> builderConsumer : builders) {
-        ComplexBuilder builder = new ComplexBuilder();
+      for (Consumer<ModelBuilder> builderConsumer : builders) {
+        ModelBuilder builder = new ModelBuilder();
         builderConsumer.accept(builder);
-        list.add(builder.build());
+        list.add(builder.model);
       }
-      subject.put(name, list);
+      model.put(name, list);
       return this;
     }
 
     public Map<String, Object> build() {
-      return Collections.unmodifiableMap(subject);
-    }
-  }
-
-  public static class ComplexBuilder {
-
-    private final Map<String, Object> properties = new HashMap<>();
-
-    public ComplexBuilder property(String name, Object value) {
-      properties.put(name, value);
-      return this;
-    }
-
-    public ComplexBuilder complex(String name, Consumer<ComplexBuilder> builderConsumer) {
-      ComplexBuilder builder = new ComplexBuilder();
-      builderConsumer.accept(builder);
-      properties.put(name, builder.build());
-      return this;
-    }
-
-    public ComplexBuilder complexArray(String name, Consumer<ComplexBuilder>... builders) {
-      List<Map<String, Object>> list = new ArrayList<>();
-      for (Consumer<ComplexBuilder> builderConsumer : builders) {
-        ComplexBuilder builder = new ComplexBuilder();
-        builderConsumer.accept(builder);
-        list.add(builder.build());
-      }
-      properties.put(name, list);
-      return this;
-    }
-
-    Map<String, Object> build() {
-      return properties;
+      return Collections.unmodifiableMap(model);
     }
   }
 

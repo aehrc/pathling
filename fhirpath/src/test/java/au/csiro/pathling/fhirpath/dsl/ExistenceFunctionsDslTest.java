@@ -21,8 +21,8 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
             .stringArray("sn2", "a", "b")
             .complex("e1", e -> e
                 .complexArray("xy",
-                    xy -> xy.property("x", 1).property("y", 2),
-                    xy -> xy.property("x", 3)
+                    xy -> xy.integer("x", 1).integer("y", 2),
+                    xy -> xy.integer("x", 3)
                 )
             ))
         .testTrue("{}.empty()", "Empty literal should return true")
@@ -45,8 +45,8 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
             .integerArray("an2", 1, 2)
             .complex("e1", e -> e
                 .complexArray("xy",
-                    xy -> xy.property("x", 1).property("y", 2),
-                    xy -> xy.property("x", 3)
+                    xy -> xy.integer("x", 1).integer("y", 2),
+                    xy -> xy.integer("x", 3)
                 )
             ))
         .testEquals(0, "{}.count()", "Empty literal should return 0")

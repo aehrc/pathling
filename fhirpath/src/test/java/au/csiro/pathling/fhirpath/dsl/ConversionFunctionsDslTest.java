@@ -2,18 +2,16 @@ package au.csiro.pathling.fhirpath.dsl;
 
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Stream;
 
 @Tag("UnitTest")
 public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
 
   @FhirPathTest
   public Stream<DynamicTest> testToStringFunction() {
+    
     return builder()
         .withSubject(sb -> sb
             .decimal("decimal1", 1.10)
@@ -26,14 +24,14 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .stringArray("sn2", "a", "b")
             .complex("e1", e -> e
                 .complexArray("xy",
-                    xy -> xy.property("x", 1).property("y", 2),
-                    xy -> xy.property("x", 3)
+                    xy -> xy.integer("x", 1).integer("y", 2),
+                    xy -> xy.integer("x", 3)
                 )
             )
             .complex("e2", e -> e
                 .complexArray("a",
-                    a -> a.property("a", 1).property("b", 2),
-                    a -> a.property("a", 3).property("b", 4)
+                    a -> a.integer("a", 1).integer("b", 2),
+                    a -> a.integer("a", 3).integer("b", 4)
                 )
             )
         )
