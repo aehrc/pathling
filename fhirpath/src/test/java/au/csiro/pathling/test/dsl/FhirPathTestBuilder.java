@@ -47,6 +47,62 @@ public class FhirPathTestBuilder {
   public FhirPathTestBuilder test(String description) {
     return test(description, builder -> builder);
   }
+  
+  /**
+   * Tests that an expression equals an expected value.
+   *
+   * @param expected The expected value
+   * @param expression The FHIRPath expression to evaluate
+   * @param description The test description
+   * @return This builder for method chaining
+   */
+  public FhirPathTestBuilder testEquals(Object expected, String expression, String description) {
+    return test(description, tc -> tc.expression(expression).expectResult(expected));
+  }
+  
+  /**
+   * Tests that an expression evaluates to true.
+   *
+   * @param expression The FHIRPath expression to evaluate
+   * @param description The test description
+   * @return This builder for method chaining
+   */
+  public FhirPathTestBuilder testTrue(String expression, String description) {
+    return test(description, tc -> tc.expression(expression).expectResult(true));
+  }
+  
+  /**
+   * Tests that an expression evaluates to false.
+   *
+   * @param expression The FHIRPath expression to evaluate
+   * @param description The test description
+   * @return This builder for method chaining
+   */
+  public FhirPathTestBuilder testFalse(String expression, String description) {
+    return test(description, tc -> tc.expression(expression).expectResult(false));
+  }
+  
+  /**
+   * Tests that an expression evaluates to an empty collection.
+   *
+   * @param expression The FHIRPath expression to evaluate
+   * @param description The test description
+   * @return This builder for method chaining
+   */
+  public FhirPathTestBuilder testEmpty(String expression, String description) {
+    return test(description, tc -> tc.expression(expression).expectResult(Collections.emptyList()));
+  }
+  
+  /**
+   * Tests that an expression throws an error.
+   *
+   * @param expression The FHIRPath expression to evaluate
+   * @param description The test description
+   * @return This builder for method chaining
+   */
+  public FhirPathTestBuilder testError(String expression, String description) {
+    return test(description, tc -> tc.expression(expression).expectError());
+  }
 
   @Nonnull
   public Map<Object, Object> buildSubject() {
