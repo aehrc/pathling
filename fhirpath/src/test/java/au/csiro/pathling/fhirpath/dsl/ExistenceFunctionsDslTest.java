@@ -67,39 +67,32 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
                     xy -> xy.property("x", 3)
                 )
             ))
-        .test("Empty literal should return 0")
-        .expression("{}.count()")
-        .expectResult(0)
-        .and()
-        .test("Empty collection has count 0")
-        .expression("nothing.count()")
-        .expectResult(0)
-        .and()
-        .test("Computed empty collection has count 0")
-        .expression("n1.where($this=0).count()")
-        .expectResult(0)
-        .and()
-        .test("Resource singular empty collection has count 0")
-        .expression("gender.count()")
-        //.inputFile("Patient-empty.json")
-        .expectResult(0)
-        .and()
-        .test("Resource plural empty collection has count 0")
-        .expression("name.given.count()")
-        //.inputFile("Patient-empty.json")
-        .expectResult(0)
-        .and()
-        .test("Singular integer has count 1")
-        .expression("n1.count()")
-        .expectResult(1)
-        .and()
-        .test("Plural integer has count 1")
-        .expression("an1.count()")
-        .expectResult(1)
-        .and()
-        .test("Plural integer collection has count 2")
-        .expression("an2.count()")
-        .expectResult(2)
-        .and().build();
+        .test("Empty literal should return 0", tc -> tc
+            .expression("{}.count()")
+            .expectResult(0))
+        .test("Empty collection has count 0", tc -> tc
+            .expression("nothing.count()")
+            .expectResult(0))
+        .test("Computed empty collection has count 0", tc -> tc
+            .expression("n1.where($this=0).count()")
+            .expectResult(0))
+        .test("Resource singular empty collection has count 0", tc -> tc
+            .expression("gender.count()")
+            //.inputFile("Patient-empty.json")
+            .expectResult(0))
+        .test("Resource plural empty collection has count 0", tc -> tc
+            .expression("name.given.count()")
+            //.inputFile("Patient-empty.json")
+            .expectResult(0))
+        .test("Singular integer has count 1", tc -> tc
+            .expression("n1.count()")
+            .expectResult(1))
+        .test("Plural integer has count 1", tc -> tc
+            .expression("an1.count()")
+            .expectResult(1))
+        .test("Plural integer collection has count 2", tc -> tc
+            .expression("an2.count()")
+            .expectResult(2))
+        .build();
   }
 }
