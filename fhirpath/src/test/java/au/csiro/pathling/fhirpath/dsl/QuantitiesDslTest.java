@@ -1,5 +1,7 @@
 package au.csiro.pathling.fhirpath.dsl;
 
+import static au.csiro.pathling.test.dsl.FhirTestExpectations.*;
+
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import org.junit.jupiter.api.DynamicTest;
@@ -44,6 +46,30 @@ public class QuantitiesDslTest extends FhirPathDslTestBase {
         .test("Quantity negation", tc -> tc
             .expression("0 'm' - 7.2 'm'= -7.2 'm'")
             .expectResult(true))
+        .build();
+  }
+  
+  @FhirPathTest
+  public Stream<DynamicTest> testWithExpectations() {
+    return builder()
+        .test("Using expectEquals", tc -> tc
+            .expression("5 + 5")
+            .apply(expectEquals(10)))
+        .test("Using expectTrue", tc -> tc
+            .expression("10 > 5")
+            .apply(expectTrue()))
+        .test("Using expectFalse", tc -> tc
+            .expression("5 > 10")
+            .apply(expectFalse()))
+        .test("Using expectEmpty", tc -> tc
+            .expression("{}.where($this > 0)")
+            .apply(expectEmpty()))
+        .test("Using expectContains", tc -> tc
+            .expression("[1, 2, 3]")
+            .apply(expectContains(1, 2, 3)))
+        .test("Using expectSingle", tc -> tc
+            .expression("5")
+            .apply(expectSingle(5)))
         .build();
   }
 }

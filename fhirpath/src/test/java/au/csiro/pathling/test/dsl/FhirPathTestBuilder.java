@@ -256,6 +256,10 @@ public class FhirPathTestBuilder {
       this.expectError = true;
       return this;
     }
+    
+    public TestCaseBuilder apply(Function<TestCaseBuilder, TestCaseBuilder> function) {
+      return function.apply(this);
+    }
 
 
     YamlSpecTestBase.RuntimeCase build(
