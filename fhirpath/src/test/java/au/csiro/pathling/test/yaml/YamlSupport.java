@@ -187,6 +187,141 @@ public class YamlSupport {
       FHIRDefinedType.CODING, SparkHelpers.codingStructType(),
       FHIRDefinedType.NULL, DataTypes.NullType
   );
+  
+  /**
+   * Converts an object model to a Spark Column representation.
+   *
+   * @param objectModel The object model to convert
+   * @return A Spark Column representing the object model
+   */
+  @Nonnull
+  public static Column omToSpark(@Nonnull final Map<Object, Object> objectModel) {
+    return createStructFromMap(objectModel);
+  }
+  
+  /**
+   * Creates a struct Column from a Map.
+   *
+   * @param map The map to convert
+   * @return A struct Column
+   */
+  @Nonnull
+  private static Column createStructFromMap(@Nonnull final Map<Object, Object> map) {
+    List<Column> fields = new ArrayList<>();
+    List<String> fieldNames = new ArrayList<>();
+    
+    for (Map.Entry<Object, Object> entry : map.entrySet()) {
+      String key = entry.getKey().toString();
+      Object value = entry.getValue();
+      
+      Column fieldColumn = valueToColumn(value);
+      if (fieldColumn != null) {
+        fields.add(fieldColumn);
+        fieldNames.add(key);
+      }
+    }
+    
+    return org.apache.spark.sql.functions.struct(
+        fields.toArray(new Column[0])
+    ).as(fieldNames.toArray(new String[0]));
+  }
+  
+  /**
+   * Converts a value to a Spark Column.
+   *
+   * @param value The value to convert
+   * @return A Spark Column representing the value
+   */
+  @Nullable
+  private static Column valueToColumn(@Nullable final Object value) {
+    if (value == null) {
+      return null;
+    } else if (value instanceof FhirTypedLiteral typedLiteral) {
+      return typedLiteralToColumn(typedLiteral);
+    } else if (value instanceof String stringValue) {
+      return StringCollection.fromValue(stringValue).getColumnValue();
+    } else if (value instanceof Integer intValue) {
+      return IntegerCollection.fromValue(intValue).getColumnValue();
+    } else if (value instanceof Boolean boolValue) {
+      return BooleanCollection.fromValue(boolValue).getColumnValue();
+    } else if (value instanceof Double doubleValue) {
+      try {
+        return DecimalCollection.fromValue(new DecimalType(doubleValue)).getColumnValue();
+      } catch (Exception e) {
+        throw new IllegalArgumentException("Failed to convert decimal value: " + doubleValue, e);
+      }
+    } else if (value instanceof Map<?, ?> mapValue) {
+      @SuppressWarnings("unchecked")
+      Map<Object, Object> objectMap = (Map<Object, Object>) mapValue;
+      return createStructFromMap(objectMap);
+    } else if (value instanceof List<?> listValue) {
+      return listToColumn(listValue);
+    } else {
+      throw new IllegalArgumentException("Unsupported data type: " + value.getClass().getName());
+    }
+  }
+  
+  /**
+   * Converts a typed literal to a Spark Column.
+   *
+   * @param typedLiteral The typed literal to convert
+   * @return A Spark Column representing the typed literal
+   */
+  @Nonnull
+  private static Column typedLiteralToColumn(@Nonnull final FhirTypedLiteral typedLiteral) {
+    if (typedLiteral.getLiteral() == null) {
+      return org.apache.spark.sql.functions.lit(null);
+    }
+    
+    try {
+      return switch (typedLiteral.getType()) {
+        case CODING -> CodingCollection.fromLiteral(typedLiteral.getLiteral()).getColumnValue();
+        case DATETIME -> DateTimeCollection.fromLiteral(typedLiteral.getLiteral()).getColumnValue();
+        case DATE -> DateCollection.fromLiteral(typedLiteral.getLiteral()).getColumnValue();
+        case TIME -> TimeCollection.fromLiteral(typedLiteral.getLiteral()).getColumnValue();
+        default -> throw new IllegalArgumentException("Unsupported FHIR type: " + typedLiteral.getType());
+      };
+    } catch (Exception e) {
+      throw new IllegalArgumentException("Failed to convert typed literal: " + typedLiteral, e);
+    }
+  }
+  
+  /**
+   * Converts a list to a Spark Column.
+   *
+   * @param list The list to convert
+   * @return A Spark Column representing the list
+   */
+  @Nullable
+  private static Column listToColumn(@Nonnull final List<?> list) {
+    if (list.isEmpty()) {
+      return null;
+    }
+    
+    // Get the first non-null element to determine the type
+    Object firstNonNull = list.stream()
+        .filter(Objects::nonNull)
+        .findFirst()
+        .orElse(null);
+    
+    if (firstNonNull == null) {
+      return null;
+    }
+    
+    List<Column> columns = new ArrayList<>();
+    for (Object item : list) {
+      Column itemColumn = valueToColumn(item);
+      if (itemColumn != null) {
+        columns.add(itemColumn);
+      }
+    }
+    
+    if (columns.isEmpty()) {
+      return null;
+    }
+    
+    return org.apache.spark.sql.functions.array(columns.toArray(new Column[0]));
+  }
 
   @Nonnull
   public static ResourceDefinition yamlToDefinition(@Nonnull final String resourcCode,
