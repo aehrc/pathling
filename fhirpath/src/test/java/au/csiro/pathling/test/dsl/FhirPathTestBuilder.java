@@ -23,6 +23,16 @@ public class FhirPathTestBuilder {
     public SubjectBuilder withSubject() {
         return new SubjectBuilder(this);
     }
+    
+    public SubjectBuilder withSubject(Map<String, Object> subject) {
+        this.subject.putAll(subject);
+        return new SubjectBuilder(this);
+    }
+    
+    public SubjectBuilder withSubject(Function<SubjectBuilder, SubjectBuilder> builderFunction) {
+        SubjectBuilder builder = new SubjectBuilder(this);
+        return builderFunction.apply(builder);
+    }
 
     public FhirPathTestBuilder group(String name) {
         this.currentGroup = name;

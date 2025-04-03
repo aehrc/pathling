@@ -32,6 +32,17 @@ public abstract class FhirPathDslTestBase extends YamlSpecTestBase {
   protected FhirPathTestBuilder.SubjectBuilder withSubject() {
     return builder().withSubject();
   }
+  
+  @Nonnull
+  protected FhirPathTestBuilder.SubjectBuilder withSubject(@Nonnull Map<String, Object> subject) {
+    return builder().withSubject(subject);
+  }
+  
+  @Nonnull
+  protected FhirPathTestBuilder.SubjectBuilder withSubject(
+      @Nonnull Function<FhirPathTestBuilder.SubjectBuilder, FhirPathTestBuilder.SubjectBuilder> builderFunction) {
+    return builder().withSubject(builderFunction);
+  }
 
 
   @Nonnull
