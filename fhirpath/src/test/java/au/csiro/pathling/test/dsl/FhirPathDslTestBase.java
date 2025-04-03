@@ -14,33 +14,45 @@ import java.util.stream.Stream;
 @SpringBootUnitTest
 public abstract class FhirPathDslTestBase extends YamlSpecTestBase {
 
-    private static final Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> CACHE =
-            Collections.synchronizedMap(new HashMap<>());
+  private static final Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> CACHE =
+      Collections.synchronizedMap(new HashMap<>());
+
+  @Nonnull
+  protected String getResourceBasePath() {
+    return "fhirpath-ptl/resources";
+  }
+
+  @Nonnull
+  protected FhirPathTestBuilder builder() {
+    return new FhirPathTestBuilder(this);
+  }
+
+
+  @Nonnull
+  protected FhirPathTestBuilder.SubjectBuilder withSubject() {
+    return builder().withSubject();
+  }
+
+
+  @Nonnull
+  @Override
+  protected ResolverBuilder createResolverBuilder() {
+    return CachingResolverBuilder.of(RuntimeContext.of(spark, fhirEncoders), CACHE);
+  }
+
+  @Value(staticConstructor = "of")
+  protected static class CachingResolverBuilder implements ResolverBuilder {
 
     @Nonnull
-    protected String getResourceBasePath() {
-        return "fhirpath-ptl/resources";
-    }
-
+    ResolverBuilder delegate;
     @Nonnull
+    Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> cache;
+
     @Override
-    protected ResolverBuilder createResolverBuilder() {
-        return CachingResolverBuilder.of(RuntimeContext.of(spark, fhirEncoders), CACHE);
+    @Nonnull
+    public ResourceResolver create(
+        @Nonnull final Function<RuntimeContext, ResourceResolver> resolveFactory) {
+      return cache.computeIfAbsent(resolveFactory, delegate::create);
     }
-
-    @Value(staticConstructor = "of")
-    protected static class CachingResolverBuilder implements ResolverBuilder {
-
-        @Nonnull
-        ResolverBuilder delegate;
-        @Nonnull
-        Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> cache;
-
-        @Override
-        @Nonnull
-        public ResourceResolver create(
-                @Nonnull final Function<RuntimeContext, ResourceResolver> resolveFactory) {
-            return cache.computeIfAbsent(resolveFactory, delegate::create);
-        }
-    }
+  }
 }

@@ -13,7 +13,7 @@ public class QuantitiesDslTest extends FhirPathDslTestBase {
 
     @FhirPathTest
     Stream<DynamicTest> testQuantities() {
-        FhirPathTestBuilder builder = new FhirPathTestBuilder();
+        FhirPathTestBuilder builder = new FhirPathTestBuilder(this);
         builder.withSubject()
             .and()
             .test("Correct flooring of decimal weekly quantities")
@@ -24,12 +24,12 @@ public class QuantitiesDslTest extends FhirPathDslTestBase {
                 .expression("@2016-02-28T00:00:00.000 + 1.7006 seconds")
                 .expectResult("2016-02-28T00:00:01.700+00:00");
                 
-        return builder.buildDynamicTests(this);
+        return builder.build();
     }
     
     @FhirPathTest
     Stream<DynamicTest> testMathOperations() {
-        FhirPathTestBuilder builder = new FhirPathTestBuilder();
+        FhirPathTestBuilder builder = new FhirPathTestBuilder(this);
         builder.withSubject()
             .and()
             .group("Polarity operator")
@@ -57,6 +57,6 @@ public class QuantitiesDslTest extends FhirPathDslTestBase {
                 .expression("0 'm' - 7.2 'm'= -7.2 'm'")
                 .expectResult(true);
                 
-        return builder.buildDynamicTests(this);
+        return builder.build();
     }
 }

@@ -14,6 +14,8 @@ import java.util.stream.Stream;
 
 @RequiredArgsConstructor
 public class FhirPathTestBuilder {
+
+    private  final YamlSpecTestBase testBase;
     private final Map<String, Object> subject = new HashMap<>();
     private final List<TestCaseBuilder> testCases = new ArrayList<>();
     private String currentGroup;
@@ -40,25 +42,9 @@ public class FhirPathTestBuilder {
         result.putAll(subject);
         return result;
     }
-
-    @Nonnull
-    public List<YamlSpecTestBase.RuntimeCase> buildTestCases(YamlSpecTestBase testBase) {
-        Map<Object, Object> subjectOM = buildSubject();
-        Function<YamlSpecTestBase.RuntimeContext, ResourceResolver> resolverFactory = 
-            YamlSpecTestBase.OMResolverFactory.of(subjectOM);
-            
-        if (testCases.isEmpty()) {
-            // If no test cases were added, return an empty list
-            return List.of();
-        }
-            
-        return testCases.stream()
-                .map(tc -> tc.build(resolverFactory))
-                .toList();
-    }
     
     @Nonnull
-    public Stream<DynamicTest> buildDynamicTests(YamlSpecTestBase testBase) {
+    public Stream<DynamicTest> build() {
         Map<Object, Object> subjectOM = buildSubject();
         Function<YamlSpecTestBase.RuntimeContext, ResourceResolver> resolverFactory = 
             YamlSpecTestBase.OMResolverFactory.of(subjectOM);
