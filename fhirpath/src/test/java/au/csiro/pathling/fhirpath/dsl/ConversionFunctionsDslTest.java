@@ -42,49 +42,49 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testEmpty("empty.toString()", "toString of empty collection is {}")
         
         .group("String collections")
-        .testEquals(List.of(""), "''.toString()", "toString of empty string literal is identity")
-        .testEquals(List.of("'ala'"), "'\\'ala\\''.toString()", "toString of string literal is identity")
-        .testEquals(List.of("a"), "s1.toString()", "toString of string value is identity")
+        .testEquals("", "''.toString()", "toString of empty string literal is identity")
+        .testEquals("'ala'", "'\\'ala\\''.toString()", "toString of string literal is identity")
+        .testEquals("a", "s1.toString()", "toString of string value is identity")
         
         .group("Boolean collections")
-        .testEquals(List.of("true"), "true.toString()", "true literal is 'true'")
-        .testEquals(List.of("false"), "false.toString()", "false literal is 'false'")
+        .testEquals("true", "true.toString()", "true literal is 'true'")
+        .testEquals("false", "false.toString()", "false literal is 'false'")
         .testEmpty("false.where($this).toString()", "computed empty boolean collection is {}")
         
         .group("Integer collections")
-        .testEquals(List.of("13"), "13.toString()", "toString of integer literal is correct")
-        .testEquals(List.of("1"), "n1.toString()", "toString of integer value is correct")
+        .testEquals("13", "13.toString()", "toString of integer literal is correct")
+        .testEquals("1", "n1.toString()", "toString of integer value is correct")
         
         .group("Decimal collections")
-        .testEquals(List.of("1.000"), "(1.000).toString()", "toString of decimal literal retains scale")
-        .testEquals(List.of("1.10"), "decimal1.toString()", "toString of decimal value retains scale")
+        .testEquals("1.000", "(1.000).toString()", "toString of decimal literal retains scale")
+        .testEquals("1.10", "decimal1.toString()", "toString of decimal value retains scale")
         
         .group("Quantity collections")
-        .testEquals(List.of("1.10 'm'"), "(1.10 'm').toString()", "ucum quantity literal toString")
-        .testEquals(List.of("1 year"), "(1 year).toString()", "time quantity literal toString")
+        .testEquals("1.10 'm'", "(1.10 'm').toString()", "ucum quantity literal toString")
+        .testEquals("1 year", "(1 year).toString()", "time quantity literal toString")
         
         .group("Coding collections")
-        .testEquals(List.of("http://snomed.info/sct|52101004"), 
+        .testEquals("http://snomed.info/sct|52101004", 
             "(http://snomed.info/sct|52101004).toString()", 
             "toString of coding literal (sys:code) is correct")
-        .testEquals(List.of("http://snomed.info/sct|52101004||Present"), 
+        .testEquals("http://snomed.info/sct|52101004||Present", 
             "(http://snomed.info/sct|52101004||Present).toString()", 
             "toString of coding literal (sys:code:disp) is correct")
-        .testEquals(List.of("http://snomed.info/sct|52101004|2.0"), 
+        .testEquals("http://snomed.info/sct|52101004|2.0", 
             "(http://snomed.info/sct|52101004|2.0).toString()", 
             "toString of coding literal (sys:code:ver) is correct")
-        .testEquals(List.of("http://snomed.info/sct|52101004|1.0|Present"), 
+        .testEquals("http://snomed.info/sct|52101004|1.0|Present", 
             "(http://snomed.info/sct|52101004|1.0|Present).toString()", 
             "toString of coding literal (sys:code:ver:disp) is correct")
         
         .group("Date-time collections")
-        .testEquals(List.of("2019-01-01T10:00:00Z"), 
+        .testEquals("2019-01-01T10:00:00Z", 
             "(@2019-01-01T10:00:00Z).toString()", 
             "toString of date-time literal is correct")
-        .testEquals(List.of("2019-01-01"), 
+        .testEquals("2019-01-01", 
             "(@2019-01-01).toString()", 
             "toString of date literal is correct")
-        .testEquals(List.of("10:00:00"), 
+        .testEquals("10:00:00", 
             "(@T10:00:00).toString()", 
             "toString of time literal is correct")
         

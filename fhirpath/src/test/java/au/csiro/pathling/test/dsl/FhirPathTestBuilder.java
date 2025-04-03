@@ -323,9 +323,11 @@ public class FhirPathTestBuilder {
       // Convert the result to the expected format
       Object formattedResult;
       if (result instanceof Number || result instanceof Boolean || result instanceof String) {
-        formattedResult = List.of(result);
+        formattedResult = result;
       } else if (result == null && expectError) {
         formattedResult = null;
+      } else if (result instanceof List && ((List<?>) result).size() == 1) {
+        formattedResult = ((List<?>) result).get(0);
       } else {
         formattedResult = result;
       }
