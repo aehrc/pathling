@@ -1,0 +1,101 @@
+package au.csiro.pathling.fhirpath.dsl;
+
+import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
+import au.csiro.pathling.test.dsl.FhirPathTest;
+import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.Tag;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Stream;
+
+@Tag("UnitTest")
+public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
+
+  @FhirPathTest
+  public Stream<DynamicTest> testToStringFunction() {
+    return builder()
+        .withSubject(sb -> sb
+            .decimal("decimal1", 1.10)
+            .integer("decimal1_scale", 2)
+            .integer("n1", 1)
+            .integerArray("an1", 1)
+            .integerArray("an2", 1, 2)
+            .string("s1", "a")
+            .stringArray("sn1", "a")
+            .stringArray("sn2", "a", "b")
+            .complex("e1", e -> e
+                .complexArray("xy",
+                    xy -> xy.property("x", 1).property("y", 2),
+                    xy -> xy.property("x", 3)
+                )
+            )
+            .complex("e2", e -> e
+                .complexArray("a",
+                    a -> a.property("a", 1).property("b", 2),
+                    a -> a.property("a", 3).property("b", 4)
+                )
+            )
+        )
+        .group("Empty collections")
+        .testEmpty("{}.toString()", "toString of empty literal collection is {}")
+        .testEmpty("empty.toString()", "toString of empty collection is {}")
+        
+        .group("String collections")
+        .testEquals(List.of(""), "''.toString()", "toString of empty string literal is identity")
+        .testEquals(List.of("'ala'"), "'\\'ala\\''.toString()", "toString of string literal is identity")
+        .testEquals(List.of("a"), "s1.toString()", "toString of string value is identity")
+        
+        .group("Boolean collections")
+        .testEquals(List.of("true"), "true.toString()", "true literal is 'true'")
+        .testEquals(List.of("false"), "false.toString()", "false literal is 'false'")
+        .testEmpty("false.where($this).toString()", "computed empty boolean collection is {}")
+        
+        .group("Integer collections")
+        .testEquals(List.of("13"), "13.toString()", "toString of integer literal is correct")
+        .testEquals(List.of("1"), "n1.toString()", "toString of integer value is correct")
+        
+        .group("Decimal collections")
+        .testEquals(List.of("1.000"), "(1.000).toString()", "toString of decimal literal retains scale")
+        .testEquals(List.of("1.10"), "decimal1.toString()", "toString of decimal value retains scale")
+        
+        .group("Quantity collections")
+        .testEquals(List.of("1.10 'm'"), "(1.10 'm').toString()", "ucum quantity literal toString")
+        .testEquals(List.of("1 year"), "(1 year).toString()", "time quantity literal toString")
+        
+        .group("Coding collections")
+        .testEquals(List.of("http://snomed.info/sct|52101004"), 
+            "(http://snomed.info/sct|52101004).toString()", 
+            "toString of coding literal (sys:code) is correct")
+        .testEquals(List.of("http://snomed.info/sct|52101004||Present"), 
+            "(http://snomed.info/sct|52101004||Present).toString()", 
+            "toString of coding literal (sys:code:disp) is correct")
+        .testEquals(List.of("http://snomed.info/sct|52101004|2.0"), 
+            "(http://snomed.info/sct|52101004|2.0).toString()", 
+            "toString of coding literal (sys:code:ver) is correct")
+        .testEquals(List.of("http://snomed.info/sct|52101004|1.0|Present"), 
+            "(http://snomed.info/sct|52101004|1.0|Present).toString()", 
+            "toString of coding literal (sys:code:ver:disp) is correct")
+        
+        .group("Date-time collections")
+        .testEquals(List.of("2019-01-01T10:00:00Z"), 
+            "(@2019-01-01T10:00:00Z).toString()", 
+            "toString of date-time literal is correct")
+        .testEquals(List.of("2019-01-01"), 
+            "(@2019-01-01).toString()", 
+            "toString of date literal is correct")
+        .testEquals(List.of("10:00:00"), 
+            "(@T10:00:00).toString()", 
+            "toString of time literal is correct")
+        
+        .group("Complex type collections")
+        .testEmpty("e1.toString()", "toString of complex type is {}")
+        
+        .group("Non-singular collections")
+        .testError("an2.toString()", "toString of non-singular Integer collection fails")
+        .testError("sn2.toString()", "toString of non-singular String collection fails")
+        .testError("e2.toString()", "toString of non-singular complex type fails")
+        
+        .build();
+  }
+}
