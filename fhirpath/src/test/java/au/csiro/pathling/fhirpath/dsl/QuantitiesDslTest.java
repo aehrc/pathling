@@ -48,28 +48,19 @@ public class QuantitiesDslTest extends FhirPathDslTestBase {
             .expectResult(true))
         .build();
   }
-  
+
   @FhirPathTest
   public Stream<DynamicTest> testWithExpectations() {
     return builder()
-        .test("Using expectEquals", tc -> tc
-            .expression("5 + 5")
-            .apply(expectEquals(10)))
-        .test("Using expectTrue", tc -> tc
-            .expression("10 > 5")
-            .apply(expectTrue()))
-        .test("Using expectFalse", tc -> tc
-            .expression("5 > 10")
-            .apply(expectFalse()))
-        .test("Using expectEmpty", tc -> tc
-            .expression("{}.where($this > 0)")
-            .apply(expectEmpty()))
-        .test("Using expectContains", tc -> tc
-            .expression("[1, 2, 3]")
-            .apply(expectContains(1, 2, 3)))
-        .test("Using expectSingle", tc -> tc
-            .expression("5")
-            .apply(expectSingle(5)))
+        .test("Using expectEquals",
+            expectEquals(10, "5 + 5"))
+        .test("Using expectTrue",
+            expectTrue("10 > 5"))
+        .test("Using expectFalse",
+            expectFalse("5 > 10"))
+        .test("Using expectEmpty",
+            expectEmpty("{}.where($this > 0)"))
+        .test("Using expectError", expectError("1 / 0"))
         .build();
   }
 }
