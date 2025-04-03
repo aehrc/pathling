@@ -38,10 +38,14 @@ public class FhirPathTestBuilder {
     return this;
   }
 
-  public TestCaseBuilder test(String description) {
+  public FhirPathTestBuilder test(String description, Function<TestCaseBuilder, TestCaseBuilder> builderFunction) {
     TestCaseBuilder builder = new TestCaseBuilder(this, description);
-    testCases.add(builder);
-    return builder;
+    testCases.add(builderFunction.apply(builder));
+    return this;
+  }
+  
+  public FhirPathTestBuilder test(String description) {
+    return test(description, builder -> builder);
   }
 
   @Nonnull
@@ -253,9 +257,6 @@ public class FhirPathTestBuilder {
       return this;
     }
 
-    public FhirPathTestBuilder and() {
-      return parent;
-    }
 
     YamlSpecTestBase.RuntimeCase build(
         Function<YamlSpecTestBase.RuntimeContext, ResourceResolver> resolverFactory) {
