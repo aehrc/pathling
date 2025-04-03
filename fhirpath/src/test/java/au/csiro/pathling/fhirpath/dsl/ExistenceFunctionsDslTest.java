@@ -1,5 +1,7 @@
 package au.csiro.pathling.fhirpath.dsl;
 
+import static au.csiro.pathling.test.dsl.FhirTestExpectations.*;
+
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import java.util.stream.Stream;
@@ -25,32 +27,22 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
                     xy -> xy.property("x", 3)
                 )
             ))
-        .test("Empty literal should return true", tc -> tc
-            .expression("{}.empty()")
-            .expectResult(true))
-        .test("Empty collection should return true", tc -> tc
-            .expression("nothing.empty()")
-            .expectResult(true))
-        .test("Computed empty collection is empty", tc -> tc
-            .expression("n1.where($this=0).empty()")
-            .expectResult(true))
-        .test("Resource singular empty collection is empty", tc -> tc
-            .expression("gender.empty()")
-            //.inputFile("Patient-empty.json")
-            .expectResult(true))
-        .test("Resource plural empty collection is empty", tc -> tc
-            .expression("name.given.empty()")
-            //.inputFile("Patient-empty.json")
-            .expectResult(true))
-        .test("Singular integer is not empty", tc -> tc
-            .expression("n1.empty()")
-            .expectResult(false))
-        .test("Plural integer is not empty", tc -> tc
-            .expression("an1.empty()")
-            .expectResult(false))
-        .test("Plural integer collection is not empty", tc -> tc
-            .expression("an2.empty()")
-            .expectResult(false))
+        .test("Empty literal should return true", 
+            expectTrue("{}.empty()"))
+        .test("Empty collection should return true", 
+            expectTrue("nothing.empty()"))
+        .test("Computed empty collection is empty", 
+            expectTrue("n1.where($this=0).empty()"))
+        .test("Resource singular empty collection is empty", 
+            expectTrue("gender.empty()"))
+        .test("Resource plural empty collection is empty", 
+            expectTrue("name.given.empty()"))
+        .test("Singular integer is not empty", 
+            expectFalse("n1.empty()"))
+        .test("Plural integer is not empty", 
+            expectFalse("an1.empty()"))
+        .test("Plural integer collection is not empty", 
+            expectFalse("an2.empty()"))
         .build();
   }
 
@@ -67,32 +59,22 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
                     xy -> xy.property("x", 3)
                 )
             ))
-        .test("Empty literal should return 0", tc -> tc
-            .expression("{}.count()")
-            .expectResult(0))
-        .test("Empty collection has count 0", tc -> tc
-            .expression("nothing.count()")
-            .expectResult(0))
-        .test("Computed empty collection has count 0", tc -> tc
-            .expression("n1.where($this=0).count()")
-            .expectResult(0))
-        .test("Resource singular empty collection has count 0", tc -> tc
-            .expression("gender.count()")
-            //.inputFile("Patient-empty.json")
-            .expectResult(0))
-        .test("Resource plural empty collection has count 0", tc -> tc
-            .expression("name.given.count()")
-            //.inputFile("Patient-empty.json")
-            .expectResult(0))
-        .test("Singular integer has count 1", tc -> tc
-            .expression("n1.count()")
-            .expectResult(1))
-        .test("Plural integer has count 1", tc -> tc
-            .expression("an1.count()")
-            .expectResult(1))
-        .test("Plural integer collection has count 2", tc -> tc
-            .expression("an2.count()")
-            .expectResult(2))
+        .test("Empty literal should return 0", 
+            expectEquals(0, "{}.count()"))
+        .test("Empty collection has count 0", 
+            expectEquals(0, "nothing.count()"))
+        .test("Computed empty collection has count 0", 
+            expectEquals(0, "n1.where($this=0).count()"))
+        .test("Resource singular empty collection has count 0", 
+            expectEquals(0, "gender.count()"))
+        .test("Resource plural empty collection has count 0", 
+            expectEquals(0, "name.given.count()"))
+        .test("Singular integer has count 1", 
+            expectEquals(1, "n1.count()"))
+        .test("Plural integer has count 1", 
+            expectEquals(1, "an1.count()"))
+        .test("Plural integer collection has count 2", 
+            expectEquals(2, "an2.count()"))
         .build();
   }
 }
