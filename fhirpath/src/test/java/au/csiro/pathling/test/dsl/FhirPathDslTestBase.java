@@ -4,12 +4,11 @@ import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.yaml.YamlSpecTestBase;
 import jakarta.annotation.Nonnull;
-import lombok.Value;
-import org.junit.jupiter.api.DynamicTest;
-
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Stream;
+import lombok.Value;
 
 @SpringBootUnitTest
 public abstract class FhirPathDslTestBase extends YamlSpecTestBase {
@@ -26,25 +25,7 @@ public abstract class FhirPathDslTestBase extends YamlSpecTestBase {
   protected FhirPathTestBuilder builder() {
     return new FhirPathTestBuilder(this);
   }
-
-
-  @Nonnull
-  protected FhirPathTestBuilder.SubjectBuilder withSubject() {
-    return builder().withSubject();
-  }
   
-  @Nonnull
-  protected FhirPathTestBuilder.SubjectBuilder withSubject(@Nonnull Map<String, Object> subject) {
-    return builder().withSubject(subject);
-  }
-  
-  @Nonnull
-  protected FhirPathTestBuilder.SubjectBuilder withSubject(
-      @Nonnull Function<FhirPathTestBuilder.SubjectBuilder, FhirPathTestBuilder.SubjectBuilder> builderFunction) {
-    return builder().withSubject(builderFunction);
-  }
-
-
   @Nonnull
   @Override
   protected ResolverBuilder createResolverBuilder() {

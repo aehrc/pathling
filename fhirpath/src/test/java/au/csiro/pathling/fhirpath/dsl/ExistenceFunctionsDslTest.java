@@ -2,31 +2,29 @@ package au.csiro.pathling.fhirpath.dsl;
 
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
-import au.csiro.pathling.test.dsl.FhirPathTestBuilder;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
-
-import java.util.stream.Stream;
 
 @Tag("UnitTest")
 public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
 
   @FhirPathTest
   public Stream<DynamicTest> testEmptyFunction() {
-    return withSubject()
-        .integer("n1", 1)
-        .integerArray("an1", 1)
-        .integerArray("an2", 1, 2)
-        .string("s1", "a")
-        .stringArray("sn1", "a")
-        .stringArray("sn2", "a", "b")
-        .complex("e1", e -> e
-            .complexArray("xy",
-                xy -> xy.property("x", 1).property("y", 2),
-                xy -> xy.property("x", 3)
-            )
-        )
-        .and()
+    return builder()
+        .withSubject(sb -> sb
+            .integer("n1", 1)
+            .integerArray("an1", 1)
+            .integerArray("an2", 1, 2)
+            .string("s1", "a")
+            .stringArray("sn1", "a")
+            .stringArray("sn2", "a", "b")
+            .complex("e1", e -> e
+                .complexArray("xy",
+                    xy -> xy.property("x", 1).property("y", 2),
+                    xy -> xy.property("x", 3)
+                )
+            ))
         .test("Empty literal should return true")
         .expression("{}.empty()")
         .expectResult(true)
@@ -60,22 +58,23 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
         .test("Plural integer collection is not empty")
         .expression("an2.empty()")
         .expectResult(false)
-        .and().build();
+        .and()
+        .build();
   }
 
   @FhirPathTest
   public Stream<DynamicTest> testCountFunction() {
-    return withSubject()
-        .integer("n1", 1)
-        .integerArray("an1", 1)
-        .integerArray("an2", 1, 2)
-        .complex("e1", e -> e
-            .complexArray("xy",
-                xy -> xy.property("x", 1).property("y", 2),
-                xy -> xy.property("x", 3)
-            )
-        )
-        .and()
+    return builder()
+        .withSubject(sb -> sb
+            .integer("n1", 1)
+            .integerArray("an1", 1)
+            .integerArray("an2", 1, 2)
+            .complex("e1", e -> e
+                .complexArray("xy",
+                    xy -> xy.property("x", 1).property("y", 2),
+                    xy -> xy.property("x", 3)
+                )
+            ))
         .test("Empty literal should return 0")
         .expression("{}.count()")
         .expectResult(0)
