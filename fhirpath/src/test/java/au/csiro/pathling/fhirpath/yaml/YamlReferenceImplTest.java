@@ -1,14 +1,9 @@
 package au.csiro.pathling.fhirpath.yaml;
 
-import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.test.yaml.YamlConfig;
 import au.csiro.pathling.test.yaml.YamlSpec;
 import au.csiro.pathling.test.yaml.YamlSpecCachedTestBase;
 import jakarta.annotation.Nonnull;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Tag;
 
@@ -20,17 +15,7 @@ import org.junit.jupiter.api.Tag;
     resourceBase = "fhirpath-js/resources"
 )
 public class YamlReferenceImplTest extends YamlSpecCachedTestBase {
-
-
-  @Nonnull
-  private static final Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> CACHE =
-      Collections.synchronizedMap(new HashMap<>());
-
-  @Override
-  protected Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> getResolverCache() {
-    return CACHE;
-  }
-
+  
   //   From: https://github.com/hl7/fhirpath.js/
   //   Tag: 3.16.4
   //

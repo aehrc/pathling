@@ -1,50 +1,14 @@
 package au.csiro.pathling.test.dsl;
 
-import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.yaml.YamlSpecTestBase;
+import au.csiro.pathling.test.yaml.YamlSpecCachedTestBase;
 import jakarta.annotation.Nonnull;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Function;
-import lombok.Value;
 
 @SpringBootUnitTest
-public abstract class FhirPathDslTestBase extends YamlSpecTestBase {
-
-  private static final Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> CACHE =
-      Collections.synchronizedMap(new HashMap<>());
-
-  @Nonnull
-  protected String getResourceBasePath() {
-    return "fhirpath-ptl/resources";
-  }
-
+public abstract class FhirPathDslTestBase extends YamlSpecCachedTestBase {
+  
   @Nonnull
   protected FhirPathTestBuilder builder() {
     return new FhirPathTestBuilder(this);
-  }
-  
-  @Nonnull
-  @Override
-  protected ResolverBuilder createResolverBuilder() {
-    return CachingResolverBuilder.of(RuntimeContext.of(spark, fhirEncoders), CACHE);
-  }
-
-  @Value(staticConstructor = "of")
-  protected static class CachingResolverBuilder implements ResolverBuilder {
-
-    @Nonnull
-    ResolverBuilder delegate;
-    @Nonnull
-    Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> cache;
-
-    @Override
-    @Nonnull
-    public ResourceResolver create(
-        @Nonnull final Function<RuntimeContext, ResourceResolver> resolveFactory) {
-      return cache.computeIfAbsent(resolveFactory, delegate::create);
-    }
   }
 }
