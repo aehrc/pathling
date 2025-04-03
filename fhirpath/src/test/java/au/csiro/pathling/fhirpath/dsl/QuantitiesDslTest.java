@@ -2,7 +2,6 @@ package au.csiro.pathling.fhirpath.dsl;
 
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
-import au.csiro.pathling.test.dsl.FhirPathTestBuilder;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 
@@ -12,9 +11,8 @@ import java.util.stream.Stream;
 public class QuantitiesDslTest extends FhirPathDslTestBase {
 
     @FhirPathTest
-    Stream<DynamicTest> testQuantities() {
-        FhirPathTestBuilder builder = new FhirPathTestBuilder(this);
-        builder.withSubject()
+    public Stream<DynamicTest> testQuantities() {
+        return withSubject()
             .and()
             .test("Correct flooring of decimal weekly quantities")
                 .expression("@2016-02-28 + 1.5 weeks")
@@ -22,15 +20,14 @@ public class QuantitiesDslTest extends FhirPathDslTestBase {
             .and()
             .test("Correct flooring of decimal second quantities")
                 .expression("@2016-02-28T00:00:00.000 + 1.7006 seconds")
-                .expectResult("2016-02-28T00:00:01.700+00:00");
-                
-        return builder.build();
+                .expectResult("2016-02-28T00:00:01.700+00:00")
+            .and()
+            .build();
     }
     
     @FhirPathTest
-    Stream<DynamicTest> testMathOperations() {
-        FhirPathTestBuilder builder = new FhirPathTestBuilder(this);
-        builder.withSubject()
+    public Stream<DynamicTest> testMathOperations() {
+        return withSubject()
             .and()
             .group("Polarity operator")
             .test("Integer negation")
@@ -55,8 +52,8 @@ public class QuantitiesDslTest extends FhirPathDslTestBase {
             .and()
             .test("Quantity negation")
                 .expression("0 'm' - 7.2 'm'= -7.2 'm'")
-                .expectResult(true);
-                
-        return builder.build();
+                .expectResult(true)
+            .and()
+            .build();
     }
 }
