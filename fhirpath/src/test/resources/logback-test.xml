@@ -36,7 +36,7 @@
   <logger level="ERROR" name="org.apache.spark.sql.catalyst.analysis.SimpleFunctionRegistry"/>
   <logger level="ERROR" name="org.apache.hadoop.util.NativeCodeLoader"/>
   <logger level="ERROR" name="org.apache.spark.scheduler.DAGScheduler"/>
-  <logger level="${au.csiro.pathling.test.yaml.logLevel:-TRACE}"
+  <logger level="${au.csiro.pathling.test.yaml.logLevel:-INFO}"
     name="au.csiro.pathling.test.yaml.YamlSpecTestBase"/>
   <root level="WARN">
     <appender-ref ref="STDOUT"/>
