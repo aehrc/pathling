@@ -28,7 +28,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
@@ -42,7 +41,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
-import lombok.Value;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.ArrayType;
@@ -119,39 +117,6 @@ public class YamlSupport {
         @Nonnull final JsonGenerator gen) throws IOException {
       gen.writeString(timeLiteral.replaceFirst("^@T", ""));
     }
-  }
-
-  @JsonSerialize(using = FhirTypedLiteralSerializer.class)
-  @Value(staticConstructor = "of")
-  public static class FhirTypedLiteral {
-
-    @Nonnull
-    FHIRDefinedType type;
-    @Nullable
-    String literal;
-
-    @Nonnull
-    public String getTag() {
-      return FhirTypedLiteral.toTag(type);
-    }
-
-    @Nonnull
-    public static String toTag(FHIRDefinedType type) {
-      return "!fhir." + type.toCode();
-    }
-
-    @Nonnull
-    public static FhirTypedLiteral toQuantity(@Nonnull final String literal) {
-      return of(FHIRDefinedType.QUANTITY, literal);
-    }
-
-    // toCoding
-    @Nonnull
-    public static FhirTypedLiteral toCoding(@Nonnull final String literal) {
-      return of(FHIRDefinedType.CODING, literal);
-    }
-
-
   }
 
   public static class FhirConstructor extends Constructor {

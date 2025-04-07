@@ -2,8 +2,7 @@ package au.csiro.pathling.test.dsl;
 
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.test.yaml.YamlSpecTestBase;
-import au.csiro.pathling.test.yaml.YamlSupport;
-import au.csiro.pathling.test.yaml.YamlSupport.FhirTypedLiteral;
+import au.csiro.pathling.test.yaml.FhirTypedLiteral;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.DynamicTest;
 import jakarta.annotation.Nonnull;
@@ -190,15 +189,15 @@ public class FhirPathTestBuilder {
     }
 
     public ModelBuilder dateTime(String name, String value) {
-      model.put(name, YamlSupport.FhirTypedLiteral.of(
+      model.put(name, FhirTypedLiteral.of(
           FHIRDefinedType.DATETIME, value));
       return this;
     }
 
     public ModelBuilder dateTimeArray(String name, String... values) {
-      List<YamlSupport.FhirTypedLiteral> list = new ArrayList<>();
+      List<FhirTypedLiteral> list = new ArrayList<>();
       for (String value : values) {
-        list.add(YamlSupport.FhirTypedLiteral.of(
+        list.add(FhirTypedLiteral.of(
             FHIRDefinedType.DATETIME, value));
       }
       model.put(name, list);
@@ -206,27 +205,27 @@ public class FhirPathTestBuilder {
     }
 
     public ModelBuilder date(String name, String value) {
-      model.put(name, YamlSupport.FhirTypedLiteral.of(
+      model.put(name, FhirTypedLiteral.of(
           FHIRDefinedType.DATE, value));
       return this;
     }
 
     public ModelBuilder time(String name, String value) {
-      model.put(name, YamlSupport.FhirTypedLiteral.of(
+      model.put(name, FhirTypedLiteral.of(
           FHIRDefinedType.TIME, value));
       return this;
     }
 
     public ModelBuilder coding(String name, String value) {
-      model.put(name, YamlSupport.FhirTypedLiteral.of(
+      model.put(name, FhirTypedLiteral.of(
           FHIRDefinedType.CODING, value));
       return this;
     }
 
     public ModelBuilder codingArray(String name, String... values) {
-      List<YamlSupport.FhirTypedLiteral> list = new ArrayList<>();
+      List<FhirTypedLiteral> list = new ArrayList<>();
       for (String value : values) {
-        list.add(YamlSupport.FhirTypedLiteral.of(
+        list.add(FhirTypedLiteral.of(
             FHIRDefinedType.CODING, value));
       }
       model.put(name, list);
@@ -234,7 +233,7 @@ public class FhirPathTestBuilder {
     }
 
     public ModelBuilder quantity(String name, String literalValue) {
-      model.put(name, YamlSupport.FhirTypedLiteral.of(
+      model.put(name, FhirTypedLiteral.of(
           FHIRDefinedType.QUANTITY, literalValue));
       return this;
     }

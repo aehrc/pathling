@@ -1,7 +1,7 @@
 package au.csiro.pathling.fhirpath.dsl;
 
-import static au.csiro.pathling.test.yaml.YamlSupport.FhirTypedLiteral.toCoding;
-import static au.csiro.pathling.test.yaml.YamlSupport.FhirTypedLiteral.toQuantity;
+import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toCoding;
+import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toQuantity;
 
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
