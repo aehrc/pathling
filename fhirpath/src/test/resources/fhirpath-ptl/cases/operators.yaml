@@ -2,52 +2,52 @@ tests:
   - 'Membership operators':
       - 'Quantity type':
           - desc: '** In for existing quantity in many **'
-            expression: "80 'mm[Hg]' in component.value.ofType(Quantity)"
-            inputfile: 'Observation_3_comp.json'
+            expression: "80 'mm[Hg]' in manyQuantity"
             result: [ true ]
           - desc: '** Contains for existing quantity in many **'
-            expression: "component.value.ofType(Quantity) contains 72 '/min'"
-            inputfile: 'Observation_3_comp.json'
+            expression: "manyQuantity contains 72 '/min'"
             result: [ true ]
           - desc: '** In for non-existing quantity in many **'
-            expression: "72 'mm[Hg]' in component.value.ofType(Quantity)"
-            inputfile: 'Observation_3_comp.json'
+            expression: "72 'mm[Hg]' in manyQuantity"
             result: [ false ]
-          - desc: '** Contains non-for existing quantity in many **'
-            expression: "component.value.ofType(Quantity) contains 80 '/min'"
-            inputfile: 'Observation_3_comp.json'
+          - desc: '** Contains non-existing quantity in many **'
+            expression: "manyQuantity contains 80 '/min'"
             result: [ false ]
-          - desc: '** In for empty quantity in many **'
-            expression: "{} in component.value.ofType(Quantity)"
-            inputfile: 'Observation_3_comp.json'
+          - desc: '** In for empty literal in many Quantity **'
+            expression: "{} in manyQuantity"
             result: [ ]
-          - desc: '** Contains empty quantity in many **'
-            expression: "component.value.ofType(Quantity) contains {}"
-            inputfile: 'Observation_3_comp.json'
+          - desc: '** Contains empty literal in many Quantity **'
+            expression: "manyQuantity contains {}"
             result: [ ]
           - desc: '** In for existing quantity in one **'
-            expression: "80 '/min' in value.ofType(Quantity)"
-            inputfile: 'Observation_1.json'
+            expression: "80 '/min' in oneQuantity"
             result: [ true ]
           - desc: '** Contains for existing quantity in one **'
-            expression: "value.ofType(Quantity) contains 80 '/min'"
-            inputfile: 'Observation_1.json'
+            expression: "oneQuantity contains 80 '/min'"
             result: [ true ]
           - desc: '** In for non-existing quantity in one **'
-            expression: "80 'mm[Hg]' in value.ofType(Quantity)"
-            inputfile: 'Observation_1.json'
+            expression: "80 'mm[Hg]' in oneQuantity"
             result: [ false ]
-          - desc: '** Contains non-for existing quantity in one **'
-            expression: "value.ofType(Quantity) contains 81 '/min'"
-            inputfile: 'Observation_1.json'
+          - desc: '** Contains non-existing quantity in one **'
+            expression: "oneQuantity contains 81 '/min'"
             result: [ false ]
-          - desc: '** In for empty quantity in many **'
-            expression: "{} in value.ofType(Quantity)"
-            inputfile: 'Observation_1.json'
+          - desc: '** In for empty literal in one Quantity **'
+            expression: "{} in oneQuantity"
             result: [ ]
-          - desc: '** Contains empty quantity in many **'
-            expression: "value.ofType(Quantity) contains {}"
-            inputfile: 'Observation_1.json'
+          - desc: '** Contains empty literal in one Quantity **'
+            expression: "oneQuantity contains {}"
+            result: [ ]
+          - desc: '** In for empty Quantity in one **'
+            expression: "noQuantity in oneQuantity"
+            result: [ ]
+          - desc: '** Contains empty Quantity in one **'
+            expression: "oneQuantity contains noQuantity"
+            result: [ ]
+          - desc: '** In for empty Quantity in many **'
+            expression: "noQuantity in manyQuantity"
+            result: [ ]
+          - desc: '** Contains empty Quantity in many **'
+            expression: "manyQuantity contains noQuantity"
             result: [ ]
       - 'Coding type':
           - desc: '** In for existing coding in many **'
@@ -447,6 +447,12 @@ subject:
     - !fhir.time "@T14:00:00"
     - !fhir.time "@T09:30:00"
     - !fhir.time "@T15:45:00"
+  noQuantity: !fhir.Quantity
+  oneQuantity: !fhir.Quantity "80 '/min'"
+  manyQuantity:
+    - !fhir.Quantity "120 'mm[Hg]'"
+    - !fhir.Quantity "80 'mm[Hg]'"
+    - !fhir.Quantity "72 '/min'"
   noCoding: !fhir.Coding
   oneCoding: !fhir.Coding "http://loinc.org|8867-4||'Heart rate'"
   manyCoding:
