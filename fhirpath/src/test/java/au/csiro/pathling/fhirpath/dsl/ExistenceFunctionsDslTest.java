@@ -19,12 +19,7 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
             .string("s1", "a")
             .stringArray("sn1", "a")
             .stringArray("sn2", "a", "b")
-            .complex("e1", e -> e
-                .complexArray("xy",
-                    xy -> xy.integer("x", 1).integer("y", 2),
-                    xy -> xy.integer("x", 3)
-                )
-            ))
+        )
         .testTrue("{}.empty()", "Empty literal should return true")
         .testTrue("nothing.empty()", "Empty collection should return true")
         .testTrue("n1.where($this=0).empty()", "Computed empty collection is empty")
@@ -43,12 +38,7 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
             .integer("n1", 1)
             .integerArray("an1", 1)
             .integerArray("an2", 1, 2)
-            .complex("e1", e -> e
-                .complexArray("xy",
-                    xy -> xy.integer("x", 1).integer("y", 2),
-                    xy -> xy.integer("x", 3)
-                )
-            ))
+        )
         .testEquals(0, "{}.count()", "Empty literal should return 0")
         .testEquals(0, "nothing.count()", "Empty collection has count 0")
         .testEquals(0, "n1.where($this=0).count()", "Computed empty collection has count 0")

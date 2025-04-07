@@ -3,6 +3,8 @@ package au.csiro.pathling.test.dsl;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.test.yaml.YamlSpecTestBase;
 import au.csiro.pathling.test.yaml.YamlSupport;
+import au.csiro.pathling.test.yaml.YamlSupport.FhirTypedLiteral;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.DynamicTest;
 import jakarta.annotation.Nonnull;
 import lombok.RequiredArgsConstructor;
@@ -20,10 +22,6 @@ public class FhirPathTestBuilder {
   private Map<String, Object> subject = new HashMap<>();
   private String currentGroup;
 
-  public FhirPathTestBuilder withSubject() {
-    return this;
-  }
-
   public FhirPathTestBuilder withSubject(Map<String, Object> subject) {
     this.subject = subject;
     return this;
@@ -38,16 +36,17 @@ public class FhirPathTestBuilder {
     return this;
   }
 
-  public FhirPathTestBuilder test(String description, Function<TestCaseBuilder, TestCaseBuilder> builderFunction) {
+  public FhirPathTestBuilder test(String description,
+      Function<TestCaseBuilder, TestCaseBuilder> builderFunction) {
     TestCaseBuilder builder = new TestCaseBuilder(this, description);
     testCases.add(builderFunction.apply(builder));
     return this;
   }
-  
+
   public FhirPathTestBuilder test(String description) {
     return test(description, builder -> builder);
   }
-  
+
   /**
    * Tests that an expression equals an expected value.
    *
@@ -59,7 +58,7 @@ public class FhirPathTestBuilder {
   public FhirPathTestBuilder testEquals(Object expected, String expression, String description) {
     return test(description, tc -> tc.expression(expression).expectResult(expected));
   }
-  
+
   /**
    * Tests that an expression evaluates to true.
    *
@@ -70,7 +69,7 @@ public class FhirPathTestBuilder {
   public FhirPathTestBuilder testTrue(String expression, String description) {
     return test(description, tc -> tc.expression(expression).expectResult(true));
   }
-  
+
   /**
    * Tests that an expression evaluates to false.
    *
@@ -81,7 +80,7 @@ public class FhirPathTestBuilder {
   public FhirPathTestBuilder testFalse(String expression, String description) {
     return test(description, tc -> tc.expression(expression).expectResult(false));
   }
-  
+
   /**
    * Tests that an expression evaluates to an empty collection.
    *
@@ -92,7 +91,7 @@ public class FhirPathTestBuilder {
   public FhirPathTestBuilder testEmpty(String expression, String description) {
     return test(description, tc -> tc.expression(expression).expectResult(Collections.emptyList()));
   }
-  
+
   /**
    * Tests that an expression throws an error.
    *
@@ -192,7 +191,7 @@ public class FhirPathTestBuilder {
 
     public ModelBuilder dateTime(String name, String value) {
       model.put(name, YamlSupport.FhirTypedLiteral.of(
-          org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.DATETIME, value));
+          FHIRDefinedType.DATETIME, value));
       return this;
     }
 
@@ -200,7 +199,7 @@ public class FhirPathTestBuilder {
       List<YamlSupport.FhirTypedLiteral> list = new ArrayList<>();
       for (String value : values) {
         list.add(YamlSupport.FhirTypedLiteral.of(
-            org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.DATETIME, value));
+            FHIRDefinedType.DATETIME, value));
       }
       model.put(name, list);
       return this;
@@ -208,19 +207,19 @@ public class FhirPathTestBuilder {
 
     public ModelBuilder date(String name, String value) {
       model.put(name, YamlSupport.FhirTypedLiteral.of(
-          org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.DATE, value));
+          FHIRDefinedType.DATE, value));
       return this;
     }
 
     public ModelBuilder time(String name, String value) {
       model.put(name, YamlSupport.FhirTypedLiteral.of(
-          org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.TIME, value));
+          FHIRDefinedType.TIME, value));
       return this;
     }
 
     public ModelBuilder coding(String name, String value) {
       model.put(name, YamlSupport.FhirTypedLiteral.of(
-          org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.CODING, value));
+          FHIRDefinedType.CODING, value));
       return this;
     }
 
@@ -228,11 +227,27 @@ public class FhirPathTestBuilder {
       List<YamlSupport.FhirTypedLiteral> list = new ArrayList<>();
       for (String value : values) {
         list.add(YamlSupport.FhirTypedLiteral.of(
-            org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.CODING, value));
+            FHIRDefinedType.CODING, value));
       }
       model.put(name, list);
       return this;
     }
+
+    public ModelBuilder quantity(String name, String literalValue) {
+      model.put(name, YamlSupport.FhirTypedLiteral.of(
+          FHIRDefinedType.QUANTITY, literalValue));
+      return this;
+    }
+
+    @Nonnull
+    public ModelBuilder quantityArray(@Nonnull final String name,
+        @Nonnull final String... literalValues) {
+      model.put(name, Stream.of(literalValues)
+          .map(FhirTypedLiteral::toQuantity)
+          .toList());
+      return this;
+    }
+
 
     public ModelBuilder complex(String name, Consumer<ModelBuilder> builderConsumer) {
       ModelBuilder builder = new ModelBuilder();
@@ -280,7 +295,7 @@ public class FhirPathTestBuilder {
       this.expectError = true;
       return this;
     }
-    
+
     public TestCaseBuilder apply(Function<TestCaseBuilder, TestCaseBuilder> function) {
       return function.apply(this);
     }
