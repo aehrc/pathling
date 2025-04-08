@@ -418,8 +418,8 @@ tests:
             expression: "@2023-01-02T00:00:00Z in manyDate"
             error: true
           - desc: '** String in Coding many **'
-            expression: "'http://loinc.org|8480-6||\\'Systolic blood pressure\\'' in codingMany"
-            result: [ false ]
+            expression: "'http://loinc.org|8480-6||\\'Systolic blood pressure\\'' in manyCoding"
+            error: true
 subject:
   oneInt: 1
   manyInt: [ 1, 2, 3 ]
