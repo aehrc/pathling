@@ -1,17 +1,21 @@
 package au.csiro.pathling.test.dsl;
 
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
-import au.csiro.pathling.test.yaml.YamlSpecTestBase;
 import au.csiro.pathling.test.yaml.FhirTypedLiteral;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.jupiter.api.DynamicTest;
+import au.csiro.pathling.test.yaml.YamlSpecTestBase;
 import jakarta.annotation.Nonnull;
-import lombok.RequiredArgsConstructor;
-
-import java.util.*;
+import jakarta.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
+import lombok.RequiredArgsConstructor;
+import org.junit.jupiter.api.DynamicTest;
 
 @RequiredArgsConstructor
 public class FhirPathTestBuilder {
@@ -188,53 +192,69 @@ public class FhirPathTestBuilder {
       return this;
     }
 
-    public ModelBuilder dateTime(String name, String value) {
-      model.put(name, FhirTypedLiteral.of(
-          FHIRDefinedType.DATETIME, value));
+    @Nonnull
+    public ModelBuilder dateTime(@Nonnull final String name, @Nullable final String value) {
+      model.put(name, FhirTypedLiteral.toDateTime(value));
       return this;
     }
 
-    public ModelBuilder dateTimeArray(String name, String... values) {
-      List<FhirTypedLiteral> list = new ArrayList<>();
-      for (String value : values) {
-        list.add(FhirTypedLiteral.of(
-            FHIRDefinedType.DATETIME, value));
-      }
-      model.put(name, list);
+    @Nonnull
+    public ModelBuilder dateTimeArray(@Nonnull final String name,
+        @Nonnull final String... values) {
+      model.put(name, Stream.of(values)
+          .map(FhirTypedLiteral::toDateTime)
+          .toList());
       return this;
     }
 
-    public ModelBuilder date(String name, String value) {
-      model.put(name, FhirTypedLiteral.of(
-          FHIRDefinedType.DATE, value));
+    @Nonnull
+    public ModelBuilder date(@Nonnull final String name, @Nullable final String value) {
+      model.put(name, FhirTypedLiteral.toDate(value));
       return this;
     }
 
-    public ModelBuilder time(String name, String value) {
-      model.put(name, FhirTypedLiteral.of(
-          FHIRDefinedType.TIME, value));
+    @Nonnull
+    public ModelBuilder dateArray(@Nonnull final String name,
+        @Nonnull final String... values) {
+      model.put(name, Stream.of(values)
+          .map(FhirTypedLiteral::toDate)
+          .toList());
       return this;
     }
 
-    public ModelBuilder coding(String name, String value) {
-      model.put(name, FhirTypedLiteral.of(
-          FHIRDefinedType.CODING, value));
+    @Nonnull
+    public ModelBuilder time(@Nonnull final String name, @Nullable final String value) {
+      model.put(name, FhirTypedLiteral.toTime(value));
       return this;
     }
 
-    public ModelBuilder codingArray(String name, String... values) {
-      List<FhirTypedLiteral> list = new ArrayList<>();
-      for (String value : values) {
-        list.add(FhirTypedLiteral.of(
-            FHIRDefinedType.CODING, value));
-      }
-      model.put(name, list);
+    @Nonnull
+    public ModelBuilder timeArray(@Nonnull final String name,
+        @Nonnull final String... values) {
+      model.put(name, Stream.of(values)
+          .map(FhirTypedLiteral::toTime)
+          .toList());
       return this;
     }
 
-    public ModelBuilder quantity(String name, String literalValue) {
-      model.put(name, FhirTypedLiteral.of(
-          FHIRDefinedType.QUANTITY, literalValue));
+    @Nonnull
+    public ModelBuilder coding(@Nonnull final String name, @Nullable final String value) {
+      model.put(name, FhirTypedLiteral.toCoding(value));
+      return this;
+    }
+
+    @Nonnull
+    public ModelBuilder codingArray(@Nonnull final String name,
+        @Nonnull final String... values) {
+      model.put(name, Stream.of(values)
+          .map(FhirTypedLiteral::toCoding)
+          .toList());
+      return this;
+    }
+
+    @Nonnull
+    public ModelBuilder quantity(@Nonnull final String name, @Nullable final String literalValue) {
+      model.put(name, FhirTypedLiteral.toQuantity(literalValue));
       return this;
     }
 
