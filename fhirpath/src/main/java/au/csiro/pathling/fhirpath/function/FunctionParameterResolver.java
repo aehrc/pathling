@@ -65,12 +65,13 @@ class FunctionParameterResolver {
       return collection.toConcepts().orElseThrow(
           () -> new IllegalArgumentException("Cannot convert collection to concepts")
       );
-    } else if (collection.getClass().isAssignableFrom(parameter.getType())) {
+    } else if (parameter.getType().isAssignableFrom(collection.getClass())) {
       // evaluate collection types 
       return collection;
     } else {
-      throw new RuntimeException("Cannot resolve input, expected:" + parameter.getType() + " and got:"
-          + collection.getClass());
+      throw new RuntimeException(
+          "Cannot resolve input, expected:" + parameter.getType() + " and got:"
+              + collection.getClass());
     }
   }
 
