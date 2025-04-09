@@ -145,6 +145,11 @@ public class FhirPathTestBuilder {
       return this;
     }
 
+    public ModelBuilder stringEmpty(@Nonnull final String name) {
+      model.put(name, FhirTypedLiteral.toString(null));
+      return this;
+    }
+
     public ModelBuilder stringArray(@Nonnull final String name, String... values) {
       model.put(name, Arrays.asList(values));
       return this;
@@ -152,6 +157,11 @@ public class FhirPathTestBuilder {
 
     public ModelBuilder integer(@Nonnull final String name, @Nullable final Integer value) {
       model.put(name, value);
+      return this;
+    }
+
+    public ModelBuilder integerEmpty(@Nonnull final String name) {
+      model.put(name, FhirTypedLiteral.toInteger(null));
       return this;
     }
 
@@ -169,6 +179,11 @@ public class FhirPathTestBuilder {
       return this;
     }
 
+    public ModelBuilder decimalEmpty(@Nonnull final String name) {
+      model.put(name, FhirTypedLiteral.toDecimal(null));
+      return this;
+    }
+
     public ModelBuilder decimalArray(@Nonnull final String name, double... values) {
       List<Double> list = new ArrayList<>();
       for (double value : values) {
@@ -180,6 +195,11 @@ public class FhirPathTestBuilder {
 
     public ModelBuilder bool(@Nonnull final String name, @Nullable Boolean value) {
       model.put(name, value);
+      return this;
+    }
+
+    public ModelBuilder boolEmpty(@Nonnull final String name) {
+      model.put(name, FhirTypedLiteral.toBoolean(null));
       return this;
     }
 
@@ -199,6 +219,12 @@ public class FhirPathTestBuilder {
     }
 
     @Nonnull
+    public ModelBuilder dateTimeEmpty(@Nonnull final String name) {
+      model.put(name, FhirTypedLiteral.toDateTime(null));
+      return this;
+    }
+
+    @Nonnull
     public ModelBuilder dateTimeArray(@Nonnull final String name,
         @Nonnull final String... values) {
       model.put(name, Stream.of(values)
@@ -210,6 +236,12 @@ public class FhirPathTestBuilder {
     @Nonnull
     public ModelBuilder date(@Nonnull final String name, @Nullable final String value) {
       model.put(name, FhirTypedLiteral.toDate(value));
+      return this;
+    }
+
+    @Nonnull
+    public ModelBuilder dateEmpty(@Nonnull final String name) {
+      model.put(name, FhirTypedLiteral.toDate(null));
       return this;
     }
 
@@ -229,6 +261,12 @@ public class FhirPathTestBuilder {
     }
 
     @Nonnull
+    public ModelBuilder timeEmpty(@Nonnull final String name) {
+      model.put(name, FhirTypedLiteral.toTime(null));
+      return this;
+    }
+
+    @Nonnull
     public ModelBuilder timeArray(@Nonnull final String name,
         @Nonnull final String... values) {
       model.put(name, Stream.of(values)
@@ -240,6 +278,12 @@ public class FhirPathTestBuilder {
     @Nonnull
     public ModelBuilder coding(@Nonnull final String name, @Nullable final String value) {
       model.put(name, FhirTypedLiteral.toCoding(value));
+      return this;
+    }
+
+    @Nonnull
+    public ModelBuilder codingEmpty(@Nonnull final String name) {
+      model.put(name, FhirTypedLiteral.toCoding(null));
       return this;
     }
 
@@ -259,6 +303,12 @@ public class FhirPathTestBuilder {
     }
 
     @Nonnull
+    public ModelBuilder quantityEmpty(@Nonnull final String name) {
+      model.put(name, FhirTypedLiteral.toQuantity(null));
+      return this;
+    }
+
+    @Nonnull
     public ModelBuilder quantityArray(@Nonnull final String name,
         @Nonnull final String... literalValues) {
       model.put(name, Stream.of(literalValues)
@@ -272,6 +322,11 @@ public class FhirPathTestBuilder {
       ModelBuilder builder = new ModelBuilder();
       builderConsumer.accept(builder);
       model.put(name, builder.model);
+      return this;
+    }
+
+    public ModelBuilder complexEmpty(@Nonnull final String name) {
+      model.put(name, null);
       return this;
     }
 
