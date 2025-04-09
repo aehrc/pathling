@@ -10,6 +10,7 @@ import au.csiro.pathling.fhirpath.function.provider.ExistenceFunctions;
 import au.csiro.pathling.fhirpath.function.provider.FhirFunctions;
 import au.csiro.pathling.fhirpath.function.provider.FilteringAndProjectionFunctions;
 import au.csiro.pathling.fhirpath.function.provider.JoinKeyFunctions;
+import au.csiro.pathling.fhirpath.function.provider.PathlingFunctions;
 import au.csiro.pathling.fhirpath.function.provider.ResolverFunctions;
 import au.csiro.pathling.fhirpath.function.provider.StringFunctions;
 import au.csiro.pathling.fhirpath.function.provider.SubsettingFunctions;
@@ -44,6 +45,7 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
         .putAll(MethodDefinedFunction.mapOf(TerminologyFunctions.class))
         .putAll(MethodDefinedFunction.mapOf(ResolverFunctions.class))
         .putAll(MethodDefinedFunction.mapOf(DateTimeFunctions.class))
+        .putAll(MethodDefinedFunction.mapOf(PathlingFunctions.class))
         .build());
   }
 
