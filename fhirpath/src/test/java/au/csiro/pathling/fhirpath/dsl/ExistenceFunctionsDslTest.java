@@ -59,6 +59,7 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
         .testTrue("person.exists()", "exists() returns true for a complex type")
         .testTrue("people.exists()", "exists() returns true for an array of complex types")
         .testFalse("emptyComplex.exists()", "exists() returns false for an empty complex type")
+        .testFalse("{}.exists()", "exists() returns false for an empty literal")
         
         // exists() with criteria
         .testTrue("stringArray.exists($this = 'one')", "exists() with criteria returns true when criteria matches")
@@ -101,6 +102,7 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
         .testTrue("emptyQuantity.empty()", "empty() returns true for an empty quantity")
         .testTrue("emptyBoolean.empty()", "empty() returns true for an empty boolean")
         .testTrue("emptyComplex.empty()", "empty() returns true for an empty complex type")
+        .testTrue("{}.empty()", "empty() returns true for an empty literal")
         .testFalse("singleString.empty()", "empty() returns false for a single string")
         .testFalse("stringArray.empty()", "empty() returns false for a non-empty array")
         .testFalse("singleInteger.empty()", "empty() returns false for a single integer")
@@ -152,6 +154,7 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
         .testEquals(0, "emptyString.count()", "count() returns 0 for an empty string")
         .testEquals(0, "emptyInteger.count()", "count() returns 0 for an empty integer")
         .testEquals(0, "emptyComplex.count()", "count() returns 0 for an empty complex type")
+        .testEquals(0, "{}.count()", "count() returns 0 for an empty literal")
         .testEquals(1, "singleString.count()", "count() returns 1 for a single string")
         .testEquals(3, "stringArray.count()", "count() returns the correct count for a string array")
         .testEquals(1, "singleInteger.count()", "count() returns 1 for a single integer")
