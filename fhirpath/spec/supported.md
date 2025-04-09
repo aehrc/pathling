@@ -27,7 +27,6 @@
 - `exists([criteria : expression]) : Boolean`
 - `empty() : Boolean`
 - `count() : Integer`
-- `sum()`
 - `allTrue() : Boolean`
 - `allFalse() : Boolean`
 - `anyTrue() : Boolean`
@@ -74,3 +73,6 @@
 ### Join Key Functions
 - `getResourceKey()`
 - `getReferenceKey([typeSpecifier])`
+
+### Pathling Functions
+- `sum()`
