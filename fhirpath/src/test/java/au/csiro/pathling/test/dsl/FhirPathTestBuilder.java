@@ -140,22 +140,22 @@ public class FhirPathTestBuilder {
 
     private final Map<String, Object> model = new HashMap<>();
 
-    public ModelBuilder string(String name, String value) {
+    public ModelBuilder string(@Nonnull final String name, @Nullable final String value) {
       model.put(name, value);
       return this;
     }
 
-    public ModelBuilder stringArray(String name, String... values) {
+    public ModelBuilder stringArray(@Nonnull final String name, String... values) {
       model.put(name, Arrays.asList(values));
       return this;
     }
 
-    public ModelBuilder integer(String name, int value) {
+    public ModelBuilder integer(@Nonnull final String name, @Nullable final Integer value) {
       model.put(name, value);
       return this;
     }
 
-    public ModelBuilder integerArray(String name, int... values) {
+    public ModelBuilder integerArray(@Nonnull final String name, int... values) {
       List<Integer> list = new ArrayList<>();
       for (int value : values) {
         list.add(value);
@@ -164,12 +164,12 @@ public class FhirPathTestBuilder {
       return this;
     }
 
-    public ModelBuilder decimal(String name, double value) {
+    public ModelBuilder decimal(@Nonnull final String name, @Nullable final Double value) {
       model.put(name, value);
       return this;
     }
 
-    public ModelBuilder decimalArray(String name, double... values) {
+    public ModelBuilder decimalArray(@Nonnull final String name, double... values) {
       List<Double> list = new ArrayList<>();
       for (double value : values) {
         list.add(value);
@@ -178,7 +178,7 @@ public class FhirPathTestBuilder {
       return this;
     }
 
-    public ModelBuilder bool(String name, boolean value) {
+    public ModelBuilder bool(@Nonnull final String name, @Nullable Boolean value) {
       model.put(name, value);
       return this;
     }
