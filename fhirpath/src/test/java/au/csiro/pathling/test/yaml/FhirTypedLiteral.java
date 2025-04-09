@@ -53,4 +53,58 @@ public class FhirTypedLiteral {
   public static FhirTypedLiteral toTime(@Nullable final String literal) {
     return of(Enumerations.FHIRDefinedType.TIME, literal);
   }
+
+  /**
+   * Creates a String typed literal.
+   *
+   * @param literal The String value
+   * @return A new FhirTypedLiteral
+   */
+  @Nonnull
+  public static FhirTypedLiteral toString(@Nullable final String literal) {
+    return of(Enumerations.FHIRDefinedType.STRING, literal);
+  }
+
+  /**
+   * Creates an Integer typed literal.
+   *
+   * @param literal The Integer value as a string
+   * @return A new FhirTypedLiteral
+   */
+  @Nonnull
+  public static FhirTypedLiteral toInteger(@Nullable final String literal) {
+    return of(Enumerations.FHIRDefinedType.INTEGER, literal);
+  }
+
+  /**
+   * Creates a Decimal typed literal.
+   *
+   * @param literal The Decimal value as a string
+   * @return A new FhirTypedLiteral
+   */
+  @Nonnull
+  public static FhirTypedLiteral toDecimal(@Nullable final String literal) {
+    return of(Enumerations.FHIRDefinedType.DECIMAL, literal);
+  }
+
+  /**
+   * Creates a Boolean typed literal.
+   *
+   * @param literal The Boolean value as a string
+   * @return A new FhirTypedLiteral
+   */
+  @Nonnull
+  public static FhirTypedLiteral toBoolean(@Nullable final String literal) {
+    return of(Enumerations.FHIRDefinedType.BOOLEAN, literal);
+  }
+
+  /**
+   * Creates a null typed literal.
+   *
+   * @return A new FhirTypedLiteral with NULL type
+   */
+  @Nonnull
+  public static FhirTypedLiteral toNull() {
+    return of(Enumerations.FHIRDefinedType.NULL, null);
+  }
 }

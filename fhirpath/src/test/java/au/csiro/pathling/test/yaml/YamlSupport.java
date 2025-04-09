@@ -75,6 +75,9 @@ public class YamlSupport {
       if (nonNull(fhirLiteral.getLiteral())) {
         @Nonnull final String literalValue = requireNonNull(fhirLiteral.getLiteral());
         switch (fhirLiteral.getType()) {
+          case NULL -> gen.writeNull();
+          case INTEGER, DECIMAL, BOOLEAN -> gen.writeRawValue(literalValue);
+          case STRING -> gen.writeString(StringCollection.parseStringLiteral(literalValue));
           case CODING -> writeCoding(literalValue, gen);
           case DATETIME, DATE -> writeDate(literalValue, gen);
           case TIME -> writeTime(literalValue, gen);
@@ -121,18 +124,10 @@ public class YamlSupport {
 
   public static class FhirConstructor extends Constructor {
 
-    private static final List<FHIRDefinedType> FHIR_TYPES = List.of(
-        FHIRDefinedType.DATETIME,
-        FHIRDefinedType.DATE,
-        FHIRDefinedType.TIME,
-        FHIRDefinedType.CODING,
-        FHIRDefinedType.QUANTITY
-    );
-
     public FhirConstructor() {
       super(new LoaderOptions());
       // Register a generic handler for FHIR types
-      for (FHIRDefinedType type : FHIR_TYPES) {
+      for (FHIRDefinedType type : FHIR_TO_SQL.keySet()) {
         this.yamlConstructors.put(new Tag(FhirTypedLiteral.toTag(type)),
             new ConstructFhirTypedLiteral(type));
       }
@@ -171,11 +166,7 @@ public class YamlSupport {
       }
     }
   }
-
-  static final Yaml YAML = new Yaml(new FhirConstructor(), new FhirRepresenter());
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
-  static Map<FHIRDefinedType, DataType> FHIR_TO_SQL = Map.of(
+  private static final Map<FHIRDefinedType, DataType> FHIR_TO_SQL = Map.of(
       FHIRDefinedType.STRING, DataTypes.StringType,
       FHIRDefinedType.INTEGER, DataTypes.IntegerType,
       FHIRDefinedType.BOOLEAN, DataTypes.BooleanType,
@@ -187,6 +178,10 @@ public class YamlSupport {
       FHIRDefinedType.QUANTITY, QuantityEncoding.dataType(),
       FHIRDefinedType.NULL, DataTypes.NullType
   );
+  static final Yaml YAML = new Yaml(new FhirConstructor(), new FhirRepresenter());
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+
 
   /**
    * Converts an object model to a Spark Column representation.
