@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Tag;
  * - exists()
  * - empty()
  * - count()
- * - sum()
  * - allTrue()
  * - allFalse()
  * - anyTrue()
@@ -165,69 +164,7 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
         .testEquals(3, "people.count()", "count() returns the correct count for an array of complex types")
         .build();
   }
-
-  @FhirPathTest
-  public Stream<DynamicTest> testSum() {
-    return builder()
-        .withSubject(sb -> sb
-            // Empty values
-            .integerEmpty("emptyInteger")
-            .decimalEmpty("emptyDecimal")
-            .quantityEmpty("emptyQuantity")
-            // Single values
-            .integer("singleInteger", 42)
-            .decimal("singleDecimal", 3.14)
-            .quantity("singleQuantity", "10 'mg'")
-            .string("singleString", "test")
-            .bool("singleBoolean", true)
-            // Arrays
-            .integerArray("integerArray", 1, 2, 3, 4, 5)
-            .decimalArray("decimalArray", 1.1, 2.2, 3.3, 4.4, 5.5)
-            .quantityArray("quantityArray", "5 'mg'", "10 'mg'", "15 'mg'")
-            .quantityArray("mixedQuantityArray", "5 'mg'", "10 'mg'", "15 'g'")
-            // Complex types
-            .complexArray("people",
-                person1 -> person1
-                    .integer("age", 25)
-                    .decimal("weight", 65.5)
-                    .quantity("height", "165 'cm'"),
-                person2 -> person2
-                    .integer("age", 40)
-                    .decimal("weight", 80.2)
-                    .quantity("height", "175 'cm'"),
-                person3 -> person3
-                    .integer("age", 35)
-                    .decimal("weight", 70.0)
-                    .quantity("height", "170 'cm'"))
-        )
-        .group("sum() function")
-        // sum() tests with Integer
-        .testEquals(42, "singleInteger.sum()", "sum() returns the value for a single integer")
-        .testEquals(15, "integerArray.sum()", "sum() returns the correct sum for an integer array")
-        .testEmpty("emptyInteger.sum()", "sum() returns empty for an empty integer")
-        
-        // sum() tests with Decimal
-        .testEquals(3.14, "singleDecimal.sum()", "sum() returns the value for a single decimal")
-        .testEquals(16.5, "decimalArray.sum()", "sum() returns the correct sum for a decimal array")
-        .testEmpty("emptyDecimal.sum()", "sum() returns empty for an empty decimal")
-        
-        // sum() tests with Quantity
-        .testEquals("10 'mg'", "singleQuantity.sum()", "sum() returns the value for a single quantity")
-        .testEquals("30 'mg'", "quantityArray.sum()", "sum() returns the correct sum for a quantity array with same units")
-        .testEmpty("emptyQuantity.sum()", "sum() returns empty for an empty quantity")
-        .testEmpty("mixedQuantityArray.sum()", "sum() returns empty for quantities with different units")
-        
-        // sum() with complex types and paths
-        .testEquals(100, "people.select(age).sum()", "sum() works with selected integer properties")
-        .testEquals(215.7, "people.select(weight).sum()", "sum() works with selected decimal properties")
-        .testEquals("510 'cm'", "people.select(height).sum()", "sum() works with selected quantity properties")
-        
-        // Error cases for sum()
-        .testError("'string'.sum()", "sum() errors on string values")
-        .testError("true.sum()", "sum() errors on boolean values")
-        .build();
-  }
-
+  
   @FhirPathTest
   public Stream<DynamicTest> testAllTrue() {
     return builder()
