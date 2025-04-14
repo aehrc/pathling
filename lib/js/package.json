@@ -13,7 +13,7 @@
     "@babel/preset-typescript": "^7.16.0",
     "@types/fhir": "^0.0.35",
     "@types/jest": "^29.2.0",
-    "@types/node": "^18.x",
+    "@types/node": "^22.x",
     "jest": "^29.2.2",
     "prettier": "^2.4.1",
     "ts-node": "^10.4.0",
