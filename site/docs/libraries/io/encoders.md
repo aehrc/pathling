@@ -1,12 +1,11 @@
 ---
-sidebar_position: 2
 description: The Pathling library can be used to transform FHIR Bundles or NDJSON into Spark data sets.
 ---
 
 # FHIR encoders
 
-The Pathling library can be used to transform [FHIR](https://hl7.org/fhir)
-Bundles or NDJSON into Spark
+The Pathling library also includes a lower-level interface called the encoders. 
+The encoders can be used to transform [FHIR](https://hl7.org/fhir) Bundles or NDJSON into Spark
 data sets. Once your data is encoded, it can be queried using SQL, or
 transformed using the full library of functions that Spark provides. It can also
 be written to [Parquet](https://parquet.apache.org/) and other formats that are

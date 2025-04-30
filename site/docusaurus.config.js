@@ -77,15 +77,8 @@ const config = {
             label: "Libraries"
           },
           {
-            type: "docSidebar",
-            position: "left",
-            sidebarId: "server",
-            label: "Server"
-          },
-          {
-            type: "docSidebar",
-            position: "left",
-            sidebarId: "fhirpath",
+            type: "doc",
+            docId: "fhirpath",
             label: "FHIRPath"
           },
           {

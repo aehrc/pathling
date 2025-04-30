@@ -10,58 +10,37 @@ yet, please [get into contact](https://pathling.csiro.au/#contact) with us
 or [create an issue](https://github.com/aehrc/pathling/issues/new) to help us
 understand your use case.
 
-## SQL on FHIR support
+## Server
 
-We are working on adding support for
-executing [SQL on FHIR views](https://build.fhir.org/ig/FHIR/sql-on-fhir-v2)
-within both the language libraries and server implementation.
+We have temporarily removed the server feature from Pathling while we redesign 
+it. The new Pathling server will focus on the following features.
 
-## Additional FHIRPath functions
+### Bulk Data Access Export API
 
-Implementation of a number of functions is planned:
+We are working on an implementation of the Export operation within the FHIR
+Bulk Data Access implementation guide. This will allow you to use Pathling as a 
+way of providing bulk export functionality over your FHIR data. When used with 
+our existing bulk client and Kafka features, you will be able to synchronise the 
+Pathling server with another FHIR server and use it to provide bulk export 
+services.
 
-### Aggregate functions
+### SQL on FHIR API
 
-- `approxCountDistinct`
-- `correlation`
-- `countDistinct`
-- `covariance[Pop]`
-- `kurtosis`
-- `last`
-- `max`
-- `mean`
-- `min`
-- `percentileApprox`
-- `product`
-- `skewness`
-- `stdDev[Pop]`
-- `sumDistinct`
-- `variance[Pop]`
+We are working on implementing the draft API within the SQL on FHIR 
+implementation guide. This will allow for the execution of view definitions 
+through the server API, and the use of views to construct bespoke exports. It 
+will also allow for the discovery and management of view definitions through the 
+FHIR REST API.
 
-### Regular functions
+## Parquet on FHIR
 
-- `contains`
-- `startsWith`
-- `endsWith`
+We are working on a new interchange specification for the representation of
+FHIR within the Parquet format, and plan to implement this within Pathling and
+make it the primary persistence format.
 
-See [Arbitrary function construction](https://github.com/aehrc/pathling/issues/510).
-
-## Ordering
-
-The implementation of an `order` function will allow for the arbitrary
-re-ordering of resources and elements within expressions.
-
-See [FHIRPath function: order](https://github.com/aehrc/pathling/issues/448).
-
-## Subscriptions
-
-Work is planned to implement
-[FHIR Subscriptions](https://www.hl7.org/fhir/R4/subscription.html) within
-Pathling. Push messaging relating to changes within the data (using criteria
-described using FHIRPath expressions) could be used as an engine for driving
-sophisticated alert systems within the clinical setting.
-
-See [Subscriptions](https://github.com/aehrc/pathling/issues/164).
+The use of this new format will have benefits in terms of interoperability with
+other analytic tools as well as performance benefits for Pathling queries over
+persisted data.
 
 ## Project board
 

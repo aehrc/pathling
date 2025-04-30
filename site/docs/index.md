@@ -7,14 +7,9 @@ description: Pathling is a set of tools that make it easier to use FHIR and clin
 Pathling is a set of tools that make it easier to
 use [FHIR&reg;](https://hl7.org/fhir) and clinical terminology within health
 data analytics. It is built on [Apache Spark](https://spark.apache.org), and
-includes both language libraries and a server implementation.
-
-<iframe class="yt-embed" 
-    src="https://www.youtube.com/embed/ZSv2qMGPquU?si=daZ2jgNFpNc3luQx" 
-    title="YouTube video player" 
-    frameborder="0" 
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-    allowfullscreen />
+it implements the [SQL on FHIR](https://sql-on-fhir.org) view specification and
+the [Bulk Data Access](https://hl7.org/fhir/uv/bulkdata/STU2/) implementation 
+guide.
 
 ## What can it do?
 
@@ -33,12 +28,13 @@ Pathling is capable of reading all the different types of FHIR resources into a
 format suitable for data analysis tasks. This makes the following things
 possible:
 
-- Querying FHIR data using SQL and [FHIRPath](/docs/fhirpath)
+- Creating SQL-friendly views from FHIR data
 - Transforming data into other formats, such as CSV
   or [Parquet](https://parquet.apache.org/)
 - Performing terminology queries against coded fields within the FHIR data
 
-See [Encoders](/docs/libraries/encoders) for more information.
+See [Data in and out](/docs/libraries/io) and 
+[Running queries](/docs/libraries/running-queries) for more information.
 
 ### Terminology queries
 
@@ -62,23 +58,6 @@ Examples of the types of questions that can be answered include:
   definition?
 
 See [Terminology functions](/docs/libraries/terminology) for more information.
-
-### FHIR analytics API
-
-Pathling also provides a FHIR server implementation, providing a REST API that
-can be used to perform analytic queries over FHIR data. This is useful for
-powering interactive web and mobile applications that need to be able to
-aggregate, group and transform FHIR data.
-
-See [Server](/docs/server) for more information.
-
-import Components from '@site/src/images/components.png';
-import Components2x from '@site/src/images/components@2x.png';
-import ComponentsDark from '@site/src/images/components-dark.png';
-import ComponentsDark2x from '@site/src/images/components-dark@2x.png';
-
-<img src={Components} srcset={`${Components2x} 2x, ${Components} 1x`} title="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" className="light-mode-only" width="800" />
-<img src={ComponentsDark} srcset={`${ComponentsDark2x} 2x, ${ComponentsDark} 1x`} title="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" className="dark-mode-only" width="800" />
 
 ## Licensing and attribution
 
