@@ -30,7 +30,19 @@ const config = {
       ({
         docs: {
           sidebarPath: require.resolve("./sidebars.js"),
-          editUrl: "https://github.com/aehrc/pathling/tree/main/site/"
+          editUrl: "https://github.com/aehrc/pathling/tree/main/site/",
+          lastVersion: "current",
+          versions: {
+            current: {
+              label: "8.0.0",
+              path: "8.0.0"
+            },
+            "7.2.0": {
+              label: "7.2.0",
+              path: "7.2.0",
+              banner: "none"
+            }
+          }
         },
         theme: {
           customCss: require.resolve("./src/css/custom.css")
@@ -82,6 +94,12 @@ const config = {
             label: "Roadmap"
           },
           {
+            type: "docsVersionDropdown",
+            position: "right",
+            dropdownItemsAfter: [{ to: "/versions", label: "All versions" }],
+            dropdownActiveClassDisabled: true
+          },
+          {
             href: "https://github.com/aehrc/pathling",
             label: "GitHub",
             position: "right"
@@ -96,7 +114,7 @@ const config = {
         darkTheme: darkCodeTheme,
         additionalLanguages: ["java", "scala", "yaml", "docker", "r"]
       },
-      image: "/assets/images/social-preview.png",
+      image: "/assets/images/social-preview.png"
     })
 };
 
