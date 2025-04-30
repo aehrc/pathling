@@ -489,41 +489,28 @@
                 <id>import-test-data</id>
                 <phase>process-test-classes</phase>
                 <goals>
-                  <goal>java</goal>
+                  <goal>exec</goal>
                 </goals>
                 <configuration>
-                  <mainClass>au.csiro.pathling.test.TestDataImporter</mainClass>
-                  <systemProperties>
-                    <property>
-                      <key>spring.profiles.active</key>
-                      <value>spark,fhir,import,cli</value>
-                    </property>
-                    <property>
-                      <key>pathling.version</key>
-                      <value>${project.version}</value>
-                    </property>
-                    <property>
-                      <key>pathling.terminology.enabled</key>
-                      <value>false</value>
-                    </property>
-                    <property>
-                      <key>pathling.storage.warehouseUrl</key>
-                      <value>file://${project.basedir}/src/test/resources/test-data</value>
-                    </property>
-                    <property>
-                      <key>pathling.storage.databaseName</key>
-                      <value>parquet</value>
-                    </property>
-                    <property>
-                      <key>spark.master</key>
-                      <value>local[1]</value>
-                    </property>
-                  </systemProperties>
+                  <executable>java</executable>
                   <arguments>
+                    <argument>-classpath</argument>
+                    <classpath/>
+                    <argument>-Xmx4g</argument>
+                    <argument>-Duser.timezone=UTC</argument>
+                    <argument>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</argument>
+                    <argument>--add-opens=java.base/java.net=ALL-UNNAMED</argument>
+                    <argument>--add-opens=java.base/sun.nio.ch=ALL-UNNAMED</argument>
+                    <argument>-Dspring.profiles.active=spark,fhir,import,cli</argument>
+                    <argument>-Dpathling.version=${project.version}</argument>
+                    <argument>-Dpathling.terminology.enabled=false</argument>
+                    <argument>-Dpathling.storage.warehouseUrl=file://${project.basedir}/src/test/resources/test-data</argument>
+                    <argument>-Dpathling.storage.databaseName=parquet</argument>
+                    <argument>-Dspark.master=local[1]</argument>
+                    <argument>au.csiro.pathling.test.TestDataImporter</argument>
                     <argument>${project.basedir}/src/test/resources/test-data/fhir</argument>
                   </arguments>
                   <classpathScope>test</classpathScope>
-                  <cleanupDaemonThreads>false</cleanupDaemonThreads>
                 </configuration>
               </execution>
             </executions>
