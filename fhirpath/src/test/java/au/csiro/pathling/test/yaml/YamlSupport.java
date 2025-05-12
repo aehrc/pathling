@@ -103,7 +103,6 @@ public class YamlSupport {
       final Coding coding = CodingLiteral.fromString(codingLiteral);
       // write as object to gen using low level api
       gen.writeStartObject();
-      //gen.writeStringField("id", randomAlias());
       gen.writeStringField("system", coding.getSystem());
       gen.writeStringField("version", coding.getVersion());
       gen.writeStringField("code", coding.getCode());
