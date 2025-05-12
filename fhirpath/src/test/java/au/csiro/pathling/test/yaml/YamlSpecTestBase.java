@@ -177,7 +177,7 @@ public abstract class YamlSpecTestBase {
     public String getDescription() {
       return spec.getDescription() != null?
              spec.getDescription()
-             : spec.getExpression();;
+             : spec.getExpression();
     }
 
     @Nullable
