@@ -71,7 +71,7 @@ public abstract class YamlSpecTestBase {
 
 
   @FunctionalInterface
-  protected interface ResolverBuilder {
+  public interface ResolverBuilder {
 
     @Nonnull
     ResourceResolver create(
@@ -162,13 +162,12 @@ public abstract class YamlSpecTestBase {
 
     @Override
     public void log(@Nonnull Logger log) {
-      log.info("Description: {}", spec.getDescription());
-      log.info("Expression: {}", spec.getExpression());
       exclusion.ifPresent(s -> log.info("Exclusion: {}", s));
       if (spec.isError()) {
-        log.info("Expecting error");
+        log.info("assertError({}):[{}]", spec.getExpression(), spec.getDescription());
       } else {
-        log.info("Result: {}", spec.getResult());
+        log.info("assertResult({}=({})):[{}]", spec.getResult(), spec.getExpression(),
+            spec.getDescription());
       }
       log.debug("Subject:\n{}", resolverFactory);
     }
@@ -176,7 +175,9 @@ public abstract class YamlSpecTestBase {
     @Override
     @Nonnull
     public String getDescription() {
-      return spec.getDescription();
+      return spec.getDescription() != null?
+             spec.getDescription()
+             : spec.getExpression();;
     }
 
     @Nullable
@@ -217,7 +218,7 @@ public abstract class YamlSpecTestBase {
           throw new AssertionError(
               "Expected error but got value: " + actual + " (" + evalResult + ")");
         } catch (Exception e) {
-          log.info("Expected error: {}", e.getMessage());
+          log.debug("Expected error: {}", e.getMessage());
         }
       } else {
         final FhirPath fhipath = PARSER.parse(spec.getExpression());
