@@ -64,14 +64,14 @@ public abstract class YamlSpecTestBase {
   public static final String PROPERTY_EXCLUSIONS_ONLY = "au.csiro.pathling.test.yaml.exclusionsOnly";
 
   @Autowired
-  SparkSession spark;
+  protected SparkSession spark;
 
   @Autowired
-  FhirEncoders fhirEncoders;
+  protected FhirEncoders fhirEncoders;
 
 
   @FunctionalInterface
-  protected interface ResolverBuilder {
+  public interface ResolverBuilder {
 
     @Nonnull
     ResourceResolver create(
@@ -79,7 +79,7 @@ public abstract class YamlSpecTestBase {
   }
 
   @Value(staticConstructor = "of")
-  protected static class RuntimeContext implements ResolverBuilder {
+  public static class RuntimeContext implements ResolverBuilder {
 
     @Nonnull
     SparkSession spark;
@@ -94,11 +94,14 @@ public abstract class YamlSpecTestBase {
     }
   }
 
-  protected interface RuntimeCase {
+  public interface RuntimeCase {
 
     void log(@Nonnull Logger log);
 
     void check(@Nonnull final ResolverBuilder rb);
+
+    @Nonnull
+    String getDescription();
   }
 
   @Value(staticConstructor = "of")
@@ -110,12 +113,17 @@ public abstract class YamlSpecTestBase {
 
     @Override
     public void check(@Nonnull final ResolverBuilder rb) {
+    }
 
+    @Override
+    @Nonnull
+    public String getDescription() {
+      return "none";
     }
   }
 
   @Value(staticConstructor = "of")
-  protected static class StdRuntimeCase implements RuntimeCase {
+  public static class StdRuntimeCase implements RuntimeCase {
 
     private static final Parser PARSER = new Parser();
 
@@ -154,15 +162,22 @@ public abstract class YamlSpecTestBase {
 
     @Override
     public void log(@Nonnull Logger log) {
-      log.info("Description: {}", spec.getDescription());
-      log.info("Expression: {}", spec.getExpression());
       exclusion.ifPresent(s -> log.info("Exclusion: {}", s));
       if (spec.isError()) {
-        log.info("Expecting error");
+        log.info("assertError({}):[{}]", spec.getExpression(), spec.getDescription());
       } else {
-        log.info("Result: {}", spec.getResult());
+        log.info("assertResult({}=({})):[{}]", spec.getResult(), spec.getExpression(),
+            spec.getDescription());
       }
       log.debug("Subject:\n{}", resolverFactory);
+    }
+
+    @Override
+    @Nonnull
+    public String getDescription() {
+      return spec.getDescription() != null?
+             spec.getDescription()
+             : spec.getExpression();
     }
 
     @Nullable
@@ -203,7 +218,7 @@ public abstract class YamlSpecTestBase {
           throw new AssertionError(
               "Expected error but got value: " + actual + " (" + evalResult + ")");
         } catch (Exception e) {
-          log.info("Expected error: {}", e.getMessage());
+          log.debug("Expected error: {}", e.getMessage());
         }
       } else {
         final FhirPath fhipath = PARSER.parse(spec.getExpression());
@@ -255,7 +270,7 @@ public abstract class YamlSpecTestBase {
   }
 
   @Value(staticConstructor = "of")
-  static class OMResolverFactory implements Function<RuntimeContext, ResourceResolver> {
+  public static class OMResolverFactory implements Function<RuntimeContext, ResourceResolver> {
 
     @Nonnull
     Map<Object, Object> subjectOM;
@@ -271,7 +286,7 @@ public abstract class YamlSpecTestBase {
       final DefResourceDefinition subjectDefinition = (DefResourceDefinition) YamlSupport
           .yamlToDefinition(subjectResourceCode, subjectOM);
       final StructType subjectSchema = YamlSupport.defnitiontoStruct(subjectDefinition);
-      
+
       final String subjectOMJson = YamlSupport.omToJson(subjectOM);
       log.trace("subjectOMJson: \n" + subjectOMJson);
       final Dataset<Row> inputDS = rt.getSpark().read().schema(subjectSchema)
@@ -297,7 +312,7 @@ public abstract class YamlSpecTestBase {
 
 
   @Value(staticConstructor = "of")
-  static class FhirResolverFactory implements Function<RuntimeContext, ResourceResolver> {
+  public static class FhirResolverFactory implements Function<RuntimeContext, ResourceResolver> {
 
     @Nonnull
     String resourceJson;
@@ -414,7 +429,7 @@ public abstract class YamlSpecTestBase {
     return RuntimeContext.of(spark, fhirEncoders);
   }
 
-  protected void run(@Nonnull final RuntimeCase testCase) {
+  public void run(@Nonnull final RuntimeCase testCase) {
     testCase.log(log);
     testCase.check(createResolverBuilder());
   }

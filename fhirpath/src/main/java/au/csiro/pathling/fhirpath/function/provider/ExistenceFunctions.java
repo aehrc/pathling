@@ -6,7 +6,6 @@ import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
@@ -82,20 +81,6 @@ public class ExistenceFunctions {
         ? input.getColumn().traverse("id").countDistinct()
         : input.getColumn().count()
     );
-  }
-
-
-  /**
-   * Returns the sum of the numbers input collection. Returns 0 when the input collection is empty.
-   *
-   * @param input The input collection
-   * @return An {@link Collection} containing the result sum
-   */
-  // TODO: Update documentation and move to a separate class
-  @FhirPathFunction
-  @Nonnull
-  public static Collection sum(@Nonnull final Collection input) {
-    return input.map(ColumnRepresentation::sum);
   }
 
   /**

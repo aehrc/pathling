@@ -1,17 +1,26 @@
 package au.csiro.pathling.test.yaml;
 
-import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
+import au.csiro.pathling.encoders.terminology.ucum.Ucum;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.CodingCollection;
+import au.csiro.pathling.fhirpath.collection.DateCollection;
+import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefCompositeDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceTag;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
 import au.csiro.pathling.test.helpers.SparkHelpers;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -19,10 +28,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,8 +40,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
-import lombok.Value;
+import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
@@ -40,6 +50,7 @@ import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
@@ -57,34 +68,41 @@ public class YamlSupport {
 
   public class FhirTypedLiteralSerializer extends JsonSerializer<FhirTypedLiteral> {
 
+
     @Override
     public void serialize(FhirTypedLiteral fhirLiteral, JsonGenerator gen,
         SerializerProvider serializers) throws IOException {
       if (nonNull(fhirLiteral.getLiteral())) {
+        @Nonnull final String literalValue = requireNonNull(fhirLiteral.getLiteral());
         switch (fhirLiteral.getType()) {
-          case CODING:
-            writeCoding(fhirLiteral, gen);
-            break;
-          case DATETIME:
-          case DATE:
-            writeDate(fhirLiteral, gen);
-            break;
-          case TIME:
-            writeTime(fhirLiteral, gen);
-            break;
-          default:
-            throw new IllegalArgumentException("Unsupported FHIR type: " + fhirLiteral.getType());
+          case NULL -> gen.writeNull();
+          case INTEGER, DECIMAL, BOOLEAN -> gen.writeRawValue(literalValue);
+          case STRING -> gen.writeString(StringCollection.parseStringLiteral(literalValue));
+          case CODING -> writeCoding(literalValue, gen);
+          case DATETIME, DATE -> writeDate(literalValue, gen);
+          case TIME -> writeTime(literalValue, gen);
+          case QUANTITY -> writeQuantity(literalValue, gen);
+          default ->
+              throw new IllegalArgumentException("Unsupported FHIR type: " + fhirLiteral.getType());
         }
       } else {
         gen.writeNull();
       }
     }
 
-    private void writeCoding(FhirTypedLiteral fhirLiteral, JsonGenerator gen) throws IOException {
-      final Coding coding = CodingLiteral.fromString(fhirLiteral.getLiteral());
+    @SneakyThrows
+    private void writeQuantity(@Nonnull final String quantityLiteral,
+        @Nonnull final JsonGenerator gen) {
+      JsonColumnWriter.of(gen)
+          .writeColumn(QuantityCollection.fromUcumString(quantityLiteral,
+              Ucum.service()).getColumnValue());
+    }
+
+    private void writeCoding(@Nonnull final String codingLiteral,
+        @Nonnull final JsonGenerator gen) throws IOException {
+      final Coding coding = CodingLiteral.fromString(codingLiteral);
       // write as object to gen using low level api
       gen.writeStartObject();
-      gen.writeStringField("id", randomAlias());
       gen.writeStringField("system", coding.getSystem());
       gen.writeStringField("version", coding.getVersion());
       gen.writeStringField("code", coding.getCode());
@@ -92,48 +110,23 @@ public class YamlSupport {
       gen.writeEndObject();
     }
 
-    private void writeDate(FhirTypedLiteral fhirLiteral, JsonGenerator gen) throws IOException {
-      gen.writeString(fhirLiteral.getLiteral().replaceFirst("^@", ""));
+    private void writeDate(@Nonnull final String dateLiteral,
+        @Nonnull final JsonGenerator gen) throws IOException {
+      gen.writeString(dateLiteral.replaceFirst("^@", ""));
     }
 
-    private void writeTime(FhirTypedLiteral fhirLiteral, JsonGenerator gen) throws IOException {
-      gen.writeString(fhirLiteral.getLiteral().replaceFirst("^@T", ""));
-    }
-  }
-
-  @JsonSerialize(using = FhirTypedLiteralSerializer.class)
-  @Value(staticConstructor = "of")
-  public static class FhirTypedLiteral {
-
-    @Nonnull
-    FHIRDefinedType type;
-    @Nullable
-    String literal;
-
-    @Nonnull
-    public String getTag() {
-      return FhirTypedLiteral.toTag(type);
-    }
-
-    @Nonnull
-    public static String toTag(FHIRDefinedType type) {
-      return "!fhir." + type.toCode();
+    private void writeTime(@Nonnull final String timeLiteral,
+        @Nonnull final JsonGenerator gen) throws IOException {
+      gen.writeString(timeLiteral.replaceFirst("^@T", ""));
     }
   }
 
   public static class FhirConstructor extends Constructor {
 
-    private static final List<FHIRDefinedType> FHIR_TYPES = List.of(
-        FHIRDefinedType.DATETIME,
-        FHIRDefinedType.DATE,
-        FHIRDefinedType.TIME,
-        FHIRDefinedType.CODING
-    );
-
     public FhirConstructor() {
       super(new LoaderOptions());
       // Register a generic handler for FHIR types
-      for (FHIRDefinedType type : FHIR_TYPES) {
+      for (FHIRDefinedType type : FHIR_TO_SQL.keySet()) {
         this.yamlConstructors.put(new Tag(FhirTypedLiteral.toTag(type)),
             new ConstructFhirTypedLiteral(type));
       }
@@ -172,11 +165,7 @@ public class YamlSupport {
       }
     }
   }
-
-  static final Yaml YAML = new Yaml(new FhirConstructor(), new FhirRepresenter());
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
-  static Map<FHIRDefinedType, DataType> FHIR_TO_SQL = Map.of(
+  private static final Map<FHIRDefinedType, DataType> FHIR_TO_SQL = Map.of(
       FHIRDefinedType.STRING, DataTypes.StringType,
       FHIRDefinedType.INTEGER, DataTypes.IntegerType,
       FHIRDefinedType.BOOLEAN, DataTypes.BooleanType,
@@ -185,8 +174,150 @@ public class YamlSupport {
       FHIRDefinedType.DATE, DataTypes.StringType,
       FHIRDefinedType.TIME, DataTypes.StringType,
       FHIRDefinedType.CODING, SparkHelpers.codingStructType(),
+      FHIRDefinedType.QUANTITY, QuantityEncoding.dataType(),
       FHIRDefinedType.NULL, DataTypes.NullType
   );
+  static final Yaml YAML = new Yaml(new FhirConstructor(), new FhirRepresenter());
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+
+
+  /**
+   * Converts an object model to a Spark Column representation.
+   *
+   * @param objectModel The object model to convert
+   * @return A Spark Column representing the object model
+   */
+  @Nonnull
+  public static Column omToSpark(@Nonnull final Map<Object, Object> objectModel) {
+    return createStructFromMap(objectModel);
+  }
+
+  /**
+   * Creates a struct Column from a Map.
+   *
+   * @param map The map to convert
+   * @return A struct Column
+   */
+  @Nonnull
+  private static Column createStructFromMap(@Nonnull final Map<Object, Object> map) {
+    List<Column> fields = new ArrayList<>();
+
+    for (Map.Entry<Object, Object> entry : map.entrySet()) {
+      String key = entry.getKey().toString();
+      Object value = entry.getValue();
+
+      Column fieldColumn = valueToColumn(value);
+      if (fieldColumn != null) {
+        fields.add(fieldColumn.alias(key));
+      }
+    }
+
+    return org.apache.spark.sql.functions.struct(
+        fields.toArray(new Column[0])
+    );
+  }
+
+  /**
+   * Converts a value to a Spark Column.
+   *
+   * @param value The value to convert
+   * @return A Spark Column representing the value
+   */
+  @Nullable
+  public static Column valueToColumn(@Nullable final Object value) {
+    if (value == null) {
+      return null;
+    } else if (value instanceof FhirTypedLiteral typedLiteral) {
+      return typedLiteralToColumn(typedLiteral);
+    } else if (value instanceof String stringValue) {
+      return StringCollection.fromValue(stringValue).getColumnValue();
+    } else if (value instanceof Integer intValue) {
+      return IntegerCollection.fromValue(intValue).getColumnValue();
+    } else if (value instanceof Boolean boolValue) {
+      return BooleanCollection.fromValue(boolValue).getColumnValue();
+    } else if (value instanceof Double doubleValue) {
+      try {
+        return DecimalCollection.fromValue(new DecimalType(doubleValue)).getColumnValue();
+      } catch (Exception e) {
+        throw new IllegalArgumentException("Failed to convert decimal value: " + doubleValue, e);
+      }
+    } else if (value instanceof Map<?, ?> mapValue) {
+      @SuppressWarnings("unchecked")
+      Map<Object, Object> objectMap = (Map<Object, Object>) mapValue;
+      return createStructFromMap(objectMap);
+    } else if (value instanceof List<?> listValue) {
+      return listToColumn(listValue);
+    } else {
+      throw new IllegalArgumentException("Unsupported data type: " + value.getClass().getName());
+    }
+  }
+
+  /**
+   * Converts a typed literal to a Spark Column.
+   *
+   * @param typedLiteral The typed literal to convert
+   * @return A Spark Column representing the typed literal
+   */
+  @Nonnull
+  private static Column typedLiteralToColumn(@Nonnull final FhirTypedLiteral typedLiteral) {
+    if (typedLiteral.getLiteral() == null) {
+      return org.apache.spark.sql.functions.lit(null);
+    }
+
+    try {
+      return switch (typedLiteral.getType()) {
+        case CODING -> CodingCollection.fromLiteral(typedLiteral.getLiteral()).getColumnValue();
+        case DATETIME -> DateTimeCollection.fromLiteral(typedLiteral.getLiteral()).getColumnValue();
+        case DATE -> DateCollection.fromLiteral(typedLiteral.getLiteral()).getColumnValue();
+        case TIME -> TimeCollection.fromLiteral(typedLiteral.getLiteral()).getColumnValue();
+        case QUANTITY ->
+            QuantityCollection.fromUcumString(typedLiteral.getLiteral(), Ucum.service())
+                .getColumnValue();
+        default ->
+            throw new IllegalArgumentException("Unsupported FHIR type: " + typedLiteral.getType());
+      };
+    } catch (Exception e) {
+      throw new IllegalArgumentException("Failed to convert typed literal: " + typedLiteral, e);
+    }
+  }
+
+  /**
+   * Converts a list to a Spark Column.
+   *
+   * @param list The list to convert
+   * @return A Spark Column representing the list
+   */
+  @Nullable
+  private static Column listToColumn(@Nonnull final List<?> list) {
+    if (list.isEmpty()) {
+      return null;
+    }
+
+    // Get the first non-null element to determine the type
+    Object firstNonNull = list.stream()
+        .filter(Objects::nonNull)
+        .findFirst()
+        .orElse(null);
+
+    if (firstNonNull == null) {
+      return null;
+    }
+
+    List<Column> columns = new ArrayList<>();
+    for (Object item : list) {
+      Column itemColumn = valueToColumn(item);
+      if (itemColumn != null) {
+        columns.add(itemColumn);
+      }
+    }
+
+    if (columns.isEmpty()) {
+      return null;
+    }
+
+    return org.apache.spark.sql.functions.array(columns.toArray(new Column[0]));
+  }
 
   @Nonnull
   public static ResourceDefinition yamlToDefinition(@Nonnull final String resourcCode,
@@ -246,7 +377,7 @@ public class YamlSupport {
         final Map<Object, Object> mergedValues = values.stream()
             .filter(Objects::nonNull)
             .map(Map.class::cast)
-            .reduce(new HashMap(), (acc, m) -> {
+            .reduce(new HashMap<>(), (acc, m) -> {
               acc.putAll(m);
               return acc;
             });
@@ -340,55 +471,4 @@ public class YamlSupport {
       throw new RuntimeException(e);
     }
   }
-
-  //
-  //
-  // @Nonnull
-  // static ResourceDefinition fromStruct(@Nonnull final String resourcCode,
-  //     @Nonnull final StructType resourceSchema) {
-  //   return DefResourceDefinition.of(
-  //       DefResourceTag.of(resourcCode),
-  //       elementsFromTypes(resourceSchema.fields())
-  //   );
-  // }
-  //
-  //
-  // @Nonnull
-  // static List<ChildDefinition> elementsFromTypes(StructField[] fields) {
-  //   return Stream.of(fields)
-  //       .map(YamlTest::elementFromType)
-  //       .toList();
-  // }
-  //
-  //
-  // @Nonnull
-  // private static ChildDefinition elementFromType(@Nonnull final String name,
-  //     @Nonnull final DataType dataType, int cardinality) {
-  //   if (dataType instanceof StructType structType) {
-  //     return DefCompositeDefinition.of(name, elementsFromTypes(structType.fields()), cardinality);
-  //   } else {
-  //     switch (dataType.typeName()) {
-  //       case "string":
-  //         return DefPrimitiveDefinition.of(name, FHIRDefinedType.STRING, cardinality);
-  //       case "long":
-  //       case "integer":
-  //         return DefPrimitiveDefinition.of(name, FHIRDefinedType.INTEGER, cardinality);
-  //       case "boolean":
-  //         return DefPrimitiveDefinition.of(name, FHIRDefinedType.BOOLEAN, cardinality);
-  //       default:
-  //         throw new IllegalArgumentException("Unsupported data type: " + dataType);
-  //     }
-  //   }
-  // }
-  //
-  // @Nonnull
-  // private static ChildDefinition elementFromType(@Nonnull final StructField structField) {
-  //   final DataType dataType = structField.dataType();
-  //   if (dataType instanceof ArrayType arrayType) {
-  //     return elementFromType(structField.name(), arrayType.elementType(), -1);
-  //   } else {
-  //     return elementFromType(structField.name(), dataType, 1);
-  //   }
-  // }
-
 }
