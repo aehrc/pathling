@@ -96,19 +96,15 @@
   </properties>
 
   <modules>
+    <module>utilities</module>
     <module>encoders</module>
-    <module>library-api</module>
-    <module>library-runtime</module>
     <module>terminology</module>
     <module>fhirpath</module>
-    <module>fhir-server</module>
-    <module>lib/import</module>
-    <module>lib/js</module>
+    <module>library-api</module>
+    <module>library-runtime</module>
     <module>lib/python</module>
     <module>lib/R</module>
-    <module>deployment/helm</module>
     <module>site</module>
-    <module>utilities</module>
   </modules>
 
   <dependencyManagement>
@@ -172,17 +168,6 @@
       </dependency>
       <dependency>
         <groupId>au.csiro.pathling</groupId>
-        <artifactId>fhir-server</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>fhir-server</artifactId>
-        <version>${project.version}</version>
-        <classifier>sources</classifier>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
         <artifactId>library-api</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -238,22 +223,6 @@
         <version>${project.version}</version>
         <classifier>docs</classifier>
       </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>js</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>import</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>helm</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-
       <!-- Ensure that consistent and correct versions of Jackson and Jersey are used. -->
       <dependency>
         <groupId>com.fasterxml.jackson</groupId>
@@ -1076,7 +1045,7 @@
                 </goals>
                 <configuration>
                   <excludedGroups>au.csiro.pathling.*</excludedGroups>
-                  <fileTemplate>fhir-server/src/main/resources/license-template.ftl</fileTemplate>
+                  <fileTemplate>license-template.ftl</fileTemplate>
                   <includeTransitiveDependencies>false</includeTransitiveDependencies>
                   <licenseMerges>
                     <licenseMerge>Apache License, Version 2.0|Apache Software License 2.0|The Apache License, Version 2.0|The Apache Software License, Version 2.0|Apache 2.0 License|Apache License 2.0|Apache-2.0|Apache 2.0|Apache Software Licenses|Apache 2</licenseMerge>

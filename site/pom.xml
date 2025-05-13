@@ -94,11 +94,6 @@
         </dependency>
         <dependency>
           <groupId>au.csiro.pathling</groupId>
-          <artifactId>fhir-server</artifactId>
-          <classifier>sources</classifier>
-        </dependency>
-        <dependency>
-          <groupId>au.csiro.pathling</groupId>
           <artifactId>library-api</artifactId>
           <classifier>sources</classifier>
         </dependency>

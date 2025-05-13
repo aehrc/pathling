@@ -29,7 +29,7 @@ public class ExtractFromJsonApp {
 
   public static void main(final String[] args) {
 
-    final Path fhirData = Path.of("fhir-server/src/test/resources/test-data/fhir").toAbsolutePath();
+    final Path fhirData = Path.of("fhirpath/src/test/resources/test-data/fhir").toAbsolutePath();
     System.out.printf("JSON Data: %s\n", fhirData);
 
     final SparkSession spark = SparkSession.builder()
