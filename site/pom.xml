@@ -120,11 +120,6 @@
           <artifactId>r</artifactId>
           <classifier>docs</classifier>
         </dependency>
-        <!-- This JAR contains the built Helm chart for Pathling Server. -->
-        <dependency>
-          <groupId>au.csiro.pathling</groupId>
-          <artifactId>helm</artifactId>
-        </dependency>
         <!-- Lombok is required for Javadoc generation. -->
         <dependency>
           <groupId>org.projectlombok</groupId>

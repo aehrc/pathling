@@ -55,7 +55,7 @@ jobs:
       - name: Run the deploy goal with Maven
         run: |
           mvn --batch-mode deploy \
-          -pl fhir-server,library-api,library-runtime -am \
+          -pl fhirpath,library-api,library-runtime -am \
           -PmavenRelease,docs \
           -DskipTests \
           -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
@@ -94,45 +94,10 @@ jobs:
           -DskipTests
         timeout-minutes: 30
 
-  deploy-docker:
-    name: Docker Hub
-    runs-on: ubuntu-latest
-    needs: deploy-python
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          # This is required so that git-commit-id-plugin can find the latest tag.
-          fetch-depth: 0
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: 17
-          distribution: "zulu"
-      - name: Cache local Maven repository
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: Run the deploy goal with Maven
-        run: |
-          mvn --batch-mode deploy \
-          -pl fhir-server -am \
-          -Pdocker \
-          -DskipTests -DskipScalaDocs
-        timeout-minutes: 30
-
   create-release:
     name: Draft GitHub release
     runs-on: ubuntu-latest
-    needs: [ deploy-maven, deploy-python, deploy-docker ]
+    needs: [ deploy-maven, deploy-python]
     steps:
       - name: Extract tag name
         id: extract_tag
