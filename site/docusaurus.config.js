@@ -10,7 +10,7 @@ const config = {
   tagline: "Analytics on FHIR&reg;",
   url: "https://pathling.csiro.au",
   baseUrl: "/",
-  onBrokenLinks: "throw",
+  onBrokenLinks: "warn",
   onBrokenMarkdownLinks: "warn",
   favicon: "favicon.ico",
 
@@ -89,7 +89,6 @@ const config = {
           {
             type: "docsVersionDropdown",
             position: "right",
-            dropdownItemsAfter: [{ to: "/versions", label: "All versions" }],
             dropdownActiveClassDisabled: true
           },
           {
