@@ -19,7 +19,6 @@ from .core import Expression, VariableExpression
 from .datasource import DataSources, DataSource
 from .fhir import MimeType, Version
 from .functions import to_coding, to_snomed_coding, to_ecl_value_set
-from .query import ExtractQuery, AggregateQuery
 from .udfs import (
     member_of,
     translate,
@@ -52,8 +51,6 @@ __all__ = [
     "to_ecl_value_set",
     "Expression",
     "VariableExpression",
-    "ExtractQuery",
-    "AggregateQuery",
     "DataSources",
     "DataSource",
 ]

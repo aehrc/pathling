@@ -19,7 +19,6 @@ from tempfile import TemporaryDirectory
 from pyspark.sql import Row, DataFrame
 from pytest import fixture
 
-from pathling import Expression as fpe
 from pathling.datasource import DataSource
 
 
@@ -193,21 +192,30 @@ def test_datasource_tables_schema(ndjson_test_data_dir, pathling_ctx):
 
 
 def ndjson_query(data_source: DataSource) -> DataFrame:
-    return data_source.aggregate(
-        "Patient",
-        aggregations=[
-            fpe("reverseResolve(Condition.subject).count()").alias("count"),
-        ],
-    )
+    return data_source.view(
+        resource='Condition',
+        select=[
+            {
+                'column': [
+                    {'path': 'id', 'name': 'id'}
+                ]
+            }
+        ]
+    ).groupby().count()
 
 
 def bundles_query(data_source: DataSource) -> DataFrame:
-    return data_source.aggregate(
-        "Patient",
-        aggregations=[
-            fpe("count()").alias("count"),
-        ],
-    )
+    return data_source.view(
+        resource='Patient',
+        select=[
+            {
+                'column': [
+                    {'path': 'id', 'name': 'id'}
+                ]
+            }
+        ]
+    ).groupby().count()
+
 
 
 def parquet_query(data_source: DataSource) -> DataFrame:
