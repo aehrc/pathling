@@ -1,8 +1,7 @@
 // @ts-check
 // Note: type annotations allow type checking and IDEs autocompletion
 
-const lightCodeTheme = require("prism-react-renderer/themes/github");
-const darkCodeTheme = require("prism-react-renderer/themes/dracula");
+import {themes as prismThemes} from 'prism-react-renderer';
 
 /** @type {import("@docusaurus/types").Config} */
 const config = {
@@ -56,7 +55,7 @@ const config = {
   /** @type {import("@docusaurus/preset-classic").ThemeConfig} */
     ({
       navbar: {
-        title: null,
+        title: undefined,
         logo: {
           alt: "Pathling",
           src: "assets/images/logo-colour.svg",
@@ -102,8 +101,8 @@ const config = {
         copyright: `This documentation is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.`
       },
       prism: {
-        theme: lightCodeTheme,
-        darkTheme: darkCodeTheme,
+        theme: prismThemes.github,
+        darkTheme: prismThemes.dracula,
         additionalLanguages: ["java", "scala", "yaml", "docker", "r"]
       },
       image: "/assets/images/social-preview.png"
