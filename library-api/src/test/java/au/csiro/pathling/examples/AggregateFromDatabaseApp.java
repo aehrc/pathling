@@ -40,7 +40,7 @@ public class AggregateFromDatabaseApp {
     final PathlingContext ptc = PathlingContext.create(spark);
 
     final QueryableDataSource data = ptc.read()
-        .delta("fhir-server/src/test/resources/test-data/parquet");
+        .delta("fhirpath/src/test/resources/test-data/parquet");
 
     final Dataset<Row> patientResult = data.aggregate(ResourceType.PATIENT)
         .grouping("gender")

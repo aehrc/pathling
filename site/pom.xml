@@ -94,11 +94,6 @@
         </dependency>
         <dependency>
           <groupId>au.csiro.pathling</groupId>
-          <artifactId>fhir-server</artifactId>
-          <classifier>sources</classifier>
-        </dependency>
-        <dependency>
-          <groupId>au.csiro.pathling</groupId>
           <artifactId>library-api</artifactId>
           <classifier>sources</classifier>
         </dependency>
@@ -124,11 +119,6 @@
           <groupId>au.csiro.pathling</groupId>
           <artifactId>r</artifactId>
           <classifier>docs</classifier>
-        </dependency>
-        <!-- This JAR contains the built Helm chart for Pathling Server. -->
-        <dependency>
-          <groupId>au.csiro.pathling</groupId>
-          <artifactId>helm</artifactId>
         </dependency>
         <!-- Lombok is required for Javadoc generation. -->
         <dependency>
