@@ -27,6 +27,9 @@ The tag can be any string, and is used to accommodate multiple different files
 that contain the same resource type. For example, you might have one file called
 `Observation.chart.ndjson` and another called `Observation.lab.ndjson`.
 
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
 <TabItem value="python" label="Python">
