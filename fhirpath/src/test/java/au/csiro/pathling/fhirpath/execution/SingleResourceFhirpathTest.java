@@ -1,4 +1,4 @@
-package au.csiro.pathling.fhirpathe.execution;
+package au.csiro.pathling.fhirpath.execution;
 
 import static au.csiro.pathling.test.helpers.SqlHelpers.sql_array;
 
