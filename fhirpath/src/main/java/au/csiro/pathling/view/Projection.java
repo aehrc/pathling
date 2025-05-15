@@ -17,12 +17,11 @@
 
 package au.csiro.pathling.view;
 
-import static au.csiro.pathling.extract.ProjectionConstraint.FLAT;
 import static au.csiro.pathling.utilities.Functions.maybeCast;
+import static au.csiro.pathling.view.Projection.ProjectionConstraint.FLAT;
 import static org.apache.spark.sql.functions.inline;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.extract.ProjectionConstraint;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -56,6 +55,21 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Slf4j
 public class Projection {
 
+
+  public enum ProjectionConstraint {
+    /**
+     * Indicates that the result will be returned in a form that supports the representation of
+     * complex types.
+     */
+    UNCONSTRAINED,
+
+    /**
+     * Indicates that the result will be returned in a form that will be constrained to a flat,
+     * unstructured representation.
+     */
+    FLAT
+  }
+  
   /**
    * The resource type that the projection is based upon.
    */
@@ -215,10 +229,4 @@ public class Projection {
         ", constraint=" + constraint +
         '}';
   }
-
-  @Nonnull
-  public String toTreeString() {
-    return selection.toTreeString(0);
-  }
-
 }
