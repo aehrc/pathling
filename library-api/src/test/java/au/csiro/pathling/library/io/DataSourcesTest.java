@@ -18,6 +18,7 @@
 package au.csiro.pathling.library.io;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -45,6 +46,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -322,24 +324,64 @@ class DataSourcesTest {
   void readInvalidUri() {
     final RuntimeException exception = assertThrows(RuntimeException.class,
         () -> pathlingContext.read().ndjson("file:\\\\non-existent"));
-    assertTrue(exception.getCause() instanceof URISyntaxException);
+    assertInstanceOf(URISyntaxException.class, exception.getCause());
   }
+
+
+  private static final String PATIENT_VIEW_JSON = """
+        {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [
+              {
+                "path": "id",
+                "name": "id"
+              }
+            ]
+          }
+        ],
+        "where": [
+          {
+            "path": "gender = 'male'"
+          }
+        ]
+      }
+      """;
+
+
+  private static final String CONDITION_VIEW_JSON = """
+        {
+        "resource": "Condition",
+        "select": [
+          {
+            "column": [
+              {
+                "path": "id",
+                "name": "id"
+              }
+            ]
+          }
+        ]
+      }
+      """;
 
   private static void queryNdjsonData(@Nonnull final QueryableDataSource data) {
     assertEquals(2, data.getResourceTypes().size());
     assertTrue(data.getResourceTypes().contains(ResourceType.PATIENT));
     assertTrue(data.getResourceTypes().contains(ResourceType.CONDITION));
 
-    final Dataset<Row> patientCount = data.aggregate(ResourceType.PATIENT)
-        .aggregation("count()")
-        .grouping("gender")
-        .execute();
-    DatasetAssert.of(patientCount)
-        .hasRows(RowFactory.create("female", 4), RowFactory.create("male", 5));
+    final Dataset<Row> patientCount = data.view(ResourceType.PATIENT)
+        .json(PATIENT_VIEW_JSON)
+        .execute()
+        .agg(functions.count("id"));
 
-    final Dataset<Row> conditionCount = data.aggregate(ResourceType.CONDITION)
-        .aggregation("count()")
-        .execute();
+    DatasetAssert.of(patientCount).hasRows(RowFactory.create(5));
+
+    final Dataset<Row> conditionCount = data.view(ResourceType.CONDITION)
+        .json(CONDITION_VIEW_JSON)
+        .execute()
+        .agg(functions.count("id"));
     DatasetAssert.of(conditionCount).hasRows(RowFactory.create(71));
   }
 
@@ -348,15 +390,18 @@ class DataSourcesTest {
     assertTrue(data.getResourceTypes().contains(ResourceType.PATIENT));
     assertTrue(data.getResourceTypes().contains(ResourceType.CONDITION));
 
-    final Dataset<Row> patientCount = data.aggregate(ResourceType.PATIENT)
-        .aggregation("count()")
-        .filter("gender = 'female'")
-        .execute();
-    DatasetAssert.of(patientCount).hasRows(RowFactory.create(6));
+    final Dataset<Row> patientCount = data.view(ResourceType.PATIENT)
+        .json(PATIENT_VIEW_JSON)
+        .execute()
+        .agg(functions.count("id"));
 
-    final Dataset<Row> conditionCount = data.aggregate(ResourceType.CONDITION)
-        .aggregation("count()")
-        .execute();
+    DatasetAssert.of(patientCount).hasRows(RowFactory.create(4));
+
+    final Dataset<Row> conditionCount = data.view(ResourceType.CONDITION)
+        .json(CONDITION_VIEW_JSON)
+        .execute()
+        .agg(functions.count("id"));
+
     DatasetAssert.of(conditionCount).hasRows(RowFactory.create(246));
   }
 
@@ -368,14 +413,40 @@ class DataSourcesTest {
     queryNdjsonData(dataSource);
   }
 
+  private static final String EXTRACT_VIEW_JSON = """
+      {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [
+              {
+                "path": "id",
+                "name": "Patient_id"
+              },
+              {
+                "path": "gender",
+                "name": "gender"
+              },
+              {
+                "path": "address.postalCode.first()",
+                "name": "address_postalCode"
+              }
+            ]
+          }
+        ],
+        "where": [
+          {
+            "path": "id = 'beff242e-580b-47c0-9844-c1a68c36c5bf'"
+          }
+        ]
+      }
+      """;
+
   private static void extractNdjsonData(@Nonnull final QueryableDataSource dataSource) {
-    final Dataset<Row> patient = dataSource.extract(ResourceType.PATIENT)
-        .column("id", "Patient ID")
-        .column("gender")
-        .column("address.postalCode")
-        .filter("id = 'beff242e-580b-47c0-9844-c1a68c36c5bf'")
-        .limit(1)
-        .execute();
+    final Dataset<Row> patient = dataSource.view(ResourceType.PATIENT)
+        .json(EXTRACT_VIEW_JSON)
+        .execute()
+        .limit(1);
     DatasetAssert.of(patient)
         .hasRows(RowFactory.create("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "02138"));
   }
@@ -385,7 +456,7 @@ class DataSourcesTest {
     final Exception exception = assertThrows(RuntimeException.class,
         () -> pathlingContext.read()
             .ndjson("s3://pathling-test-data/ndjson/"));
-    assertTrue(exception.getCause() instanceof ClassNotFoundException);
+    assertInstanceOf(ClassNotFoundException.class, exception.getCause());
     assertEquals("Class org.apache.hadoop.fs.s3a.S3AFileSystem not found",
         exception.getCause().getMessage());
   }

@@ -17,23 +17,16 @@
 
 package au.csiro.pathling.library.io.source;
 
-import static au.csiro.pathling.fhir.FhirUtils.getResourceType;
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.aggregate.AggregateQueryExecutor;
-import au.csiro.pathling.config.QueryConfiguration;
-import au.csiro.pathling.extract.ExtractQueryExecutor;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
-import au.csiro.pathling.library.query.AggregateQuery;
-import au.csiro.pathling.library.query.ExtractQuery;
 import au.csiro.pathling.library.query.FhirViewQuery;
 import au.csiro.pathling.library.query.QueryDispatcher;
 import au.csiro.pathling.views.FhirViewExecutor;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.util.Optional;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -57,23 +50,12 @@ public abstract class AbstractSource implements QueryableDataSource {
   @Nonnull
   private QueryDispatcher buildDispatcher(final @Nonnull PathlingContext context,
       final DataSource dataSource) {
-    // Use the default query configuration.
-    final QueryConfiguration queryConfiguration = QueryConfiguration.builder().build();
-
-    // Build executors for the aggregate and extract queries using the context, configuration and 
-    // this data source.
-    final AggregateQueryExecutor aggregateExecutor = new AggregateQueryExecutor(queryConfiguration,
-        context.getFhirContext(), context.getSpark(), dataSource,
-        Optional.of(context.getTerminologyServiceFactory()));
-    final ExtractQueryExecutor extractExecutor = new ExtractQueryExecutor(queryConfiguration,
-        context.getFhirContext(), context.getSpark(), dataSource,
-        Optional.of(context.getTerminologyServiceFactory()));
     final FhirViewExecutor viewExecutor = new FhirViewExecutor(context.getFhirContext(),
         context.getSpark(), dataSource
     );
 
     // Build the dispatcher using the executors.
-    return new QueryDispatcher(aggregateExecutor, extractExecutor, viewExecutor);
+    return new QueryDispatcher(viewExecutor);
   }
 
   @Nonnull
@@ -84,38 +66,7 @@ public abstract class AbstractSource implements QueryableDataSource {
 
   @Nonnull
   @Override
-  public AggregateQuery aggregate(@Nullable final ResourceType subjectResource) {
-    return new AggregateQuery(dispatcher, requireNonNull(subjectResource));
-  }
-
-  @Nonnull
-  @Override
-  public ExtractQuery extract(@Nullable final ResourceType subjectResource) {
-    return new ExtractQuery(dispatcher, requireNonNull(subjectResource));
-  }
-
-  @Nonnull
-  @Override
-  public AggregateQuery aggregate(@Nullable final String subjectResource) {
-    return aggregate(getResourceType(subjectResource));
-  }
-
-  @Nonnull
-  @Override
-  public ExtractQuery extract(@Nullable final String subjectResource) {
-    return extract(getResourceType(subjectResource));
-  }
-
-  @Nonnull
-  @Override
   public FhirViewQuery view(@Nullable final ResourceType subjectResource) {
     return new FhirViewQuery(dispatcher, requireNonNull(subjectResource), context.getGson());
   }
-
-  @Nonnull
-  @Override
-  public FhirViewQuery view(@Nullable final String subjectResource) {
-    return view(getResourceType(subjectResource));
-  }
-
 }

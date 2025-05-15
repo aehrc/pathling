@@ -17,11 +17,6 @@
 
 package au.csiro.pathling.library.query;
 
-import au.csiro.pathling.aggregate.AggregateQueryExecutor;
-import au.csiro.pathling.aggregate.AggregateRequest;
-import au.csiro.pathling.extract.ExtractQueryExecutor;
-import au.csiro.pathling.extract.ExtractRequest;
-import au.csiro.pathling.extract.ProjectionConstraint;
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
 import jakarta.annotation.Nonnull;
@@ -37,43 +32,13 @@ import org.apache.spark.sql.Row;
 public class QueryDispatcher {
 
   @Nonnull
-  private final AggregateQueryExecutor aggregateExecutor;
-
-  @Nonnull
-  private final ExtractQueryExecutor extractExecutor;
-
-  @Nonnull
   private final FhirViewExecutor viewExecutor;
 
-  public QueryDispatcher(@Nonnull final AggregateQueryExecutor aggregateExecutor,
-      @Nonnull final ExtractQueryExecutor extractExecutor,
+  public QueryDispatcher(
       @Nonnull final FhirViewExecutor viewExecutor) {
-    this.aggregateExecutor = aggregateExecutor;
-    this.extractExecutor = extractExecutor;
     this.viewExecutor = viewExecutor;
   }
 
-  /**
-   * Dispatches the given extract request to the relevant executor and returns the result.
-   *
-   * @param extractRequest the request to execute
-   * @return the result of the execution
-   */
-  @Nonnull
-  public Dataset<Row> dispatch(@Nonnull final ExtractRequest extractRequest) {
-    return extractExecutor.buildQuery(extractRequest, ProjectionConstraint.UNCONSTRAINED);
-  }
-
-  /**
-   * Dispatches the given aggregate request to the relevant executor and returns the result.
-   *
-   * @param aggregateRequest the request to execute
-   * @return the result of the execution
-   */
-  @Nonnull
-  public Dataset<Row> dispatch(@Nonnull final AggregateRequest aggregateRequest) {
-    return aggregateExecutor.buildQuery(aggregateRequest).getDataset();
-  }
 
   /**
    * Dispatches the given view request to the relevant executor and returns the result.
