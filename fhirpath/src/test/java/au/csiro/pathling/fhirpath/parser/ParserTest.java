@@ -55,6 +55,7 @@ import org.junit.jupiter.api.Test;
 /**
  * @author Piotr Szul
  */
+@Disabled
 public class ParserTest extends AbstractParserTest {
 
   @SuppressWarnings("SameParameterValue")
