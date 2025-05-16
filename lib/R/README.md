@@ -94,7 +94,7 @@ starting points:
 - `?pathling_connect` for information about creating and configuring Pathling
   contexts.
 - `?tx_display` and `?tx_to_snomed_coding` for terminology functions.
-- `?ds_aggregate` and `?ds_extract` for pathling queries.
+- `?ds_view` for executing SQL on FHIR views.
 - `?pathling_encode` for encoding of FHIR resources into data frames.
 - `?pathling_read_ndjson` and `?ds_write_ndjson` for reading and writing FHIR
   resources in various formats.
