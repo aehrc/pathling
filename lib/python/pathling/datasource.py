@@ -22,7 +22,6 @@ from typing import Dict, Sequence, Optional, Callable
 
 from pathling import PathlingContext
 from pathling.core import (
-    ExpOrStr,
     StringToStringSetMapper,
     SparkConversionsMixin,
 )
@@ -65,63 +64,6 @@ class DataSource(SparkConversionsMixin):
         from pathling.datasink import DataSinks
 
         return DataSinks(self)
-
-    def extract(
-        self,
-        resource_type: str,
-        columns: Sequence[ExpOrStr],
-        filters: Optional[Sequence[str]] = None,
-    ) -> DataFrame:
-        """
-        Runs an extract query for the given resource type, using the specified columns and filters
-        to create a tabular extract from FHIR data.
-
-        For more information see: :class:`ExtractQuery`
-
-        :param resource_type: A string representing the type of FHIR resource to extract data from.
-        :param columns: A sequence of FHIRPath expressions that define the columns to include in the
-               extract.
-        :param filters: An optional sequence of FHIRPath expressions that can be evaluated against
-               each resource in the data set to determine whether it is included within the result.
-               The expression must evaluate to a Boolean value. Multiple filters are combined using
-               AND logic.
-
-        :return: A Spark DataFrame containing the results of the extract query.
-        """
-        from pathling.query import ExtractQuery
-
-        return ExtractQuery(resource_type, columns, filters).execute(self)
-
-    def aggregate(
-        self,
-        resource_type: str,
-        aggregations: Sequence[ExpOrStr],
-        groupings: Optional[Sequence[ExpOrStr]] = None,
-        filters: Optional[Sequence[str]] = None,
-    ) -> DataFrame:
-        """
-        Runs an aggregate query for the given resource type, using the specified aggregation,
-        grouping, and filter expressions. The context for each of the expressions is a collection
-        of resources of the subject resource type.
-
-        For more information see: :class:`AggregateQuery`
-
-        :param resource_type: A string representing the type of FHIR resource to aggregate data
-               from.
-        :param aggregations: A sequence of FHIRPath expressions that calculate a summary value from
-               each grouping. The expressions must be singular.
-        :param groupings: An optional sequence of FHIRPath expressions that determine which
-               groupings the resources should be counted within.
-        :param filters: An optional sequence of FHIRPath expressions that determine whether
-               a resource is included in the result. The expressions must evaluate to a Boolean
-               value. Multiple filters are combined using AND logic.
-        :return: A Spark DataFrame object containing the results of the aggregate query.
-        """
-        from pathling.query import AggregateQuery
-
-        return AggregateQuery(resource_type, aggregations, groupings, filters).execute(
-            self
-        )
 
     def view(
         self,

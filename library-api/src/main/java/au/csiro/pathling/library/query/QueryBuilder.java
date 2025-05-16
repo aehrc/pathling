@@ -17,12 +17,7 @@
 
 package au.csiro.pathling.library.query;
 
-import static au.csiro.pathling.utilities.Preconditions.requireNonBlank;
-
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -41,27 +36,11 @@ public abstract class QueryBuilder<T extends QueryBuilder<?>> {
 
   @Nonnull
   protected QueryDispatcher dispatcher;
-
-  @Nonnull
-  protected final List<String> filters = new ArrayList<>();
-
+  
   protected QueryBuilder(@Nonnull final QueryDispatcher dispatcher,
       @Nonnull final ResourceType subjectResource) {
     this.dispatcher = dispatcher;
     this.subjectResource = subjectResource;
-  }
-
-  /**
-   * Adds a filter expression to the query. The extract query result will only include rows for
-   * resources that match all the filters.
-   *
-   * @param filter the filter expression to add
-   * @return this query
-   */
-  @Nonnull
-  public T filter(@Nullable final String filter) {
-    filters.add(requireNonBlank(filter, "Filter expression cannot be blank"));
-    return (T) this;
   }
 
   /**

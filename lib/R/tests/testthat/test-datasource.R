@@ -29,17 +29,39 @@ temp_delta_dir <- function() {
 
 
 ndjson_query <- function(data_source) {
-  data_source %>% ds_aggregate(
-      "Patient",
-      aggregations = list(count = "reverseResolve(Condition.subject).count()")
-  )
+  data_source %>%
+      ds_view(
+          "Condition",
+          select = list(
+              list(
+                  column = list(
+                      list(
+                          path = "id",
+                          name = "id"
+                      )
+                  )
+              )
+          )
+      ) %>%
+      count(name = "count")
 }
 
 bundles_query <- function(data_source) {
-  data_source %>% ds_aggregate(
-      "Patient",
-      aggregations = list(count = "count()")
-  )
+  data_source %>%
+      ds_view(
+          "Patient",
+          select = list(
+              list(
+                  column = list(
+                      list(
+                          path = "id",
+                          name = "id"
+                      )
+                  )
+              )
+          )
+      ) %>%
+      count(name = "count")
 }
 
 parquet_query <- ndjson_query
