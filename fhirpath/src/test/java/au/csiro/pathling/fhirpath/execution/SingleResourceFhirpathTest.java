@@ -7,9 +7,7 @@ import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.execution.CollectionDataset;
-import au.csiro.pathling.fhirpath.execution.FhirpathEvaluators.MultiEvaluatorProvider;
-import au.csiro.pathling.fhirpath.execution.FhirpathExecutor;
+import au.csiro.pathling.fhirpath.execution.FhirpathEvaluators.SingleEvaluatorProvider;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
@@ -87,7 +85,7 @@ class SingleResourceFhirpathTest {
   @Nonnull
   FhirpathExecutor createEvaluator(@Nonnull final ResourceType subjectResource,
       @Nonnull final DataSource datasource) {
-    return FhirpathExecutor.of(new Parser(), new MultiEvaluatorProvider(encoders.getContext(),
+    return FhirpathExecutor.of(new Parser(), new SingleEvaluatorProvider(encoders.getContext(),
         StaticFunctionRegistry.getInstance(),
         Map.of(),
         datasource));

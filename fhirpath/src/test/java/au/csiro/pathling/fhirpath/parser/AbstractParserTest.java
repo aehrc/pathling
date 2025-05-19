@@ -21,8 +21,8 @@ import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhirpath.execution.FhirpathEvaluators.SingleEvaluatorProvider;
 import au.csiro.pathling.fhirpath.execution.FhirpathExecutor;
-import au.csiro.pathling.fhirpath.execution.FhirpathEvaluators.MultiEvaluatorProvider;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -34,6 +34,7 @@ import au.csiro.pathling.test.assertions.FhirPathAssertion;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
+import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -42,7 +43,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import java.util.Map;
 
 @SpringBootUnitTest
 @ExtendWith(TimingExtension.class)
@@ -85,7 +85,7 @@ public class AbstractParserTest {
 
   @Nonnull
   protected FhirpathExecutor createExecutor() {
-    return FhirpathExecutor.of(new Parser(), new MultiEvaluatorProvider(fhirContext,
+    return FhirpathExecutor.of(new Parser(), new SingleEvaluatorProvider(fhirContext,
         StaticFunctionRegistry.getInstance(), Map.of(), dataSource));
   }
 
