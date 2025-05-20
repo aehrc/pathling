@@ -4,6 +4,8 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.apache.spark.sql.functions.callUDF;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.fhirpath.annotations.SofCompatibility;
+import au.csiro.pathling.fhirpath.annotations.SofCompatibility.Profile;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DateCollection;
 import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
@@ -41,6 +43,7 @@ public abstract class BoundaryFunctions {
    * href="https://build.fhir.org/ig/HL7/FHIRPath/#lowboundaryprecision-integer-decimal--date--datetime--time">lowBoundary</a>
    */
   @FhirPathFunction
+  @SofCompatibility(Profile.EXPERIMENTAL)
   @Nonnull
   public static Collection lowBoundary(@Nonnull final Collection input,
       @Nullable final IntegerCollection precision) {
@@ -71,6 +74,7 @@ public abstract class BoundaryFunctions {
    * href="https://build.fhir.org/ig/HL7/FHIRPath/#highboundaryprecision-integer-decimal--date--datetime--time">highBoundary</a>
    */
   @FhirPathFunction
+  @SofCompatibility(Profile.EXPERIMENTAL)
   @Nonnull
   public static Collection highBoundary(@Nonnull final Collection input,
       @Nullable final IntegerCollection precision) {

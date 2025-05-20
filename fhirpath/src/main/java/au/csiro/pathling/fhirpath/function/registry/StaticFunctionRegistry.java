@@ -4,13 +4,10 @@ import au.csiro.pathling.fhirpath.function.MethodDefinedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.provider.BooleanLogicFunctions;
 import au.csiro.pathling.fhirpath.function.provider.BoundaryFunctions;
-import au.csiro.pathling.fhirpath.function.provider.ConversionFunctions;
-import au.csiro.pathling.fhirpath.function.provider.DateTimeFunctions;
 import au.csiro.pathling.fhirpath.function.provider.ExistenceFunctions;
 import au.csiro.pathling.fhirpath.function.provider.FhirFunctions;
 import au.csiro.pathling.fhirpath.function.provider.FilteringAndProjectionFunctions;
 import au.csiro.pathling.fhirpath.function.provider.JoinKeyFunctions;
-import au.csiro.pathling.fhirpath.function.provider.PathlingFunctions;
 import au.csiro.pathling.fhirpath.function.provider.StringFunctions;
 import au.csiro.pathling.fhirpath.function.provider.SubsettingFunctions;
 import au.csiro.pathling.fhirpath.function.provider.TerminologyFunctions;
@@ -34,7 +31,6 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
     super(new Builder<String, NamedFunction>()
         .putAll(MethodDefinedFunction.mapOf(BooleanLogicFunctions.class))
         .putAll(MethodDefinedFunction.mapOf(BoundaryFunctions.class))
-        .putAll(MethodDefinedFunction.mapOf(ConversionFunctions.class))
         .putAll(MethodDefinedFunction.mapOf(ExistenceFunctions.class))
         .putAll(MethodDefinedFunction.mapOf(FhirFunctions.class))
         .putAll(MethodDefinedFunction.mapOf(FilteringAndProjectionFunctions.class))
@@ -42,8 +38,6 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
         .putAll(MethodDefinedFunction.mapOf(StringFunctions.class))
         .putAll(MethodDefinedFunction.mapOf(SubsettingFunctions.class))
         .putAll(MethodDefinedFunction.mapOf(TerminologyFunctions.class))
-        .putAll(MethodDefinedFunction.mapOf(DateTimeFunctions.class))
-        .putAll(MethodDefinedFunction.mapOf(PathlingFunctions.class))
         .build());
   }
 

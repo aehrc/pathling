@@ -4,7 +4,6 @@ import static au.csiro.pathling.test.helpers.SqlHelpers.sql_array;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
-import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluators.SingleEvaluatorProvider;
@@ -340,54 +339,6 @@ class SingleResourceFhirpathTest {
   }
 
   @Test
-  void testIifWithNullLiteralAsFalse() {
-
-    final ObjectDataSource dataSource = getPatients();
-
-    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.PATIENT,
-        "iif(gender='male', name.family, {})");
-    Assertions.assertThat(evalResult)
-        .isElementPath(StringCollection.class)
-        .toCanonicalResult()
-        .hasRowsUnordered(
-            RowFactory.create("1", sql_array("Kay", "Adams")),
-            RowFactory.create("2", null)
-        );
-  }
-
-  @Test
-  void testIifWithNullLiteralAsTrue() {
-    final ObjectDataSource dataSource = getPatients();
-
-    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.PATIENT,
-        "iif(gender='male', {}, name.family)");
-    Assertions.assertThat(evalResult)
-        .isElementPath(StringCollection.class)
-        .toCanonicalResult()
-        .hasRowsUnordered(
-            RowFactory.create("1", null),
-            RowFactory.create("2", sql_array("Lee"))
-        );
-  }
-
-
-  @Test
-  void testIifWithNullLiteralAsTrueAndFalse() {
-    final ObjectDataSource dataSource = getPatients();
-
-    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.PATIENT,
-        "iif(gender='male', {}, {})");
-    Assertions.assertThat(evalResult)
-        .isElementPath(EmptyCollection.class)
-        .toCanonicalResult()
-        .hasRowsUnordered(
-            RowFactory.create("1", null),
-            RowFactory.create("2", null)
-        );
-  }
-
-
-  @Test
   void testSubsumesSingularCodeableConcept() {
 
     TerminologyServiceHelpers.setupSubsumes(terminologyService);
@@ -403,8 +354,7 @@ class SingleResourceFhirpathTest {
             RowFactory.create("1", true)
         );
   }
-
-
+  
   @Test
   void testSubsumesPluralCodeableConcept() {
 

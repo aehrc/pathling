@@ -62,7 +62,14 @@ excludeSet:
           - supersetOf
           - isDistinct
           - distinct
+          - count
+          - allTrue
+          - allFalse
+          - anyTrue
+          - anyFalse
       - title: 'Unsupported filtering and projection constructs'
+        function:
+          - select
         expression:
           - "(^|\\W)\\$index($|\\W)"
       - title: 'Not supported aggregate constructs'
@@ -71,6 +78,7 @@ excludeSet:
           - min
           - max
           - avg
+          - sum
         expression:
           - "\\$total"
       - title: 'Not supported conversion functions'
@@ -81,9 +89,10 @@ excludeSet:
           - toDecimal
           - toInteger
           - toQuantity
-          #- toString
+          - toString
           - toTime
           - toType
+          - iif
       - title: 'Not supported conversion check functions'
         function:
           - convertsToBoolean

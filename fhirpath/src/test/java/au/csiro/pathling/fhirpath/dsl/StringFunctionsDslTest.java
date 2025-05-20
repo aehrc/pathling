@@ -54,7 +54,7 @@ public class StringFunctionsDslTest extends FhirPathDslTestBase {
             "join() on single string with separator returns the string")
 
         .group("join() function with complex expressions")
-        .testEquals("Alice,Bob", "people.select(firstName).join(',')",
+        .testEquals("Alice,Bob", "people.where(lastName.exists()).firstName.join(',')",
             "join() works with selected properties")
         .group("join() function error cases")
         .testError("integerArray.join()", "join() error non-string type")

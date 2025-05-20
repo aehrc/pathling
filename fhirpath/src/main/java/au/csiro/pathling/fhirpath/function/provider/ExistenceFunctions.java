@@ -2,10 +2,10 @@ package au.csiro.pathling.fhirpath.function.provider;
 
 import static java.util.Objects.nonNull;
 
+import au.csiro.pathling.fhirpath.annotations.SofCompatibility;
+import au.csiro.pathling.fhirpath.annotations.SofCompatibility.Profile;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.IntegerCollection;
-import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
@@ -39,6 +39,7 @@ public class ExistenceFunctions {
    * Specification - exists</a>
    */
   @FhirPathFunction
+  @SofCompatibility(Profile.SHARABLE)
   @Nonnull
   public static BooleanCollection exists(@Nonnull final Collection input,
       @Nullable final CollectionTransform criteria) {
@@ -57,95 +58,9 @@ public class ExistenceFunctions {
    * empty</a>
    */
   @FhirPathFunction
+  @SofCompatibility(Profile.SHARABLE)
   @Nonnull
   public static BooleanCollection empty(@Nonnull final Collection input) {
     return BooleanCollection.build(input.getColumn().isEmpty());
-  }
-
-  /**
-   * Returns the integer count of the number of items in the input collection. Returns 0 when the
-   * input collection is empty.
-   *
-   * @param input The input collection
-   * @return An {@link IntegerCollection} containing the result
-   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#count--integer">FHIRPath Specification -
-   * count</a>
-   */
-  @FhirPathFunction
-  @Nonnull
-  public static IntegerCollection count(@Nonnull final Collection input) {
-
-    // TODO: Review if this is really necessary and correct
-    return IntegerCollection.buildUnsigned(
-        input instanceof ResourceCollection
-        ? input.getColumn().traverse("id").countDistinct()
-        : input.getColumn().count()
-    );
-  }
-
-  /**
-   * Takes a collection of Boolean values and returns {@code true} if all the items are
-   * {@code true}. If any items are {@code false}, the result is {@code false}.
-   * <p>
-   * If the input is empty, the result is {@code true}.
-   *
-   * @param input The input collection
-   * @return A {@link BooleanCollection} containing the result
-   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#alltrue--boolean">FHIRPath Specification
-   * - allTrue</a>
-   */
-  @FhirPathFunction
-  @Nonnull
-  public static BooleanCollection allTrue(@Nonnull final BooleanCollection input) {
-    return BooleanCollection.build(input.getColumn().allTrue());
-  }
-
-  /**
-   * Takes a collection of Boolean values and returns {@code true} if all the items are
-   * {@code false}. If any items are {@code true}, the result is {@code false}.
-   * <p>
-   * If the input is empty, the result is {@code true}.
-   *
-   * @param input The input collection
-   * @return A {@link BooleanCollection} containing the result
-   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#allfalse--boolean">FHIRPath Specification
-   * - allFalse</a>
-   */
-  @FhirPathFunction
-  @Nonnull
-  public static BooleanCollection allFalse(@Nonnull final BooleanCollection input) {
-    return BooleanCollection.build(input.getColumn().allFalse());
-  }
-
-  /**
-   * Returns {@code true} if any of the items in the input collection are {@code true}.
-   * <p>
-   * If all items are {@code false}, or if the input is empty, the result is {@code false}.
-   *
-   * @param input The input collection
-   * @return A {@link BooleanCollection} containing the result
-   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#anytrue--boolean">FHIRPath Specification
-   * - anyTrue</a>
-   */
-  @FhirPathFunction
-  @Nonnull
-  public static BooleanCollection anyTrue(@Nonnull final BooleanCollection input) {
-    return BooleanCollection.build(input.getColumn().anyTrue());
-  }
-
-  /**
-   * Returns {@code true} if any of the items in the input collection are {@code false}.
-   * <p>
-   * If all items are {@code true}, or if the input is empty, the result is {@code false}.
-   *
-   * @param input The input collection
-   * @return A {@link BooleanCollection} containing the result
-   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#anyfalse--boolean">FHIRPath Specification
-   * - anyFalse</a>
-   */
-  @FhirPathFunction
-  @Nonnull
-  public static BooleanCollection anyFalse(@Nonnull final BooleanCollection input) {
-    return BooleanCollection.build(input.getColumn().anyFalse());
   }
 }
