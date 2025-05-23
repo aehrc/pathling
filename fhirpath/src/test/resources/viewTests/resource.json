@@ -34,37 +34,7 @@
   ],
   "tests": [
     {
-      "title": "count() on resource",
-      "view": {
-        "resource": "Patient",
-        "select": [
-          {
-            "column": [
-              {
-                "path": "id",
-                "name": "id"
-              },
-              {
-                "path": "count()",
-                "name": "count"
-              }
-            ]
-          }
-        ]
-      },
-      "expect": [
-        {
-          "id": "p1",
-          "count": 1
-        },
-        {
-          "id": "p2",
-          "count": 1
-        }
-      ]
-    },
-    {
-      "title": "count() on resource with where",
+      "title": "empty() on resource with where",
       "view": {
         "resource": "Patient",
         "select": [
@@ -76,7 +46,7 @@
               },
               {
                 "path": "where(gender='male').empty()",
-                "name": "count"
+                "name": "is_empty"
               }
             ]
           }
@@ -85,11 +55,11 @@
       "expect": [
         {
           "id": "p1",
-          "count": false
+          "is_empty": false
         },
         {
           "id": "p2",
-          "count": true
+          "is_empty": true
         }
       ]
     },

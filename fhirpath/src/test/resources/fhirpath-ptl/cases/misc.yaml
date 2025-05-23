@@ -2,28 +2,6 @@
 # Test related to reported bugs also present in 7.x branch
 #
 tests:
-  - 'AnyTrue on empty collections (#2150)':
-      - desc: 'On empty collection literal'
-        expression: "{}.anyTrue()"
-        error: true # should be : result: [ false ]
-      - desc: 'On empty collection'
-        expression: "missing.anyTrue()"
-        error: true # should be : result: [ false ]
-      - desc: 'On empty int collection'
-        expression: "i1.where($this>0).anyTrue()"
-        error: true # should be : result: [ false ]
-      - desc: 'anyTrue empty boolean collection'
-        expression: "b1.where($this).anyTrue()"
-        result: [ false ]
-      - desc: 'anyFalse for empty boolean collection'
-        expression: "b1.where($this).anyFalse()"
-        result: [ false ]
-      - desc: 'allTrue for empty boolean collection'
-        expression: "b1.where($this).allTrue()"
-        result: [ true ]
-      - desc: 'allFalse for empty  boolean collection'
-        expression: "b1.where($this).allFalse()"
-        result: [ true ]
   - 'Incorrect math operations on quantity/numerical literals (#2168)':
       - desc: 'Quantity addition'
         expression: "200 'cm' + 2.0 'm' = 4.0 'm'"

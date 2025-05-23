@@ -5,9 +5,9 @@ import static au.csiro.pathling.UnitTestDependencies.jsonParser;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.validation.ValidationUtils.ensureValid;
 import static java.util.Objects.nonNull;
-import static org.apache.spark.sql.functions.callUDF;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toList;
 import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,9 +18,6 @@ import static scala.collection.JavaConversions.asScalaBuffer;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.sql.boundary.LowBoundaryForDateTimeFunction;
-import au.csiro.pathling.sql.boundary.LowBoundaryForTimeFunction;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.utilities.Streams;
 import ca.uhn.fhir.context.FhirContext;
@@ -32,7 +29,6 @@ import jakarta.annotation.Nullable;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -58,18 +54,20 @@ import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
+import org.apache.spark.sql.expressions.UserDefinedFunction;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.DecimalType;
 import org.apache.spark.sql.types.StringType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.utilities.Utilities;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
@@ -78,6 +76,27 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 @TestInstance(Lifecycle.PER_CLASS)
 @Slf4j
 abstract class FhirViewTest {
+
+
+  /**
+   * Precision that includes only the year, month and day of a date string.
+   */
+  protected static final int DATE_BOUNDARY_PRECISION = 8;
+
+  /**
+   * Precision that includes all components of a time string.
+   */
+  protected static final int TIME_BOUNDARY_PRECISION = 9;
+
+  protected static final UserDefinedFunction LOW_BOUNDARY_FOR_DATE_TIME_UDF = functions.udf(
+      (String s) -> Utilities.lowBoundaryForDate(s, DATE_BOUNDARY_PRECISION),
+      DataTypes.StringType
+  );
+
+  protected static final UserDefinedFunction LOW_BOUNDARY_FOR_TIME_UDF = functions.udf(
+      (String s) -> Utilities.lowBoundaryForTime(s, TIME_BOUNDARY_PRECISION),
+      DataTypes.StringType
+  );
 
   static Path tempDir;
 
@@ -92,7 +111,7 @@ abstract class FhirViewTest {
 
   @Autowired
   Gson gson;
-  
+
   @Nonnull
   private final String testLocationGlob;
 
@@ -170,20 +189,20 @@ abstract class FhirViewTest {
             } else if (field.dataType() instanceof StringType) {
               // Normalize anything that looks like a datetime or time, otherwise pass it through 
               // unaltered.
+
               return when(
                   col(field.name()).rlike(FHIR_DATE_TIME_PATTERN),
-                  callUDF(LowBoundaryForDateTimeFunction.FUNCTION_NAME, col(field.name()),
-                      lit(null))
+                  LOW_BOUNDARY_FOR_DATE_TIME_UDF.apply(col(field.name()))
               ).when(
                   col(field.name()).rlike(FHIR_TIME_PATTERN),
-                  callUDF(LowBoundaryForTimeFunction.FUNCTION_NAME, col(field.name()), lit(null))
+                  LOW_BOUNDARY_FOR_TIME_UDF.apply(col(field.name()))
               ).otherwise(col(field.name())).alias(field.name());
             } else {
               // Add the field to the selection without alteration.
               return col(field.name());
             }
           })
-          .collect(Collectors.toList());
+          .collect(toList());
 
       // Select the data with the dynamically created column expressions.
       final Dataset<Row> selectedExpectedResult = expectedResult.select(
@@ -275,37 +294,26 @@ abstract class FhirViewTest {
   }
 
   DataSource getDataSource(@Nonnull final JsonNode testDefinition) {
-    try {
-      // Create a parent directory based upon the test name.
-      final JsonNode resources = testDefinition.get("resources");
-      final Path directory = getTempDir(testDefinition);
-      final TestDataSource result = new TestDataSource();
+    // Create a parent directory based upon the test name.
+    final JsonNode resources = testDefinition.get("resources");
+    final TestDataSource result = new TestDataSource();
 
-      for (final Iterator<JsonNode> it = resources.elements(); it.hasNext(); ) {
-        final JsonNode resource = it.next();
-
-        // Append each resource to a file named after its type.
-        final String resourceType = resource.get("resourceType").asText();
-        final Path ndjsonPath = directory.resolve(resourceType + ".ndjson");
-        Files.write(ndjsonPath,
-            (resource + "\n").getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE,
-            StandardOpenOption.APPEND);
-
-        // Read the NDJSON file into a Spark dataset and add it to the data source.
-        final Dataset<String> jsonStrings = spark.read().text(ndjsonPath.toString())
-            .as(Encoders.STRING());
-        final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(resourceType);
-        final Dataset<Row> dataset = jsonStrings.map(
-            (MapFunction<String, IBaseResource>) (json) -> jsonParser(fhirContext())
-                .parseResource(json), encoder).toDF().cache();
-        result.put(ResourceType.fromCode(resourceType), dataset);
-      }
-
-      return result;
-
-    } catch (final IOException e) {
-      throw new RuntimeException(e);
-    }
+    // For each resource type, create a dataset and add it to the result.
+    Streams.streamOf(resources.elements())
+        // groupBy resource type and convert the value using toString()
+        .collect(Collectors.groupingBy(
+            resource -> resource.get("resourceType").asText(),
+            mapping(Object::toString, toList()
+            ))
+        ).forEach((resourceType, jsonStrings) -> {
+          final Dataset<String> dataset = spark.createDataset(jsonStrings, Encoders.STRING());
+          final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(resourceType);
+          final Dataset<Row> resourceDataset = dataset.map(
+              (MapFunction<String, IBaseResource>) (json) -> jsonParser(fhirContext())
+                  .parseResource(json), encoder).toDF().cache();
+          result.put(ResourceType.fromCode(resourceType), resourceDataset);
+        });
+    return result;
   }
 
   List<TestParameters> toTestParameters(@Nonnull final JsonNode testDefinition,
@@ -324,7 +332,7 @@ abstract class FhirViewTest {
             .orElse(Stream.empty())
             .map(JsonNode::asText)
             .toList();
-        
+
         if (includeTags.isEmpty() || !Collections.disjoint(tags, includeTags)) {
           // Get the view JSON.
           final String viewJson = view.get("view").toPrettyString();
@@ -396,7 +404,7 @@ abstract class FhirViewTest {
         expectedColumns = columns;
       }
       // Append the row to the file.
-      Files.write(expectedPath, (row + "\n").getBytes(StandardCharsets.UTF_8),
+      Files.writeString(expectedPath, row + "\n",
           StandardOpenOption.APPEND);
     }
     return new Expect(expectedPath, expectedColumns != null

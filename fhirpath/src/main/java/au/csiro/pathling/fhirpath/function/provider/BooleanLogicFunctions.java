@@ -1,5 +1,7 @@
 package au.csiro.pathling.fhirpath.function.provider;
 
+import au.csiro.pathling.fhirpath.annotations.SofCompatibility;
+import au.csiro.pathling.fhirpath.annotations.SofCompatibility.Profile;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
@@ -25,6 +27,7 @@ public class BooleanLogicFunctions {
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#not--boolean">not</a>
    */
   @Nonnull
+  @SofCompatibility(Profile.SHARABLE)
   @FhirPathFunction
   public static BooleanCollection not(@Nonnull final BooleanCollection input) {
     return BooleanCollection.build(input.getColumn().not());

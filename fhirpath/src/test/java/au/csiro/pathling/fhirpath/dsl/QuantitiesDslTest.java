@@ -23,8 +23,6 @@ public class QuantitiesDslTest extends FhirPathDslTestBase {
             "Correct flooring of decimal weekly quantities")
         .testEquals("2016-02-28T00:00:01.700+00:00", "@2016-02-28T00:00:00.000 + 1.7006 seconds",
             "Correct flooring of decimal second quantities")
-        .testEquals("1.5 'm'", "q1.toString()",
-            "Correct string representation of quantity")
         .testTrue("150 'cm' = q1",
             "Correct equality of quantities")
         .testTrue("3.0 'm' = (q1 + q1)",

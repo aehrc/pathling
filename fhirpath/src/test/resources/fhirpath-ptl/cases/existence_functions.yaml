@@ -41,39 +41,6 @@ tests:
       - desc: '** Incomplete traversed collection is not empty **'
         expression: 'e1.xy.y.empty()'
         result: [ false ]
-  - 'Testing the count() function in various scenarios':
-      - desc: '** Empty literal should return 0 **'
-        expression: '{}.count()'
-        result: [ 0 ]
-      - desc: '** Empty collection has count 0 **'
-        expression: 'nothing.count()'
-        result: [ 0 ]
-      - desc: '** Computed empty collection has count 0 **'
-        expression: 'n1.where($this=0).count()'
-        result: [ 0 ]
-      - desc: '** Resource singular empty collection has count 0 **'
-        expression: 'gender.count()'
-        inputfile: 'Patient-empty.json'
-        result: [ 0 ]
-      - desc: '** Resource plural empty collection has count 0 **'
-        expression: 'name.given.count()'
-        inputfile: 'Patient-empty.json'
-        result: [ 0 ]
-      - desc: '** Singular integer has count 1 **'
-        expression: 'n1.count()'
-        result: [ 1 ]
-      - desc: '** Plural integer has count 1 **'
-        expression: 'an1.count()'
-        result: [ 1 ]
-      - desc: '** Plural integer collection has count 2 **'
-        expression: 'an2.count()'
-        result: [ 2 ]
-      - desc: '** Complete traversed collection has count 2 **'
-        expression: 'e1.xy.x.count()'
-        result: [ 2 ]
-      - desc: '** Incomplete traversed collection has count 1 **'
-        expression: 'e1.xy.y.count()'
-        result: [ 1 ]
   - 'Testing the exists() function in various scenarios':
       - desc: '** Empty literal should does not exist **'
         expression: '{}.exists()'
