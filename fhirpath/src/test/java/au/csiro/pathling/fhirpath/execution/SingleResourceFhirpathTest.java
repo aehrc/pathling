@@ -101,11 +101,11 @@ class SingleResourceFhirpathTest {
         List.of(patient));
 
     final Dataset<Row> result = selectExpression(dataSource, ResourceType.PATIENT,
-        "where(gender='female').name.where(family.where($this='Kay').exists()).given.join(',')");
+        "where(gender='female').name.where(family.where($this='Kay').exists()).given.first()");
     final Dataset<Row> expected = DatasetBuilder.of(spark)
         .withColumn("id", DataTypes.StringType)
         .withColumn("value", DataTypes.StringType)
-        .withRow("1", "Awee,Zosia")
+        .withRow("1", "Awee")
         .build();
 
     new DatasetAssert(result)

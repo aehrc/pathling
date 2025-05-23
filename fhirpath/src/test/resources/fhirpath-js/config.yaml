@@ -14,6 +14,7 @@ excludeSet:
           - intersect
       - title: 'Not supported string functions'
         function:
+          - join
           - indexOf
           - substring
           - startsWith
