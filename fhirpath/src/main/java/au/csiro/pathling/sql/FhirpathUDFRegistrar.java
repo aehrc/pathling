@@ -18,7 +18,6 @@
 package au.csiro.pathling.sql;
 
 import au.csiro.pathling.spark.SparkConfigurer;
-import au.csiro.pathling.sql.boundary.BoundaryUDFRegistrar;
 import au.csiro.pathling.sql.dates.date.DateUDFRegistrar;
 import au.csiro.pathling.sql.dates.datetime.DateTimeUDFRegistrar;
 import au.csiro.pathling.sql.dates.time.TimeUdfRegistrar;
@@ -34,7 +33,7 @@ public class FhirpathUDFRegistrar implements SparkConfigurer {
 
   private final List<SparkConfigurer> children = List.of(
       new DateUDFRegistrar(), new TimeUdfRegistrar(), new DateTimeUDFRegistrar(),
-      new MiscUDFRegistrar(), new BoundaryUDFRegistrar()
+      new MiscUDFRegistrar()
   );
 
   @Override

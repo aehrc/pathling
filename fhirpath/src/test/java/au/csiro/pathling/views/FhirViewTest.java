@@ -7,9 +7,7 @@ import static au.csiro.pathling.validation.ValidationUtils.ensureValid;
 import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
-import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -20,8 +18,6 @@ import static scala.collection.JavaConversions.asScalaBuffer;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.sql.boundary.LowBoundaryForDateTimeFunction;
-import au.csiro.pathling.sql.boundary.LowBoundaryForTimeFunction;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.utilities.Streams;
 import ca.uhn.fhir.context.FhirContext;
@@ -33,7 +29,6 @@ import jakarta.annotation.Nullable;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -59,11 +54,14 @@ import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
+import org.apache.spark.sql.expressions.UserDefinedFunction;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.DecimalType;
 import org.apache.spark.sql.types.StringType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.utilities.Utilities;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -78,6 +76,27 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 @TestInstance(Lifecycle.PER_CLASS)
 @Slf4j
 abstract class FhirViewTest {
+
+
+  /**
+   * Precision that includes only the year, month and day of a date string.
+   */
+  protected static final int DATE_BOUNDARY_PRECISION = 8;
+
+  /**
+   * Precision that includes all components of a time string.
+   */
+  protected static final int TIME_BOUNDARY_PRECISION = 9;
+
+  protected static final UserDefinedFunction LOW_BOUNDARY_FOR_DATE_TIME_UDF = functions.udf(
+      (String s) -> Utilities.lowBoundaryForDate(s, DATE_BOUNDARY_PRECISION),
+      DataTypes.StringType
+  );
+
+  protected static final UserDefinedFunction LOW_BOUNDARY_FOR_TIME_UDF = functions.udf(
+      (String s) -> Utilities.lowBoundaryForTime(s, TIME_BOUNDARY_PRECISION),
+      DataTypes.StringType
+  );
 
   static Path tempDir;
 
@@ -170,13 +189,13 @@ abstract class FhirViewTest {
             } else if (field.dataType() instanceof StringType) {
               // Normalize anything that looks like a datetime or time, otherwise pass it through 
               // unaltered.
+
               return when(
                   col(field.name()).rlike(FHIR_DATE_TIME_PATTERN),
-                  callUDF(LowBoundaryForDateTimeFunction.FUNCTION_NAME, col(field.name()),
-                      lit(null))
+                  LOW_BOUNDARY_FOR_DATE_TIME_UDF.apply(col(field.name()))
               ).when(
                   col(field.name()).rlike(FHIR_TIME_PATTERN),
-                  callUDF(LowBoundaryForTimeFunction.FUNCTION_NAME, col(field.name()), lit(null))
+                  LOW_BOUNDARY_FOR_TIME_UDF.apply(col(field.name()))
               ).otherwise(col(field.name())).alias(field.name());
             } else {
               // Add the field to the selection without alteration.
