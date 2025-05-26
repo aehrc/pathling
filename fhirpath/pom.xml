@@ -339,9 +339,7 @@
     <profile>
       <id>importTestData</id>
       <activation>
-        <property>
-          <name>!skipTests</name>
-        </property>
+        <activeByDefault>false</activeByDefault>
       </activation>
       <build>
         <plugins>

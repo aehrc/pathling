@@ -1,10 +1,10 @@
 package au.csiro.pathling.fhirpath.function.provider;
 
 import au.csiro.pathling.fhirpath.TypeSpecifier;
+import au.csiro.pathling.fhirpath.annotations.SofCompatibility;
+import au.csiro.pathling.fhirpath.annotations.SofCompatibility.Profile;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
-import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
 
@@ -37,49 +37,13 @@ public class FilteringAndProjectionFunctions {
    * href="https://build.fhir.org/ig/HL7/FHIRPath/#wherecriteria--expression--collection">where</a>
    */
   @FhirPathFunction
+  @SofCompatibility(Profile.SHARABLE)
   @Nonnull
   public static Collection where(@Nonnull final Collection input,
       @Nonnull final CollectionTransform expression) {
     return input.filter(expression.requireBoolean().toColumnTransformation(input));
   }
-
-  /**
-   * Evaluates the projection expression for each item in the input collection. The result of each
-   * evaluation is added to the output collection.
-   * <p>
-   * If the evaluation results in a collection with multiple items, all items are added to the
-   * output collection (collections resulting from evaluation of projection are flattened).
-   * <p>
-   * This means that if the evaluation for an element results in the empty collection ({ }), no
-   * element is added to the result, and that if the input collection is empty ({ }), the result is
-   * empty as well.
-   *
-   * @param input The input collection
-   * @param mapper The projection expression
-   * @return A collection containing the results of evaluating the projection expression for each
-   * item in the input collection
-   * @see <a
-   * href="https://build.fhir.org/ig/HL7/FHIRPath/#selectprojection-expression--collection">select</a>
-   */
-  @FhirPathFunction
-  @Nonnull
-  public static Collection select(@Nonnull final Collection input,
-      @Nonnull final CollectionTransform mapper) {
-    final ColumnTransform columnMapper = mapper.toColumnTransformation(input);
-    return mapper.apply(input)
-        .copyWith(
-            input
-                .getColumn()
-                .transform(
-                    // TODO: this is not correct as maybe the representation should not be 
-                    //  a DefaultRepresentation but a different one
-                    //  this needs to be fixed in a few places 
-                    col -> columnMapper.apply(new DefaultRepresentation(col)).getValue()
-                )
-                .flatten()
-        );
-  }
-
+  
   /**
    * Returns a collection that contains all items in the input collection that are of the given type
    * or a subclass thereof. If the input collection is empty, the result is empty. The type argument
@@ -93,6 +57,7 @@ public class FilteringAndProjectionFunctions {
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#oftype">ofType</a>
    */
   @FhirPathFunction
+  @SofCompatibility(Profile.SHARABLE)
   @Nonnull
   public static Collection ofType(@Nonnull final Collection input,
       @Nonnull final TypeSpecifier typeSpecifier) {

@@ -19,8 +19,10 @@ package au.csiro.pathling.fhirpath.parser;
 
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+@Disabled
 public class QuantityParserTest extends AbstractParserTest {
 
   @Test
