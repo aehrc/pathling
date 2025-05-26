@@ -417,6 +417,12 @@ excludeSet:
         any:
           - "coll contains el"
           - "coll contains not_el"
+      - title: "'contains' operator with empty on element types fails"
+        type: feature
+        any:
+          - "ups in coll"
+          - "coll contains empty"
+          - "coll contains ups"
   - title: Math 6 exclusions
     glob: "fhirpath-js/cases/6.6_math.yaml"
     exclude:

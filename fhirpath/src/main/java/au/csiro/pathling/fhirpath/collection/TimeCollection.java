@@ -113,7 +113,7 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
 
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
-    return path instanceof TimeCollection || super.isComparableTo(path);
+    return path instanceof TimeCollection || Comparable.super.isComparableTo(path);
   }
 
   @Override

@@ -48,7 +48,8 @@ import org.hl7.fhir.r4.model.UuidType;
  *
  * @author John Grimes
  */
-public class StringCollection extends Collection implements Materializable<PrimitiveType>,
+public class StringCollection extends Collection implements Comparable,
+    Materializable<PrimitiveType>,
     StringCoercible {
 
   protected StringCollection(@Nonnull final ColumnRepresentation columnRepresentation,
@@ -291,7 +292,7 @@ public class StringCollection extends Collection implements Materializable<Primi
 
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
-    return path instanceof StringCollection || super.isComparableTo(path);
+    return path instanceof StringCollection || Comparable.super.isComparableTo(path);
   }
 
   @Override

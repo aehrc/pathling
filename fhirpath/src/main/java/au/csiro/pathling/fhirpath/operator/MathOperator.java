@@ -72,7 +72,7 @@ public class MathOperator implements BinaryOperator {
             + type + " " + right.getExpression());
     final Comparable comparableLeft = (Comparable) left;
     final Comparable comparableRight = (Comparable) right;
-    checkUserInput(comparableLeft.isComparableTo(right),
+    checkUserInput(comparableLeft.isComparableTo(comparableRight),
         "Left and right operands are not comparable: " + left.getExpression() + " "
             + type + " " + right.getExpression());
 

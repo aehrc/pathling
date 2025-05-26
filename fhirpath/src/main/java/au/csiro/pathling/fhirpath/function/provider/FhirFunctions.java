@@ -10,6 +10,7 @@ import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
+import au.csiro.pathling.fhirpath.operator.Comparable;
 import jakarta.annotation.Nonnull;
 
 /**
@@ -42,7 +43,7 @@ public class FhirFunctions {
     return input.traverse(EXTENSION_ELEMENT_NAME).map(extensionCollection ->
         FilteringAndProjectionFunctions.where(extensionCollection, c -> c.traverse(
                 URL_ELEMENT_NAME).map(
-                urlCollection -> urlCollection.getComparison(EQUALS).apply(url))
+                urlCollection -> ((Comparable) urlCollection).getComparison(EQUALS).apply(url))
             .map(col -> BooleanCollection.build(new DefaultRepresentation(col)))
             .orElse(BooleanCollection.fromValue(false)))
     ).orElse(EmptyCollection.getInstance());

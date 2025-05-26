@@ -122,7 +122,7 @@ public class DateCollection extends Collection implements Materializable<DateTyp
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
     return DateTimeCollection.getComparableTypes().contains(path.getClass())
-        || super.isComparableTo(path);
+        || Comparable.super.isComparableTo(path);
   }
 
   @Nonnull

@@ -14,7 +14,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 /**
  * Represents an empty collection.
  */
-public class EmptyCollection extends Collection implements StringCoercible {
+public class EmptyCollection extends Collection implements Comparable, StringCoercible {
 
   private static final EmptyCollection INSTANCE = new EmptyCollection(
       DefaultRepresentation.empty(), Optional.empty(), Optional.empty(), Optional.empty(),

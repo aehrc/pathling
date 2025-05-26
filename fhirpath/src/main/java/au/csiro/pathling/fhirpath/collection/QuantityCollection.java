@@ -223,7 +223,7 @@ public class QuantityCollection extends Collection implements Comparable,
 
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
-    return path instanceof QuantityCollection || super.isComparableTo(path);
+    return path instanceof QuantityCollection || Comparable.super.isComparableTo(path);
   }
 
   @Override

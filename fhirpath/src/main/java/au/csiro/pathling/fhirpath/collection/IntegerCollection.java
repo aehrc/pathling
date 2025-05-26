@@ -225,7 +225,7 @@ public class IntegerCollection extends Collection implements
 
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
-    return COMPARABLE_TYPES.contains(path.getClass()) || super.isComparableTo(path);
+    return COMPARABLE_TYPES.contains(path.getClass()) || Comparable.super.isComparableTo(path);
   }
 
   @Nonnull
