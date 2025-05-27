@@ -19,10 +19,6 @@ public class QuantitiesDslTest extends FhirPathDslTestBase {
             .quantity("q1", "1.5 'm'")
             .coding("c1", "http://loinc.org|8480-6||'Systolic blood pressure'")
         )
-        .testEquals("2016-03-06", "@2016-02-28 + 1.5 weeks",
-            "Correct flooring of decimal weekly quantities")
-        .testEquals("2016-02-28T00:00:01.700+00:00", "@2016-02-28T00:00:00.000 + 1.7006 seconds",
-            "Correct flooring of decimal second quantities")
         .testTrue("150 'cm' = q1",
             "Correct equality of quantities")
         .testTrue("3.0 'm' = (q1 + q1)",

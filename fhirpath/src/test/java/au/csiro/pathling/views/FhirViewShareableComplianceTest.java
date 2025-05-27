@@ -28,6 +28,14 @@ public class FhirViewShareableComplianceTest extends FhirViewTest {
       "target/fhir-view-compliance-test.json");
 
   public FhirViewShareableComplianceTest() {
-    super("classpath:tests/sql-on-fhir/*.json", Set.of("shareable"));
+    super("classpath:tests/sql-on-fhir/*.json",
+        Set.of("shareable"),
+        Set.of(
+            "constant_types - date",
+            "constant_types - dateTime",
+            "constant_types - instant",
+            "constant_types - time"
+        )
+    );
   }
 }

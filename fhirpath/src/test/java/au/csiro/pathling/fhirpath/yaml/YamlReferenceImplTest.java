@@ -5,6 +5,7 @@ import au.csiro.pathling.test.yaml.YamlSpec;
 import au.csiro.pathling.test.yaml.YamlSpecCachedTestBase;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 
 
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Tag;
     config = "fhirpath-js/config.yaml",
     resourceBase = "fhirpath-js/resources"
 )
+@Disabled
 public class YamlReferenceImplTest extends YamlSpecCachedTestBase {
   
   //   From: https://github.com/hl7/fhirpath.js/

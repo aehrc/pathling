@@ -18,9 +18,6 @@
 package au.csiro.pathling.sql;
 
 import au.csiro.pathling.spark.SparkConfigurer;
-import au.csiro.pathling.sql.dates.date.DateUDFRegistrar;
-import au.csiro.pathling.sql.dates.datetime.DateTimeUDFRegistrar;
-import au.csiro.pathling.sql.dates.time.TimeUdfRegistrar;
 import au.csiro.pathling.sql.misc.MiscUDFRegistrar;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -32,7 +29,6 @@ import org.apache.spark.sql.SparkSession;
 public class FhirpathUDFRegistrar implements SparkConfigurer {
 
   private final List<SparkConfigurer> children = List.of(
-      new DateUDFRegistrar(), new TimeUdfRegistrar(), new DateTimeUDFRegistrar(),
       new MiscUDFRegistrar()
   );
 

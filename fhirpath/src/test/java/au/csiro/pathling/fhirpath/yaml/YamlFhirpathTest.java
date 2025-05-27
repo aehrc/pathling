@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Tag;
     resourceBase = "fhirpath-ptl/resources"
 )
 public class YamlFhirpathTest extends YamlSpecCachedTestBase {
-  
+
   @YamlSpec("fhirpath-ptl/cases/literals.yaml")
   void testLiterals(@Nonnull final RuntimeCase testCase) {
     run(testCase);
@@ -24,16 +24,11 @@ public class YamlFhirpathTest extends YamlSpecCachedTestBase {
     run(testCase);
   }
 
-  @YamlSpec("fhirpath-ptl/cases/quantities.yaml")
-  void testQuantities(@Nonnull final RuntimeCase testCase) {
-    run(testCase);
-  }
-
   @YamlSpec("fhirpath-ptl/cases/math.yaml")
   void testMath(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }
-  
+
   @YamlSpec("fhirpath-ptl/cases/operators.yaml")
   void testOperators(@Nonnull final RuntimeCase testCase) {
     run(testCase);

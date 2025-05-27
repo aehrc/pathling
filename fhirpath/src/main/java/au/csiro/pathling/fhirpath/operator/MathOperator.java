@@ -21,10 +21,8 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
-import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import jakarta.annotation.Nonnull;
 
 /**
@@ -54,11 +52,6 @@ public class MathOperator implements BinaryOperator {
     final Collection left = input.getLeft();
     final Collection right = input.getRight();
 
-    // Check whether this needs to be delegated off to the DateArithmeticOperator.
-    if (left instanceof Temporal && right instanceof QuantityCollection) {
-      return new DateArithmeticOperator(type).invoke(input);
-    }
-
     checkUserInput(left instanceof Numeric,
         type + " operator does not support left operand: " + left.getExpression());
     checkUserInput(right instanceof Numeric,
@@ -82,7 +75,7 @@ public class MathOperator implements BinaryOperator {
     final Numeric rightNumeric = (Numeric) right;
     return leftNumeric.getMathOperation(type).apply(rightNumeric);
   }
-  
+
   @Override
   @Nonnull
   public String getOperatorName() {
