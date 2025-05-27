@@ -33,20 +33,83 @@ import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import jakarta.annotation.Nonnull;
+import java.text.ParseException;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Value;
 import lombok.experimental.UtilityClass;
 import org.fhir.ucum.UcumException;
-import java.text.ParseException;
 
 @UtilityClass
 public class Literals {
 
+  public static NullLiteral nullLiteral() {
+    return new NullLiteral();
+  }
+
+  public static StringLiteral stringLiteral(@Nonnull final String literalValue) {
+    return new StringLiteral(literalValue);
+  }
+
+  public static BooleanLiteral booleanLiteral(@Nonnull final String literalValue) {
+    return new BooleanLiteral(literalValue);
+  }
+
+  public static CodingLiteral codingLiteral(@Nonnull final String literalValue) {
+    return new CodingLiteral(literalValue);
+  }
+
+  public static DateLiteral dateLiteral(@Nonnull final String literalValue) {
+    return new DateLiteral(literalValue);
+  }
+
+  public static DateTimeLiteral dateTimeLiteral(@Nonnull final String literalValue) {
+    return new DateTimeLiteral(literalValue);
+  }
+
+  public static TimeLiteral timeLiteral(@Nonnull final String literalValue) {
+    return new TimeLiteral(literalValue);
+  }
+
+  public static IntegerLiteral integerLiteral(@Nonnull final String literalValue) {
+    return new IntegerLiteral(literalValue);
+  }
+
+  public static DecimalLiteral decimalLiteral(@Nonnull final String literalValue) {
+    return new DecimalLiteral(literalValue);
+  }
+
+  public static CalendarDurationLiteral calendarDurationLiteral(
+      @Nonnull final String literalValue) {
+    return new CalendarDurationLiteral(literalValue);
+  }
+
+  public static UcumQuantityLiteral ucumQuantityLiteral(@Nonnull final String literalValue) {
+    return new UcumQuantityLiteral(literalValue);
+  }
+
+  public static LiteralPath numericLiteral(@Nonnull final String literalValue) {
+    try {
+      Integer.parseInt(literalValue);
+      return Literals.integerLiteral(literalValue);
+    } catch (final NumberFormatException e) {
+      return Literals.decimalLiteral(literalValue);
+    }
+  }
+
+  public static LiteralPath quantityLiteral(@Nonnull final String literalValue,
+      @Nonnull final String unit, boolean isUCUM) {
+    return isUCUM
+           ? new CalendarDurationLiteral(String.format("%s %s", literalValue, unit))
+           : new UcumQuantityLiteral(String.format("%s %s", literalValue, unit));
+  }
+  
   public interface LiteralPath extends FhirPath {
 
   }
 
-
   @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
   public static class NullLiteral implements LiteralPath {
 
     @Override
@@ -63,6 +126,7 @@ public class Literals {
   }
 
   @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
   public static class StringLiteral implements LiteralPath {
 
     @Nonnull
@@ -82,6 +146,7 @@ public class Literals {
   }
 
   @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
   public static class BooleanLiteral implements LiteralPath {
 
     @Nonnull
@@ -101,6 +166,7 @@ public class Literals {
   }
 
   @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
   public static class CodingLiteral implements LiteralPath {
 
     @Nonnull
@@ -124,6 +190,7 @@ public class Literals {
   }
 
   @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
   public static class CalendarDurationLiteral implements LiteralPath {
 
     @Nonnull
@@ -143,6 +210,7 @@ public class Literals {
   }
 
   @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
   public static class UcumQuantityLiteral implements LiteralPath {
 
     @Nonnull
@@ -169,6 +237,7 @@ public class Literals {
    * Date literal.
    */
   @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
   public static class DateLiteral implements LiteralPath {
 
     @Nonnull
@@ -195,6 +264,7 @@ public class Literals {
    * DateTime literal.
    */
   @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
   public static class DateTimeLiteral implements LiteralPath {
 
     @Nonnull
@@ -221,6 +291,7 @@ public class Literals {
    * Time literal.
    */
   @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
   public static class TimeLiteral implements LiteralPath {
 
     @Nonnull
@@ -243,6 +314,7 @@ public class Literals {
    * Integer literal.
    */
   @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
   public static class IntegerLiteral implements LiteralPath {
 
     @Nonnull
@@ -265,6 +337,7 @@ public class Literals {
    * Decimal literal.
    */
   @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
   public static class DecimalLiteral implements LiteralPath {
 
     @Nonnull
@@ -282,5 +355,4 @@ public class Literals {
       return value;
     }
   }
-
 }

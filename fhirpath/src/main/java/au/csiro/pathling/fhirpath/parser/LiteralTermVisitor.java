@@ -30,17 +30,7 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.NumberLiteralC
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.QuantityLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.StringLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TimeLiteralContext;
-import au.csiro.pathling.fhirpath.path.Literals.BooleanLiteral;
-import au.csiro.pathling.fhirpath.path.Literals.CalendarDurationLiteral;
-import au.csiro.pathling.fhirpath.path.Literals.CodingLiteral;
-import au.csiro.pathling.fhirpath.path.Literals.DateLiteral;
-import au.csiro.pathling.fhirpath.path.Literals.DateTimeLiteral;
-import au.csiro.pathling.fhirpath.path.Literals.DecimalLiteral;
-import au.csiro.pathling.fhirpath.path.Literals.IntegerLiteral;
-import au.csiro.pathling.fhirpath.path.Literals.NullLiteral;
-import au.csiro.pathling.fhirpath.path.Literals.StringLiteral;
-import au.csiro.pathling.fhirpath.path.Literals.TimeLiteral;
-import au.csiro.pathling.fhirpath.path.Literals.UcumQuantityLiteral;
+import au.csiro.pathling.fhirpath.path.Literals;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import org.antlr.v4.runtime.tree.TerminalNode;
@@ -57,13 +47,13 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   public FhirPath visitStringLiteral(
       @Nullable final StringLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    return new StringLiteral(requireNonNull(fhirPath));
+    return Literals.stringLiteral(requireNonNull(fhirPath));
   }
 
   @Override
   public FhirPath visitDateLiteral(@Nullable final DateLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    return new DateLiteral(requireNonNull(fhirPath));
+    return Literals.dateLiteral(requireNonNull(fhirPath));
   }
 
   @Override
@@ -71,7 +61,7 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   public FhirPath visitDateTimeLiteral(
       @Nullable final DateTimeLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    return new DateTimeLiteral(requireNonNull(fhirPath));
+    return Literals.dateTimeLiteral(requireNonNull(fhirPath));
 
   }
 
@@ -79,33 +69,27 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Nonnull
   public FhirPath visitTimeLiteral(@Nullable final TimeLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    return new TimeLiteral(requireNonNull(fhirPath));
+    return Literals.timeLiteral(requireNonNull(fhirPath));
   }
 
   @Override
   @Nonnull
   public FhirPath visitNumberLiteral(
       @Nullable final NumberLiteralContext ctx) {
-    final String fhirPath = requireNonNull(requireNonNull(ctx).getText());
-    try {
-      Integer.parseInt(fhirPath);
-      return new IntegerLiteral(fhirPath);
-    } catch (final NumberFormatException e) {
-      return new DecimalLiteral(fhirPath);
-    }
+    return Literals.numericLiteral(requireNonNull(requireNonNull(ctx).getText()));
   }
 
   @Override
   @Nonnull
   public FhirPath visitBooleanLiteral(
       @Nullable final BooleanLiteralContext ctx) {
-    return new BooleanLiteral(requireNonNull(requireNonNull(ctx).getText()));
+    return Literals.booleanLiteral(requireNonNull(requireNonNull(ctx).getText()));
   }
 
   @Override
   @Nonnull
   public FhirPath visitNullLiteral(@Nullable final NullLiteralContext ctx) {
-    return new NullLiteral();
+    return Literals.nullLiteral();
   }
 
   @Override
@@ -117,16 +101,17 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
     requireNonNull(number);
     @Nullable final TerminalNode ucumUnit = ctx.quantity().unit().STRING();
     return (ucumUnit == null)
-           ? new CalendarDurationLiteral(
-        String.format("%s %s", number, ctx.quantity().unit().getText()))
-           : new UcumQuantityLiteral(String.format("%s %s", number, ucumUnit.getText()));
+           ? Literals.quantityLiteral(requireNonNull(number),
+        requireNonNull(ctx.quantity().unit().getText()), false)
+           : Literals.quantityLiteral(requireNonNull(number), requireNonNull(ucumUnit.getText()),
+               true);
   }
 
   @Override
   @Nonnull
   public FhirPath visitCodingLiteral(
       @Nullable final CodingLiteralContext ctx) {
-    return new CodingLiteral(requireNonNull(requireNonNull(ctx).getText()));
+    return Literals.codingLiteral(requireNonNull(requireNonNull(ctx).getText()));
   }
 
 }
