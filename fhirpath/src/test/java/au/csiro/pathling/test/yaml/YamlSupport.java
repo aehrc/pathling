@@ -4,16 +4,11 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
-import au.csiro.pathling.fhirpath.collection.DateCollection;
-import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
-import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefCompositeDefinition;
@@ -40,7 +35,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
-import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.ArrayType;
@@ -79,23 +73,12 @@ public class YamlSupport {
           case INTEGER, DECIMAL, BOOLEAN -> gen.writeRawValue(literalValue);
           case STRING -> gen.writeString(StringCollection.parseStringLiteral(literalValue));
           case CODING -> writeCoding(literalValue, gen);
-          case DATETIME, DATE -> writeDate(literalValue, gen);
-          case TIME -> writeTime(literalValue, gen);
-          case QUANTITY -> writeQuantity(literalValue, gen);
           default ->
               throw new IllegalArgumentException("Unsupported FHIR type: " + fhirLiteral.getType());
         }
       } else {
         gen.writeNull();
       }
-    }
-
-    @SneakyThrows
-    private void writeQuantity(@Nonnull final String quantityLiteral,
-        @Nonnull final JsonGenerator gen) {
-      JsonColumnWriter.of(gen)
-          .writeColumn(QuantityCollection.fromUcumString(quantityLiteral,
-              Ucum.service()).getColumnValue());
     }
 
     private void writeCoding(@Nonnull final String codingLiteral,
@@ -108,16 +91,6 @@ public class YamlSupport {
       gen.writeStringField("code", coding.getCode());
       gen.writeStringField("display", coding.getDisplay());
       gen.writeEndObject();
-    }
-
-    private void writeDate(@Nonnull final String dateLiteral,
-        @Nonnull final JsonGenerator gen) throws IOException {
-      gen.writeString(dateLiteral.replaceFirst("^@", ""));
-    }
-
-    private void writeTime(@Nonnull final String timeLiteral,
-        @Nonnull final JsonGenerator gen) throws IOException {
-      gen.writeString(timeLiteral.replaceFirst("^@T", ""));
     }
   }
 
@@ -165,6 +138,7 @@ public class YamlSupport {
       }
     }
   }
+
   private static final Map<FHIRDefinedType, DataType> FHIR_TO_SQL = Map.of(
       FHIRDefinedType.STRING, DataTypes.StringType,
       FHIRDefinedType.INTEGER, DataTypes.IntegerType,
@@ -179,7 +153,6 @@ public class YamlSupport {
   );
   static final Yaml YAML = new Yaml(new FhirConstructor(), new FhirRepresenter());
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
 
 
   /**
@@ -268,14 +241,8 @@ public class YamlSupport {
     try {
       return switch (typedLiteral.getType()) {
         case CODING -> CodingCollection.fromLiteral(typedLiteral.getLiteral()).getColumnValue();
-        case DATETIME -> DateTimeCollection.fromLiteral(typedLiteral.getLiteral()).getColumnValue();
-        case DATE -> DateCollection.fromLiteral(typedLiteral.getLiteral()).getColumnValue();
-        case TIME -> TimeCollection.fromLiteral(typedLiteral.getLiteral()).getColumnValue();
-        case QUANTITY ->
-            QuantityCollection.fromUcumString(typedLiteral.getLiteral(), Ucum.service())
-                .getColumnValue();
-        default ->
-            throw new IllegalArgumentException("Unsupported FHIR type: " + typedLiteral.getType());
+        default -> throw new IllegalArgumentException(
+            "Unsupported FHIR type: " + typedLiteral.getType());
       };
     } catch (Exception e) {
       throw new IllegalArgumentException("Failed to convert typed literal: " + typedLiteral, e);
@@ -416,8 +383,9 @@ public class YamlSupport {
       return DefCompositeDefinition.of(key, elementsFromYaml((Map<Object, Object>) map),
           cardinality);
     } else {
-      throw new IllegalArgumentException("Unsupported data type: " + value + " (" + value.getClass()
-          .getName() + ")");
+      throw new IllegalArgumentException(
+          "Unsupported data type: " + value + " (" + value.getClass()
+              .getName() + ")");
     }
   }
 

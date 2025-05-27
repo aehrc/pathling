@@ -26,7 +26,6 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
-import java.text.ParseException;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
@@ -77,21 +76,7 @@ public class DateTimeCollection extends Collection implements
   public static DateTimeCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
     return DateTimeCollection.build(columnRepresentation, Optional.empty());
   }
-
-  /**
-   * Returns a new instance, parsed from a FHIRPath literal.
-   *
-   * @param fhirPath The FHIRPath representation of the literal
-   * @return A new instance of {@link DateTimeCollection}
-   * @throws ParseException if the literal is malformed
-   */
-  @Nonnull
-  public static DateTimeCollection fromLiteral(@Nonnull final String fhirPath)
-      throws ParseException {
-    final String dateString = fhirPath.replaceFirst("^@", "");
-    return DateTimeCollection.build(DefaultRepresentation.literal(dateString));
-  }
-
+  
   /**
    * Returns a new instance based upon a {@link DateTimeType}.
    *

@@ -17,32 +17,25 @@
 
 package au.csiro.pathling.fhirpath.path;
 
-import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.DateCollection;
-import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
-import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import jakarta.annotation.Nonnull;
-import java.text.ParseException;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 import lombok.experimental.UtilityClass;
-import org.fhir.ucum.UcumException;
 
 @UtilityClass
 public class Literals {
-
+  
   public static NullLiteral nullLiteral() {
     return new NullLiteral();
   }
@@ -59,16 +52,19 @@ public class Literals {
     return new CodingLiteral(literalValue);
   }
 
-  public static DateLiteral dateLiteral(@Nonnull final String literalValue) {
-    return new DateLiteral(literalValue);
+  @SuppressWarnings("unused")
+  public static LiteralPath dateLiteral(@Nonnull final String literalValue) {
+    throw new UnsupportedOperationException("Date literals are not supported");
   }
 
-  public static DateTimeLiteral dateTimeLiteral(@Nonnull final String literalValue) {
-    return new DateTimeLiteral(literalValue);
+  @SuppressWarnings("unused")
+  public static LiteralPath dateTimeLiteral(@Nonnull final String literalValue) {
+    throw new UnsupportedOperationException("DateTime literals are not supported");
   }
 
-  public static TimeLiteral timeLiteral(@Nonnull final String literalValue) {
-    return new TimeLiteral(literalValue);
+  @SuppressWarnings("unused")
+  public static LiteralPath timeLiteral(@Nonnull final String literalValue) {
+    throw new UnsupportedOperationException("DateTime literals are not supported");
   }
 
   public static IntegerLiteral integerLiteral(@Nonnull final String literalValue) {
@@ -79,13 +75,15 @@ public class Literals {
     return new DecimalLiteral(literalValue);
   }
 
-  public static CalendarDurationLiteral calendarDurationLiteral(
+  @SuppressWarnings("unused")
+  public static LiteralPath calendarDurationLiteral(
       @Nonnull final String literalValue) {
-    return new CalendarDurationLiteral(literalValue);
+    throw new UnsupportedOperationException("CalendarDurationLiteral literals are not supported");
   }
 
-  public static UcumQuantityLiteral ucumQuantityLiteral(@Nonnull final String literalValue) {
-    return new UcumQuantityLiteral(literalValue);
+  @SuppressWarnings("unused")
+  public static LiteralPath ucumQuantityLiteral(@Nonnull final String literalValue) {
+    throw new UnsupportedOperationException("UcumQuantityLiteral literals are not supported");
   }
 
   public static LiteralPath numericLiteral(@Nonnull final String literalValue) {
@@ -100,10 +98,10 @@ public class Literals {
   public static LiteralPath quantityLiteral(@Nonnull final String literalValue,
       @Nonnull final String unit, boolean isUCUM) {
     return isUCUM
-           ? new CalendarDurationLiteral(String.format("%s %s", literalValue, unit))
-           : new UcumQuantityLiteral(String.format("%s %s", literalValue, unit));
+           ? calendarDurationLiteral(String.format("%s %s", literalValue, unit))
+           : ucumQuantityLiteral(String.format("%s %s", literalValue, unit));
   }
-  
+
   public interface LiteralPath extends FhirPath {
 
   }
@@ -180,127 +178,6 @@ public class Literals {
       } catch (final IllegalArgumentException e) {
         throw new InvalidUserInputError(e.getMessage(), e);
       }
-    }
-
-    @Nonnull
-    @Override
-    public String toExpression() {
-      return value;
-    }
-  }
-
-  @Value
-  @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class CalendarDurationLiteral implements LiteralPath {
-
-    @Nonnull
-    String value;
-
-    @Override
-    public QuantityCollection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      return QuantityCollection.fromCalendarDurationString(value);
-    }
-
-    @Nonnull
-    @Override
-    public String toExpression() {
-      return value;
-    }
-  }
-
-  @Value
-  @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class UcumQuantityLiteral implements LiteralPath {
-
-    @Nonnull
-    String value;
-
-    @Override
-    public QuantityCollection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      try {
-        return QuantityCollection.fromUcumString(value, Ucum.service());
-      } catch (final UcumException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    @Nonnull
-    @Override
-    public String toExpression() {
-      return value;
-    }
-  }
-
-  /**
-   * Date literal.
-   */
-  @Value
-  @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class DateLiteral implements LiteralPath {
-
-    @Nonnull
-    String value;
-
-    @Override
-    public DateCollection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      try {
-        return DateCollection.fromLiteral(value);
-      } catch (final ParseException e) {
-        throw new InvalidUserInputError("Unable to parse date format: " + value);
-      }
-    }
-
-    @Nonnull
-    @Override
-    public String toExpression() {
-      return value;
-    }
-  }
-
-  /**
-   * DateTime literal.
-   */
-  @Value
-  @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class DateTimeLiteral implements LiteralPath {
-
-    @Nonnull
-    String value;
-
-    @Override
-    public DateTimeCollection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      try {
-        return DateTimeCollection.fromLiteral(value);
-      } catch (final ParseException e) {
-        throw new InvalidUserInputError("Unable to parse date/time format: " + value);
-      }
-    }
-
-    @Nonnull
-    @Override
-    public String toExpression() {
-      return value;
-    }
-  }
-
-  /**
-   * Time literal.
-   */
-  @Value
-  @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class TimeLiteral implements LiteralPath {
-
-    @Nonnull
-    String value;
-
-    @Override
-    public TimeCollection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      return TimeCollection.fromLiteral(value);
     }
 
     @Nonnull

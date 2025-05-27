@@ -24,7 +24,6 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
             .string("singleString", "test")
             .integer("singleInteger", 42)
             .bool("singleBoolean", true)
-            .quantity("singleQuantity", "10 'mg'")
             // Arrays
             .stringArray("stringArray", "one", "two", "three")
             // Complex types
@@ -49,7 +48,6 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
         .testFalse("emptyString.exists()", "exists() returns false for an empty value")
         .testTrue("singleInteger.exists()", "exists() returns true for a single integer")
         .testTrue("singleBoolean.exists()", "exists() returns true for a single boolean")
-        .testTrue("singleQuantity.exists()", "exists() returns true for a single quantity")
         .testTrue("person.exists()", "exists() returns true for a complex type")
         .testTrue("people.exists()", "exists() returns true for an array of complex types")
         .testFalse("emptyComplex.exists()", "exists() returns false for an empty complex type")
@@ -77,14 +75,12 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
             .stringEmpty("emptyString")
             .integerEmpty("emptyInteger")
             .decimalEmpty("emptyDecimal")
-            .quantityEmpty("emptyQuantity")
             .boolEmpty("emptyBoolean")
             .complexEmpty("emptyComplex")
             // Single values
             .string("singleString", "test")
             .integer("singleInteger", 42)
             .bool("singleBoolean", true)
-            .quantity("singleQuantity", "10 'mg'")
             // Arrays
             .stringArray("stringArray", "one", "two", "three")
             // Complex types
@@ -98,7 +94,6 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
         .testTrue("emptyString.empty()", "empty() returns true for an empty string")
         .testTrue("emptyInteger.empty()", "empty() returns true for an empty integer")
         .testTrue("emptyDecimal.empty()", "empty() returns true for an empty decimal")
-        .testTrue("emptyQuantity.empty()", "empty() returns true for an empty quantity")
         .testTrue("emptyBoolean.empty()", "empty() returns true for an empty boolean")
         .testTrue("emptyComplex.empty()", "empty() returns true for an empty complex type")
         .testTrue("{}.empty()", "empty() returns true for an empty literal")
@@ -106,7 +101,6 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
         .testFalse("stringArray.empty()", "empty() returns false for a non-empty array")
         .testFalse("singleInteger.empty()", "empty() returns false for a single integer")
         .testFalse("singleBoolean.empty()", "empty() returns false for a single boolean")
-        .testFalse("singleQuantity.empty()", "empty() returns false for a single quantity")
         .testFalse("person.empty()", "empty() returns false for a complex type")
         .build();
   }
