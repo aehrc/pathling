@@ -8,38 +8,7 @@ import org.junit.jupiter.api.Tag;
 
 @Tag("UnitTest")
 public class MembershipOperatorsDslTest extends FhirPathDslTestBase {
-
-  @FhirPathTest
-  public Stream<DynamicTest> testQuantityMembership() {
-    return builder()
-        .withSubject(sb -> sb
-            .quantity("noQuantity", null)
-            .quantity("oneQuantity", "80 '/min'")
-            .quantityArray("manyQuantity",
-                "120 'mm[Hg]'",
-                "80 'mm[Hg]'",
-                "72 '/min'")
-        )
-        .group("Quantity type")
-        .testTrue("80 'mm[Hg]' in manyQuantity", "In for existing quantity in many")
-        .testTrue("manyQuantity contains 72 '/min'", "Contains for existing quantity in many")
-        .testFalse("72 'mm[Hg]' in manyQuantity", "In for non-existing quantity in many")
-        .testFalse("manyQuantity contains 80 '/min'", "Contains non-existing quantity in many")
-        .testEmpty("{} in manyQuantity", "In for empty literal in many Quantity")
-        .testEmpty("manyQuantity contains {}", "Contains empty literal in many Quantity")
-        .testTrue("80 '/min' in oneQuantity", "In for existing quantity in one")
-        .testTrue("oneQuantity contains 80 '/min'", "Contains for existing quantity in one")
-        .testFalse("80 'mm[Hg]' in oneQuantity", "In for non-existing quantity in one")
-        .testFalse("oneQuantity contains 81 '/min'", "Contains non-existing quantity in one")
-        .testEmpty("{} in oneQuantity", "In for empty literal in one Quantity")
-        .testEmpty("oneQuantity contains {}", "Contains empty literal in one Quantity")
-        .testEmpty("noQuantity in oneQuantity", "In for empty Quantity in one")
-        .testEmpty("oneQuantity contains noQuantity", "Contains empty Quantity in one")
-        .testEmpty("noQuantity in manyQuantity", "In for empty Quantity in many")
-        .testEmpty("manyQuantity contains noQuantity", "Contains empty Quantity in many")
-        .build();
-  }
-
+  
   @FhirPathTest
   public Stream<DynamicTest> testCodingMembership() {
     return builder()

@@ -1,54 +1,5 @@
 tests:
   - 'Membership operators':
-      - 'Quantity type':
-          - desc: '** In for existing quantity in many **'
-            expression: "80 'mm[Hg]' in manyQuantity"
-            result: [ true ]
-          - desc: '** Contains for existing quantity in many **'
-            expression: "manyQuantity contains 72 '/min'"
-            result: [ true ]
-          - desc: '** In for non-existing quantity in many **'
-            expression: "72 'mm[Hg]' in manyQuantity"
-            result: [ false ]
-          - desc: '** Contains non-existing quantity in many **'
-            expression: "manyQuantity contains 80 '/min'"
-            result: [ false ]
-          - desc: '** In for empty literal in many Quantity **'
-            expression: "{} in manyQuantity"
-            result: [ ]
-          - desc: '** Contains empty literal in many Quantity **'
-            expression: "manyQuantity contains {}"
-            result: [ ]
-          - desc: '** In for existing quantity in one **'
-            expression: "80 '/min' in oneQuantity"
-            result: [ true ]
-          - desc: '** Contains for existing quantity in one **'
-            expression: "oneQuantity contains 80 '/min'"
-            result: [ true ]
-          - desc: '** In for non-existing quantity in one **'
-            expression: "80 'mm[Hg]' in oneQuantity"
-            result: [ false ]
-          - desc: '** Contains non-existing quantity in one **'
-            expression: "oneQuantity contains 81 '/min'"
-            result: [ false ]
-          - desc: '** In for empty literal in one Quantity **'
-            expression: "{} in oneQuantity"
-            result: [ ]
-          - desc: '** Contains empty literal in one Quantity **'
-            expression: "oneQuantity contains {}"
-            result: [ ]
-          - desc: '** In for empty Quantity in one **'
-            expression: "noQuantity in oneQuantity"
-            result: [ ]
-          - desc: '** Contains empty Quantity in one **'
-            expression: "oneQuantity contains noQuantity"
-            result: [ ]
-          - desc: '** In for empty Quantity in many **'
-            expression: "noQuantity in manyQuantity"
-            result: [ ]
-          - desc: '** Contains empty Quantity in many **'
-            expression: "manyQuantity contains noQuantity"
-            result: [ ]
       - 'Coding type':
           - desc: '** In for existing coding in many **'
             expression: "http://loinc.org|8480-6||'Systolic blood pressure' in manyCoding"
@@ -269,31 +220,6 @@ subject:
   manyBoolean: [ true, false, true ]
   oneDecimal: 1.5
   manyDecimal: [ 1.5, 2.5, 3.5 ]
-  noDateTime: !fhir.dateTime
-  oneDateTime: !fhir.dateTime "@2023-10-15T09:45:00Z"
-  manyDateTime:
-    - !fhir.dateTime "@2023-01-02T14:00:00Z"
-    - !fhir.dateTime "@2023-01-03T09:30:00Z"
-    - !fhir.dateTime "@2023-01-03T15:45:00Z"
-  noDate: !fhir.date
-  oneDate: !fhir.date "@2023-10-15"
-  manyDate:
-    - !fhir.date "@2023-01-02"
-    - !fhir.date "@2023-01-03"
-    - !fhir.date "@2023-01-05"
-  noTime: !fhir.time
-  oneTime: !fhir.time "@T09:45:00"
-  manyTime:
-    - !fhir.time "@T14:00:00"
-    - !fhir.time "@T09:30:00"
-    - !fhir.time "@T15:45:00"
-  noQuantity: !fhir.Quantity
-  oneQuantity: !fhir.Quantity "80 '/min'"
-  manyQuantity:
-    - !fhir.Quantity "120 'mm[Hg]'"
-    - !fhir.Quantity "80 'mm[Hg]'"
-    - !fhir.Quantity "72 '/min'"
-  noCoding: !fhir.Coding
   oneCoding: !fhir.Coding "http://loinc.org|8867-4||'Heart rate'"
   manyCoding:
     - !fhir.Coding "http://loinc.org|8480-6||'Systolic blood pressure'"

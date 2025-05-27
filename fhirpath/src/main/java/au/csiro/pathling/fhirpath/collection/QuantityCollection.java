@@ -20,29 +20,20 @@ package au.csiro.pathling.fhirpath.collection;
 import static au.csiro.pathling.fhirpath.CalendarDurationUtils.parseCalendarDuration;
 import static au.csiro.pathling.fhirpath.collection.DecimalCollection.parseLiteral;
 import static au.csiro.pathling.fhirpath.collection.StringCollection.parseStringLiteral;
-import static au.csiro.pathling.utilities.Preconditions.checkPresent;
-import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.comparison.QuantityComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
-import au.csiro.pathling.fhirpath.operator.Comparable;
 import au.csiro.pathling.sql.misc.QuantityToLiteral;
-import au.csiro.pathling.sql.types.FlexiDecimal;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.Optional;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.spark.sql.Column;
@@ -55,10 +46,8 @@ import org.hl7.fhir.r4.model.Quantity;
  *
  * @author John Grimes
  */
-public class QuantityCollection extends Collection implements Comparable,
-    Numeric, StringCoercible {
+public class QuantityCollection extends Collection implements StringCoercible {
 
-  private static final Column NO_UNIT_LITERAL = lit(Ucum.NO_UNIT_CODE);
   private static final Pattern UCUM_PATTERN = Pattern.compile("([0-9.]+) ('[^']+')");
 
   /**
@@ -89,7 +78,6 @@ public class QuantityCollection extends Collection implements Comparable,
         Optional.of(FHIRDefinedType.QUANTITY), definition, Optional.empty());
   }
 
-
   /**
    * Returns a new instance with the specified columnCtx and unknown definition.
    *
@@ -100,7 +88,6 @@ public class QuantityCollection extends Collection implements Comparable,
   public static QuantityCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
     return build(columnRepresentation, Optional.empty());
   }
-
 
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
@@ -149,56 +136,6 @@ public class QuantityCollection extends Collection implements Comparable,
   }
 
   @Nonnull
-  private static BiFunction<Column, Column, Column> getMathColumnOperation(
-      @Nonnull final MathOperation operation) {
-    return switch (operation) {
-      case ADDITION -> FlexiDecimal::plus;
-      case MULTIPLICATION -> FlexiDecimal::multiply;
-      case DIVISION -> FlexiDecimal::divide;
-      case SUBTRACTION -> FlexiDecimal::minus;
-      default -> throw new AssertionError("Unsupported math operation encountered: " + operation);
-    };
-  }
-
-  @Nonnull
-  private static Column getResultUnit(
-      @Nonnull final MathOperation operation, @Nonnull final Column leftUnit,
-      @Nonnull final Column rightUnit) {
-    return switch (operation) {
-      case ADDITION, SUBTRACTION -> leftUnit;
-      case MULTIPLICATION ->
-        // we only allow multiplication by dimensionless values at the moment
-        // the unit is preserved in this case
-          when(leftUnit.notEqual(NO_UNIT_LITERAL), leftUnit).otherwise(rightUnit);
-      case DIVISION ->
-        // we only allow division by the same unit or a dimensionless value
-          when(leftUnit.equalTo(rightUnit), NO_UNIT_LITERAL).otherwise(leftUnit);
-      default -> throw new AssertionError("Unsupported math operation encountered: " + operation);
-    };
-  }
-
-  @Nonnull
-  private static Column getValidResult(
-      @Nonnull final MathOperation operation, @Nonnull final Column result,
-      @Nonnull final Column leftUnit,
-      @Nonnull final Column rightUnit) {
-    return switch (operation) {
-      case ADDITION, SUBTRACTION -> when(leftUnit.equalTo(rightUnit), result)
-          .otherwise(null);
-      case MULTIPLICATION ->
-        // we only allow multiplication by dimensionless values at the moment
-        // the unit is preserved in this case
-          when(leftUnit.equalTo(NO_UNIT_LITERAL).or(rightUnit.equalTo(NO_UNIT_LITERAL)),
-              result).otherwise(null);
-      case DIVISION ->
-        // we only allow division by the same unit or a dimensionless value
-          when(leftUnit.equalTo(rightUnit).or(rightUnit.equalTo(NO_UNIT_LITERAL)),
-              result).otherwise(null);
-      default -> throw new AssertionError("Unsupported math operation encountered: " + operation);
-    };
-  }
-
-  @Nonnull
   private static BigDecimal getQuantityValue(@Nonnull final String value) {
     final BigDecimal decimalValue;
     try {
@@ -221,96 +158,10 @@ public class QuantityCollection extends Collection implements Comparable,
         new DefaultRepresentation(QuantityEncoding.encodeLiteral(quantity)));
   }
 
-  @Override
-  public boolean isComparableTo(@Nonnull final Comparable path) {
-    return path instanceof QuantityCollection || Comparable.super.isComparableTo(path);
-  }
-
-  @Override
-  @Nonnull
-  public BiFunction<Column, Column, Column> getSqlComparator(@Nonnull final Comparable other,
-      @Nonnull final ComparisonOperation operation) {
-    return QuantityComparator.buildSqlComparator(this, other, operation);
-  }
-
-  @Nonnull
-  @Override
-  public Optional<Column> getNumericValue() {
-    return Optional.of(
-        getColumn().traverse(QuantityEncoding.CANONICALIZED_VALUE_COLUMN,
-            Optional.of(FHIRDefinedType.DECIMAL)).getValue());
-  }
-
-  @Nonnull
-  @Override
-  public Optional<Column> getNumericContext() {
-    return Optional.of(getColumn().getValue());
-  }
-
-  @Nonnull
-  @Override
-  public Function<Numeric, Collection> getMathOperation(@Nonnull final MathOperation operation) {
-    return target -> {
-      final BiFunction<Column, Column, Column> mathOperation = getMathColumnOperation(operation);
-      final Column sourceComparable = checkPresent(this.getNumericValue());
-      final Column targetComparable = checkPresent(target.getNumericValue());
-      final Column sourceContext = checkPresent(this.getNumericContext());
-      final Column targetContext = checkPresent(target.getNumericContext());
-      final Column resultColumn = mathOperation.apply(sourceComparable, targetComparable);
-      final Column sourceCanonicalizedCode = sourceContext.getField(
-          QuantityEncoding.CANONICALIZED_CODE_COLUMN);
-      final Column targetCanonicalizedCode = targetContext.getField(
-          QuantityEncoding.CANONICALIZED_CODE_COLUMN);
-      final Column resultCode = getResultUnit(operation, sourceCanonicalizedCode,
-          targetCanonicalizedCode);
-
-      final Column resultStruct = QuantityEncoding.toStruct(
-          sourceContext.getField("id"),
-          FlexiDecimal.toDecimal(resultColumn),
-          // NOTE: This (setting value_scale to null) works because we never decode this struct to a 
-          // Quantity. The only Quantities that are decoded are calendar duration quantities parsed 
-          // from literals.
-          lit(null),
-          sourceContext.getField("comparator"),
-          resultCode,
-          sourceContext.getField("system"),
-          resultCode,
-          resultColumn,
-          resultCode,
-          sourceContext.getField("_fid")
-      );
-
-      final Column validResult = getValidResult(operation, resultStruct,
-          sourceCanonicalizedCode, targetCanonicalizedCode);
-      final Column resultQuantityColumn = when(sourceContext.isNull().or(targetContext.isNull()),
-          null).otherwise(validResult);
-
-      return QuantityCollection.build(new DefaultRepresentation(resultQuantityColumn),
-          getDefinition());
-    };
-  }
-
-
-  @Override
-  @Nonnull
-  public Collection negate() {
-    return this.mapColumn(QuantityCollection::quantityNegate);
-  }
-
   @Nonnull
   @Override
   public StringCollection asStringPath() {
     return asSingular()
         .map(r -> r.callUdf(QuantityToLiteral.FUNCTION_NAME), StringCollection::build);
   }
-
-  private static Column quantityNegate(@Nonnull final Column quantityColumn) {
-    final QuantityEncoding quantityEncoding = QuantityEncoding.fromStruct(quantityColumn);
-    return quantityEncoding
-        .withValue(
-            quantityEncoding.getValue().unary_$minus(),
-            FlexiDecimal.negate(quantityEncoding.getCanonicalizedValue())
-        ).toStruct();
-  }
-
 }
