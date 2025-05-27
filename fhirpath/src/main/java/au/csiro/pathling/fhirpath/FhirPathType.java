@@ -2,7 +2,6 @@ package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
-import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.Getter;
@@ -25,7 +24,6 @@ public enum FhirPathType {
   DATE("Date", DataTypes.StringType),
   DATETIME("DateTime", DataTypes.StringType),
   TIME("Time", DataTypes.StringType),
-  QUANTITY("Quantity", QuantityEncoding.dataType()),
   CODING("Coding", CodingEncoding.codingStructType());
 
   @Nonnull

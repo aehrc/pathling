@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
 import java.util.function.BiFunction;
@@ -123,7 +124,9 @@ public interface Comparable {
   /**
    * @return {@code true} if this path can be compared to the specified class
    */
-  boolean isComparableTo(@Nonnull Comparable path);
+  default boolean isComparableTo(@Nonnull Comparable path) {
+    return path instanceof EmptyCollection;
+  }
 
   /**
    * Represents a type of comparison operation.

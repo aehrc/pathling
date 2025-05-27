@@ -24,6 +24,8 @@ import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import java.util.function.BiFunction;
 
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+
 /**
  * Provides the functionality of the collection operators within FHIRPath.
  *
@@ -69,9 +71,13 @@ public class CollectionOperations {
   @Nonnull
   public static BooleanCollection contains(@Nonnull final Collection collection,
       @Nonnull final Collection element) {
+    checkUserInput(collection instanceof Comparable,
+        "Left operand to contains operator must be Comparable");
+    checkUserInput(element instanceof Comparable,
+        "Right operand to contains operator must be Comparable");
 
-    final BiFunction<Column, Column, Column> columnComparator = collection.getSqlComparator(
-        element, ComparisonOperation.EQUALS);
+    final BiFunction<Column, Column, Column> columnComparator = ((Comparable) collection)
+        .getSqlComparator((Comparable) element, ComparisonOperation.EQUALS);
 
     // In the future type adjustment may should be done before the operator is called.
     final Collection typeAdjustedElement = element.convertibleTo(collection)

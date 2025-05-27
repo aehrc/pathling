@@ -17,27 +17,16 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
 import static org.apache.spark.sql.functions.date_format;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
-import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.comparison.DateTimeComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import au.csiro.pathling.fhirpath.operator.Comparable;
-import au.csiro.pathling.sql.dates.datetime.DateTimeAddDurationFunction;
-import au.csiro.pathling.sql.dates.datetime.DateTimeSubtractDurationFunction;
-import com.google.common.collect.ImmutableSet;
 import jakarta.annotation.Nonnull;
-import java.text.ParseException;
 import java.util.Optional;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.BaseDateTimeType;
@@ -51,11 +40,9 @@ import org.hl7.fhir.r4.model.InstantType;
  * @author John Grimes
  */
 public class DateTimeCollection extends Collection implements
-    Materializable<BaseDateTimeType>, Comparable, Temporal, StringCoercible {
+    Materializable<BaseDateTimeType>, StringCoercible {
 
   private static final String SPARK_FHIRPATH_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
-  private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
-      .of(DateCollection.class, DateTimeCollection.class);
 
   protected DateTimeCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
@@ -89,21 +76,7 @@ public class DateTimeCollection extends Collection implements
   public static DateTimeCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
     return DateTimeCollection.build(columnRepresentation, Optional.empty());
   }
-
-  /**
-   * Returns a new instance, parsed from a FHIRPath literal.
-   *
-   * @param fhirPath The FHIRPath representation of the literal
-   * @return A new instance of {@link DateTimeCollection}
-   * @throws ParseException if the literal is malformed
-   */
-  @Nonnull
-  public static DateTimeCollection fromLiteral(@Nonnull final String fhirPath)
-      throws ParseException {
-    final String dateString = fhirPath.replaceFirst("^@", "");
-    return DateTimeCollection.build(DefaultRepresentation.literal(dateString));
-  }
-
+  
   /**
    * Returns a new instance based upon a {@link DateTimeType}.
    *
@@ -127,17 +100,7 @@ public class DateTimeCollection extends Collection implements
     return DateTimeCollection.build(
         DefaultRepresentation.literal(value.getValueAsString()));
   }
-
-  /**
-   * Returns a set of classes that this collection can be compared to.
-   *
-   * @return A set of classes that this collection can be compared to
-   */
-  @Nonnull
-  public static ImmutableSet<Class<? extends Comparable>> getComparableTypes() {
-    return COMPARABLE_TYPES;
-  }
-
+  
   @Nonnull
   @Override
   public Optional<BaseDateTimeType> getFhirValueFromRow(@Nonnull final Row row,
@@ -153,27 +116,7 @@ public class DateTimeCollection extends Collection implements
       return Optional.of(value);
     }
   }
-
-  @Override
-  @Nonnull
-  public BiFunction<Column, Column, Column> getSqlComparator(@Nonnull final Comparable other,
-      @Nonnull final ComparisonOperation operation) {
-    return DateTimeComparator.buildSqlComparison(this, other, operation);
-  }
-
-  @Override
-  public boolean isComparableTo(@Nonnull final Comparable path) {
-    return COMPARABLE_TYPES.contains(path.getClass()) || super.isComparableTo(path);
-  }
-
-  @Nonnull
-  @Override
-  public Function<QuantityCollection, Collection> getDateArithmeticOperation(
-      @Nonnull final MathOperation operation) {
-    return buildDateArithmeticOperation(this, operation,
-        DateTimeAddDurationFunction.FUNCTION_NAME, DateTimeSubtractDurationFunction.FUNCTION_NAME);
-  }
-
+  
   @Nonnull
   @Override
   public StringCollection asStringPath() {

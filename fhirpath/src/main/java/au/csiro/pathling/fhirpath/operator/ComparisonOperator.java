@@ -52,13 +52,22 @@ public class ComparisonOperator implements BinaryOperator {
   public Collection invoke(@Nonnull final BinaryOperatorInput input) {
     final Collection left = input.getLeft();
     final Collection right = input.getRight();
-    checkUserInput(left.isComparableTo(right), "Operands must be comparable");
+
+    checkUserInput(left instanceof Comparable,
+        "Left operand to " + type + " operator must be Comparable");
+    checkUserInput(right instanceof Comparable,
+        "Right operand to " + type + " operator must be Comparable");
+
+    final Comparable leftComparable = (Comparable) left;
+    final Comparable rightComparable = (Comparable) right;
+
+    checkUserInput(leftComparable.isComparableTo(rightComparable), "Operands must be comparable");
 
     return BooleanCollection.build(
         ColumnRepresentation.binaryOperator(
             left.getColumn().singular(),
             right.getColumn().singular(),
-            left.getSqlComparator(right, type))
+            leftComparable.getSqlComparator(rightComparable, type))
     );
   }
 

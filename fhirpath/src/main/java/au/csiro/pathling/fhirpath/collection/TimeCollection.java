@@ -23,7 +23,6 @@ import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import au.csiro.pathling.fhirpath.operator.Comparable;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
@@ -37,7 +36,7 @@ import org.hl7.fhir.r4.model.TimeType;
  * @author John Grimes
  */
 public class TimeCollection extends Collection implements Materializable<TimeType>,
-    Comparable, StringCoercible {
+    StringCoercible {
 
   protected TimeCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
@@ -110,12 +109,7 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
   public StringCollection asStringPath() {
     return map(ColumnRepresentation::asString, StringCollection::build);
   }
-
-  @Override
-  public boolean isComparableTo(@Nonnull final Comparable path) {
-    return path instanceof TimeCollection || super.isComparableTo(path);
-  }
-
+  
   @Override
   @Nonnull
   public String toLiteral(@Nonnull final TimeType value) {

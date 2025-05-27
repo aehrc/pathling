@@ -120,7 +120,7 @@ public class BooleanCollection extends Collection implements Materializable<Bool
 
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
-    return path instanceof BooleanCollection || super.isComparableTo(path);
+    return path instanceof BooleanCollection || Comparable.super.isComparableTo(path);
   }
 
   @Override

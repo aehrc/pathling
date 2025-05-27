@@ -140,7 +140,7 @@ public class CodingCollection extends Collection implements Materializable<Codin
 
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
-    return path instanceof CodingCollection || super.isComparableTo(path);
+    return path instanceof CodingCollection || Comparable.super.isComparableTo(path);
   }
 
   @Override

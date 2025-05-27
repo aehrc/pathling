@@ -17,36 +17,225 @@
 
 package au.csiro.pathling.fhirpath.path;
 
-import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.DateCollection;
-import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
-import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import jakarta.annotation.Nonnull;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Value;
 import lombok.experimental.UtilityClass;
-import org.fhir.ucum.UcumException;
-import java.text.ParseException;
 
+/**
+ * Utility class for creating and working with FHIRPath literal values.
+ * <p>
+ * This class provides factory methods for creating various types of literal values that can be used
+ * in FHIRPath expressions, such as strings, booleans, integers, decimals, and codings. It also
+ * includes methods for handling unsupported literal types.
+ * </p>
+ */
 @UtilityClass
 public class Literals {
+  
+  /**
+   * Creates a null literal value.
+   *
+   * @return a new {@link NullLiteral} instance
+   */
+  public static NullLiteral nullLiteral() {
+    return new NullLiteral();
+  }
 
+  /**
+   * Creates a string literal value.
+   *
+   * @param literalValue the string value
+   * @return a new {@link StringLiteral} instance
+   */
+  public static StringLiteral stringLiteral(@Nonnull final String literalValue) {
+    return new StringLiteral(literalValue);
+  }
+
+  /**
+   * Creates a boolean literal value.
+   *
+   * @param literalValue the boolean value as a string ("true" or "false")
+   * @return a new {@link BooleanLiteral} instance
+   */
+  public static BooleanLiteral booleanLiteral(@Nonnull final String literalValue) {
+    return new BooleanLiteral(literalValue);
+  }
+
+  /**
+   * Creates a coding literal value.
+   *
+   * @param literalValue the coding value as a string
+   * @return a new {@link CodingLiteral} instance
+   */
+  public static CodingLiteral codingLiteral(@Nonnull final String literalValue) {
+    return new CodingLiteral(literalValue);
+  }
+
+  /**
+   * Creates a date literal value.
+   * <p>
+   * Note: This operation is not currently supported and will throw an exception.
+   * </p>
+   *
+   * @param literalValue the date value as a string
+   * @return a new date literal instance
+   * @throws UnsupportedOperationException always, as date literals are not supported
+   */
+  @SuppressWarnings("unused")
+  public static LiteralPath dateLiteral(@Nonnull final String literalValue) {
+    throw new UnsupportedOperationException("Date literals are not supported");
+  }
+
+  /**
+   * Creates a dateTime literal value.
+   * <p>
+   * Note: This operation is not currently supported and will throw an exception.
+   * </p>
+   *
+   * @param literalValue the dateTime value as a string
+   * @return a new dateTime literal instance
+   * @throws UnsupportedOperationException always, as dateTime literals are not supported
+   */
+  @SuppressWarnings("unused")
+  public static LiteralPath dateTimeLiteral(@Nonnull final String literalValue) {
+    throw new UnsupportedOperationException("DateTime literals are not supported");
+  }
+
+  /**
+   * Creates a time literal value.
+   * <p>
+   * Note: This operation is not currently supported and will throw an exception.
+   * </p>
+   *
+   * @param literalValue the time value as a string
+   * @return a new time literal instance
+   * @throws UnsupportedOperationException always, as time literals are not supported
+   */
+  @SuppressWarnings("unused")
+  public static LiteralPath timeLiteral(@Nonnull final String literalValue) {
+    throw new UnsupportedOperationException("DateTime literals are not supported");
+  }
+
+  /**
+   * Creates an integer literal value.
+   *
+   * @param literalValue the integer value as a string
+   * @return a new {@link IntegerLiteral} instance
+   */
+  public static IntegerLiteral integerLiteral(@Nonnull final String literalValue) {
+    return new IntegerLiteral(literalValue);
+  }
+
+  /**
+   * Creates a decimal literal value.
+   *
+   * @param literalValue the decimal value as a string
+   * @return a new {@link DecimalLiteral} instance
+   */
+  public static DecimalLiteral decimalLiteral(@Nonnull final String literalValue) {
+    return new DecimalLiteral(literalValue);
+  }
+
+  /**
+   * Creates a calendar duration literal value.
+   * <p>
+   * Note: This operation is not currently supported and will throw an exception.
+   * </p>
+   *
+   * @param literalValue the calendar duration value as a string
+   * @return a new calendar duration literal instance
+   * @throws UnsupportedOperationException always, as calendar duration literals are not supported
+   */
+  @SuppressWarnings("unused")
+  public static LiteralPath calendarDurationLiteral(
+      @Nonnull final String literalValue) {
+    throw new UnsupportedOperationException("CalendarDurationLiteral literals are not supported");
+  }
+
+  /**
+   * Creates a UCUM quantity literal value.
+   * <p>
+   * Note: This operation is not currently supported and will throw an exception.
+   * </p>
+   *
+   * @param literalValue the UCUM quantity value as a string
+   * @return a new UCUM quantity literal instance
+   * @throws UnsupportedOperationException always, as UCUM quantity literals are not supported
+   */
+  @SuppressWarnings("unused")
+  public static LiteralPath ucumQuantityLiteral(@Nonnull final String literalValue) {
+    throw new UnsupportedOperationException("UcumQuantityLiteral literals are not supported");
+  }
+
+  /**
+   * Creates a numeric literal value, determining whether it's an integer or decimal.
+   * <p>
+   * This method attempts to parse the value as an integer first. If that fails, it creates
+   * a decimal literal instead.
+   * </p>
+   *
+   * @param literalValue the numeric value as a string
+   * @return a new {@link IntegerLiteral} or {@link DecimalLiteral} instance
+   */
+  public static LiteralPath numericLiteral(@Nonnull final String literalValue) {
+    try {
+      Integer.parseInt(literalValue);
+      return Literals.integerLiteral(literalValue);
+    } catch (final NumberFormatException e) {
+      return Literals.decimalLiteral(literalValue);
+    }
+  }
+
+  /**
+   * Creates a quantity literal value with a unit.
+   * <p>
+   * Note: This operation delegates to either {@link #calendarDurationLiteral} or
+   * {@link #ucumQuantityLiteral}, both of which are currently unsupported.
+   * </p>
+   *
+   * @param literalValue the numeric value as a string
+   * @param unit the unit of measurement
+   * @param isUCUM whether the unit is a UCUM unit
+   * @return a new quantity literal instance
+   * @throws UnsupportedOperationException always, as quantity literals are not supported
+   */
+  public static LiteralPath quantityLiteral(@Nonnull final String literalValue,
+      @Nonnull final String unit, boolean isUCUM) {
+    return isUCUM
+           ? calendarDurationLiteral(String.format("%s %s", literalValue, unit))
+           : ucumQuantityLiteral(String.format("%s %s", literalValue, unit));
+  }
+
+  /**
+   * Interface for all literal path implementations.
+   * <p>
+   * This interface represents a FHIRPath literal value that can be used in expressions.
+   * </p>
+   */
   public interface LiteralPath extends FhirPath {
 
   }
 
-
+  /**
+   * Represents a null literal in FHIRPath.
+   * <p>
+   * This class implements a literal that represents an empty collection.
+   * </p>
+   */
   @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
   public static class NullLiteral implements LiteralPath {
 
     @Override
@@ -62,7 +251,14 @@ public class Literals {
     }
   }
 
+  /**
+   * Represents a string literal in FHIRPath.
+   * <p>
+   * This class implements a literal that represents a string value.
+   * </p>
+   */
   @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
   public static class StringLiteral implements LiteralPath {
 
     @Nonnull
@@ -81,7 +277,14 @@ public class Literals {
     }
   }
 
+  /**
+   * Represents a boolean literal in FHIRPath.
+   * <p>
+   * This class implements a literal that represents a boolean value (true or false).
+   * </p>
+   */
   @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
   public static class BooleanLiteral implements LiteralPath {
 
     @Nonnull
@@ -100,7 +303,14 @@ public class Literals {
     }
   }
 
+  /**
+   * Represents a coding literal in FHIRPath.
+   * <p>
+   * This class implements a literal that represents a FHIR Coding value.
+   * </p>
+   */
   @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
   public static class CodingLiteral implements LiteralPath {
 
     @Nonnull
@@ -123,126 +333,14 @@ public class Literals {
     }
   }
 
-  @Value
-  public static class CalendarDurationLiteral implements LiteralPath {
-
-    @Nonnull
-    String value;
-
-    @Override
-    public QuantityCollection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      return QuantityCollection.fromCalendarDurationString(value);
-    }
-
-    @Nonnull
-    @Override
-    public String toExpression() {
-      return value;
-    }
-  }
-
-  @Value
-  public static class UcumQuantityLiteral implements LiteralPath {
-
-    @Nonnull
-    String value;
-
-    @Override
-    public QuantityCollection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      try {
-        return QuantityCollection.fromUcumString(value, Ucum.service());
-      } catch (final UcumException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    @Nonnull
-    @Override
-    public String toExpression() {
-      return value;
-    }
-  }
-
   /**
-   * Date literal.
+   * Represents an integer literal in FHIRPath.
+   * <p>
+   * This class implements a literal that represents an integer value.
+   * </p>
    */
   @Value
-  public static class DateLiteral implements LiteralPath {
-
-    @Nonnull
-    String value;
-
-    @Override
-    public DateCollection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      try {
-        return DateCollection.fromLiteral(value);
-      } catch (final ParseException e) {
-        throw new InvalidUserInputError("Unable to parse date format: " + value);
-      }
-    }
-
-    @Nonnull
-    @Override
-    public String toExpression() {
-      return value;
-    }
-  }
-
-  /**
-   * DateTime literal.
-   */
-  @Value
-  public static class DateTimeLiteral implements LiteralPath {
-
-    @Nonnull
-    String value;
-
-    @Override
-    public DateTimeCollection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      try {
-        return DateTimeCollection.fromLiteral(value);
-      } catch (final ParseException e) {
-        throw new InvalidUserInputError("Unable to parse date/time format: " + value);
-      }
-    }
-
-    @Nonnull
-    @Override
-    public String toExpression() {
-      return value;
-    }
-  }
-
-  /**
-   * Time literal.
-   */
-  @Value
-  public static class TimeLiteral implements LiteralPath {
-
-    @Nonnull
-    String value;
-
-    @Override
-    public TimeCollection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      return TimeCollection.fromLiteral(value);
-    }
-
-    @Nonnull
-    @Override
-    public String toExpression() {
-      return value;
-    }
-  }
-
-  /**
-   * Integer literal.
-   */
-  @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
   public static class IntegerLiteral implements LiteralPath {
 
     @Nonnull
@@ -262,9 +360,13 @@ public class Literals {
   }
 
   /**
-   * Decimal literal.
+   * Represents a decimal literal in FHIRPath.
+   * <p>
+   * This class implements a literal that represents a decimal (floating-point) value.
+   * </p>
    */
   @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
   public static class DecimalLiteral implements LiteralPath {
 
     @Nonnull
@@ -282,5 +384,4 @@ public class Literals {
       return value;
     }
   }
-
 }

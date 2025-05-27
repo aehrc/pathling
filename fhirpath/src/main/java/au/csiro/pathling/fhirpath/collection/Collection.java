@@ -32,7 +32,6 @@ import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
-import au.csiro.pathling.fhirpath.operator.Comparable;
 import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
 import java.lang.reflect.Constructor;
@@ -56,7 +55,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 @Getter
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
-public class Collection implements Comparable {
+public class Collection {
 
   // See https://hl7.org/fhir/fhirpath.html#types.
   @Nonnull
@@ -82,8 +81,6 @@ public class Collection implements Comparable {
           .put(FHIRDefinedType.INSTANT, DateTimeCollection.class)
           .put(FHIRDefinedType.TIME, TimeCollection.class)
           .put(FHIRDefinedType.CODING, CodingCollection.class)
-          .put(FHIRDefinedType.QUANTITY, QuantityCollection.class)
-          .put(FHIRDefinedType.SIMPLEQUANTITY, QuantityCollection.class)
           .put(FHIRDefinedType.REFERENCE, ReferenceCollection.class)
           .put(FHIRDefinedType.NULL, EmptyCollection.class)
           .build();
@@ -330,12 +327,7 @@ public class Collection implements Comparable {
   protected ColumnRepresentation getFid() {
     return column.traverse(ExtensionSupport.FID_FIELD_NAME());
   }
-
-  @Override
-  public boolean isComparableTo(@Nonnull final Comparable path) {
-    return path instanceof EmptyCollection;
-  }
-
+  
   /**
    * Returns a new {@link Collection} with the specified {@link ColumnRepresentation}.
    *

@@ -34,7 +34,6 @@ public abstract class FhirTypeMapping {
           .put(FHIRDefinedType.DATETIME, FhirPathType.DATETIME)
           .put(FHIRDefinedType.INSTANT, FhirPathType.DATETIME)
           .put(FHIRDefinedType.TIME, FhirPathType.TIME)
-          .put(FHIRDefinedType.QUANTITY, FhirPathType.QUANTITY)
           .put(FHIRDefinedType.CODING, FhirPathType.CODING)
           .build();
 

@@ -47,7 +47,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class DecimalCollection extends Collection implements Materializable<DecimalType>,
+public class DecimalCollection extends Collection implements Comparable,
+    Materializable<DecimalType>,
     Numeric, StringCoercible {
 
   public static final org.apache.spark.sql.types.DecimalType DECIMAL_TYPE = DataTypes
@@ -148,7 +149,7 @@ public class DecimalCollection extends Collection implements Materializable<Deci
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
     return IntegerCollection.getComparableTypes().contains(path.getClass()) ||
-        super.isComparableTo(path);
+        Comparable.super.isComparableTo(path);
   }
 
   @Nonnull

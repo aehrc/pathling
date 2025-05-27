@@ -17,25 +17,14 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
-
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
-import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.comparison.DateTimeComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import au.csiro.pathling.fhirpath.operator.Comparable;
-import au.csiro.pathling.sql.dates.date.DateAddDurationFunction;
-import au.csiro.pathling.sql.dates.date.DateSubtractDurationFunction;
 import jakarta.annotation.Nonnull;
-import java.text.ParseException;
 import java.util.Optional;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
@@ -48,8 +37,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 @Slf4j
-public class DateCollection extends Collection implements Materializable<DateType>,
-    Comparable, Temporal, StringCoercible {
+public class DateCollection extends Collection implements Materializable<DateType>, StringCoercible {
 
   protected DateCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
@@ -77,20 +65,7 @@ public class DateCollection extends Collection implements Materializable<DateTyp
   private static DateCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
     return DateCollection.build(columnRepresentation, Optional.empty());
   }
-
-  /**
-   * Returns a new instance, parsed from a FHIRPath literal.
-   *
-   * @param fhirPath The FHIRPath representation of the literal
-   * @return A new instance of {@link DateCollection}
-   * @throws ParseException if the literal is malformed
-   */
-  @Nonnull
-  public static DateCollection fromLiteral(@Nonnull final String fhirPath) throws ParseException {
-    final String dateString = fhirPath.replaceFirst("^@", "");
-    return DateCollection.build(DefaultRepresentation.literal(dateString));
-  }
-
+  
   /**
    * Returns a new instance based upon a {@link DateType}.
    *
@@ -111,28 +86,7 @@ public class DateCollection extends Collection implements Materializable<DateTyp
     final String dateString = row.getString(columnNumber);
     return Optional.of(new DateType(dateString));
   }
-
-  @Override
-  @Nonnull
-  public BiFunction<Column, Column, Column> getSqlComparator(@Nonnull final Comparable other,
-      @Nonnull final ComparisonOperation operation) {
-    return DateTimeComparator.buildSqlComparison(this, other, operation);
-  }
-
-  @Override
-  public boolean isComparableTo(@Nonnull final Comparable path) {
-    return DateTimeCollection.getComparableTypes().contains(path.getClass())
-        || super.isComparableTo(path);
-  }
-
-  @Nonnull
-  @Override
-  public Function<QuantityCollection, Collection> getDateArithmeticOperation(
-      @Nonnull final MathOperation operation) {
-    return buildDateArithmeticOperation(this, operation,
-        DateAddDurationFunction.FUNCTION_NAME, DateSubtractDurationFunction.FUNCTION_NAME);
-  }
-
+  
   @Nonnull
   @Override
   public StringCollection asStringPath() {

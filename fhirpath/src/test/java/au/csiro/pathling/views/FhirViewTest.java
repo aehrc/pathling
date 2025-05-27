@@ -118,6 +118,9 @@ abstract class FhirViewTest {
   @Nonnull
   private final Set<String> includeTags;
 
+  @Nonnull
+  private final Set<String> exludedTests;
+
   @FunctionalInterface
   interface Expectation {
 
@@ -240,6 +243,13 @@ abstract class FhirViewTest {
   }
 
 
+  protected FhirViewTest(@Nonnull final String testLocationGlob,
+      @Nonnull final Set<String> includeTags, @Nonnull final Set<String> excludeTests) {
+    this.testLocationGlob = testLocationGlob;
+    this.includeTags = includeTags;
+    this.exludedTests = excludeTests;
+  }
+
   /**
    * Constructor for the FhirViewTest class.
    *
@@ -247,8 +257,7 @@ abstract class FhirViewTest {
    */
   protected FhirViewTest(@Nonnull final String testLocationGlob,
       @Nonnull final Set<String> includeTags) {
-    this.testLocationGlob = testLocationGlob;
-    this.includeTags = includeTags;
+    this(testLocationGlob, Collections.emptySet(), Collections.emptySet());
   }
 
   protected FhirViewTest(@Nonnull final String testLocationGlob) {
@@ -289,9 +298,20 @@ abstract class FhirViewTest {
         // Create a TestParameters object for each test within the file.
         .flatMap(testDefinition -> {
           final DataSource sourceData = getDataSource(testDefinition);
-          return toTestParameters(testDefinition, sourceData).stream();
-        });
+          return toTestParameters(testDefinition, sourceData)
+              .stream();
+        }).filter(this::includeTest);
   }
+
+  boolean includeTest(@Nonnull final TestParameters testParameters) {
+    if (this.exludedTests.contains(testParameters.getTitle())) {
+      log.warn("Excluding test: {}", testParameters);
+      return false;
+    } else {
+      return true;
+    }
+  }
+
 
   DataSource getDataSource(@Nonnull final JsonNode testDefinition) {
     // Create a parent directory based upon the test name.
