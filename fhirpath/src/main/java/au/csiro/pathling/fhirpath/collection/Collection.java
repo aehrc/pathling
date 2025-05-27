@@ -81,8 +81,6 @@ public class Collection {
           .put(FHIRDefinedType.INSTANT, DateTimeCollection.class)
           .put(FHIRDefinedType.TIME, TimeCollection.class)
           .put(FHIRDefinedType.CODING, CodingCollection.class)
-          .put(FHIRDefinedType.QUANTITY, QuantityCollection.class)
-          .put(FHIRDefinedType.SIMPLEQUANTITY, QuantityCollection.class)
           .put(FHIRDefinedType.REFERENCE, ReferenceCollection.class)
           .put(FHIRDefinedType.NULL, EmptyCollection.class)
           .build();

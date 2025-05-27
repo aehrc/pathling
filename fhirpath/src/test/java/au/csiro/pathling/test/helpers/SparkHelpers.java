@@ -21,15 +21,10 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static org.apache.spark.sql.functions.col;
 
-import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
-import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import jakarta.annotation.Nonnull;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -42,7 +37,6 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.Quantity;
 import scala.collection.JavaConverters;
 import scala.collection.mutable.Buffer;
 
@@ -114,11 +108,6 @@ public abstract class SparkHelpers {
   }
 
   @Nonnull
-  public static StructType quantityStructType() {
-    return QuantityEncoding.dataType();
-  }
-
-  @Nonnull
   public static Row rowFromCoding(@Nonnull final Coding coding) {
     return new GenericRowWithSchema(
         new Object[]{coding.getId(), coding.getSystem(), coding.getVersion(), coding.getCode(),
@@ -144,39 +133,6 @@ public abstract class SparkHelpers {
         codeableConceptStructType());
   }
 
-  @Nonnull
-  public static Row rowFromQuantity(@Nonnull final Quantity quantity) {
-    final Row object = QuantityEncoding.encode(quantity, false);
-    return requireNonNull(object);
-  }
-
-  @Nonnull
-  public static Row rowForUcumQuantity(@Nonnull final BigDecimal value,
-      @Nonnull final String unit) {
-    final Quantity quantity = new Quantity();
-    quantity.setValue(value);
-    if (quantity.getValue().scale() > DecimalCustomCoder.scale()) {
-      quantity.setValue(
-          quantity.getValue().setScale(DecimalCustomCoder.scale(), RoundingMode.HALF_UP));
-    }
-    // NOTE: BigDecimal precision is total number od digits (before and after the decimal point)
-    // while the SQL decimal precision is the number of digits allowed before the decimal point.
-    if (quantity.getValue().precision()
-        > DecimalCustomCoder.precision() + DecimalCustomCoder.scale()) {
-      throw new AssertionError("Attempt to encode a value with greater than supported precision");
-    }
-    quantity.setUnit(unit);
-    quantity.setSystem(TestHelpers.UCUM_URL);
-    quantity.setCode(unit);
-    return rowFromQuantity(quantity);
-  }
-
-
-  @Nonnull
-  public static Row rowForUcumQuantity(@Nonnull final String value,
-      @Nonnull final String unit) {
-    return rowForUcumQuantity(new BigDecimal(value), unit);
-  }
 
   @Value
   public static class IdAndValueColumns {

@@ -15,7 +15,6 @@ import au.csiro.pathling.fhirpath.definition.def.DefCompositeDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceTag;
-import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
 import au.csiro.pathling.test.helpers.SparkHelpers;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -148,7 +147,6 @@ public class YamlSupport {
       FHIRDefinedType.DATE, DataTypes.StringType,
       FHIRDefinedType.TIME, DataTypes.StringType,
       FHIRDefinedType.CODING, SparkHelpers.codingStructType(),
-      FHIRDefinedType.QUANTITY, QuantityEncoding.dataType(),
       FHIRDefinedType.NULL, DataTypes.NullType
   );
   static final Yaml YAML = new Yaml(new FhirConstructor(), new FhirRepresenter());
