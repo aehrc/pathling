@@ -89,19 +89,7 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
   public static IntegerCollection build(final ColumnRepresentation columnRepresentation) {
     return build(columnRepresentation, Optional.empty());
   }
-
-  /**
-   * Returns a new instance with the specified column representation and no definition with
-   * unsignedInteger FHIR type.
-   *
-   * @param columnRepresentation The column representation to use
-   * @return A new instance of {@link IntegerCollection}
-   */
-  @Nonnull
-  public static IntegerCollection buildUnsigned(final ColumnRepresentation columnRepresentation) {
-    return build(columnRepresentation, FHIRDefinedType.UNSIGNEDINT);
-  }
-
+  
   /**
    * Returns a new instance with the specified column representation and no definition with
    * speficied FHIR type.
