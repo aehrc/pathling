@@ -141,13 +141,6 @@ final public class Paths {
              : leftPath.head();
     }
 
-    @Override
-    @Nonnull
-    public FhirPath xsuffix() {
-      return leftPath.isNull()
-             ? FhirPath.nullPath()
-             : new EvalOperator(leftPath.tail(), rightPath, operator);
-    }
   }
 
   @Value

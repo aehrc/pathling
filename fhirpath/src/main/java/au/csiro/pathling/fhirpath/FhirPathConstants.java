@@ -31,17 +31,4 @@ public interface FhirPathConstants {
     String ROOT_RESOURCE = "rootResource";
     String CONTEXT = "context";
   }
-
-  /**
-   * Non-exhaustive list of FHIRPath function names.
-   */
-  interface Functions {
-
-    String RESOLVE = "resolve";
-    String REVERSE_RESOLVE = "reverseResolve";
-    String IIF = "iif";
-    String OF_TYPE = "ofType";
-    String EXTENSION = "extension";
-  }
-
 }

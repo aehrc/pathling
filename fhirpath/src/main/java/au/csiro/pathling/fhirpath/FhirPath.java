@@ -50,16 +50,6 @@ public interface FhirPath {
     return head();
   }
 
-  /**
-   * Get the rest of the path after the prefix element. Returns the null path if there is no
-   * suffix.
-   *
-   * @return the rest of the path after the prefix element
-   */
-  default FhirPath xsuffix() {
-    return tail();
-  }
-
 
   default FhirPath andThen(@Nonnull final FhirPath after) {
     return nullPath().equals(after)
@@ -81,7 +71,7 @@ public interface FhirPath {
   static FhirPath nullPath() {
     return NULL;
   }
-  
+
   default boolean isNull() {
     return NULL.equals(this);
   }
@@ -100,11 +90,6 @@ public interface FhirPath {
   @Nonnull
   default String toTermExpression() {
     return toExpression();
-  }
-
-  @Nonnull
-  default <T> T accept(@Nonnull final FhirPathVisitor<T> visitor) {
-    return visitor.visitPath(this);
   }
 
   @Nonnull
@@ -183,13 +168,5 @@ public interface FhirPath {
           .map(FhirPath::toTermExpression)
           .collect(Collectors.joining("."));
     }
-
-
-    @Override
-    @Nonnull
-    public <T> T accept(@Nonnull final FhirPathVisitor<T> visitor) {
-      return visitor.visitComposite(this);
-    }
-
   }
 }
