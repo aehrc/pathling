@@ -21,12 +21,10 @@ import static au.csiro.pathling.fhirpath.literal.StringLiteral.unescapeFhirPathS
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import au.csiro.pathling.fhirpath.literal.StringLiteral;
 import au.csiro.pathling.fhirpath.operator.Comparable;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
@@ -48,9 +46,7 @@ import org.hl7.fhir.r4.model.UuidType;
  *
  * @author John Grimes
  */
-public class StringCollection extends Collection implements Comparable,
-    Materializable<PrimitiveType>,
-    StringCoercible {
+public class StringCollection extends Collection implements Comparable, StringCoercible {
 
   protected StringCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
@@ -279,13 +275,6 @@ public class StringCollection extends Collection implements Comparable,
 
   @Nonnull
   @Override
-  public Optional<PrimitiveType> getFhirValueFromRow(@Nonnull final Row row,
-      final int columnNumber) {
-    return valueFromRow(row, columnNumber, getFhirType());
-  }
-
-  @Nonnull
-  @Override
   public StringCollection asStringPath() {
     return (StringCollection) asSingular();
   }
@@ -294,11 +283,4 @@ public class StringCollection extends Collection implements Comparable,
   public boolean isComparableTo(@Nonnull final Comparable path) {
     return path instanceof StringCollection || Comparable.super.isComparableTo(path);
   }
-
-  @Override
-  @Nonnull
-  public String toLiteral(@Nonnull final PrimitiveType value) {
-    return StringLiteral.toLiteral(value.getValueAsString());
-  }
-
 }

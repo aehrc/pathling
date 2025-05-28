@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -27,7 +26,6 @@ import au.csiro.pathling.fhirpath.operator.Comparable;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -36,8 +34,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class BooleanCollection extends Collection implements Materializable<BooleanType>,
-    Comparable, StringCoercible {
+public class BooleanCollection extends Collection implements Comparable, StringCoercible {
 
   protected BooleanCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
@@ -108,16 +105,7 @@ public class BooleanCollection extends Collection implements Materializable<Bool
   public static BooleanCollection fromValue(final boolean value) {
     return BooleanCollection.build(DefaultRepresentation.literal(value));
   }
-
-  @Nonnull
-  @Override
-  public Optional<BooleanType> getFhirValueFromRow(@Nonnull final Row row, final int columnNumber) {
-    if (row.isNullAt(columnNumber)) {
-      return Optional.empty();
-    }
-    return Optional.of(new BooleanType(row.getBoolean(columnNumber)));
-  }
-
+  
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
     return path instanceof BooleanCollection || Comparable.super.isComparableTo(path);

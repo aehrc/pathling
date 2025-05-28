@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -27,7 +26,6 @@ import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -37,7 +35,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 @Slf4j
-public class DateCollection extends Collection implements Materializable<DateType>, StringCoercible {
+public class DateCollection extends Collection implements StringCoercible {
 
   protected DateCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
@@ -65,7 +63,7 @@ public class DateCollection extends Collection implements Materializable<DateTyp
   private static DateCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
     return DateCollection.build(columnRepresentation, Optional.empty());
   }
-  
+
   /**
    * Returns a new instance based upon a {@link DateType}.
    *
@@ -79,23 +77,7 @@ public class DateCollection extends Collection implements Materializable<DateTyp
 
   @Nonnull
   @Override
-  public Optional<DateType> getFhirValueFromRow(@Nonnull final Row row, final int columnNumber) {
-    if (row.isNullAt(columnNumber)) {
-      return Optional.empty();
-    }
-    final String dateString = row.getString(columnNumber);
-    return Optional.of(new DateType(dateString));
-  }
-  
-  @Nonnull
-  @Override
   public StringCollection asStringPath() {
     return Collection.defaultAsStringPath(this);
-  }
-
-  @Override
-  @Nonnull
-  public String toLiteral(@Nonnull final DateType value) {
-    return "@" + value.getValueAsString();
   }
 }
