@@ -26,20 +26,20 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
   public Stream<DynamicTest> testDisplayFunction() {
     // Reset mocks and setup terminology service expectations
     SharedMocks.resetAll();
-    
+
     // Create codings for testing
-    Coding loincCoding = new Coding("http://loinc.org", "55915-3", 
+    Coding loincCoding = new Coding("http://loinc.org", "55915-3",
         "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis");
     Coding snomedCoding = new Coding("http://snomed.info/sct", "63816008", "Left hepatectomy");
     Coding weightCoding = new Coding("http://loinc.org", "29463-7", "Body weight");
-    
+
     // Setup terminology service expectations
     TerminologyServiceHelpers.setupLookup(terminologyService)
         // Setup display values without language parameter
         .withDisplay(loincCoding)
         .withDisplay(snomedCoding)
         .withDisplay(weightCoding)
-        
+
         // Setup display values with language parameter
         .withDisplay(loincCoding, "LC_55915_3 (DE)", "de")
         .withDisplay(snomedCoding, "CD_SNOMED_VER_63816008 (DE)", "de")
@@ -89,21 +89,125 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
             "display() with language parameter returns the localized display value for the second coding in an array")
         .testEquals("LC_29463_7 (DE)", "multipleCodings[2].display('de')",
             "display() with language parameter returns the localized display value for the third coding in an array")
-            
+
         .group("display() function on collections")
-        .testEquals(List.of("Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis",  
-                        "Left hepatectomy", "Body weight"),
-            "multipleCodings.display()", 
+        .testEquals(
+            List.of("Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis",
+                "Left hepatectomy", "Body weight"),
+            "multipleCodings.display()",
             "display() returns display names on a collection of codings")
         .testEquals(List.of("LC_55915_3 (DE)", "CD_SNOMED_VER_63816008 (DE)", "LC_29463_7 (DE)"),
-            "multipleCodings.display('de')", 
+            "multipleCodings.display('de')",
             "display() returns localized display names on a collection of codings")
-        
+
         .group("display() function error cases")
         .testError("'string'.display()",
             "display() throws an error when called on a non-coding type")
         .testError("loinc.display('en', 'fr')",
             "display() throws an error when called with more than one parameter")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testDesignationFunction() {
+    // Reset mocks and setup terminology service expectations
+    SharedMocks.resetAll();
+
+    // Create codings for testing
+    Coding loincCoding = new Coding("http://loinc.org", "55915-3",
+        "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis");
+    Coding snomedCoding = new Coding("http://snomed.info/sct", "63816008", "Left hepatectomy");
+
+    // Create use coding for filtering designations
+    Coding synonymUse = new Coding("http://snomed.info/sct", "900000000000013009", "Synonym");
+
+    // Setup terminology service expectations for designations
+    TerminologyServiceHelpers.setupLookup(terminologyService)
+        // Setup designations with no filtering
+        .withDesignation(loincCoding, null, null, "Beta-2 globulin", "β2 globulin")
+        .withDesignation(snomedCoding, null, null, "Left hepatic lobectomy", "Left liver resection")
+
+        // Setup designations with use filtering
+        .withDesignation(loincCoding, synonymUse, null, "Beta-2 globulin")
+        .withDesignation(snomedCoding, synonymUse, null, "Left hepatic lobectomy")
+
+        // Setup designations with language filtering
+        .withDesignation(loincCoding, null, "fr", "Globuline bêta-2")
+        .withDesignation(snomedCoding, null, "fr", "Hépatectomie gauche")
+
+        // Setup designations with both use and language filtering
+        .withDesignation(loincCoding, synonymUse, "de", "Beta-2-Globulin")
+        .withDesignation(snomedCoding, synonymUse, "de", "Linke Hepatektomie")
+
+        // Additional designations for language filtering
+        .withDesignation(loincCoding, null, "de", "Beta-2-Globulin (allgemein)")
+        .withDesignation(snomedCoding, null, "de", "Linke Hepatektomie (allgemein)")
+        .done();
+
+    return builder()
+        .withSubject(sb -> sb
+            // Empty coding
+            .coding("emptyCoding", null)
+            // Single codings
+            .coding("loinc",
+                "http://loinc.org|55915-3||'Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis'")
+            .coding("snomed", "http://snomed.info/sct|63816008||'Left hepatectomy'")
+            // Array of codings
+            .codingArray("multipleCodings",
+                "http://loinc.org|55915-3||'Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis'",
+                "http://snomed.info/sct|63816008||'Left hepatectomy'")
+        )
+        .group("designation() function with no parameters")
+        .testEquals(List.of("Beta-2 globulin", "β2 globulin", "Beta-2 globulin", "Globuline bêta-2",
+                "Beta-2-Globulin", "Beta-2-Globulin (allgemein)"),
+            "loinc.designation()",
+            "designation() returns all designations for a single LOINC coding")
+        .testEquals(
+            List.of("Left hepatic lobectomy", "Left liver resection", "Left hepatic lobectomy",
+                "Hépatectomie gauche", "Linke Hepatektomie", "Linke Hepatektomie (allgemein)"),
+            "snomed.designation()",
+            "designation() returns all designations for a single SNOMED coding")
+        .testEmpty("emptyCoding.designation()",
+            "designation() returns empty for an empty coding")
+
+        .group("designation() function with use parameter")
+        .testEquals(List.of("Beta-2 globulin", "Beta-2-Globulin"),
+            "loinc.designation(http://snomed.info/sct|900000000000013009)",
+            "designation() with use parameter returns filtered designations for LOINC")
+        .testEquals(List.of("Left hepatic lobectomy", "Linke Hepatektomie"),
+            "snomed.designation(http://snomed.info/sct|900000000000013009)",
+            "designation() with use parameter returns filtered designations for SNOMED")
+        .testEmpty("emptyCoding.designation(http://snomed.info/sct|900000000000013009)",
+            "designation() with use parameter returns empty for an empty coding")
+        .group("designation() function with both use and language parameters")
+        .testEquals(List.of("Beta-2-Globulin"),
+            "loinc.designation(http://snomed.info/sct|900000000000013009, 'de')",
+            "designation() with use and language parameters returns filtered designations for LOINC")
+        .testEquals(List.of("Linke Hepatektomie"),
+            "snomed.designation(http://snomed.info/sct|900000000000013009, 'de')",
+            "designation() with use and language parameters returns filtered designations for SNOMED")
+        .testEmpty("emptyCoding.designation(http://snomed.info/sct|900000000000013009, 'de')",
+            "designation() with use and language parameters returns empty for an empty coding")
+
+        .group("designation() function on collections")
+        .testEquals(List.of("Beta-2 globulin", "β2 globulin", "Beta-2 globulin", "Globuline bêta-2",
+                "Beta-2-Globulin", "Beta-2-Globulin (allgemein)", "Left hepatic lobectomy",
+                "Left liver resection", "Left hepatic lobectomy",
+                "Hépatectomie gauche", "Linke Hepatektomie", "Linke Hepatektomie (allgemein)"),
+            "multipleCodings.designation()",
+            "designation() returns all designations on a collection of codings")
+        .testEquals(List.of("Beta-2 globulin", "Beta-2-Globulin", "Left hepatic lobectomy", "Linke Hepatektomie"),
+            "multipleCodings.designation(http://snomed.info/sct|900000000000013009)",
+            "designation() with use parameter returns filtered designations on a collection of codings")
+        .testEquals(List.of("Beta-2-Globulin", "Linke Hepatektomie"),
+            "multipleCodings.designation(http://snomed.info/sct|900000000000013009, 'de')",
+            "designation() with use and language parameters returns filtered designations on a collection of codings")
+
+        .group("designation() function error cases")
+        .testError("'string'.designation()",
+            "designation() throws an error when called on a non-coding type")
+        .testError("loinc.designation(http://snomed.info/sct|900000000000013009, 'de', 'extra')",
+            "designation() throws an error when called with more than two parameters")
         .build();
   }
 }
