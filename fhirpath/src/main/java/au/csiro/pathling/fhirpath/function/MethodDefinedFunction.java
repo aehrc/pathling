@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.function;
 
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
@@ -49,6 +51,11 @@ public class MethodDefinedFunction implements NamedFunction<Collection> {
         functionInput.getContext(),
         functionInput.getInput());
     final List<FhirPath> actualArguments = functionInput.getArguments();
+
+    // Check that not extra arguments are provided.
+    checkUserInput(actualArguments.size() <= method.getParameterCount() - 1,
+        "Too many arguments provided for function '" + name + "'. Expected "
+            + (method.getParameterCount() - 1) + ", got " + actualArguments.size());
 
     // Resolve each pair of method parameter and argument.
     final Stream<Object> resolvedArguments = IntStream.range(0, method.getParameterCount() - 1)
