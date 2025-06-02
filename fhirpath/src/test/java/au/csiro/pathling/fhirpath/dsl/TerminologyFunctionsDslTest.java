@@ -2,6 +2,7 @@ package au.csiro.pathling.fhirpath.dsl;
 
 import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toCoding;
 import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toInteger;
+import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.*;
 
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
@@ -236,6 +237,120 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
             "property() throws an error when called with an invalid type parameter")
         .testError("loinc.property()",
             "property() throws an error when called with no parameters")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testMemberOfFunction() {
+    // Reset mocks and setup terminology service expectations
+    SharedMocks.resetAll();
+
+    // Create codings for testing
+    Coding loincCoding = new Coding("http://loinc.org", "55915-3",
+        "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis");
+    Coding snomedCoding = new Coding("http://snomed.info/sct", "63816008", "Left hepatectomy");
+    Coding weightCoding = new Coding("http://loinc.org", "29463-7", "Body weight");
+
+    // Define value set URLs
+    String labTestsValueSet = "http://example.org/fhir/ValueSet/lab-tests";
+    String proceduresValueSet = "http://example.org/fhir/ValueSet/procedures";
+    String vitalSignsValueSet = "http://example.org/fhir/ValueSet/vital-signs";
+
+    // Setup terminology service expectations for memberOf
+    TerminologyServiceHelpers.setupValidate(terminologyService)
+        // Lab tests value set includes LOINC coding but not SNOMED
+        .withValueSet(labTestsValueSet, loincCoding)
+        // Procedures value set includes SNOMED coding but not LOINC
+        .withValueSet(proceduresValueSet, snomedCoding)
+        // Vital signs value set includes weight coding
+        .withValueSet(vitalSignsValueSet, weightCoding);
+
+    return builder()
+        .withSubject(sb -> sb
+            // Empty coding
+            .coding("emptyCoding", null)
+            // Single codings
+            .coding("loinc",
+                "http://loinc.org|55915-3||'Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis'")
+            .coding("snomed", "http://snomed.info/sct|63816008||'Left hepatectomy'")
+            .coding("weight", "http://loinc.org|29463-7||'Body weight'")
+            // Array of codings
+            .codingArray("multipleCodings",
+                "http://loinc.org|55915-3||'Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis'",
+                "http://snomed.info/sct|63816008||'Left hepatectomy'",
+                "http://loinc.org|29463-7||'Body weight'")
+            // CodeableConcepts with single coding
+            .element("loincConcept", concept -> concept
+                .fhirType(CODEABLECONCEPT)
+                .codingArray("coding",
+                    "http://loinc.org|55915-3||'Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis'"))
+            .element("snomedConcept", concept -> concept
+                .fhirType(CODEABLECONCEPT)
+                .codingArray("coding",
+                    "http://snomed.info/sct|63816008||'Left hepatectomy'"))
+            // CodeableConcept with multiple codings
+            .element("mixedConcept", concept -> concept
+                .fhirType(CODEABLECONCEPT)
+                .codingArray("coding",
+                    "http://loinc.org|55915-3||'Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis'",
+                    "http://snomed.info/sct|63816008||'Left hepatectomy'"))
+            // Array of CodeableConcepts
+            .elementArray("multipleConcepts",
+                concept1 -> concept1.fhirType(CODEABLECONCEPT).codingArray("coding",
+                    "http://loinc.org|55915-3||'Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis'"),
+                concept2 -> concept2.fhirType(CODEABLECONCEPT).codingArray("coding",
+                    "http://snomed.info/sct|63816008||'Left hepatectomy'"))
+        )
+        .group("memberOf() function with Coding")
+        .testTrue("loinc.memberOf('" + labTestsValueSet + "')",
+            "memberOf() returns true for a coding that is in the value set")
+        .testFalse("loinc.memberOf('" + proceduresValueSet + "')",
+            "memberOf() returns false for a coding that is not in the value set")
+        .testFalse("snomed.memberOf('" + labTestsValueSet + "')",
+            "memberOf() returns false for a SNOMED coding that is not in the lab tests value set")
+        .testTrue("snomed.memberOf('" + proceduresValueSet + "')",
+            "memberOf() returns true for a SNOMED coding that is in the procedures value set")
+        .testEmpty("emptyCoding.memberOf('" + labTestsValueSet + "')",
+            "memberOf() returns empty for an empty coding")
+
+        .group("memberOf() function with collections of Codings")
+        .testEquals(List.of(true, false, false),
+            "multipleCodings.memberOf('" + labTestsValueSet + "')",
+            "memberOf() returns correct results for a collection of codings with lab tests value set")
+        .testEquals(List.of(false, true, false),
+            "multipleCodings.memberOf('" + proceduresValueSet + "')",
+            "memberOf() returns correct results for a collection of codings with procedures value set")
+        .testEquals(List.of(false, false, true),
+            "multipleCodings.memberOf('" + vitalSignsValueSet + "')",
+            "memberOf() returns correct results for a collection of codings with vital signs value set")
+
+        .group("memberOf() function with CodeableConcept")
+        .testTrue("loincConcept.memberOf('" + labTestsValueSet + "')",
+            "memberOf() returns true for a CodeableConcept with a coding that is in the value set")
+        .testFalse("loincConcept.memberOf('" + proceduresValueSet + "')",
+            "memberOf() returns false for a CodeableConcept with no codings in the value set")
+        .testTrue("snomedConcept.memberOf('" + proceduresValueSet + "')",
+            "memberOf() returns true for a CodeableConcept with a coding that is in the value set")
+        .testTrue("mixedConcept.memberOf('" + labTestsValueSet + "')",
+            "memberOf() returns true for a CodeableConcept with at least one coding in the value set")
+        .testTrue("mixedConcept.memberOf('" + proceduresValueSet + "')",
+            "memberOf() returns true for a CodeableConcept with at least one coding in the value set")
+
+        .group("memberOf() function with collections of CodeableConcepts")
+        .testEquals(List.of(true, false),
+            "multipleConcepts.memberOf('" + labTestsValueSet + "')",
+            "memberOf() returns correct results for a collection of CodeableConcepts with lab tests value set")
+        .testEquals(List.of(false, true),
+            "multipleConcepts.memberOf('" + proceduresValueSet + "')",
+            "memberOf() returns correct results for a collection of CodeableConcepts with procedures value set")
+
+        .group("memberOf() function error cases")
+        .testError("'string'.memberOf('" + labTestsValueSet + "')",
+            "memberOf() throws an error when called on a non-coding/non-codeableconcept type")
+        .testError("loinc.memberOf()",
+            "memberOf() throws an error when called with no parameters")
+        .testError("loinc.memberOf('" + labTestsValueSet + "', 'extra')",
+            "memberOf() throws an error when called with more than one parameter")
         .build();
   }
 
