@@ -1,17 +1,24 @@
 package au.csiro.pathling.fhirpath.dsl;
 
+import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toCoding;
+import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toInteger;
+
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
+import java.util.List;
+import java.util.stream.Stream;
+import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.DateTimeType;
+import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import java.util.List;
-import java.util.stream.Stream;
 
 /**
  * Tests for terminology functions.
@@ -109,6 +116,130 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
   }
 
   @FhirPathTest
+  public Stream<DynamicTest> testPropertyFunction() {
+    // Reset mocks and setup terminology service expectations
+    SharedMocks.resetAll();
+
+    // Create codings for testing
+    Coding loincCoding = new Coding("http://loinc.org", "55915-3",
+        "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis");
+    Coding snomedCoding = new Coding("http://snomed.info/sct", "63816008", "Left hepatectomy");
+
+    // Setup terminology service expectations for properties
+    TerminologyServiceHelpers.setupLookup(terminologyService)
+        // Setup string properties
+        .withProperty(loincCoding, "description", null, new StringType("LOINC description"))
+        .withProperty(snomedCoding, "description", null, new StringType("SNOMED description"))
+
+        // Setup code properties
+        .withProperty(loincCoding, "parent", null, new CodeType("55900-0"))
+        .withProperty(snomedCoding, "parent", null, new CodeType("107963000"))
+
+        // Setup integer properties
+        .withProperty(loincCoding, "rank", null, new IntegerType(5))
+        .withProperty(snomedCoding, "rank", null, new IntegerType(10))
+
+        // Setup boolean properties
+        .withProperty(loincCoding, "active", null, new BooleanType(true))
+        .withProperty(snomedCoding, "active", null, new BooleanType(false))
+
+        // Setup DateTime properties
+        .withProperty(loincCoding, "effectiveDate", null, new DateTimeType("2020-01-01"))
+        .withProperty(snomedCoding, "effectiveDate", null, new DateTimeType("2019-06-15"))
+
+        // Setup Coding properties
+        .withProperty(loincCoding, "category", null,
+            new Coding("http://loinc.org/category", "LAB", "Laboratory"))
+        .withProperty(snomedCoding, "category", null,
+            new Coding("http://snomed.info/sct/category", "PROC", "Procedure"))
+
+        // Setup properties with language parameter
+        .withProperty(loincCoding, "description", "de", new StringType("LOINC Beschreibung"))
+        .withProperty(snomedCoding, "description", "de", new StringType("SNOMED Beschreibung"))
+
+        // Setup multiple property values
+        .withProperty(loincCoding, "synonym", null,
+            new StringType("Beta-2 globulin"), new StringType("β2 globulin"))
+        .withProperty(snomedCoding, "synonym", null,
+            new StringType("Left hepatic lobectomy"), new StringType("Left liver resection"))
+        .done();
+
+    return builder()
+        .withSubject(sb -> sb
+            // Empty coding
+            .coding("emptyCoding", null)
+            // Single codings
+            .coding("loinc",
+                "http://loinc.org|55915-3||'Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis'")
+            .coding("snomed", "http://snomed.info/sct|63816008||'Left hepatectomy'")
+            // Array of codings
+            .codingArray("multipleCodings",
+                "http://loinc.org|55915-3||'Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis'",
+                "http://snomed.info/sct|63816008||'Left hepatectomy'")
+        )
+        .group("property() function with string type (default)")
+        .testEquals("LOINC description", "loinc.property('description')",
+            "property() returns string property for a single LOINC coding")
+        .testEquals("SNOMED description", "snomed.property('description')",
+            "property() returns string property for a single SNOMED coding")
+        .testEmpty("emptyCoding.property('description')",
+            "property() returns empty for an empty coding")
+        .testEquals(List.of("Beta-2 globulin", "β2 globulin"), "loinc.property('synonym')",
+            "property() returns multiple string values when available")
+        .group("property() function with explicit type parameters")
+        .testEquals("55900-0", "loinc.property('parent', 'code')",
+            "property() returns code property for a LOINC coding")
+        .testEquals("107963000", "snomed.property('parent', 'code')",
+            "property() returns code property for a SNOMED coding")
+        .testEquals(toInteger("5"), "loinc.property('rank', 'integer')",
+            "property() returns integer property for a LOINC coding")
+        .testEquals(10, "snomed.property('rank', 'integer')",
+            "property() returns integer property for a SNOMED coding")
+        .testEquals(true, "loinc.property('active', 'boolean')",
+            "property() returns boolean property for a LOINC coding")
+        .testEquals(false, "snomed.property('active', 'boolean')",
+            "property() returns boolean property for a SNOMED coding")
+        .testEquals("2020-01-01", "loinc.property('effectiveDate', 'dateTime')",
+            "property() returns dateTime property for a LOINC coding")
+        .testEquals("2019-06-15", "snomed.property('effectiveDate', 'dateTime')",
+            "property() returns dateTime property for a SNOMED coding")
+
+        .group("property() function with Coding type")
+        .testEquals(toCoding("http://loinc.org/category|LAB||'Laboratory'"),
+            "loinc.property('category', 'Coding')",
+            "property() returns Coding property for a LOINC coding")
+        .testEquals(toCoding("http://snomed.info/sct/category|PROC||'Procedure'"),
+            "snomed.property('category', 'Coding')",
+            "property() returns Coding property for a SNOMED coding")
+
+        .group("property() function with language parameter")
+        .testEquals("LOINC Beschreibung", "loinc.property('description', 'string', 'de')",
+            "property() with language parameter returns localized string property for LOINC")
+        .testEquals("SNOMED Beschreibung", "snomed.property('description', 'string', 'de')",
+            "property() with language parameter returns localized string property for SNOMED")
+
+        .group("property() function on collections")
+        .testEquals(List.of("LOINC description", "SNOMED description"),
+            "multipleCodings.property('description')",
+            "property() returns string properties on a collection of codings")
+        .testEquals(List.of("55900-0", "107963000"),
+            "multipleCodings.property('parent', 'code')",
+            "property() returns code properties on a collection of codings")
+        .testEquals(List.of("LOINC Beschreibung", "SNOMED Beschreibung"),
+            "multipleCodings.property('description', 'string', 'de')",
+            "property() with language parameter returns localized string properties on a collection of codings")
+
+        .group("property() function error cases")
+        .testError("'string'.property('description')",
+            "property() throws an error when called on a non-coding type")
+        .testError("loinc.property('description', 'invalidType')",
+            "property() throws an error when called with an invalid type parameter")
+        .testError("loinc.property()",
+            "property() throws an error when called with no parameters")
+        .build();
+  }
+
+  @FhirPathTest
   public Stream<DynamicTest> testDesignationFunction() {
     // Reset mocks and setup terminology service expectations
     SharedMocks.resetAll();
@@ -196,7 +327,8 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
                 "Hépatectomie gauche", "Linke Hepatektomie", "Linke Hepatektomie (allgemein)"),
             "multipleCodings.designation()",
             "designation() returns all designations on a collection of codings")
-        .testEquals(List.of("Beta-2 globulin", "Beta-2-Globulin", "Left hepatic lobectomy", "Linke Hepatektomie"),
+        .testEquals(List.of("Beta-2 globulin", "Beta-2-Globulin", "Left hepatic lobectomy",
+                "Linke Hepatektomie"),
             "multipleCodings.designation(http://snomed.info/sct|900000000000013009)",
             "designation() with use parameter returns filtered designations on a collection of codings")
         .testEquals(List.of("Beta-2-Globulin", "Linke Hepatektomie"),
