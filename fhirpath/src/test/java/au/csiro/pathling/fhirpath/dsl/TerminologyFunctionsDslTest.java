@@ -364,31 +364,34 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
     Coding loincCoding = new Coding("http://loinc.org", "55915-3",
         "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis");
     Coding snomedCoding = new Coding("http://snomed.info/sct", "63816008", "Left hepatectomy");
-    
+
     // Create target codings for translations
-    Coding translatedLoinc1 = new Coding("http://example.org/alt-loinc", "L55915", "Beta 2 globulin");
-    Coding translatedLoinc2 = new Coding("http://example.org/alt-loinc", "L55915-ALT", "Beta-2 globulin alt");
-    Coding translatedSnomed = new Coding("http://example.org/alt-snomed", "S63816", "Left hepatic resection");
-    
+    Coding translatedLoinc1 = new Coding("http://example.org/alt-loinc", "L55915",
+        "Beta 2 globulin");
+    Coding translatedLoinc2 = new Coding("http://example.org/alt-loinc", "L55915-ALT",
+        "Beta-2 globulin alt");
+    Coding translatedSnomed = new Coding("http://example.org/alt-snomed", "S63816",
+        "Left hepatic resection");
+
     // Define concept map URLs
     String conceptMap1 = "http://example.org/fhir/ConceptMap/loinc-to-alt";
     String conceptMap2 = "http://example.org/fhir/ConceptMap/snomed-to-alt";
-    
+
     // Setup terminology service expectations for translate
     TerminologyServiceHelpers.setupTranslate(terminologyService)
         // Forward translations (reverse=false)
-        .withTranslations(loincCoding, conceptMap1, false, 
+        .withTranslations(loincCoding, conceptMap1, false,
             TerminologyService.Translation.of(ConceptMapEquivalence.EQUIVALENT, translatedLoinc1),
             TerminologyService.Translation.of(ConceptMapEquivalence.NARROWER, translatedLoinc2))
         .withTranslations(snomedCoding, conceptMap1, false,
             TerminologyService.Translation.of(ConceptMapEquivalence.EQUIVALENT, translatedSnomed))
-        .withTranslations(snomedCoding, conceptMap2, false, 
+        .withTranslations(snomedCoding, conceptMap2, false,
             TerminologyService.Translation.of(ConceptMapEquivalence.EQUIVALENT, translatedSnomed))
-        
+
         // Reverse translations (reverse=true)
-        .withTranslations(translatedLoinc1, conceptMap1, true, 
+        .withTranslations(translatedLoinc1, conceptMap1, true,
             TerminologyService.Translation.of(ConceptMapEquivalence.EQUIVALENT, loincCoding))
-        .withTranslations(translatedSnomed, conceptMap2, true, 
+        .withTranslations(translatedSnomed, conceptMap2, true,
             TerminologyService.Translation.of(ConceptMapEquivalence.EQUIVALENT, snomedCoding));
 
     return builder()
@@ -420,7 +423,8 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
                     "http://snomed.info/sct|63816008||'Left hepatectomy'"))
             // Translated codings for reverse testing
             .coding("translatedLoinc", "http://example.org/alt-loinc|L55915||'Beta 2 globulin'")
-            .coding("translatedSnomed", "http://example.org/alt-snomed|S63816||'Left hepatic resection'")
+            .coding("translatedSnomed",
+                "http://example.org/alt-snomed|S63816||'Left hepatic resection'")
         )
         .group("translate() function with default parameters")
         .testEquals(toCoding("http://example.org/alt-loinc|L55915||'Beta 2 globulin'"),
@@ -431,15 +435,16 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
             "translate() returns equivalent translation for a SNOMED coding")
         .testEmpty("emptyCoding.translate('" + conceptMap1 + "')",
             "translate() returns empty for an empty coding")
-            
+
         .group("translate() function with reverse parameter")
-        .testEquals(toCoding("http://loinc.org|55915-3||'Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis'"),
+        .testEquals(toCoding(
+                "http://loinc.org|55915-3||'Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis'"),
             "translatedLoinc.translate('" + conceptMap1 + "', true)",
             "translate() with reverse=true returns source coding for a translated LOINC coding")
         .testEquals(toCoding("http://snomed.info/sct|63816008||'Left hepatectomy'"),
             "translatedSnomed.translate('" + conceptMap2 + "', true)",
             "translate() with reverse=true returns source coding for a translated SNOMED coding")
-            
+
         .group("translate() function with equivalence parameter")
         .testEquals(List.of(
                 toCoding("http://example.org/alt-loinc|L55915||'Beta 2 globulin'"),
@@ -452,14 +457,14 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
         .testEquals(toCoding("http://example.org/alt-loinc|L55915-ALT||'Beta-2 globulin alt'"),
             "loinc.translate('" + conceptMap1 + "', false, 'narrower')",
             "translate() with equivalence='narrower' returns only narrower translations")
-            
+
         .group("translate() function on collections")
         .testEquals(List.of(
                 toCoding("http://example.org/alt-loinc|L55915||'Beta 2 globulin'"),
                 toCoding("http://example.org/alt-snomed|S63816||'Left hepatic resection'")),
             "multipleCodings.translate('" + conceptMap1 + "')",
             "translate() returns translations for a collection of codings")
-            
+
         .group("translate() function with CodeableConcept")
         .testEquals(toCoding("http://example.org/alt-loinc|L55915||'Beta 2 globulin'"),
             "loincConcept.translate('" + conceptMap1 + "')",
@@ -472,7 +477,7 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
                 toCoding("http://example.org/alt-snomed|S63816||'Left hepatic resection'")),
             "mixedConcept.translate('" + conceptMap1 + "')",
             "translate() returns translations for a CodeableConcept with multiple codings")
-            
+
         .group("translate() function error cases")
         .testError("'string'.translate('" + conceptMap1 + "')",
             "translate() throws an error when called on a non-coding/non-codeableconcept type")
@@ -480,6 +485,123 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
             "translate() throws an error when called with no parameters")
         .testError("loinc.translate('" + conceptMap1 + "', false, 'equivalent', 'target', 'extra')",
             "translate() throws an error when called with more than four parameters")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testSubsumesFunctions() {
+    // Reset mocks and setup terminology service expectations
+    SharedMocks.resetAll();
+
+    // Create codings for testing
+    Coding liverResection = new Coding("http://snomed.info/sct", "107963000", "Liver resection");
+    Coding leftHepatectomy = new Coding("http://snomed.info/sct", "63816008", "Left hepatectomy");
+    Coding viralSinusitis = new Coding("http://snomed.info/sct", "444814009", "Viral sinusitis");
+    Coding chronicSinusitis = new Coding("http://snomed.info/sct", "40055000", "Chronic sinusitis");
+
+    // Setup terminology service expectations for subsumes
+    TerminologyServiceHelpers.setupSubsumes(terminologyService)
+        // Liver resection subsumes Left hepatectomy
+        .withSubsumes(liverResection, leftHepatectomy)
+        // Viral sinusitis subsumes Chronic sinusitis
+        .withSubsumes(viralSinusitis, chronicSinusitis);
+
+    return builder()
+        .withSubject(sb -> sb
+            // Empty coding
+            .codingEmpty("emptyCoding")
+            // Single codings
+            .coding("liverResection", "http://snomed.info/sct|107963000||'Liver resection'")
+            .coding("leftHepatectomy", "http://snomed.info/sct|63816008||'Left hepatectomy'")
+            .coding("viralSinusitis", "http://snomed.info/sct|444814009||'Viral sinusitis'")
+            .coding("chronicSinusitis", "http://snomed.info/sct|40055000||'Chronic sinusitis'")
+            // Arrays of codings
+            .codingArray("procedureCodings",
+                "http://snomed.info/sct|107963000||'Liver resection'",
+                "http://snomed.info/sct|63816008||'Left hepatectomy'")
+            .codingArray("sinusitisCodings",
+                "http://snomed.info/sct|444814009||'Viral sinusitis'",
+                "http://snomed.info/sct|40055000||'Chronic sinusitis'")
+            // CodeableConcepts
+            .element("liverResectionConcept", concept -> concept
+                .fhirType(CODEABLECONCEPT)
+                .codingArray("coding", "http://snomed.info/sct|107963000||'Liver resection'"))
+            .element("leftHepatectomyConcept", concept -> concept
+                .fhirType(CODEABLECONCEPT)
+                .codingArray("coding", "http://snomed.info/sct|63816008||'Left hepatectomy'"))
+        )
+        .group("subsumes() function with Coding")
+        .testTrue("liverResection.subsumes(leftHepatectomy)",
+            "subsumes() returns true when the source coding subsumes the target coding")
+        .testFalse("leftHepatectomy.subsumes(liverResection)",
+            "subsumes() returns false when the source coding does not subsume the target coding")
+        .testTrue("viralSinusitis.subsumes(chronicSinusitis)",
+            "subsumes() returns true when the source coding subsumes the target coding (different concepts)")
+        .testFalse("chronicSinusitis.subsumes(viralSinusitis)",
+            "subsumes() returns false when the source coding does not subsume the target coding (different concepts)")
+        .testTrue("liverResection.subsumes(liverResection)",
+            "subsumes() returns true when the source coding is equivalent to the target coding")
+        .testEmpty("emptyCoding.subsumes(leftHepatectomy)",
+            "subsumes() returns empty when the source coding is empty")
+        .testEmpty("liverResection.subsumes(emptyCoding)",
+            "subsumes() returns empty when the target coding is empty")
+
+        .group("subsumes() function with collections")
+        .testEquals(List.of(true, false),
+            "procedureCodings.subsumes(liverResection)",
+            "subsumes() returns correct results for a collection of source codings")
+        .testEquals(true,
+            "liverResection.subsumes(procedureCodings)",
+            "subsumes() returns correct results for a collection of target codings")
+        .testEquals(List.of(true, true),
+            "procedureCodings.subsumes(procedureCodings)",
+            "subsumes() returns correct results for collections of both source and target codings")
+
+        .group("subsumes() function with CodeableConcept")
+        .testTrue("liverResectionConcept.subsumes(leftHepatectomyConcept)",
+            "subsumes() returns true when the source CodeableConcept subsumes the target CodeableConcept")
+        .testFalse("leftHepatectomyConcept.subsumes(liverResectionConcept)",
+            "subsumes() returns false when the source CodeableConcept does not subsume the target CodeableConcept")
+
+        .group("subsumedBy() function with Coding")
+        .testTrue("leftHepatectomy.subsumedBy(liverResection)",
+            "subsumedBy() returns true when the source coding is subsumed by the target coding")
+        .testFalse("liverResection.subsumedBy(leftHepatectomy)",
+            "subsumedBy() returns false when the source coding is not subsumed by the target coding")
+        .testTrue("chronicSinusitis.subsumedBy(viralSinusitis)",
+            "subsumedBy() returns true when the source coding is subsumed by the target coding (different concepts)")
+        .testFalse("viralSinusitis.subsumedBy(chronicSinusitis)",
+            "subsumedBy() returns false when the source coding is not subsumed by the target coding (different concepts)")
+        .testTrue("liverResection.subsumedBy(liverResection)",
+            "subsumedBy() returns true when the source coding is equivalent to the target coding")
+        .testEmpty("emptyCoding.subsumedBy(liverResection)",
+            "subsumedBy() returns empty when the source coding is empty")
+        .testEmpty("leftHepatectomy.subsumedBy(emptyCoding)",
+            "subsumedBy() returns empty when the target coding is empty")
+
+        .group("subsumedBy() function with collections")
+        .testEquals(List.of(false, true),
+            "procedureCodings.subsumedBy(leftHepatectomy)",
+            "subsumedBy() returns correct results for a collection of source codings")
+        .testEquals(true,
+            "leftHepatectomy.subsumedBy(procedureCodings)",
+            "subsumedBy() returns correct results for a collection of target codings")
+
+        .group("subsumedBy() function with CodeableConcept")
+        .testTrue("leftHepatectomyConcept.subsumedBy(liverResectionConcept)",
+            "subsumedBy() returns true when the source CodeableConcept is subsumed by the target CodeableConcept")
+        .testFalse("liverResectionConcept.subsumedBy(leftHepatectomyConcept)",
+            "subsumedBy() returns false when the source CodeableConcept is not subsumed by the target CodeableConcept")
+
+        .group("subsumes/subsumedBy error cases")
+        .testError("'string'.subsumes(leftHepatectomy)",
+            "subsumes() throws an error when called on a non-coding/non-codeableconcept type")
+        .testError("liverResection.subsumes('string')",
+            "subsumes() throws an error when called with a non-coding/non-codeableconcept argument")
+        .testError("'string'.subsumedBy(liverResection)",
+            "subsumedBy() throws an error when called on a non-coding/non-codeableconcept type")
+        .testError("leftHepatectomy.subsumedBy('string')",
+            "subsumedBy() throws an error when called with a non-coding/non-codeableconcept argument")
         .build();
   }
 
