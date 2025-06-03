@@ -40,7 +40,9 @@ class FunctionParameterResolver {
     } else if (Collection.class.isAssignableFrom(parameter.getType())
         || Concepts.class.isAssignableFrom(parameter.getType())) {
       // evaluate collection types 
-      return resolveCollection(argument.apply(input, evaluationContext),
+      return resolveCollection(
+          argument.apply(evaluationContext.getInputContext(),
+              evaluationContext),
           parameter);
     } else if (CollectionTransform.class.isAssignableFrom(parameter.getType())) {
       // bind with context
