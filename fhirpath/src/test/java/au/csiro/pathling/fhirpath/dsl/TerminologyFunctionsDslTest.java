@@ -2,7 +2,7 @@ package au.csiro.pathling.fhirpath.dsl;
 
 import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toCoding;
 import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toInteger;
-import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.*;
+import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.CODEABLECONCEPT;
 
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
@@ -17,6 +17,7 @@ import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -351,6 +352,134 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
             "memberOf() throws an error when called with no parameters")
         .testError("loinc.memberOf('" + labTestsValueSet + "', 'extra')",
             "memberOf() throws an error when called with more than one parameter")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testTranslateFunction() {
+    // Reset mocks and setup terminology service expectations
+    SharedMocks.resetAll();
+
+    // Create source codings for testing
+    Coding loincCoding = new Coding("http://loinc.org", "55915-3",
+        "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis");
+    Coding snomedCoding = new Coding("http://snomed.info/sct", "63816008", "Left hepatectomy");
+    
+    // Create target codings for translations
+    Coding translatedLoinc1 = new Coding("http://example.org/alt-loinc", "L55915", "Beta 2 globulin");
+    Coding translatedLoinc2 = new Coding("http://example.org/alt-loinc", "L55915-ALT", "Beta-2 globulin alt");
+    Coding translatedSnomed = new Coding("http://example.org/alt-snomed", "S63816", "Left hepatic resection");
+    
+    // Define concept map URLs
+    String conceptMap1 = "http://example.org/fhir/ConceptMap/loinc-to-alt";
+    String conceptMap2 = "http://example.org/fhir/ConceptMap/snomed-to-alt";
+    
+    // Setup terminology service expectations for translate
+    TerminologyServiceHelpers.setupTranslate(terminologyService)
+        // Forward translations (reverse=false)
+        .withTranslations(loincCoding, conceptMap1, false, 
+            TerminologyService.Translation.of(ConceptMapEquivalence.EQUIVALENT, translatedLoinc1),
+            TerminologyService.Translation.of(ConceptMapEquivalence.NARROWER, translatedLoinc2))
+        .withTranslations(snomedCoding, conceptMap1, false,
+            TerminologyService.Translation.of(ConceptMapEquivalence.EQUIVALENT, translatedSnomed))
+        .withTranslations(snomedCoding, conceptMap2, false, 
+            TerminologyService.Translation.of(ConceptMapEquivalence.EQUIVALENT, translatedSnomed))
+        
+        // Reverse translations (reverse=true)
+        .withTranslations(translatedLoinc1, conceptMap1, true, 
+            TerminologyService.Translation.of(ConceptMapEquivalence.EQUIVALENT, loincCoding))
+        .withTranslations(translatedSnomed, conceptMap2, true, 
+            TerminologyService.Translation.of(ConceptMapEquivalence.EQUIVALENT, snomedCoding));
+
+    return builder()
+        .withSubject(sb -> sb
+            // Empty coding
+            .coding("emptyCoding", null)
+            // Single codings
+            .coding("loinc",
+                "http://loinc.org|55915-3||'Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis'")
+            .coding("snomed", "http://snomed.info/sct|63816008||'Left hepatectomy'")
+            // Array of codings
+            .codingArray("multipleCodings",
+                "http://loinc.org|55915-3||'Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis'",
+                "http://snomed.info/sct|63816008||'Left hepatectomy'")
+            // CodeableConcepts with single coding
+            .element("loincConcept", concept -> concept
+                .fhirType(CODEABLECONCEPT)
+                .codingArray("coding",
+                    "http://loinc.org|55915-3||'Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis'"))
+            .element("snomedConcept", concept -> concept
+                .fhirType(CODEABLECONCEPT)
+                .codingArray("coding",
+                    "http://snomed.info/sct|63816008||'Left hepatectomy'"))
+            // CodeableConcept with multiple codings
+            .element("mixedConcept", concept -> concept
+                .fhirType(CODEABLECONCEPT)
+                .codingArray("coding",
+                    "http://loinc.org|55915-3||'Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis'",
+                    "http://snomed.info/sct|63816008||'Left hepatectomy'"))
+            // Translated codings for reverse testing
+            .coding("translatedLoinc", "http://example.org/alt-loinc|L55915||'Beta 2 globulin'")
+            .coding("translatedSnomed", "http://example.org/alt-snomed|S63816||'Left hepatic resection'")
+        )
+        .group("translate() function with default parameters")
+        .testEquals(toCoding("http://example.org/alt-loinc|L55915||'Beta 2 globulin'"),
+            "loinc.translate('" + conceptMap1 + "')",
+            "translate() returns equivalent translation for a LOINC coding")
+        .testEquals(toCoding("http://example.org/alt-snomed|S63816||'Left hepatic resection'"),
+            "snomed.translate('" + conceptMap2 + "')",
+            "translate() returns equivalent translation for a SNOMED coding")
+        .testEmpty("emptyCoding.translate('" + conceptMap1 + "')",
+            "translate() returns empty for an empty coding")
+            
+        .group("translate() function with reverse parameter")
+        .testEquals(toCoding("http://loinc.org|55915-3||'Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis'"),
+            "translatedLoinc.translate('" + conceptMap1 + "', true)",
+            "translate() with reverse=true returns source coding for a translated LOINC coding")
+        .testEquals(toCoding("http://snomed.info/sct|63816008||'Left hepatectomy'"),
+            "translatedSnomed.translate('" + conceptMap2 + "', true)",
+            "translate() with reverse=true returns source coding for a translated SNOMED coding")
+            
+        .group("translate() function with equivalence parameter")
+        .testEquals(List.of(
+                toCoding("http://example.org/alt-loinc|L55915||'Beta 2 globulin'"),
+                toCoding("http://example.org/alt-loinc|L55915-ALT||'Beta-2 globulin alt'")),
+            "loinc.translate('" + conceptMap1 + "', false, 'equivalent,narrower')",
+            "translate() with equivalence parameter returns translations with specified equivalences")
+        .testEquals(toCoding("http://example.org/alt-loinc|L55915||'Beta 2 globulin'"),
+            "loinc.translate('" + conceptMap1 + "', false, 'equivalent')",
+            "translate() with equivalence='equivalent' returns only equivalent translations")
+        .testEquals(toCoding("http://example.org/alt-loinc|L55915-ALT||'Beta-2 globulin alt'"),
+            "loinc.translate('" + conceptMap1 + "', false, 'narrower')",
+            "translate() with equivalence='narrower' returns only narrower translations")
+            
+        .group("translate() function on collections")
+        .testEquals(List.of(
+                toCoding("http://example.org/alt-loinc|L55915||'Beta 2 globulin'"),
+                toCoding("http://example.org/alt-snomed|S63816||'Left hepatic resection'")),
+            "multipleCodings.translate('" + conceptMap1 + "')",
+            "translate() returns translations for a collection of codings")
+            
+        .group("translate() function with CodeableConcept")
+        .testEquals(toCoding("http://example.org/alt-loinc|L55915||'Beta 2 globulin'"),
+            "loincConcept.translate('" + conceptMap1 + "')",
+            "translate() returns translation for a CodeableConcept with LOINC coding")
+        .testEquals(toCoding("http://example.org/alt-snomed|S63816||'Left hepatic resection'"),
+            "snomedConcept.translate('" + conceptMap2 + "')",
+            "translate() returns translation for a CodeableConcept with SNOMED coding")
+        .testEquals(List.of(
+                toCoding("http://example.org/alt-loinc|L55915||'Beta 2 globulin'"),
+                toCoding("http://example.org/alt-snomed|S63816||'Left hepatic resection'")),
+            "mixedConcept.translate('" + conceptMap1 + "')",
+            "translate() returns translations for a CodeableConcept with multiple codings")
+            
+        .group("translate() function error cases")
+        .testError("'string'.translate('" + conceptMap1 + "')",
+            "translate() throws an error when called on a non-coding/non-codeableconcept type")
+        .testError("loinc.translate()",
+            "translate() throws an error when called with no parameters")
+        .testError("loinc.translate('" + conceptMap1 + "', false, 'equivalent', 'target', 'extra')",
+            "translate() throws an error when called with more than four parameters")
         .build();
   }
 

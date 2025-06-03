@@ -338,7 +338,8 @@ public class FhirPathTestBuilder {
       return this;
     }
 
-    public ModelBuilder elementArray(String name, Consumer<ModelBuilder>... builders) {
+    @SafeVarargs
+    public final ModelBuilder elementArray(String name, Consumer<ModelBuilder>... builders) {
       List<Map<String, Object>> list = new ArrayList<>();
       for (Consumer<ModelBuilder> builderConsumer : builders) {
         ModelBuilder builder = new ModelBuilder();
