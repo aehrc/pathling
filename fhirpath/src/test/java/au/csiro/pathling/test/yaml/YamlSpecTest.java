@@ -25,7 +25,7 @@ public class YamlSpecTest {
         "test", testData);
 
     assertEquals(
-        DefCompositeDefinition.of("test",
+        DefCompositeDefinition.backbone("test",
             List.of(
                 DefPrimitiveDefinition.of("a", INTEGER, 1),
                 DefPrimitiveDefinition.of("b", INTEGER, 1)

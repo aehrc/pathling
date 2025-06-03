@@ -15,13 +15,13 @@ public class DefDefinitionContextTest {
 
 
   @Test
-  public void testDefinitions() throws Exception {
+  public void testDefinitions() {
 
     ResourceDefinition rs = DefResourceDefinition.of(
         DefResourceTag.of("Test"),
         DefPrimitiveDefinition.single("name", FHIRDefinedType.STRING),
         DefPrimitiveDefinition.single("age", FHIRDefinedType.INTEGER),
-        DefCompositeDefinition.of("address", List.of(
+        DefCompositeDefinition.backbone("address", List.of(
             DefPrimitiveDefinition.single("street", FHIRDefinedType.STRING),
             DefPrimitiveDefinition.single("city", FHIRDefinedType.STRING),
             DefPrimitiveDefinition.single("zip", FHIRDefinedType.STRING)

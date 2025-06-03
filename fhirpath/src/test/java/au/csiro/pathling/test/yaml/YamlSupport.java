@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -58,6 +59,8 @@ import org.yaml.snakeyaml.representer.Representer;
 
 @UtilityClass
 public class YamlSupport {
+
+  public static final String FHIR_TYPE_ANNOTATION = "__FHIR_TYPE__";
 
   public class FhirTypedLiteralSerializer extends JsonSerializer<FhirTypedLiteral> {
 
@@ -378,8 +381,15 @@ public class YamlSupport {
     } else if (value instanceof Double) {
       return DefPrimitiveDefinition.of(key, FHIRDefinedType.DECIMAL, cardinality);
     } else if (value instanceof Map<?, ?> map) {
-      return DefCompositeDefinition.of(key, elementsFromYaml((Map<Object, Object>) map),
-          cardinality);
+      return Optional.ofNullable(map.get(FHIR_TYPE_ANNOTATION))
+          .map(Object::toString)
+          .map(FHIRDefinedType::fromCode)
+          .map(fhirType -> DefCompositeDefinition.of(key,
+              elementsFromYaml((Map<Object, Object>) map),
+              cardinality, fhirType))
+          .orElseGet(() -> DefCompositeDefinition.backbone(key,
+              elementsFromYaml((Map<Object, Object>) map),
+              cardinality));
     } else {
       throw new IllegalArgumentException(
           "Unsupported data type: " + value + " (" + value.getClass()

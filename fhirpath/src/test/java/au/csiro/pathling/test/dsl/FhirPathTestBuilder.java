@@ -3,6 +3,7 @@ package au.csiro.pathling.test.dsl;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.test.yaml.FhirTypedLiteral;
 import au.csiro.pathling.test.yaml.YamlSpecTestBase;
+import au.csiro.pathling.test.yaml.YamlSupport;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.DynamicTest;
 
 @RequiredArgsConstructor
@@ -139,6 +141,12 @@ public class FhirPathTestBuilder {
   public static class ModelBuilder {
 
     private final Map<String, Object> model = new HashMap<>();
+
+    public ModelBuilder fhirType(@Nonnull final FHIRDefinedType fhirType) {
+      model.put(YamlSupport.FHIR_TYPE_ANNOTATION, fhirType.toCode());
+      return this;
+    }
+
 
     public ModelBuilder string(@Nonnull final String name, @Nullable final String value) {
       model.put(name, value);
@@ -318,19 +326,19 @@ public class FhirPathTestBuilder {
     }
 
 
-    public ModelBuilder complex(String name, Consumer<ModelBuilder> builderConsumer) {
+    public ModelBuilder element(String name, Consumer<ModelBuilder> builderConsumer) {
       ModelBuilder builder = new ModelBuilder();
       builderConsumer.accept(builder);
       model.put(name, builder.model);
       return this;
     }
 
-    public ModelBuilder complexEmpty(@Nonnull final String name) {
+    public ModelBuilder elementEmpty(@Nonnull final String name) {
       model.put(name, null);
       return this;
     }
 
-    public ModelBuilder complexArray(String name, Consumer<ModelBuilder>... builders) {
+    public ModelBuilder elementArray(String name, Consumer<ModelBuilder>... builders) {
       List<Map<String, Object>> list = new ArrayList<>();
       for (Consumer<ModelBuilder> builderConsumer : builders) {
         ModelBuilder builder = new ModelBuilder();
