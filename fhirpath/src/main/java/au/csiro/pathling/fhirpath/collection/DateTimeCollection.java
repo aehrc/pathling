@@ -20,7 +20,6 @@ package au.csiro.pathling.fhirpath.collection;
 import static org.apache.spark.sql.functions.date_format;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -28,8 +27,6 @@ import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.BaseDateTimeType;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.InstantType;
@@ -39,8 +36,7 @@ import org.hl7.fhir.r4.model.InstantType;
  *
  * @author John Grimes
  */
-public class DateTimeCollection extends Collection implements
-    Materializable<BaseDateTimeType>, StringCoercible {
+public class DateTimeCollection extends Collection implements StringCoercible {
 
   private static final String SPARK_FHIRPATH_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
 
@@ -76,7 +72,7 @@ public class DateTimeCollection extends Collection implements
   public static DateTimeCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
     return DateTimeCollection.build(columnRepresentation, Optional.empty());
   }
-  
+
   /**
    * Returns a new instance based upon a {@link DateTimeType}.
    *
@@ -103,22 +99,6 @@ public class DateTimeCollection extends Collection implements
   
   @Nonnull
   @Override
-  public Optional<BaseDateTimeType> getFhirValueFromRow(@Nonnull final Row row,
-      final int columnNumber) {
-    if (row.isNullAt(columnNumber)) {
-      return Optional.empty();
-    }
-    if (getFhirType().isPresent() && getFhirType().get() == FHIRDefinedType.INSTANT) {
-      final InstantType value = new InstantType(row.getTimestamp(columnNumber));
-      return Optional.of(value);
-    } else {
-      final DateTimeType value = new DateTimeType(row.getString(columnNumber));
-      return Optional.of(value);
-    }
-  }
-  
-  @Nonnull
-  @Override
   public StringCollection asStringPath() {
     final ColumnRepresentation valueColumn;
     if (getFhirType().isPresent() && getFhirType().get() == FHIRDefinedType.INSTANT) {
@@ -130,9 +110,4 @@ public class DateTimeCollection extends Collection implements
     return StringCollection.build(valueColumn);
   }
 
-  @Override
-  @Nonnull
-  public String toLiteral(@Nonnull final BaseDateTimeType value) {
-    return "@" + value.getValueAsString();
-  }
 }

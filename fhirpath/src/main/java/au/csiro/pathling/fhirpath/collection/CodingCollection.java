@@ -22,7 +22,6 @@ import static org.apache.spark.sql.functions.struct;
 
 import au.csiro.pathling.fhirpath.Concepts;
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -35,7 +34,6 @@ import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -45,8 +43,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class CodingCollection extends Collection implements Materializable<Coding>,
-    Comparable, StringCoercible {
+public class CodingCollection extends Collection implements Comparable, StringCoercible {
 
   protected CodingCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
@@ -112,32 +109,6 @@ public class CodingCollection extends Collection implements Materializable<Codin
         lit(null).cast(DataTypes.IntegerType).as("_fid"));
   }
 
-  @Nonnull
-  @Override
-  public Optional<Coding> getFhirValueFromRow(@Nonnull final Row row, final int columnNumber) {
-    if (row.isNullAt(columnNumber)) {
-      return Optional.empty();
-    }
-
-    final Row codingStruct = row.getStruct(columnNumber);
-
-    final String system = codingStruct.getString(codingStruct.fieldIndex("system"));
-    final String version = codingStruct.getString(codingStruct.fieldIndex("version"));
-    final String code = codingStruct.getString(codingStruct.fieldIndex("code"));
-    final String display = codingStruct.getString(codingStruct.fieldIndex("display"));
-
-    final int userSelectedIndex = codingStruct.fieldIndex("userSelected");
-    final boolean userSelectedPresent = !codingStruct.isNullAt(userSelectedIndex);
-
-    final Coding coding = new Coding(system, code, display);
-    coding.setVersion(version);
-    if (userSelectedPresent) {
-      coding.setUserSelected(codingStruct.getBoolean(userSelectedIndex));
-    }
-
-    return Optional.of(coding);
-  }
-
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
     return path instanceof CodingCollection || Comparable.super.isComparableTo(path);
@@ -161,11 +132,5 @@ public class CodingCollection extends Collection implements Materializable<Codin
   public StringCollection asStringPath() {
     return asSingular()
         .map(c -> c.transformWithUdf(CodingToLiteral.FUNCTION_NAME), StringCollection::build);
-  }
-
-  @Override
-  @Nonnull
-  public String toLiteral(@Nonnull final Coding value) {
-    return CodingLiteral.toLiteral(value);
   }
 }

@@ -21,7 +21,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkState;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.fhirpath.Orderable;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.ArrayList;
@@ -82,12 +81,7 @@ public class DatasetBuilder {
   public DatasetBuilder withColumn(@Nonnull final DataType dataType) {
     return withColumn(randomAlias(), dataType);
   }
-
-  @Nonnull
-  public DatasetBuilder withEidColumn() {
-    return withColumn(randomAlias(), Orderable.ORDERING_COLUMN_TYPE);
-  }
-
+  
   @Nonnull
   public DatasetBuilder withColumn(@Nonnull final String columnName,
       @Nonnull final DataType dataType) {

@@ -21,7 +21,6 @@ import static au.csiro.pathling.test.helpers.SparkHelpers.getIdAndValueColumns;
 import static org.apache.spark.sql.functions.col;
 import static org.mockito.Mockito.mock;
 
-import au.csiro.pathling.fhirpath.Nesting;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
@@ -53,8 +52,6 @@ public class ElementPathBuilder {
 
   private boolean singular;
 
-  @Nonnull
-  private Nesting nesting;
 
   @Nonnull
   private FHIRDefinedType fhirType;
@@ -77,7 +74,6 @@ public class ElementPathBuilder {
     idColumn = col(dataset.columns()[0]);
     valueColumn = col(dataset.columns()[1]);
     singular = false;
-    nesting = new Nesting();
     fhirType = FHIRDefinedType.NULL;
     definition = mock(ElementDefinition.class);
   }
@@ -125,12 +121,6 @@ public class ElementPathBuilder {
   @Nonnull
   public ElementPathBuilder singular(final boolean singular) {
     this.singular = singular;
-    return this;
-  }
-
-  @Nonnull
-  public ElementPathBuilder nestingColumns(@Nonnull final Nesting nesting) {
-    this.nesting = nesting;
     return this;
   }
 

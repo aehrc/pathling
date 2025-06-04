@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -26,7 +25,6 @@ import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.TimeType;
 
@@ -35,8 +33,7 @@ import org.hl7.fhir.r4.model.TimeType;
  *
  * @author John Grimes
  */
-public class TimeCollection extends Collection implements Materializable<TimeType>,
-    StringCoercible {
+public class TimeCollection extends Collection implements StringCoercible {
 
   protected TimeCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
@@ -97,22 +94,7 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
 
   @Nonnull
   @Override
-  public Optional<TimeType> getFhirValueFromRow(@Nonnull final Row row, final int columnNumber) {
-    if (row.isNullAt(columnNumber)) {
-      return Optional.empty();
-    }
-    return Optional.of(new TimeType(row.getString(columnNumber)));
-  }
-
-  @Nonnull
-  @Override
   public StringCollection asStringPath() {
     return map(ColumnRepresentation::asString, StringCollection::build);
-  }
-  
-  @Override
-  @Nonnull
-  public String toLiteral(@Nonnull final TimeType value) {
-    return "@T" + value.getValueAsString();
   }
 }

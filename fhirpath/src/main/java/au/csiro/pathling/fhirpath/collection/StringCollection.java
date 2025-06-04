@@ -21,24 +21,19 @@ import static au.csiro.pathling.fhirpath.literal.StringLiteral.unescapeFhirPathS
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import au.csiro.pathling.fhirpath.literal.StringLiteral;
 import au.csiro.pathling.fhirpath.operator.Comparable;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Base64BinaryType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.IdType;
-import org.hl7.fhir.r4.model.MarkdownType;
 import org.hl7.fhir.r4.model.OidType;
-import org.hl7.fhir.r4.model.PrimitiveType;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.UuidType;
@@ -48,9 +43,7 @@ import org.hl7.fhir.r4.model.UuidType;
  *
  * @author John Grimes
  */
-public class StringCollection extends Collection implements Comparable,
-    Materializable<PrimitiveType>,
-    StringCoercible {
+public class StringCollection extends Collection implements Comparable, StringCoercible {
 
   protected StringCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
@@ -236,54 +229,6 @@ public class StringCollection extends Collection implements Comparable,
             "Cannot convert column to literal value: " + this.getColumn()));
   }
 
-
-  /**
-   * Cast the column value of this collection to a literal.
-   *
-   * @return The column value as a literal is present, otherwise empty
-   */
-  @Nonnull
-  public Optional<String> asLiteralValue() {
-    return getColumn().asStringValue();
-  }
-
-
-  /**
-   * Gets a value from a row for a String or String literal.
-   *
-   * @param row The {@link Row} from which to extract the value
-   * @param columnNumber The column number to extract the value from
-   * @param fhirType The FHIR type to assume when extracting the value
-   * @return A {@link PrimitiveType}, or the absence of a value
-   */
-  @Nonnull
-  public static Optional<PrimitiveType> valueFromRow(@Nonnull final Row row, final int columnNumber,
-      @Nonnull final Optional<FHIRDefinedType> fhirType) {
-    if (row.isNullAt(columnNumber)) {
-      return Optional.empty();
-    }
-    if (fhirType.isEmpty()) {
-      return Optional.of(new StringType(row.getString(columnNumber)));
-    }
-    return switch (fhirType.get()) {
-      case URI -> Optional.of(new UriType(row.getString(columnNumber)));
-      case CODE -> Optional.of(new CodeType(row.getString(columnNumber)));
-      case OID -> Optional.of(new OidType(row.getString(columnNumber)));
-      case ID -> Optional.of(new IdType(row.getString(columnNumber)));
-      case UUID -> Optional.of(new UuidType(row.getString(columnNumber)));
-      case MARKDOWN -> Optional.of(new MarkdownType(row.getString(columnNumber)));
-      case BASE64BINARY -> Optional.of(new Base64BinaryType(row.getString(columnNumber)));
-      default -> Optional.of(new StringType(row.getString(columnNumber)));
-    };
-  }
-
-  @Nonnull
-  @Override
-  public Optional<PrimitiveType> getFhirValueFromRow(@Nonnull final Row row,
-      final int columnNumber) {
-    return valueFromRow(row, columnNumber, getFhirType());
-  }
-
   @Nonnull
   @Override
   public StringCollection asStringPath() {
@@ -294,11 +239,4 @@ public class StringCollection extends Collection implements Comparable,
   public boolean isComparableTo(@Nonnull final Comparable path) {
     return path instanceof StringCollection || Comparable.super.isComparableTo(path);
   }
-
-  @Override
-  @Nonnull
-  public String toLiteral(@Nonnull final PrimitiveType value) {
-    return StringLiteral.toLiteral(value.getValueAsString());
-  }
-
 }

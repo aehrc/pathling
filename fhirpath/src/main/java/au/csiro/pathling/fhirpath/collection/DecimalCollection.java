@@ -22,7 +22,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
@@ -32,13 +31,10 @@ import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.operator.Comparable;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.Optional;
 import java.util.function.Function;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.LongType;
 import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -47,9 +43,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class DecimalCollection extends Collection implements Comparable,
-    Materializable<DecimalType>,
-    Numeric, StringCoercible {
+public class DecimalCollection extends Collection implements Comparable, Numeric, StringCoercible {
 
   public static final org.apache.spark.sql.types.DecimalType DECIMAL_TYPE = DataTypes
       .createDecimalType(DecimalCustomCoder.precision(), DecimalCustomCoder.scale());
@@ -179,34 +173,6 @@ public class DecimalCollection extends Collection implements Comparable,
   @Override
   public Optional<Column> getNumericContext() {
     return this.getNumericValue();
-  }
-
-  @Nonnull
-  @Override
-  public Optional<DecimalType> getFhirValueFromRow(@Nonnull final Row row, final int columnNumber) {
-    if (row.isNullAt(columnNumber)) {
-      return Optional.empty();
-    }
-    // We support the extraction of Decimal values from columns with the long type. This will be
-    // used in the future to support things like casting large numbers to Decimal to work around the
-    // maximum Integer limit.
-    if (row.schema().fields()[columnNumber].dataType() instanceof LongType) {
-      final long longValue = row.getLong(columnNumber);
-      return Optional.of(new DecimalType(longValue));
-    } else {
-      final BigDecimal decimal = row.getDecimal(columnNumber);
-
-      if (decimal.precision() > getDecimalType().precision()) {
-        throw new InvalidUserInputError(
-            "Attempt to return a Decimal value with greater than supported precision");
-      }
-      if (decimal.scale() > getDecimalType().scale()) {
-        return Optional.of(
-            new DecimalType(decimal.setScale(getDecimalType().scale(), RoundingMode.HALF_UP)));
-      }
-
-      return Optional.of(new DecimalType(decimal));
-    }
   }
 
   @Override
