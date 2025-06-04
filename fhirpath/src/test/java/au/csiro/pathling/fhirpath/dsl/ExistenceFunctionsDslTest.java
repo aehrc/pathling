@@ -19,7 +19,7 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
         .withSubject(sb -> sb
             // Empty values
             .stringEmpty("emptyString")
-            .complexEmpty("emptyComplex")
+            .elementEmpty("emptyComplex")
             // Single values
             .string("singleString", "test")
             .integer("singleInteger", 42)
@@ -27,11 +27,11 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
             // Arrays
             .stringArray("stringArray", "one", "two", "three")
             // Complex types
-            .complex("person", person -> person
+            .element("person", person -> person
                 .string("name", "John")
                 .integer("age", 30)
                 .bool("active", true))
-            .complexArray("people",
+            .elementArray("people",
                 person1 -> person1
                     .string("name", "Alice")
                     .integer("age", 25)
@@ -76,7 +76,7 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
             .integerEmpty("emptyInteger")
             .decimalEmpty("emptyDecimal")
             .boolEmpty("emptyBoolean")
-            .complexEmpty("emptyComplex")
+            .elementEmpty("emptyComplex")
             // Single values
             .string("singleString", "test")
             .integer("singleInteger", 42)
@@ -84,7 +84,7 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
             // Arrays
             .stringArray("stringArray", "one", "two", "three")
             // Complex types
-            .complex("person", person -> person
+            .element("person", person -> person
                 .string("name", "John")
                 .integer("age", 30)
                 .bool("active", true))
@@ -113,7 +113,7 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
             .stringArray("stringArray", "one", "two", "three")
             .integerArray("integerArray", 1, 2, 3, 4, 5)
             // Complex types
-            .complexArray("people",
+            .elementArray("people",
                 person1 -> person1
                     .string("name", "Alice")
                     .integer("age", 25)

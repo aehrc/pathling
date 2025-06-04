@@ -175,9 +175,21 @@ public abstract class YamlSpecTestBase {
     @Override
     @Nonnull
     public String getDescription() {
-      return spec.getDescription() != null?
+      return spec.getDescription() != null
+             ?
              spec.getDescription()
              : spec.getExpression();
+    }
+
+    @Nullable
+    private static Object adjustResultType(@Nullable Object actualRaw) {
+      if (actualRaw instanceof Integer intValue) {
+        return intValue.longValue();
+      } else if (actualRaw instanceof BigDecimal bdValue) {
+        return bdValue.setScale(6, RoundingMode.HALF_UP).longValue();
+      } else {
+        return actualRaw;
+      }
     }
 
     @Nullable
@@ -187,14 +199,10 @@ public abstract class YamlSpecTestBase {
                                : row.get(index);
       if (actualRaw instanceof WrappedArray<?> wrappedArray) {
         return (wrappedArray.length() == 1
-                ? wrappedArray.apply(0)
+                ? adjustResultType(wrappedArray.apply(0))
                 : wrappedArray);
-      } else if (actualRaw instanceof Integer intValue) {
-        return intValue.longValue();
-      } else if (actualRaw instanceof BigDecimal bdValue) {
-        return bdValue.setScale(6, RoundingMode.HALF_UP).longValue();
       } else {
-        return actualRaw;
+        return adjustResultType(actualRaw);
       }
     }
 

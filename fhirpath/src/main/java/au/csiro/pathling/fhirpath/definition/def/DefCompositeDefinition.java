@@ -18,6 +18,7 @@ public class DefCompositeDefinition implements ElementDefinition {
   String name;
   List<ChildDefinition> children;
   int cardinality;
+  FHIRDefinedType type;
 
   @Override
   @Nonnull
@@ -42,6 +43,13 @@ public class DefCompositeDefinition implements ElementDefinition {
   @Override
   @Nonnull
   public Optional<FHIRDefinedType> getFhirType() {
-    return Optional.of(FHIRDefinedType.BACKBONEELEMENT);
+    return Optional.of(type);
   }
+
+  @Nonnull
+  public static DefCompositeDefinition backbone(@Nonnull final String name,
+      @Nonnull final List<ChildDefinition> children, final int cardinality) {
+    return new DefCompositeDefinition(name, children, cardinality, FHIRDefinedType.BACKBONEELEMENT);
+  }
+
 }
