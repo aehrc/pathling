@@ -3,6 +3,7 @@ package au.csiro.pathling.fhirpath.function;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static java.util.Objects.isNull;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Concepts;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -57,6 +58,16 @@ public class FunctionParameterResolver {
 
   @Nonnull
   public FunctionInvocation bind(@Nonnull final Method method) {
+
+    // this is the  actual runtime error as this is an unexpected situation
+    if (method.getParameterCount() == 0) {
+      throw new RuntimeException("Function '" + method.getName()
+          + "' does not accept any parameters and is a not a valid Fhirpath function backend.");
+    }
+
+    // Resolve the input.
+    final Object resolvedInput = resolveCollection(input, method.getParameters()[0]);
+
     // Check that not extra arguments are provided.
     checkUserInput(actualArguments.size() <= method.getParameterCount() - 1,
         "Too many arguments provided for function '" + method.getName() + "'. Expected "
@@ -69,8 +80,6 @@ public class FunctionParameterResolver {
             ? actualArguments.get(i)
             : null));
 
-    // Resolve the input.
-    final Object resolvedInput = resolveCollection(input, method.getParameters()[0]);
     return FunctionInvocation.of(method,
         Stream.concat(Stream.of(resolvedInput), resolvedArguments)
             .toArray(Object[]::new));
@@ -83,18 +92,12 @@ public class FunctionParameterResolver {
 
     if (isNull(argument)) {
       // check the pararmeter is happy with a null value
-      if (EvaluationContext.class.isAssignableFrom(parameter.getType())) {
-        // bind type specifier
-        return evaluationContext;
-      } else if (parameter.getAnnotation(Nullable.class) != null) {
+      if (parameter.getAnnotation(Nullable.class) != null) {
         return null;
       } else {
-        throw new RuntimeException(
+        throw new InvalidUserInputError(
             "Parameter " + parameter + " is not nullable and no argument was provided");
       }
-      // return Optional.ofNullable(parameter.getAnnotation(Nullable.class))
-      //     .map(__ -> null).orElseThrow(() -> new RuntimeException(
-      //         "Parameter " + parameter + " is not nullable and no argument was provided"));
     } else if (Collection.class.isAssignableFrom(parameter.getType())
         || Concepts.class.isAssignableFrom(parameter.getType())) {
       // evaluate collection types 
@@ -108,11 +111,6 @@ public class FunctionParameterResolver {
     } else if (TypeSpecifier.class.isAssignableFrom(parameter.getType())) {
       // bind type specifier
       return ((ParserPaths.TypeSpecifierPath) argument).getValue();
-
-
-    } else if (FhirPath.class.isAssignableFrom(parameter.getType())) {
-      // bind type specifier
-      return argument;
     } else {
       throw new RuntimeException("Cannot resolve parameter:" + parameter);
     }
