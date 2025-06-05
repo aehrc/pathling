@@ -13,6 +13,7 @@ import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.function.FunctionParameterResolver.FunctionInvocation;
 import au.csiro.pathling.fhirpath.path.ParserPaths;
@@ -37,7 +38,7 @@ class FunctionParameterResolverTest {
 
   @SuppressWarnings("unused")
   static Collection funcRequiredArg(@Nonnull Collection input,
-      @Nonnull Collection requiredArgument) {
+      @Nonnull IntegerCollection requiredArgument) {
     return null;
   }
 
@@ -66,6 +67,10 @@ class FunctionParameterResolverTest {
     return null;
   }
 
+  @SuppressWarnings("unused")
+  public static Collection funcBooleanCollection(@Nonnull BooleanCollection input) {
+    return null;
+  }
 
   @SuppressWarnings("unused")
   static Collection invalidFunction() {
@@ -196,7 +201,7 @@ class FunctionParameterResolverTest {
     final InvalidUserInputError ex = assertThrows(
         InvalidUserInputError.class, () -> resolver.bind(method));
     assertEquals(
-        "Parameter au.csiro.pathling.fhirpath.collection.Collection arg1 is not nullable and no argument was provided",
+        "Function 'funcRequiredArg', argument 0 (IntegerCollection): Parameter is required but no argument was provided",
         ex.getMessage());
   }
 
@@ -211,7 +216,7 @@ class FunctionParameterResolverTest {
     final InvalidUserInputError ex = assertThrows(
         InvalidUserInputError.class, () -> resolver.bind(method));
 
-    assertEquals("Too many arguments provided for function 'funcRequiredArg'. Expected 1, got 2",
+    assertEquals("Function 'funcRequiredArg': Too many arguments provided. Expected 1, got 2",
         ex.getMessage());
   }
 
@@ -228,7 +233,60 @@ class FunctionParameterResolverTest {
     final RuntimeException ex = assertThrows(
         RuntimeException.class, () -> resolver.bind(method));
 
-    assertEquals("Function 'invalidFunction' does not accept any parameters and is a not a valid Fhirpath function backend.",
+    assertEquals(
+        "Function 'invalidFunction' does not accept any parameters and is a not a valid Fhirpath function backend.",
+        ex.getMessage());
+  }
+
+  @Test
+  void failsForTypeMismatchInCollection() {
+    final StringCollection input = mock(StringCollection.class);
+    final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
+        input,
+        List.of());
+    final Method method = getMethod("funcBooleanCollection");
+
+    final InvalidUserInputError ex = assertThrows(
+        InvalidUserInputError.class, () -> resolver.bind(method));
+
+    assertEquals(
+        "Function 'funcBooleanCollection', input: Type mismatch: expected BooleanCollection but got StringCollection",
+        ex.getMessage());
+  }
+
+  @Test
+  void failsForFailedConversionToConcepts() {
+    final CodingCollection codingInput = mock(CodingCollection.class);
+    // Mock toConcepts to return empty Optional (conversion failure)
+    when(codingInput.toConcepts()).thenReturn(Optional.empty());
+
+    final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
+        codingInput, List.of());
+    final Method method = getMethod("funcConcepts");
+
+    final InvalidUserInputError ex = assertThrows(
+        InvalidUserInputError.class, () -> resolver.bind(method));
+
+    assertEquals(
+        "Function 'funcConcepts', input: Cannot convert collection of type CodingCollection to Concepts",
+        ex.getMessage());
+  }
+
+  @Test
+  void failsForInvalidTypeArgument() {
+    final Collection input = mock(Collection.class);
+    final StringCollection stringCollection = mock(StringCollection.class);
+
+    final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
+        input,
+        List.of(ConstPath.of(stringCollection)));
+    final Method method = getMethod("funcRequiredArg");
+
+    final InvalidUserInputError ex = assertThrows(
+        InvalidUserInputError.class, () -> resolver.bind(method));
+
+    assertEquals(
+        "Function 'funcRequiredArg', argument 0 (IntegerCollection): Type mismatch: expected IntegerCollection but got StringCollection",
         ex.getMessage());
   }
 }
