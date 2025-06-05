@@ -75,8 +75,14 @@ production environments such as the Pathling website and sandbox instance.
 
 ### Coding conventions
 
-This repository uses [EditorConfig](https://editorconfig.org/), please use it to
-reformat your code before pushing.
+This repository uses multiple code formatters:
+- Prettier for JavaScript code
+- Black for Python code  
+- EditorConfig for all other languages
+
+Please use the appropriate formatter to reformat your code before pushing.
+
+Please terminate all line comments with a period.
 
 ## Code of conduct
 

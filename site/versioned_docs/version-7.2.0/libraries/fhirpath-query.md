@@ -738,6 +738,212 @@ CatalogSource data = pc.read().tables("mimic-iv");
 </TabItem>
 </Tabs>
 
+### FHIR Bulk Data API
+
+You can load data directly from a FHIR server that implements the [FHIR Bulk Data Access API](https://hl7.org/fhir/uv/bulkdata/). This allows you to efficiently extract large amounts of data from a FHIR server for analysis.
+
+<!--suppress CheckEmptyScriptTag -->
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+# Basic system-level export
+data = pc.read.bulk(
+    fhir_endpoint_url="https://bulk-data.smarthealthit.org/fhir",
+    output_dir="/tmp/bulk_export"
+)
+
+# Customized group-level export
+data = pc.read.bulk(
+    fhir_endpoint_url="https://bulk-data.smarthealthit.org/fhir",
+    output_dir="/tmp/bulk_export",
+    group_id="BMCHealthNet",
+    types=["Patient", "Condition", "Observation"],
+    elements=["id", "status"],
+    since=datetime(2015, 1, 1, tzinfo=timezone.utc)
+)
+
+# Patient-level export with specific patients
+data = pc.read.bulk(
+    fhir_endpoint_url="https://bulk-data.smarthealthit.org/fhir",
+    output_dir="/tmp/bulk_export",
+    patients=[
+        "Patient/736a19c8-eea5-32c5-67ad-1947661de21a",
+        "Patient/26d06b50-7868-829d-cf71-9f9a68901a81"
+    ]
+)
+
+# Export with authentication
+data = pc.read.bulk(
+    fhir_endpoint_url="https://bulk-data.smarthealthit.org/fhir",
+    output_dir="/tmp/bulk_export",
+    auth_config={
+        "enabled": True,
+        "client_id": "my-client-id",
+        "private_key_jwk": "{ \"kty\":\"RSA\", ...}",
+        "scope": "system/*.read"
+    }
+)
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+# Basic system-level export
+data <- pc %>% pathling_read_bulk(
+    fhir_endpoint_url = "https://bulk-data.smarthealthit.org/fhir",
+    output_dir = "/tmp/bulk_export"
+)
+
+# Customized group-level export
+data <- pc %>% pathling_read_bulk(
+    fhir_endpoint_url = "https://bulk-data.smarthealthit.org/fhir",
+    output_dir = "/tmp/bulk_export",
+    group_id = "BMCHealthNet",
+    types = c("Patient", "Condition", "Observation"),
+    elements = c("id", "status"),
+    since = as.POSIXct("2015-01-01", tz = "UTC")
+)
+
+# Patient-level export with specific patients
+data <- pc %>% pathling_read_bulk(
+    fhir_endpoint_url = "https://bulk-data.smarthealthit.org/fhir",
+    output_dir = "/tmp/bulk_export",
+    patients = c(
+        "Patient/736a19c8-eea5-32c5-67ad-1947661de21a",
+        "Patient/26d06b50-7868-829d-cf71-9f9a68901a81"
+    )
+)
+
+# Export with authentication
+data <- pc %>% pathling_read_bulk(
+    fhir_endpoint_url = "https://bulk-data.smarthealthit.org/fhir",
+    output_dir = "/tmp/bulk_export",
+    auth_config = list(
+        enabled = TRUE,
+        client_id = "my-client-id",
+        private_key_jwk = '{ "kty":"RSA", ...}',
+        scope = "system/*.read"
+    )
+)
+```
+
+</TabItem>
+<TabItem value="scala" label="Scala">
+
+```scala
+// Basic system-level export
+val data = pc.read().bulk(
+  BulkExportClient.systemBuilder()
+    .withFhirEndpointUrl("https://bulk-data.smarthealthit.org/fhir")
+    .withOutputDir("/tmp/bulk_export")
+    .build()
+)
+
+// Customized group-level export
+val data = pc.read().bulk(
+  BulkExportClient.groupBuilder("BMCHealthNet")
+    .withFhirEndpointUrl("https://bulk-data.smarthealthit.org/fhir")
+    .withOutputDir("/tmp/bulk_export")
+    .withTypes(List("Patient", "Condition", "Observation"))
+    .withElements(List("id", "status"))
+    .withSince(Instant.parse("2015-01-01T00:00:00Z"))
+    .build()
+)
+
+// Patient-level export with specific patients
+val data = pc.read().bulk(
+  BulkExportClient.patientBuilder()
+    .withFhirEndpointUrl("https://bulk-data.smarthealthit.org/fhir")
+    .withOutputDir("/tmp/bulk_export")
+    .withPatients(List(
+      "Patient/736a19c8-eea5-32c5-67ad-1947661de21a",
+      "Patient/26d06b50-7868-829d-cf71-9f9a68901a81"
+    ))
+    .build()
+)
+
+// Export with authentication
+val authConfig = AuthConfig.builder()
+  .enabled(true)
+  .clientId("my-client-id")
+  .privateKeyJWK("{ \"kty\":\"RSA\", ...}")
+  .scope("system/*.read")
+  .build()
+
+val data = pc.read().bulk(
+  BulkExportClient.systemBuilder()
+    .withFhirEndpointUrl("https://bulk-data.smarthealthit.org/fhir")
+    .withOutputDir("/tmp/bulk_export")
+    .withAuthConfig(authConfig)
+    .build()
+)
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+```java
+// Basic system-level export
+DataSource data = pc.read().bulk(
+    BulkExportClient.systemBuilder()
+        .withFhirEndpointUrl("https://bulk-data.smarthealthit.org/fhir")
+        .withOutputDir("/tmp/bulk_export")
+        .build()
+);
+
+// Customized group-level export
+DataSource data = pc.read().bulk(
+    BulkExportClient.groupBuilder("BMCHealthNet")
+        .withFhirEndpointUrl("https://bulk-data.smarthealthit.org/fhir")
+        .withOutputDir("/tmp/bulk_export")
+        .withTypes(List.of("Patient", "Condition", "Observation"))
+        .withElements(List.of("id", "status"))
+        .withSince(Instant.parse("2015-01-01T00:00:00Z"))
+        .build()
+);
+
+// Patient-level export with specific patients
+DataSource data = pc.read().bulk(
+    BulkExportClient.patientBuilder()
+        .withFhirEndpointUrl("https://bulk-data.smarthealthit.org/fhir")
+        .withOutputDir("/tmp/bulk_export")
+        .withPatients(List.of(
+            "Patient/736a19c8-eea5-32c5-67ad-1947661de21a",
+            "Patient/26d06b50-7868-829d-cf71-9f9a68901a81"
+        ))
+        .build()
+);
+
+// Export with authentication
+AuthConfig authConfig = AuthConfig.builder()
+    .enabled(true)
+    .clientId("my-client-id")
+    .privateKeyJWK("{ \"kty\":\"RSA\", ...}")
+    .scope("system/*.read")
+    .build();
+
+DataSource data = pc.read().bulk(
+    BulkExportClient.systemBuilder()
+        .withFhirEndpointUrl("https://bulk-data.smarthealthit.org/fhir")
+        .withOutputDir("/tmp/bulk_export")
+        .withAuthConfig(authConfig)
+        .build()
+);
+```
+
+</TabItem>
+</Tabs>
+
+The Bulk Data API source supports all features of the [FHIR Bulk Data Access specification](https://hl7.org/fhir/uv/bulkdata/), including:
+
+- System, group and patient level exports
+- Filtering by resource types and elements  
+- Time-based filtering
+- Associated data inclusion
+- SMART authentication (both symmetric and asymmetric)
+
 ## Writing FHIR data
 
 Once you have read data in from a data source, you can also optionally write it

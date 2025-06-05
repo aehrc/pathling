@@ -217,6 +217,8 @@
               <arguments>
                 <argument>--verbose</argument>
                 <argument>-e</argument>
+                <argument>Sys.setenv(CXX11="clang++", CXX11STD="-std=c++11", CXXFLAGS="-std=c++11")</argument>
+                <argument>-e</argument>
                 <argument>install.packages("devtools")</argument>
                 <argument>-e</argument>
                 <argument>devtools::install_dev_deps()</argument>

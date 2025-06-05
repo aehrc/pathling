@@ -9,11 +9,18 @@ description: The import operation allows FHIR data to be imported into the serve
 
 This operation allows FHIR R4 data to be imported into the server, making it
 available for query via other operations such
-as [search](./search), [aggregate](./aggregate) and [extract](./extract). This
-operation accepts the [NDJSON](https://hl7.org/fhir/R4/nd-json.html) format, and
-links to retrieve that data are provided rather that sending the data inline
-within the request itself. This is to allow for large data sets to be imported
+as [search](./search), [aggregate](./aggregate) and [extract](./extract). Links
+to retrieve that data are provided rather that sending the data inline within
+the request itself. This is to allow for large data sets to be imported
 efficiently.
+
+Source formats currently supported are:
+
+* [NDJSON](https://hl7.org/fhir/R4/nd-json.html) format
+* [Parquet](https://parquet.apache.org/) conforming to
+  the [Pathling schema](../../libraries/encoders/schema)
+* [Delta Lake](https://delta.io/) conforming to
+  the [Pathling schema](../../libraries/encoders/schema)
 
 Currently Pathling supports retrieval of NDJSON files from
 [Amazon S3](https://aws.amazon.com/s3/) (`s3://`),
@@ -61,6 +68,9 @@ following parameters:
       resources with updated resources in the source file based on their ID, and
       either update the existing resources or add new resources as appropriate.
       The default value is `overwrite`.
+    - `format [0..1] (code)` - Indicates the format of the source file.
+      Possible values are `ndjson`, `parquet` and `delta`. The default value
+      is `ndjson`.
 
 ## Response
 

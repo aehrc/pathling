@@ -25,6 +25,14 @@ invoke_datasource <- function(pc, name, ...) {
       j_invoke(name, ...)
 }
 
+to_java_list <- function(sc, elements) {
+  list <- j_invoke_new(sc, "java.util.ArrayList")
+  for (e in elements) {
+    j_invoke(list, "add", e)
+  }
+  list
+}
+
 #' ImportMode
 #' 
 #' The following import modes are supported:
@@ -396,4 +404,208 @@ ds_write_tables <- function(ds, schema = NULL, import_mode = ImportMode$OVERWRIT
   } else {
     invoke_datasink(ds, "tables", import_mode)
   }
+}
+
+#' Create a data source from a FHIR Bulk Data Access API endpoint
+#'
+#' Creates a data source by downloading data from a FHIR server that implements the FHIR Bulk Data 
+#' Access API.
+#'
+#' @param pc The PathlingContext object.
+#' @param fhir_endpoint_url The URL of the FHIR server to export from.
+#' @param output_dir The directory to write the output files to.
+#' @param group_id Optional group ID for group-level export.
+#' @param patients Optional list of patient IDs for patient-level export.
+#' @param types List of FHIR resource types to include.
+#' @param output_format The format of the output data. Defaults to "application/fhir+ndjson".
+#' @param since Only include resources modified after this timestamp.
+#' @param elements List of FHIR elements to include.
+#' @param type_filters FHIR search queries to filter resources.
+#' @param include_associated_data Pre-defined set of FHIR resources to include.
+#' @param output_extension File extension for output files. Defaults to "ndjson".
+#' @param timeout Optional timeout duration in seconds.
+#' @param max_concurrent_downloads Maximum number of concurrent downloads. Defaults to 10.
+#' @param auth_config Optional authentication configuration list with the following possible elements:
+#'   \itemize{
+#'     \item{enabled: Whether authentication is enabled (default: FALSE)}
+#'     \item{client_id: The client ID to use for authentication}
+#'     \item{private_key_jwk: The private key in JWK format}
+#'     \item{client_secret: The client secret to use for authentication}
+#'     \item{token_endpoint: The token endpoint URL}
+#'     \item{use_smart: Whether to use SMART authentication (default: TRUE)}
+#'     \item{use_form_for_basic_auth: Whether to use form-based basic auth (default: FALSE)}
+#'     \item{scope: The scope to request}
+#'     \item{token_expiry_tolerance: The token expiry tolerance in seconds (default: 120)}
+#'   }
+#' @return A DataSource object that can be used to run queries against the data.
+#'
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#fhir-bulk-data-api}{Pathling documentation - Reading from Bulk Data API}
+#'
+#' @export
+#'
+#' @family data source functions
+#'
+#' @examples \dontrun{
+#' pc <- pathling_connect()
+#' 
+#' # Basic system-level export
+#' data_source <- pc %>% pathling_read_bulk(
+#'   fhir_endpoint_url = "https://bulk-data.smarthealthit.org/fhir",
+#'   output_dir = "/tmp/bulk_export"
+#' )
+#' 
+#' # Group-level export with filters
+#' data_source <- pc %>% pathling_read_bulk(
+#'   fhir_endpoint_url = "https://bulk-data.smarthealthit.org/fhir", 
+#'   output_dir = "/tmp/bulk_export",
+#'   group_id = "group-1",
+#'   types = c("Patient", "Observation"),
+#'   elements = c("id", "status"),
+#'   since = as.POSIXct("2023-01-01")
+#' )
+#' 
+#' # Patient-level export with auth
+#' data_source <- pc %>% pathling_read_bulk(
+#'   fhir_endpoint_url = "https://bulk-data.smarthealthit.org/fhir",
+#'   output_dir = "/tmp/bulk_export", 
+#'   patients = c(
+#'     "123",  # Just the ID portion
+#'     "456"
+#'   ),
+#'   auth_config = list(
+#'     enabled = TRUE,
+#'     client_id = "my-client-id",
+#'     private_key_jwk = '{ "kty":"RSA", ...}',
+#'     scope = "system/*.read"
+#'   )
+#' )
+#' 
+#' pathling_disconnect(pc)
+#' }
+pathling_read_bulk <- function(pc,
+                               fhir_endpoint_url,
+                               output_dir,
+                               group_id = NULL,
+                               patients = NULL,
+                               types = NULL,
+                               output_format = "application/fhir+ndjson",
+                               since = NULL,
+                               elements = NULL,
+                               type_filters = NULL,
+                               include_associated_data = NULL,
+                               output_extension = "ndjson",
+                               timeout = NULL,
+                               max_concurrent_downloads = 10,
+                               auth_config = NULL) {
+  # Validate required parameters.
+  if (missing(fhir_endpoint_url)) {
+    stop("argument \"fhir_endpoint_url\" is missing")
+  }
+  if (missing(output_dir)) {
+    stop("argument \"output_dir\" is missing")
+  }
+
+  # Get the appropriate BulkExportClient builder based on export type
+  sc <- spark_connection(pc)
+  builder_class <- "au.csiro.fhir.export.BulkExportClient"
+
+  if (!is.null(group_id)) {
+    builder <- invoke_static(sc, builder_class, "groupBuilder", as.character(group_id))
+  } else if (!is.null(patients)) {
+    builder <- invoke_static(sc, builder_class, "patientBuilder")
+  } else {
+    builder <- invoke_static(sc, builder_class, "systemBuilder")
+  }
+
+  # Configure the basic parameters.
+  builder <- builder %>%
+      j_invoke("withFhirEndpointUrl", as.character(fhir_endpoint_url)) %>%
+      j_invoke("withOutputDir", as.character(output_dir)) %>%
+      j_invoke("withTypes", to_java_list(sc, types))
+
+  # Configure optional parameters if provided.
+  if (!is.null(output_format)) {
+    builder <- builder %>% j_invoke("withOutputFormat", as.character(output_format))
+  }
+  if (!is.null(since)) {
+    instant <- j_invoke_static(sc, "java.time.Instant", "ofEpochMilli", as.numeric(since) * 1000)
+    builder <- builder %>% j_invoke("withSince", instant)
+  }
+  if (!is.null(patients)) {
+    j_objects <- purrr::map(patients, function(r) j_invoke_static(sc, "au.csiro.fhir.model.Reference", 
+                                                           "of", r))
+    builder <- builder %>% j_invoke("withPatients", to_java_list(sc, j_objects))
+  }
+  if (!is.null(elements)) {
+    builder <- builder %>% j_invoke("withElements", to_java_list(sc, elements))
+  }
+  if (!is.null(type_filters)) {
+    builder <- builder %>% j_invoke("withTypeFilters", to_java_list(sc, type_filters))
+  }
+  if (!is.null(include_associated_data)) {
+    builder <- builder %>% j_invoke("withIncludeAssociatedData", 
+                                   to_java_list(sc, include_associated_data))
+  }
+  if (!is.null(output_extension)) {
+    builder <- builder %>% j_invoke("withOutputExtension", as.character(output_extension))
+  }
+  if (!is.null(timeout)) {
+    j_object = j_invoke_static(sc, "java.time.Duration", "ofSeconds", as.numeric(duration))
+    builder <- builder %>% j_invoke("withTimeout", j_object)
+  }
+  if (!is.null(max_concurrent_downloads)) {
+    builder <- builder %>% j_invoke("withMaxConcurrentDownloads", as.integer(max_concurrent_downloads))
+  }
+
+  # Configure authentication if provided.
+  if (!is.null(auth_config)) {
+    auth_builder <- j_invoke_new(sc, "au.csiro.pathling.auth.AuthConfig$AuthConfigBuilder")
+
+    # Set defaults to match Java class.
+    auth_builder <- auth_builder %>%
+        j_invoke("enabled", FALSE) %>%
+        j_invoke("useSMART", TRUE) %>%
+        j_invoke("useFormForBasicAuth", FALSE) %>%
+        j_invoke("tokenExpiryTolerance", 120L)
+
+    # Map R config to Java builder methods.
+    if (!is.null(auth_config$enabled))
+        auth_builder <- auth_builder %>% j_invoke("enabled", auth_config$enabled)
+
+    if (!is.null(auth_config$use_smart))
+        auth_builder <- auth_builder %>% j_invoke("useSMART", auth_config$use_smart)
+
+    if (!is.null(auth_config$token_endpoint))
+        auth_builder <- auth_builder %>% j_invoke("tokenEndpoint", auth_config$token_endpoint)
+
+    if (!is.null(auth_config$client_id))
+        auth_builder <- auth_builder %>% j_invoke("clientId", auth_config$client_id)
+
+    if (!is.null(auth_config$client_secret))
+        auth_builder <- auth_builder %>% j_invoke("clientSecret", auth_config$client_secret)
+
+    if (!is.null(auth_config$private_key_jwk))
+        auth_builder <- auth_builder %>% j_invoke("privateKeyJWK", auth_config$private_key_jwk)
+
+    if (!is.null(auth_config$use_form_for_basic_auth))
+        auth_builder <- auth_builder %>% j_invoke("useFormForBasicAuth",
+                                                  auth_config$use_form_for_basic_auth)
+
+    if (!is.null(auth_config$scope))
+        auth_builder <- auth_builder %>% j_invoke("scope", auth_config$scope)
+
+    if (!is.null(auth_config$token_expiry_tolerance))
+        auth_builder <- auth_builder %>% j_invoke("tokenExpiryTolerance",
+                                                  as.integer(auth_config$token_expiry_tolerance))
+
+    # Build auth config and add to builder.
+    auth_config_obj <- auth_builder %>% j_invoke("build")
+    builder <- builder %>% j_invoke("withAuthConfig", auth_config_obj)
+  }
+
+  # Build the BulkExportClient.
+  client <- builder %>% j_invoke("build")
+
+  # Pass the client to the bulk method.
+  pc %>% invoke_datasource("bulk", client)
 }
