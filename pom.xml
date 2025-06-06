@@ -223,6 +223,11 @@
         <version>${project.version}</version>
         <classifier>docs</classifier>
       </dependency>
+      <dependency>
+        <groupId>au.csiro.fhir</groupId>
+        <artifactId>bulk-export</artifactId>
+        <version>1.0.2</version>
+      </dependency>
       <!-- Ensure that consistent and correct versions of Jackson and Jersey are used. -->
       <dependency>
         <groupId>com.fasterxml.jackson</groupId>

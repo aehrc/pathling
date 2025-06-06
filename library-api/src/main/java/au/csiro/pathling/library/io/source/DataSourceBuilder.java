@@ -20,6 +20,7 @@ package au.csiro.pathling.library.io.source;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 
+import au.csiro.fhir.export.BulkExportClient;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -183,6 +184,17 @@ public class DataSourceBuilder {
   @Nonnull
   public CatalogSource tables(@Nullable final String schema) {
     return new CatalogSource(context, requireNonNull(schema));
+  }
+
+  /**
+   * Creates a new data source from a FHIR Bulk Data endpoint.
+   *
+   * @param client the configured {@link BulkExportClient} that specifies the endpoint and export parameters
+   * @return the new data source
+   */
+  @Nonnull
+  public BulkDataSource bulk(@Nonnull final BulkExportClient client) {
+    return new BulkDataSource(context, requireNonNull(client));
   }
 
 }

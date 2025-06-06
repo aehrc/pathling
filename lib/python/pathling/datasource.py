@@ -13,19 +13,21 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+from datetime import datetime
+from typing import Dict, Sequence, Optional, Callable
+from typing import List, TYPE_CHECKING
 
 from json import dumps, loads
-from py4j.java_collections import SetConverter
 from py4j.java_gateway import JavaObject
+from py4j.java_collections import SetConverter
 from pyspark.sql import DataFrame
-from typing import Dict, Sequence, Optional, Callable
 
 from pathling import PathlingContext
-from pathling.core import (
-    StringToStringSetMapper,
-    SparkConversionsMixin,
-)
+from pathling.core import StringToStringSetMapper, SparkConversionsMixin
 from pathling.fhir import MimeType
+
+if TYPE_CHECKING:
+    from pathling.datasink import DataSinks
 
 
 class DataSource(SparkConversionsMixin):
@@ -61,8 +63,8 @@ class DataSource(SparkConversionsMixin):
         """
         Provides access to a :class:`DataSinks` object that can be used to persist data.
         """
+        # Import here to avoid circular dependency
         from pathling.datasink import DataSinks
-
         return DataSinks(self)
 
     def view(
@@ -215,3 +217,108 @@ class DataSources(SparkConversionsMixin):
             return self._wrap_ds(self._jdataSources.tables(schema))
         else:
             return self._wrap_ds(self._jdataSources.tables())
+
+    def bulk(
+        self,
+        fhir_endpoint_url: str,
+        output_dir: str,
+        group_id: Optional[str] = None,
+        patients: Optional[List[str]] = None,
+        output_format: str = "application/fhir+ndjson",
+        since: Optional[datetime] = None,
+        types: Optional[List[str]] = None,
+        elements: Optional[List[str]] = None,
+        include_associated_data: Optional[List[str]] = None,
+        type_filters: Optional[List[str]] = None,
+        output_extension: str = "ndjson",
+        timeout: Optional[int] = None,
+        max_concurrent_downloads: int = 10,
+        auth_config: Optional[Dict] = None
+    ) -> DataSource:
+        """
+        Creates a data source from a FHIR Bulk Data Access API endpoint.
+
+        :param fhir_endpoint_url: The URL of the FHIR server to export from
+        :param output_dir: The directory to write the output files to
+        :param group_id: Optional group ID for group-level export
+        :param patients: Optional list of patient references for patient-level export
+        :param output_format: The format of the output data
+        :param since: Only include resources modified after this timestamp
+        :param types: List of FHIR resource types to include
+        :param elements: List of FHIR elements to include
+        :param include_associated_data: Pre-defined set of FHIR resources to include
+        :param type_filters: FHIR search queries to filter resources
+        :param output_extension: File extension for output files. Defaults to "ndjson"
+        :param timeout: Optional timeout duration in seconds
+        :param max_concurrent_downloads: Maximum number of concurrent downloads. Defaults to 10
+        :param auth_config: Optional authentication configuration dictionary with the following possible keys:
+            - enabled: Whether authentication is enabled (default: False)
+            - client_id: The client ID to use for authentication
+            - private_key_jwk: The private key in JWK format
+            - client_secret: The client secret to use for authentication
+            - token_endpoint: The token endpoint URL
+            - use_smart: Whether to use SMART authentication (default: True)
+            - use_form_for_basic_auth: Whether to use form-based basic auth (default: False)
+            - scope: The scope to request
+            - token_expiry_tolerance: The token expiry tolerance in seconds (default: 120)
+        :return: A DataSource object that can be used to run queries against the data
+        """
+        from pathling.bulk import BulkExportClient
+
+        # Create appropriate client based on parameters
+        if group_id is not None:
+            client = BulkExportClient.for_group(
+                self.spark._jvm,
+                fhir_endpoint_url=fhir_endpoint_url,
+                output_dir=output_dir,
+                group_id=group_id,
+                output_format=output_format,
+                since=since,
+                types=types,
+                elements=elements,
+                include_associated_data=include_associated_data,
+                type_filters=type_filters,
+                output_extension=output_extension,
+                timeout=timeout,
+                max_concurrent_downloads=max_concurrent_downloads,
+                auth_config=auth_config
+            )
+        elif patients is not None:
+            client = BulkExportClient.for_patient(
+                self.spark._jvm,
+                fhir_endpoint_url=fhir_endpoint_url,
+                output_dir=output_dir,
+                patients=patients,
+                output_format=output_format,
+                since=since,
+                types=types,
+                elements=elements,
+                include_associated_data=include_associated_data,
+                type_filters=type_filters,
+                output_extension=output_extension,
+                timeout=timeout,
+                max_concurrent_downloads=max_concurrent_downloads,
+                auth_config=auth_config
+            )
+        else:
+            client = BulkExportClient.for_system(
+                self.spark._jvm,
+                fhir_endpoint_url=fhir_endpoint_url,
+                output_dir=output_dir,
+                output_format=output_format,
+                since=since,
+                types=types,
+                elements=elements,
+                include_associated_data=include_associated_data,
+                type_filters=type_filters,
+                output_extension=output_extension,
+                timeout=timeout,
+                max_concurrent_downloads=max_concurrent_downloads,
+                auth_config=auth_config
+            )
+
+        # Perform the export
+        result = client.export()
+
+        # Return a DataSource that reads from the exported files
+        return self.ndjson(output_dir)

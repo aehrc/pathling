@@ -16,7 +16,9 @@
 from typing import Callable, Optional
 
 from pathling.core import SparkConversionsMixin, StringMapper
-from pathling.datasource import DataSource
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from pathling.datasource import DataSource
 
 
 class ImportMode:
@@ -49,7 +51,7 @@ class DataSinks(SparkConversionsMixin):
     A class for writing FHIR data to a variety of different targets.
     """
 
-    def __init__(self, datasource: DataSource):
+    def __init__(self, datasource: "DataSource"):
         SparkConversionsMixin.__init__(self, datasource.spark)
         self._datasinks = (
             self.spark._jvm.au.csiro.pathling.library.io.sink.DataSinkBuilder(
