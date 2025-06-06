@@ -231,7 +231,7 @@ public class TestConfig {
    */
   @Data
   @NoArgsConstructor
-  static class ExcludeSet {
+  public static class ExcludeSet {
 
     /**
      * A title for the collection of exclusion rules.
