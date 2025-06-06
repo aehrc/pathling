@@ -16,6 +16,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.DynamicTest;
 
@@ -24,11 +25,24 @@ public class FhirPathTestBuilder {
 
   private final YamlSpecTestBase testBase;
   private final List<TestCaseBuilder> testCases = new ArrayList<>();
-  private Map<String, Object> subject = new HashMap<>();
+
+  @Nullable
+  private Map<String, Object> subject = null;
+  @Nullable
+  IBaseResource resource = null;
   private String currentGroup;
 
+  @Nonnull
+  public FhirPathTestBuilder withResource(@Nonnull IBaseResource resource) {
+    this.subject = null;
+    this.resource = resource;
+    return this;
+  }
+
+  @Nonnull
   public FhirPathTestBuilder withSubject(Map<String, Object> subject) {
     this.subject = subject;
+    this.resource = null;
     return this;
   }
 
@@ -118,9 +132,15 @@ public class FhirPathTestBuilder {
 
   @Nonnull
   public Stream<DynamicTest> build() {
-    Map<Object, Object> subjectOM = buildSubject();
-    Function<YamlSpecTestBase.RuntimeContext, ResourceResolver> resolverFactory =
-        YamlSpecTestBase.OMResolverFactory.of(subjectOM);
+
+    final Function<YamlSpecTestBase.RuntimeContext, ResourceResolver> resolverFactory;
+    if (resource != null) {
+      resolverFactory = YamlSpecTestBase.HapiResolverFactory.of(resource);
+    } else if (subject != null) {
+      resolverFactory = YamlSpecTestBase.OMResolverFactory.of(buildSubject());
+    } else {
+      throw new IllegalStateException("No resource or subject provided for FhirPath tests.");
+    }
 
     if (testCases.isEmpty()) {
       // If no test cases were added, return an empty stream
