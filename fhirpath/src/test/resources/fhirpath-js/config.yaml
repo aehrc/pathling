@@ -57,11 +57,14 @@ excludeSet:
         function:
           - descendants
           - children
-      - title: "Unsupported type operators"
+      - title: "Unsupported type operators and functions"
         id: "#2383"
         function:
           - is
           - as
+        expression:
+          - " is " # is operator
+          - " as " # as operator
       - title: "Unsupported combining functions"
         id: "#2384"
         function:
@@ -85,18 +88,22 @@ excludeSet:
         function:
           - select
           - repeat
+      - title: "Unsupported $index keyword"
+        id: "#2389"
         expression:
           - "(^|\\W)\\$index($|\\W)"
-      - title: "Not supported aggregate constructs"
+      - title: "Unsupported aggregate function"
+        id: "#2390"
         function:
           - aggregate
+      - title: "Nonexistent aggregate functions"
+        function:
           - min
           - max
           - avg
           - sum
-        expression:
-          - "\\$total"
-      - title: "Not supported conversion functions"
+      - title: "Type conversion functions"
+        id: "#2391"
         function:
           - toBoolean
           - toDateTime
@@ -107,8 +114,12 @@ excludeSet:
           - toString
           - toTime
           - toType
+      - title: "Unsupported iif function"
+        id: "#2392"
+        function:
           - iif
-      - title: "Not supported conversion check functions"
+      - title: "Unsupported conversion check functions"
+        id: "#2393"
         function:
           - convertsToBoolean
           - convertsToInteger
@@ -118,24 +129,25 @@ excludeSet:
           - convertsToDateTime
           - convertsToTime
           - convertsToDate
-      - title: "Not supported equality"
+      - title: "Unsupported equivalence operators"
+        id: "#2394"
         expression:
-          - " !~ " # not equals operator
-          - " ~ " # ~ operator
-      - title: "Not supported utility functions"
+          - " !~ " # not equivalent operator
+          - " ~ " # equivalent operator
+      - title: "Unsupported reflection"
+        id: "#2395"
         function:
+          - type
           - trace
-          - timeOfDay
-      - title: "Not supported misc functions"
+      - title: "Unsupported current date and time functions"
+        id: "#2396"
         function:
+          - timeOfDay
           - now
           - today
-          - type
       - title: "Not supported operators"
         expression: # regex matching expressoin
           - ".+\\|.+" # union operator
-          - " is " # is operator
-          - " as " # as operator
           - " & " # & operator
           - " div " # div operator
   - title: Path exclusions
