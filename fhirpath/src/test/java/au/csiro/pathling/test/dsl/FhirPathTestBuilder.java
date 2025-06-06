@@ -147,6 +147,11 @@ public class FhirPathTestBuilder {
       return this;
     }
 
+    public ModelBuilder choice(@Nonnull final String name) {
+      model.put(YamlSupport.CHOICE_ANNOTATION, name);
+      return this;
+    }
+
 
     public ModelBuilder string(@Nonnull final String name, @Nullable final String value) {
       model.put(name, value);

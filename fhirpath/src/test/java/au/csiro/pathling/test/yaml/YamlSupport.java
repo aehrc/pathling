@@ -11,6 +11,7 @@ import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
+import au.csiro.pathling.fhirpath.definition.def.DefChoiceDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefCompositeDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceDefinition;
@@ -61,9 +62,13 @@ import org.yaml.snakeyaml.representer.Representer;
 public class YamlSupport {
 
   public static final String FHIR_TYPE_ANNOTATION = "__FHIR_TYPE__";
+  public static final String CHOICE_ANNOTATION = "__CHOICE__";
+
+  static boolean isAnnotation(@Nonnull final Object key) {
+    return key.toString().startsWith("__");
+  }
 
   public class FhirTypedLiteralSerializer extends JsonSerializer<FhirTypedLiteral> {
-
 
     @Override
     public void serialize(FhirTypedLiteral fhirLiteral, JsonGenerator gen,
@@ -155,17 +160,6 @@ public class YamlSupport {
   static final Yaml YAML = new Yaml(new FhirConstructor(), new FhirRepresenter());
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-
-  /**
-   * Converts an object model to a Spark Column representation.
-   *
-   * @param objectModel The object model to convert
-   * @return A Spark Column representing the object model
-   */
-  @Nonnull
-  public static Column omToSpark(@Nonnull final Map<Object, Object> objectModel) {
-    return createStructFromMap(objectModel);
-  }
 
   /**
    * Creates a struct Column from a Map.
@@ -310,9 +304,14 @@ public class YamlSupport {
 
   @Nonnull
   static List<ChildDefinition> elementsFromYaml(@Nonnull final Map<Object, Object> data) {
-    return data.entrySet().stream()
+
+    final List<ChildDefinition> children = data.entrySet().stream()
+        .filter(entry -> !isAnnotation(entry.getKey()))
         .map(entry -> elementFromYaml(entry.getKey().toString(), entry.getValue()))
         .toList();
+    return Optional.ofNullable(data.get(CHOICE_ANNOTATION))
+        .map(name -> List.<ChildDefinition>of(DefChoiceDefinition.of(name.toString(), children)))
+        .orElse(children);
   }
 
   static ChildDefinition elementFromYaml(String key, Object value) {
@@ -408,32 +407,37 @@ public class YamlSupport {
       @Nonnull final List<ChildDefinition> childDefinitions) {
     return new StructType(
         childDefinitions.stream()
-            .map(YamlSupport::elementToStructField)
+            .flatMap(YamlSupport::elementToStructField)
             .toArray(StructField[]::new)
     );
   }
 
-  private static StructField elementToStructField(ChildDefinition childDefinition) {
+  private static Stream<StructField> elementToStructField(ChildDefinition childDefinition) {
     if (childDefinition instanceof DefPrimitiveDefinition primitiveDefinition) {
       final DataType elementType = requireNonNull(
           FHIR_TO_SQL.get(primitiveDefinition.getType()),
           "No SQL type for " + primitiveDefinition.getFhirType());
-      return new StructField(
+      return Stream.of(new StructField(
           primitiveDefinition.getName(),
           primitiveDefinition.getCardinality() < 0
           ? new ArrayType(elementType, true)
           : elementType,
           true, Metadata.empty()
-      );
+      ));
     } else if (childDefinition instanceof DefCompositeDefinition compositeDefinition) {
       final StructType elementType = childrendToStruct(compositeDefinition.getChildren());
-      return new StructField(
+      return Stream.of(new StructField(
           compositeDefinition.getName(),
           compositeDefinition.getCardinality() < 0
           ? new ArrayType(elementType, true)
           : elementType,
           true, Metadata.empty()
-      );
+      ));
+    } else if (childDefinition instanceof DefChoiceDefinition choiceDefinition) {
+      final StructType elementType = childrendToStruct(
+          choiceDefinition.getChoices().stream().filter(c -> !c.getName().startsWith("_"))
+              .collect(Collectors.toList()));
+      return Stream.of(elementType.fields());
     } else {
       throw new IllegalArgumentException("Unsupported child definition: " + childDefinition);
     }
