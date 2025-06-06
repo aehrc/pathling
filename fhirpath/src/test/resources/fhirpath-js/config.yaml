@@ -4,7 +4,8 @@ excludeSet:
   - title: Global exclusions
     glob: "*.yaml"
     exclude:
-      - title: "Not supported subsetting functions"
+      - title: "Unsupported subsetting functions"
+        id: "#2378"
         function:
           - single
           - tail
@@ -13,9 +14,13 @@ excludeSet:
           - last
           - exclude
           - intersect
-      - title: "Not supported string functions"
+      - title: "join function"
+        id: "#2379"
         function:
           - join
+      - title: "Unsupported string functions"
+        id: "#2380"
+        function:
           - indexOf
           - substring
           - startsWith
@@ -34,7 +39,8 @@ excludeSet:
           - decode
           - escape
           - unescape
-      - title: "Not supported math5 functions"
+      - title: "Unsupported math functions"
+        id: "#2381"
         function:
           - abs
           - ceiling
@@ -46,7 +52,8 @@ excludeSet:
           - round
           - sqrt
           - truncate
-      - title: "Not supported path functions"
+      - title: "Unsupported tree navigation functions"
+        id: "#2382"
         function:
           - descendants
           - children
