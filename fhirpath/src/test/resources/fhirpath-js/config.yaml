@@ -57,14 +57,18 @@ excludeSet:
         function:
           - descendants
           - children
-      - title: "Not supported types functions"
+      - title: "Unsupported type operators"
+        id: "#2383"
         function:
           - is
           - as
-      - title: "Not supported combining functions"
+      - title: "Unsupported combining functions"
+        id: "#2384"
         function:
           - union
-      - title: "Not supported existence functions"
+          - combine
+      - title: "Unsupported existence functions"
+        id: "#2385"
         function:
           - all
           - subsetOf
@@ -76,9 +80,11 @@ excludeSet:
           - allFalse
           - anyTrue
           - anyFalse
-      - title: "Unsupported filtering and projection constructs"
+      - title: "Unsupported filtering and projection functions"
+        id: "#2388"
         function:
           - select
+          - repeat
         expression:
           - "(^|\\W)\\$index($|\\W)"
       - title: "Not supported aggregate constructs"
@@ -122,8 +128,6 @@ excludeSet:
           - timeOfDay
       - title: "Not supported misc functions"
         function:
-          - repeat
-          - combine
           - now
           - today
           - type
