@@ -343,6 +343,26 @@ public abstract class YamlSpecTestBase {
     }
   }
 
+  @Value(staticConstructor = "of")
+  public static class HapiResolverFactory implements Function<RuntimeContext, ResourceResolver> {
+
+    @Nonnull
+    IBaseResource resource;
+
+    @Override
+    @Nonnull
+    public ResourceResolver apply(@Nonnull final RuntimeContext rt) {
+      final Dataset<Row> resourceDS = rt.getSpark().createDataset(List.of(resource),
+          rt.getFhirEncoders().of(resource.fhirType())).toDF();
+
+      return DefResourceResolver.of(
+          FhirResourceTag.of(ResourceType.fromCode(resource.fhirType())),
+          FhirDefinitionContext.of(rt.getFhirEncoders().getContext()),
+          resourceDS
+      );
+    }
+  }
+
   static class FhirpathArgumentProvider implements ArgumentsProvider {
 
     @Override

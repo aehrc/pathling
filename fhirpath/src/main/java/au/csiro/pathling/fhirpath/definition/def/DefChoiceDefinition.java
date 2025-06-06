@@ -1,0 +1,73 @@
+package au.csiro.pathling.fhirpath.definition.def;
+
+import au.csiro.pathling.fhirpath.definition.ChildDefinition;
+import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
+import jakarta.annotation.Nonnull;
+import java.util.List;
+import java.util.Optional;
+import lombok.Value;
+import org.apache.commons.lang.WordUtils;
+
+/**
+ * The default implementation of a choice data type allowing for explicit definition of its
+ * possible choices and other properties. This class represents FHIR choice elements, which
+ * can contain one of several possible types (e.g., valueString, valueInteger, etc.).
+ */
+@Value(staticConstructor = "of")
+public class DefChoiceDefinition implements ChoiceDefinition {
+
+  /**
+   * The base name of this choice element, without any type suffix.
+   */
+  @Nonnull
+  String name;
+  
+  /**
+   * The list of possible child definitions that this choice element can contain.
+   * Each child represents a different possible type for this choice element.
+   */
+  List<ChildDefinition> choices;
+
+  /**
+   * Returns the child element definition for the given type, if it exists.
+   * For example, if the choice element is named "value" and the type is "string",
+   * this method will look for a child named "valueString".
+   *
+   * @param type the type of the child element (e.g., "string", "integer")
+   * @return the child element definition, if it exists
+   */
+  @Override
+  @Nonnull
+  public Optional<ElementDefinition> getChildByType(@Nonnull final String type) {
+    return getChildElement(name + WordUtils.capitalize(type))
+        .map(ElementDefinition.class::cast);
+  }
+
+  /**
+   * Returns the maximum cardinality for this choice element.
+   * Choice elements always have a maximum cardinality of 1.
+   *
+   * @return the maximum cardinality, which is always 1 for choice elements
+   */
+  @Override
+  @Nonnull
+  public Optional<Integer> getMaxCardinality() {
+    return Optional.of(1);
+  }
+
+  /**
+   * Returns the child element with the specified name, if it exists in the list of choices.
+   * This method is used to find a specific type option within this choice element.
+   *
+   * @param name the name of the child element to find
+   * @return the child element, if it exists
+   */
+  @Override
+  @Nonnull
+  public Optional<? extends ChildDefinition> getChildElement(@Nonnull final String name) {
+    return choices.stream()
+        .filter(child -> child.getName().equals(name))
+        .findFirst();
+  }
+}
