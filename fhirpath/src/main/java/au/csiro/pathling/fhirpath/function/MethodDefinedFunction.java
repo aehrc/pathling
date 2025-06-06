@@ -17,18 +17,13 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-
-import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.Value;
 
@@ -47,36 +42,8 @@ public class MethodDefinedFunction implements NamedFunction<Collection> {
   @Override
   @Nonnull
   public Collection invoke(@Nonnull final FunctionInput functionInput) {
-    final FunctionParameterResolver resolver = new FunctionParameterResolver(
-        functionInput.getContext(),
-        functionInput.getInput());
-    final List<FhirPath> actualArguments = functionInput.getArguments();
-
-    // Check that not extra arguments are provided.
-    checkUserInput(actualArguments.size() <= method.getParameterCount() - 1,
-        "Too many arguments provided for function '" + name + "'. Expected "
-            + (method.getParameterCount() - 1) + ", got " + actualArguments.size());
-
-    // Resolve each pair of method parameter and argument.
-    final Stream<Object> resolvedArguments = IntStream.range(0, method.getParameterCount() - 1)
-        .mapToObj(i -> resolver.resolveArgument(method.getParameters()[i + 1],
-            (i < actualArguments.size())
-            ? actualArguments.get(i)
-            : null));
-
-    // Resolve the input.
-    final Object input = resolver.resolveCollection(functionInput.getInput(),
-        method.getParameters()[0]);
-
-    // Create an array of arguments to pass to the method.
-    final Object[] invocationArgs = Stream.concat(Stream.of(input),
-        resolvedArguments).toArray(Object[]::new);
-    try {
-      // Invoke the method and return the result.
-      return (Collection) method.invoke(null, invocationArgs);
-    } catch (final IllegalAccessException | InvocationTargetException e) {
-      throw new RuntimeException("Error invoking method-defined function", e);
-    }
+    return FunctionParameterResolver.fromFunctionInput(functionInput)
+        .bind(method).invoke();
   }
 
   /**
