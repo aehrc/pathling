@@ -175,7 +175,11 @@ excludeSet:
     glob: "fhirpath-js/cases/5.3_subsetting.yaml"
     exclude:
       - title: "Primitive attributes"
-        type: ???
+        id: "#437"
+        type: feature
+        comment: |
+          This test requires support for the primitive attribute/extension structure, as it involves 
+          traversing to the `id` of a primitive element.
         any:
           - "** first for collection with null values"
   - title: String manipulation exclusions
@@ -249,7 +253,7 @@ excludeSet:
           - "^[+-]7(.3)?$"
       - title: "Unsupported escape sequences in string literal"
         type: bug
-        any: ["'a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065'"]
+        any: [ "'a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065'" ]
       - title: "Unsupported datetime literals with non-second precision"
         id: "#2147"
         type: bug
