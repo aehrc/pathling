@@ -359,6 +359,10 @@ class DataSourcesTest {
               {
                 "path": "id",
                 "name": "id"
+              },
+              {
+                "path": "onset.ofType(Period).start",
+                "name": "onset_start"
               }
             ]
           }

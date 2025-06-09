@@ -166,8 +166,9 @@ case class GetHapiValue(value: Expression,
  *
  * @param value      The value to cast
  * @param resultType The type to which the value should be cast
+ * @param lenient    If true the cast of incompatible types will return NULL rather than throwing an exception. 
  */
-case class ObjectCast(value: Expression, resultType: DataType)
+case class ObjectCast(value: Expression, resultType: DataType, lenient: Boolean = false)
   extends Expression with NonSQLExpression {
 
   override def nullable: Boolean = value.nullable
@@ -186,15 +187,16 @@ case class ObjectCast(value: Expression, resultType: DataType)
 
     val code =
       code"""
-         ${obj.code}
-         final $javaType ${ev.value} = ($javaType) ${obj.value};
-       """
+         |${obj.code}
+         |final $javaType ${ev.value} = ($lenient && !(${obj.value} instanceof $javaType))?null:($javaType) ${obj.value};
+         |boolean ${ev.isNull} = (${ev.value} == null);
+       """.stripMargin
 
-    ev.copy(code = code, isNull = obj.isNull)
+    ev.copy(code = code)
   }
 
   override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
-    ObjectCast(newChildren.head, resultType)
+    ObjectCast(newChildren.head, resultType, lenient)
   }
 
 }
@@ -512,11 +514,11 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
     // the number of fields for each child
     val aritiesOfChildrenScala = children
       .map(_.dataType.asInstanceOf[ArrayType].elementType.asInstanceOf[StructType].fields.length)
-      .toArray;
+      .toArray
     val sizeOfOutput = aritiesOfChildrenScala.sum
 
     val offsetsScala = aritiesOfChildrenScala.scanLeft(0)(_ + _).init
-    val offsets = ctx.addReferenceObj("offsets", offsetsScala, "int[]");
+    val offsets = ctx.addReferenceObj("offsets", offsetsScala, "int[]")
 
     val genericInternalRow = classOf[GenericInternalRow].getName
     val arrVals = ctx.freshName("arrVals")
@@ -641,12 +643,12 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
       val result = new Array[InternalRow](productSize)
       val zippedArrays: Seq[(ArrayData, Int)] = inputArrays.zipWithIndex
       for (i <- 0 until productSize) {
-        val productIndexes: Array[Int] = new Array[Int](children.length);
-        var productBase = i;
+        val productIndexes: Array[Int] = new Array[Int](children.length)
+        var productBase = i
         for (childIndex <- children.indices) {
-          val childArity = inputArrays(childIndex).numElements();
-          productIndexes(childIndex) = productBase % childArity;
-          productBase = productBase / childArity;
+          val childArity = inputArrays(childIndex).numElements()
+          productIndexes(childIndex) = productBase % childArity
+          productBase = productBase / childArity
         }
         val currentRowData = new Array[Any](sizeOfOutput)
         zippedArrays.foreach { case (arr, index) =>
