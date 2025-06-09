@@ -145,11 +145,15 @@ excludeSet:
           - timeOfDay
           - now
           - today
-      - title: "Not supported operators"
-        expression: # regex matching expressoin
-          - ".+\\|.+" # union operator
-          - " & " # & operator
-          - " div " # div operator
+      - title: "Unsupported union operator"
+        id: "#2398"
+        expression:
+          - ".+\\|.+"
+      - title: "Unsupported math operators"
+        id: "#2399"
+        expression:
+          - " & "
+          - " div "
   - title: Path exclusions
     glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
