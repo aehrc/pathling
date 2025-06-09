@@ -182,12 +182,6 @@ excludeSet:
           traversing to the `id` of a primitive element.
         any:
           - "** first for collection with null values"
-  - title: String manipulation exclusions
-    glob: "fhirpath-js/cases/5.6_string_manipulation.yaml"
-    exclude:
-      - title: "empty collection: join"
-        any:
-          - "** join on empty input collection"
   - title: Math 6 exclusions
     glob: "fhirpath-js/cases/6.6_math.yaml"
     exclude:
