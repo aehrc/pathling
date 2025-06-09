@@ -156,7 +156,6 @@ public class FhirEncodersTest {
         .createDataset(ImmutableList.of(questionnaireResponse),
             ENCODERS_L0.of(QuestionnaireResponse.class));
     decodedQuestionnaireResponse = questionnaireResponseDataset.head();
-
   }
 
   /**
@@ -504,17 +503,23 @@ public class FhirEncodersTest {
 
   @Test
   public void testFromRdd() {
-    try (final JavaSparkContext context = new JavaSparkContext(spark.sparkContext())) {
-      final JavaRDD<Condition> conditionRdd = context.parallelize(ImmutableList.of(condition));
+    // This JavaSparkContext is only thin wrapper around the SparkContext, 
+    // which will be closed when SparkSession is closed.
+    // It cannot be closed here as it will cause SparkSession used by other tests to fail.
 
-      final Dataset<Condition> ds = spark.createDataset(conditionRdd.rdd(),
-          ENCODERS_L0.of(Condition.class));
+    @SuppressWarnings("resource") 
+    final JavaSparkContext context = new JavaSparkContext(
+        spark.sparkContext());
+    final JavaRDD<Condition> conditionRdd = context.parallelize(ImmutableList.of(condition));
 
-      final Condition convertedCondition = ds.head();
+    final Dataset<Condition> ds = spark.createDataset(conditionRdd.rdd(),
+        ENCODERS_L0.of(Condition.class));
 
-      assertEquals(condition.getId(),
-          convertedCondition.getId());
-    }
+    final Condition convertedCondition = ds.head();
+
+    assertEquals(condition.getId(),
+        convertedCondition.getId());
+
   }
 
   @Test
@@ -626,6 +631,25 @@ public class FhirEncodersTest {
     assertEquals(originalComparator.toCode(), queriedComparator);
   }
 
+
+  @Test
+  public void traversalToChoiceFieldsFromJson() {
+    // this tests for the issue reported in: https://github.com/aehrc/pathling/issues/1770
+    final Observation observationWithQuanityValue = (Observation) new Observation()
+        .setValue(new Quantity(139.99))
+        .setId("obs1");
+    final Dataset<Observation> observationsDataset = spark.createDataset(
+        ImmutableList.of(observationWithQuanityValue),
+        ENCODERS_L0.of(Observation.class));
+    final Row subjectRow = observationsDataset
+        // map() introduces the issue, as it traverses to the choice field
+        .map((MapFunction<Observation, Observation>) x -> x, ENCODERS_L0.of(Observation.class))
+        .toDF().select("valueQuantity.value")
+        .first();
+    assertFalse(subjectRow.isNullAt(0));
+    assertEquals(new BigDecimal("139.990000"), subjectRow.getDecimal(0));
+  }
+
   @Test
   public void nullEncoding() {
     // empty elements of all types should be encoded as nulls
@@ -664,23 +688,5 @@ public class FhirEncodersTest {
     assertTrue(subjectRow.isNullAt(2));
   }
 
-
-  @Test
-  public void traversalToChoiceFieldsFromJson() {
-    // this tests for the issue reported in: https://github.com/aehrc/pathling/issues/1770
-    final Observation observationWithQuanityValue = (Observation) new Observation()
-        .setValue(new Quantity(139.99))
-        .setId("obs1");
-    final Dataset<Observation> observationsDataset = spark.createDataset(
-        ImmutableList.of(observationWithQuanityValue),
-        ENCODERS_L0.of(Observation.class));
-    final Row subjectRow = observationsDataset
-        // map() introduces the issue, as it traverses to the choice field
-        .map((MapFunction<Observation, Observation>) x -> x, ENCODERS_L0.of(Observation.class))
-        .toDF().select("valueQuantity.value")
-        .first();
-    assertFalse(subjectRow.isNullAt(0));
-    assertEquals(new BigDecimal("139.990000"), subjectRow.getDecimal(0));
-  }
 
 }
