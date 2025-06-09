@@ -39,11 +39,11 @@ import java.nio.file.Path;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -156,7 +156,6 @@ public class FhirEncodersTest {
         .createDataset(ImmutableList.of(questionnaireResponse),
             ENCODERS_L0.of(QuestionnaireResponse.class));
     decodedQuestionnaireResponse = questionnaireResponseDataset.head();
-
   }
 
   /**
@@ -504,17 +503,23 @@ public class FhirEncodersTest {
 
   @Test
   public void testFromRdd() {
-    try (final JavaSparkContext context = new JavaSparkContext(spark.sparkContext())) {
-      final JavaRDD<Condition> conditionRdd = context.parallelize(ImmutableList.of(condition));
+    // This JavaSparkContext is only thin wrapper around the SparkContext, 
+    // which will be closed when SparkSession is closed.
+    // It cannot be closed here as it will cause SparkSession used by other tests to fail.
 
-      final Dataset<Condition> ds = spark.createDataset(conditionRdd.rdd(),
-          ENCODERS_L0.of(Condition.class));
+    @SuppressWarnings("resource") 
+    final JavaSparkContext context = new JavaSparkContext(
+        spark.sparkContext());
+    final JavaRDD<Condition> conditionRdd = context.parallelize(ImmutableList.of(condition));
 
-      final Condition convertedCondition = ds.head();
+    final Dataset<Condition> ds = spark.createDataset(conditionRdd.rdd(),
+        ENCODERS_L0.of(Condition.class));
 
-      assertEquals(condition.getId(),
-          convertedCondition.getId());
-    }
+    final Condition convertedCondition = ds.head();
+
+    assertEquals(condition.getId(),
+        convertedCondition.getId());
+
   }
 
   @Test
@@ -559,7 +564,7 @@ public class FhirEncodersTest {
     // Build a list of questionnaires with increasing nesting levels
     final List<Questionnaire> questionnaires = IntStream.rangeClosed(0, NESTING_LEVEL_3)
         .mapToObj(i -> TestData.newNestedQuestionnaire(i, 4))
-        .collect(Collectors.toUnmodifiableList());
+        .toList();
 
     final Questionnaire questionnaire_L0 = questionnaires.get(0);
 
@@ -585,12 +590,12 @@ public class FhirEncodersTest {
     }
 
     assertEquals(Stream.of("Item/0", "Item/0", "Item/0", "Item/0").map(RowFactory::create)
-            .collect(Collectors.toUnmodifiableList()),
+            .toList(),
         questionnaireDataset_L3.select(col("item").getItem(0).getField("linkId"))
             .collectAsList());
 
     assertEquals(Stream.of(null, "Item/1.0", "Item/1.0", "Item/1.0").map(RowFactory::create)
-            .collect(Collectors.toUnmodifiableList()),
+            .toList(),
         questionnaireDataset_L3
             .select(col("item")
                 .getItem(1).getField("item")
@@ -598,7 +603,7 @@ public class FhirEncodersTest {
             .collectAsList());
 
     assertEquals(Stream.of(null, null, "Item/2.1.0", "Item/2.1.0").map(RowFactory::create)
-            .collect(Collectors.toUnmodifiableList()),
+            .toList(),
         questionnaireDataset_L3
             .select(col("item")
                 .getItem(2).getField("item")
@@ -607,7 +612,7 @@ public class FhirEncodersTest {
             .collectAsList());
 
     assertEquals(Stream.of(null, null, null, "Item/3.2.1.0").map(RowFactory::create)
-            .collect(Collectors.toUnmodifiableList()),
+            .toList(),
         questionnaireDataset_L3
             .select(col("item")
                 .getItem(3).getField("item")
@@ -624,6 +629,25 @@ public class FhirEncodersTest {
         .getString(0);
 
     assertEquals(originalComparator.toCode(), queriedComparator);
+  }
+
+
+  @Test
+  public void traversalToChoiceFieldsFromJson() {
+    // this tests for the issue reported in: https://github.com/aehrc/pathling/issues/1770
+    final Observation observationWithQuanityValue = (Observation) new Observation()
+        .setValue(new Quantity(139.99))
+        .setId("obs1");
+    final Dataset<Observation> observationsDataset = spark.createDataset(
+        ImmutableList.of(observationWithQuanityValue),
+        ENCODERS_L0.of(Observation.class));
+    final Row subjectRow = observationsDataset
+        // map() introduces the issue, as it traverses to the choice field
+        .map((MapFunction<Observation, Observation>) x -> x, ENCODERS_L0.of(Observation.class))
+        .toDF().select("valueQuantity.value")
+        .first();
+    assertFalse(subjectRow.isNullAt(0));
+    assertEquals(new BigDecimal("139.990000"), subjectRow.getDecimal(0));
   }
 
   @Test
@@ -663,5 +687,6 @@ public class FhirEncodersTest {
     assertTrue(subjectRow.isNullAt(1));
     assertTrue(subjectRow.isNullAt(2));
   }
+
 
 }
