@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 import lombok.Value;
 import org.hl7.fhir.exceptions.FHIRException;
@@ -129,14 +130,18 @@ public class TypeSpecifier {
   }
 
   /**
-   * @return The FHIR resource type represented by this type specifier
+   * @return The FHIR resource type represented by this type specifier if a valid FHIR resource
+   * type.
    */
   @Nonnull
-  public ResourceType toResourceType() {
-    if (!isFhirType()) {
-      throw new IllegalStateException("Not a FHIR type: " + this);
+  public Optional<ResourceType> asResourceType() {
+    try {
+      if (isFhirType()) {
+        return Optional.of(ResourceType.fromCode(typeName));
+      }
+    } catch (FHIRException ignored) {
     }
-    return ResourceType.fromCode(typeName);
+    return Optional.empty();
   }
 
   private static String validateNamespace(final String namespace) throws IllegalArgumentException {

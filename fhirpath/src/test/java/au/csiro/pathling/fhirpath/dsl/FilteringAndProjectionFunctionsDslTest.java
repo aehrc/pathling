@@ -2,11 +2,11 @@ package au.csiro.pathling.fhirpath.dsl;
 
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
+import au.csiro.pathling.test.yaml.FhirTypedLiteral;
 import java.util.List;
 import java.util.stream.Stream;
-import au.csiro.pathling.test.yaml.FhirTypedLiteral;
+import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 
@@ -170,7 +170,6 @@ public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase 
         .build();
   }
 
-  @Disabled("ofType() for monomorphic resources is not yet implemented")
   @FhirPathTest
   public Stream<DynamicTest> testOfTypeWithResources() {
     return builder()
@@ -185,10 +184,28 @@ public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase 
         .testTrue("ofType(Patient).exists()",
             "ofType() filters resources by type Patient")
         // Single resource ofType() tests
-        .testEquals("John Doe", "ofType(Patient).name",
+        .testEquals("John Doe", "ofType(FHIR.Patient).name",
             "ofType() returns the resource when type matches")
-        .testEmpty("ofType(Observation)",
+        .testEmpty("ofType(FHIR.Observation)",
             "ofType() returns empty when resource type doesn't match")
         .build();
   }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testOfTypeWithFhirResources() {
+    return builder()
+        .withResource(new Condition().setId("Condition/1")
+        )
+        .group("ofType() function with resource types")
+        // Basic ofType() tests with resources
+        .testTrue("ofType(Condition).exists()",
+            "ofType() filters resources by type Patient")
+        // Single resource ofType() tests
+        .testEquals("1", "ofType(FHIR.Condition).id",
+            "ofType() returns the resource when type matches")
+        .testEmpty("ofType(Patient)",
+            "ofType() returns empty when resource type doesn't match")
+        .build();
+  }
+
 }

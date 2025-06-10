@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.collection;
 import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
@@ -191,6 +192,24 @@ public class ResourceCollection extends Collection {
     return StringCollection.build(
         getColumn().traverse("id_versioned", Optional.of(FHIRDefinedType.STRING))
     );
+  }
+
+  /**
+   * Returns a new collection representing just the elements of this collection with the specified
+   * type.
+   *
+   * @param type The type of element to return
+   * @return A new collection representing just the elements of this collection with the specified
+   * type
+   */
+  @Nonnull
+  @Override
+  public Collection filterByType(@Nonnull final TypeSpecifier type) {
+    return type.asResourceType()
+        .map(ResourceType::toCode)
+        .filter(getResourceDefinition().getResourceCode()::equals)
+        .map(__ -> (Collection) this)
+        .orElse(EmptyCollection.getInstance());
   }
 
 }
