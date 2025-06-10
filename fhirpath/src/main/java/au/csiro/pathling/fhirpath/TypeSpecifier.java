@@ -34,8 +34,8 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value
 public class TypeSpecifier {
 
-  private static final String SYSTEM_NAMESPACE = "System";
-  private static final String FHIR_NAMESPACE = "FHIR";
+  public static final String SYSTEM_NAMESPACE = "System";
+  public static final String FHIR_NAMESPACE = "FHIR";
   private static final List<String> NAMESPACE_SEARCH_ORDER = List.of(FHIR_NAMESPACE,
       SYSTEM_NAMESPACE);
   private static final Map<String, Predicate<String>> NAMESPACE_VALIDATORS = Map.of(
@@ -82,6 +82,13 @@ public class TypeSpecifier {
 
 
   /**
+   * @return true if this type specifier is a type in System namespace.
+   */
+  public boolean isSystemType() {
+    return SYSTEM_NAMESPACE.equals(namespace);
+  }
+
+  /**
    * Returns a copy of this type specifier with the new namespace.
    *
    * @param namespace the new namespace
@@ -90,6 +97,21 @@ public class TypeSpecifier {
   @Nonnull
   public TypeSpecifier withNamespace(@Nonnull final String namespace) {
     return new TypeSpecifier(namespace, typeName);
+  }
+
+
+  /**
+   * Converts this type specifier to a System(Fhirpath) type.
+   *
+   * @return the System(Fhirpath) type
+   * @throws IllegalStateException if this type specifier is not a System type
+   */
+  @Nonnull
+  public FhirPathType toSystemType() {
+    if (!isSystemType()) {
+      throw new IllegalStateException("Not a System type: " + this);
+    }
+    return FhirPathType.valueOf(typeName.toUpperCase());
   }
 
   /**
@@ -157,5 +179,5 @@ public class TypeSpecifier {
   public String toString() {
     return namespace + "." + typeName;
   }
-  
+
 }

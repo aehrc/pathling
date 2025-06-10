@@ -84,6 +84,11 @@ public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase 
             .decimal("decimalValue", 3.14)
             .bool("booleanValue", true)
             .stringEmpty("emptyString")
+            .coding("codingValue", "http://example.org/codesystem|code2|display1")
+            .element("quantityValue",
+                qt -> qt.fhirType(FHIRDefinedType.QUANTITY)
+                    .decimal("value", 11.5)
+                    .string("unit", "mg"))
             // Array of mixed primitive types
             .elementArray("heteroattr",
                 // only the first element needs to be a full choice type
@@ -112,15 +117,20 @@ public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase 
         )
         .group("ofType() function with non-resource types")
         // ofType() tests with primitive types
-        // DISABLED: ofType() monomorphic resources are not yet implemented
-        // .testEquals("test", "stringValue.ofType(String)",
-        //     "ofType() returns string value when filtering for String type")
-        // .testEquals(42, "integerValue.ofType(Integer)",
-        //     "ofType() returns integer value when filtering for Integer type")
-        // .testEquals(3.14, "decimalValue.ofType(Decimal)",
-        //     "ofType() returns decimal value when filtering for Decimal type")
-        // .testEquals(true, "booleanValue.ofType(Boolean)",
-        //     "ofType() returns boolean value when filtering for Boolean type")
+        .testEquals("test", "stringValue.ofType(System.String)",
+            "ofType() returns string value when filtering for System.String type")
+        .testEquals(42, "integerValue.ofType(Integer)",
+            "ofType() returns integer value when filtering for (Systrem).Integer type")
+        .testEquals(3.14, "decimalValue.ofType(decimal)",
+            "ofType() returns decimal value when filtering for (FHIR).decimal type")
+        .testEquals(true, "booleanValue.ofType(FHIR.boolean)",
+            "ofType() returns boolean value when filtering for FHIR.boolean type")
+        .testEquals("mg", "quantityValue.ofType(Quantity).unit",
+            "ofType() returns quantity value when filtering for (FHIR).Quantity type")
+        .testTrue("codingValue.ofType(FHIR.Coding).exists()",
+            "ofType() returns coding value when for FHIR.Coding type")
+        .testTrue("codingValue.ofType(System.Coding).exists()",
+            "ofType() returns coding value when for System.Coding type")
 
         // ofType() with empty collections
         .testEmpty("emptyString.ofType(String)",
@@ -154,6 +164,8 @@ public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase 
         .testEmpty("stringValue.ofType(Integer)",
             "ofType() returns empty when type doesn't match")
         .testEmpty("integerValue.ofType(Boolean)",
+            "ofType() returns empty when type doesn't match")
+        .testEmpty("codingValue.ofType(Quantity)",
             "ofType() returns empty when type doesn't match")
         .build();
   }
