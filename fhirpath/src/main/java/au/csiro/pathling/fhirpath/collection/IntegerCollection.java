@@ -45,7 +45,7 @@ import org.hl7.fhir.r4.model.UnsignedIntType;
  * @author John Grimes
  */
 public class IntegerCollection extends Collection implements Comparable, Numeric, StringCoercible {
-  
+
   private static final Set<FHIRDefinedType> INTEGER_TYPES = Set.of(FHIRDefinedType.INTEGER,
       FHIRDefinedType.UNSIGNEDINT, FHIRDefinedType.POSITIVEINT);
 
@@ -88,19 +88,6 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
   @Nonnull
   public static IntegerCollection build(final ColumnRepresentation columnRepresentation) {
     return build(columnRepresentation, Optional.empty());
-  }
-  
-  /**
-   * Returns a new instance with the specified column representation and no definition with
-   * speficied FHIR type.
-   *
-   * @return A new instance of {@link IntegerCollection}
-   */
-  @Nonnull
-  public static IntegerCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
-      @Nonnull final FHIRDefinedType fhirType) {
-    return new IntegerCollection(columnRepresentation, Optional.of(FhirPathType.INTEGER),
-        Optional.of(fhirType), Optional.empty(), Optional.empty());
   }
 
   /**
@@ -163,7 +150,7 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
       throws NumberFormatException {
     return IntegerCollection.fromValue(Integer.parseInt(integerLiteral));
   }
-  
+
   /**
    * Returns a set of classes that this collection can be compared to.
    *
@@ -221,10 +208,7 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
           if (target instanceof DecimalCollection) {
             valueColumn = valueColumn.cast(DataTypes.LongType);
           }
-          // TODO: This is not correct as the FHIR type is not always the source type
-          //  and sometime cannot be detertmined  - most likely we should return this alwyas as INTEGER.
-          return IntegerCollection.build(new DefaultRepresentation(valueColumn),
-              source.getFhirType().orElse(FHIRDefinedType.INTEGER));
+          return IntegerCollection.build(new DefaultRepresentation(valueColumn));
         case DIVISION:
           final Column numerator = source.getColumn().cast(DecimalCollection.getDecimalType())
               .getValue();

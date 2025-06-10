@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath.context;
 
-import au.csiro.pathling.fhirpath.EvalOptions;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
@@ -25,13 +24,13 @@ import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
 import jakarta.annotation.Nonnull;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Value;
-import java.util.Optional;
 
 /**
- * An implementation of {@link EvaluationContext} used for evaluating FHIRPath expressions
- * within FHIR views.
+ * An implementation of {@link EvaluationContext} used for evaluating FHIRPath expressions within
+ * FHIR views.
  * <p>
  * This class combines three key components needed for FHIRPath evaluation:
  * <ul>
@@ -40,7 +39,6 @@ import java.util.Optional;
  *   <li>A {@link ResourceResolver} that provides access to FHIR resources</li>
  * </ul>
  * <p>
- * It also supports custom evaluation options through {@link EvalOptions}.
  */
 @Value
 @AllArgsConstructor
@@ -65,25 +63,6 @@ public class ViewEvaluationContext implements EvaluationContext {
   ResourceResolver resourceResolver;
 
   /**
-   * The evaluation options that control the behavior of the FHIRPath evaluation.
-   */
-  @Nonnull
-  EvalOptions evalOptions;
-
-  /**
-   * Creates a new ViewEvaluationContext with default evaluation options.
-   *
-   * @param fhirPathContext The FHIRPath context
-   * @param functionRegistry The function registry
-   * @param resourceResolver The resource resolver
-   */
-  public ViewEvaluationContext(@Nonnull final FhirPathContext fhirPathContext,
-      @Nonnull final FunctionRegistry<?> functionRegistry,
-      @Nonnull final ResourceResolver resourceResolver) {
-    this(fhirPathContext, functionRegistry, resourceResolver, EvalOptions.getDefaults());
-  }
-
-  /**
    * {@inheritDoc}
    * <p>
    * Delegates to the underlying {@link ResourceResolver}.
@@ -103,6 +82,7 @@ public class ViewEvaluationContext implements EvaluationContext {
   @Override
   public NamedFunction<Collection> resolveFunction(@Nonnull final String name)
       throws NoSuchFunctionException {
+    //noinspection unchecked
     return (NamedFunction<Collection>) functionRegistry.getInstance(name);
   }
 
