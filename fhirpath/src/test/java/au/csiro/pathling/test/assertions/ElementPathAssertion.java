@@ -20,6 +20,9 @@ package au.csiro.pathling.test.assertions;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.execution.CollectionDataset;
 import jakarta.annotation.Nonnull;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author John Grimes
@@ -42,11 +45,11 @@ public class ElementPathAssertion extends BaseFhirPathAssertion<ElementPathAsser
   //   this.fhirPath = fhirPath;
   // }
   //
-  // @Nonnull
-  // public ElementPathAssertion hasFhirType(@Nonnull final FHIRDefinedType type) {
-  //   assertEquals(type, fhirPath.getFhirType());
-  //   return this;
-  // }
+  @Nonnull
+  public ElementPathAssertion hasFhirType(@Nonnull final FHIRDefinedType type) {
+    assertEquals(type, result.getFhirType().orElse(null));
+    return this;
+  }
   //
   //
   // @Nonnull
