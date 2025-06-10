@@ -55,4 +55,15 @@ public class EmptyCollection extends Collection implements Comparable, StringCoe
   public StringCollection asStringPath() {
     return StringCollection.empty();
   }
+  
+  /**
+   * {@inheritDoc}
+   * <p>
+   * This implementation returns an empty BooleanCollection
+   */
+  @Override
+  @Nonnull
+  public BooleanCollection asBooleanPath() {
+    return BooleanCollection.empty();
+  }
 }

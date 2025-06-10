@@ -558,4 +558,16 @@ public class Collection {
   public StringCollection asStringPath() {
     return asSingular().map(ColumnRepresentation::asEmpty, StringCollection::build);
   }
+
+  /**
+   * @return a new {@link Collection} representing the Boolean representation of this path
+   */
+  @Nonnull
+  public BooleanCollection asBooleanPath() {
+    throw new UnsupportedOperationException(
+        "Booolean evaluation of collection is not supported yet for "
+            + this.getClass().getSimpleName());
+  }
+
+
 }

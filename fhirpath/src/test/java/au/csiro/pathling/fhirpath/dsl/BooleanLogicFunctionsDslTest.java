@@ -42,12 +42,13 @@ public class BooleanLogicFunctionsDslTest extends FhirPathDslTestBase {
             "not() negates true to false")
         .testEquals(true, "falseValue.not()",
             "not() negates false to true")
+        // empty collections
         .testEmpty("emptyBoolean.not()",
             "not() returns empty for empty boolean")
-        // DISABLED: not or empty collection not implemented
-        // .testEmpty("{}.not()",
-        //     "not() returns empty for empty collection")
-        
+        .testEmpty("{}.not()",
+            "not() returns empty for empty collection")
+        .testEmpty("undefined.not()",
+            "not() returns empty for empty collection")
         // not() with boolean arrays
         .testEquals(List.of(false, true, false), "boolArray.not()",
             "not() negates each value in a boolean array")

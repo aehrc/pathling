@@ -7,29 +7,7 @@ import au.csiro.pathling.fhirpath.Concepts;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.path.ParserPaths;
-import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.util.List;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-import lombok.Value;
-
-/**
- * Resolves and binds parameters for FHIRPath function invocations.
- * <p>
- * This class handles the conversion between FHIRPath expressions and Java method parameters,
- * providing type checking and error reporting during the binding process. It supports various
- * parameter types including Collections, Concepts, TypeSpecifiers, and CollectionTransforms.
- */
-import au.csiro.pathling.fhirpath.Concepts;
-import au.csiro.pathling.fhirpath.EvaluationContext;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.TypeSpecifier;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.path.ParserPaths;
 import jakarta.annotation.Nonnull;
@@ -45,13 +23,19 @@ import lombok.Value;
 @Value
 public class FunctionParameterResolver {
 
-  /** The evaluation context for resolving variables and executing expressions */
+  /**
+   * The evaluation context for resolving variables and executing expressions
+   */
   EvaluationContext evaluationContext;
-  
-  /** The input collection that the function will operate on */
+
+  /**
+   * The input collection that the function will operate on
+   */
   Collection input;
-  
-  /** The list of FHIRPath expressions that will be bound to function parameters */
+
+  /**
+   * The list of FHIRPath expressions that will be bound to function parameters
+   */
   List<FhirPath> actualArguments;
 
 
@@ -61,10 +45,14 @@ public class FunctionParameterResolver {
   @Value(staticConstructor = "of")
   public static class FunctionInvocation {
 
-    /** The method to be invoked */
+    /**
+     * The method to be invoked
+     */
     Method method;
-    
-    /** The resolved arguments to pass to the method */
+
+    /**
+     * The resolved arguments to pass to the method
+     */
     Object[] arguments;
 
     /**
@@ -85,17 +73,21 @@ public class FunctionParameterResolver {
   /**
    * Provides context for parameter binding operations, including error reporting.
    * <p>
-   * This class helps generate consistent, informative error messages that include
-   * the function name and context (input or specific argument).
+   * This class helps generate consistent, informative error messages that include the function name
+   * and context (input or specific argument).
    */
   @Value
   public static class BindingContext {
 
-    /** The method being bound */
+    /**
+     * The method being bound
+     */
     @Nonnull
     Method method;
-    
-    /** Description of the current binding context (e.g., "input" or "argument 0") */
+
+    /**
+     * Description of the current binding context (e.g., "input" or "argument 0")
+     */
     @Nullable
     String contextDescription;
 
@@ -186,8 +178,8 @@ public class FunctionParameterResolver {
   /**
    * Binds the input and arguments to the specified method.
    * <p>
-   * This method performs type checking and conversion of FHIRPath expressions to Java objects
-   * that can be passed to the method. It validates that:
+   * This method performs type checking and conversion of FHIRPath expressions to Java objects that
+   * can be passed to the method. It validates that:
    * <ul>
    *   <li>The method has at least one parameter (for the input)</li>
    *   <li>The number of arguments does not exceed the method's parameter count</li>
@@ -305,7 +297,9 @@ public class FunctionParameterResolver {
   @Nonnull
   Object resolveCollection(@Nonnull final Collection collection,
       @Nonnull final Parameter parameter, @Nonnull final BindingContext context) {
-    if (Concepts.class.isAssignableFrom(parameter.getType())) {
+    if (BooleanCollection.class.isAssignableFrom(parameter.getType())) {
+      return collection.asBooleanPath();
+    } else if (Concepts.class.isAssignableFrom(parameter.getType())) {
       // evaluate collection types 
       return collection.toConcepts().orElseGet(
           () -> context.reportError("Cannot convert collection of type " +
