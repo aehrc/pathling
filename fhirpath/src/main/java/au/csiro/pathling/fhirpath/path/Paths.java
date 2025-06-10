@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.fhirpath.path;
 
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -33,7 +31,6 @@ import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import au.csiro.pathling.fhirpath.operator.UnaryOperator;
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Value;
@@ -50,7 +47,7 @@ final public class Paths {
    * appear in fhir paths is explicitly needed. In all cases when $this is followed another path
    * element it is stripped.
    * <p>
-   * For example: 
+   * For example:
    * <pre>`where($this.name = 'foo')` is converted to `where(name = 'foo')`</pre>
    * but:
    * <pre>`where($this = 'foo')` remains `where($this = 'foo')`</pre>
@@ -219,13 +216,7 @@ final public class Paths {
     @Override
     public Collection apply(@Nonnull final Collection input,
         @Nonnull final EvaluationContext context) {
-      final Optional<Collection> result = input.traverse(propertyName);
-      if (context.getEvalOptions().isAllowUndefinedFields()) {
-        return result.orElse(EmptyCollection.getInstance());
-      } else {
-        checkUserInput(result.isPresent(), "No such child: " + propertyName);
-        return result.get();
-      }
+      return input.traverse(propertyName).orElse(EmptyCollection.getInstance());
     }
 
     @Nonnull
