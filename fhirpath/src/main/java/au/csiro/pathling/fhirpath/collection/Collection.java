@@ -568,4 +568,16 @@ public class Collection {
     // true is exists() or empty otherwise().
     return asSingular().map(ColumnRepresentation::toBoolean, BooleanCollection::build);
   }
+
+  /**
+   * Gets a new {@link BooleanCollection} representing this collection as a singular Boolean value.
+   * Throws an  exception during evalution if the collection is not singular.
+   *
+   * @return a new {@link Collection} represented as singular Boolean value.
+   */
+  @Nonnull
+  public BooleanCollection asBooleanSingleton() {
+    return asBooleanPath();
+  }
+
 }

@@ -148,4 +148,16 @@ public class BooleanCollection extends Collection implements Comparable, StringC
   public BooleanCollection asBooleanPath() {
     return this;
   }
+
+  /**
+   * {@inheritDoc}
+   * <p>
+   * Special case for Boolean collection to go with the specialized `asBooleanPath()`.
+   */
+  @Override
+  @Nonnull
+  public BooleanCollection asBooleanSingleton() {
+    return (BooleanCollection) this.asSingular();
+  }
+
 }
