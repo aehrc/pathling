@@ -564,10 +564,8 @@ public class Collection {
    */
   @Nonnull
   public BooleanCollection asBooleanPath() {
-    throw new UnsupportedOperationException(
-        "Booolean evaluation of collection is not supported yet for "
-            + this.getClass().getSimpleName());
+    // by default only can be converted if singular and then 
+    // true is exists() or empty otherwise().
+    return asSingular().map(ColumnRepresentation::toBoolean, BooleanCollection::build);
   }
-
-
 }

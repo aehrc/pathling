@@ -1,6 +1,7 @@
 package au.csiro.pathling.fhirpath.collection.mixed;
 
 import au.csiro.pathling.fhirpath.TypeSpecifier;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
 import jakarta.annotation.Nonnull;
@@ -37,6 +38,17 @@ public class ChoiceElementCollection extends MixedCollection {
     return choiceDefinition.getChildByType(type.toFhirType().toCode())
         .map(parent::traverseElement)
         .orElse(super.filterByType(type));
+  }
+
+  /**
+   * {@inheritDoc}
+   * <p>
+   * This implementation delegates to parent collection.
+   */
+  @Nonnull
+  @Override
+  public BooleanCollection asBooleanPath() {
+    return parent.asBooleanPath();
   }
 
 }

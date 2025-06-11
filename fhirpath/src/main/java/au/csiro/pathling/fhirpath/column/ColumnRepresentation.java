@@ -419,6 +419,21 @@ public abstract class ColumnRepresentation {
         Column::isNull);
   }
 
+
+  /**
+   * Gets the boolean value of the current {@link ColumnRepresentation}. Returns `true` for
+   * non-empty representations or `null` otherwise. This is NOT a simple type cast!
+   *
+   * @return A new {@link ColumnRepresentation} with the boolean representation.
+   */
+  @Nonnull
+  public ColumnRepresentation toBoolean() {
+    return vectorize(
+        a -> when(size(a).notEqual(0), lit(true)),
+        s -> when(s.isNotNull(), lit(true)));
+  }
+
+
   /**
    * Joins the current {@link ColumnRepresentation} with a separator.
    *

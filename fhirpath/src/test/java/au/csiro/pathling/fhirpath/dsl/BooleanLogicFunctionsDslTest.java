@@ -22,6 +22,10 @@ public class BooleanLogicFunctionsDslTest extends FhirPathDslTestBase {
             .bool("trueValue", true)
             .bool("falseValue", false)
             .boolEmpty("emptyBoolean")
+            // String values
+            .string("stringValue", "value")
+            .stringEmpty("emptyString")
+            .stringArray("stringArray", "value1", "valu2")
             // Boolean arrays
             .boolArray("boolArray", true, false, true)
             // Complex types with boolean properties
@@ -35,6 +39,11 @@ public class BooleanLogicFunctionsDslTest extends FhirPathDslTestBase {
                 person2 -> person2
                     .string("name", "Bob")
                     .bool("active", false))
+            .element("choiceField",
+                val1 -> val1.choice("value")
+                    .string("valueString", "123")
+                    .integerEmpty("valueInteger")
+            )
         )
         .group("not() function")
         // Basic not() tests
@@ -49,10 +58,33 @@ public class BooleanLogicFunctionsDslTest extends FhirPathDslTestBase {
             "not() returns empty for empty collection")
         .testEmpty("undefined.not()",
             "not() returns empty for empty collection")
+        .testEmpty("emptyString.not()",
+            "not() returns empty for empty String collection")
+        .testEmpty("stringValue.where($this.empty()).not()",
+            "not() returns empty for calculated empty String collection")
+        .testEmpty("stringArray.where($this.empty()).not()",
+            "not() returns empty for calculated empty String collection")
+        .testEmpty("%resource.ofType(Condition).not()",
+            "not() returns empty for empty Resource collection")
+        // boolean evaluation of collections
+        .testFalse("%resource.not()",
+            "not() false for root resource collection")
+        .testFalse("stringValue.not()",
+            "not() false for singular string element")
+        .testFalse("stringArray.where($this='value1').not()",
+            "not() false for calculated singular  element")
+        .testFalse("choiceField.value.not()",
+            "not() false for singular choice element")
+        .testFalse("choiceField.value.ofType(string).not()",
+            "not() false for singular resolved choice element")
+        .testEmpty("choiceField.value.ofType(integer).not()",
+            "not() empty for empty resolved choice element")
+        .testError("stringArray.not()",
+            "not() fails on non-boolean non-singular collection")
+        
         // not() with boolean arrays
         .testEquals(List.of(false, true, false), "boolArray.not()",
             "not() negates each value in a boolean array")
-
         // not() with complex types
         .testEquals(false, "person.active.not()",
             "not() negates boolean property of complex type")

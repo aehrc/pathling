@@ -133,9 +133,9 @@ public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase 
             "ofType() returns coding value when for System.Coding type")
 
         // ofType() with empty collections
-        .testEmpty("emptyString.ofType(String)",
+        .testEmpty("emptyString.ofType(string)",
             "ofType() returns empty when applied to empty string")
-        .testEmpty("{}.ofType(String)",
+        .testEmpty("{}.ofType(string)",
             "ofType() returns empty when applied to empty collection")
 
         // ofType() with heterogeneous collection
