@@ -31,6 +31,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -48,6 +49,7 @@ import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
@@ -417,7 +419,28 @@ public abstract class YamlSpecTestBase {
 
       final Function<RuntimeContext, ResourceResolver> defaultResolverFactory =
           Optional.ofNullable(spec.getSubject())
-              .<Function<RuntimeContext, ResourceResolver>>map(OMResolverFactory::of)
+              .map(subject -> {
+                // Check if the resourceType is a valid FHIR resource type.
+                final String resourceTypeStr = Optional.ofNullable(subject.get("resourceType"))
+                    .map(String.class::cast)
+                    .orElse(null);
+
+                // If the resourceType is valid in FHIRDefinedType, use FhirResolverFactory.
+                if (resourceTypeStr != null) {
+                  try {
+                    Objects.requireNonNull(FHIRDefinedType.fromCode(resourceTypeStr));
+                    // Convert the subject map to JSON for FhirResolverFactory.
+                    final String jsonStr = YamlSupport.omToJson(subject);
+                    return FhirResolverFactory.of(jsonStr);
+                  } catch (final Exception e) {
+                    // Not a valid FHIR resource type, use OMResolverFactory.
+                    log.debug("Not a valid FHIR resource type: {}", resourceTypeStr);
+                  }
+                }
+
+                // Default to OMResolverFactory.
+                return OMResolverFactory.of(subject);
+              })
               .orElse(EmptyResolverFactory.getInstance());
 
       List<Arguments> cases = spec.getCases()
