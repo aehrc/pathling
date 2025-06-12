@@ -26,11 +26,15 @@ import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.CodingComparator;
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import au.csiro.pathling.fhirpath.definition.def.DefCompositeDefinition;
+import au.csiro.pathling.fhirpath.definition.def.DefPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
 import au.csiro.pathling.fhirpath.operator.Comparable;
 import au.csiro.pathling.sql.misc.CodingToLiteral;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import org.apache.spark.sql.Column;
@@ -44,6 +48,21 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 public class CodingCollection extends Collection implements Comparable, StringCoercible {
+
+  private static final ElementDefinition LITERAL_DEFINITION = DefCompositeDefinition.of(
+      "",
+      List.of(
+          DefPrimitiveDefinition.single("id", FHIRDefinedType.STRING),
+          DefPrimitiveDefinition.single("system", FHIRDefinedType.URI),
+          DefPrimitiveDefinition.single("version", FHIRDefinedType.STRING),
+          DefPrimitiveDefinition.single("code", FHIRDefinedType.CODE),
+          DefPrimitiveDefinition.single("display", FHIRDefinedType.STRING),
+          DefPrimitiveDefinition.single("userSelected", FHIRDefinedType.BOOLEAN)
+      ),
+      1,
+      FHIRDefinedType.CODING
+  );
+
 
   protected CodingCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
@@ -76,7 +95,7 @@ public class CodingCollection extends Collection implements Comparable, StringCo
    */
   @Nonnull
   public static CodingCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
-    return build(columnRepresentation, Optional.empty());
+    return build(columnRepresentation, Optional.of(LITERAL_DEFINITION));
   }
 
 

@@ -123,6 +123,15 @@ public class SystemDslTest extends FhirPathDslTestBase {
             "correct traversal to a 'true' boolean property")
         .testFalse("falseValue",
             "correct traversal to a 'false' boolean property")
+        .group("travrersal to complex literal types")
+        .testEquals("urn:system1", "(urn:system1|code1).system",
+            "correct traversal to a Coding literal system")
+        .testEquals("code2", "(urn:system2|code2).code",
+            "correct traversal to a Coding literal code")
+        .testEquals("display3", "(urn:system2|code2||display3).display",
+            "correct traversal to a Coding literal display")
+        .testEquals(true, "(urn:system2|code2|v1|display|true).userSelected",
+            "correct traversal to a Coding literal userSelected")
         .build();
   }
 
@@ -141,4 +150,7 @@ public class SystemDslTest extends FhirPathDslTestBase {
             "correct traversal an ID property")
         .build();
   }
+
+
+
 }
