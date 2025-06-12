@@ -14,6 +14,57 @@ import org.junit.jupiter.api.Tag;
  */
 @Tag("UnitTest")
 public class SystemDslTest extends FhirPathDslTestBase {
+
+  @FhirPathTest
+  public Stream<DynamicTest> testLiterals() {
+    return builder()
+        .withSubject(sb -> sb
+            .string("stringValue", "test")
+        )
+        .group("Supported literal types")
+        // String literals
+        .testEquals("test", "'test'", "Simple string literal")
+        .testEquals("test with spaces", "'test with spaces'", "String literal with spaces")
+        .testEquals("", "''", "Empty string literal")
+        
+        // Integer literals
+        .testEquals(42, "42", "Positive integer literal")
+        .testEquals(-42, "-42", "Negative integer literal")
+        .testEquals(0, "0", "Zero integer literal")
+        
+        // Decimal literals
+        .testEquals(3.14, "3.14", "Positive decimal literal")
+        .testEquals(-3.14, "-3.14", "Negative decimal literal")
+        .testEquals(0.0, "0.0", "Zero decimal literal")
+        
+        // Boolean literals
+        .testEquals(true, "true", "True boolean literal")
+        .testEquals(false, "false", "False boolean literal")
+        
+        // Empty literal
+        .testEmpty("{}", "Empty literal")
+        
+        // Coding literals
+        .testTrue("(http://example.org|code).exists()", "Simple Coding literal exists")
+        .testEquals("http://example.org", "(http://example.org|code).system", "Coding literal system")
+        .testEquals("code", "(http://example.org|code).code", "Coding literal code")
+        .testEquals("display", "(http://example.org|code||display).display", "Coding literal display")
+        .testEquals(true, "(http://example.org|code|v1|display|true).userSelected", "Coding literal userSelected")
+        
+        .group("String literal escape sequences")
+        .testEquals("a\\b'\"", "'a\\\\b\\'\\\"'", "String literal with escape sequences")
+        .testEquals("line1\nline2", "'line1\\nline2'", "String literal with newline")
+        .testEquals("tab\tcharacter", "'tab\\tcharacter'", "String literal with tab")
+        .testEquals("carriage\rreturn", "'carriage\\rreturn'", "String literal with carriage return")
+        
+        .group("Unsupported literal types")
+        .testError("@2019-02-04", "DateTime literal is not supported")
+        .testError("@2019-02-04T14:34:28+09:00", "DateTime with time literal is not supported")
+        .testError("@T14:34:28", "Time literal is not supported")
+        .testError("10 'mg'", "Quantity literal is not supported")
+        .testError("4 days", "Time quantity literal is not supported")
+        .build();
+  }
   
   @FhirPathTest
   public Stream<DynamicTest> testBooleanEvaluation() {
