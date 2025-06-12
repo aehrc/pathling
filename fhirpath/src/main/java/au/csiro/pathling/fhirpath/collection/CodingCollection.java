@@ -49,19 +49,32 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public class CodingCollection extends Collection implements Comparable, StringCoercible {
 
-  private static final ElementDefinition LITERAL_DEFINITION = DefCompositeDefinition.of(
-      "",
-      List.of(
-          DefPrimitiveDefinition.single("id", FHIRDefinedType.STRING),
-          DefPrimitiveDefinition.single("system", FHIRDefinedType.URI),
-          DefPrimitiveDefinition.single("version", FHIRDefinedType.STRING),
-          DefPrimitiveDefinition.single("code", FHIRDefinedType.CODE),
-          DefPrimitiveDefinition.single("display", FHIRDefinedType.STRING),
-          DefPrimitiveDefinition.single("userSelected", FHIRDefinedType.BOOLEAN)
-      ),
-      1,
-      FHIRDefinedType.CODING
-  );
+  /**
+   * Creates a definition for a Coding element with the specified name and cardinality.
+   *
+   * @param name The name of the element
+   * @param cardinality The cardinality of the element
+   * @return An {@link ElementDefinition} representing the Coding type
+   */
+  public static ElementDefinition createDefinition(
+      @Nonnull final String name, final int cardinality) {
+    return DefCompositeDefinition.of(
+        name,
+        List.of(
+            DefPrimitiveDefinition.single("id", FHIRDefinedType.STRING),
+            DefPrimitiveDefinition.single("system", FHIRDefinedType.URI),
+            DefPrimitiveDefinition.single("version", FHIRDefinedType.STRING),
+            DefPrimitiveDefinition.single("code", FHIRDefinedType.CODE),
+            DefPrimitiveDefinition.single("display", FHIRDefinedType.STRING),
+            DefPrimitiveDefinition.single("userSelected", FHIRDefinedType.BOOLEAN)
+        ),
+        cardinality,
+        FHIRDefinedType.CODING
+    );
+  }
+
+  private static final ElementDefinition LITERAL_DEFINITION =
+      createDefinition("", 1);
 
 
   protected CodingCollection(@Nonnull final ColumnRepresentation columnRepresentation,
