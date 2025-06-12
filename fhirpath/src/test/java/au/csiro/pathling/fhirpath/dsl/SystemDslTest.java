@@ -26,37 +26,47 @@ public class SystemDslTest extends FhirPathDslTestBase {
         .testEquals("test", "'test'", "Simple string literal")
         .testEquals("test with spaces", "'test with spaces'", "String literal with spaces")
         .testEquals("", "''", "Empty string literal")
-        
+
         // Integer literals
         .testEquals(42, "42", "Positive integer literal")
         .testEquals(-42, "-42", "Negative integer literal")
         .testEquals(0, "0", "Zero integer literal")
-        
+
         // Decimal literals
         .testEquals(3.14, "3.14", "Positive decimal literal")
         .testEquals(-3.14, "-3.14", "Negative decimal literal")
         .testEquals(0.0, "0.0", "Zero decimal literal")
-        
+
         // Boolean literals
         .testEquals(true, "true", "True boolean literal")
         .testEquals(false, "false", "False boolean literal")
-        
+
         // Empty literal
         .testEmpty("{}", "Empty literal")
-        
+
         // Coding literals
         .testTrue("(http://example.org|code).exists()", "Simple Coding literal exists")
-        .testEquals("http://example.org", "(http://example.org|code).system", "Coding literal system")
+        .testEquals("http://example.org", "(http://example.org|code).system",
+            "Coding literal system")
         .testEquals("code", "(http://example.org|code).code", "Coding literal code")
-        .testEquals("display", "(http://example.org|code||display).display", "Coding literal display")
-        .testEquals(true, "(http://example.org|code|v1|display|true).userSelected", "Coding literal userSelected")
-        
+        .testEquals("display", "(http://example.org|code||display).display",
+            "Coding literal display")
+        .testEquals(true, "(http://example.org|code|v1|display|true).userSelected",
+            "Coding literal userSelected")
+
         .group("String literal escape sequences")
-        .testEquals("a\\b'\"", "'a\\\\b\\'\\\"'", "String literal with escape sequences")
         .testEquals("line1\nline2", "'line1\\nline2'", "String literal with newline")
         .testEquals("tab\tcharacter", "'tab\\tcharacter'", "String literal with tab")
-        .testEquals("carriage\rreturn", "'carriage\\rreturn'", "String literal with carriage return")
-        
+        .testEquals("carriage\rreturn", "'carriage\\rreturn'",
+            "String literal with carriage return")
+        .testEquals("form\ffeed", "'form\\ffeed'", "String literal with form feed")
+        .testEquals("back`tick", "'back\\`tick'", "String literal with backtick")
+        .testEquals("Unicode: Peter", "'Unicode: P\\u0065ter'",
+            "String literal with Unicode escape")
+        .testEquals("All escapes: \\\r\n\t\f\"`'",
+            "'All escapes: \\\\\\r\\n\\t\\f\\\"`\\''",
+            "String literal with all escape sequences")
+
         .group("Unsupported literal types")
         .testError("@2019-02-04", "DateTime literal is not supported")
         .testError("@2019-02-04T14:34:28+09:00", "DateTime with time literal is not supported")
@@ -65,7 +75,7 @@ public class SystemDslTest extends FhirPathDslTestBase {
         .testError("4 days", "Time quantity literal is not supported")
         .build();
   }
-  
+
   @FhirPathTest
   public Stream<DynamicTest> testBooleanEvaluation() {
     return builder()
@@ -201,7 +211,6 @@ public class SystemDslTest extends FhirPathDslTestBase {
             "correct traversal an ID property")
         .build();
   }
-
 
 
 }
