@@ -57,7 +57,7 @@ class StringLiteralPathTest {
   @Test
   void unescapeTab() {
     final String result = unescapeFhirPathString("Some\\tthing");
-    assertEquals("Some\u0009thing", result);
+    assertEquals("Some\tthing", result);
   }
 
   @Test
@@ -91,4 +91,10 @@ class StringLiteralPathTest {
     assertEquals("Some string and it\\'s problems", result);
   }
 
+  @Test
+  void unescapeUnicode() {
+    final String result = unescapeFhirPathString("P\\u0065ter");
+    assertEquals("Peter", result);
+  }
+  
 }

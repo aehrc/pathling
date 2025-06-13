@@ -148,12 +148,11 @@ public class YamlSupport {
 
   private static final Map<FHIRDefinedType, DataType> FHIR_TO_SQL = Map.of(
       FHIRDefinedType.STRING, DataTypes.StringType,
+      FHIRDefinedType.URI, DataTypes.StringType,
+      FHIRDefinedType.CODE, DataTypes.StringType,
       FHIRDefinedType.INTEGER, DataTypes.IntegerType,
       FHIRDefinedType.BOOLEAN, DataTypes.BooleanType,
       FHIRDefinedType.DECIMAL, DecimalCollection.DECIMAL_TYPE,
-      FHIRDefinedType.DATETIME, DataTypes.StringType,
-      FHIRDefinedType.DATE, DataTypes.StringType,
-      FHIRDefinedType.TIME, DataTypes.StringType,
       FHIRDefinedType.CODING, SparkHelpers.codingStructType(),
       FHIRDefinedType.NULL, DataTypes.NullType
   );
@@ -370,7 +369,11 @@ public class YamlSupport {
       return DefPrimitiveDefinition.of(key, FHIRDefinedType.NULL, cardinality);
     } else if (value instanceof FhirTypedLiteral typedLiteral) {
       // Use the FHIRDefinedType directly from the typed literal
-      return DefPrimitiveDefinition.of(key, typedLiteral.getType(), cardinality);
+      if (typedLiteral.getType() == FHIRDefinedType.CODING) {
+        return CodingCollection.createDefinition(key, cardinality);
+      } else {
+        return DefPrimitiveDefinition.of(key, typedLiteral.getType(), cardinality);
+      }
     } else if (value instanceof String) {
       return DefPrimitiveDefinition.of(key, FHIRDefinedType.STRING, cardinality);
     } else if (value instanceof Integer) {
@@ -425,7 +428,11 @@ public class YamlSupport {
           true, Metadata.empty()
       ));
     } else if (childDefinition instanceof DefCompositeDefinition compositeDefinition) {
-      final StructType elementType = childrendToStruct(compositeDefinition.getChildren());
+
+      StructType predefinedType = (StructType) FHIR_TO_SQL.get(compositeDefinition.getType());
+      final StructType elementType = predefinedType != null
+                                     ? predefinedType
+                                     : childrendToStruct(compositeDefinition.getChildren());
       return Stream.of(new StructField(
           compositeDefinition.getName(),
           compositeDefinition.getCardinality() < 0

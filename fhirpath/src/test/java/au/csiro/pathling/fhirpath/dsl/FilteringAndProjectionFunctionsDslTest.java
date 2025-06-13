@@ -156,10 +156,9 @@ public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase 
         // traversing into complex types
         .testEquals("mg", "heteroQuantity.value.ofType(Quantity).unit",
             "can traverse into fields of complex type from ofType(Quantity)")
-        // DISABLED: ofType() with Coding type BUG
-        // .testEquals("code1",
-        //     "heteroComplex.test.ofType(Coding).code",
-        //     "can traverse into fields of complex literal type from ofType(Coding)")
+        .testEquals("code1",
+            "heteroComplex.test.ofType(Coding).code",
+            "can traverse into fields of complex literal type from ofType(Coding)")
         // ofType() with non-matching type
         .testEmpty("stringValue.ofType(Integer)",
             "ofType() returns empty when type doesn't match")
