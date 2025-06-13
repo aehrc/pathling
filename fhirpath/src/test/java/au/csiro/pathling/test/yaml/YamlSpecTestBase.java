@@ -29,6 +29,7 @@ import jakarta.annotation.Nullable;
 import java.io.File;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -48,8 +49,8 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
@@ -59,12 +60,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import scala.collection.mutable.WrappedArray;
 
 
+/**
+ * Base class for YAML-based FHIRPath specification tests. This class provides the infrastructure
+ * for running FHIRPath tests defined in YAML files, with support for test exclusions, resource
+ * resolution, and result validation.
+ * <p>
+ * The class uses a combination of Spring Boot test infrastructure and custom test utilities to
+ * execute FHIRPath expressions against test data and validate the results against expected
+ * outcomes.
+ */
 @SpringBootUnitTest
 @Slf4j
 public abstract class YamlSpecTestBase {
 
-  public static final String PROPERTY_DISABLED_EXCLUSIONS = "au.csiro.pathling.test.yaml.disabledExclusions";
-  public static final String PROPERTY_EXCLUSIONS_ONLY = "au.csiro.pathling.test.yaml.exclusionsOnly";
+  private static final String PROPERTY_DISABLED_EXCLUSIONS = "au.csiro.pathling.test.yaml.disabledExclusions";
+  private static final String PROPERTY_EXCLUSIONS_ONLY = "au.csiro.pathling.test.yaml.exclusionsOnly";
 
   @Autowired
   protected SparkSession spark;
@@ -73,6 +83,9 @@ public abstract class YamlSpecTestBase {
   protected FhirEncoders fhirEncoders;
 
 
+  /**
+   * Interface for building resource resolvers with specific context.
+   */
   @FunctionalInterface
   public interface ResolverBuilder {
 
@@ -81,6 +94,10 @@ public abstract class YamlSpecTestBase {
         @Nonnull final Function<RuntimeContext, ResourceResolver> resolveFactory);
   }
 
+  /**
+   * Represents a runtime context for test execution, providing access to Spark session and FHIR
+   * encoders.
+   */
   @Value(staticConstructor = "of")
   public static class RuntimeContext implements ResolverBuilder {
 
@@ -97,20 +114,42 @@ public abstract class YamlSpecTestBase {
     }
   }
 
+  /**
+   * Interface defining the contract for test case execution.
+   */
   public interface RuntimeCase {
 
+    /**
+     * Logs the test case details.
+     *
+     * @param log The logger instance to use
+     */
     void log(@Nonnull Logger log);
 
+    /**
+     * Executes the test case validation.
+     *
+     * @param rb The resolver builder to use for resource resolution
+     */
     void check(@Nonnull final ResolverBuilder rb);
 
+    /**
+     * Gets a human-readable description of the test case.
+     *
+     * @return The test case description
+     */
     @Nonnull
     String getDescription();
   }
 
+  /**
+   * Simple implementation of RuntimeCase for scenarios where no tests are available. Provides a
+   * minimal implementation that logs the absence of tests and performs no validation.
+   */
   @Value(staticConstructor = "of")
   protected static class NoTestRuntimeCase implements RuntimeCase {
 
-    public void log(@Nonnull Logger log) {
+    public void log(@Nonnull final Logger log) {
       log.info("No tests");
     }
 
@@ -125,6 +164,16 @@ public abstract class YamlSpecTestBase {
     }
   }
 
+  /**
+   * Standard implementation of RuntimeCase that handles the execution and validation of FHIRPath
+   * test cases. This class is responsible for:
+   * <ul>
+   *   <li>Parsing and evaluating FHIRPath expressions</li>
+   *   <li>Comparing actual results with expected outcomes</li>
+   *   <li>Handling error cases and validation failures</li>
+   *   <li>Providing detailed logging of test execution</li>
+   * </ul>
+   */
   @Value(staticConstructor = "of")
   public static class StdRuntimeCase implements RuntimeCase {
 
@@ -148,9 +197,9 @@ public abstract class YamlSpecTestBase {
     }
 
     @Nonnull
-    ColumnRepresentation getResultRepresentation() {
+    private ColumnRepresentation getResultRepresentation() {
       final Object result = requireNonNull(spec.getResult());
-      final Object resultRepresentation = result instanceof List<?> list && list.size() == 1
+      final Object resultRepresentation = result instanceof final List<?> list && list.size() == 1
                                           ? list.get(0)
                                           : result;
       final ChildDefinition resultDefinition = YamlSupport.elementFromYaml("result",
@@ -164,7 +213,7 @@ public abstract class YamlSpecTestBase {
     }
 
     @Override
-    public void log(@Nonnull Logger log) {
+    public void log(@Nonnull final Logger log) {
       exclusion.ifPresent(s -> log.info("Exclusion: {}", s));
       if (spec.isError()) {
         log.info("assertError({}):[{}]", spec.getExpression(), spec.getDescription());
@@ -185,10 +234,10 @@ public abstract class YamlSpecTestBase {
     }
 
     @Nullable
-    private static Object adjustResultType(@Nullable Object actualRaw) {
-      if (actualRaw instanceof Integer intValue) {
+    private static Object adjustResultType(@Nullable final Object actualRaw) {
+      if (actualRaw instanceof final Integer intValue) {
         return intValue.longValue();
-      } else if (actualRaw instanceof BigDecimal bdValue) {
+      } else if (actualRaw instanceof final BigDecimal bdValue) {
         return bdValue.setScale(6, RoundingMode.HALF_UP).longValue();
       } else {
         return actualRaw;
@@ -196,11 +245,11 @@ public abstract class YamlSpecTestBase {
     }
 
     @Nullable
-    Object getResult(@Nonnull final Row row, final int index) {
+    private Object getResult(@Nonnull final Row row, final int index) {
       final Object actualRaw = row.isNullAt(index)
                                ? null
                                : row.get(index);
-      if (actualRaw instanceof WrappedArray<?> wrappedArray) {
+      if (actualRaw instanceof final WrappedArray<?> wrappedArray) {
         return (wrappedArray.length() == 1
                 ? adjustResultType(wrappedArray.apply(0))
                 : wrappedArray);
@@ -218,24 +267,26 @@ public abstract class YamlSpecTestBase {
       if (spec.isError()) {
         try {
           final FhirPath fhirPath = PARSER.parse(spec.getExpression());
-          log.trace("FhirPath: {}", fhirPath);
+          log.trace("FhirPath expression: {}", fhirPath);
           final Collection evalResult = evaluator.evaluate(fhirPath);
-          log.trace("Evaluated: {}", evalResult);
+          log.trace("Evaluation result: {}", evalResult);
           final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
           final Row resultRow = evaluator.createInitialDataset().select(
               actualRepresentation.getValue().alias("actual")
           ).first();
           final Object actual = getResult(resultRow, 0);
           throw new AssertionError(
-              "Expected error but got value: " + actual + " (" + evalResult + ")");
-        } catch (Exception e) {
-          log.debug("Expected error: {}", e.getMessage());
+              String.format(
+                  "Expected an error but received a valid result: %s (Expression result: %s)",
+                  actual, evalResult));
+        } catch (final Exception e) {
+          log.debug("Received expected error: {}", e.getMessage());
         }
       } else {
-        final FhirPath fhipath = PARSER.parse(spec.getExpression());
-        log.trace("FhirPath: {}", fhipath);
-        final Collection evalResult = evaluator.evaluate(fhipath);
-        log.trace("Evaluated: {}", evalResult);
+        final FhirPath fhirPath = PARSER.parse(spec.getExpression());
+        log.trace("FhirPath expression: {}", fhirPath);
+        final Collection evalResult = evaluator.evaluate(fhirPath);
+        log.trace("Evaluation result: {}", evalResult);
 
         final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
         final ColumnRepresentation expectedRepresentation = getResultRepresentation();
@@ -249,13 +300,19 @@ public abstract class YamlSpecTestBase {
         final Object expected = getResult(resultRow, 1);
 
         log.trace("Result schema: {}", resultRow.schema().treeString());
-        log.debug("Expected: " + expected + " but got: " + actual);
-        assertEquals(expected, actual, "Expected: " + expected + " but got: " + actual);
+        log.debug("Comparing results - Expected: {} | Actual: {}", expected, actual);
+        assertEquals(expected, actual,
+            String.format("Expression evaluation mismatch for '%s'. Expected: %s, but got: %s",
+                spec.getExpression(), expected, actual));
       }
     }
   }
 
 
+  /**
+   * Factory for creating empty resource resolvers. This implementation provides a resolver that
+   * returns an empty DataFrame, useful for testing expressions that don't require input data.
+   */
   @Value
   @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
   static class EmptyResolverFactory implements Function<RuntimeContext, ResourceResolver> {
@@ -271,7 +328,7 @@ public abstract class YamlSpecTestBase {
     @Override
     public ResourceResolver apply(final RuntimeContext runtimeContext) {
 
-      DefResourceTag subjectResourceTag = DefResourceTag.of("Empty");
+      final DefResourceTag subjectResourceTag = DefResourceTag.of("Empty");
       return DefResourceResolver.of(
           subjectResourceTag,
           DefDefinitionContext.of(DefResourceDefinition.of(subjectResourceTag)),
@@ -280,16 +337,20 @@ public abstract class YamlSpecTestBase {
     }
   }
 
+  /**
+   * Factory for creating resource resolvers from Object Model representations. This class handles
+   * the conversion of YAML-defined test data into a format that can be used for FHIRPath expression
+   * evaluation.
+   */
   @Value(staticConstructor = "of")
   public static class OMResolverFactory implements Function<RuntimeContext, ResourceResolver> {
 
     @Nonnull
-    Map<Object, Object> subjectOM;
+    Map<Object, Object> subjectOM;  // Changed back to Map<Object, Object>
 
     @Override
     @Nonnull
-    public ResourceResolver apply(@Nonnull final RuntimeContext rt) {
-
+    public ResourceResolver apply(final RuntimeContext rt) {
       final String subjectResourceCode = Optional.ofNullable(subjectOM.get("resourceType"))
           .map(String.class::cast)
           .orElse("Test");
@@ -299,7 +360,7 @@ public abstract class YamlSpecTestBase {
       final StructType subjectSchema = YamlSupport.defnitiontoStruct(subjectDefinition);
 
       final String subjectOMJson = YamlSupport.omToJson(subjectOM);
-      log.trace("subjectOMJson: \n" + subjectOMJson);
+      log.trace("subjectOMJson: \n{}", subjectOMJson);
       final Dataset<Row> inputDS = rt.getSpark().read().schema(subjectSchema)
           .json(rt.getSpark().createDataset(List.of(subjectOMJson),
               Encoders.STRING()));
@@ -322,6 +383,11 @@ public abstract class YamlSpecTestBase {
   }
 
 
+  /**
+   * Factory for creating resource resolvers from FHIR JSON resources. This implementation handles
+   * the parsing and conversion of FHIR resources into a format suitable for FHIRPath expression
+   * evaluation.
+   */
   @Value(staticConstructor = "of")
   public static class FhirResolverFactory implements Function<RuntimeContext, ResourceResolver> {
 
@@ -330,7 +396,7 @@ public abstract class YamlSpecTestBase {
 
     @Override
     @Nonnull
-    public ResourceResolver apply(@Nonnull final RuntimeContext rt) {
+    public ResourceResolver apply(final RuntimeContext rt) {
 
       final IParser jsonParser = rt.getFhirEncoders().getContext().newJsonParser();
       final IBaseResource resource = jsonParser.parseResource(
@@ -346,6 +412,11 @@ public abstract class YamlSpecTestBase {
     }
   }
 
+  /**
+   * Factory for creating resource resolvers from HAPI FHIR resources. This implementation handles
+   * the conversion of HAPI FHIR resource objects into a format suitable for FHIRPath expression
+   * evaluation.
+   */
   @Value(staticConstructor = "of")
   public static class HapiResolverFactory implements Function<RuntimeContext, ResourceResolver> {
 
@@ -354,7 +425,7 @@ public abstract class YamlSpecTestBase {
 
     @Override
     @Nonnull
-    public ResourceResolver apply(@Nonnull final RuntimeContext rt) {
+    public ResourceResolver apply(final RuntimeContext rt) {
       final Dataset<Row> resourceDS = rt.getSpark().createDataset(List.of(resource),
           rt.getFhirEncoders().of(resource.fhirType())).toDF();
 
@@ -366,121 +437,205 @@ public abstract class YamlSpecTestBase {
     }
   }
 
+  /**
+   * Provides test arguments for parameterized test execution. This provider handles loading and
+   * processing of YAML test specifications, configuration management, and test case creation.
+   */
   static class FhirpathArgumentProvider implements ArgumentsProvider {
 
     @Override
-    public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
+    public Stream<? extends Arguments> provideArguments(final ExtensionContext context) {
+      final TestConfiguration config = loadTestConfiguration(context);
+      final FhipathTestSpec spec = loadTestSpec(context);
+      final Function<RuntimeContext, ResourceResolver> defaultResolverFactory = createDefaultResolverFactory(
+          spec);
 
-      final boolean exclusionsOnly = "true".equals(
-          System.getProperty(PROPERTY_EXCLUSIONS_ONLY));
+      return createTestCases(spec, config, defaultResolverFactory);
+    }
+
+    private TestConfiguration loadTestConfiguration(final ExtensionContext context) {
+      final boolean exclusionsOnly = "true".equals(System.getProperty(PROPERTY_EXCLUSIONS_ONLY));
       if (exclusionsOnly) {
-        log.warn(
-            "Running excluded test only (`au.csiro.pathling.test.yaml.exclusionsOnly` is set)!!!");
+        log.warn("Running excluded tests only (system property '{}' is set)",
+            PROPERTY_EXCLUSIONS_ONLY);
       }
 
-      final Set<String> disabledExlusionIds = Optional.ofNullable(
-              System.getProperty(PROPERTY_DISABLED_EXCLUSIONS)).stream()
+      final Set<String> disabledExclusionIds = parseDisabledExclusions();
+      if (!disabledExclusionIds.isEmpty()) {
+        log.warn("Disabling exclusions with IDs: {}", disabledExclusionIds);
+      }
+
+      return new TestConfiguration(
+          getTestConfigPath(context),
+          getResourceBase(context),
+          disabledExclusionIds,
+          exclusionsOnly
+      );
+    }
+
+    private Set<String> parseDisabledExclusions() {
+      return Optional.ofNullable(System.getProperty(PROPERTY_DISABLED_EXCLUSIONS))
+          .stream()
           .flatMap(s -> Stream.of(s.split(",")))
           .map(String::trim)
           .filter(s -> !s.isBlank())
           .collect(Collectors.toUnmodifiableSet());
+    }
 
-      if (!disabledExlusionIds.isEmpty()) {
-        log.warn("Disabling exclusions with ids: {}", disabledExlusionIds);
-      }
-
-      final Optional<String> testConfigPath = context.getTestClass()
+    private Optional<String> getTestConfigPath(final ExtensionContext context) {
+      return context.getTestClass()
           .flatMap(c -> Optional.ofNullable(c.getAnnotation(YamlConfig.class)))
           .map(YamlConfig::config)
           .filter(s -> !s.isBlank());
+    }
 
-      final Optional<String> resourceBase = context.getTestClass()
+    private Optional<String> getResourceBase(final ExtensionContext context) {
+      return context.getTestClass()
           .flatMap(c -> Optional.ofNullable(c.getAnnotation(YamlConfig.class)))
           .map(YamlConfig::resourceBase)
           .filter(s -> !s.isBlank());
+    }
 
-      testConfigPath.ifPresent(s -> log.info("Loading test config from: {}", s));
-      resourceBase.ifPresent(s -> log.info("Resource base : {}", s));
-
-      final TestConfig testConfig = testConfigPath
-          .map(TestResources::getResourceAsString)
-          .map(TestConfig::fromYaml)
-          .orElse(TestConfig.getDefault());
-      final Function<TestCase, Optional<String>> excluder = testConfig.toExcluder(
-          disabledExlusionIds);
-
-      final String yamlSpecLocation = context.getTestMethod().orElseThrow()
+    private FhipathTestSpec loadTestSpec(final ExtensionContext context) {
+      final String yamlSpecLocation = context.getTestMethod()
+          .orElseThrow(() -> new IllegalStateException("Test method not found in context"))
           .getAnnotation(YamlSpec.class)
           .value();
-      log.debug("Loading test spec from: {}", yamlSpecLocation);
+
+      log.debug("Loading test specification from: {}", yamlSpecLocation);
       final String testSpec = getResourceAsString(yamlSpecLocation);
-      final FhipathTestSpec spec = FhipathTestSpec.fromYaml(testSpec);
+      return FhipathTestSpec.fromYaml(testSpec);
+    }
 
-      // create the default model (or not)
-
-      final Function<RuntimeContext, ResourceResolver> defaultResolverFactory =
-          Optional.ofNullable(spec.getSubject())
-              .map(subject -> {
-                // Check if the resourceType is a valid FHIR resource type.
-                final String resourceTypeStr = Optional.ofNullable(subject.get("resourceType"))
-                    .map(String.class::cast)
-                    .orElse(null);
-
-                // If the resourceType is valid in FHIRDefinedType, use FhirResolverFactory.
-                if (resourceTypeStr != null) {
-                  try {
-                    Objects.requireNonNull(FHIRDefinedType.fromCode(resourceTypeStr));
-                    // Convert the subject map to JSON for FhirResolverFactory.
-                    final String jsonStr = YamlSupport.omToJson(subject);
-                    return FhirResolverFactory.of(jsonStr);
-                  } catch (final Exception e) {
-                    // Not a valid FHIR resource type, use OMResolverFactory.
-                    log.debug("Not a valid FHIR resource type: {}", resourceTypeStr);
-                  }
-                }
-
-                // Default to OMResolverFactory.
-                return OMResolverFactory.of(subject);
-              })
-              .orElse(EmptyResolverFactory.getInstance());
-
-      List<Arguments> cases = spec.getCases()
-          .stream()
-          .filter(ts -> {
-            if (ts.isDisable()) {
-              log.warn("Disabling test case: {}", ts);
-            }
-            return !ts.isDisable();
+    private Function<RuntimeContext, ResourceResolver> createDefaultResolverFactory(
+        final FhipathTestSpec spec) {
+      return Optional.ofNullable(spec.getSubject())
+          .map(subject -> {
+            @SuppressWarnings("unchecked")
+            final Map<Object, Object> convertedSubject = new HashMap<>(subject);
+            return createResolverFactoryFromSubject(convertedSubject);
           })
-          .map(ts -> StdRuntimeCase.of(
-              ts,
-              Optional.ofNullable(ts.getInputFile())
-                  .map(f -> (Function<RuntimeContext, ResourceResolver>) FhirResolverFactory.of(
-                      getResourceAsString(resourceBase.orElse("") + File.separator + f)))
-                  .orElse(defaultResolverFactory),
-              excluder.apply(ts)
-          ))
+          .orElse(EmptyResolverFactory.getInstance());
+    }
+
+    private Function<RuntimeContext, ResourceResolver> createResolverFactoryFromSubject(
+        final Map<Object, Object> subject) {
+      final String resourceTypeStr = Optional.ofNullable(subject.get("resourceType"))
+          .map(String.class::cast)
+          .orElse(null);
+
+      if (resourceTypeStr != null) {
+        try {
+          Objects.requireNonNull(FHIRDefinedType.fromCode(resourceTypeStr));
+          final String jsonStr = YamlSupport.omToJson(subject);
+          return FhirResolverFactory.of(jsonStr);
+        } catch (final Exception e) {
+          log.debug("Invalid FHIR resource type '{}', falling back to OMResolverFactory",
+              resourceTypeStr);
+        }
+      }
+      return OMResolverFactory.of(subject);
+    }
+
+    private Stream<Arguments> createTestCases(
+        final FhipathTestSpec spec,
+        final TestConfiguration config,
+        final Function<RuntimeContext, ResourceResolver> defaultResolverFactory) {
+
+      final List<Arguments> cases = spec.getCases()
+          .stream()
+          .filter(this::filterDisabledTests)
+          .map(testCase -> createRuntimeCase(testCase, config, defaultResolverFactory))
           .map(Arguments::of)
           .toList();
+
       return cases.isEmpty()
              ? Stream.of(Arguments.of(NoTestRuntimeCase.of()))
              : cases.stream();
     }
+
+    private boolean filterDisabledTests(final TestCase testCase) {
+      if (testCase.isDisable()) {
+        log.warn("Skipping disabled test case: {}", testCase);
+        return false;
+      }
+      return true;
+    }
+
+    private RuntimeCase createRuntimeCase(
+        final TestCase testCase,
+        final TestConfiguration config,
+        final Function<RuntimeContext, ResourceResolver> defaultResolverFactory) {
+
+      final Function<RuntimeContext, ResourceResolver> resolverFactory = Optional.ofNullable(
+              testCase.getInputFile())
+          .map(f -> createFileBasedResolver(f, config.resourceBase()))
+          .orElse(defaultResolverFactory);
+
+      return StdRuntimeCase.of(
+          testCase,
+          resolverFactory,
+          config.excluder().apply(testCase)
+      );
+    }
+
+    private Function<RuntimeContext, ResourceResolver> createFileBasedResolver(
+        final String inputFile, final Optional<String> resourceBase) {
+      final String path = resourceBase.orElse("") + File.separator + inputFile;
+      return FhirResolverFactory.of(getResourceAsString(path));
+    }
+
+    /**
+     * Configuration record for test execution settings. Encapsulates:
+     * <ul>
+     *   <li>Test configuration file path</li>
+     *   <li>Resource base directory</li>
+     *   <li>Disabled exclusion IDs</li>
+     *   <li>Exclusions-only mode flag</li>
+     * </ul>
+     */
+    private record TestConfiguration(
+        Optional<String> configPath,
+        Optional<String> resourceBase,
+        Set<String> disabledExclusionIds,
+        boolean exclusionsOnly
+    ) {
+
+      private Function<TestCase, Optional<String>> excluder() {
+        final TestConfig config = configPath
+            .map(TestResources::getResourceAsString)
+            .map(TestConfig::fromYaml)
+            .orElse(TestConfig.getDefault());
+        return config.toExcluder(disabledExclusionIds);
+      }
+    }
   }
 
+  /**
+   * Creates a new resolver builder instance for test execution.
+   *
+   * @return A new resolver builder configured with the current Spark session and FHIR encoders
+   */
   @Nonnull
   protected ResolverBuilder createResolverBuilder() {
     return RuntimeContext.of(spark, fhirEncoders);
   }
 
+  /**
+   * Executes a runtime test case, handling logging and exclusion checks.
+   *
+   * @param testCase The test case to run
+   * @throws TestAbortedException if the test case is excluded
+   */
   public void run(@Nonnull final RuntimeCase testCase) {
     testCase.log(log);
-    
+
     // Check if the test case is excluded and skip.
     if (testCase instanceof final StdRuntimeCase stdCase && stdCase.getExclusion().isPresent()) {
-      throw new TestAbortedException("Test case skipped due to exclusion: " + stdCase.getExclusion().get());
+      throw new TestAbortedException(
+          "Test case skipped due to exclusion: " + stdCase.getExclusion().get());
     }
-    
+
     testCase.check(createResolverBuilder());
   }
 }
