@@ -53,6 +53,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import scala.collection.mutable.WrappedArray;
@@ -451,22 +452,14 @@ public abstract class YamlSpecTestBase {
             }
             return !ts.isDisable();
           })
-          .map(ts -> StdRuntimeCase.of(ts,
+          .map(ts -> StdRuntimeCase.of(
+              ts,
               Optional.ofNullable(ts.getInputFile())
                   .map(f -> (Function<RuntimeContext, ResourceResolver>) FhirResolverFactory.of(
                       getResourceAsString(resourceBase.orElse("") + File.separator + f)))
                   .orElse(defaultResolverFactory),
               excluder.apply(ts)
           ))
-          .filter(rtc -> {
-            if (exclusionsOnly) {
-              return rtc.getExclusion().isPresent();
-            } else {
-              rtc.getExclusion()
-                  .ifPresent(s -> log.warn("Excluding test case: {} because {}", rtc.getSpec(), s));
-              return rtc.getExclusion().isEmpty();
-            }
-          })
           .map(Arguments::of)
           .toList();
       return cases.isEmpty()
@@ -482,6 +475,12 @@ public abstract class YamlSpecTestBase {
 
   public void run(@Nonnull final RuntimeCase testCase) {
     testCase.log(log);
+    
+    // Check if the test case is excluded and skip.
+    if (testCase instanceof final StdRuntimeCase stdCase && stdCase.getExclusion().isPresent()) {
+      throw new TestAbortedException("Test case skipped due to exclusion: " + stdCase.getExclusion().get());
+    }
+    
     testCase.check(createResolverBuilder());
   }
 }
