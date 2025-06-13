@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
@@ -48,14 +47,9 @@ public class BooleanOperator implements BinaryOperator {
   @Nonnull
   @Override
   public Collection invoke(@Nonnull final BinaryOperatorInput input) {
-    final Collection left = input.getLeft();
-    final Collection right = input.getRight();
-
-    checkUserInput(left instanceof BooleanCollection,
-        "Left operand to " + type + " operator must be Boolean");
-    checkUserInput(right instanceof BooleanCollection,
-        "Right operand to " + type + " operator must be Boolean");
-
+    final BooleanCollection left = input.getLeft().asBooleanSingleton();
+    final BooleanCollection right = input.getRight().asBooleanSingleton();
+    
     final ColumnRepresentation resultCtx = ColumnRepresentation.binaryOperator(left.getColumn(),
         right.getColumn(),
         (leftValue, rightValue) -> {
@@ -129,6 +123,7 @@ public class BooleanOperator implements BinaryOperator {
     }
 
   }
+
   @Override
   @Nonnull
   public String getOperatorName() {

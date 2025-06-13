@@ -1,6 +1,13 @@
 package au.csiro.pathling.fhirpath.literal;
 
+import static java.util.Map.entry;
+
 import jakarta.annotation.Nonnull;
+import java.util.Map;
+import org.apache.commons.text.translate.AggregateTranslator;
+import org.apache.commons.text.translate.CharSequenceTranslator;
+import org.apache.commons.text.translate.LookupTranslator;
+import org.apache.commons.text.translate.UnicodeUnescaper;
 
 public abstract class StringLiteral {
 
@@ -31,6 +38,30 @@ public abstract class StringLiteral {
     return value.replace("'", "\\'");
   }
 
+
+  private static final Map<CharSequence, CharSequence> FHIR_CTRL_UNESCAPE_MAP =
+      Map.ofEntries(
+          entry("\\n", "\n"),
+          entry("\\t", "\t"),
+          entry("\\f", "\f"),
+          entry("\\r", "\r")
+      );
+
+  private static final Map<CharSequence, CharSequence> FHIR_CHAR_UNESCAPE_MAP =
+      Map.ofEntries(
+          entry("\\`", "`"),
+          entry("\\'", "'"),
+          entry("\\\"", "\""),
+          entry("\\/", "/"),
+          entry("\\\\", "\\")
+      );
+
+  private static final CharSequenceTranslator UNESCAPE_FHIR = new AggregateTranslator(
+      new UnicodeUnescaper(),
+      new LookupTranslator(FHIR_CTRL_UNESCAPE_MAP),
+      new LookupTranslator(FHIR_CHAR_UNESCAPE_MAP)
+  );
+
   /**
    * This method implements the rules for dealing with strings in the FHIRPath specification.
    *
@@ -40,16 +71,7 @@ public abstract class StringLiteral {
    */
   @Nonnull
   public static String unescapeFhirPathString(@Nonnull String value) {
-    value = value.replaceAll("\\\\/", "/");
-    value = value.replaceAll("\\\\f", "\u000C");
-    value = value.replaceAll("\\\\n", "\n");
-    value = value.replaceAll("\\\\r", "\r");
-    value = value.replaceAll("\\\\t", "\u0009");
-    value = value.replaceAll("\\\\`", "`");
-    value = value.replaceAll("\\\\'", "'");
-    value = value.replaceAll("\\\\\"", "\"");
-
-    return value.replaceAll("\\\\\\\\", "\\\\");
+    return UNESCAPE_FHIR.translate(value);
   }
 
 }

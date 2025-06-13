@@ -105,16 +105,59 @@ public class BooleanCollection extends Collection implements Comparable, StringC
   public static BooleanCollection fromValue(final boolean value) {
     return BooleanCollection.build(DefaultRepresentation.literal(value));
   }
-  
+
+  /**
+   * Returns an empty boolean collection.
+   *
+   * @return A new instance of {@link BooleanCollection}
+   */
+  @Nonnull
+  public static BooleanCollection empty() {
+    return build(DefaultRepresentation.empty());
+  }
+
+  /**
+   * {@inheritDoc}
+   * <p>
+   * This implementation returns a new instance with the specified column representation.
+   */
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
     return path instanceof BooleanCollection || Comparable.super.isComparableTo(path);
   }
 
+  /**
+   * {@inheritDoc}
+   * <p>
+   * This implementation returns true, as BooleanCollection can be converted to any other collection
+   * type.
+   */
   @Override
   @Nonnull
   public StringCollection asStringPath() {
     return Collection.defaultAsStringPath(this);
+  }
+
+  /**
+   * {@inheritDoc}
+   * <p>
+   * This implementation returns itself as it is already a BooleanCollection.
+   */
+  @Override
+  @Nonnull
+  public BooleanCollection asBooleanPath() {
+    return this;
+  }
+
+  /**
+   * {@inheritDoc}
+   * <p>
+   * Special case for Boolean collection to go with the specialized `asBooleanPath()`.
+   */
+  @Override
+  @Nonnull
+  public BooleanCollection asBooleanSingleton() {
+    return (BooleanCollection) this.asSingular();
   }
 
 }

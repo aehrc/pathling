@@ -5,7 +5,6 @@ import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.EvalOptions;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
@@ -262,7 +261,6 @@ public abstract class YamlSpecTestBase {
     public void check(@Nonnull final ResolverBuilder rb) {
       final FhirpathEvaluator evaluator = FhirpathEvaluator
           .fromResolver(rb.create(resolverFactory))
-          .evalOptions(EvalOptions.builder().allowUndefinedFields(true).build())
           .build();
       if (spec.isError()) {
         try {

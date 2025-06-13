@@ -2,11 +2,11 @@ package au.csiro.pathling.fhirpath.dsl;
 
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
+import au.csiro.pathling.test.yaml.FhirTypedLiteral;
 import java.util.List;
 import java.util.stream.Stream;
-import au.csiro.pathling.test.yaml.FhirTypedLiteral;
+import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 
@@ -84,6 +84,11 @@ public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase 
             .decimal("decimalValue", 3.14)
             .bool("booleanValue", true)
             .stringEmpty("emptyString")
+            .coding("codingValue", "http://example.org/codesystem|code2|display1")
+            .element("quantityValue",
+                qt -> qt.fhirType(FHIRDefinedType.QUANTITY)
+                    .decimal("value", 11.5)
+                    .string("unit", "mg"))
             // Array of mixed primitive types
             .elementArray("heteroattr",
                 // only the first element needs to be a full choice type
@@ -112,20 +117,25 @@ public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase 
         )
         .group("ofType() function with non-resource types")
         // ofType() tests with primitive types
-        // DISABLED: ofType() monomorphic resources are not yet implemented
-        // .testEquals("test", "stringValue.ofType(String)",
-        //     "ofType() returns string value when filtering for String type")
-        // .testEquals(42, "integerValue.ofType(Integer)",
-        //     "ofType() returns integer value when filtering for Integer type")
-        // .testEquals(3.14, "decimalValue.ofType(Decimal)",
-        //     "ofType() returns decimal value when filtering for Decimal type")
-        // .testEquals(true, "booleanValue.ofType(Boolean)",
-        //     "ofType() returns boolean value when filtering for Boolean type")
+        .testEquals("test", "stringValue.ofType(System.String)",
+            "ofType() returns string value when filtering for System.String type")
+        .testEquals(42, "integerValue.ofType(Integer)",
+            "ofType() returns integer value when filtering for (Systrem).Integer type")
+        .testEquals(3.14, "decimalValue.ofType(decimal)",
+            "ofType() returns decimal value when filtering for (FHIR).decimal type")
+        .testEquals(true, "booleanValue.ofType(FHIR.boolean)",
+            "ofType() returns boolean value when filtering for FHIR.boolean type")
+        .testEquals("mg", "quantityValue.ofType(Quantity).unit",
+            "ofType() returns quantity value when filtering for (FHIR).Quantity type")
+        .testTrue("codingValue.ofType(FHIR.Coding).exists()",
+            "ofType() returns coding value when for FHIR.Coding type")
+        .testTrue("codingValue.ofType(System.Coding).exists()",
+            "ofType() returns coding value when for System.Coding type")
 
         // ofType() with empty collections
-        .testEmpty("emptyString.ofType(String)",
+        .testEmpty("emptyString.ofType(string)",
             "ofType() returns empty when applied to empty string")
-        .testEmpty("{}.ofType(String)",
+        .testEmpty("{}.ofType(string)",
             "ofType() returns empty when applied to empty collection")
 
         // ofType() with heterogeneous collection
@@ -146,19 +156,19 @@ public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase 
         // traversing into complex types
         .testEquals("mg", "heteroQuantity.value.ofType(Quantity).unit",
             "can traverse into fields of complex type from ofType(Quantity)")
-        // DISABLED: ofType() with Coding type BUG
-        // .testEquals("code1",
-        //     "heteroComplex.test.ofType(Coding).code",
-        //     "can traverse into fields of complex literal type from ofType(Coding)")
+        .testEquals("code1",
+            "heteroComplex.test.ofType(Coding).code",
+            "can traverse into fields of complex literal type from ofType(Coding)")
         // ofType() with non-matching type
         .testEmpty("stringValue.ofType(Integer)",
             "ofType() returns empty when type doesn't match")
         .testEmpty("integerValue.ofType(Boolean)",
             "ofType() returns empty when type doesn't match")
+        .testEmpty("codingValue.ofType(Quantity)",
+            "ofType() returns empty when type doesn't match")
         .build();
   }
 
-  @Disabled("ofType() for monomorphic resources is not yet implemented")
   @FhirPathTest
   public Stream<DynamicTest> testOfTypeWithResources() {
     return builder()
@@ -173,10 +183,28 @@ public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase 
         .testTrue("ofType(Patient).exists()",
             "ofType() filters resources by type Patient")
         // Single resource ofType() tests
-        .testEquals("John Doe", "ofType(Patient).name",
+        .testEquals("John Doe", "ofType(FHIR.Patient).name",
             "ofType() returns the resource when type matches")
-        .testEmpty("ofType(Observation)",
+        .testEmpty("ofType(FHIR.Observation)",
             "ofType() returns empty when resource type doesn't match")
         .build();
   }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testOfTypeWithFhirResources() {
+    return builder()
+        .withResource(new Condition().setId("Condition/1")
+        )
+        .group("ofType() function with resource types")
+        // Basic ofType() tests with resources
+        .testTrue("ofType(Condition).exists()",
+            "ofType() filters resources by type Patient")
+        // Single resource ofType() tests
+        .testEquals("1", "ofType(FHIR.Condition).id",
+            "ofType() returns the resource when type matches")
+        .testEmpty("ofType(Patient)",
+            "ofType() returns empty when resource type doesn't match")
+        .build();
+  }
+
 }

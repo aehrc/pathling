@@ -104,10 +104,14 @@ class FunctionParameterResolverTest {
     final Collection input = mock(Collection.class);
 
     final StringCollection stringArgument = mock(StringCollection.class);
-    final BooleanCollection booleanArgument = mock(BooleanCollection.class);
+    final Collection booleanArgument = mock(Collection.class);
+    final BooleanCollection booleanRepresentation = mock(BooleanCollection.class);
     final CodingCollection codingArgument = mock(CodingCollection.class);
     final Concepts concepts = mock(Concepts.Set.class);
     final TypeSpecifier typeSpecifier = mock(TypeSpecifier.class);
+
+    // mock booleanArgument to return booleanRepresentation when asBooleanPath() is called
+    when(booleanArgument.asBooleanPath()).thenReturn(booleanRepresentation);
     // mock codingArgument to return concept when toConcepts() is called
     when(codingArgument.toConcepts()).thenReturn(Optional.of(concepts));
 
@@ -122,7 +126,7 @@ class FunctionParameterResolverTest {
     final Method method = getMethod("funcAllTypes");
     final FunctionInvocation invocation = resolver.bind(method);
     assertEquals(FunctionInvocation.of(method, new Object[]{input,
-            stringArgument, booleanArgument, concepts, typeSpecifier
+            stringArgument, booleanRepresentation, concepts, typeSpecifier
         }
     ), invocation);
   }
@@ -175,6 +179,20 @@ class FunctionParameterResolverTest {
     final Method method = getMethod("funcConcepts");
     final FunctionInvocation invocation = resolver.bind(method);
     assertEquals(FunctionInvocation.of(method, new Object[]{concepts}), invocation);
+  }
+
+  @Test
+  void testBooleanInputType() {
+    final BooleanCollection booleanRepresentation = mock(BooleanCollection.class);
+    final Collection inputCollection = mock(Collection.class);
+    // mock codingInput to return concept when toConcepts() is called
+    when(inputCollection.asBooleanPath()).thenReturn(booleanRepresentation);
+
+    final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
+        inputCollection, List.of());
+    final Method method = getMethod("funcBooleanCollection");
+    final FunctionInvocation invocation = resolver.bind(method);
+    assertEquals(FunctionInvocation.of(method, new Object[]{booleanRepresentation}), invocation);
   }
 
   @Test
@@ -240,17 +258,17 @@ class FunctionParameterResolverTest {
 
   @Test
   void failsForTypeMismatchInCollection() {
-    final StringCollection input = mock(StringCollection.class);
+    final IntegerCollection input = mock(IntegerCollection.class);
     final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
         input,
         List.of());
-    final Method method = getMethod("funcBooleanCollection");
+    final Method method = getMethod("funcStringCollection");
 
     final InvalidUserInputError ex = assertThrows(
         InvalidUserInputError.class, () -> resolver.bind(method));
 
     assertEquals(
-        "Function 'funcBooleanCollection', input: Type mismatch: expected BooleanCollection but got StringCollection",
+        "Function 'funcStringCollection', input: Type mismatch: expected StringCollection but got IntegerCollection",
         ex.getMessage());
   }
 

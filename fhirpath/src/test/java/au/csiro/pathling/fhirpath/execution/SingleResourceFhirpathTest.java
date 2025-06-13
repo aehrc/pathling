@@ -28,8 +28,10 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Coverage;
 import org.hl7.fhir.r4.model.Device;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.HumanName;
@@ -101,11 +103,11 @@ class SingleResourceFhirpathTest {
         List.of(patient));
 
     final Dataset<Row> result = selectExpression(dataSource, ResourceType.PATIENT,
-        "where(gender='female').name.where(family.where($this='Kay').exists()).given.first()");
+        "where(gender='female').name.where(family.where($this='Kay').exists()).given.join(',')");
     final Dataset<Row> expected = DatasetBuilder.of(spark)
         .withColumn("id", DataTypes.StringType)
         .withColumn("value", DataTypes.StringType)
-        .withRow("1", "Awee")
+        .withRow("1", "Awee,Zosia")
         .build();
 
     new DatasetAssert(result)
@@ -261,6 +263,28 @@ class SingleResourceFhirpathTest {
         );
   }
 
+  @Test
+  void testFHIRTypeOfIntegerMathOperation() {
+    final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
+        List.of(
+            new Coverage()
+                .setOrder(1)
+                .setId("Coverage/1")
+        )
+    );
+
+    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.COVERAGE,
+        "order - 11");
+
+    Assertions.assertThat(evalResult)
+        .isElementPath(IntegerCollection.class)
+        .hasFhirType(FHIRDefinedType.INTEGER)
+        .toCanonicalResult()
+        .hasRowsUnordered(
+            RowFactory.create("1", -10)
+        );
+  }
+
 
   @Test
   void testOfTypeForReference() {
@@ -354,7 +378,7 @@ class SingleResourceFhirpathTest {
             RowFactory.create("1", true)
         );
   }
-  
+
   @Test
   void testSubsumesPluralCodeableConcept() {
 
@@ -451,26 +475,6 @@ class SingleResourceFhirpathTest {
                         )
                 )
                 .setId("Observation/1")
-        )
-    );
-  }
-
-  @Nonnull
-  private ObjectDataSource getPatients() {
-    return new ObjectDataSource(spark, encoders,
-        List.of(
-            new Patient()
-                .setGender(AdministrativeGender.MALE)
-                .setName(List.of(
-                    new HumanName().setFamily("Kay").addGiven("John"),
-                    new HumanName().setFamily("Adams").addGiven("John")
-                ))
-                .setId("Patient/1"),
-            new Patient()
-                .setGender(AdministrativeGender.FEMALE)
-                .setName(List.of(new HumanName().setFamily("Lee").addGiven("Anna")))
-                .setId("Patient/2")
-
         )
     );
   }

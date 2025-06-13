@@ -71,16 +71,6 @@ public interface EvaluationContext {
   Collection resolveVariable(@Nonnull final String name);
 
   /**
-   * Returns the evaluation options that control the behavior of the FHIRPath evaluation.
-   *
-   * @return The evaluation options
-   */
-  @Nonnull
-  default EvalOptions getEvalOptions() {
-    return EvalOptions.getDefaults();
-  }
-
-  /**
    * Returns the current input context (the focus of the evaluation).
    * <p>
    * By default, this is the value of the predefined variable "%context".

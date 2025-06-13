@@ -20,7 +20,9 @@ package au.csiro.pathling.fhirpath.collection;
 import static au.csiro.pathling.fhirpath.literal.StringLiteral.unescapeFhirPathString;
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -28,7 +30,9 @@ import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.operator.Comparable;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
+import java.util.function.Function;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Base64BinaryType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -43,7 +47,7 @@ import org.hl7.fhir.r4.model.UuidType;
  *
  * @author John Grimes
  */
-public class StringCollection extends Collection implements Comparable, StringCoercible {
+public class StringCollection extends Collection implements Comparable, Numeric, StringCoercible {
 
   protected StringCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
@@ -238,5 +242,22 @@ public class StringCollection extends Collection implements Comparable, StringCo
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
     return path instanceof StringCollection || Comparable.super.isComparableTo(path);
+  }
+
+  @Override
+  public @Nonnull Function<Numeric, Collection> getMathOperation(
+      @Nonnull final Numeric.MathOperation operation) {
+    if (operation == MathOperation.ADDITION) {
+      return numeric -> mapColumn(c -> functions.concat(c, numeric.getColumn().getValue()));
+    } else {
+      throw new InvalidUserInputError(
+          "Cannot perform operation " + operation + " on String");
+    }
+  }
+
+  @Override
+  public @Nonnull Collection negate() {
+    throw new InvalidUserInputError(
+        "Negation is not supported for String type");
   }
 }

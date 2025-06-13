@@ -170,9 +170,7 @@ private[encoders] class SerializerBuilderProcessor(expression: Expression,
       case _: RuntimeChildExtension => super.visitElement(elementCtx)
       case _: RuntimeChildChoiceDefinition =>
         val implementingClass = elementCtx.elementDefinition.getImplementingClass
-        val optionExpression = If(InstanceOf(expression, implementingClass),
-          ObjectCast(expression, ObjectType(implementingClass)),
-          Literal.create(null, ObjectType(implementingClass)))
+        val optionExpression = ObjectCast(expression, ObjectType(implementingClass), lenient = true)
         withExpression(optionExpression).proceedElement(elementCtx)
       case _ => super.visitElement(elementCtx)
     }

@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 import lombok.Value;
 import org.hl7.fhir.exceptions.FHIRException;
@@ -34,8 +35,8 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value
 public class TypeSpecifier {
 
-  private static final String SYSTEM_NAMESPACE = "System";
-  private static final String FHIR_NAMESPACE = "FHIR";
+  public static final String SYSTEM_NAMESPACE = "System";
+  public static final String FHIR_NAMESPACE = "FHIR";
   private static final List<String> NAMESPACE_SEARCH_ORDER = List.of(FHIR_NAMESPACE,
       SYSTEM_NAMESPACE);
   private static final Map<String, Predicate<String>> NAMESPACE_VALIDATORS = Map.of(
@@ -82,6 +83,13 @@ public class TypeSpecifier {
 
 
   /**
+   * @return true if this type specifier is a type in System namespace.
+   */
+  public boolean isSystemType() {
+    return SYSTEM_NAMESPACE.equals(namespace);
+  }
+
+  /**
    * Returns a copy of this type specifier with the new namespace.
    *
    * @param namespace the new namespace
@@ -90,6 +98,21 @@ public class TypeSpecifier {
   @Nonnull
   public TypeSpecifier withNamespace(@Nonnull final String namespace) {
     return new TypeSpecifier(namespace, typeName);
+  }
+
+
+  /**
+   * Converts this type specifier to a System(Fhirpath) type.
+   *
+   * @return the System(Fhirpath) type
+   * @throws IllegalStateException if this type specifier is not a System type
+   */
+  @Nonnull
+  public FhirPathType toSystemType() {
+    if (!isSystemType()) {
+      throw new IllegalStateException("Not a System type: " + this);
+    }
+    return FhirPathType.valueOf(typeName.toUpperCase());
   }
 
   /**
@@ -107,14 +130,18 @@ public class TypeSpecifier {
   }
 
   /**
-   * @return The FHIR resource type represented by this type specifier
+   * @return The FHIR resource type represented by this type specifier if a valid FHIR resource
+   * type.
    */
   @Nonnull
-  public ResourceType toResourceType() {
-    if (!isFhirType()) {
-      throw new IllegalStateException("Not a FHIR type: " + this);
+  public Optional<ResourceType> asResourceType() {
+    try {
+      if (isFhirType()) {
+        return Optional.of(ResourceType.fromCode(typeName));
+      }
+    } catch (FHIRException ignored) {
     }
-    return ResourceType.fromCode(typeName);
+    return Optional.empty();
   }
 
   private static String validateNamespace(final String namespace) throws IllegalArgumentException {
@@ -157,5 +184,5 @@ public class TypeSpecifier {
   public String toString() {
     return namespace + "." + typeName;
   }
-  
+
 }

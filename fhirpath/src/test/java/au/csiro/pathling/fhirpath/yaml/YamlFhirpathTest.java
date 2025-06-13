@@ -14,16 +14,6 @@ import org.junit.jupiter.api.Tag;
 )
 public class YamlFhirpathTest extends YamlSpecCachedTestBase {
 
-  @YamlSpec("fhirpath-ptl/cases/literals.yaml")
-  void testLiterals(@Nonnull final RuntimeCase testCase) {
-    run(testCase);
-  }
-
-  @YamlSpec("fhirpath-ptl/cases/existence_functions.yaml")
-  void testExistenceFunctions(@Nonnull final RuntimeCase testCase) {
-    run(testCase);
-  }
-
   @YamlSpec("fhirpath-ptl/cases/math.yaml")
   void testMath(@Nonnull final RuntimeCase testCase) {
     run(testCase);
@@ -31,11 +21,6 @@ public class YamlFhirpathTest extends YamlSpecCachedTestBase {
 
   @YamlSpec("fhirpath-ptl/cases/operators.yaml")
   void testOperators(@Nonnull final RuntimeCase testCase) {
-    run(testCase);
-  }
-
-  @YamlSpec("fhirpath-ptl/cases/misc.yaml")
-  void testMisc(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }
 }

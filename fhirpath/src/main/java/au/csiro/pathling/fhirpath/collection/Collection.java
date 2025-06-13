@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import static au.csiro.pathling.fhirpath.TypeSpecifier.FHIR_NAMESPACE;
+import static au.csiro.pathling.fhirpath.TypeSpecifier.SYSTEM_NAMESPACE;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 
@@ -327,7 +329,7 @@ public class Collection {
   protected ColumnRepresentation getFid() {
     return column.traverse(ExtensionSupport.FID_FIELD_NAME());
   }
-  
+
   /**
    * Returns a new {@link Collection} with the specified {@link ColumnRepresentation}.
    *
@@ -452,14 +454,19 @@ public class Collection {
    */
   @Nonnull
   public Collection filterByType(@Nonnull final TypeSpecifier type) {
-    return EmptyCollection.getInstance();
+    final Optional<Collection> maybeCollection = switch (type.getNamespace()) {
+      case SYSTEM_NAMESPACE -> getType().filter(type.toSystemType()::equals).map(__ -> this);
+      case FHIR_NAMESPACE -> getFhirType().filter(type.toFhirType()::equals).map(__ -> this);
+      default -> Optional.empty();
+    };
+    return maybeCollection.orElse(EmptyCollection.getInstance());
   }
 
   // TODO: Remove this after removing usages.
   @Deprecated
   @Nonnull
   public String getExpression() {
-    return "??";
+    return getClass().getSimpleName();
   }
 
   /**
@@ -506,6 +513,17 @@ public class Collection {
    * @return true if the other collection can be converted to the other collection type
    */
   public boolean convertibleTo(@Nonnull final Collection other) {
+    return typeEquivalentWith(other);
+  }
+
+  /**
+   * Check if this collection is type equivalent with the other collection. The equivalence is based
+   * on the type and fhirType of the collections.
+   *
+   * @param other the other collection
+   * @return true if the other collection is type equivalent with this collection
+   */
+  public boolean typeEquivalentWith(@Nonnull final Collection other) {
     // if one has a type then the other needs to have the same type
     if (type.isPresent() || other.type.isPresent()) {
       return type.equals(other.type);
@@ -515,25 +533,28 @@ public class Collection {
       // in which case we need to check that the fhir types are the same
       return fhirType.equals(other.fhirType);
     } else {
-      // this most likely is an empty collection we will handle that in EmptyCollection and MixedCollection
-      throw new IllegalStateException("Both types and fhir types are empty");
+      // this most likely is an empty collection or mixed collection
+      return this == other;
     }
   }
 
   /**
    * Casts this collection to the type of another collection.
    * <p>
-   * This method attempts to cast the current collection to match the type of the provided collection.
-   * The cast will only succeed if the current collection is convertible to the target collection type
-   * as determined by the {@link #convertibleTo(Collection)} method.
+   * This method attempts to cast the current collection to match the type of the provided
+   * collection. The cast will only succeed if the current collection is convertible to the target
+   * collection type as determined by the {@link #convertibleTo(Collection)} method.
    *
    * @param other The collection whose type to cast to
    * @return A new collection with the same values but cast to the type of the other collection
-   * @throws IllegalArgumentException If this collection cannot be cast to the type of the other collection
+   * @throws IllegalArgumentException If this collection cannot be cast to the type of the other
+   * collection
    */
   @Nonnull
   public Collection castAs(@Nonnull final Collection other) {
-    if (convertibleTo(other)) {
+    if (typeEquivalentWith(other)) {
+      return this;
+    } else if (convertibleTo(other)) {
       return other.getType()
           .map(castType ->
               other.map(__ -> this.getColumn().cast(castType.getSqlDataType())))
@@ -550,4 +571,26 @@ public class Collection {
   public StringCollection asStringPath() {
     return asSingular().map(ColumnRepresentation::asEmpty, StringCollection::build);
   }
+
+  /**
+   * @return a new {@link Collection} representing the Boolean representation of this path
+   */
+  @Nonnull
+  public BooleanCollection asBooleanPath() {
+    // by default only can be converted if singular and then 
+    // true is exists() or empty otherwise().
+    return asSingular().map(ColumnRepresentation::toBoolean, BooleanCollection::build);
+  }
+
+  /**
+   * Gets a new {@link BooleanCollection} representing this collection as a singular Boolean value.
+   * Throws an  exception during evalution if the collection is not singular.
+   *
+   * @return a new {@link Collection} represented as singular Boolean value.
+   */
+  @Nonnull
+  public BooleanCollection asBooleanSingleton() {
+    return asBooleanPath();
+  }
+
 }
