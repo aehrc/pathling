@@ -190,45 +190,6 @@ excludeSet:
           traversing to the `id` of a primitive element.
         any:
           - "** first for collection with null values"
-  - title: Boolean exclusions
-    glob: "fhirpath-js/cases/6.5_boolean_logic.yaml"
-    exclude:
-      - title: "empty collection: and"
-        any:
-          - "* and ({} and true)"
-          - "* and (true and {})"
-          - "* and ({} and false)"
-          - "* and (false and {})"
-          - "* and (true and null)"
-          - "* and (false and null)"
-      - title: "empty collection: or"
-        any:
-          - "* or ({} or true)"
-          - "* or (true or {})"
-          - "* or ({} or false)"
-          - "* or (false or {})"
-          - "* or ({} or {})"
-          - "* or (true or null)"
-          - "* or (false or null)"
-      - title: "empty collection: xor"
-        any:
-          - "* xor (true xor {})"
-          - "* xor ({} xor false)"
-          - "* xor (false xor {})"
-          - "* xor ({} xor {})"
-          - "* xor (true xor null)"
-          - "* xor (false xor null)"
-          - "* xor ({} xor true)"
-      - title: "empty collection: implies"
-        any:
-          - "* implies ({} implies true)"
-          - "* implies (true implies {})"
-          - "* implies ({} implies false)"
-          - "* implies (false implies {})"
-          - "* implies ({} implies {})"
-      - title: "boolean eval of collections: not"
-        any:
-          - "** not() for non-empty collection"
   - title: Literal exclusions
     glob: "fhirpath-js/cases/4.1_literals.yaml"
     exclude:
