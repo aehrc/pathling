@@ -158,7 +158,7 @@ excludeSet:
     glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
       - title: "Mixed collections not supported"
-        type: feature
+        type: framework-gap
         comment: |
           Pathling does not support the representation of mixed collections, which is required for
           these tests.
@@ -173,6 +173,12 @@ excludeSet:
         id: "#2406"
         expression:
           - "(^|\\W)contained(\\W|$)"
+      - title: "Custom fields not supported within FHIR resources"
+        type: framework-gap
+        comment: Pathling does not support custom fields within FHIR resources.
+        any:
+          - "Access a custom field starting with a capital letter (1)"
+          - "Access a custom field starting with a capital letter (2)"
   - title: Subsetting exclusions
     glob: "fhirpath-js/cases/5.3_subsetting.yaml"
     exclude:
