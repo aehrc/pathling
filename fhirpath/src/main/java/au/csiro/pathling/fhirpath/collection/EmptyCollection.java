@@ -78,17 +78,7 @@ public class EmptyCollection extends Collection implements Comparable, Numeric, 
       return this;
     };
   }
-
-  @Override
-  public @Nonnull Optional<Column> getNumericValue() {
-    return Optional.empty();
-  }
-
-  @Override
-  public @Nonnull Optional<Column> getNumericContext() {
-    return Optional.empty();
-  }
-
+  
   @Override
   public @Nonnull Collection negate() {
     return this;
