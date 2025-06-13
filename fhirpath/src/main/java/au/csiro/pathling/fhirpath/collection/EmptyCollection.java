@@ -1,6 +1,7 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -8,13 +9,14 @@ import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.operator.Comparable;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
+import java.util.function.Function;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Represents an empty collection.
  */
-public class EmptyCollection extends Collection implements Comparable, StringCoercible {
+public class EmptyCollection extends Collection implements Comparable, Numeric, StringCoercible {
 
   private static final EmptyCollection INSTANCE = new EmptyCollection(
       DefaultRepresentation.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
@@ -55,7 +57,7 @@ public class EmptyCollection extends Collection implements Comparable, StringCoe
   public StringCollection asStringPath() {
     return StringCollection.empty();
   }
-  
+
   /**
    * {@inheritDoc}
    * <p>
@@ -65,5 +67,30 @@ public class EmptyCollection extends Collection implements Comparable, StringCoe
   @Nonnull
   public BooleanCollection asBooleanPath() {
     return BooleanCollection.empty();
+  }
+
+
+  @Override
+  public @Nonnull Function<Numeric, Collection> getMathOperation(
+      @Nonnull final Numeric.MathOperation operation) {
+    return numeric -> {
+      // For empty collections, all math operations return an empty collection
+      return this;
+    };
+  }
+
+  @Override
+  public @Nonnull Optional<Column> getNumericValue() {
+    return Optional.empty();
+  }
+
+  @Override
+  public @Nonnull Optional<Column> getNumericContext() {
+    return Optional.empty();
+  }
+
+  @Override
+  public @Nonnull Collection negate() {
+    return this;
   }
 }
