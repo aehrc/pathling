@@ -216,9 +216,9 @@ public abstract class YamlSpecTestBase {
           .build();
       if (spec.isError()) {
         try {
-          final FhirPath fhipath = PARSER.parse(spec.getExpression());
-          log.trace("FhirPath: {}", fhipath);
-          final Collection evalResult = evaluator.evaluate(fhipath);
+          final FhirPath fhirPath = PARSER.parse(spec.getExpression());
+          log.trace("FhirPath: {}", fhirPath);
+          final Collection evalResult = evaluator.evaluate(fhirPath);
           log.trace("Evaluated: {}", evalResult);
           final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
           final Row resultRow = evaluator.createInitialDataset().select(
@@ -463,7 +463,7 @@ public abstract class YamlSpecTestBase {
               return rtc.getExclusion().isPresent();
             } else {
               rtc.getExclusion()
-                  .ifPresent(s -> log.warn("Excluding test case: {} becasue {}", rtc.getSpec(), s));
+                  .ifPresent(s -> log.warn("Excluding test case: {} because {}", rtc.getSpec(), s));
               return rtc.getExclusion().isEmpty();
             }
           })
