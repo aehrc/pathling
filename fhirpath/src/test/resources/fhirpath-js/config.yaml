@@ -167,6 +167,7 @@ excludeSet:
           - "Observation.value with an R5 FHIR model"
           - "Observation.value with an STU3 FHIR model"
           - "Observation.value with an DSTU2 FHIR model"
+          - "Observation.value without a model"
       - title: "Contained resources not supported"
         type: feature
         id: "#2406"
