@@ -161,7 +161,7 @@ public class Literals {
   @SuppressWarnings("unused")
   public static LiteralPath calendarDurationLiteral(
       @Nonnull final String literalValue) {
-    throw new UnsupportedOperationException("CalendarDurationLiteral literals are not supported");
+    throw new UnsupportedOperationException("Calendar duration literals are not supported");
   }
 
   /**
@@ -176,7 +176,7 @@ public class Literals {
    */
   @SuppressWarnings("unused")
   public static LiteralPath ucumQuantityLiteral(@Nonnull final String literalValue) {
-    throw new UnsupportedOperationException("UcumQuantityLiteral literals are not supported");
+    throw new UnsupportedOperationException("Quantity literals are not supported");
   }
 
   /**
