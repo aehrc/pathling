@@ -190,13 +190,6 @@ excludeSet:
           traversing to the `id` of a primitive element.
         any:
           - "** first for collection with null values"
-  - title: Math 6 exclusions
-    glob: "fhirpath-js/cases/6.6_math.yaml"
-    exclude:
-      - title: "Math operations on integers"
-        any:
-          - "** Can multiply two numbers"
-          - "** Can multiply two number literals"
   - title: Boolean exclusions
     glob: "fhirpath-js/cases/6.5_boolean_logic.yaml"
     exclude:
