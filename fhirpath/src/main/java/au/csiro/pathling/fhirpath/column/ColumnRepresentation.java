@@ -560,14 +560,17 @@ public abstract class ColumnRepresentation {
   }
 
   /**
-   * Casts the current {@link ColumnRepresentation} to a different data type.
+   * Casts (elementwise) the current {@link ColumnRepresentation} to a different data type.
    *
    * @param dataType The data type to cast to
    * @return A new {@link ColumnRepresentation} that is the result of the cast
    */
   @Nonnull
   public ColumnRepresentation cast(@Nonnull final DataType dataType) {
-    return copyOf(getValue().cast(dataType));
+    return vectorize(
+        a -> functions.transform(a, c -> c.cast(dataType)),
+        s -> s.cast(dataType)
+    );
   }
 
   /**

@@ -58,7 +58,7 @@ public class DefaultTerminologyService extends BaseTerminologyService {
     final ValidateCodeParameters parameters = new ValidateCodeParameters(valueSetUrl,
         ImmutableCoding.of(coding));
     final ValidateCodeExecutor executor = new ValidateCodeExecutor(terminologyClient, parameters);
-    return Boolean.TRUE.equals(execute(executor));
+    return execute(executor);
   }
 
   @Nonnull
@@ -93,7 +93,7 @@ public class DefaultTerminologyService extends BaseTerminologyService {
 
 
   @Nonnull
-  private static <ResponseType, ResultType> ResultType execute(
+  private static <ResponseType, ResultType> ResultType   execute(
       @Nonnull final TerminologyOperation<ResponseType, ResultType> operation) {
     final Optional<ResultType> invalidResult = operation.validate();
     if (invalidResult.isPresent()) {

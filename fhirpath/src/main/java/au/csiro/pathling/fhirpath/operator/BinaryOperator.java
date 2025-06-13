@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.operator;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
+import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * Represents a binary operator in FHIRPath.
@@ -40,5 +41,25 @@ public interface BinaryOperator {
   @Nonnull
   default String getOperatorName() {
     return this.getClass().getSimpleName();
+  }
+
+  /**
+   * Reconciles two collections to a common type, if possible.
+   *
+   * @param left The left collection
+   * @param right The right collection
+   * @return A pair of collections that can be reconciled to a common type
+   */
+  @Nonnull
+  static Pair<Collection, Collection> reconcileTypes(@Nonnull final Collection left,
+      @Nonnull final Collection right) {
+    // finds if left and right elements can be reconciled to a common type
+    if (right.convertibleTo(left)) {
+      return Pair.of(left, right.castAs(left));
+    } else if (left.convertibleTo(right)) {
+      return Pair.of(left.castAs(right), right);
+    } else {
+      return Pair.of(left, right);
+    }
   }
 }

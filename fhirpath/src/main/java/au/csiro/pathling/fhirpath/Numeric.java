@@ -56,7 +56,9 @@ public interface Numeric {
    * @return a {@link Column} that provides a value that can me used in math operations
    */
   @Nonnull
-  Optional<Column> getNumericValue();
+  default Optional<Column> getNumericValue() {
+    return Optional.empty();
+  }
 
   /**
    * Provides a {@link Column} that provides additional context that informs the way that math
@@ -66,7 +68,9 @@ public interface Numeric {
    * @return a {@link Column} that provides additional context for math operations
    */
   @Nonnull
-  Optional<Column> getNumericContext();
+  default Optional<Column> getNumericContext() {
+    return Optional.empty();
+  }
 
   /**
    * The type of the result of evaluating this expression, if known.

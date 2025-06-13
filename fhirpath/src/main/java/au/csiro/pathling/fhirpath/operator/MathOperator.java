@@ -24,6 +24,7 @@ import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
+import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * Provides the functionality of the family of math operators within FHIRPath, i.e. +, -, *, / and
@@ -49,17 +50,18 @@ public class MathOperator implements BinaryOperator {
   @Nonnull
   @Override
   public Collection invoke(@Nonnull final BinaryOperatorInput input) {
-    final Collection left = input.getLeft();
-    final Collection right = input.getRight();
+
+    final Pair<Collection, Collection> reconciledArguments = BinaryOperator.reconcileTypes(
+        input.getLeft(), input.getRight());
+
+    final Collection left = reconciledArguments.getLeft().asSingular();
+    final Collection right = reconciledArguments.getRight().asSingular();
 
     checkUserInput(left instanceof Numeric,
         type + " operator does not support left operand: " + left.getExpression());
     checkUserInput(right instanceof Numeric,
         type + " operator does not support right operand: " + right.getExpression());
-    checkUserInput(left.isSingular(),
-        "Left operand to " + type + " operator must be singular: " + left.getExpression());
-    checkUserInput(right.isSingular(),
-        "Right operand to " + type + " operator must be singular: " + right.getExpression());
+    
     checkUserInput(left instanceof Comparable && right instanceof Comparable,
         "Left and right operands are not comparable: " + left.getExpression() + " "
             + type + " " + right.getExpression());
@@ -68,8 +70,6 @@ public class MathOperator implements BinaryOperator {
     checkUserInput(comparableLeft.isComparableTo(comparableRight),
         "Left and right operands are not comparable: " + left.getExpression() + " "
             + type + " " + right.getExpression());
-
-    //final String expression = buildExpression(input, type.toString());
 
     final Numeric leftNumeric = (Numeric) left;
     final Numeric rightNumeric = (Numeric) right;
