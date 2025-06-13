@@ -207,12 +207,13 @@ excludeSet:
           - "@2019"
           - "@2019-02-03T01:00Z = @2019-02-02T21:00-04:00"
           - "@2019-02-03T02:00Z = @2019-02-02T21:00-04:00"
-      - title: "Framework gaps"
-        type: framework-gap
+      - title: "Unsupported quantity literals"
+        type: feature
+        id: "#2410"
         expression:
-          # assertions on quantity values
           - "2 'mo'"
           - "^2 years$"
+          - "\\(2 years\\).value"
       - title: "Unsupported polarity operator"
         type: feature
         expression:
@@ -224,7 +225,6 @@ excludeSet:
         id: "#2167"
         type: bug
         any:
-          - "(2 years).value"
   - title: Existence exclusions
     glob: "fhirpath-js/cases/5.1_existence.yaml"
     exclude:
