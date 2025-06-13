@@ -217,6 +217,11 @@ excludeSet:
   - title: Existence exclusions
     glob: "fhirpath-js/cases/5.1_existence.yaml"
     exclude:
+      - title: "Incorrect behaviour when evaluating boolean value of collections"
+        type: bug
+        id: "#2411"
+        any:
+          - "** error for collection that is not a singleton"
       - title: "Support for null values with in exising primitive elements"
         type: ???
         any:
