@@ -467,11 +467,6 @@ excludeSet:
         any:
           - "** Can divide two numbers"
           - "** Can divide two number literals"
-      - title: "'*' operator does not singularise arguments"
-        type: bug
-        any:
-          - "** Error multiplying multi-valued collection (1)"
-          - "** Error multiplying multi-valued collection (2)"
       - title: "'*' operator fails when right argument is empty"
         id: "#2174"
         type: bug
