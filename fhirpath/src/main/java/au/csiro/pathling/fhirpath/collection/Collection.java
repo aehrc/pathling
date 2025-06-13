@@ -513,6 +513,17 @@ public class Collection {
    * @return true if the other collection can be converted to the other collection type
    */
   public boolean convertibleTo(@Nonnull final Collection other) {
+    return typeEquivalentWith(other);
+  }
+
+  /**
+   * Check if this collection is type equivalent with the other collection. The equivalence is based
+   * on the type and fhirType of the collections.
+   *
+   * @param other the other collection
+   * @return true if the other collection is type equivalent with this collection
+   */
+  public boolean typeEquivalentWith(@Nonnull final Collection other) {
     // if one has a type then the other needs to have the same type
     if (type.isPresent() || other.type.isPresent()) {
       return type.equals(other.type);
@@ -522,8 +533,8 @@ public class Collection {
       // in which case we need to check that the fhir types are the same
       return fhirType.equals(other.fhirType);
     } else {
-      // this most likely is an empty collection we will handle that in EmptyCollection and MixedCollection
-      throw new IllegalStateException("Both types and fhir types are empty");
+      // this most likely is an empty collection or mixed collection
+      return this == other;
     }
   }
 
@@ -541,7 +552,9 @@ public class Collection {
    */
   @Nonnull
   public Collection castAs(@Nonnull final Collection other) {
-    if (convertibleTo(other)) {
+    if (typeEquivalentWith(other)) {
+      return this;
+    } else if (convertibleTo(other)) {
       return other.getType()
           .map(castType ->
               other.map(__ -> this.getColumn().cast(castType.getSqlDataType())))
