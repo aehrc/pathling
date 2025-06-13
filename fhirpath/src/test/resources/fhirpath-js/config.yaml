@@ -193,8 +193,11 @@ excludeSet:
   - title: Literal exclusions
     glob: "fhirpath-js/cases/4.1_literals.yaml"
     exclude:
-      - title: "Non issues"
-        type: non-issue
+      - title: "Using ` to wrap a string is not allowed by grammar"
+        type: bug
+        comment: |
+          An issue has been raised on the fhirpath.js GitHub repository (#172), this may be an 
+          incorrect expectation within the test cases.
         any:
           - "`a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065`"
       - title: "Framework gaps"
