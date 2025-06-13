@@ -214,13 +214,6 @@ excludeSet:
           - "2 'mo'"
           - "^2 years$"
           - "\\(2 years\\).value"
-      - title: "Unsupported escape sequences in string literal"
-        type: bug
-        any: [ "'a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065'" ]
-      - title: "Traversal into quantity literals fails"
-        id: "#2167"
-        type: bug
-        any:
   - title: Existence exclusions
     glob: "fhirpath-js/cases/5.1_existence.yaml"
     exclude:
