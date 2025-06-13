@@ -157,20 +157,21 @@ excludeSet:
   - title: Path exclusions
     glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
-      - title: "Support for models"
-        type: framework-gap
+      - title: "Mixed collections not supported"
+        type: feature
+        comment: |
+          Pathling does not support the representation of mixed collections, which is required for
+          these tests.
         any:
           - "Observation.value with an R4 FHIR model"
-      - title: "Contained resources not supported"
-        type: feature
-        expression:
-          - "(^|\\W)contained(\\W|$)"
-      - title: "DSTU2, STU3, R5 not supported"
-        type: feature
-        any:
           - "Observation.value with an R5 FHIR model"
           - "Observation.value with an STU3 FHIR model"
           - "Observation.value with an DSTU2 FHIR model"
+      - title: "Contained resources not supported"
+        type: feature
+        id: "#2406"
+        expression:
+          - "(^|\\W)contained(\\W|$)"
   - title: Subsetting exclusions
     glob: "fhirpath-js/cases/5.3_subsetting.yaml"
     exclude:
