@@ -200,6 +200,13 @@ excludeSet:
           incorrect expectation within the test cases.
         any:
           - "`a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065`"
+      - title: "Unsupported date and datetime literals"
+        type: feature
+        id: "#2409"
+        any:
+          - "@2019"
+          - "@2019-02-03T01:00Z = @2019-02-02T21:00-04:00"
+          - "@2019-02-03T02:00Z = @2019-02-02T21:00-04:00"
       - title: "Framework gaps"
         type: framework-gap
         expression:
@@ -213,12 +220,6 @@ excludeSet:
       - title: "Unsupported escape sequences in string literal"
         type: bug
         any: [ "'a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065'" ]
-      - title: "Unsupported datetime literals with non-second precision"
-        id: "#2147"
-        type: bug
-        any:
-          - "@2019-02-03T01:00Z = @2019-02-02T21:00-04:00"
-          - "@2019-02-03T02:00Z = @2019-02-02T21:00-04:00"
       - title: "Traversal into quantity literals fails"
         id: "#2167"
         type: bug
