@@ -108,7 +108,7 @@ public class YamlReferenceImplTest extends YamlSpecCachedTestBase {
   }
 
   @YamlSpec("fhirpath-js/cases/6.2_comparision.yaml")
-  void testComparision(@Nonnull final RuntimeCase testCase) {
+  void testComparison(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }
 
