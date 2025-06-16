@@ -227,12 +227,6 @@ excludeSet:
         any:
           - "** null is not empty"
           - "** exists for null should return true"
-      - title: "Incorrect not() for empty collections"
-        id: "#2150"
-        type: bug
-        any:
-          - "** empty coll with not() is empty coll"
-          - "** not nothing is empty coll"
       - title: "Incorrect allTrue() for empty collections"
         id: "#2150"
         type: bug
