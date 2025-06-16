@@ -158,7 +158,7 @@ excludeSet:
     glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
       - title: "Mixed collections not supported"
-        type: framework-gap
+        type: wontfix
         comment: |
           Pathling does not support the representation of mixed collections, which is required for
           these tests.
@@ -174,7 +174,7 @@ excludeSet:
         expression:
           - "(^|\\W)contained(\\W|$)"
       - title: "Custom fields not supported within FHIR resources"
-        type: framework-gap
+        type: wontfix
         comment: Pathling does not support custom fields within FHIR resources.
         any:
           - "Access a custom field starting with a capital letter (1)"
@@ -222,8 +222,8 @@ excludeSet:
         id: "#2411"
         any:
           - "** error for collection that is not a singleton"
-      - title: "Support for null values with in exising primitive elements"
-        type: ???
+      - title: "Support for null values within exising primitive elements"
+        type: wontfix
         any:
           - "** null is not empty"
           - "** exists for null should return true"
