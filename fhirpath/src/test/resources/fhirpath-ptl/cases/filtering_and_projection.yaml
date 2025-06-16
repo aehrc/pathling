@@ -1,0 +1,23 @@
+tests:
+  - desc: 'select string from mixed collection'
+    expression: component.value.ofType(String)
+    result: [ 'string' ]
+  - desc: 'select integer from mixed collection'
+    expression: component.value.ofType(Integer)
+    result: [ 1 ]
+  - desc: 'select decimal from mixed collection'
+    expression: component.value.ofType(Decimal)
+    result: [ 1.01 ]
+  - desc: 'select boolean from mixed collection'
+    expression: component.value.ofType(Boolean)
+    result: [ true, false ]
+
+
+subject:
+  resourceType: Observation
+  component:
+    - valueString: 'string'
+    - valueInteger: 1
+    - valueDecimal: 1.01
+    - valueBoolean: true
+    - valueBoolean: false
