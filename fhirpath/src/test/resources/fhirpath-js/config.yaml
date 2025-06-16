@@ -222,35 +222,11 @@ excludeSet:
         id: "#2411"
         any:
           - "** error for collection that is not a singleton"
-      - title: "Support for null values within exising primitive elements"
+      - title: "Support for null values within existing primitive elements"
         type: wontfix
         any:
           - "** null is not empty"
           - "** exists for null should return true"
-      - title: "Incorrect allTrue() for empty collections"
-        id: "#2150"
-        type: bug
-        any:
-          - "** allTrue for empty coll is true"
-          - "** allTrue for non exists coll is true"
-      - title: "Incorrect anyTrue() for empty collections"
-        id: "#2150"
-        type: bug
-        any:
-          - "** anyTrue for empty coll is false"
-          - "** anyTrue for non-exists coll is false"
-      - title: "Incorrect allFalse() for empty collections"
-        id: "#2150"
-        type: bug
-        any:
-          - "** allFalse for empty coll is true"
-          - "** allFalse for non-exists coll is true"
-      - title: "Incorrect anyFalse() for empty collections"
-        id: "#2150"
-        type: bug
-        any:
-          - "** anyFalse for empty coll is false"
-          - "** anyFalse for non-exists coll is false"
   - title: Filtering and projection exclusions
     glob: "fhirpath-js/cases/5.2_filtering_and_projection.yaml"
     exclude:
