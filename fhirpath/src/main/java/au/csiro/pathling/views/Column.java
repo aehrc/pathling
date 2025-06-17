@@ -4,8 +4,10 @@ import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
 /**
  * Describes the selection of a column in the output.
@@ -13,6 +15,8 @@ import lombok.EqualsAndHashCode;
  * @author John Grimes
  */
 @Data
+@AllArgsConstructor(staticName = "of")
+@NoArgsConstructor
 @EqualsAndHashCode(callSuper = false)
 public class Column implements SelectionElement {
 

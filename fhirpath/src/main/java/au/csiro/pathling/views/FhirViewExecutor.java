@@ -4,6 +4,7 @@ import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.validation.ValidationUtils;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluators.SingleEvaluatorFactory;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
@@ -74,6 +75,9 @@ public class FhirViewExecutor {
    */
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final FhirView view) {
+    // Validate the view using JSR-380 validation
+    ValidationUtils.ensureValid(view, "Valid SQL on FHIR view");
+    
     final ExecutionContext executionContext = new ExecutionContext(sparkSession,
         SingleEvaluatorFactory.of(fhirContext, dataSource)
     );

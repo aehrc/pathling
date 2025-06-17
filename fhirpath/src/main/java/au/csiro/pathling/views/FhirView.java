@@ -1,9 +1,14 @@
 package au.csiro.pathling.views;
 
+import static java.util.Objects.nonNull;
+
+import au.csiro.pathling.views.validation.UniqueColumnNames;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
+import java.util.stream.Stream;
 import lombok.Data;
 
 /**
@@ -17,6 +22,7 @@ import lombok.Data;
  * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html">ViewDefinition</a>
  */
 @Data
+@UniqueColumnNames
 public class FhirView {
 
   /**
@@ -63,5 +69,17 @@ public class FhirView {
    */
   @Nullable
   List<WhereClause> where;
-
+  
+  /**
+   * Gets the names of all columns in the view including those in nested selects.
+   *
+   * @return a stream of all columns in the view
+   */
+  @Nonnull
+  public Stream<Column> getAllColumns() {
+    return nonNull(select)
+           ? select.stream()
+               .flatMap(SelectClause::getAllColumns)
+           : Stream.empty();
+  }
 }
