@@ -47,8 +47,7 @@ public class ChoiceElementCollection extends MixedCollection {
    */
   @Nonnull
   @Override
-  public BooleanCollection asBooleanPath() {
-    return parent.asBooleanPath();
+  public BooleanCollection asBooleanSingleton() {
+    return parent.asBooleanSingleton();
   }
-
 }

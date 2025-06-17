@@ -23,6 +23,7 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 
 import au.csiro.pathling.encoders.ExtensionSupport;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Concepts;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
@@ -577,20 +578,18 @@ public class Collection {
    */
   @Nonnull
   public BooleanCollection asBooleanPath() {
-    // by default only can be converted if singular and then 
-    // true is exists() or empty otherwise().
-    return asSingular().map(ColumnRepresentation::toBoolean, BooleanCollection::build);
+    throw new InvalidUserInputError("Cannot implicitly convert " + this + " to BooleanCollection");
   }
 
   /**
    * Gets a new {@link BooleanCollection} representing this collection as a singular Boolean value.
-   * Throws an  exception during evalution if the collection is not singular.
+   * Throws an exception during evalution if the collection is not singular.
    *
    * @return a new {@link Collection} represented as singular Boolean value.
    */
   @Nonnull
   public BooleanCollection asBooleanSingleton() {
-    return asBooleanPath();
+    return asSingular().map(ColumnRepresentation::toBoolean, BooleanCollection::build);
   }
 
 }
