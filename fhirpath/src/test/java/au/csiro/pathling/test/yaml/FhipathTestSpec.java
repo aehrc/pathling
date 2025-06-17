@@ -1,6 +1,8 @@
 package au.csiro.pathling.test.yaml;
 
+import static au.csiro.pathling.test.yaml.FhipathTestSpec.TestCase.ANY_ERROR;
 import static au.csiro.pathling.test.yaml.YamlSupport.YAML;
+import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
 import jakarta.annotation.Nonnull;
@@ -20,11 +22,14 @@ public class FhipathTestSpec {
   @Value
   public static class TestCase {
 
+    public static final String ANY_ERROR = "*";
+
     @Nullable
     String description;
     @Nonnull
     String expression;
-    boolean error;
+    @Nullable
+    String errorMsg;
     @Nullable
     Object result;
     @Nullable
@@ -34,6 +39,10 @@ public class FhipathTestSpec {
     @Nullable
     String context;
     boolean disable;
+
+    boolean isError() {
+      return nonNull(errorMsg);
+    }
   }
 
   @Nullable
@@ -52,7 +61,9 @@ public class FhipathTestSpec {
           .map(expr -> new TestCase(
               (String) caseOrGroup.get("desc"),
               expr,
-              (boolean) caseOrGroup.computeIfAbsent("error", k -> false),
+              (boolean) caseOrGroup.computeIfAbsent("error", k -> false)
+              ? ANY_ERROR
+              : null,
               caseOrGroup.get("result"),
               (String) caseOrGroup.get("inputfile"),
               (String) caseOrGroup.get("model"),
