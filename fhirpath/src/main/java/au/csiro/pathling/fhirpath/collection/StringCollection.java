@@ -251,13 +251,13 @@ public class StringCollection extends Collection implements Comparable, Numeric,
       return numeric -> mapColumn(c -> functions.concat(c, numeric.getColumn().getValue()));
     } else {
       throw new InvalidUserInputError(
-          "Cannot perform operation " + operation + " on String");
+          "Cannot perform operation " + operation + " on String.");
     }
   }
 
   @Override
   public @Nonnull Collection negate() {
     throw new InvalidUserInputError(
-        "Negation is not supported for String type");
+        "Negation is not supported for String type.");
   }
 }

@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.column;
 
 import static au.csiro.pathling.utilities.Functions.maybeCast;
+import static java.util.Objects.nonNull;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.coalesce;
@@ -30,6 +31,7 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.sql.misc.ToNull;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -53,6 +55,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 public abstract class ColumnRepresentation {
+
+  public static final String DEF_NOT_SINGULAR_ERROR = "Expecting a collection with a single element but it has many.";
 
   /**
    * Create a new {@link ColumnRepresentation} from the result of a function that takes two
@@ -207,6 +211,7 @@ public abstract class ColumnRepresentation {
     return copyOf(coalesce(getValue(), lit(value)));
   }
 
+
   /**
    * Returns a singular value from the current {@link ColumnRepresentation}.
    *
@@ -214,9 +219,23 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation singular() {
+    return singular(null);
+  }
+
+
+  /**
+   * Returns a singular value from the current {@link ColumnRepresentation}.
+   *
+   * @param errorMessage the error message to use when the representation cannot be singularized.
+   * @return A new {@link ColumnRepresentation} that is a singular value
+   */
+  @Nonnull
+  public ColumnRepresentation singular(@Nullable final String errorMessage) {
     return vectorize(
         c -> when(size(c).leq(1), c.getItem(0))
-            .otherwise(raise_error(lit("Expected a single value, but found multiple values"))),
+            .otherwise(raise_error(lit(nonNull(errorMessage)
+                                       ? errorMessage
+                                       : DEF_NOT_SINGULAR_ERROR))),
         Function.identity()
     );
   }

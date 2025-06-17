@@ -24,7 +24,9 @@ public class PolarityOperator implements UnaryOperator {
   public Collection invoke(@Nonnull final UnaryOperatorInput input) {
     Preconditions.checkUserInput(input.getInput() instanceof Numeric,
         "Polarity operator can only be applied to numeric types");
-    final Collection singularInput = input.getInput().asSingular();
+    final Collection singularInput = input.getInput().asSingular(
+        "Polarity operator (-) requires a singular operand."
+    );
     return negation
            ? ((Numeric) singularInput).negate()
            : singularInput;
@@ -37,7 +39,7 @@ public class PolarityOperator implements UnaryOperator {
            ? "-"
            : "+";
   }
-  
+
   /**
    * Returns a new instance of {@link PolarityOperator} from the specified polarity symbol ('+' or
    * '-').

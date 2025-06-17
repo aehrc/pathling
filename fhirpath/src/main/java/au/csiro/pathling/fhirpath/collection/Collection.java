@@ -20,7 +20,6 @@ package au.csiro.pathling.fhirpath.collection;
 import static au.csiro.pathling.fhirpath.TypeSpecifier.FHIR_NAMESPACE;
 import static au.csiro.pathling.fhirpath.TypeSpecifier.SYSTEM_NAMESPACE;
 import static au.csiro.pathling.utilities.Preconditions.check;
-import static au.csiro.pathling.utilities.Strings.randomAlias;
 
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -46,9 +45,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.types.ArrayType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -359,6 +355,19 @@ public class Collection {
         ctx -> ctx.filter(col -> lambda.apply(new DefaultRepresentation(col)).getValue()));
   }
 
+
+  /**
+   * Returns a new collection representing the elements of this collection as a singular value.
+   *
+   * @param errorMessage the error messsage to produce if the collection cannot be singularized.
+   * @return A new collection representing the elements of this collection as a singular value
+   */
+  @Nonnull
+  public Collection asSingular(@Nonnull final String errorMessage) {
+    return map(cr -> cr.singular(errorMessage));
+  }
+
+
   /**
    * Returns a new collection representing the elements of this collection as a singular value.
    *
@@ -463,37 +472,18 @@ public class Collection {
     return maybeCollection.orElse(EmptyCollection.getInstance());
   }
 
-  // TODO: Remove this after removing usages.
-  @Deprecated
-  @Nonnull
-  public String getExpression() {
-    return getClass().getSimpleName();
-  }
 
   /**
-   * Determines if this collection represents a singular value in a context of a dataset.
-   * <p>
-   * This method examines the underlying dataset schema to determine if the column representing this
-   * collection is an array type or not.
+   * Gets a user-friendly representation of the current collection that can be used to refer to it
+   * in user errors.
    *
-   * @param dataset The dataset that this collection can evaluate on
-   * @return true if the collection represents a singular value, false if it represents an array
+   * @return a user-friendly representation of the collection.
    */
-  public boolean isSingular(@Nonnull final Dataset<Row> dataset) {
-    // Singularity cannot be determined from the reference alone as its parents may not be singular
-    // Select the column on the parent dataset to check the representation
-    final Dataset<Row> referenceDataset = dataset.select(
-        getColumnValue().alias(randomAlias()));
-    return !(referenceDataset.schema().apply(0).dataType() instanceof ArrayType);
+  @Nonnull
+  public String getDisplayExpression() {
+    return getClass().getSimpleName();
   }
-
-  // TODO: Remove this after removing usages.
-  @Deprecated
-  public boolean isSingular() {
-    return true;
-  }
-
-
+  
   /**
    * Returns an optional {@link Concepts} representation of this collection.
    *
