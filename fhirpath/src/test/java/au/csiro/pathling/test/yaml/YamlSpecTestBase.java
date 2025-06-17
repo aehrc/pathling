@@ -1,6 +1,7 @@
 package au.csiro.pathling.test.yaml;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsString;
+import static au.csiro.pathling.test.yaml.FhipathTestSpec.TestCase.ANY_ERROR;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -39,6 +40,7 @@ import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode.Exclude;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
@@ -163,7 +165,8 @@ public abstract class YamlSpecTestBase {
     public void log(@Nonnull Logger log) {
       exclusion.ifPresent(s -> log.info("Exclusion: {}", s));
       if (spec.isError()) {
-        log.info("assertError({}):[{}]", spec.getExpression(), spec.getDescription());
+        log.info("assertError({}->'{}'}):[{}]", spec.getExpression(), spec.getErrorMsg(),
+            spec.getDescription());
       } else {
         log.info("assertResult({}=({})):[{}]", spec.getResult(), spec.getExpression(),
             spec.getDescription());
@@ -224,7 +227,12 @@ public abstract class YamlSpecTestBase {
           throw new AssertionError(
               "Expected error but got value: " + actual + " (" + evalResult + ")");
         } catch (Exception e) {
-          log.debug("Expected error: {}", e.getMessage());
+          log.trace("Expected error: {}", e.toString());
+          final String rootCauseMsg = ExceptionUtils.getRootCause(e).getMessage();
+          log.debug("Expected error message: '{}', got: {}", spec.getErrorMsg(), rootCauseMsg);
+          if (!ANY_ERROR.equals(spec.getErrorMsg())) {
+            assertEquals(spec.getErrorMsg(), rootCauseMsg);
+          }
         }
       } else {
         final FhirPath fhipath = PARSER.parse(spec.getExpression());

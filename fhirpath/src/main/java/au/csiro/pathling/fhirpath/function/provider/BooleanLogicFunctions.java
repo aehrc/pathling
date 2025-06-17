@@ -3,6 +3,7 @@ package au.csiro.pathling.fhirpath.function.provider;
 import au.csiro.pathling.fhirpath.annotations.SofCompatibility;
 import au.csiro.pathling.fhirpath.annotations.SofCompatibility.Profile;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
 
@@ -29,8 +30,8 @@ public class BooleanLogicFunctions {
   @Nonnull
   @SofCompatibility(Profile.SHARABLE)
   @FhirPathFunction
-  public static BooleanCollection not(@Nonnull final BooleanCollection input) {
-    return BooleanCollection.build(input.getColumn().not());
+  public static BooleanCollection not(@Nonnull final Collection input) {
+    return BooleanCollection.build(input.asBooleanSingleton().getColumn().not());
   }
 
 }

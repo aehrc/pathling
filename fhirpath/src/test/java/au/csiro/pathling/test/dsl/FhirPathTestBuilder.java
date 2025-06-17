@@ -20,6 +20,9 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.DynamicTest;
 
+import static au.csiro.pathling.test.yaml.FhipathTestSpec.TestCase.ANY_ERROR;
+import static java.util.Objects.nonNull;
+
 @RequiredArgsConstructor
 public class FhirPathTestBuilder {
 
@@ -121,6 +124,20 @@ public class FhirPathTestBuilder {
   public FhirPathTestBuilder testError(String expression, String description) {
     return test(description, tc -> tc.expression(expression).expectError());
   }
+
+  /**
+   * Tests that an expression throws an error.
+   *
+   * @param errorMessage The error message to expect
+   * @param expression The FHIRPath expression to evaluate
+   * @param description The test description
+   * @return This builder for method chaining
+   */
+  public FhirPathTestBuilder testError(@Nonnull final String errorMessage, String expression,
+      String description) {
+    return test(description, tc -> tc.expression(expression).expectError(errorMessage));
+  }
+
 
   @Nonnull
   public Map<Object, Object> buildSubject() {
@@ -387,7 +404,8 @@ public class FhirPathTestBuilder {
     private final String description;
     private String expression;
     private Object result;
-    private boolean expectError = false;
+    @Nullable
+    private String expectError = null;
 
     public TestCaseBuilder expression(String expression) {
       this.expression = expression;
@@ -396,11 +414,17 @@ public class FhirPathTestBuilder {
 
     public TestCaseBuilder expectResult(Object result) {
       this.result = result;
+      this.expectError = null;
+      return this;
+    }
+
+    public TestCaseBuilder expectError(@Nonnull final String expectError) {
+      this.expectError = expectError;
       return this;
     }
 
     public TestCaseBuilder expectError() {
-      this.expectError = true;
+      this.expectError = ANY_ERROR;
       return this;
     }
 
@@ -415,7 +439,7 @@ public class FhirPathTestBuilder {
       Object formattedResult;
       if (result instanceof Number || result instanceof Boolean || result instanceof String) {
         formattedResult = result;
-      } else if (result == null && expectError) {
+      } else if (result == null && nonNull(expectError)) {
         formattedResult = null;
       } else if (result instanceof List && ((List<?>) result).size() == 1) {
         formattedResult = ((List<?>) result).get(0);

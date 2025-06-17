@@ -2,7 +2,6 @@ package au.csiro.pathling.fhirpath.dsl;
 
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
-import java.util.List;
 import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Resource;
@@ -26,24 +25,19 @@ public class SystemDslTest extends FhirPathDslTestBase {
         .testEquals("test", "'test'", "Simple string literal")
         .testEquals("test with spaces", "'test with spaces'", "String literal with spaces")
         .testEquals("", "''", "Empty string literal")
-
         // Integer literals
         .testEquals(42, "42", "Positive integer literal")
         .testEquals(-42, "-42", "Negative integer literal")
         .testEquals(0, "0", "Zero integer literal")
-
         // Decimal literals
         .testEquals(3.14, "3.14", "Positive decimal literal")
         .testEquals(-3.14, "-3.14", "Negative decimal literal")
         .testEquals(0.0, "0.0", "Zero decimal literal")
-
         // Boolean literals
         .testEquals(true, "true", "True boolean literal")
         .testEquals(false, "false", "False boolean literal")
-
         // Empty literal
         .testEmpty("{}", "Empty literal")
-
         // Coding literals
         .testTrue("(http://example.org|code).exists()", "Simple Coding literal exists")
         .testEquals("http://example.org", "(http://example.org|code).system",
@@ -66,7 +60,6 @@ public class SystemDslTest extends FhirPathDslTestBase {
         .testEquals("All escapes: \\\r\n\t\f\"`'",
             "'All escapes: \\\\\\r\\n\\t\\f\\\"`\\''",
             "String literal with all escape sequences")
-
         .group("Unsupported literal types")
         .testError("@2019-02-04", "DateTime literal is not supported")
         .testError("@2019-02-04T14:34:28+09:00", "DateTime with time literal is not supported")
@@ -149,14 +142,13 @@ public class SystemDslTest extends FhirPathDslTestBase {
             "single polymorphic choice evaluates to true in boolean operators")
         .testTrue("choiceField.value.ofType(string) or false",
             "single resolved choice evaluates to true in boolean operators")
-        .group("non boolean collections with many elements fail to evaluate in functions")
-        .testEquals(List.of(false, true, false),
-            "booleanArray.not()",
-            "array of booleans evaluates to collection in function")
+        .group("collections with many elements fail to evaluate as boolean singleton")
+        .testError("booleanArray.not()",
+            "array of booleans evaluates to error as boolean singleton")
         .testError("stringArray.not()",
-            "array of many strings evaluates to error in function")
+            "array of many strings evaluates to error as boolean singleton")
         .testError("stringArray.where($this.exists()).not()",
-            "computed array many of strings evaluates to error in function")
+            "computed array many of strings evaluates to error as boolean singleton")
         .group("collections with many elements fail to evaluate in boolean operators")
         .testError(
             "booleanArray and true",

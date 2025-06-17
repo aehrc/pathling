@@ -2,7 +2,6 @@ package au.csiro.pathling.fhirpath.dsl;
 
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
-import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
@@ -83,13 +82,13 @@ public class BooleanLogicFunctionsDslTest extends FhirPathDslTestBase {
             "not() fails on non-boolean non-singular collection")
         
         // not() with boolean arrays
-        .testEquals(List.of(false, true, false), "boolArray.not()",
-            "not() negates each value in a boolean array")
+        .testError( "boolArray.not()",
+            "not() fails on non-singular boolean collection")
         // not() with complex types
         .testEquals(false, "person.active.not()",
             "not() negates boolean property of complex type")
-        .testEquals(List.of(false, true), "people.active.not()",
-            "not() negates boolean property of each item in complex type array")
+        .testError("people.active.not()",
+            "not() fails on non-singlar boolean computed collection")
 
         // Chained not() tests
         .testEquals(true, "falseValue.not().not().not()",
