@@ -241,10 +241,6 @@ excludeSet:
   - title: Literal exclusions
     glob: "fhirpath-js/cases/5.5_conversion.yaml"
     exclude:
-      - title: "Primitive attributes"
-        type: ???
-        any:
-          - "** iif for collection with null values"
       - title: "Unsupported primitive ids"
         type: feature
         any:
