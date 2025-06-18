@@ -238,17 +238,6 @@ excludeSet:
           - "heteroattr.ofType(Integer)"
           - "heteroattr.ofType(Decimal)"
           - "heteroattr.ofType(Boolean)"
-  - title: Literal exclusions
-    glob: "fhirpath-js/cases/5.5_conversion.yaml"
-    exclude:
-      - title: "Precision lost in in decimal literals"
-        type: bug
-        expression:
-          - '^attrdec\.toString\(\)$'
-      - title: "Incorrect filter() on empty collections"
-        type: bug
-        any:
-          - "** filter empty coll"
   - title: Equality exclusions
     glob: "fhirpath-js/cases/6.1_equality.yaml"
     exclude:
