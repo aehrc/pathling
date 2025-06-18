@@ -1,12 +1,12 @@
 package au.csiro.pathling.views;
 
-import com.google.gson.annotations.SerializedName;
-import jakarta.annotation.Nullable;
+import jakarta.annotation.Nonnull;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.Collections;
 import java.util.List;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -19,35 +19,60 @@ import lombok.NoArgsConstructor;
  * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.from">ViewDefinition.select.from</a>
  */
 @Data
-@AllArgsConstructor(staticName = "of")
-@NoArgsConstructor
+@AllArgsConstructor()
+@NoArgsConstructor()
+@Builder
 @EqualsAndHashCode(callSuper = false)
 public class ColumnSelect extends SelectClause {
 
   /**
-   * Creates a scope for selection relative to a parent FHIRPath expression.
-   *
-   * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.from">ViewDefinition.select.from</a>
+   * The customized Lombok builder for {@link ColumnSelect}. This builder provides convenience
+   * methods.
    */
-  @Nullable
-  @SerializedName("from")
-  String path;
+  @SuppressWarnings("unused")
+  public static class ColumnSelectBuilder {
+
+    /**
+     * Convenience method to create columns from a var arg of  {@link Column}.
+     */
+    public ColumnSelectBuilder columns(@Nonnull final Column... columns) {
+      return column(List.of(columns));
+    }
+
+    /**
+     * Convenience method to build select from a var arg of {@link SelectClause}.
+     */
+    public ColumnSelectBuilder selects(@Nonnull final SelectClause... selects) {
+      return select(List.of(selects));
+    }
+
+    /**
+     * Convenience method to create unions from a var arg of {@link SelectClause}.
+     */
+    public ColumnSelectBuilder unionsAll(@Nonnull final SelectClause... unionsAll) {
+      return unionAll(List.of(unionsAll));
+    }
+
+  }
+
 
   @NotNull
+  @Builder.Default
   List<Column> column = Collections.emptyList();
 
   /**
-   * Nested select relative to the {@link #path}.
+   * Nested select relative to this.
    *
    * @see <a
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.select">ViewDefinition.select.select</a>
    */
   @NotNull
   @Size()
+  @Builder.Default
   List<SelectClause> select = Collections.emptyList();
 
   @NotNull
   @Size()
+  @Builder.Default
   List<SelectClause> unionAll = Collections.emptyList();
 }

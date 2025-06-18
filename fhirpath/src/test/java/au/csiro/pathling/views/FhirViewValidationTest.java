@@ -16,38 +16,46 @@ public class FhirViewValidationTest {
     fhirView.setResource("Patient");
     fhirView.setSelect(
         List.of(
-            ColumnSelect.of(null,
-                List.of(
-                    Column.of("unique1", "Patient.name", "Patient name", false, "string"),
-                    Column.of("duplicate1", "Patient.name", "Patient name", false, "string"),
-                    Column.of("duplicate1", "Patient.name", "Patient name", false, "string"),
-                    Column.of("duplicate3", "Patient.name", "Patient name", false, "string"),
-                    Column.of("duplicate4", "Patient.name", "Patient name", false, "string")
-                ),
-                List.of(
-                    ColumnSelect.of(null, List.of(
-                        Column.of("unique3", "Patient.name", "Patient name", false, "string"),
-                        Column.of("duplicate4", "Patient.name", "Patient name", false, "string"),
-                        Column.of("duplicate5", "Patient.name", "Patient name", false, "string")
-                    ), List.of(), List.of())
-                ), List.of()
-            ),
-            ColumnSelect.of(null,
-                List.of(
-                    Column.of("unique2", "Patient.name", "Patient name", false, "string"),
-                    Column.of("duplicate2", "Patient.name", "Patient name", false, "string"),
-                    Column.of("duplicate2", "Patient.name", "Patient name", false, "string"),
-                    Column.of("duplicate3", "Patient.name", "Patient name", false, "string"),
-                    Column.of("duplicate5", "Patient.name", "Patient name", false, "string")
-                ),
-                List.of(), List.of()
-            )
+            ColumnSelect.builder()
+                .columns(
+                    Column.single("unique1", "Patient.name"),
+                    Column.single("duplicate1", "Patient.name"),
+                    Column.single("duplicate1", "Patient.name"),
+                    Column.single("duplicate3", "Patient.name"),
+                    Column.single("duplicate4", "Patient.name"),
+                    Column.single("duplicate6", "Patient.name")
+                )
+                .selects(
+                    ColumnSelect.builder().columns(
+                        Column.single("unique3", "Patient.name"),
+                        Column.single("duplicate4", "Patient.name"),
+                        Column.single("duplicate5", "Patient.name")
+                    ).build()
+                ).build(),
+            ColumnSelect.builder()
+                .columns(
+                    Column.single("unique2", "Patient.name"),
+                    Column.single("duplicate2", "Patient.name"),
+                    Column.single("duplicate2", "Patient.name"),
+                    Column.single("duplicate3", "Patient.name"),
+                    Column.single("duplicate5", "Patient.name")
+                )
+                .unionsAll(
+                    ColumnSelect.builder().columns(
+                        Column.single("unique4", "Patient.name"),
+                        Column.single("duplicate6", "Patient.name")
+                    ).build(),
+                    ColumnSelect.builder().columns(
+                        Column.single("unique4", "Patient.name"),
+                        Column.single("duplicate6", "Patient.name")
+                    ).build()
+                ).build()
         )
     );
     final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(fhirView);
     final ConstraintViolation<FhirView> violation = validationResult.iterator().next();
     assertEquals(
-        "Duplicate column names found: duplicate1, duplicate2, duplicate3, duplicate4, duplicate5",
+        "Duplicate column names found: duplicate1, duplicate2, duplicate3, duplicate4, duplicate5, duplicate6",
         violation.getMessage());
     assertEquals(fhirView, violation.getRootBean());
   }

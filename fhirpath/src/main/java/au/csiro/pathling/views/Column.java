@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -15,10 +16,32 @@ import lombok.NoArgsConstructor;
  * @author John Grimes
  */
 @Data
-@AllArgsConstructor(staticName = "of")
+@AllArgsConstructor
 @NoArgsConstructor
+@Builder
 @EqualsAndHashCode(callSuper = false)
 public class Column implements SelectionElement {
+
+  @SuppressWarnings("unused")
+  public static class ColumnBuilder {
+    // for javadocs
+  }
+
+  /**
+   * Static factory method to create a new non collection {@link Column} instance with required
+   * fields.
+   *
+   * @param name the name of the column, must be in a database-friendly format
+   * @param path the FHIRPath expression that evaluates to the value for the column
+   * @return a new {@link Column} instance
+   */
+  public static Column single(@NotNull final String name,
+      @NotNull final String path) {
+    return builder()
+        .name(name)
+        .path(path)
+        .build();
+  }
 
   /**
    * Name of the column produced in the output, must be in a database-friendly format.
