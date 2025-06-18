@@ -18,11 +18,11 @@ public abstract class SelectClause implements SelectionElement {
   public abstract List<Column> getColumn();
 
   @Nonnull
-  abstract List<SelectClause> getSelect();
+  public abstract List<SelectClause> getSelect();
 
   @Nonnull
-  abstract List<SelectClause> getUnionAll();
-  
+  public abstract List<SelectClause> getUnionAll();
+
   /**
    * Returns a stream of all columns defined in this select clause, including those in nested
    * selects and the unionAll.

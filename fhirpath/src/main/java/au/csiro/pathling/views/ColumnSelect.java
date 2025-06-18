@@ -1,6 +1,8 @@
 package au.csiro.pathling.views;
 
+import au.csiro.pathling.views.validation.CompatibleUnionColumns;
 import jakarta.annotation.Nonnull;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.Collections;
@@ -52,13 +54,13 @@ public class ColumnSelect extends SelectClause {
     public ColumnSelectBuilder unionsAll(@Nonnull final SelectClause... unionsAll) {
       return unionAll(List.of(unionsAll));
     }
-
   }
 
 
   @NotNull
+  @Valid
   @Builder.Default
-  List<Column> column = Collections.emptyList();
+  List<@Valid Column> column = Collections.emptyList();
 
   /**
    * Nested select relative to this.
@@ -68,11 +70,14 @@ public class ColumnSelect extends SelectClause {
    */
   @NotNull
   @Size()
+  @Valid
   @Builder.Default
-  List<SelectClause> select = Collections.emptyList();
+  List<@Valid SelectClause> select = Collections.emptyList();
 
   @NotNull
   @Size()
+  @Valid
+  @CompatibleUnionColumns
   @Builder.Default
-  List<SelectClause> unionAll = Collections.emptyList();
+  List<@Valid SelectClause> unionAll = Collections.emptyList();
 }

@@ -5,6 +5,7 @@ import static java.util.Objects.nonNull;
 import au.csiro.pathling.views.validation.UniqueColumnNames;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
@@ -54,7 +55,8 @@ public class FhirView {
    */
   @NotNull
   @NotEmpty
-  List<SelectClause> select;
+  @Valid
+  List<@Valid SelectClause> select;
 
   /**
    * FHIRPath expression defining a filter condition.

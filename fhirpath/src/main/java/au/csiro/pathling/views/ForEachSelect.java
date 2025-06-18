@@ -1,5 +1,6 @@
 package au.csiro.pathling.views;
 
+import au.csiro.pathling.views.validation.CompatibleUnionColumns;
 import com.google.gson.annotations.SerializedName;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -44,6 +45,7 @@ public class ForEachSelect extends SelectClause {
 
   @NotNull
   @Size()
+  @CompatibleUnionColumns
   List<SelectClause> unionAll = Collections.emptyList();
 
 }

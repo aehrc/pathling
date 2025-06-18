@@ -51,7 +51,7 @@ public class Column implements SelectionElement {
    */
   @NotNull
   @Size(max = 255)
-  @Pattern(regexp = "^[^_][A-Za-z][A-Za-z0-9_]+$")
+  @Pattern(regexp = "^[A-Za-z][A-Za-z0-9_]*$")
   String name;
 
   /**
@@ -96,5 +96,35 @@ public class Column implements SelectionElement {
    */
   @Nullable
   String type;
+
+
+  /**
+   * Checks if this column is compatible with another column for union operations. Columns are
+   * compatible if they have the same type and collection indicator.
+   *
+   * @param other the other column to compare with
+   * @return true if the columns are compatible, false otherwise
+   */
+  public boolean isCompatibleWith(@Nullable final Column other) {
+    if (other == null) {
+      return false;
+    }
+
+    // Check collection indicator
+    if (this.isCollection() != other.isCollection()) {
+      return false;
+    }
+
+    // Check type compatibility
+    if (this.getType() == null && other.getType() == null) {
+      return true; // Both have null type, considered compatible
+    }
+
+    if (this.getType() == null || other.getType() == null) {
+      return false; // One has type, the other doesn't
+    }
+
+    return this.getType().equals(other.getType());
+  }
 
 }
