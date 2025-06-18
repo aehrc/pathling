@@ -5,8 +5,8 @@ import static java.util.Objects.nonNull;
 import au.csiro.pathling.views.validation.UniqueColumnNames;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.stream.Stream;
 import lombok.Data;
@@ -53,7 +53,7 @@ public class FhirView {
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select">ViewDefinition.select</a>
    */
   @NotNull
-  @Size(min = 1)
+  @NotEmpty
   List<SelectClause> select;
 
   /**
@@ -69,7 +69,7 @@ public class FhirView {
    */
   @Nullable
   List<WhereClause> where;
-  
+
   /**
    * Gets the names of all columns in the view including those in nested selects.
    *

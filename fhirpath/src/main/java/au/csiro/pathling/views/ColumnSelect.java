@@ -44,6 +44,7 @@ public class ColumnSelect extends SelectClause {
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.select">ViewDefinition.select.select</a>
    */
   @NotNull
+  @Size()
   List<SelectClause> select = Collections.emptyList();
 
   @NotNull
