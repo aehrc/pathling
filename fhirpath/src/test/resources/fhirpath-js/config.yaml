@@ -241,10 +241,6 @@ excludeSet:
   - title: Literal exclusions
     glob: "fhirpath-js/cases/5.5_conversion.yaml"
     exclude:
-      - title: "Unsupported primitive ids"
-        type: feature
-        any:
-          - "** where for a collection with a null value that has an id"
       - title: "Precision lost in in decimal literals"
         type: bug
         expression:
