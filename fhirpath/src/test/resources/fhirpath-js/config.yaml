@@ -264,13 +264,10 @@ excludeSet:
     glob: "fhirpath-js/cases/6.1_equality.yaml"
     exclude:
       - title: "Bundles are not supported"
-        type: framework-gap
+        type: feature
+        id: "#2418"
         expression:
           - "(^|\\W)Bundle(\\W|$)"
-      - title: "Time literals with timezone"
-        type: ??? # non-issue
-        expression:
-          - "@T\\d{2}:\\d{2}:\\d{2}[-+]\\d{2}:\\d{2}"
       - title: "Equality for empty values"
         type: ??? # non-issue
         any:
