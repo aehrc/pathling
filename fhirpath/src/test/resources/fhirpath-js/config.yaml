@@ -154,6 +154,42 @@ excludeSet:
         expression:
           - " & "
           - " div "
+      - title: "Unsupported date and datetime literals"
+        type: feature
+        id: "#2409"
+        any:
+          - "@2019"
+          - "@2019-02-03T01:00Z = @2019-02-02T21:00-04:00"
+          - "@2019-02-03T02:00Z = @2019-02-02T21:00-04:00"
+          - "@2018 = @2018"
+          - "@2018 = @2017"
+          - "@2018 = @2018-02"
+          - "@2018-02 = @2018-02"
+          - "@2018-02 = @2018-03"
+          - "@2018-02-02 = @2018-02-02"
+          - "@2018-02-02 = @2018-02-03"
+          - "@2018-02-02T11:01:03 = @2018-02-02T11:01:03"
+          - "@2018-02-02T11:01:03 = @2018-02-02T11:01:04"
+          - "@2018-02-02T11:01:03.123 = @2018-02-02T11:01:03.123"
+          - "@2018-02-02T11:01:03.123 = @2018-02-02T11:01:03.124"
+          - "@2018-02-02T11:01:03.123+02:00 = @2018-02-02T11:01:03.123+04:00"
+          - "@2018 != @2018"
+          - "@2018 != @2017"
+          - "@2018 != @2018-02"
+          - "@2018 != @2018-01"
+          - "@2018-02-03 != @2018-01"
+      - title: "Unsupported quantity literals"
+        type: feature
+        id: "#2410"
+        expression:
+          - "2 'mo'"
+          - "^2 years$"
+          - "\\(2 years\\).value"
+          - "1 month = 30 'd'"
+          - "1 week = 1 'wk'"
+          - "1 day = 1 'd'"
+          - "1 day = 24 'h'"
+          - "1 second = 1 's'"
   - title: Path exclusions
     glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
@@ -200,20 +236,6 @@ excludeSet:
           incorrect expectation within the test cases.
         any:
           - "`a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065`"
-      - title: "Unsupported date and datetime literals"
-        type: feature
-        id: "#2409"
-        any:
-          - "@2019"
-          - "@2019-02-03T01:00Z = @2019-02-02T21:00-04:00"
-          - "@2019-02-03T02:00Z = @2019-02-02T21:00-04:00"
-      - title: "Unsupported quantity literals"
-        type: feature
-        id: "#2410"
-        expression:
-          - "2 'mo'"
-          - "^2 years$"
-          - "\\(2 years\\).value"
   - title: Existence exclusions
     glob: "fhirpath-js/cases/5.1_existence.yaml"
     exclude:
