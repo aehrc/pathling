@@ -230,8 +230,9 @@ excludeSet:
   - title: Filtering and projection exclusions
     glob: "fhirpath-js/cases/5.2_filtering_and_projection.yaml"
     exclude:
-      - title: "Unsupported polymorphic collection"
-        type: framework-gap
+      - title: "FHIRPath types currently not working within ofType"
+        type: bug
+        id: "#2415"
         any:
           - "heteroattr.ofType(String)"
           - "heteroattr.ofType(Integer)"
