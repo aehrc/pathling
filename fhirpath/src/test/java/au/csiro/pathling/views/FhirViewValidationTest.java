@@ -6,6 +6,7 @@ import au.csiro.pathling.validation.ValidationUtils;
 import jakarta.validation.ConstraintViolation;
 import java.util.Set;
 import java.util.stream.Stream;
+import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -147,6 +148,26 @@ public class FhirViewValidationTest {
         "Duplicate column names found: duplicate1, duplicate2, duplicate3, duplicate4, duplicate5, duplicate6",
         violation.getMessage());
     assertEquals(fhirView, violation.getRootBean());
+  }
+
+  @Test
+  public void testConstantNameValidation() {
+    // Create a constant with an invalid name (contains hyphens)
+    ConstantDeclaration invalidConstant = ConstantDeclaration.builder()
+        .name("invalid-constant-name")
+        .value(new StringType("test value"))
+        .build();
+
+    final FhirView fhirView = FhirView.withResource("Patient")
+        .selects(ColumnSelect.ofColumns(Column.single("id", "Patient.id")))
+        .constants(invalidConstant)
+        .build();
+
+    final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(fhirView);
+    assertEquals(1, validationResult.size());
+    final ConstraintViolation<FhirView> violation = validationResult.iterator().next();
+    assertEquals("must match \"^[A-Za-z][A-Za-z0-9_]*$\"", violation.getMessage());
+    assertEquals("constant[0].name", violation.getPropertyPath().toString());
   }
 
   @ParameterizedTest(name = "{0}")
