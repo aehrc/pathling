@@ -169,6 +169,26 @@ public class FhirViewValidationTest {
     assertEquals("must be a valid name ([A-Za-z][A-Za-z0-9_]*)", violation.getMessage());
     assertEquals("constant[0].name", violation.getPropertyPath().toString());
   }
+  
+  @Test
+  public void testAtMostOneNonNullForEachFields() {
+    // Create a SelectClause with both forEach and forEachOrNull set
+    SelectClause invalidSelectClause = SelectClause.builder()
+        .forEach("Patient.name")
+        .forEachOrNull("Patient.address")
+        .columns(Column.single("id", "Patient.id"))
+        .build();
+
+    final FhirView fhirView = FhirView.withResource("Patient")
+        .selects(invalidSelectClause)
+        .build();
+
+    final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(fhirView);
+    assertEquals(1, validationResult.size());
+    final ConstraintViolation<FhirView> violation = validationResult.iterator().next();
+    assertEquals("Only one of the fields [forEach, forEachOrNull] can be non-null", violation.getMessage());
+    assertEquals("select[0]", violation.getPropertyPath().toString());
+  }
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("recursiveValidationTestCases")

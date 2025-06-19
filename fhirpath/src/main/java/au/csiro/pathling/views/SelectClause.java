@@ -1,5 +1,6 @@
 package au.csiro.pathling.views;
 
+import au.csiro.pathling.views.validation.AtMostOneNonNull;
 import au.csiro.pathling.views.validation.CompatibleUnionColumns;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -26,6 +27,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor()
 @NoArgsConstructor()
 @Builder
+@AtMostOneNonNull({"forEach", "forEachOrNull"})
 public class SelectClause implements SelectionElement {
 
   /**
