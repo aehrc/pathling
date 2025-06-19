@@ -35,9 +35,7 @@ import au.csiro.pathling.terminology.TerminologyFunctions;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.validation.ValidationUtils;
 import au.csiro.pathling.views.ConstantDeclarationTypeAdapterFactory;
-import au.csiro.pathling.views.SelectClauseTypeAdapterFactory;
 import au.csiro.pathling.views.StrictStringTypeAdapterFactory;
-import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
@@ -107,7 +105,6 @@ public class PathlingContext {
   @Nonnull
   private static Gson buildGson() {
     final GsonBuilder builder = new GsonBuilder();
-    builder.registerTypeAdapterFactory(new SelectClauseTypeAdapterFactory());
     builder.registerTypeAdapterFactory(new ConstantDeclarationTypeAdapterFactory());
     builder.registerTypeAdapterFactory(new StrictStringTypeAdapterFactory());
     return builder.create();
