@@ -14,6 +14,24 @@ import org.junit.jupiter.params.provider.MethodSource;
 public class FhirViewValidationTest {
 
   @Test
+  public void failsWithNullColumnName() {
+    final Column columnWithNoName = Column.builder()
+        .path("Patient.id")
+        .build(); // No name set, should fail validation
+    
+    // Create a valid FhirView with a single select clause
+    final FhirView fhirView = FhirView.withResource("Patient")
+        .selects(ColumnSelect.ofColumns(columnWithNoName))
+        .build();
+
+    final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(fhirView);
+    assertEquals(1, validationResult.size());
+    final ConstraintViolation<FhirView> violation = validationResult.iterator().next();
+    assertEquals("must not be null", violation.getMessage());
+    assertEquals("select[0].column[0].name", violation.getPropertyPath().toString());
+  }
+
+  @Test
   public void testPassesForCompatibleUnionColumns() {
     // Create a union with compatible columns
     Column compatibleColumn1 = Column.single("name", "Patient.name");
