@@ -2,7 +2,10 @@ package au.csiro.pathling.views;
 
 import jakarta.annotation.Nonnull;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hl7.fhir.instance.model.api.IBase;
 
 /**
@@ -16,6 +19,9 @@ import org.hl7.fhir.instance.model.api.IBase;
  * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant">ViewDefinition.constant</a>
  */
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class ConstantDeclaration {
 
   /**

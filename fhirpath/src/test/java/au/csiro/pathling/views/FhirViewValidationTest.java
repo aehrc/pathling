@@ -75,6 +75,30 @@ public class FhirViewValidationTest {
   }
 
   @Test
+  public void testValidatesWhereClause() {
+    final FhirView fhirView = new FhirView();
+    fhirView.setResource("Patient");
+    fhirView.setSelect(
+        List.of(
+            ColumnSelect.builder()
+                .columns(Column.single("id", "Patient.id"))
+                .build()
+        )
+    );
+    
+    // Set a where clause with a null expression (which violates @NotNull)
+    WhereClause invalidWhereClause = new WhereClause();
+    invalidWhereClause.setDescription("This has a null expression");
+    fhirView.setWhere(List.of(invalidWhereClause));
+    
+    final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(fhirView);
+    assertEquals(1, validationResult.size());
+    final ConstraintViolation<FhirView> violation = validationResult.iterator().next();
+    assertEquals("must not be null", violation.getMessage());
+    assertEquals("expression", violation.getPropertyPath().toString().split("\\.")[1]);
+  }
+
+  @Test
   public void testFailsForDuplicateColumnNames() {
     final FhirView fhirView = new FhirView();
     fhirView.setResource("Patient");

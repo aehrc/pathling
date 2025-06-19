@@ -3,7 +3,10 @@ package au.csiro.pathling.views;
 import com.google.gson.annotations.SerializedName;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * 'where' filters are FHIRPath expressions joined with an implicit "and". This enables users to
@@ -13,6 +16,9 @@ import lombok.Data;
  * @author John Grimes
  */
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class WhereClause {
 
   /**

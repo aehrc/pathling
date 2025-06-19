@@ -92,8 +92,9 @@ public class FhirView {
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant">ViewDefinition.constant</a>
    */
   @Nullable
+  @Valid
   @Builder.Default
-  List<ConstantDeclaration> constant = null;
+  List<@Valid ConstantDeclaration> constant = null;
 
   /**
    * Defines the content of a column within the view.
@@ -119,8 +120,9 @@ public class FhirView {
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.where">ViewDefinition.where</a>
    */
   @Nullable
+  @Valid
   @Builder.Default
-  List<WhereClause> where = null;
+  List<@Valid WhereClause> where = null;
 
   /**
    * Gets the names of all columns in the view including those in nested selects.
