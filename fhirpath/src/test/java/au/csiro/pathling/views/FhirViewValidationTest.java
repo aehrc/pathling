@@ -5,7 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import au.csiro.pathling.validation.ValidationUtils;
 import jakarta.validation.ConstraintViolation;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class FhirViewValidationTest {
 
@@ -125,5 +129,79 @@ public class FhirViewValidationTest {
         "Duplicate column names found: duplicate1, duplicate2, duplicate3, duplicate4, duplicate5, duplicate6",
         violation.getMessage());
     assertEquals(fhirView, violation.getRootBean());
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("recursiveValidationTestCases")
+  public void testRecursiveValidationOfColumnConstraints(String testName, FhirView view,
+      String expectedPath) {
+    Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(view);
+    assertEquals(1, validationResult.size());
+    ConstraintViolation<FhirView> violation = validationResult.iterator().next();
+    assertEquals("must match \"^[A-Za-z][A-Za-z0-9_]*$\"", violation.getMessage());
+    assertEquals(expectedPath, violation.getPropertyPath().toString());
+  }
+
+  static Stream<Arguments> recursiveValidationTestCases() {
+    // Create a column with an invalid name (doesn't match pattern)
+    Column invalidColumn = Column.builder()
+        .name("invalid-name-with-hyphens")  // Invalid: contains hyphens
+        .path("Patient.name")
+        .build();
+
+    return Stream.of(
+        // Test validation in ColumnSelect
+        Arguments.of(
+            "ColumnSelect direct validation",
+            FhirView.withResource("Patient")
+                .selects(ColumnSelect.ofColumns(invalidColumn))
+                .build(),
+            "select[0].column[0].name"
+        ),
+
+        // Test validation in ForEachSelect
+        Arguments.of(
+            "ForEachSelect direct validation",
+            FhirView.withResource("Patient")
+                .selects(ForEachSelect.ofColumns("Patient.name", invalidColumn))
+                .build(),
+            "select[0].column[0].name"
+        ),
+
+        // Test validation in ForEachOrNullSelect
+        Arguments.of(
+            "ForEachOrNullSelect direct validation",
+            FhirView.withResource("Patient")
+                .selects(ForEachOrNullSelect.ofColumns("Patient.name", invalidColumn))
+                .build(),
+            "select[0].column[0].name"
+        ),
+
+        // Test validation in nested structures (select within select)
+        Arguments.of(
+            "Nested select validation",
+            FhirView.withResource("Patient")
+                .selects(
+                    ColumnSelect.builder().columns(Column.single("valid", "Patient.id"))
+                        .selects(ColumnSelect.ofColumns(invalidColumn))
+                        .build()
+                )
+                .build(),
+            "select[0].select[0].column[0].name"
+        ),
+
+        // Test validation in unionAll
+        Arguments.of(
+            "UnionAll validation",
+            FhirView.withResource("Patient")
+                .selects(
+                    ColumnSelect.builder().columns(Column.single("valid", "Patient.id"))
+                        .unionsAll(ColumnSelect.ofColumns(invalidColumn))
+                        .build()
+                )
+                .build(),
+            "select[0].unionAll[0].column[0].name"
+        )
+    );
   }
 }
