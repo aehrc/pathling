@@ -180,6 +180,22 @@ excludeSet:
           - "@2018-02-03 != @2018-01"
           - "@2018 = int1"
           - "@2018 = 'zzz'"
+          - "@2018 > @2017"
+          - "@2018 >= @2017"
+          - "@2018 >= @2018"
+          - "@2018 <= @2017"
+          - "@2018 <= @2018"
+          - "@2018 < @2017"
+          - "@2018 < @2018"
+          - "@T12:03 > @T12:01"
+          - "@T12:01:34.123 > @T12:01:34.122"
+          - "@T12:02:34.324 > @T12:01"
+          - "DiagnosticReport.issued = @2005-01-27T06:40:01Z"
+          - "@2018-12-31 > @2018"
+          - "@T12:01 > @T12:03"
+          - "@T12:01 > @T12"
+          - "@T12+04:00 > @T12:02:34.324+05:00"
+          - "@T12:02:34.324+05:00 > @T12+05:00"
         expression:
           - "@\\d{4}-\\d{2}-\\d{2}T\\d{2}[^:]"
           - "@\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}[^:]"
@@ -203,6 +219,19 @@ excludeSet:
           - "1 day = 24 hours"
           - "10 'kg.m/s2' = 5 'kg' * 4 'm' / (2 seconds * 1000 'ms')"
           - "1 week = 7 days"
+          - "1 year > 1 'a'"
+          - "1 's' > 1 year"
+          - "1 'min' < 2 minutes"
+          - "1 'kg' < 2 's'"
+          - "1 'min' < 61 seconds"
+          - "10 seconds > 1 's'"
+          - "10 seconds < 1 's'"
+          - "1 's' > 10 seconds"
+          - "1 's' < 10 seconds"
+          - "999 'g' < 1 'kg'"
+          - "999 'g' > 1 'kg'"
+          - "1001 'g' > 1 'kg'"
+          - "1001 'g' < 1 'kg'"
   - title: Path exclusions
     glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
@@ -299,46 +328,18 @@ excludeSet:
           - "** two colls"
           - "** two colls not"
           - "** length mismatch"
-  - title: "Comparison exlusions"
+  - title: "Comparison exclusions"
     glob: "fhirpath-js/cases/6.2_comparision.yaml"
     exclude:
-      - title: "Comparison for empty collections fails"
-        id: "#2164"
-        type: bug
+      - title: Unsupported comparison of dates, times and date times
+        type: new-feature
+        id: "#2421"
         any:
-          - "less than, with empty value"
-          - "less than, with null value"
-          - "greater than, with empty value"
-          - "greater than, with null value"
-          - "greater or equal than, with empty value"
-          - "greater or equal than, with null value"
-          - "less or equal than, with empty value"
-          - "less or equal than, with null value"
-      - title: "Comparision for non-singular collections fails"
-        id: "#2164"
-        type: bug
-        any:
-          - "less than, with too many values"
-          - "greater than, with too many values"
-          - "greater or equal than, with too many values"
-      - title: "Comparison for time quantities returns null"
-        id: "#2172"
-        type: bug
-        any:
+          - "DiagnosticReport.issued < DiagnosticReport.effectiveDateTime"
           - "1 year > 12 months"
           - "1 year < 12 months"
           - "1 minute > 59 seconds"
           - "1 minute < 61 seconds"
-      - title: "Comparison based on the lesser precision fails"
-        id: "#2172"
-        type: bug
-        any:
-          - "@2018-12-31 > @2018"
-          - "@T12:01 > @T12"
-      - title: "Time literals with timezone"
-        type: ??? # non-issue
-        expression:
-          - "@T\\d{2}:\\d{2}:\\d{2}(\\.\\d{3})?[-+]\\d{2}:\\d{2}"
   - title: Collections exclusions
     glob: "fhirpath-js/cases/6.4_collections.yaml"
     exclude:
