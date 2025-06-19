@@ -56,6 +56,17 @@ public class ColumnSelect extends SelectClause {
     }
   }
 
+  /**
+   * Creates a new {@link ColumnSelect} with the given columns.
+   *
+   * @param columns the columns to include
+   * @return a new {@link ColumnSelect} instance
+   */
+  @Nonnull
+  public static ColumnSelect ofColumns(@Nonnull final Column... columns) {
+    return builder().column(List.of(columns)).build();
+  }
+
 
   @NotNull
   @Valid

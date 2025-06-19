@@ -64,8 +64,20 @@ public class ForEachSelect extends SelectClause {
    * @return a builder with the path set
    */
   @Nonnull
-  public static ForEachSelectBuilder ofPath(@Nonnull final String path) {
+  public static ForEachSelectBuilder withPath(@Nonnull final String path) {
     return builder().path(path);
+  }
+
+  /**
+   * Creates a new {@link ForEachSelect} with the given path and columns.
+   *
+   * @param path the path to set
+   * @param columns the columns to include
+   * @return a new {@link ForEachSelect} instance
+   */
+  @Nonnull
+  public static ForEachSelect ofColumns(@Nonnull final String path, @Nonnull final Column... columns) {
+    return builder().path(path).column(List.of(columns)).build();
   }
 
   /**

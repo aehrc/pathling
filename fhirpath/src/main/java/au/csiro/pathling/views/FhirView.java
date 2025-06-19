@@ -34,8 +34,7 @@ import lombok.NoArgsConstructor;
 public class FhirView {
 
   /**
-   * The customized Lombok builder for {@link FhirView}. This builder provides convenience
-   * methods.
+   * The customized Lombok builder for {@link FhirView}. This builder provides convenience methods.
    */
   @SuppressWarnings("unused")
   public static class FhirViewBuilder {
@@ -69,7 +68,7 @@ public class FhirView {
    * @return a builder with the resource set
    */
   @Nonnull
-  public static FhirViewBuilder ofResource(@Nonnull final String resource) {
+  public static FhirViewBuilder withResource(@Nonnull final String resource) {
     return builder().resource(resource);
   }
 
