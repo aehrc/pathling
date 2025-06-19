@@ -36,6 +36,8 @@ import org.apache.commons.lang3.tuple.Pair;
 @NotImplemented
 public class MathOperator implements BinaryOperator {
 
+  private static final String NON_SINGULAR_ERROR_FORMAT = "Math operator (%s) requires the %s operand to be singular.";
+
   @Nonnull
   private final MathOperation type;
 
@@ -54,22 +56,24 @@ public class MathOperator implements BinaryOperator {
     final Pair<Collection, Collection> reconciledArguments = BinaryOperator.reconcileTypes(
         input.getLeft(), input.getRight());
 
-    final Collection left = reconciledArguments.getLeft().asSingular();
-    final Collection right = reconciledArguments.getRight().asSingular();
+    final Collection left = reconciledArguments.getLeft()
+        .asSingular(NON_SINGULAR_ERROR_FORMAT.formatted(type.toString(), "left"));
+    final Collection right = reconciledArguments.getRight()
+        .asSingular(NON_SINGULAR_ERROR_FORMAT.formatted(type.toString(), "right"));
 
     checkUserInput(left instanceof Numeric,
-        type + " operator does not support left operand: " + left.getExpression());
+        type + " operator does not support left operand: " + left.getDisplayExpression());
     checkUserInput(right instanceof Numeric,
-        type + " operator does not support right operand: " + right.getExpression());
-    
+        type + " operator does not support right operand: " + right.getDisplayExpression());
+
     checkUserInput(left instanceof Comparable && right instanceof Comparable,
-        "Left and right operands are not comparable: " + left.getExpression() + " "
-            + type + " " + right.getExpression());
+        "Left and right operands are not comparable: " + left.getDisplayExpression() + " "
+            + type + " " + right.getDisplayExpression());
     final Comparable comparableLeft = (Comparable) left;
     final Comparable comparableRight = (Comparable) right;
     checkUserInput(comparableLeft.isComparableTo(comparableRight),
-        "Left and right operands are not comparable: " + left.getExpression() + " "
-            + type + " " + right.getExpression());
+        "Left and right operands are not comparable: " + left.getDisplayExpression() + " "
+            + type + " " + right.getDisplayExpression());
 
     final Numeric leftNumeric = (Numeric) left;
     final Numeric rightNumeric = (Numeric) right;

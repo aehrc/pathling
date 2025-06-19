@@ -68,6 +68,17 @@ public class EmptyCollection extends Collection implements Comparable, Numeric, 
   public BooleanCollection asBooleanPath() {
     return BooleanCollection.empty();
   }
+  
+  /**
+   * {@inheritDoc}
+   * <p>
+   * This implementation returns an empty BooleanCollection
+   */
+  @Override
+  @Nonnull
+  public BooleanCollection asBooleanSingleton() {
+    return BooleanCollection.empty();
+  }
 
 
   @Override
@@ -78,7 +89,7 @@ public class EmptyCollection extends Collection implements Comparable, Numeric, 
       return this;
     };
   }
-  
+
   @Override
   public @Nonnull Collection negate() {
     return this;
