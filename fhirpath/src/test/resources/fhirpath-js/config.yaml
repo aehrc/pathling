@@ -343,23 +343,15 @@ excludeSet:
   - title: Collections exclusions
     glob: "fhirpath-js/cases/6.4_collections.yaml"
     exclude:
-      - title: "Create correct empty collection in ad hoc resources"
-        type: framework-gap
+      - title: Unsupported equality for complex types
+        type: new-feature
+        id: "#2420"
         any:
           - "el in emptycoll"
-      - title: "'in' operator on element types fails"
-        type: bug
-        any:
           - "el in coll"
           - "not_el in coll"
-      - title: "'contains' operator on element types fails"
-        type: bug
-        any:
           - "coll contains el"
           - "coll contains not_el"
-      - title: "'contains' operator with empty on element types fails"
-        type: feature
-        any:
           - "ups in coll"
           - "coll contains empty"
           - "coll contains ups"
