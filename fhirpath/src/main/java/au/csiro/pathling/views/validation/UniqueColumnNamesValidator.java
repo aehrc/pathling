@@ -12,10 +12,38 @@ import java.util.stream.Collectors;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Validator implementation for the UniqueColumnNames constraint.
+ * Validator implementation for the {@link UniqueColumnNames} constraint.
+ * <p>
+ * This validator ensures that all column names within a {@code FhirView} are unique.
+ * It works by:
+ * <ol>
+ *   <li>Collecting all column names from the view using {@link FhirView#getAllColumns()}</li>
+ *   <li>Grouping them by name and counting occurrences</li>
+ *   <li>Identifying any names that appear more than once</li>
+ *   <li>Creating a detailed error message if duplicates are found</li>
+ * </ol>
+ * <p>
+ * The validator produces a custom error message that lists all duplicate column names
+ * in alphabetical order, making it easier for users to identify and fix the issues.
  */
 public class UniqueColumnNamesValidator implements ConstraintValidator<UniqueColumnNames, FhirView> {
 
+    /**
+     * Validates that all column names within a {@link FhirView} are unique.
+     * <p>
+     * The validation process:
+     * <ol>
+     *   <li>If the view is null, returns true (letting {@code @NotNull} handle that case)</li>
+     *   <li>Collects all column names from the view</li>
+     *   <li>Groups them by name and counts occurrences</li>
+     *   <li>Filters for names that appear more than once</li>
+     *   <li>If duplicates are found, creates a custom error message and returns false</li>
+     * </ol>
+     *
+     * @param view the {@link FhirView} to validate
+     * @param context the constraint validator context
+     * @return {@code true} if all column names are unique, {@code false} otherwise
+     */
     @Override
     public boolean isValid(FhirView view, ConstraintValidatorContext context) {
         if (view == null) {
