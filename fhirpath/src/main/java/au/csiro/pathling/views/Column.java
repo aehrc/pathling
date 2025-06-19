@@ -1,5 +1,6 @@
 package au.csiro.pathling.views;
 
+import au.csiro.pathling.views.validation.ValidName;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -51,7 +52,7 @@ public class Column implements SelectionElement {
    */
   @NotNull
   @Size(max = 255)
-  @Pattern(regexp = "^[A-Za-z][A-Za-z0-9_]*$")
+  @ValidName
   String name;
 
   /**

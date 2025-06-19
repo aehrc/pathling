@@ -166,7 +166,7 @@ public class FhirViewValidationTest {
     final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(fhirView);
     assertEquals(1, validationResult.size());
     final ConstraintViolation<FhirView> violation = validationResult.iterator().next();
-    assertEquals("must match \"^[A-Za-z][A-Za-z0-9_]*$\"", violation.getMessage());
+    assertEquals("must be a valid name ([A-Za-z][A-Za-z0-9_]*)", violation.getMessage());
     assertEquals("constant[0].name", violation.getPropertyPath().toString());
   }
 
@@ -177,7 +177,7 @@ public class FhirViewValidationTest {
     Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(view);
     assertEquals(1, validationResult.size());
     ConstraintViolation<FhirView> violation = validationResult.iterator().next();
-    assertEquals("must match \"^[A-Za-z][A-Za-z0-9_]*$\"", violation.getMessage());
+    assertEquals("must be a valid name ([A-Za-z][A-Za-z0-9_]*)", violation.getMessage());
     assertEquals(expectedPath, violation.getPropertyPath().toString());
   }
 

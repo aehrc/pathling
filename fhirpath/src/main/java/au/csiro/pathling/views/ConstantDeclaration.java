@@ -1,5 +1,6 @@
 package au.csiro.pathling.views;
 
+import au.csiro.pathling.views.validation.ValidName;
 import jakarta.annotation.Nonnull;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -33,7 +34,7 @@ public class ConstantDeclaration {
    */
   @Nonnull
   @NotNull
-  @Pattern(regexp = "^[A-Za-z][A-Za-z0-9_]*$")
+  @ValidName
   String name;
 
   /**
