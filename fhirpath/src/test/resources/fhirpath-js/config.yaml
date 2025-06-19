@@ -244,7 +244,7 @@ excludeSet:
         id: "#2411"
         any:
           - "** error for collection that is not a singleton"
-      - title: "Support for null values within existing primitive elements"
+      - title: "Support for null values within FHIR elements"
         type: wontfix
         any:
           - "** null is not empty"
@@ -268,8 +268,8 @@ excludeSet:
         id: "#2418"
         expression:
           - "(^|\\W)Bundle(\\W|$)"
-      - title: "Equality for empty values"
-        type: ??? # non-issue
+      - title: "Support for null values within FHIR elements"
+        type: wontfix
         any:
           - "** equality for null values"
           - "** inequality for null values"
