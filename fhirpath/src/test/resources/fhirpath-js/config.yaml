@@ -319,6 +319,10 @@ excludeSet:
           - "3 '1' - 2 = 1 '1'"
           - "2 years + 6 months = 2.5 year"
           - "3 year - 1 year = 2 year"
+      - title: "Unsupported hasValue function"
+        id: "#2430"
+        function:
+          - hasValue
   - title: Path exclusions
     glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
@@ -494,14 +498,6 @@ excludeSet:
           - "After converting 'a' to year it isn't equal to 'a'"
           - "After converting 'min' to minutes it is equal to minutes"
           - "Can access the comparator field when there isn't a need to convert"
-  - title: Has Value Exclusions
-    glob: "fhirpath-js/cases/hasValue.yaml"
-    exclude:
-      - title: "hasValue() not supported"
-        type: ???
-        comment: "hasValue() is not defined in FHIRSpec ???"
-        function:
-          - "hasValue"
   - title: Simple Exclusions
     glob: "fhirpath-js/cases/simple.yaml"
     exclude:
