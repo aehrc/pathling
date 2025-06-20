@@ -454,14 +454,16 @@ excludeSet:
     glob: "fhirpath-js/cases/extensions.yaml"
     exclude:
       - title: "ID on primitive types not supported"
-        comment: "That also includes the case of an empty primitive value with non-empty attributes"
+        comment: "This also includes the case of an empty primitive value with non-empty attributes"
         type: feature
+        id: "#437"
         any:
           - "** id for primitive type"
           - "Patient.address[1].id = 'someId'"
           - "** count nodes without value, but with extensions"
       - title: "extensions on primitive types not supported"
         type: feature
+        id: "#437"
         any:
           - "** expression with extension for primitive type 1"
           - "** expression with extension for primitive type 3"
