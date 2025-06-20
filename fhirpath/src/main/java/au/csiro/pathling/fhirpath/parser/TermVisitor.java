@@ -58,9 +58,13 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
       @Nullable final ExternalConstantTermContext ctx) {
     final ExternalConstantContext constantContext = requireNonNull(
         requireNonNull(ctx).externalConstant());
-    final String term = Optional.ofNullable((ParseTree) constantContext.identifier())
+    String term = Optional.ofNullable((ParseTree) constantContext.identifier())
         .orElse(constantContext.STRING()).getText();
     requireNonNull(term);
+
+    // Trim any backticks or single quotes from the start and end of the term.
+    term = term.replaceAll("^`|`$", "");
+    term = term.replaceAll("^'|'$", "");
 
     return new ExternalConstantPath(term);
   }
