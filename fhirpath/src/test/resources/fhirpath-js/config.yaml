@@ -442,20 +442,12 @@ excludeSet:
           - "ups in coll"
           - "coll contains empty"
           - "coll contains ups"
-  - title: Variable exlusions
+  - title: Variable exclusions
     glob: "fhirpath-js/cases/8_variables.yaml"
     exclude:
-      - title: "Custom variables not supported"
-        type: framework-gap
-        any:
-          - "%a - 1"
-          - "Empty variable"
-          - "Null variable"
-          - "Undefined variable"
-          - "Back-quoted variable name"
-          - "Single-quoted variable name"
-      - title: "Custom context defintion"
-        type: framework-gap
+      - title: "Unsupported context definition within view runner"
+        type: new-feature
+        id: "#2424"
         spel:
           - "#testCase.context == 'g1'"
   - title: Extension exclusions
