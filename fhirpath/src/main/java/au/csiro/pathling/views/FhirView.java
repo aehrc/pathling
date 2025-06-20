@@ -90,10 +90,10 @@ public class FhirView {
    * @see <a
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant">ViewDefinition.constant</a>
    */
-  @Nullable
+  @NotNull
   @Valid
   @Builder.Default
-  List<@Valid ConstantDeclaration> constant = null;
+  List<@Valid ConstantDeclaration> constant = Collections.emptyList();
 
   /**
    * Defines the content of a column within the view.

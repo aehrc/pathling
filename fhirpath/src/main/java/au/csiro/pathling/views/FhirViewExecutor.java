@@ -21,7 +21,6 @@ import au.csiro.pathling.view.UnionSelection;
 import au.csiro.pathling.view.UnnestingSelection;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -109,11 +108,10 @@ public class FhirViewExecutor {
 
     // Pass the constants through so that they can be substituted into the FHIRPath expressions
     // during evaluation.
-    final List<ConstantDeclaration> constants = Optional.ofNullable(fhirView.getConstant())
-        .orElse(Collections.emptyList());
 
     // Create the Projection object that represents the view.
-    return new Projection(ResourceType.fromCode(fhirView.getResource()), constants, selection,
+    return new Projection(ResourceType.fromCode(fhirView.getResource()), fhirView.getConstant(),
+        selection,
         where);
   }
 
