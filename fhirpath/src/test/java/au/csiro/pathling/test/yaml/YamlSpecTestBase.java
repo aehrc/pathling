@@ -7,7 +7,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
@@ -262,9 +266,16 @@ public abstract class YamlSpecTestBase {
 
     @Override
     public void check(@Nonnull final ResolverBuilder rb) {
-      final FhirpathEvaluator evaluator = FhirpathEvaluator
-          .fromResolver(rb.create(resolverFactory))
-          .build();
+      FhirpathEvaluator.FhirpathEvaluatorBuilder builder = FhirpathEvaluator
+          .fromResolver(rb.create(resolverFactory));
+
+      // If the spec has variables, convert them to FHIRPath collections and add them to the 
+      // evaluator.
+      if (spec.getVariables() != null) {
+        builder = builder.variables(toVariableCollections(spec.getVariables()));
+      }
+
+      final FhirpathEvaluator evaluator = builder.build();
       if (spec.isError()) {
         try {
           final FhirPath fhirPath = PARSER.parse(spec.getExpression());
@@ -311,6 +322,69 @@ public abstract class YamlSpecTestBase {
             String.format("Expression evaluation mismatch for '%s'. Expected: %s, but got: %s",
                 spec.getExpression(), expected, actual));
       }
+    }
+
+    /**
+     * Converts a map of variable names and values from the YAML test spec into a map of FHIRPath
+     * literal Collections. Only single-valued variables are supported. Multi-valued (list)
+     * variables will throw an error.
+     *
+     * @param variables Map of variable names to values (may be null, single value, or list)
+     * @return Map of variable names to {@link Collection} objects
+     * @throws IllegalArgumentException if a variable is a list with more than one value, or
+     * unsupported type
+     */
+    @Nonnull
+    private static Map<String, Collection> toVariableCollections(
+        final Map<String, Object> variables) {
+      // Return empty map if input is null.
+      if (variables == null) {
+        return Map.of();
+      }
+      final Map<String, Collection> result = new HashMap<>();
+      for (final Map.Entry<String, Object> entry : variables.entrySet()) {
+        final String key = entry.getKey();
+        final Object value = entry.getValue();
+        Object singleValue = value;
+        // If the value is a list, only allow single-valued lists.
+        if (value instanceof final List<?> l) {
+          if (l.size() > 1) {
+            // Multi-valued variables are not supported.
+            throw new IllegalArgumentException(
+                "Test runner does not support multi-valued variable collections for variable: "
+                    + key);
+          } else if (l.isEmpty()) {
+            // Empty list: use EmptyCollection.
+            result.put(key, au.csiro.pathling.fhirpath.collection.EmptyCollection.getInstance());
+            continue;
+          } else {
+            // Single-valued list: extract the value.
+            singleValue = l.get(0);
+          }
+        }
+        final Collection col;
+        // Map Java types to FHIRPath Collection types.
+        if (singleValue == null) {
+          col = au.csiro.pathling.fhirpath.collection.EmptyCollection.getInstance();
+        } else if (singleValue instanceof Integer) {
+          col = IntegerCollection.fromValue((Integer) singleValue);
+        } else if (singleValue instanceof String) {
+          col = StringCollection.fromValue((String) singleValue);
+        } else if (singleValue instanceof Boolean) {
+          col = BooleanCollection.fromValue((Boolean) singleValue);
+        } else if (singleValue instanceof Double || singleValue instanceof Float) {
+          // For decimals, convert to string and use fromLiteral.
+          col = DecimalCollection.fromLiteral(singleValue.toString());
+        } else {
+          // Unsupported type.
+          throw new IllegalArgumentException(
+              "Test runner does not support variable type for variable: '" + key + "' (type: "
+                  + singleValue.getClass().getSimpleName() + ")");
+        }
+        // Add the collection to the result map.
+        result.put(key, col);
+      }
+      return result;
     }
   }
 

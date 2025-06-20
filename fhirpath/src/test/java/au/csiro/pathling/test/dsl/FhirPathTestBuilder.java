@@ -457,7 +457,8 @@ public class FhirPathTestBuilder {
               null, // inputFile
               null, // model
               null, // context
-              false // disable
+              false, // disable
+              null // variables
           );
 
       // Create and return the RuntimeCase
