@@ -442,13 +442,6 @@ excludeSet:
           - "ups in coll"
           - "coll contains empty"
           - "coll contains ups"
-  - title: Aggregate exclusions
-    glob: "fhirpath-js/cases/7_aggregate.yaml"
-    exclude:
-      - title: "Sum on non-numeric collection fails"
-        type: bug
-        any:
-          - "sum() function calculates the sum of input collection with null elements"
   - title: Variable exlusions
     glob: "fhirpath-js/cases/8_variables.yaml"
     exclude:
