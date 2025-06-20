@@ -508,29 +508,17 @@ excludeSet:
           - "name.`family`"
       - title: "Boolean evaluation of collections"
         type: feature
+        id: "#2166"
         any:
           - "Patient.name.exists(given)"
-      - title: "Unsupported function type()"
-        type: feature
-        any:
-          - "Patient.name.given.type()"
-      - title: "Not supported expression maps"
-        type: framework-gap
+      - title: "Unsupported type runner feature: expression maps"
+        type: new-feature
         any:
           - "Evaluating expression for a part of a resource"
-      - title: "ofType() fails on monomorphic collections"
-        id: "#2171"
-        type: bug
-        any:
-          - "Patient.name.given.ofType(string)"
-      - title: "Comparison of element types"
-        type: framework-gap
+      - title: "Unsupported comparison between typed complex value and expected structure"
+        type: wontfix
         any:
           - "Patient.telecom.where($this.use = 'work')"
-      - title: "unsupported lenght property on strings"
-        type: ???
-        any:
-          - "Patient.name.given.select($this.length) = Patient.name.given.select(length)"
   - title: FHIR R4 Exclusions
     glob: "fhirpath-js/cases/fhir-r4.yaml"
     exclude:
