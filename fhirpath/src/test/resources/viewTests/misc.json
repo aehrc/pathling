@@ -1,0 +1,67 @@
+{
+  "title": "miscellaneous tests",
+  "resources": [
+    {
+      "resourceType": "Patient",
+      "id": "p1",
+      "gender": "male",
+      "name": [
+        {
+          "use": "official",
+          "family": "f1",
+          "given": [
+            "g1.1",
+            "g1.2"
+          ]
+        }
+      ]
+    },
+    {
+      "resourceType": "Patient",
+      "id": "p2",
+      "gender": "female",
+      "name": [
+        {
+          "use": "nickname",
+          "family": "f2",
+          "given": [
+            "g2.1",
+            "g2.2"
+          ]
+        }
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "title": "empty literal",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [
+              {
+                "path": "id",
+                "name": "id"
+              },
+              {
+                "path": "{}",
+                "name": "empty"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "p1",
+          "empty": null
+        },
+        {
+          "id": "p2",
+          "empty": null
+        }
+      ]
+    }
+  ]
+}

@@ -39,8 +39,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute;
-import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
@@ -69,7 +67,7 @@ public class Projection {
      */
     FLAT
   }
-  
+
   /**
    * The resource type that the projection is based upon.
    */
@@ -142,20 +140,16 @@ public class Projection {
     final List<String> columnNames = Arrays.stream(structType.fields())
         .map(StructField::name)
         .toList();
-
-    // Get the list of columns to select from the inlined result.
-    final Column[] columns = columnNames.stream()
-        .map(functions::col)
-        .toArray(Column[]::new);
-
-    // Zip the columns with the ProjectedColumn collection and render them
-    // with the projection constraint
-    final Column[] renderedColumns = IntStream.range(0, columns.length)
+    // Bind the result cllections to the columns in the projection result.
+    final List<Collection> boundResults = IntStream.range(0, columnNames.size())
         .mapToObj(i -> projectionResult.getResults().get(i).getCollection()
-            .copyWith(new DefaultRepresentation(columns[i])))
-        .map(this::renderColumn)
-        .toArray(Column[]::new);
+            .copyWith(new
+                DefaultRepresentation(inlinedResult.col(columnNames.get(i)))))
+        .toList();
 
+    Column[] renderedColumns = IntStream.range(0, columnNames.size())
+        .mapToObj(i -> renderColumn(boundResults.get(i), columnNames.get(i)))
+        .toArray(Column[]::new);
     // Select the columns from the inlined result.
     return inlinedResult.select(renderedColumns);
   }
@@ -168,16 +162,7 @@ public class Projection {
    * @return The converted column
    */
   @Nonnull
-  private Column renderColumn(@Nonnull final Collection collection) {
-
-    // These should always be unresolved atttirbute columns
-    // so we can get their names this way
-    final Column collectionColumn = collection.getColumn().getValue();
-    if (!(collectionColumn.expr() instanceof UnresolvedAttribute)) {
-      throw new IllegalStateException("Expected unresolved attribute column");
-    }
-    final String alias = collectionColumn.toString();
-
+  private Column renderColumn(@Nonnull final Collection collection, @Nonnull final String name) {
     final Collection finalResult;
     if (FLAT.equals(constraint)) {
       // If we are constrained to a flat result, we need to coerce the collection to a string.
@@ -192,7 +177,7 @@ public class Projection {
       finalResult = collection;
     }
     // re-alias the column
-    return finalResult.getColumn().getValue().alias(alias);
+    return finalResult.getColumn().getValue().alias(name);
   }
 
 
