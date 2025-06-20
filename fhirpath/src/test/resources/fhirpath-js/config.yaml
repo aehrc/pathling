@@ -231,6 +231,21 @@ excludeSet:
           - "@T23:59:23-05:00 + 1.5 hours = @T00:59:23-05:00"
           - "Patient.birthDate - 1 day = @1974-12-24"
           - "Patient.birthDate + 1 day = @1974-12-26"
+          - "@2018-02-18T12:23:45-05:00 + 2 years"
+          - "@T09:45Z + 120 seconds = @T04:47-05:00"
+          - "@T09:45Z + 59 seconds = @T09:45Z"
+          - "@T09:45:23Z + 2 minutes = @T04:47:23.000-05:00"
+          - "@T23:59:23Z + 2 minutes = @T00:01:23Z"
+          - "@2016 - 364 days"
+          - "@2016 + 365 days"
+          - "@2016-01 + 30 days"
+          - "1 year + @2016-02-29"
+          - "1 year - 6 months - 1 year + 18 months = 1 year"
+          - "1 year * 2 = 2 year"
+          - "2 * 5 months = 10 months"
+          - "1 year / 6 months = 2"
+          - "@2016-02-29 + 1.5 year"
+          - "@2016-02-28 + 1.5 day"
         expression:
           - "@\\d{4}-\\d{2}-\\d{2}T\\d{2}[^:]"
           - "@\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}[^:]"
@@ -282,6 +297,28 @@ excludeSet:
           - "1 'a' - 1 year"
           - "1 year - 1 'a'"
           - "3 'a' - 1 'a' = 2 'a'"
+          - "2 'kg' * 5 'm' = 10 'kg.m'"
+          - "2 'kg' * 5 = 10 'kg'"
+          - "2 * 5 'kg' = 10 'kg'"
+          - "1 'B' * 2"
+          - "1 'B' / 2"
+          - "1 'B' + 1 'B'"
+          - "1 'B' - 1 'B'"
+          - "10 'kg' / 5 'm' = 2 'kg/m'"
+          - "20 'kg' / 5 = 4 'kg'"
+          - "20 / 5 'kg' = 4 '1/kg'"
+          - "3 's' / 3 milliseconds = 1000"
+          - "1 / 3 months"
+          - "3 month / 2 year = 1 / 8"
+          - "1 year / 2 = 6 months"
+          - "Observation.value / 185 months = 1"
+          - "Observation.value / 185 'mo'"
+          - "3 '1' + 2 = 5 '1'"
+          - "3 + 2 '1' = 5 '1'"
+          - "3 - 2 '1' = 1 '1'"
+          - "3 '1' - 2 = 1 '1'"
+          - "2 years + 6 months = 2.5 year"
+          - "3 year - 1 year = 2 year"
   - title: Path exclusions
     glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
@@ -405,121 +442,6 @@ excludeSet:
           - "ups in coll"
           - "coll contains empty"
           - "coll contains ups"
-  - title: Math 6 exclusions
-    glob: "fhirpath-js/cases/6.6_math.yaml"
-    exclude:
-      - title: "Only create FHIR resource whem model defined"
-        type: framework-gap
-        any:
-          - "** Do not convert a resource node value to Date without model"
-      - title: "Incorrect comparison of DateTime values in with different offsets"
-        type: framework-gap
-        any:
-          - "@2018-02-18T12:23:45-05:00 + 2 years"
-      - title: "Comparison of decimal values"
-        type: framework-gap
-        disabled: true
-        any:
-          - "** Can divide two numbers"
-          - "** Can divide two number literals"
-      - title: "'*' operator fails when right argument is empty"
-        id: "#2174"
-        type: bug
-        any:
-          - "** Empty result multiplying empty collection (1)"
-          - "** Empty result when one of the operands is null"
-          - "** Empty result multiplying empty collection (2)"
-      - title: "'-' operator incorrect when right argument is empty"
-        id: "#2174"
-        type: bug
-        any:
-          - "** Empty result when one of the operands is empty"
-      - title: "'*' operator incorrect for quantities"
-        id: "#2168"
-        type: bug
-        any:
-          - "** Can multiply two quantities"
-          - "** Can multiply a quantity by a number"
-          - "** Can multiply a number by a quantity"
-          - "** Empty result when one of the operands has a special unit"
-      - title: "'/' operator incorrect for quantities"
-        id: "#2168"
-        type: bug
-        any:
-          - "** Can divide two quantities"
-          - "** Can divide a quantity by a number"
-          - "** Can divide a number by a quantity"
-          - "** Allow division of a UCUM duration quantity"
-      - title: "'+' and '-' operators fail for mix of numbers and unit quantities"
-        id: "#2168"
-        type: bug
-        any:
-          - "** Can add a number to a quantity"
-          - "** Can add a quantity to a number"
-          - "** Can subtract a quantity from a number"
-          - "** Can subtract a number from a quantity"
-      - title: "'/' operator incorrect for time quantities"
-        id: "#2168"
-        type: bug
-        any:
-          - "** Empty result when one of the operands is a calendar duration quantity greater than seconds (5)"
-          - "** Can divide when both operands are calendar duration quantities"
-          - "** Can divide a calendar duration quantity by a number"
-          - "** Can divide System.Quantity (converted from FHIR.Quantity) by System.Quantity"
-          - "** Empty result when one of the operands is a calendar duration quantity greater than seconds (6)"
-      - title: "math operators produces long value for int arguments"
-        type: ??? # bug
-        disabled: true
-        any:
-          - "** Can add two numbers"
-          - "** Can add two number literals"
-          - "** Can subtract two numbers"
-          - "** Can subtract two number literals"
-          - "** Can mod two numbers"
-      - title: "'+' should produce {} if any argument is empty"
-        id: "#2174"
-        type: bug
-        any:
-          - "** Empty result if one or both operands is empty (1b)"
-          - "** Empty result if one or both operands is empty (2)"
-          - "** Empty result if one or both operands is empty (3)"
-      - title: "Time literals with Z timezone break parsing"
-        type: bug
-        expression:
-          - "@T\\d{2}:\\d{2}(:\\d{2})?Z"
-      - title: "Implement '+' operator for strings"
-        id: "#2154"
-        type: feature
-        any:
-          - "** Can concatenate two strings with +"
-          - "** Null in concatenation is treated as an empty collection (2)"
-          - "** Empty collection in concatenation using +"
-          - "** Null in concatenation is treated as an empty collection (1)"
-      - title: "Incorrect Math operations on calendar quantities with limited precision"
-        id: "#2173"
-        type: bug
-        any:
-          - "@2016-01 + 30 days" # 30 days should be converted to 1 month
-          - "@2016 - 364 days" # 364 days should be converted to 0 years
-          - "@2016 + 365 days" # 365 days should be converted to 1 year
-      - title: "Math operations on calendar quantities fail or incorrect"
-        id: "#2173"
-        type: bug
-        any:
-          - "2 years + 6 months = 2.5 year"
-          - "3 year - 1 year = 2 year"
-          - "1 year + @2016-02-29"
-          - "@2016-02-29 + @2016-02-29"
-          - "1 year - 6 months - 1 year + 18 months = 1 year"
-          - "1 year * 2 = 2 year"
-          - "2 * 5 months = 10 months"
-          - "1 year / 6 months = 2"
-      - title: "Addition of time quantities with decimal portion incorrect"
-        id: "#2173"
-        type: bug
-        any:
-          - "@2016-02-29 + 1.5 year"
-          - "@2016-02-28 + 1.5 day"
   - title: Aggregate exclusions
     glob: "fhirpath-js/cases/7_aggregate.yaml"
     exclude:
