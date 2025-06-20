@@ -479,6 +479,7 @@ excludeSet:
     exclude:
       - title: "Custom factory not supported"
         type: feature
+        id: "#2425"
         expression:
           - "%factory(\\W|$)"
   - title: Quantity Exclusions
