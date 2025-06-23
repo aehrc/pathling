@@ -39,6 +39,8 @@ public class FhipathTestSpec {
     @Nullable
     String context;
     boolean disable;
+    @Nullable
+    Map<String, Object> variables;
 
     boolean isError() {
       return nonNull(errorMsg);
@@ -68,7 +70,8 @@ public class FhipathTestSpec {
               (String) caseOrGroup.get("inputfile"),
               (String) caseOrGroup.get("model"),
               (String) caseOrGroup.get("context"),
-              (boolean) caseOrGroup.computeIfAbsent("disable", k -> false)
+              (boolean) caseOrGroup.computeIfAbsent("disable", k -> false),
+              (Map<String, Object>) caseOrGroup.get("variables")
           ));
     } else if (caseOrGroup.size() == 1) {
       final Object singleValue = caseOrGroup.values().iterator().next();

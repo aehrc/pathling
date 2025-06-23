@@ -5,7 +5,6 @@ import au.csiro.pathling.test.yaml.YamlSpec;
 import au.csiro.pathling.test.yaml.YamlSpecCachedTestBase;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 
 
@@ -15,9 +14,9 @@ import org.junit.jupiter.api.Tag;
     config = "fhirpath-js/config.yaml",
     resourceBase = "fhirpath-js/resources"
 )
-@Disabled
+
 public class YamlReferenceImplTest extends YamlSpecCachedTestBase {
-  
+
   //   From: https://github.com/hl7/fhirpath.js/
   //   Tag: 3.16.4
   //
@@ -109,7 +108,7 @@ public class YamlReferenceImplTest extends YamlSpecCachedTestBase {
   }
 
   @YamlSpec("fhirpath-js/cases/6.2_comparision.yaml")
-  void testComparision(@Nonnull final RuntimeCase testCase) {
+  void testComparison(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }
 

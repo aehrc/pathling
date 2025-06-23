@@ -1,14 +1,17 @@
 package au.csiro.pathling.test.yaml;
 
+import static java.util.Objects.isNull;
+
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.xml.bind.DatatypeConverter;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -16,14 +19,18 @@ import java.util.stream.Stream;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.Value;
+import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.yaml.snakeyaml.Yaml;
 
-import static java.util.Objects.isNull;
-
+/**
+ * Represents configuration that relates to how the YAML-based test cases are executed.
+ *
+ * @author Piotr Szul
+ */
 @Data
 @NoArgsConstructor
 public class TestConfig {
@@ -39,7 +46,8 @@ public class TestConfig {
     String function;
 
     @Override
-    public boolean test(@Nonnull final FhipathTestSpec.TestCase testCase) {
+    public boolean test(final FhipathTestSpec.TestCase testCase) {
+      Objects.requireNonNull(testCase);
       return testCase.getExpression().contains(function + "(");
     }
   }
@@ -52,7 +60,7 @@ public class TestConfig {
     Pattern regex;
 
     @Override
-    public boolean test(@Nonnull final FhipathTestSpec.TestCase testCase) {
+    public boolean test(final FhipathTestSpec.TestCase testCase) {
       return regex.asPredicate().test(testCase.getExpression());
     }
 
@@ -69,7 +77,7 @@ public class TestConfig {
     String substring;
 
     @Override
-    public boolean test(@Nonnull final FhipathTestSpec.TestCase testCase) {
+    public boolean test(final FhipathTestSpec.TestCase testCase) {
       return Stream.of(
           Stream.of(testCase.getExpression()),
           Stream.ofNullable(testCase.getDescription())
@@ -86,10 +94,10 @@ public class TestConfig {
     String spELExpression;
 
     @Override
-    public boolean test(@Nonnull final FhipathTestSpec.TestCase testCase) {
-      StandardEvaluationContext context = new StandardEvaluationContext();
+    public boolean test(final FhipathTestSpec.TestCase testCase) {
+      final EvaluationContext context = new StandardEvaluationContext();
       context.setVariable("testCase", testCase);
-      Expression exp = PARSER.parseExpression(spELExpression);
+      final Expression exp = PARSER.parseExpression(spELExpression);
       return Boolean.TRUE.equals(exp.getValue(context, Boolean.class));
     }
   }
@@ -104,7 +112,7 @@ public class TestConfig {
     String tag;
 
     @Override
-    public boolean test(@Nonnull final FhipathTestSpec.TestCase testCase) {
+    public boolean test(final FhipathTestSpec.TestCase testCase) {
       return predicate.test(testCase);
     }
 
@@ -122,11 +130,11 @@ public class TestConfig {
         final MessageDigest digest = MessageDigest.getInstance("MD5");
         // Update the digest with the bytes of the data
         final String data = category + title;
-        byte[] hashBytes = digest.digest(data.getBytes(StandardCharsets.UTF_8));
+        final byte[] hashBytes = digest.digest(data.getBytes(StandardCharsets.UTF_8));
         // Convert the hash bytes to a hexadecimal string
         return TaggedPredicate.of(predicate,
             DatatypeConverter.printHexBinary(hashBytes).toLowerCase());
-      } catch (NoSuchAlgorithmException e) {
+      } catch (final NoSuchAlgorithmException e) {
         throw new RuntimeException(e);
       }
     }
@@ -137,29 +145,69 @@ public class TestConfig {
   @NoArgsConstructor
   public static class Exclude {
 
+    /**
+     * Provides a reference to a GitHub Issue.
+     */
     @Nullable
     String id;
+
+    /**
+     * Provides a descriptive name for the set of exclusions.
+     */
     @Nonnull
     String title;
+
+    /**
+     * Provides rationale on why this exclusion is in place.
+     */
     @Nullable
     String comment;
+
+    /**
+     * Provides a category for the exclusion, e.g. feature, bug.
+     */
     @Nullable
     String type;
 
+    /**
+     * Provides a way to disable the exclusion without removing it from the configuration file.
+     */
     boolean disabled = false;
+
+    /**
+     * A list of function names to match within the expression to determine whether it should be
+     * excluded.
+     */
+    @Nullable
     List<String> function;
+
+    /**
+     * A list of regular expressions that will be tested against the test expressions to determine
+     * whether they should be excluded.
+     */
     @Nullable
     List<String> expression;
+
     @Nullable
     List<String> desc;
+
+    /**
+     * Expressions will be tested to see if they contain any of the strings in this list.
+     */
     @Nullable
     List<String> any;
+
+    /**
+     * Test cases will be evaluated using these SpEL expressions to determine whether they should be
+     * excluded.
+     */
     @Nonnull
     List<String> spel;
 
     @Nonnull
     Stream<Predicate<FhipathTestSpec.TestCase>> toPredicates(@Nonnull final String category) {
       if (!disabled) {
+        //noinspection RedundantCast
         return Stream.of(
                 Stream.ofNullable(function).flatMap(List::stream)
                     .map(FunctionPredicate::of),
@@ -178,22 +226,40 @@ public class TestConfig {
     }
   }
 
+  /**
+   * A collection of exclusion rules.
+   */
   @Data
   @NoArgsConstructor
   public static class ExcludeSet {
 
+    /**
+     * A title for the collection of exclusion rules.
+     */
     @Nonnull
     String title;
+
+    /**
+     * A longer description of what the exclusion set is concerned with.
+     */
     @Nullable
     String comment;
+
+    /**
+     * A glob which defines which test files this set covers.
+     */
     @Nullable
     String glob;
+
+    /**
+     * The list of exclusion rules in this set.
+     */
     @Nonnull
     List<Exclude> exclude;
 
     @Nonnull
-    Stream<Predicate<FhipathTestSpec.TestCase>> toPredicates(
-        @Nonnull final Set<String> disabledExclusionIds) {
+    private Stream<Predicate<FhipathTestSpec.TestCase>> toPredicates(
+        @Nonnull final Collection<String> disabledExclusionIds) {
       return exclude.stream()
           .filter(ex -> isNull(ex.getId()) || !disabledExclusionIds.contains(ex.id))
           .flatMap(ex -> ex.toPredicates(title));
@@ -205,19 +271,14 @@ public class TestConfig {
 
   @Nonnull
   Stream<Predicate<FhipathTestSpec.TestCase>> toPredicates(
-      @Nonnull final Set<String> disabledExclusionIds) {
+      @Nonnull final Collection<String> disabledExclusionIds) {
     return excludeSet.stream().flatMap(es -> es.toPredicates(disabledExclusionIds));
   }
 
 
   @Nonnull
-  public Function<FhipathTestSpec.TestCase, Optional<String>> toExcluder() {
-    return toExcluder(Set.of());
-  }
-
-  @Nonnull
   public Function<FhipathTestSpec.TestCase, Optional<String>> toExcluder(
-      @Nonnull final Set<String> disabledExclusionIds) {
+      @Nonnull final Collection<String> disabledExclusionIds) {
     final List<Predicate<FhipathTestSpec.TestCase>> predicates = toPredicates(
         disabledExclusionIds).toList();
     return testCase -> predicates

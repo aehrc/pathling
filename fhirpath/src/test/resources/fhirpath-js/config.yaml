@@ -1,9 +1,11 @@
-# Specify the exclutions for the test cases
+# This file documents exclusions from the test cases along with justification of why the tests are
+# excluded and links to related issues.
 excludeSet:
   - title: Global exclusions
-    glob: '*.yaml'
+    glob: "*.yaml"
     exclude:
-      - title: 'Not supported subsetting functions'
+      - title: "Unsupported subsetting functions"
+        id: "#2378"
         function:
           - single
           - tail
@@ -12,9 +14,13 @@ excludeSet:
           - last
           - exclude
           - intersect
-      - title: 'Not supported string functions'
+      - title: "join function"
+        id: "#2379"
         function:
           - join
+      - title: "Unsupported string functions"
+        id: "#2380"
+        function:
           - indexOf
           - substring
           - startsWith
@@ -33,7 +39,8 @@ excludeSet:
           - decode
           - escape
           - unescape
-      - title: 'Not supported math5 functions'
+      - title: "Unsupported math functions"
+        id: "#2381"
         function:
           - abs
           - ceiling
@@ -45,18 +52,26 @@ excludeSet:
           - round
           - sqrt
           - truncate
-      - title: 'Not supported path functions'
+      - title: "Unsupported tree navigation functions"
+        id: "#2382"
         function:
           - descendants
           - children
-      - title: 'Not supported types functions'
+      - title: "Unsupported type operators and functions"
+        id: "#2383"
         function:
           - is
           - as
-      - title: 'Not supported combining functions'
+        expression:
+          - " is " # is operator
+          - " as " # as operator
+      - title: "Unsupported combining functions"
+        id: "#2384"
         function:
           - union
-      - title: 'Not supported existence functions'
+          - combine
+      - title: "Unsupported existence functions"
+        id: "#2385"
         function:
           - all
           - subsetOf
@@ -68,21 +83,27 @@ excludeSet:
           - allFalse
           - anyTrue
           - anyFalse
-      - title: 'Unsupported filtering and projection constructs'
+      - title: "Unsupported filtering and projection functions"
+        id: "#2388"
         function:
           - select
+          - repeat
+      - title: "Unsupported $index keyword"
+        id: "#2389"
         expression:
           - "(^|\\W)\\$index($|\\W)"
-      - title: 'Not supported aggregate constructs'
+      - title: "Unsupported aggregate function"
+        id: "#2390"
         function:
           - aggregate
+      - title: "Nonexistent aggregate functions"
+        function:
           - min
           - max
           - avg
           - sum
-        expression:
-          - "\\$total"
-      - title: 'Not supported conversion functions'
+      - title: "Type conversion functions"
+        id: "#2391"
         function:
           - toBoolean
           - toDateTime
@@ -93,8 +114,12 @@ excludeSet:
           - toString
           - toTime
           - toType
+      - title: "Unsupported iif function"
+        id: "#2392"
+        function:
           - iif
-      - title: 'Not supported conversion check functions'
+      - title: "Unsupported conversion check functions"
+        id: "#2393"
         function:
           - convertsToBoolean
           - convertsToInteger
@@ -104,228 +129,223 @@ excludeSet:
           - convertsToDateTime
           - convertsToTime
           - convertsToDate
-      - title: 'Not supported equality'
+      - title: "Unsupported equivalence operators"
+        id: "#2394"
         expression:
-          - " !~ " # not equals operator
-          - " ~ " # ~ operator
-      - title: 'Not supported utility functions'
+          - " !~ " # not equivalent operator
+          - " ~ " # equivalent operator
+      - title: "Unsupported reflection"
+        id: "#2395"
         function:
+          - type
           - trace
-          - timeOfDay
-      - title: 'Not supported misc functions'
+      - title: "Unsupported current date and time functions"
+        id: "#2396"
         function:
-          - repeat
-          - combine
+          - timeOfDay
           - now
           - today
-          - type
-      - title: 'Not supported operators'
-        expression: # regex matching expressoin
-          - ".+\\|.+" # union operator
-          - " is " # is operator
-          - " as " # as operator
-          - " & " # & operator
-          - " div " # div operator
-  - title: Path exclusions
-    glob: "fhirpath-js/cases/3.2_paths.yaml"
-    exclude:
-      - title: "Support for models"
-        type: framework-gap
-        any:
-          - "Observation.value with an R4 FHIR model"
-      - title: "Contained resources not supported"
-        type: feature
+      - title: "Unsupported union operator"
+        id: "#2398"
         expression:
-          - "(^|\\W)contained(\\W|$)"
-      - title: "DSTU2, STU3, R5 not supported"
-        type: feature
-        any:
-          - "Observation.value with an R5 FHIR model"
-          - "Observation.value with an STU3 FHIR model"
-          - "Observation.value with an DSTU2 FHIR model"
-  - title: Subsetting exclusions
-    glob: 'fhirpath-js/cases/5.3_subsetting.yaml'
-    exclude:
-      - title: 'Primitive attributes'
-        type: ???
-        any:
-          - '** first for collection with null values'
-  - title: String manipulation exclusions
-    glob: 'fhirpath-js/cases/5.6_string_manipulation.yaml'
-    exclude:
-      - title: 'empty collection: join'
-        any:
-          - '** join on empty input collection'
-  - title: Math 6 exclusions
-    glob: 'fhirpath-js/cases/6.6_math.yaml'
-    exclude:
-      - title: 'Math operations on integers'
-        any:
-          - '** Can multiply two numbers'
-          - '** Can multiply two number literals'
-  - title: Boolean exclusions
-    glob: 'fhirpath-js/cases/6.5_boolean_logic.yaml'
-    exclude:
-      - title: 'empty collection: and'
-        any:
-          - '* and ({} and true)'
-          - '* and (true and {})'
-          - '* and ({} and false)'
-          - '* and (false and {})'
-          - '* and (true and null)'
-          - '* and (false and null)'
-      - title: 'empty collection: or'
-        any:
-          - '* or ({} or true)'
-          - '* or (true or {})'
-          - '* or ({} or false)'
-          - '* or (false or {})'
-          - '* or ({} or {})'
-          - '* or (true or null)'
-          - '* or (false or null)'
-      - title: 'empty collection: xor'
-        any:
-          - '* xor (true xor {})'
-          - '* xor ({} xor false)'
-          - '* xor (false xor {})'
-          - '* xor ({} xor {})'
-          - '* xor (true xor null)'
-          - '* xor (false xor null)'
-          - '* xor ({} xor true)'
-      - title: 'empty collection: implies'
-        any:
-          - '* implies ({} implies true)'
-          - '* implies (true implies {})'
-          - '* implies ({} implies false)'
-          - '* implies (false implies {})'
-          - '* implies ({} implies {})'
-      - title: 'boolean eval of collections: not'
-        any:
-          - '** not() for non-empty collection'
-  - title: Literal exclusions
-    glob: 'fhirpath-js/cases/4.1_literals.yaml'
-    exclude:
-      - title: 'Non issues'
-        type: non-issue
-        any:
-          - "`a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065`"
-      - title: "Framework gaps"
-        type: framework-gap
+          - ".+\\|.+"
+      - title: "Unsupported math operators"
+        id: "#2399"
         expression:
-          # assertions on quantity values
-          - "2 'mo'"
-          - "^2 years$"
-      - title: 'Unsupported polarity operator'
+          - " & "
+          - " div "
+      - title: "Unsupported date and datetime literals"
         type: feature
-        expression:
-          - '^[+-]7(.3)?$'
-      - title: 'Unsupported escape sequences in string literal'
-        type: bug
-        any: [ "'a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065'" ]
-      - title: 'Unsupported datetime literals with non-second precision'
-        id: '#2147'
-        type: bug
+        id: "#2409"
         any:
+          - "@2019"
           - "@2019-02-03T01:00Z = @2019-02-02T21:00-04:00"
           - "@2019-02-03T02:00Z = @2019-02-02T21:00-04:00"
-      - title: 'Traversal into quantity literals fails'
-        id: '#2167'
-        type: bug
-        any:
-          - "(2 years).value"
-  - title: Existence exclusions
-    glob: 'fhirpath-js/cases/5.1_existence.yaml'
-    exclude:
-      - title: 'Support for null values with in exising primitive elements'
-        type: ???
-        any:
-          - "** null is not empty"
-          - "** exists for null should return true"
-      - title: 'Incorrect not() for empty collections'
-        id: '#2150'
-        type: bug
-        any:
-          - "** empty coll with not() is empty coll"
-          - "** not nothing is empty coll"
-      - title: "Incorrect allTrue() for empty collections"
-        id: '#2150'
-        type: bug
-        any:
-          - "** allTrue for empty coll is true"
-          - "** allTrue for non exists coll is true"
-      - title: "Incorrect anyTrue() for empty collections"
-        id: '#2150'
-        type: bug
-        any:
-          - "** anyTrue for empty coll is false"
-          - "** anyTrue for non-exists coll is false"
-      - title: "Incorrect allFalse() for empty collections"
-        id: '#2150'
-        type: bug
-        any:
-          - "** allFalse for empty coll is true"
-          - "** allFalse for non-exists coll is true"
-      - title: "Incorrect anyFalse() for empty collections"
-        id: '#2150'
-        type: bug
-        any:
-          - "** anyFalse for empty coll is false"
-          - "** anyFalse for non-exists coll is false"
-  - title: Filtering and projection exclusions
-    glob: "fhirpath-js/cases/5.2_filtering_and_projection.yaml"
-    exclude:
-      - title: 'Unsupported polymorphic collection'
-        type: framework-gap
-        any:
-          - "heteroattr.ofType(String)"
-          - "heteroattr.ofType(Integer)"
-          - "heteroattr.ofType(Decimal)"
-          - "heteroattr.ofType(Boolean)"
-  - title: Literal exclusions
-    glob: 'fhirpath-js/cases/5.5_conversion.yaml'
-    exclude:
-      - title: 'Primitive attributes'
-        type: ???
-        any:
-          - '** iif for collection with null values'
-      - title: "Unsupported primitive ids"
-        type: feature
-        any:
-          - "** where for a collection with a null value that has an id"
-      - title: 'Precision lost in in decimal literals'
-        type: bug
-        expression:
-          - '^attrdec\.toString\(\)$'
-      - title: "Incorrect filter() on empty collections"
-        type: bug
-        any:
-          - "** filter empty coll"
-  - title: Equality exclusions
-    glob: 'fhirpath-js/cases/6.1_equality.yaml'
-    exclude:
-      - title: "Bundles are not supported"
-        type: framework-gap
-        expression:
-          - "(^|\\W)Bundle(\\W|$)"
-      - title: 'Time literals with timezone'
-        type: ??? # non-issue
-        expression:
-          - "@T\\d{2}:\\d{2}:\\d{2}[-+]\\d{2}:\\d{2}"
-      - title: 'Equality for empty values'
-        type: ??? # non-issue
-        any:
-          - "** equality for null values"
-          - "** inequality for null values"
-      - title: 'Unsupported datetime literals with non-second precision'
-        id: '#2147'
-        type: bug
+          - "@2018 = @2018"
+          - "@2018 = @2017"
+          - "@2018 = @2018-02"
+          - "@2018-02 = @2018-02"
+          - "@2018-02 = @2018-03"
+          - "@2018-02-02 = @2018-02-02"
+          - "@2018-02-02 = @2018-02-03"
+          - "@2018-02-02T11:01:03 = @2018-02-02T11:01:03"
+          - "@2018-02-02T11:01:03 = @2018-02-02T11:01:04"
+          - "@2018-02-02T11:01:03.123 = @2018-02-02T11:01:03.123"
+          - "@2018-02-02T11:01:03.123 = @2018-02-02T11:01:03.124"
+          - "@2018-02-02T11:01:03.123+02:00 = @2018-02-02T11:01:03.123+04:00"
+          - "@2018 != @2018"
+          - "@2018 != @2017"
+          - "@2018 != @2018-02"
+          - "@2018 != @2018-01"
+          - "@2018-02-03 != @2018-01"
+          - "@2018 = int1"
+          - "@2018 = 'zzz'"
+          - "@2018 > @2017"
+          - "@2018 >= @2017"
+          - "@2018 >= @2018"
+          - "@2018 <= @2017"
+          - "@2018 <= @2018"
+          - "@2018 < @2017"
+          - "@2018 < @2018"
+          - "@T12:03 > @T12:01"
+          - "@T12:01:34.123 > @T12:01:34.122"
+          - "@T12:02:34.324 > @T12:01"
+          - "DiagnosticReport.issued = @2005-01-27T06:40:01Z"
+          - "@2018-12-31 > @2018"
+          - "@T12:01 > @T12:03"
+          - "@T12:01 > @T12"
+          - "@T12+04:00 > @T12:02:34.324+05:00"
+          - "@T12:02:34.324+05:00 > @T12+05:00"
+          - "@2018 + 1 year"
+          - "@2016 + 364 days"
+          - "@2016 - 365 days"
+          - "@2016 + 11 months"
+          - "@2016 + 12 months"
+          - "@2018 + 2 years"
+          - "@2018-02 + 1 month"
+          - "@2018-02 + 2 months"
+          - "@2016-01 + 29 days"
+          - "@2016-01 + 1 hour"
+          - "@2018-01-03 + 2 years"
+          - "@2016-02-29 + 1 month"
+          - "@2016-02-29 + 1 year"
+          - "@2016-01-31 + 1 month"
+          - "@2016-01-31 + 1 month + 1 day"
+          - "@2016-02-28 + 1 week"
+          - "@2016-02-28 + 1 day"
+          - "@2016-02-28 + 2 days"
+          - "@2016-02-28 - 2 days"
+          - "@2016-01-01 + 1 month"
+          - "@2016-01-01 + 24 hours"
+          - "@2016-01-01 + 47 hours"
+          - "@T23:59:23-05:00 + 2 minutes = @T00:01:23-05:00"
+          - "@T23:59:23-05:00 + 5 milliseconds = @T23:59:23.005-05:00"
+          - "@T23:59:23-05:00 + 1.5 seconds = @T23:59:24.500-05:00"
+          - "@T23:59:23-05:00 + 1.5 's' = @T23:59:24.500-05:00"
+          - "@T23:59:23-05:00 - 1.5 's' = @T23:59:21.500-05:00"
+          - "@T23:59:23-05:00 + 1000 milliseconds = @T23:59:24-05:00"
+          - "@T23:59:23.005-05:00 + 995 milliseconds = @T23:59:24-05:00"
+          - "@T23:59:23.005-05:00 + 1990 milliseconds = @T23:59:24.995-05:00"
+          - "@2016-02-28 + 1.5 weeks"
+          - "@2016-02-28 - 1.5 weeks"
+          - "@T23:59:23-05:00 + 1.5 hours = @T00:59:23-05:00"
+          - "Patient.birthDate - 1 day = @1974-12-24"
+          - "Patient.birthDate + 1 day = @1974-12-26"
+          - "@2018-02-18T12:23:45-05:00 + 2 years"
+          - "@T09:45Z + 120 seconds = @T04:47-05:00"
+          - "@T09:45Z + 59 seconds = @T09:45Z"
+          - "@T09:45:23Z + 2 minutes = @T04:47:23.000-05:00"
+          - "@T23:59:23Z + 2 minutes = @T00:01:23Z"
+          - "@2016 - 364 days"
+          - "@2016 + 365 days"
+          - "@2016-01 + 30 days"
+          - "1 year + @2016-02-29"
+          - "1 year - 6 months - 1 year + 18 months = 1 year"
+          - "1 year * 2 = 2 year"
+          - "2 * 5 months = 10 months"
+          - "1 year / 6 months = 2"
+          - "@2016-02-29 + 1.5 year"
+          - "@2016-02-28 + 1.5 day"
+          - "Patient.birthDate = @1974-12-25"
+          - "Patient.birthDate != @1974-12-25T12:34:00"
+          - "@2017-11-05T01:30:00.0-04:00 > @2017-11-05T01:15:00.0-05:00"
+          - "@2017-11-05T01:30:00.0-04:00 < @2017-11-05T01:15:00.0-05:00"
+          - "@2017-11-05T01:30:00.0-04:00 = @2017-11-05T01:15:00.0-05:00"
+          - "@2017-11-05T01:30:00.0-04:00 = @2017-11-05T00:30:00.0-05:00"
+          - "@2012-04-15 = @2012-04-15"
+          - "@2012-04-15 = @2012-04-16"
+          - "@2012-04-15 = @2012-04-15T10:00:00"
+          - "@2012-04-15T15:00:00 = @2012-04-15T10:00:00"
+          - "@2012-04-15T15:30:31 = @2012-04-15T15:30:31.0"
+          - "@2012-04-15T15:30:31 = @2012-04-15T15:30:31.1"
+          - "@2012-04-15T15:00:00+02:00 = @2012-04-15T16:00:00+03:00"
+          - "@2012-04-15 != @2012-04-15"
+          - "@2012-04-15 != @2012-04-16"
+          - "@2012-04-15 != @2012-04-15T10:00:00"
+          - "@2012-04-15T15:00:00 != @2012-04-15T10:00:00"
+          - "@2012-04-15T15:30:31 != @2012-04-15T15:30:31.0"
+          - "@2012-04-15T15:30:31 != @2012-04-15T15:30:31.1"
+          - "@2012-04-15T15:00:00+02:00 != @2012-04-15T16:00:00+03:00"
+          - "@2014-12-12 < @2014-12-13"
+          - "@2014-12-13T12:00:00 < @2014-12-13T12:00:01"
+          - "@T12:00:00 < @T14:00:00"
+          - "@2014-12-12 < @2014-12-12"
+          - "@2014-12-13T12:00:00 < @2014-12-13T12:00:00"
+          - "@T12:00:00 < @T12:00:00"
+          - "@2014-12-13 < @2014-12-12"
+          - "@2014-12-13T12:00:01 < @2014-12-13T12:00:00"
+          - "@T12:00:01 < @T12:00:00"
+          - "@2018-03-01T10:30:00 < @2018-03-01T10:30:00.0"
+          - "@2014-12-12 <= @2014-12-13"
+          - "@2014-12-13T12:00:00 <= @2014-12-13T12:00:01"
+          - "@T12:00:00 <= @T14:00:00"
+          - "@2014-12-12 <= @2014-12-12"
+          - "@2014-12-13T12:00:00 <= @2014-12-13T12:00:00"
+          - "@T12:00:00 <= @T12:00:00"
+          - "@2014-12-13 <= @2014-12-12"
+          - "@2014-12-13T12:00:01 <= @2014-12-13T12:00:00"
+          - "@T12:00:01 <= @T12:00:00"
+          - "@2018-03 <= @2018-03-01"
+          - "@2018-03-01T10:30:00  <= @2018-03-01T10:30:00.0"
+          - "@T10:30:00 <= @T10:30:00.0"
+          - "@2014-12-12 >= @2014-12-13"
+          - "@2014-12-13T12:00:00 >= @2014-12-13T12:00:01"
+          - "@T12:00:00 >= @T14:00:00"
+          - "@2014-12-12 >= @2014-12-12"
+          - "@2014-12-13T12:00:00 >= @2014-12-13T12:00:00"
+          - "@T12:00:00 >= @T12:00:00"
+          - "@2014-12-13 >= @2014-12-12"
+          - "@2014-12-13T12:00:01 >= @2014-12-13T12:00:00"
+          - "@T12:00:01 >= @T12:00:00"
+          - "@2018-03 >= @2018-03-01"
+          - "@2018-03-01T10:30:00 >= @2018-03-01T10:30:00.0"
+          - "@2014-12-12 > @2014-12-13"
+          - "@2014-12-13T12:00:00 > @2014-12-13T12:00:01"
+          - "@T12:00:00 > @T14:00:00"
+          - "@2014-12-12 > @2014-12-12"
+          - "@2014-12-13T12:00:00 > @2014-12-13T12:00:00"
+          - "@T12:00:00 > @T12:00:00"
+          - "@2014-12-13 > @2014-12-12"
+          - "@2014-12-13T12:00:01 > @2014-12-13T12:00:00"
+          - "@T12:00:01 > @T12:00:00"
+          - "@2018-03-01T10:30:00 > @2018-03-01T10:30:00.0"
+          - "@T10:30:00 > @T10:30:00.0"
+          - "Patient.birthDate != @T12:14:15"
+          - "Patient.birthDate != @T12:14"
+          - "@2018-03 < @2018-03-01"
+          - "@T10 < @T10:30"
+          - "@T10:30:00 < @T10:30:00.0"
+          - "@T10 <= @T10:30"
+          - "@T10 >= @T10:30"
+          - "@T10:30:00 >= @T10:30:00.0"
+          - "@2018-03 > @2018-03-01"
+          - "@T10 > @T10:30"
+          - "@T10:04:23-04:00 = @T18:04:23+04:00"
+          - "@T19:01:23-05:00 = @T00:01:23-00:00"
+          - "@T10:04:23-04:00 = @T18:04:24+04:00"
+          - "@T10:04:23-04:00 = @T14:04:23Z"
+          - "@T10:04:23-04:00 = @T14:04:24Z"
+          - "@T10:04:23-04:00 = @T14:04Z"
+          - "@T10:05:23-04:00 = @T14:04Z"
+          - "@T10:04:23-04:00 != @T18:04:23+04:00"
+          - "@T10:04:23-04:00 != @T18:04:24+04:00"
+          - "@T10:04:23-04:00 != @T14:04:23Z"
+          - "@T10:04:23-04:00 != @T14:04:24Z"
         expression:
           - "@\\d{4}-\\d{2}-\\d{2}T\\d{2}[^:]"
           - "@\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}[^:]"
-      - title: 'Equality for quantity literals fails'
-        id: '#2151'
-        type: bug
+      - title: "Unsupported quantity literals"
+        type: feature
+        id: "#2410"
         any:
+          - "2 'mo'"
+          - "^2 years$"
+          - "\\(2 years\\).value"
+          - "1 month = 30 'd'"
+          - "1 week = 1 'wk'"
+          - "1 day = 1 'd'"
+          - "1 day = 24 'h'"
+          - "1 second = 1 's'"
           - "1 year != 1 'a'"
           - "12 months = 1 year"
           - "1 year = 1 year"
@@ -333,251 +353,214 @@ excludeSet:
           - "1 month = 30 days"
           - "1 day = 24 hours"
           - "10 'kg.m/s2' = 5 'kg' * 4 'm' / (2 seconds * 1000 'ms')"
-      - title: "Equality for different primitive types fails"
-        type: ??? # bug
-        any:
-          - "DateTime literal compared with a number"
-          - "DateTime literal compared with a string literal"
-      - title: "Equality for complex types fails"
-        type: bug
-        any:
-          - "** two objects"
-          - "** two objects not"
-          - "** two colls"
-          - "** two colls not"
-      - title: "Equality for non singular elements fails"
-        id: '#2164'
-        type: bug
-        any:
-          - "** length mismatch"
-          # also the complex type tests above
-          - "** two objects"
-          - "** two objects not"
-          - "** two colls"
-          - "** two colls not"
-      - title: "Comparison for time quantities returns null"
-        id: '#2172'
-        type: bug
-        any:
           - "1 week = 7 days"
-  - title: 'Comparison exlusions'
+          - "1 year > 1 'a'"
+          - "1 's' > 1 year"
+          - "1 'min' < 2 minutes"
+          - "1 'kg' < 2 's'"
+          - "1 'min' < 61 seconds"
+          - "10 seconds > 1 's'"
+          - "10 seconds < 1 's'"
+          - "1 's' > 10 seconds"
+          - "1 's' < 10 seconds"
+          - "999 'g' < 1 'kg'"
+          - "999 'g' > 1 'kg'"
+          - "1001 'g' > 1 'kg'"
+          - "1001 'g' < 1 'kg'"
+          - "1 'm' * 1 year"
+          - "1 year * 1 year"
+          - "1 'mo' / 1 year"
+          - "1 year / 1 'mo'"
+          - "3 minutes / 1 's'"
+          - "1 'kg' / 3 months"
+          - "1 year / 0 months"
+          - "3 'm' + 3 'cm' = 303 'cm'"
+          - "1 'a' + 1 year"
+          - "1 year + 1 'a'"
+          - "2 'a' + 1 'a' = 3 'a'"
+          - "3 'm' - 3 'cm' = 297 'cm'"
+          - "1 'a' - 1 year"
+          - "1 year - 1 'a'"
+          - "3 'a' - 1 'a' = 2 'a'"
+          - "2 'kg' * 5 'm' = 10 'kg.m'"
+          - "2 'kg' * 5 = 10 'kg'"
+          - "2 * 5 'kg' = 10 'kg'"
+          - "1 'B' * 2"
+          - "1 'B' / 2"
+          - "1 'B' + 1 'B'"
+          - "1 'B' - 1 'B'"
+          - "10 'kg' / 5 'm' = 2 'kg/m'"
+          - "20 'kg' / 5 = 4 'kg'"
+          - "20 / 5 'kg' = 4 '1/kg'"
+          - "3 's' / 3 milliseconds = 1000"
+          - "1 / 3 months"
+          - "3 month / 2 year = 1 / 8"
+          - "1 year / 2 = 6 months"
+          - "Observation.value / 185 months = 1"
+          - "Observation.value / 185 'mo'"
+          - "3 '1' + 2 = 5 '1'"
+          - "3 + 2 '1' = 5 '1'"
+          - "3 - 2 '1' = 1 '1'"
+          - "3 '1' - 2 = 1 '1'"
+          - "2 years + 6 months = 2.5 year"
+          - "3 year - 1 year = 2 year"
+          - "4.0000 'g' = 4000.0 'mg'"
+          - "4 'g' != 4040 'mg'"
+          - "1.0 'm' / 1.0 'm' = 1 '1'"
+          - "7 days = 1 week"
+          - "6 days < 1 week"
+          - "8 days > 1 week"
+          - "2 years"
+          - "(2 years).value"
+      - title: "Unsupported hasValue function"
+        id: "#2430"
+        function:
+          - hasValue
+  - title: Path exclusions
+    glob: "fhirpath-js/cases/3.2_paths.yaml"
+    exclude:
+      - title: "Mixed collections not supported"
+        type: wontfix
+        comment: |
+          Pathling does not support the representation of mixed collections, which is required for
+          these tests.
+        any:
+          - "Observation.value with an R4 FHIR model"
+          - "Observation.value with an R5 FHIR model"
+          - "Observation.value with an STU3 FHIR model"
+          - "Observation.value with an DSTU2 FHIR model"
+          - "Observation.value without a model"
+      - title: "Contained resources not supported"
+        type: feature
+        id: "#2406"
+        expression:
+          - "(^|\\W)contained(\\W|$)"
+      - title: "Custom fields not supported within FHIR resources"
+        type: wontfix
+        comment: Pathling does not support custom fields within FHIR resources.
+        any:
+          - "Access a custom field starting with a capital letter (1)"
+          - "Access a custom field starting with a capital letter (2)"
+  - title: Subsetting exclusions
+    glob: "fhirpath-js/cases/5.3_subsetting.yaml"
+    exclude:
+      - title: "Primitive attributes"
+        id: "#437"
+        type: feature
+        comment: |
+          This test requires support for the primitive attribute/extension structure, as it involves 
+          traversing to the `id` of a primitive element.
+        any:
+          - "** first for collection with null values"
+  - title: Literal exclusions
+    glob: "fhirpath-js/cases/4.1_literals.yaml"
+    exclude:
+      - title: "Using ` to wrap a string is not allowed by grammar"
+        type: bug
+        comment: |
+          An issue has been raised on the fhirpath.js GitHub repository (#172), this may be an 
+          incorrect expectation within the test cases.
+        any:
+          - "`a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065`"
+  - title: Existence exclusions
+    glob: "fhirpath-js/cases/5.1_existence.yaml"
+    exclude:
+      - title: "Incorrect behaviour when evaluating boolean value of collections"
+        type: bug
+        id: "#2411"
+        any:
+          - "** error for collection that is not a singleton"
+      - title: "Support for null values within FHIR elements"
+        type: wontfix
+        any:
+          - "** null is not empty"
+          - "** exists for null should return true"
+  - title: Filtering and projection exclusions
+    glob: "fhirpath-js/cases/5.2_filtering_and_projection.yaml"
+    exclude:
+      - title: "FHIRPath types currently not working within ofType"
+        type: bug
+        id: "#2415"
+        any:
+          - "heteroattr.ofType(String)"
+          - "heteroattr.ofType(Integer)"
+          - "heteroattr.ofType(Decimal)"
+          - "heteroattr.ofType(Boolean)"
+  - title: Equality exclusions
+    glob: "fhirpath-js/cases/6.1_equality.yaml"
+    exclude:
+      - title: "Bundles are not supported"
+        type: feature
+        id: "#2418"
+        expression:
+          - "(^|\\W)Bundle(\\W|$)"
+      - title: "Support for null values within FHIR elements"
+        type: wontfix
+        any:
+          - "** equality for null values"
+          - "** inequality for null values"
+      - title: Unsupported equality for complex types
+        type: new-feature
+        id: "#2420"
+        any:
+          - "** two objects"
+          - "** two objects not"
+      - title: Unsupported equality for collections
+        type: new-feature
+        id: "#2164"
+        any:
+          - "** two colls"
+          - "** two colls not"
+          - "** length mismatch"
+  - title: "Comparison exclusions"
     glob: "fhirpath-js/cases/6.2_comparision.yaml"
     exclude:
-      - title: "Comparison for empty collections fails"
-        id: '#2164'
-        type: bug
+      - title: Unsupported comparison of dates, times and date times
+        type: new-feature
+        id: "#2421"
         any:
-          - "less than, with empty value"
-          - "less than, with null value"
-          - "greater than, with empty value"
-          - "greater than, with null value"
-          - "greater or equal than, with empty value"
-          - "greater or equal than, with null value"
-          - "less or equal than, with empty value"
-          - "less or equal than, with null value"
-      - title: "Comparision for non-singular collections fails"
-        id: '#2164'
-        type: bug
-        any:
-          - "less than, with too many values"
-          - "greater than, with too many values"
-          - "greater or equal than, with too many values"
-      - title: "Comparison for time quantities returns null"
-        id: '#2172'
-        type: bug
-        any:
+          - "DiagnosticReport.issued < DiagnosticReport.effectiveDateTime"
           - "1 year > 12 months"
           - "1 year < 12 months"
           - "1 minute > 59 seconds"
           - "1 minute < 61 seconds"
-      - title: "Comparison based on the lesser precision fails"
-        id: '#2172'
-        type: bug
-        any:
-          - "@2018-12-31 > @2018"
-          - "@T12:01 > @T12"
-      - title: 'Time literals with timezone'
-        type: ??? # non-issue
-        expression:
-          - "@T\\d{2}:\\d{2}:\\d{2}(\\.\\d{3})?[-+]\\d{2}:\\d{2}"
   - title: Collections exclusions
     glob: "fhirpath-js/cases/6.4_collections.yaml"
     exclude:
-      - title: "Create correct empty collection in ad hoc resources"
-        type: framework-gap
+      - title: Unsupported equality for complex types
+        type: new-feature
+        id: "#2420"
         any:
           - "el in emptycoll"
-      - title: "'in' operator on element types fails"
-        type: bug
-        any:
           - "el in coll"
           - "not_el in coll"
-      - title: "'contains' operator on element types fails"
-        type: bug
-        any:
           - "coll contains el"
           - "coll contains not_el"
-      - title: "'contains' operator with empty on element types fails"
-        type: feature
-        any:
           - "ups in coll"
           - "coll contains empty"
           - "coll contains ups"
-  - title: Math 6 exclusions
-    glob: "fhirpath-js/cases/6.6_math.yaml"
+  - title: Variable exclusions
+    glob: "fhirpath-js/cases/8_variables.yaml"
     exclude:
-      - title: "Only create FHIR resource whem model defined"
-        type: framework-gap
-        any:
-          - "** Do not convert a resource node value to Date without model"
-      - title: "Incorrect comparison of DateTime values in with different offsets"
-        type: framework-gap
-        any:
-          - "@2018-02-18T12:23:45-05:00 + 2 years"
-      - title: "Comparison of decimal values"
-        type: framework-gap
-        disabled: true
-        any:
-          - "** Can divide two numbers"
-          - "** Can divide two number literals"
-      - title: "'*' operator does not singularise arguments"
-        type: bug
-        any:
-          - "** Error multiplying multi-valued collection (1)"
-          - "** Error multiplying multi-valued collection (2)"
-      - title: "'*' operator fails when right argument is empty"
-        id: '#2174'
-        type: bug
-        any:
-          - "** Empty result multiplying empty collection (1)"
-          - "** Empty result when one of the operands is null"
-          - "** Empty result multiplying empty collection (2)"
-      - title: "'-' operator incorrect when right argument is empty"
-        id: '#2174'
-        type: bug
-        any:
-          - "** Empty result when one of the operands is empty"
-      - title: "'*' operator incorrect for quantities"
-        id: '#2168'
-        type: bug
-        any:
-          - "** Can multiply two quantities"
-          - "** Can multiply a quantity by a number"
-          - "** Can multiply a number by a quantity"
-          - "** Empty result when one of the operands has a special unit"
-      - title: "'/' operator incorrect for quantities"
-        id: '#2168'
-        type: bug
-        any:
-          - "** Can divide two quantities"
-          - "** Can divide a quantity by a number"
-          - "** Can divide a number by a quantity"
-          - "** Allow division of a UCUM duration quantity"
-      - title: "'+' and '-' operators fail for mix of numbers and unit quantities"
-        id: '#2168'
-        type: bug
-        any:
-          - "** Can add a number to a quantity"
-          - "** Can add a quantity to a number"
-          - "** Can subtract a quantity from a number"
-          - "** Can subtract a number from a quantity"
-      - title: "'/' operator incorrect for time quantities"
-        id: '#2168'
-        type: bug
-        any:
-          - "** Empty result when one of the operands is a calendar duration quantity greater than seconds (5)"
-          - "** Can divide when both operands are calendar duration quantities"
-          - "** Can divide a calendar duration quantity by a number"
-          - "** Can divide System.Quantity (converted from FHIR.Quantity) by System.Quantity"
-          - "** Empty result when one of the operands is a calendar duration quantity greater than seconds (6)"
-      - title: "math operators produces long value for int arguments"
-        type: ??? # bug
-        disabled: true
-        any:
-          - "** Can add two numbers"
-          - "** Can add two number literals"
-          - "** Can subtract two numbers"
-          - "** Can subtract two number literals"
-          - "** Can mod two numbers"
-      - title: "'+' should produce {} if any argument is empty"
-        id: '#2174'
-        type: bug
-        any:
-          - "** Empty result if one or both operands is empty (1b)"
-          - "** Empty result if one or both operands is empty (2)"
-          - "** Empty result if one or both operands is empty (3)"
-      - title: "Time literals with Z timezone break parsing"
-        type: bug
-        expression:
-          - "@T\\d{2}:\\d{2}(:\\d{2})?Z"
-      - title: "Implement '+' operator for strings"
-        id: '#2154'
-        type: feature
-        any:
-          - "** Can concatenate two strings with +"
-          - "** Null in concatenation is treated as an empty collection (2)"
-          - "** Empty collection in concatenation using +"
-          - "** Null in concatenation is treated as an empty collection (1)"
-      - title: "Incorrect Math operations on calendar quantities with limited precision"
-        id: '#2173'
-        type: bug
-        any:
-          - "@2016-01 + 30 days" # 30 days should be converted to 1 month
-          - "@2016 - 364 days" # 364 days should be converted to 0 years
-          - "@2016 + 365 days" # 365 days should be converted to 1 year
-      - title: "Math operations on calendar quantities fail or incorrect"
-        id: '#2173'
-        type: bug
-        any:
-          - "2 years + 6 months = 2.5 year"
-          - "3 year - 1 year = 2 year"
-          - "1 year + @2016-02-29"
-          - "@2016-02-29 + @2016-02-29"
-          - "1 year - 6 months - 1 year + 18 months = 1 year"
-          - "1 year * 2 = 2 year"
-          - "2 * 5 months = 10 months"
-          - "1 year / 6 months = 2"
-      - title: "Addition of time quantities with decimal portion incorrect"
-        id: '#2173'
-        type: bug
-        any:
-          - "@2016-02-29 + 1.5 year"
-          - "@2016-02-28 + 1.5 day"
-  - title: Aggregate exclusions
-    glob: 'fhirpath-js/cases/7_aggregate.yaml'
-    exclude:
-      - title: 'Sum on non-numeric collection fails'
-        type: bug
-        any:
-          - "sum() function calculates the sum of input collection with null elements"
-  - title: Variable exlusions
-    glob: 'fhirpath-js/cases/8_variables.yaml'
-    exclude:
-      - title: 'Custom variables not supported'
-        type: framework-gap
-        any:
-          - "%a - 1"
-          - "Empty variable"
-          - "Null variable"
-          - "Undefined variable"
-          - "Back-quoted variable name"
-          - "Single-quoted variable name"
-      - title: 'Custom context defintion'
-        type: framework-gap
+      - title: "Unsupported context definition within view runner"
+        type: new-feature
+        id: "#2424"
         spel:
           - "#testCase.context == 'g1'"
   - title: Extension exclusions
-    glob: 'fhirpath-js/cases/extensions.yaml'
+    glob: "fhirpath-js/cases/extensions.yaml"
     exclude:
-      - title: 'ID on primitive types not supported'
-        comment: "That also includes the case of an empty primitive value with non-empty attributes"
+      - title: "ID on primitive types not supported"
+        comment: "This also includes the case of an empty primitive value with non-empty attributes"
         type: feature
+        id: "#437"
         any:
           - "** id for primitive type"
           - "Patient.address[1].id = 'someId'"
           - "** count nodes without value, but with extensions"
-      - title: 'extensions on primitive types not supported'
+      - title: "extensions on primitive types not supported"
         type: feature
+        id: "#437"
         any:
           - "** expression with extension for primitive type 1"
           - "** expression with extension for primitive type 3"
@@ -589,138 +572,80 @@ excludeSet:
           - "** value of extension of extension (using FHIR model data)"
           - "** id of extension of extension"
   - title: Factory exclusions
-    glob: 'fhirpath-js/cases/factory.yaml'
+    glob: "fhirpath-js/cases/factory.yaml"
     exclude:
-      - title: 'Custom factory not supported'
+      - title: "Custom factory not supported"
         type: feature
+        id: "#2425"
         expression:
           - "%factory(\\W|$)"
   - title: Quantity Exclusions
     glob: "fhirpath-js/cases/fhir-quantity.yaml"
     exclude:
-      - title: "Implicit conversion of polymophic types not supported"
-        id: '#2163'
+      - title: "Implicit conversion of polymorphic types not supported"
+        id: "#2163"
         comment: "Should the value be implicitly converted to a quantity?"
         type: feature
         any:
           - "After converting 'a' to year it is equal to year"
           - "After converting 'a' to year it isn't equal to 'a'"
           - "After converting 'min' to minutes it is equal to minutes"
-      - title: "Untyped access to polymorphic collections"
-        type: ???
-        any:
           - "Can access the comparator field when there isn't a need to convert"
-  - title: Has Value Exclusions
-    glob: 'fhirpath-js/cases/hasValue.yaml'
-    exclude:
-      - title: 'hasValue() not supported'
-        type: ???
-        comment: "hasValue() is not defined in FHIRSpec ???"
-        function:
-          - "hasValue"
   - title: Simple Exclusions
-    glob: 'fhirpath-js/cases/simple.yaml'
+    glob: "fhirpath-js/cases/simple.yaml"
     exclude:
       - title: "Tick quotes identifiers not supported"
-        id: '#2153'
+        id: "#2153"
         type: bug
         any:
           - "name.`family`"
       - title: "Boolean evaluation of collections"
         type: feature
+        id: "#2166"
         any:
           - "Patient.name.exists(given)"
-      - title: "Unsupported function type()"
-        type: feature
-        any:
-          - "Patient.name.given.type()"
-      - title: "Not supported expression maps"
-        type: framework-gap
+      - title: "Unsupported type runner feature: expression maps"
+        type: new-feature
         any:
           - "Evaluating expression for a part of a resource"
-      - title: "ofType() fails on monomorphic collections"
-        id: '#2171'
-        type: bug
-        any:
-          - "Patient.name.given.ofType(string)"
-      - title: "Comparison of element types"
-        type: framework-gap
+      - title: "Unsupported comparison between typed complex value and expected structure"
+        type: wontfix
         any:
           - "Patient.telecom.where($this.use = 'work')"
-      - title: "unsupported lenght property on strings"
-        type: ???
-        any:
-          - "Patient.name.given.select($this.length) = Patient.name.given.select(length)"
   - title: FHIR R4 Exclusions
-    glob: 'fhirpath-js/cases/fhir-r4.yaml'
+    glob: "fhirpath-js/cases/fhir-r4.yaml"
     exclude:
       - title: "Tick quotes identifiers not supported"
-        id: '#2153'
+        id: "#2153"
         type: bug
         any:
           - "** testEscapedIdentifier"
           - "** testSimpleBackTick1"
-      - title: "Direct access to polymorphic collection properties"
-        type: ???
+      - title: "Implicit conversion of polymorphic types not supported"
+        type: feature
+        id: "#2163"
         any:
           - "** testPolymorphismA"
           - "** testLiteralDecimalGreaterThanNonZeroTrue"
           - "** testLiteralDecimalGreaterThanZeroTrue"
           - "** testLiteralDecimalGreaterThanIntegerTrue"
           - "** testLiteralDecimalLessThanInteger"
-      - title: "Comparison of DateTime and Time values"
-        comment: "In pathling not comparable (error) in reference implementation returns a boolean value"
-        type: ???
-        any:
-          - "** testDateNotEqualTimeSecond"
-          - "** testDateNotEqualTimeMinute"
-      - title: "unicode escape sequences not supporter in string literals"
-        id: '#2170'
-        comment: "E.g: 'P\u0065ter' should be equal to 'Peter' but is not"
-        type: bug
-        any:
-          - "** testLiteralUnicode"
+          - "** testEquality28"
+          - "** testNEquality24"
+          - "** testLessThan22"
+          - "** testLessOrEqual22"
+          - "Observation.value >= 100 '[lb_av]'"
+          - "Observation.value > 100 '[lb_av]'"
       - title: "Comparison ('=' and '!=') of collections not supported"
-        id: '#2164'
+        id: "#2164"
         comment: "Also against an empty collection"
         type: ???
         any:
           - "** testCollectionNotEqualEmpty"
           - "** testEquality25"
           - "** testNEquality19"
-      - title: "Boolean evaluation of collections"
-        comment: "Including empty collections. 
-          Throws au.csiro.pathling.errors.InvalidUserInputError: 
-          Left operand to and operator must be Boolean"
-        type: feature
-        any:
-          - "** testIntegerBooleanNotFalse"
-          - "** testCollectionBoolean2"
-          - "(true and {}).empty()"
-          - "(false and {}) = false"
-          - "({} and true).empty()"
-          - "({} and false) = false"
-          - "({} and {}).empty()"
-          - "(true or {}) = true"
-          - "(false or {}).empty()"
-          - "({} or true) = true"
-          - "({} or false).empty()"
-          - "({} or {}).empty()"
-          - "(true xor {}).empty()"
-          - "(false xor {}).empty()"
-          - "({} xor true).empty()"
-          - "({} xor false).empty()"
-          - "({} xor {}).empty()"
-          - "(true xor {}).empty()"
-          - "(false xor {}).empty()"
-          - "({} xor true).empty()"
-          - "(true implies {}).empty()"
-          - "(false implies {}) = true"
-          - "({} implies true) = true"
-          - "({} implies false).empty()"
-          - "({} implies {}).empty()"
       - title: "incorrect multiplication/division of quantity literals"
-        id: '#2168'
+        id: "#2168"
         comment: "E.g: 2.0 'cm' * 2.0 'm' = 0.040 'm2'"
         type: bug
         any:
@@ -733,56 +658,22 @@ excludeSet:
           - "** testCollectionBoolean5"
           - "** testCollectionBoolean6"
       - title: "where() results in SQL runtime singularity exception"
-        id: '#2164'
+        id: "#2164"
         comment: "'java.lang.RuntimeException: Expected a single value, but found multiple values thrown' in evaluation"
         type: bug
         any:
           - "** testWhere2"
           - "** testWhere3"
           - "** testWhere4"
-      - title: "Direct comparison with polymorphic collections not supported"
-        id: '#2163'
-        comment: "E.g.: Observation.value = 185 '[lb_av]'"
-        type: ???
-        any:
-          - "** testEquality28"
-          - "** testNEquality24"
-          - "** testLessThan22"
-          - "** testLessOrEqual22"
-          - "Observation.value >= 100 '[lb_av]'"
-          - "Observation.value > 100 '[lb_av]'"
       - title: "Decimal literal exceeded maximum scale supported (6): 0.6666667"
-        id: '#2144'
+        id: "#2144"
         type: feature
         any:
           - "** testNEquality22"
           - "1.2 / 1.8 = 0.66666667"
-      - title: "Incorrect comparison of time values with different precisions"
-        id: '#2172'
-        type: bug
-        any:
-          - "** testLessThan23"
-          - "** testLessThan25"
-          - "** testLessThan27"
-          - "** testLessOrEqual25"
-          - "@T10 >= @T10:30"
-          - "@T10:30:00 >= @T10:30:00.0"
-          - "@2018-03 > @2018-03-01"
-          - "@T10 > @T10:30"
-      - title: "addition '+' operator on strings incorrect"
-        id: '#2154'
-        type: bug
-        any:
-          - "'a'+'b' = 'ab'"
       - title: "Extensions on primitive types not supported"
         type: feature
+        id: "#437"
         any:
           - "Patient.birthDate.extension('http://hl7.org/fhir/StructureDefinition/patient-birthTime').exists()"
           - "Patient.birthDate.extension('http://hl7.org/fhir/StructureDefinition/patient-birthTime1').empty()"
-      - title: "Comparison for time quantities returns null"
-        id: '#2172'
-        type: bug
-        any:
-          - "7 days = 1 week"
-          - "6 days < 1 week"
-          - "8 days > 1"
