@@ -72,6 +72,7 @@ jobs:
           path: |-
             **/*.dump
             **/*.dumpstream
+          if-no-files-found: 'ignore'
       - name: Publish test results
         # If the actor is Dependabot, we need to avoid anything that requires access to secrets.
         if: github.actor != 'dependabot[bot]'
@@ -80,7 +81,13 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: Encoders test report
           fail_on_test_failures: true
-
+      - name: Upload JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: encoders-jars
+          path: encoders/target/encoders-*.jar
+          if-no-files-found: 'error'
+  
   # This job builds the FHIR server, and runs all tests that do not fall into tranches 1 or 2.
   fhirpath:
     name: FHIRPath
