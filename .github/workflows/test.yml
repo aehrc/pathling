@@ -24,9 +24,52 @@ env:
   MAVEN_OPTS: --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
 
 jobs:
+  utilities:
+    name: Utilities
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # This is required so that git-commit-id-plugin can find the latest tag.
+          fetch-depth: 0
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: "zulu"
+      - name: Cache local Maven repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-utilities-${{ hashFiles('pom.xml') }}
+          restore-keys: |-
+            ${{ runner.os }}-maven-utilities-
+      - name: Run the verify goal with Maven
+        working-directory: utilities
+        run: mvn --batch-mode verify
+        timeout-minutes: 10
+      - name: Upload encoders test reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: utilities-surefire-reports
+          path: utilities/target/surefire-reports
+      - name: Upload test coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: utilities-coverage
+          path: "**/jacoco.xml"
+      - name: Upload JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: utilities-jars
+          path: utilities/target/encoders-*.jar
+          if-no-files-found: 'error'
+  
   encoders:
     name: Encoders
     runs-on: ubuntu-latest
+    needs: utilities
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -45,42 +88,39 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |-
             ${{ runner.os }}-maven-
+      - name: Download utilities JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: utilities-jars
+          path: utilities/target
+      - name: Get version from POM
+        id: get_version
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -f utilities/pom.xml)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Install utilities to local Maven repo
+        run: |
+          mvn install:install-file \
+            -Dfile=utilities/target/*.jar \
+            -DpomFile=utilities/pom.xml \
+            -DgroupId=au.csiro.pathling \
+            -DartifactId=utilities \
+            -Dversion=${{ steps.get_version.outputs.version }} \
+            -Dpackaging=jar
       - name: Run the verify goal with Maven
-        env:
-          # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
-          # report action to report them.
-          PATHLING_OPTS: ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
-        run: >-
-          mvn --batch-mode verify
-          -pl encoders -am
-          ${{ env.PATHLING_OPTS }}
+        working-directory: encoders
+        run: mvn --batch-mode verify
         timeout-minutes: 20
       - name: Upload encoders test reports
         uses: actions/upload-artifact@v4
         with:
           name: encoders-surefire-reports
-          path: encoders/target/surefire-reports
+          path: target/surefire-reports
       - name: Upload test coverage report
         uses: actions/upload-artifact@v4
         with:
           name: encoders-coverage
           path: "**/jacoco.xml"
-      - name: Upload dump files
-        uses: actions/upload-artifact@v4
-        with:
-          name: encoders-dump-files
-          path: |-
-            **/*.dump
-            **/*.dumpstream
-          if-no-files-found: 'ignore'
-      - name: Publish test results
-        # If the actor is Dependabot, we need to avoid anything that requires access to secrets.
-        if: github.actor != 'dependabot[bot]'
-        uses: scacap/action-surefire-report@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          check_name: Encoders test report
-          fail_on_test_failures: true
       - name: Upload JARs
         uses: actions/upload-artifact@v4
         with:
