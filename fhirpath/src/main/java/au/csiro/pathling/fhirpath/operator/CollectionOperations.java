@@ -25,7 +25,7 @@ import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
 import jakarta.annotation.Nonnull;
 import java.util.function.BiFunction;
 import lombok.experimental.UtilityClass;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.spark.sql.Column;
 
 /**
