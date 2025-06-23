@@ -98,10 +98,10 @@ jobs:
         run: |
           VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -f utilities/pom.xml)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-      - name: Install utilities to local Maven repo
+      - name: Install utilities test artifact to local Maven repo
         run: |
           mvn install:install-file \
-            -Dfile=utilities/target/*.jar \
+            -Dfile=utilities/target/utilities-${{ steps.get_version.outputs.version }}-tests.jar \
             -DpomFile=utilities/pom.xml \
             -DgroupId=au.csiro.pathling \
             -DartifactId=utilities \
