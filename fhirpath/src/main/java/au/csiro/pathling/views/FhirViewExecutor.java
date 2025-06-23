@@ -1,6 +1,8 @@
 package au.csiro.pathling.views;
 
 import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -8,6 +10,7 @@ import au.csiro.pathling.fhirpath.execution.FhirpathEvaluators.SingleEvaluatorFa
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.utilities.Lists;
+import au.csiro.pathling.validation.ValidationUtils;
 import au.csiro.pathling.view.ColumnSelection;
 import au.csiro.pathling.view.ExecutionContext;
 import au.csiro.pathling.view.GroupingSelection;
@@ -18,7 +21,6 @@ import au.csiro.pathling.view.UnionSelection;
 import au.csiro.pathling.view.UnnestingSelection;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -74,6 +76,9 @@ public class FhirViewExecutor {
    */
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final FhirView view) {
+    // Validate the view using JSR-380 validation
+    ValidationUtils.ensureValid(view, "Valid SQL on FHIR view");
+
     final ExecutionContext executionContext = new ExecutionContext(sparkSession,
         SingleEvaluatorFactory.of(fhirContext, dataSource)
     );
@@ -103,11 +108,10 @@ public class FhirViewExecutor {
 
     // Pass the constants through so that they can be substituted into the FHIRPath expressions
     // during evaluation.
-    final List<ConstantDeclaration> constants = Optional.ofNullable(fhirView.getConstant())
-        .orElse(Collections.emptyList());
 
     // Create the Projection object that represents the view.
-    return new Projection(ResourceType.fromCode(fhirView.getResource()), constants, selection,
+    return new Projection(ResourceType.fromCode(fhirView.getResource()), fhirView.getConstant(),
+        selection,
         where);
   }
 
@@ -125,28 +129,24 @@ public class FhirViewExecutor {
     // (3) A "for each or null" selection, which is the same as (2) but creates a null row if
     //     the parent path evaluates to an empty collection
 
-    if (select instanceof ColumnSelect) {
+    if (isNull(select.getForEach()) && isNull(select.getForEachOrNull())) {
       // If this is a direct column selection, we use a FromSelection. This will produce the 
       // cartesian product of the collections that are produced by the FHIRPath expressions.
       return new GroupingSelection(parseSubSelection(select));
-
-    } else if (select instanceof final ForEachSelect forEachSelect) {
+    } else if (nonNull(select.getForEach()) && nonNull(select.getForEachOrNull())) {
+      throw new IllegalStateException(
+          "Both forEach and forEachOrNull are set in the select clause");
+    } else if (nonNull(select.getForEach())) {
       // If this is a "for each" selection, we use a ForEachSelectionX. This will produce a row for
       // each item in the collection produced by the parent path.
-      return new UnnestingSelection(parser.parse(requireNonNull(forEachSelect.getPath())),
+      return new UnnestingSelection(parser.parse(requireNonNull(select.getForEach())),
           parseSubSelection(select), false);
-
-    } else if (select instanceof final ForEachOrNullSelect forEachOrNullSelect) {
+    } else { // this implies that forEachOrNull is non-null
       // If this is a "for each or null" selection, we use a ForEachSelectionX with a flag set to
       // true. This will produce a row for each item in the collection produced by the parent path,
       // or a single null row if the parent path evaluates to an empty collection.
-      return new UnnestingSelection(parser.parse(requireNonNull(forEachOrNullSelect.getPath())),
+      return new UnnestingSelection(parser.parse(requireNonNull(select.getForEachOrNull())),
           parseSubSelection(select), true);
-
-    } else {
-      // This will only ever happen if a new type of select clause is added to the FhirView
-      // model that is not handled here.
-      throw new IllegalStateException("Unknown select clause type: " + select.getClass());
     }
   }
 

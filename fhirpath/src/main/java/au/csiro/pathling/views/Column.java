@@ -1,11 +1,15 @@
 package au.csiro.pathling.views;
 
+import au.csiro.pathling.views.validation.ValidName;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
 /**
  * Describes the selection of a column in the output.
@@ -13,8 +17,32 @@ import lombok.EqualsAndHashCode;
  * @author John Grimes
  */
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 @EqualsAndHashCode(callSuper = false)
 public class Column implements SelectionElement {
+
+  @SuppressWarnings("unused")
+  public static class ColumnBuilder {
+    // for javadocs
+  }
+
+  /**
+   * Static factory method to create a new non collection {@link Column} instance with required
+   * fields.
+   *
+   * @param name the name of the column, must be in a database-friendly format
+   * @param path the FHIRPath expression that evaluates to the value for the column
+   * @return a new {@link Column} instance
+   */
+  public static Column single(@NotNull final String name,
+      @NotNull final String path) {
+    return builder()
+        .name(name)
+        .path(path)
+        .build();
+  }
 
   /**
    * Name of the column produced in the output, must be in a database-friendly format.
@@ -24,7 +52,7 @@ public class Column implements SelectionElement {
    */
   @NotNull
   @Size(max = 255)
-  @Pattern(regexp = "^[^_][A-Za-z][A-Za-z0-9_]+$")
+  @ValidName
   String name;
 
   /**
@@ -69,5 +97,35 @@ public class Column implements SelectionElement {
    */
   @Nullable
   String type;
+
+
+  /**
+   * Checks if this column is compatible with another column for union operations. Columns are
+   * compatible if they have the same type and collection indicator.
+   *
+   * @param other the other column to compare with
+   * @return true if the columns are compatible, false otherwise
+   */
+  public boolean isCompatibleWith(@Nullable final Column other) {
+    if (other == null) {
+      return false;
+    }
+
+    // Check collection indicator
+    if (this.isCollection() != other.isCollection()) {
+      return false;
+    }
+
+    // Check type compatibility
+    if (this.getType() == null && other.getType() == null) {
+      return true; // Both have null type, considered compatible
+    }
+
+    if (this.getType() == null || other.getType() == null) {
+      return false; // One has type, the other doesn't
+    }
+
+    return this.getType().equals(other.getType());
+  }
 
 }
