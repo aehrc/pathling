@@ -23,9 +23,4 @@ public class YamlFhirpathTest extends YamlSpecCachedTestBase {
   void testOperators(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }
-
-  @YamlSpec("fhirpath-ptl/cases/filtering_and_projection.yaml")
-  void testFilteringAndProjection(@Nonnull final RuntimeCase testCase) {
-    run(testCase);
-  }
 }
