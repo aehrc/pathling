@@ -49,7 +49,7 @@ jobs:
         working-directory: utilities
         run: mvn --batch-mode verify
         timeout-minutes: 10
-      - name: Upload encoders test reports
+      - name: Upload test report
         uses: actions/upload-artifact@v4
         with:
           name: utilities-surefire-reports
@@ -63,7 +63,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: utilities-jars
-          path: utilities/target/encoders-*.jar
+          path: utilities/target/utilities-*.jar
           if-no-files-found: 'error'
   
   encoders:
