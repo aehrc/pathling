@@ -63,8 +63,7 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
     requireNonNull(term);
 
     // Trim any backticks or single quotes from the start and end of the term.
-    term = term.replaceAll("^`|`$", "");
-    term = term.replaceAll("^'|'$", "");
+    term = term.replaceAll("^[`']|[`']$", "");
 
     return new ExternalConstantPath(term);
   }
