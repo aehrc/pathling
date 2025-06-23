@@ -106,7 +106,8 @@ jobs:
             -DgroupId=au.csiro.pathling \
             -DartifactId=utilities \
             -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar
+            -Dpackaging=jar \
+            -Dclassifier=test
       - name: Run the verify goal with Maven
         working-directory: encoders
         run: mvn --batch-mode verify
