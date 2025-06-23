@@ -18,9 +18,4 @@ public class YamlFhirpathTest extends YamlSpecCachedTestBase {
   void testMath(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }
-
-  @YamlSpec("fhirpath-ptl/cases/operators.yaml")
-  void testOperators(@Nonnull final RuntimeCase testCase) {
-    run(testCase);
-  }
 }

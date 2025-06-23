@@ -17,14 +17,16 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
 import jakarta.annotation.Nonnull;
-import org.apache.spark.sql.Column;
 import java.util.function.BiFunction;
-
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import lombok.experimental.UtilityClass;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.spark.sql.Column;
 
 /**
  * Provides the functionality of the collection operators within FHIRPath.
@@ -34,7 +36,14 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
  * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#collections-1">FHIRPath specification -
  * Collections</a>
  */
+@UtilityClass
 public class CollectionOperations {
+
+  private static final String IN_OPERATOR = "in";
+  private static final String CONTAINS_OPERATOR = "contains";
+
+  private static final String LEFT_OPERAND = "left";
+  private static final String RIGHT_OPERAND = "right";
 
   /**
    * If the left operand is a collection with a single item, this operator returns {@code true} if
@@ -52,7 +61,9 @@ public class CollectionOperations {
   @Nonnull
   public static BooleanCollection in(@Nonnull final Collection element,
       @Nonnull final Collection collection) {
-    return contains(collection, element);
+    checkComparable(element, IN_OPERATOR, LEFT_OPERAND);
+    checkComparable(collection, IN_OPERATOR, RIGHT_OPERAND);
+    return containsImpl(collection, element);
   }
 
   /**
@@ -71,15 +82,27 @@ public class CollectionOperations {
   @Nonnull
   public static BooleanCollection contains(@Nonnull final Collection collection,
       @Nonnull final Collection element) {
+    checkComparable(collection, CONTAINS_OPERATOR, LEFT_OPERAND);
+    checkComparable(element, CONTAINS_OPERATOR, RIGHT_OPERAND);
+    return containsImpl(collection, element);
+  }
+
+  private static void checkComparable(@Nonnull final Collection collection,
+      @Nonnull final String operator,
+      @Nonnull final String operand) {
     checkUserInput(collection instanceof Comparable,
-        "Left operand to contains operator must be Comparable");
-    checkUserInput(element instanceof Comparable,
-        "Right operand to contains operator must be Comparable");
+        StringUtils.capitalize(operand) + " operand to " + operator
+            + " operator must be Comparable");
+  }
+
+  @Nonnull
+  private static BooleanCollection containsImpl(@Nonnull final Collection collection,
+      @Nonnull final Collection element) {
 
     final BiFunction<Column, Column, Column> columnComparator = ((Comparable) collection)
         .getSqlComparator((Comparable) element, ComparisonOperation.EQUALS);
 
-    // In the future type adjustment may should be done before the operator is called.
+    // In the future, type adjustment may be done before the operator is called.
     final Collection typeAdjustedElement = element.convertibleTo(collection)
                                            ? element.castAs(collection)
                                            : element;

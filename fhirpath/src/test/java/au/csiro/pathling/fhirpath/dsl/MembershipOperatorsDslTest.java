@@ -3,12 +3,13 @@ package au.csiro.pathling.fhirpath.dsl;
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import java.util.stream.Stream;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 
 @Tag("UnitTest")
 public class MembershipOperatorsDslTest extends FhirPathDslTestBase {
-  
+
   @FhirPathTest
   public Stream<DynamicTest> testCodingMembership() {
     return builder()
@@ -148,12 +149,26 @@ public class MembershipOperatorsDslTest extends FhirPathDslTestBase {
                 "http://loinc.org|8480-6||'Systolic blood pressure'",
                 "http://loinc.org|8867-4||'Heart rate'",
                 "http://loinc.org|8462-4||'Diastolic blood pressure'")
+            .element("name", b -> b.fhirType(FHIRDefinedType.HUMANNAME).string("family", "Smith"))
         )
         .group("Cross type membership")
         .testError("10 in oneString", "Integer in String one")
         .testError("'true' in manyBoolean", "String in boolean one")
         .testError("'http://loinc.org|8480-6||\\'Systolic blood pressure\\'' in manyCoding",
             "String in Coding many")
+        .group("Test illegal membership operations")
+        .testError("Left operand to contains operator must be Comparable",
+            "name contains true",
+            "Contains with not comparable collection")
+        .testError("Right operand to in operator must be Comparable",
+            "1 in name",
+            "In with not comparable collection")
+        .testError("Right operand to contains operator must be Comparable",
+            "true contains name",
+            "Contains with not comparable element")
+        .testError("Left operand to in operator must be Comparable",
+            "name in 10",
+            "In with not comparable element")
         .build();
   }
 }
