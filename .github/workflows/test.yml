@@ -107,7 +107,7 @@ jobs:
             -DartifactId=utilities \
             -Dversion=${{ steps.get_version.outputs.version }} \
             -Dpackaging=jar \
-            -Dclassifier=test
+            -Dclassifier=tests
       - name: Run the verify goal with Maven
         working-directory: encoders
         run: mvn --batch-mode verify
