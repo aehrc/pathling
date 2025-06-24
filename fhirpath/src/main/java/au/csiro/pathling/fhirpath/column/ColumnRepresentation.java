@@ -29,6 +29,7 @@ import static org.apache.spark.sql.functions.raise_error;
 import static org.apache.spark.sql.functions.size;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.sql.misc.ToNull;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -648,5 +649,23 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation asEmpty() {
     return callUdf(ToNull.FUNCTION_NAME);
+  }
+
+
+  /**
+   * Traverses the current {@link ColumnRepresentation} to a selected elements in a choice and
+   * returns a new {@link ColumnRepresentation} that is the result of the traversal.
+   *
+   * @param definitions The definitions to traverse to
+   * @return A new {@link ColumnRepresentation} that is the result of the traversal
+   */
+  @Nonnull
+  public ColumnRepresentation traverseChoice(@Nonnull final ElementDefinition... definitions) {
+    return transform(c -> functions.coalesce(Stream.of(definitions)
+        .map(
+            ed -> this.copyOf(c)
+                .traverse(ed.getElementName(), ed.getFhirType())
+                .getValue()
+        ).toArray(Column[]::new)));
   }
 }
