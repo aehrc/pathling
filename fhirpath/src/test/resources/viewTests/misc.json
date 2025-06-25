@@ -62,6 +62,36 @@
           "empty": null
         }
       ]
+    },
+    {
+      "title": "traversal on array first()",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [
+              {
+                "path": "id",
+                "name": "id"
+              },
+              {
+                "path": "name.first().family",
+                "name": "given_name"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "p1",
+          "given_name": "f1"
+        },
+        {
+          "id": "p2",
+          "given_name": "f2"
+        }
+      ]
     }
   ]
 }
