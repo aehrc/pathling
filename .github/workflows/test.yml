@@ -344,7 +344,7 @@ jobs:
             -Dfile=lib/python/target/python-${{ steps.get_version.outputs.version }}-docs.jar \
             -DpomFile=lib/python/pom.xml \
             -DgroupId=au.csiro.pathling \
-            -DartifactId=python-api \
+            -DartifactId=python \
             -Dversion=${{ steps.get_version.outputs.version }} \
             -Dpackaging=jar \
             -Dclassifier=docs
@@ -354,7 +354,7 @@ jobs:
             -Dfile=lib/R/target/r-${{ steps.get_version.outputs.version }}-docs.jar \
             -DpomFile=lib/R/pom.xml \
             -DgroupId=au.csiro.pathling \
-            -DartifactId=pathling \
+            -DartifactId=r \
             -Dversion=${{ steps.get_version.outputs.version }} \
             -Dpackaging=jar \
             -Dclassifier=docs
