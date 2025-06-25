@@ -680,15 +680,65 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-maven-site-${{ hashFiles('**/pom.xml') }}
           restore-keys: |-
-            ${{ runner.os }}-maven-
+            ${{ runner.os }}-maven-site-
       - name: Cache R packages
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/Library
           key: r-packages-${{ runner.os }}-${{ hashFiles('lib/R/DESCRIPTION.src') }}
           restore-keys: r-packages-${{ runner.os }}-
+      - name: Download library API JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: library-api-jars
+          path: library-api/target
+      - name: Download Python API JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: python-api-jars
+          path: lib/python/target
+      - name: Download R API JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: r-api-jars
+          path: lib/R/target
+      - name: Get version from POM
+        id: get_version
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -f library-api/pom.xml)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Install library API sources JAR to local Maven repo
+        run: |
+          mvn install:install-file \
+            -Dfile=library-api/target/library-api-${{ steps.get_version.outputs.version }}-sources.jar \
+            -DpomFile=library-api/pom.xml \
+            -DgroupId=au.csiro.pathling \
+            -DartifactId=library-api \
+            -Dversion=${{ steps.get_version.outputs.version }} \
+            -Dpackaging=jar \
+            -Dclassifier=sources
+      - name: Install Python API docs JAR to local Maven repo
+        run: |
+          mvn install:install-file \
+            -Dfile=lib/python/target/python-api-${{ steps.get_version.outputs.version }}-docs.jar \
+            -DpomFile=lib/python/pom.xml \
+            -DgroupId=au.csiro.pathling \
+            -DartifactId=python-api \
+            -Dversion=${{ steps.get_version.outputs.version }} \
+            -Dpackaging=jar \
+            -Dclassifier=docs
+      - name: Install R API docs JAR to local Maven repo
+        run: |
+          mvn install:install-file \
+            -Dfile=lib/R/target/pathling-${{ steps.get_version.outputs.version }}-docs.jar \
+            -DpomFile=lib/R/pom.xml \
+            -DgroupId=au.csiro.pathling \
+            -DartifactId=pathling \
+            -Dversion=${{ steps.get_version.outputs.version }} \
+            -Dpackaging=jar \
+            -Dclassifier=docs
       - name: Extract Spark version
         working-directory: lib/R
         run: echo "SPARK_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.sparkVersion -q -DforceStdout)" >> $GITHUB_ENV
@@ -716,13 +766,10 @@ jobs:
       - name: Install texlive and libcurl
         run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra libcurl4-openssl-dev
       - name: Run the verify goal with Maven
+        working-directory: site
         env:
           R_KEEP_PKG_SOURCE: yes
-        run: >-
-          mvn --batch-mode verify
-          -pl site -am
-          -Pdocs
-          -DskipTests
+        run: mvn --batch-mode verify -Pdocs
         timeout-minutes: 45
 
   upload-coverage:
