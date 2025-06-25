@@ -395,7 +395,7 @@
         <version>${pathling.springBootVersion}</version>
       </dependency>
       <dependency>
-      <groupId>org.springframework.boot</groupId>
+        <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-actuator</artifactId>
         <version>${pathling.springBootVersion}</version>
       </dependency>
@@ -427,6 +427,12 @@
         <groupId>org.antlr</groupId>
         <artifactId>antlr4</artifactId>
         <version>${pathling.antlrVersion}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.ibm.icu</groupId>
+            <artifactId>icu4j</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.antlr</groupId>
@@ -607,7 +613,7 @@
         <artifactId>snakeyaml</artifactId>
         <version>2.2</version>
       </dependency>
-      
+
       <!-- CVE-2023-44981 -->
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
@@ -626,8 +632,8 @@
         <artifactId>avro-mapred</artifactId>
         <version>1.11.4</version>
       </dependency>
-      
-      
+
+
     </dependencies>
   </dependencyManagement>
 
