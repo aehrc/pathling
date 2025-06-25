@@ -63,12 +63,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: library-api-coverage
-          path: |
-            utilities/target/jacoco.xml
-            encoders/target/jacoco.xml
-            terminology/target/jacoco.xml
-            fhirpath/target/jacoco.xml
-            library-api/target/jacoco.xml
+          path: "**/jacoco.xml"
       - name: Upload utilities JARs
         uses: actions/upload-artifact@v4
         with:
@@ -165,16 +160,6 @@ jobs:
           PYSPARK_DRIVER_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
         run: mvn --batch-mode verify -Pdocs
         timeout-minutes: 30
-      - name: Upload library API test reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: library-api-surefire-reports
-          path: library-api/target/surefire-reports
-      - name: Upload library API test coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: library-api-coverage
-          path: "**/jacoco.xml"
       - name: Upload Python API test coverage report
         uses: actions/upload-artifact@v4
         with:
