@@ -268,7 +268,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: r-api-jars
-          path: lib/R/target/pathling-*.jar
+          path: lib/R/target/r-*.jar
 
   site:
     name: Site
