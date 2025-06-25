@@ -186,24 +186,6 @@ jobs:
             -DartifactId=encoders \
             -Dversion=${{ steps.get_version.outputs.version }} \
             -Dpackaging=jar
-      - name: Install terminology artifact to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=terminology/target/terminology-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=terminology/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=terminology \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar
-      - name: Install fhirpath artifact to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=fhirpath/target/fhirpath-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=fhirpath/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=fhirpath \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar
       - name: Run the verify goal with Maven
         working-directory: terminology
         run: mvn --batch-mode verify
