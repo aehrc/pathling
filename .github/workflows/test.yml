@@ -24,308 +24,13 @@ env:
   MAVEN_OPTS: --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
 
 jobs:
-  utilities:
-    name: Utilities
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          # This is required so that git-commit-id-plugin can find the latest tag.
-          fetch-depth: 0
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: 17
-          distribution: "zulu"
-      - name: Cache local Maven repository
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-utilities-${{ hashFiles('pom.xml') }}
-          restore-keys: |-
-            ${{ runner.os }}-maven-utilities-
-      - name: Run the verify goal with Maven
-        working-directory: utilities
-        run: mvn --batch-mode verify
-        timeout-minutes: 10
-      - name: Upload test report
-        uses: actions/upload-artifact@v4
-        with:
-          name: utilities-surefire-reports
-          path: utilities/target/surefire-reports
-      - name: Upload test coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: utilities-coverage
-          path: "**/jacoco.xml"
-      - name: Upload JARs
-        uses: actions/upload-artifact@v4
-        with:
-          name: utilities-jars
-          path: utilities/target/utilities-*.jar
-          if-no-files-found: 'error'
-  
-  encoders:
-    name: Encoders
-    runs-on: ubuntu-latest
-    needs: utilities
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          # This is required so that git-commit-id-plugin can find the latest tag.
-          fetch-depth: 0
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: 17
-          distribution: "zulu"
-      - name: Cache local Maven repository
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-encoders-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |-
-            ${{ runner.os }}-maven-encoders-
-      - name: Download utilities JARs
-        uses: actions/download-artifact@v4
-        with:
-          name: utilities-jars
-          path: utilities/target
-      - name: Get version from POM
-        id: get_version
-        run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -f utilities/pom.xml)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-      - name: Install utilities test artifact to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=utilities/target/utilities-${{ steps.get_version.outputs.version }}-tests.jar \
-            -DpomFile=utilities/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=utilities \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar \
-            -Dclassifier=tests
-      - name: Run the verify goal with Maven
-        working-directory: encoders
-        run: mvn --batch-mode verify
-        timeout-minutes: 20
-      - name: Upload encoders test reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: encoders-surefire-reports
-          path: target/surefire-reports
-      - name: Upload test coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: encoders-coverage
-          path: "**/jacoco.xml"
-      - name: Upload JARs
-        uses: actions/upload-artifact@v4
-        with:
-          name: encoders-jars
-          path: encoders/target/encoders-*.jar
-          if-no-files-found: 'error'
-  
-  terminology:
-    name: Terminology
-    runs-on: ubuntu-latest
-    needs:
-      - utilities
-      - encoders
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          # This is required so that git-commit-id-plugin can find the latest tag.
-          fetch-depth: 0
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: 17
-          distribution: "zulu"
-      - name: Cache local Maven repository
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-terminology-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |-
-            ${{ runner.os }}-maven-terminology-
-      - name: Download utilities JARs
-        uses: actions/download-artifact@v4
-        with:
-          name: utilities-jars
-          path: utilities/target
-      - name: Download encoders JARs
-        uses: actions/download-artifact@v4
-        with:
-          name: encoders-jars
-          path: encoders/target
-      - name: Get version from POM
-        id: get_version
-        run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -f utilities/pom.xml)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-      - name: Install utilities artifact to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=utilities/target/utilities-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=utilities/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=utilities \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar
-      - name: Install encoders artifact to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=encoders/target/encoders-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=encoders/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=encoders \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar
-      - name: Run the verify goal with Maven
-        working-directory: terminology
-        run: mvn --batch-mode verify
-        timeout-minutes: 20
-      - name: Upload terminology test reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: terminology-surefire-reports
-          path: terminology/target/surefire-reports
-      - name: Upload test coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: terminology-coverage
-          path: "**/jacoco.xml"
-      - name: Upload JARs
-        uses: actions/upload-artifact@v4
-        with:
-          name: terminology-jars
-          path: terminology/target/terminology-*.jar
-          if-no-files-found: 'error'
-  
-  fhirpath:
-    name: FHIRPath
-    runs-on: ubuntu-latest
-    needs: terminology
-    permissions:
-      id-token: write
-      contents: write
-      actions: write
-      checks: write
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::865780493209:role/PathlingBenchmarkUpload
-          aws-region: ap-southeast-2
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          # This is required so that git-commit-id-plugin can find the latest tag.
-          fetch-depth: 0
-          submodules: recursive
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: 17
-          distribution: "zulu"
-      - name: Cache local Maven repository
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-fhirpath-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |-
-            ${{ runner.os }}-maven-fhirpath-
-      - name: Cache test data
-        id: cache-test-data
-        uses: actions/cache@v4
-        with:
-          path: fhirpath/src/test/resources/test-data/parquet
-          key: ${{ runner.os }}-test-data-${{ hashFiles('fhirpath/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
-      - name: Get version from POM
-        id: get_version
-        run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -f utilities/pom.xml)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-      - name: Install utilities artifact to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=utilities/target/utilities-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=utilities/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=utilities \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar
-      - name: Install encoders artifact to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=encoders/target/encoders-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=encoders/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=encoders \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar
-      - name: Install terminology artifact to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=terminology/target/terminology-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=terminology/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=terminology \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar
-      - name: Install fhirpath artifact to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=fhirpath/target/fhirpath-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=fhirpath/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=fhirpath \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar
-      - name: Run the verify goal with Maven
-        working-directory: fhirpath
-        env:
-          # Skip the test data import if the cache hit.
-          PATHLING_PROFILES: ${{ steps.cache-test-data.outputs.cache-hit && '!importTestData' || 'none' }}
-        run: mvn --batch-mode verify -P${{ env.PATHLING_PROFILES }}
-        timeout-minutes: 30
-      - name: Upload FHIRPath test reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: fhirpath-surefire-reports
-          path: fhirpath/target/surefire-reports
-      - name: Upload FHIRPath test coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: fhirpath-coverage
-          path: "**/jacoco.xml"
-      - name: Upload FHIRPath JARs
-        uses: actions/upload-artifact@v4
-        with:
-          name: fhirpath-jars
-          path: fhirpath/target/fhirpath-*.jar
-          if-no-files-found: 'error'
-      - name: Upload SQL on FHIR test report to S3
-        run: aws s3 cp fhirpath/target/fhir-view-compliance-test.json s3://pathling-benchmark/test-reports/${{ github.ref }}/sof-test-results.json
-  
   library-api:
     name: Library API
     runs-on: ubuntu-latest
-    needs:
-      - encoders
-      - terminology
-      - fhirpath
-      - utilities
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -339,145 +44,61 @@ jobs:
           key: ${{ runner.os }}-maven-library-api-${{ hashFiles('**/pom.xml') }}
           restore-keys: |-
             ${{ runner.os }}-maven-library-api-
-      - name: Download encoders JARs
-        uses: actions/download-artifact@v4
-        with:
-          name: encoders-jars
-          path: encoders/target
-      - name: Download terminology JARs
-        uses: actions/download-artifact@v4
-        with:
-          name: terminology-jars
-          path: terminology/target
-      - name: Download fhirpath JARs
-        uses: actions/download-artifact@v4
-        with:
-          name: fhirpath-jars
-          path: fhirpath/target
-      - name: Download utilities JARs
-        uses: actions/download-artifact@v4
-        with:
-          name: utilities-jars
-          path: utilities/target
-      - name: Get version from POM
-        id: get_version
-        run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -f utilities/pom.xml)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-      - name: Install utilities artifact to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=utilities/target/utilities-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=utilities/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=utilities \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar
-      - name: Install encoders artifact to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=encoders/target/encoders-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=encoders/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=encoders \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar
-      - name: Install terminology artifact to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=terminology/target/terminology-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=terminology/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=terminology \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar
-      - name: Install fhirpath artifact to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=fhirpath/target/fhirpath-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=fhirpath/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=fhirpath \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar
       - name: Run the verify goal with Maven
-        working-directory: library-api
-        run: mvn --batch-mode verify
+        run: >
+          mvn --batch-mode verify -pl library-runtime -am -Pdocs
         timeout-minutes: 30
-      - name: Upload Library API test reports
+      - name: Upload test reports
         uses: actions/upload-artifact@v4
         with:
           name: library-api-surefire-reports
-          path: library-api/target/surefire-reports
-      - name: Upload Library API test coverage report
+          path: |
+            utilities/target/surefire-reports
+            encoders/target/surefire-reports
+            terminology/target/surefire-reports
+            fhirpath/target/surefire-reports
+            library-api/target/surefire-reports
+      - name: Upload coverage reports
         uses: actions/upload-artifact@v4
         with:
           name: library-api-coverage
-          path: "**/jacoco.xml"
-      - name: Upload Library API JARs
+          path: |
+            utilities/target/jacoco.xml
+            encoders/target/jacoco.xml
+            terminology/target/jacoco.xml
+            fhirpath/target/jacoco.xml
+            library-api/target/jacoco.xml
+      - name: Upload utilities JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: utilities-jars
+          path: utilities/target/utilities-*.jar
+          if-no-files-found: 'error'
+      - name: Upload encoders JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: encoders-jars
+          path: encoders/target/encoders-*.jar
+          if-no-files-found: 'error'
+      - name: Upload terminology JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: terminology-jars
+          path: terminology/target/terminology-*.jar
+          if-no-files-found: 'error'
+      - name: Upload fhirpath JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: fhirpath-jars
+          path: fhirpath/target/fhirpath-*.jar
+          if-no-files-found: 'error'
+      - name: Upload library-api JARs
         uses: actions/upload-artifact@v4
         with:
           name: library-api-jars
           path: library-api/target/library-api-*.jar
           if-no-files-found: 'error'
-  
-  library-runtime:
-    name: Library Runtime
-    runs-on: ubuntu-latest
-    needs:
-      - library-api
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          # This is required so that git-commit-id-plugin can find the latest tag.
-          fetch-depth: 0
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: 17
-          distribution: "zulu"
-      - name: Cache local Maven repository
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-library-runtime-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |-
-            ${{ runner.os }}-maven-library-runtime-
-      - name: Download library API JARs
-        uses: actions/download-artifact@v4
-        with:
-          name: library-api-jars
-          path: library-api/target
-      - name: Get version from POM
-        id: get_version
-        run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -f library-api/pom.xml)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-      - name: Install library-api artifact to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=library-api/target/library-api-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=library-api/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=library-api \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar
-      - name: Run the verify goal with Maven
-        working-directory: library-runtime
-        run: mvn --batch-mode verify
-        timeout-minutes: 20
-      - name: Upload Library Runtime test reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: library-runtime-surefire-reports
-          path: library-runtime/target/surefire-reports
-      - name: Upload Library Runtime test coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: library-runtime-coverage
-          path: "**/jacoco.xml"
-      - name: Upload Library Runtime JARs
+      - name: Upload library-runtime JARs
         uses: actions/upload-artifact@v4
         with:
           name: library-runtime-jars
@@ -487,8 +108,7 @@ jobs:
   python-api:
     name: Python API
     runs-on: ubuntu-latest
-    needs:
-      - library-runtime
+    needs: library-api
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -563,8 +183,7 @@ jobs:
   R-api:
     name: R API
     runs-on: ubuntu-latest
-    needs:
-      - library-runtime
+    needs: library-api
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -779,32 +398,12 @@ jobs:
   upload-coverage:
     name: Upload coverage
     runs-on: ubuntu-latest
-    needs: [ encoders, fhirpath, python-api ]
+    needs: [ library-api, python-api ]
     if: github.actor != 'dependabot[bot]'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Download utilities coverage report
-        uses: actions/download-artifact@v4
-        with:
-          name: utilities-coverage
-          path: utilities-coverage
-      - name: Download encoders coverage report
-        uses: actions/download-artifact@v4
-        with:
-          name: encoders-coverage
-          path: encoders-coverage
-      - name: Download terminology coverage report
-        uses: actions/download-artifact@v4
-        with:
-          name: terminology-coverage
-          path: terminology-coverage
-      - name: Download FHIRPath coverage report
-        uses: actions/download-artifact@v4
-        with:
-          name: fhirpath-coverage
-          path: fhirpath-coverage
-      - name: Download library API coverage report
+      - name: Download library API coverage reports
         uses: actions/download-artifact@v4
         with:
           name: library-api-coverage
@@ -822,12 +421,7 @@ jobs:
   deploy-pre-release:
     name: Pre-release deployment
     needs:
-      - utilities
-      - encoders
-      - terminology
-      - fhirpath
       - library-api
-      - library-runtime
     runs-on: ubuntu-latest
     # If the branch starts with "release/", we deploy pre-release packages.
     if: startsWith(github.ref, 'refs/heads/release/')
