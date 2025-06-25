@@ -821,7 +821,13 @@ jobs:
 
   deploy-pre-release:
     name: Pre-release deployment
-    needs: [ encoders,fhirpath ]
+    needs:
+      - utilities
+      - encoders
+      - terminology
+      - fhirpath
+      - library-api
+      - library-runtime
     runs-on: ubuntu-latest
     # If the branch starts with "release/", we deploy pre-release packages.
     if: startsWith(github.ref, 'refs/heads/release/')
@@ -843,11 +849,6 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Install GPG key
         run: |
           cat <(echo -e "${{ secrets.GPG_KEY }}") | gpg --batch --import
@@ -861,12 +862,104 @@ jobs:
               "username": "${{ secrets.OSSRH_USERNAME }}",
               "password": "${{ secrets.OSSRH_PASSWORD }}"
             }]
-      - name: Run the deploy goal with Maven
+      - name: Download utilities JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: utilities-jars
+          path: utilities/target
+      - name: Download encoders JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: encoders-jars
+          path: encoders/target
+      - name: Download terminology JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: terminology-jars
+          path: terminology/target
+      - name: Download fhirpath JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: fhirpath-jars
+          path: fhirpath/target
+      - name: Download library-api JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: library-api-jars
+          path: library-api/target
+      - name: Download library-runtime JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: library-runtime-jars
+          path: library-runtime/target
+      - name: Get version from POM
+        id: get_version
         run: |
-          TAG=$(echo '${{ github.ref }}' | sed 's/refs\/heads\/release\///')
-          mvn --batch-mode deploy \
-          -pl fhirpath,library-api,library-runtime -am \
-          -PmavenPreRelease,docs \
-          -DskipTests -DskipScalaDocs \
-          -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
-        timeout-minutes: 30
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -f utilities/pom.xml)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Deploy utilities artifact to Sonatype snapshot repo
+        run: |
+          mvn deploy:deploy-file \
+            -Dfile=utilities/target/utilities-${{ steps.get_version.outputs.version }}.jar \
+            -DpomFile=utilities/pom.xml \
+            -DgroupId=au.csiro.pathling \
+            -DartifactId=utilities \
+            -Dversion=${{ steps.get_version.outputs.version }} \
+            -Dpackaging=jar \
+            -DrepositoryId=ossrh \
+            -Durl=https://oss.sonatype.org/content/repositories/snapshots/
+      - name: Deploy encoders artifact to Sonatype snapshot repo
+        run: |
+          mvn deploy:deploy-file \
+            -Dfile=encoders/target/encoders-${{ steps.get_version.outputs.version }}.jar \
+            -DpomFile=encoders/pom.xml \
+            -DgroupId=au.csiro.pathling \
+            -DartifactId=encoders \
+            -Dversion=${{ steps.get_version.outputs.version }} \
+            -Dpackaging=jar \
+            -DrepositoryId=ossrh \
+            -Durl=https://oss.sonatype.org/content/repositories/snapshots/
+      - name: Deploy terminology artifact to Sonatype snapshot repo
+        run: |
+          mvn deploy:deploy-file \
+            -Dfile=terminology/target/terminology-${{ steps.get_version.outputs.version }}.jar \
+            -DpomFile=terminology/pom.xml \
+            -DgroupId=au.csiro.pathling \
+            -DartifactId=terminology \
+            -Dversion=${{ steps.get_version.outputs.version }} \
+            -Dpackaging=jar \
+            -DrepositoryId=ossrh \
+            -Durl=https://oss.sonatype.org/content/repositories/snapshots/
+      - name: Deploy fhirpath artifact to Sonatype snapshot repo
+        run: |
+          mvn deploy:deploy-file \
+            -Dfile=fhirpath/target/fhirpath-${{ steps.get_version.outputs.version }}.jar \
+            -DpomFile=fhirpath/pom.xml \
+            -DgroupId=au.csiro.pathling \
+            -DartifactId=fhirpath \
+            -Dversion=${{ steps.get_version.outputs.version }} \
+            -Dpackaging=jar \
+            -DrepositoryId=ossrh \
+            -Durl=https://oss.sonatype.org/content/repositories/snapshots/
+      - name: Deploy library-api artifact to Sonatype snapshot repo
+        run: |
+          mvn deploy:deploy-file \
+            -Dfile=library-api/target/library-api-${{ steps.get_version.outputs.version }}.jar \
+            -DpomFile=library-api/pom.xml \
+            -DgroupId=au.csiro.pathling \
+            -DartifactId=library-api \
+            -Dversion=${{ steps.get_version.outputs.version }} \
+            -Dpackaging=jar \
+            -DrepositoryId=ossrh \
+            -Durl=https://oss.sonatype.org/content/repositories/snapshots/
+      - name: Deploy library-runtime artifact to Sonatype snapshot repo
+        run: |
+          mvn deploy:deploy-file \
+            -Dfile=library-runtime/target/library-runtime-${{ steps.get_version.outputs.version }}.jar \
+            -DpomFile=library-runtime/pom.xml \
+            -DgroupId=au.csiro.pathling \
+            -DartifactId=library-runtime \
+            -Dversion=${{ steps.get_version.outputs.version }} \
+            -Dpackaging=jar \
+            -DrepositoryId=ossrh \
+            -Durl=https://oss.sonatype.org/content/repositories/snapshots/
