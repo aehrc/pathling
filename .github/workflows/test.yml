@@ -751,11 +751,26 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Download utilities coverage report
+        uses: actions/download-artifact@v4
+        with:
+          name: utilities-coverage
+          path: utilities-coverage
       - name: Download encoders coverage report
         uses: actions/download-artifact@v4
         with:
           name: encoders-coverage
           path: encoders-coverage
+      - name: Download terminology coverage report
+        uses: actions/download-artifact@v4
+        with:
+          name: terminology-coverage
+          path: terminology-coverage
+      - name: Download FHIRPath coverage report
+        uses: actions/download-artifact@v4
+        with:
+          name: fhirpath-coverage
+          path: fhirpath-coverage
       - name: Download library API coverage report
         uses: actions/download-artifact@v4
         with:
@@ -766,11 +781,6 @@ jobs:
         with:
           name: python-api-coverage
           path: python-api-coverage
-      - name: Download FHIR server coverage report 3
-        uses: actions/download-artifact@v4
-        with:
-          name: fhirpath-coverage
-          path: fhirpath-coverage
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
         with:
