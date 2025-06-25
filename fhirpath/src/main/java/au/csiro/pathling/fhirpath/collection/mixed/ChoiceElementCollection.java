@@ -8,9 +8,9 @@ import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import jakarta.annotation.Nonnull;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -67,7 +67,7 @@ public class ChoiceElementCollection extends MixedCollection {
     if (selectedTypes.length <= 1) {
       // delegate to the single choice mapping
       // this will take care of Decimal case (creation of DecimalCollection and DecimalRepsentation)
-      return resolveElement(Stream.of(selectedTypes).findFirst());
+      return resolveElement(Arrays.stream(selectedTypes).findFirst());
     } else {
       return Collection.build(parent.getColumn().traverseChoice(selectedTypes),
           fhirpathType.getDefaultFhirType());
