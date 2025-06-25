@@ -56,33 +56,16 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public class Collection {
 
-  // See https://hl7.org/fhir/fhirpath.html#types.
+
+  // Additional mappings for collection classes that don't directly map to FhirPathType
   @Nonnull
-  private static final Map<FHIRDefinedType, Class<? extends Collection>> FHIR_TYPE_TO_ELEMENT_PATH_CLASS =
+  private static final Map<FHIRDefinedType, Class<? extends Collection>> ADDITIONAL_COLLECTION_MAPPINGS =
       new ImmutableMap.Builder<FHIRDefinedType, Class<? extends Collection>>()
-          .put(FHIRDefinedType.BOOLEAN, BooleanCollection.class)
-          .put(FHIRDefinedType.STRING, StringCollection.class)
-          .put(FHIRDefinedType.URI, StringCollection.class)
-          .put(FHIRDefinedType.URL, StringCollection.class)
-          .put(FHIRDefinedType.CANONICAL, StringCollection.class)
-          .put(FHIRDefinedType.CODE, StringCollection.class)
-          .put(FHIRDefinedType.OID, StringCollection.class)
-          .put(FHIRDefinedType.ID, StringCollection.class)
-          .put(FHIRDefinedType.UUID, StringCollection.class)
-          .put(FHIRDefinedType.MARKDOWN, StringCollection.class)
-          .put(FHIRDefinedType.BASE64BINARY, StringCollection.class)
-          .put(FHIRDefinedType.INTEGER, IntegerCollection.class)
-          .put(FHIRDefinedType.UNSIGNEDINT, IntegerCollection.class)
-          .put(FHIRDefinedType.POSITIVEINT, IntegerCollection.class)
-          .put(FHIRDefinedType.DECIMAL, DecimalCollection.class)
-          .put(FHIRDefinedType.DATE, DateCollection.class)
-          .put(FHIRDefinedType.DATETIME, DateTimeCollection.class)
-          .put(FHIRDefinedType.INSTANT, DateTimeCollection.class)
-          .put(FHIRDefinedType.TIME, TimeCollection.class)
-          .put(FHIRDefinedType.CODING, CodingCollection.class)
           .put(FHIRDefinedType.REFERENCE, ReferenceCollection.class)
           .put(FHIRDefinedType.NULL, EmptyCollection.class)
           .build();
+
+  // See https://hl7.org/fhir/fhirpath.html#types.
 
   /**
    * A {@link Column} representing the result of evaluating this expression.
@@ -201,7 +184,8 @@ public class Collection {
     final FHIRDefinedType resolvedType = fhirType
         .or(() -> definition.flatMap(ElementDefinition::getFhirType))
         .orElseThrow(() -> new IllegalArgumentException("Must have a fhirType or a definition"));
-    final Class<? extends Collection> elementPathClass = classForType(resolvedType)
+    final Class<? extends Collection> elementPathClass = classForType(
+        resolvedType)
         .orElse(Collection.class);
     final Optional<FhirPathType> fhirPathType = FhirPathType.forFhirType(resolvedType);
 
@@ -219,14 +203,21 @@ public class Collection {
     }
   }
 
+
   /**
-   * @param fhirType A {@link FHIRDefinedType}
+   * @param fhirType a {@link FHIRDefinedType}
    * @return The subtype of {@link Collection} that represents this type
    */
   @Nonnull
   public static Optional<Class<? extends Collection>> classForType(
       @Nonnull final FHIRDefinedType fhirType) {
-    return Optional.ofNullable(FHIR_TYPE_TO_ELEMENT_PATH_CLASS.get(fhirType));
+    // First check if there's a direct mapping through FhirPathType
+    Optional<FhirPathType> pathType = FhirPathType.forFhirType(fhirType);
+    if (pathType.isPresent()) {
+      return Optional.of(pathType.get().getCollectionClass());
+    }
+    // If not, check additional mappings
+    return Optional.ofNullable(ADDITIONAL_COLLECTION_MAPPINGS.get(fhirType));
   }
 
   /**
@@ -483,7 +474,7 @@ public class Collection {
   public String getDisplayExpression() {
     return getClass().getSimpleName();
   }
-  
+
   /**
    * Returns an optional {@link Concepts} representation of this collection.
    *
