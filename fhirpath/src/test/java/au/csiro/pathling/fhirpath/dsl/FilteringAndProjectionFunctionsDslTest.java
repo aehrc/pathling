@@ -182,7 +182,7 @@ public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase 
             "ofType() returns empty when type doesn't match")
         .testEmpty("codingValue.ofType(Quantity)",
             "ofType() returns empty when type doesn't match")
-        .group("ofType() on polymorphic colllections with System types")
+        .group("ofType() on polymorphic collections with System types")
         .testEquals("string", "heteroattr.value.ofType(System.String)",
             "ofType() filters polymorphic collection for System.String type with one FHIR to String mapping")
         .testEmpty("heteroattr.value.ofType(Boolean)",
@@ -193,7 +193,7 @@ public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase 
             "ofType() filters polymorphic collection for System.String type with many FHIR to String mappings")
         .testEquals(4.8,
             "polyStrings.value.ofType(System.Decimal) + polyStrings.value.ofType(FHIR.decimal)",
-            "ofType() filters polymorphic collectio for decimal type")
+            "ofType() filters polymorphic collection for decimal type")
         .build();
   }
 
