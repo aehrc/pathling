@@ -69,38 +69,38 @@ jobs:
         with:
           name: utilities-jars
           path: utilities/target/utilities-*.jar
-          if-no-files-found: 'error'
+          if-no-files-found: "error"
       - name: Upload encoders JARs
         uses: actions/upload-artifact@v4
         with:
           name: encoders-jars
           path: encoders/target/encoders-*.jar
-          if-no-files-found: 'error'
+          if-no-files-found: "error"
       - name: Upload terminology JARs
         uses: actions/upload-artifact@v4
         with:
           name: terminology-jars
           path: terminology/target/terminology-*.jar
-          if-no-files-found: 'error'
+          if-no-files-found: "error"
       - name: Upload fhirpath JARs
         uses: actions/upload-artifact@v4
         with:
           name: fhirpath-jars
           path: fhirpath/target/fhirpath-*.jar
-          if-no-files-found: 'error'
+          if-no-files-found: "error"
       - name: Upload library-api JARs
         uses: actions/upload-artifact@v4
         with:
           name: library-api-jars
           path: library-api/target/library-api-*.jar
-          if-no-files-found: 'error'
+          if-no-files-found: "error"
       - name: Upload library-runtime JARs
         uses: actions/upload-artifact@v4
         with:
           name: library-runtime-jars
           path: library-runtime/target/library-runtime-*.jar
-          if-no-files-found: 'error'
-  
+          if-no-files-found: "error"
+
   python-api:
     name: Python API
     runs-on: ubuntu-latest
@@ -165,7 +165,12 @@ jobs:
         with:
           name: python-api-coverage
           path: lib/python/**/coverage.xml
-  
+      - name: Upload Python API JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-api-jars
+          path: lib/python/target/python-*.jar
+
   R-api:
     name: R API
     runs-on: ubuntu-latest
@@ -259,6 +264,11 @@ jobs:
         with:
           name: r-package
           path: lib/R/target/pathling_*.tar.gz
+      - name: Upload R API JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: r-api-jars
+          path: lib/R/target/pathling-*.jar
 
   site:
     name: Site
@@ -331,7 +341,7 @@ jobs:
       - name: Install Python API docs JAR to local Maven repo
         run: |
           mvn install:install-file \
-            -Dfile=lib/python/target/python-api-${{ steps.get_version.outputs.version }}-docs.jar \
+            -Dfile=lib/python/target/python-${{ steps.get_version.outputs.version }}-docs.jar \
             -DpomFile=lib/python/pom.xml \
             -DgroupId=au.csiro.pathling \
             -DartifactId=python-api \
@@ -341,7 +351,7 @@ jobs:
       - name: Install R API docs JAR to local Maven repo
         run: |
           mvn install:install-file \
-            -Dfile=lib/R/target/pathling-${{ steps.get_version.outputs.version }}-docs.jar \
+            -Dfile=lib/R/target/r-${{ steps.get_version.outputs.version }}-docs.jar \
             -DpomFile=lib/R/pom.xml \
             -DgroupId=au.csiro.pathling \
             -DartifactId=pathling \
@@ -384,7 +394,7 @@ jobs:
   upload-coverage:
     name: Upload coverage
     runs-on: ubuntu-latest
-    needs: [ library-api, python-api ]
+    needs: [library-api, python-api]
     if: github.actor != 'dependabot[bot]'
     steps:
       - name: Checkout code
