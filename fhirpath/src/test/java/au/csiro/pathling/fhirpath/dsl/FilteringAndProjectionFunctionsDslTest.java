@@ -114,13 +114,29 @@ public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase 
                     )
                     .stringEmpty("valueString")
             )
+            .element("monoCode",
+                val1 -> val1.choice("value")
+                    .string("valueCode", "code1")
+                    .stringEmpty("valueString")
+            )
+            .elementArray("polyStrings",
+                // only the first element needs to be a full choice type
+                val1 -> val1.choice("value")
+                    .string("valueString", "string")
+                    .stringEmpty("valueCode")
+                    .decimalEmpty("valueDecimal")
+                    .stringEmpty("valueId"),
+                val2 -> val2.string("valueId", "id"),
+                val3 -> val3.decimal("valueDecimal", 2.4),
+                val2 -> val2.string("valueCode", "code")
+            )
         )
         .group("ofType() function with non-resource types")
         // ofType() tests with primitive types
         .testEquals("test", "stringValue.ofType(System.String)",
             "ofType() returns string value when filtering for System.String type")
         .testEquals(42, "integerValue.ofType(Integer)",
-            "ofType() returns integer value when filtering for (Systrem).Integer type")
+            "ofType() returns integer value when filtering for (System).Integer type")
         .testEquals(3.14, "decimalValue.ofType(decimal)",
             "ofType() returns decimal value when filtering for (FHIR).decimal type")
         .testEquals(true, "booleanValue.ofType(FHIR.boolean)",
@@ -166,6 +182,18 @@ public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase 
             "ofType() returns empty when type doesn't match")
         .testEmpty("codingValue.ofType(Quantity)",
             "ofType() returns empty when type doesn't match")
+        .group("ofType() on polymorphic collections with System types")
+        .testEquals("string", "heteroattr.value.ofType(System.String)",
+            "ofType() filters polymorphic collection for System.String type with one FHIR to String mapping")
+        .testEmpty("heteroattr.value.ofType(Boolean)",
+            "ofType() filters polymorphic collection for System.Boolean type")
+        .testEquals("code1", "monoCode.value.ofType(String)",
+            "ofType() includes code in polymorphic singleton for System.String type")
+        .testEquals(List.of("string", "id", "code"), "polyStrings.value.ofType(System.String)",
+            "ofType() filters polymorphic collection for System.String type with many FHIR to String mappings")
+        .testEquals(4.8,
+            "polyStrings.value.ofType(System.Decimal) + polyStrings.value.ofType(FHIR.decimal)",
+            "ofType() filters polymorphic collection for decimal type")
         .build();
   }
 
