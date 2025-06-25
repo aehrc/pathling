@@ -85,9 +85,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-maven-encoders-${{ hashFiles('**/pom.xml') }}
           restore-keys: |-
-            ${{ runner.os }}-maven-
+            ${{ runner.os }}-maven-encoders-
       - name: Download utilities JARs
         uses: actions/download-artifact@v4
         with:
@@ -129,10 +129,89 @@ jobs:
           path: encoders/target/encoders-*.jar
           if-no-files-found: 'error'
   
-  # This job builds the FHIR server, and runs all tests that do not fall into tranches 1 or 2.
+  terminology:
+    name: Terminology
+    runs-on: ubuntu-latest
+    needs:
+      - utilities
+      - encoders
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # This is required so that git-commit-id-plugin can find the latest tag.
+          fetch-depth: 0
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: "zulu"
+      - name: Cache local Maven repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-terminology-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |-
+            ${{ runner.os }}-maven-terminology-
+      - name: Download utilities JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: utilities-jars
+          path: utilities/target
+      - name: Download encoders JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: encoders-jars
+          path: encoders/target
+      - name: Get version from POM
+        id: get_version
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -f utilities/pom.xml)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Install utilities test artifact to local Maven repo
+        run: |
+          mvn install:install-file \
+            -Dfile=utilities/target/utilities-${{ steps.get_version.outputs.version }}-tests.jar \
+            -DpomFile=utilities/pom.xml \
+            -DgroupId=au.csiro.pathling \
+            -DartifactId=utilities \
+            -Dversion=${{ steps.get_version.outputs.version }} \
+            -Dpackaging=jar \
+            -Dclassifier=tests
+      - name: Install encoders artifact to local Maven repo
+        run: |
+          mvn install:install-file \
+            -Dfile=encoders/target/encoders-${{ steps.get_version.outputs.version }}.jar \
+            -DpomFile=encoders/pom.xml \
+            -DgroupId=au.csiro.pathling \
+            -DartifactId=encoders \
+            -Dversion=${{ steps.get_version.outputs.version }} \
+            -Dpackaging=jar
+      - name: Run the verify goal with Maven
+        working-directory: terminology
+        run: mvn --batch-mode verify
+        timeout-minutes: 20
+      - name: Upload terminology test reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: terminology-surefire-reports
+          path: terminology/target/surefire-reports
+      - name: Upload test coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: terminology-coverage
+          path: "**/jacoco.xml"
+      - name: Upload JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: terminology-jars
+          path: terminology/target/terminology-*.jar
+          if-no-files-found: 'error'
+  
   fhirpath:
     name: FHIRPath
     runs-on: ubuntu-latest
+    needs: terminology
     permissions:
       id-token: write
       contents: write
@@ -159,9 +238,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-maven-fhirpath-${{ hashFiles('**/pom.xml') }}
           restore-keys: |-
-            ${{ runner.os }}-maven-
+            ${{ runner.os }}-maven-fhirpath-
       - name: Cache test data
         id: cache-test-data
         uses: actions/cache@v4
@@ -169,31 +248,12 @@ jobs:
           path: fhirpath/src/test/resources/test-data/parquet
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhirpath/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
       - name: Run the verify goal with Maven
+        working-directory: fhirpath
         env:
-          # Activate the "tranche 3" test profile. If there is a cache hit on the test data, we
-          # don't need to import it.
+          # Skip the test data import if the cache hit.
           PATHLING_PROFILES: ${{ steps.cache-test-data.outputs.cache-hit && '!importTestData' || 'none' }}
-          # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
-          # report action to report them.
-          PATHLING_OPTS: >-
-            -DskipEncodersTests
-            ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
-        run: >-
-          mvn --batch-mode verify
-          -pl fhirpath -am
-          -P${{ env.PATHLING_PROFILES }}
-          ${{ env.PATHLING_OPTS }}
+        run: mvn --batch-mode verify -P${{ env.PATHLING_PROFILES }}
         timeout-minutes: 30
-      - name: Upload utilities test reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: utilities-surefire-reports
-          path: utilities/target/surefire-reports
-      - name: Upload terminology test reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: terminology-surefire-reports
-          path: terminology/target/surefire-reports
       - name: Upload FHIRPath test reports
         uses: actions/upload-artifact@v4
         with:
@@ -204,21 +264,12 @@ jobs:
         with:
           name: fhirpath-coverage
           path: "**/jacoco.xml"
-      - name: Upload dump files
+      - name: Upload FHIRPath JARs
         uses: actions/upload-artifact@v4
         with:
-          name: fhirpath-dump-files
-          path: |-
-            **/*.dump
-            **/*.dumpstream
-      - name: Publish test results
-        # If the actor is Dependabot, we need to avoid anything that requires access to secrets.
-        if: github.actor != 'dependabot[bot]'
-        uses: scacap/action-surefire-report@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          check_name: FHIRPath test report
-          fail_on_test_failures: true
+          name: fhirpath-jars
+          path: fhirpath/target/fhirpath-*.jar
+          if-no-files-found: 'error'
       - name: Upload SQL on FHIR test report to S3
         run: aws s3 cp fhirpath/target/fhir-view-compliance-test.json s3://pathling-benchmark/test-reports/${{ github.ref }}/sof-test-results.json
 
