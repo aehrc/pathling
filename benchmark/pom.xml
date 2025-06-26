@@ -10,62 +10,56 @@
   <artifactId>benchmark</artifactId>
   <packaging>jar</packaging>
   <name>Pathling Benchmark</name>
-  <description>JMH benchmarks for Pathling view execution against NDJSON and Parquet data sources.</description>
+  <description>A benchmark for evaluating the performance of Pathling query execution.</description>
+
+  <properties>
+    <pathling.jmhVersion>1.37</pathling.jmhVersion>
+    <pathling.testDataVersion>1.0.0-SNAPSHOT</pathling.testDataVersion>
+  </properties>
 
   <dependencies>
-    <!-- Pathling API and runtime -->
-    <dependency>
-      <groupId>au.csiro.pathling</groupId>
-      <artifactId>library-api</artifactId>
-      <version>${project.version}</version>
-    </dependency>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>library-runtime</artifactId>
       <version>${project.version}</version>
     </dependency>
-    <!-- JMH dependencies -->
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-sql_${pathling.scalaVersion}</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>test-data</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
+    </dependency>
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-core</artifactId>
-      <version>1.36</version>
+      <version>${pathling.jmhVersion}</version>
     </dependency>
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-generator-annprocess</artifactId>
-      <version>1.36</version>
-      <scope>provided</scope>
+      <version>${pathling.jmhVersion}</version>
     </dependency>
   </dependencies>
 
   <build>
     <plugins>
-      <!-- Enable JMH annotation processing -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.1</version>
-        <configuration>
-          <annotationProcessorPaths>
-            <path>
-              <groupId>org.openjdk.jmh</groupId>
-              <artifactId>jmh-generator-annprocess</artifactId>
-              <version>1.36</version>
-            </path>
-          </annotationProcessorPaths>
-        </configuration>
-      </plugin>
-      <!-- Enable JMH benchmark execution -->
-      <plugin>
-        <groupId>org.openjdk.jmh</groupId>
-        <artifactId>jmh-maven-plugin</artifactId>
-        <version>1.36</version>
+        <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
-            <id>benchmark</id>
+            <id>unpack-test-data</id>
+            <phase>generate-test-resources</phase>
             <goals>
-              <goal>benchmark</goal>
+              <goal>unpack</goal>
             </goals>
+            <configuration>
+              <artifact>au.csiro.pathling:test-data:${pathling.testDataVersion}:jar</artifact>
+              <outputDirectory>${project.build.directory}/generated-test-resources</outputDirectory>
+            </configuration>
           </execution>
         </executions>
       </plugin>

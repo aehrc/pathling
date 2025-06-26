@@ -1,77 +1,70 @@
 package au.csiro.pathling.benchmark;
 
-import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.query.FhirViewQuery;
-import au.csiro.pathling.library.query.QueryDispatcher;
-import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.library.io.source.NdjsonSource;
-import au.csiro.pathling.library.io.source.ParquetSource;
-import au.csiro.pathling.views.FhirView;
-import au.csiro.pathling.views.FhirViewExecutor;
-import com.google.gson.Gson;
-import org.apache.spark.sql.Dataset;
+import jakarta.annotation.Nonnull;
+import java.util.List;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.Level;
-import org.openjdk.jmh.annotations.Param;
-import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
-import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.TearDown;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Warmup;
 
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-
-@State(Scope.Benchmark)
+@Fork(2)
+@Warmup(iterations = 1, time = 5)
+@Measurement(iterations = 3, time = 5)
 public class PathlingBenchmark {
 
-  @Param({"ndjson", "parquet"})
-  public String dataSourceType;
-
-  @Param({"simple", "nested", "complex"})
-  public String viewDefName;
-
-  private SparkSession spark;
-  private PathlingContext context;
-  private DataSource dataSource;
-  private QueryDispatcher dispatcher;
-  private String viewJson;
-  private Gson gson;
-
-  @Setup(Level.Trial)
-  public void setup() throws Exception {
-    spark = SparkSession.builder().appName("PathlingBenchmark").master("local[*]").getOrCreate();
-    context = PathlingContext.create(spark);
-    gson = context.getGson();
-    String baseDir = System.getProperty("benchmark.dataDir", "data");
-    if (dataSourceType.equals("ndjson")) {
-      dataSource = new NdjsonSource(context, baseDir + "/ndjson");
-    } else {
-      dataSource = new ParquetSource(context, baseDir + "/parquet");
-    }
-    dispatcher = new QueryDispatcher(new FhirViewExecutor(context.getFhirContext(), spark, dataSource));
-    try (InputStream in = getClass().getResourceAsStream("/" + viewDefName + ".json")) {
-      byte[] bytes = in.readAllBytes();
-      viewJson = new String(bytes, StandardCharsets.UTF_8);
-    }
+  @Benchmark
+  public List<Row> conditionFlat(@Nonnull final PathlingBenchmarkState state) {
+    return state.getNdjsonSource()
+        .view("Condition")
+        .json(state.getViewDefinitions().get("ConditionFlat"))
+        .execute()
+        .collectAsList();
   }
 
   @Benchmark
-  public long runView() {
-    ResourceType resource = ResourceType.Patient;
-    return new FhirViewQuery(dispatcher, resource, gson)
-        .json(viewJson)
+  public List<Row> encounterFlat(@Nonnull final PathlingBenchmarkState state) {
+    return state.getNdjsonSource()
+        .view("Encounter")
+        .json(state.getViewDefinitions().get("EncounterFlat"))
         .execute()
-        .count();
+        .collectAsList();
   }
 
-  @TearDown(Level.Trial)
-  public void teardown() {
-    if (spark != null) {
-      spark.stop();
-    }
+  @Benchmark
+  public List<Row> patientAddresses(@Nonnull final PathlingBenchmarkState state) {
+    return state.getNdjsonSource()
+        .view("Patient")
+        .json(state.getViewDefinitions().get("PatientAddresses"))
+        .execute()
+        .collectAsList();
   }
+
+  @Benchmark
+  public List<Row> patientAndContactAddressUnion(@Nonnull final PathlingBenchmarkState state) {
+    return state.getNdjsonSource()
+        .view("Patient")
+        .json(state.getViewDefinitions().get("PatientAndContactAddressUnion"))
+        .execute()
+        .collectAsList();
+  }
+
+  @Benchmark
+  public List<Row> patientDemographics(@Nonnull final PathlingBenchmarkState state) {
+    return state.getNdjsonSource()
+        .view("Patient")
+        .json(state.getViewDefinitions().get("PatientDemographics"))
+        .execute()
+        .collectAsList();
+  }
+
+  @Benchmark
+  public List<Row> usCoreBloodPressures(@Nonnull final PathlingBenchmarkState state) {
+    return state.getNdjsonSource()
+        .view("Observation")
+        .json(state.getViewDefinitions().get("UsCoreBloodPressures"))
+        .execute()
+        .collectAsList();
+  }
+
 }
-
