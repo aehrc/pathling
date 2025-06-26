@@ -1,0 +1,18 @@
+{
+  "resource": "Patient",
+  "select": [
+    {
+      "column": [
+        {
+          "name": "id",
+          "path": "id"
+        },
+        {
+          "name": "gender",
+          "path": "gender"
+        }
+      ]
+    }
+  ]
+}
+

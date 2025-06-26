@@ -1,0 +1,29 @@
+{
+  "resource": "Patient",
+  "select": [
+    {
+      "column": [
+        {
+          "name": "id",
+          "path": "id"
+        }
+      ],
+      "select": [
+        {
+          "forEach": "name",
+          "column": [
+            {
+              "name": "given",
+              "path": "name.given"
+            },
+            {
+              "name": "family",
+              "path": "name.family"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+

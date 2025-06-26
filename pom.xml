@@ -105,6 +105,7 @@
     <module>lib/python</module>
     <module>lib/R</module>
     <module>site</module>
+    <module>benchmark</module>
   </modules>
 
   <dependencyManagement>

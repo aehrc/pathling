@@ -1,0 +1,57 @@
+{
+  "resource": "Patient",
+  "constant": [
+    {
+      "name": "genderConst",
+      "expression": "'male'"
+    }
+  ],
+  "select": [
+    {
+      "column": [
+        {
+          "name": "id",
+          "path": "id"
+        }
+      ]
+    },
+    {
+      "forEach": "name",
+      "column": [
+        {
+          "name": "given",
+          "path": "name.given"
+        },
+        {
+          "name": "family",
+          "path": "name.family"
+        }
+      ]
+    },
+    {
+      "unionAll": [
+        {
+          "column": [
+            {
+              "name": "gender",
+              "path": "gender"
+            }
+          ]
+        },
+        {
+          "column": [
+            {
+              "name": "birthDate",
+              "path": "birthDate"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "where": [
+    {
+      "path": "gender = %genderConst"
+    }
+  ]
+}
