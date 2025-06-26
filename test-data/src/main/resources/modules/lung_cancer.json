@@ -1,0 +1,2699 @@
+{
+  "name": "Lung Cancer",
+  "remarks": [
+    "Most of the data for this module was synthesized from two primary sources:",
+    "1. The comprehensive pages starting at http://www.cancer.org/cancer/lungcancer/index",
+    "2. The Cancer Care Ontario Pathway Maps at https://www.cancercare.on.ca/ocs/qpi/dispathmgmt/pathways/lung_cancer_pathway_map/",
+    "Some data statistics came from:",
+    "3. The American Lung Association Lung Cancer Fact Sheet @ http://www.lung.org/lung-health-and-diseases/lung-disease-lookup/lung-cancer/learn-about-lung-cancer/lung-cancer-fact-sheet.html",
+    "4. https://www.verywell.com/what-percentage-of-smokers-get-lung-cancer-2248868",
+    "5. Life Expectancies: http://www.healthcommunities.com/lung-cancer/prognosis.shtml"
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Ages_45_65"
+    },
+    "Ages_45_65": {
+      "type": "Delay",
+      "range": {
+        "low": 45,
+        "high": 65,
+        "unit": "years"
+      },
+      "direct_transition": "Lung Cancer Probabilities",
+      "remarks": [
+        "Lung cancer mainly occurs in older people. About 2 out of 3 people diagnosed with lung cancer are 65 or older, while less than 2% are younger than 45. The average age at the time of diagnosis is about 70.",
+        "http://www.cancer.org/cancer/lungcancer-non-smallcell/detailedguide/non-small-cell-lung-cancer-key-statistics"
+      ]
+    },
+    "Lung Cancer Probabilities": {
+      "type": "CallSubmodule",
+      "submodule": "lung_cancer/lung_cancer_probabilities",
+      "distributed_transition": [
+        {
+          "distribution": {
+            "attribute": "probability_of_lung_cancer",
+            "default": 0.0645
+          },
+          "transition": "Onset_Lung_Cancer"
+        },
+        {
+          "distribution": {
+            "attribute": "probability_of_no_lung_cancer",
+            "default": 0.93355
+          },
+          "transition": "Terminal"
+        }
+      ],
+      "remarks": [
+        "Overall, the chance that a man will develop lung cancer in his lifetime is about 1 in 14; for a woman, the risk is about 1 in 17.",
+        "http://www.cancer.org/cancer/lungcancer-non-smallcell/detailedguide/non-small-cell-lung-cancer-key-statistics",
+        "Men who smoke are 23 times more likely to develop lung cancer. Women are 13 times more likely, compared to never smokers.",
+        "http://www.lung.org/lung-health-and-diseases/lung-disease-lookup/lung-cancer/learn-about-lung-cancer/lung-cancer-fact-sheet.html",
+        "In a 2006 European study, the risk of developing lung cancer was: 0.2 percent for men who never smoked (0.4% for women); 5.5 percent of male former smokers (2.6% in women); 15.9 percent of current male smokers (9.5% for women); 24.4 percent for male 'heavy smokers' defined as smoking more than 5 cigarettes per day (18.5 percent for women)",
+        "https://www.verywell.com/what-percentage-of-smokers-get-lung-cancer-2248868"
+      ]
+    },
+    "Onset_Lung_Cancer": {
+      "type": "SetAttribute",
+      "attribute": "lung_cancer",
+      "value": true,
+      "direct_transition": "Init_Lung_Cancer_Counter"
+    },
+    "Init_Lung_Cancer_Counter": {
+      "type": "SetAttribute",
+      "attribute": "lung_cancer_nondiagnosis_counter",
+      "value": 0,
+      "direct_transition": "Undiagnosed_Lung_Cancer"
+    },
+    "Undiagnosed_Lung_Cancer": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "months"
+      },
+      "distributed_transition": [
+        {
+          "distribution": {
+            "attribute": "probability_of_lung_cancer_treatment",
+            "default": 0.2
+          },
+          "transition": "Cough"
+        },
+        {
+          "distribution": {
+            "attribute": "probability_of_no_lung_cancer_treatment",
+            "default": 0.8
+          },
+          "transition": "Increment_Counter"
+        }
+      ]
+    },
+    "Increment_Counter": {
+      "type": "Counter",
+      "action": "increment",
+      "attribute": "lung_cancer_nondiagnosis_counter",
+      "direct_transition": "Undiagnosed_Lung_Cancer"
+    },
+    "Cough": {
+      "type": "Symptom",
+      "symptom": "Cough",
+      "range": {
+        "low": 50,
+        "high": 100
+      },
+      "direct_transition": "Bloody Cough"
+    },
+    "Bloody Cough": {
+      "type": "Symptom",
+      "symptom": "Cough",
+      "range": {
+        "low": 100,
+        "high": 350
+      },
+      "direct_transition": "Shortness of Breath"
+    },
+    "Shortness of Breath": {
+      "type": "Symptom",
+      "symptom": "Cough",
+      "range": {
+        "low": 100,
+        "high": 350
+      },
+      "direct_transition": "Fever"
+    },
+    "Fever": {
+      "type": "Symptom",
+      "symptom": "Cough",
+      "range": {
+        "low": 50,
+        "high": 250
+      },
+      "direct_transition": "Head and neck swelling"
+    },
+    "Head and neck swelling": {
+      "type": "Symptom",
+      "symptom": "Cough",
+      "range": {
+        "low": 50,
+        "high": 250
+      },
+      "direct_transition": "Sweats"
+    },
+    "Sweats": {
+      "type": "Symptom",
+      "symptom": "Cough",
+      "range": {
+        "low": 50,
+        "high": 250
+      },
+      "direct_transition": "Fatigue"
+    },
+    "Fatigue": {
+      "type": "Symptom",
+      "symptom": "Cough",
+      "range": {
+        "low": 50,
+        "high": 250
+      },
+      "direct_transition": "Decrease in appetite"
+    },
+    "Decrease in appetite": {
+      "type": "Symptom",
+      "symptom": "Cough",
+      "range": {
+        "low": 50,
+        "high": 100
+      },
+      "direct_transition": "Decrease in weight"
+    },
+    "Decrease in weight": {
+      "type": "Symptom",
+      "symptom": "Cough",
+      "range": {
+        "low": 50,
+        "high": 100
+      },
+      "direct_transition": "Chest Pain"
+    },
+    "Chest Pain": {
+      "type": "Symptom",
+      "symptom": "Chest Pain",
+      "range": {
+        "low": 50,
+        "high": 250
+      },
+      "direct_transition": "Suspected Lung Cancer"
+    },
+    "Suspected Lung Cancer": {
+      "type": "ConditionOnset",
+      "target_encounter": "Diagnosis Encounter I",
+      "assign_to_attribute": "Suspected Lung Cancer",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "162573006",
+          "display": "Suspected lung cancer (situation)"
+        }
+      ],
+      "direct_transition": "Diagnosis Encounter I"
+    },
+    "Diagnosis Encounter I": {
+      "type": "Encounter",
+      "encounter_class": "emergency",
+      "reason": "Suspected Lung Cancer",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "50849002",
+          "display": "Emergency room admission (procedure)"
+        }
+      ],
+      "direct_transition": "Pain_Vital"
+    },
+    "Chest X-Ray": {
+      "type": "Procedure",
+      "reason": "Suspected Lung Cancer",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "399208008",
+          "display": "Plain chest X-ray (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 10,
+        "high": 25,
+        "unit": "minutes"
+      },
+      "direct_transition": "End_Diagnosis_Encounter_I"
+    },
+    "End_Diagnosis_Encounter_I": {
+      "type": "EncounterEnd",
+      "direct_transition": "Schedule Follow Up I"
+    },
+    "Schedule Follow Up I": {
+      "type": "Delay",
+      "range": {
+        "low": 2,
+        "high": 9,
+        "unit": "days"
+      },
+      "direct_transition": "Diagnosis Encounter II"
+    },
+    "Diagnosis Encounter II": {
+      "type": "Encounter",
+      "encounter_class": "outpatient",
+      "reason": "Suspected Lung Cancer",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem"
+        }
+      ],
+      "direct_transition": "Chest CT Scan"
+    },
+    "Chest CT Scan": {
+      "type": "Procedure",
+      "reason": "Suspected Lung Cancer",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "418891003",
+          "display": "Computed tomography of chest and abdomen"
+        }
+      ],
+      "duration": {
+        "low": 20,
+        "high": 60,
+        "unit": "minutes"
+      },
+      "direct_transition": "End_Diagnosis_Encounter_II"
+    },
+    "End_Diagnosis_Encounter_II": {
+      "type": "EncounterEnd",
+      "direct_transition": "Schedule Follow Up II"
+    },
+    "Schedule Follow Up II": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 9,
+        "unit": "days"
+      },
+      "distributed_transition": [
+        {
+          "distribution": 0.85,
+          "transition": "Non-Small Cell Lung Cancer"
+        },
+        {
+          "distribution": 0.15,
+          "transition": "Small Cell Lung Cancer"
+        }
+      ],
+      "remarks": [
+        "About 85% of lung cancers are non-small cell lung cancers.",
+        "About 10%-15% of lung cancers are small cell lung cancers.",
+        "http://www.cancer.org/cancer/lungcancer/index"
+      ]
+    },
+    "Non-Small Cell Lung Cancer": {
+      "type": "SetAttribute",
+      "attribute": "Lung Cancer Type",
+      "value": "NSCLC",
+      "direct_transition": "NSCLC"
+    },
+    "NSCLC": {
+      "type": "ConditionOnset",
+      "target_encounter": "Diagnosis Encounter III",
+      "assign_to_attribute": "Lung Cancer",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "254637007",
+          "display": "Non-small cell lung cancer (disorder)"
+        }
+      ],
+      "direct_transition": "Diagnosis Encounter III"
+    },
+    "Small Cell Lung Cancer": {
+      "type": "SetAttribute",
+      "attribute": "Lung Cancer Type",
+      "value": "SCLC",
+      "direct_transition": "SCLC"
+    },
+    "SCLC": {
+      "type": "ConditionOnset",
+      "target_encounter": "Diagnosis Encounter III",
+      "assign_to_attribute": "Lung Cancer",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "254632001",
+          "display": "Small cell carcinoma of lung (disorder)"
+        }
+      ],
+      "direct_transition": "Diagnosis Encounter III"
+    },
+    "Diagnosis Encounter III": {
+      "type": "Encounter",
+      "encounter_class": "outpatient",
+      "reason": "Lung Cancer",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem"
+        }
+      ],
+      "distributed_transition": [
+        {
+          "distribution": 0.25,
+          "transition": "Sputum Cytology (Phelgm)"
+        },
+        {
+          "distribution": 0.25,
+          "transition": "Thoracentesis (Fluid)"
+        },
+        {
+          "distribution": 0.25,
+          "transition": "Needle Biopsy (Cells)"
+        },
+        {
+          "distribution": 0.25,
+          "transition": "Bronchoscopy (Tube)"
+        }
+      ]
+    },
+    "Sputum Cytology (Phelgm)": {
+      "type": "Procedure",
+      "reason": "Suspected Lung Cancer",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "167995008",
+          "display": "Sputum microscopy (procedure)"
+        }
+      ],
+      "direct_transition": "End_Diagnosis_Encounter_III"
+    },
+    "Thoracentesis (Fluid)": {
+      "type": "Procedure",
+      "reason": "Suspected Lung Cancer",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "91602002",
+          "display": "Thoracentesis (procedure)"
+        }
+      ],
+      "direct_transition": "End_Diagnosis_Encounter_III"
+    },
+    "Needle Biopsy (Cells)": {
+      "type": "Procedure",
+      "reason": "Suspected Lung Cancer",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "432231006",
+          "display": "Fine needle aspiration biopsy of lung (procedure)"
+        }
+      ],
+      "direct_transition": "End_Diagnosis_Encounter_III"
+    },
+    "Bronchoscopy (Tube)": {
+      "type": "Procedure",
+      "reason": "Suspected Lung Cancer",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "173160006",
+          "display": "Diagnostic fiberoptic bronchoscopy (procedure)"
+        }
+      ],
+      "direct_transition": "End_Diagnosis_Encounter_III"
+    },
+    "End_Diagnosis_Encounter_III": {
+      "type": "EncounterEnd",
+      "distributed_transition": [
+        {
+          "transition": "Check_Anemia_Exist",
+          "distribution": 0.77
+        },
+        {
+          "transition": "Check For Hospice",
+          "distribution": 0.23
+        }
+      ],
+      "remarks": [
+        "1462 of 1900 patients developed anemia at some point during the survey - ",
+        ""
+      ]
+    },
+    "Schedule Follow Up III": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 3,
+        "unit": "days"
+      },
+      "remarks": [
+        "See Stage Distribution (%) 2006-2012, Case Counts and Percentages",
+        "http://seer.cancer.gov/csr/1975_2013/browse_csr.php?sectionSEL=15&pageSEL=sect_15_table.14.html",
+        "http://seer.cancer.gov/csr/1975_2013/browse_csr.php?sectionSEL=15&pageSEL=sect_15_table.13.html",
+        "only 15 percent of lung cancer cases are diagnosed at an early stage.",
+        "http://www.lung.org/lung-health-and-diseases/lung-disease-lookup/lung-cancer/learn-about-lung-cancer/lung-cancer-fact-sheet.html",
+        "updated remarks 2017-08-31:",
+        "http://oregon.providence.org/our-services/a/ask-a-providence-expert/forms-and-information/ask-an-expert-lung-cancer-growth-and-spread/",
+        "It takes at least 30 divisions of one cancer cell to create a tumor that is 1 centimeter in size (about half an inch).",
+        "That is the smallest size likely to be seen on an X-ray. It takes about three to six months for most lung cancers to double their size. ",
+        "Therefore, it could take several years for a typical lung cancer to reach a size at which it could be diagnosed on a chest X-ray. "
+      ],
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "lung_cancer_nondiagnosis_counter",
+            "operator": "<=",
+            "value": 36
+          },
+          "transition": "Stage I"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "lung_cancer_nondiagnosis_counter",
+            "operator": "<=",
+            "value": 72
+          },
+          "transition": "Stage II"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "lung_cancer_nondiagnosis_counter",
+            "operator": "<=",
+            "value": 108
+          },
+          "transition": "Stage III"
+        },
+        {
+          "transition": "Stage IV"
+        }
+      ]
+    },
+    "Stage I": {
+      "type": "Death",
+      "range": {
+        "low": 2,
+        "high": 6,
+        "unit": "years"
+      },
+      "referenced_by_attribute": "Lung Cancer",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "Lung Cancer Type",
+            "operator": "==",
+            "value": "SCLC"
+          },
+          "transition": "SCLC I"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "Lung Cancer Type",
+            "operator": "==",
+            "value": "NSCLC"
+          },
+          "transition": "NSCLC I"
+        }
+      ]
+    },
+    "Stage II": {
+      "type": "Death",
+      "range": {
+        "low": 16,
+        "high": 28,
+        "unit": "months"
+      },
+      "referenced_by_attribute": "Lung Cancer",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "Lung Cancer Type",
+            "operator": "==",
+            "value": "SCLC"
+          },
+          "transition": "SCLC II"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "Lung Cancer Type",
+            "operator": "==",
+            "value": "NSCLC"
+          },
+          "transition": "NSCLC II"
+        }
+      ]
+    },
+    "Stage III": {
+      "type": "Death",
+      "range": {
+        "low": 9,
+        "high": 18,
+        "unit": "months"
+      },
+      "referenced_by_attribute": "Lung Cancer",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "Lung Cancer Type",
+            "operator": "==",
+            "value": "SCLC"
+          },
+          "transition": "SCLC III"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "Lung Cancer Type",
+            "operator": "==",
+            "value": "NSCLC"
+          },
+          "transition": "NSCLC III"
+        }
+      ]
+    },
+    "Stage IV": {
+      "type": "Death",
+      "range": {
+        "low": 6,
+        "high": 10,
+        "unit": "months"
+      },
+      "referenced_by_attribute": "Lung Cancer",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "Lung Cancer Type",
+            "operator": "==",
+            "value": "SCLC"
+          },
+          "transition": "SCLC IV"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "Lung Cancer Type",
+            "operator": "==",
+            "value": "NSCLC"
+          },
+          "transition": "NSCLC IV"
+        }
+      ]
+    },
+    "NSCLC I": {
+      "type": "ConditionOnset",
+      "target_encounter": "Diagnosis Encounter IV",
+      "assign_to_attribute": "Lung Cancer Condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "424132000",
+          "display": "Non-small cell carcinoma of lung, TNM stage 1 (disorder)"
+        }
+      ],
+      "direct_transition": "Diagnosis Encounter IV"
+    },
+    "NSCLC II": {
+      "type": "ConditionOnset",
+      "target_encounter": "Diagnosis Encounter IV",
+      "assign_to_attribute": "Lung Cancer Condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "425048006",
+          "display": "Non-small cell carcinoma of lung, TNM stage 2 (disorder)"
+        }
+      ],
+      "direct_transition": "Diagnosis Encounter IV"
+    },
+    "NSCLC III": {
+      "type": "ConditionOnset",
+      "target_encounter": "Diagnosis Encounter IV",
+      "assign_to_attribute": "Lung Cancer Condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "422968005",
+          "display": "Non-small cell carcinoma of lung, TNM stage 3 (disorder)"
+        }
+      ],
+      "direct_transition": "Diagnosis Encounter IV"
+    },
+    "NSCLC IV": {
+      "type": "ConditionOnset",
+      "target_encounter": "Diagnosis Encounter IV",
+      "assign_to_attribute": "Lung Cancer Condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "423121009",
+          "display": "Non-small cell carcinoma of lung, TNM stage 4 (disorder)"
+        }
+      ],
+      "direct_transition": "Diagnosis Encounter IV"
+    },
+    "SCLC I": {
+      "type": "ConditionOnset",
+      "target_encounter": "Diagnosis Encounter IV",
+      "assign_to_attribute": "Lung Cancer Condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "67811000119102",
+          "display": "Primary small cell malignant neoplasm of lung, TNM stage 1 (disorder)"
+        }
+      ],
+      "direct_transition": "Diagnosis Encounter IV"
+    },
+    "SCLC II": {
+      "type": "ConditionOnset",
+      "target_encounter": "Diagnosis Encounter IV",
+      "assign_to_attribute": "Lung Cancer Condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "67821000119109",
+          "display": "Primary small cell malignant neoplasm of lung, TNM stage 2 (disorder)"
+        }
+      ],
+      "direct_transition": "Diagnosis Encounter IV"
+    },
+    "SCLC III": {
+      "type": "ConditionOnset",
+      "target_encounter": "Diagnosis Encounter IV",
+      "assign_to_attribute": "Lung Cancer Condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "67831000119107",
+          "display": "Primary small cell malignant neoplasm of lung, TNM stage 3 (disorder)"
+        }
+      ],
+      "direct_transition": "Diagnosis Encounter IV"
+    },
+    "SCLC IV": {
+      "type": "ConditionOnset",
+      "target_encounter": "Diagnosis Encounter IV",
+      "assign_to_attribute": "Lung Cancer Condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "67841000119103",
+          "display": "Primary small cell malignant neoplasm of lung, TNM stage 4 (disorder)"
+        }
+      ],
+      "direct_transition": "Diagnosis Encounter IV"
+    },
+    "Diagnosis Encounter IV": {
+      "type": "Encounter",
+      "encounter_class": "outpatient",
+      "reason": "Lung Cancer Condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem"
+        }
+      ],
+      "direct_transition": "Lung_Cancer_CarePlan"
+    },
+    "Lung_Cancer_CarePlan": {
+      "type": "CarePlanStart",
+      "reason": "Lung Cancer Condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "182964004",
+          "display": "Terminal care"
+        }
+      ],
+      "activities": [
+        {
+          "system": "SNOMED-CT",
+          "code": "133918004",
+          "display": "Comfort measures"
+        },
+        {
+          "system": "SNOMED-CT",
+          "code": "408957008",
+          "display": "Chronic pain control management"
+        },
+        {
+          "system": "SNOMED-CT",
+          "code": "243072006",
+          "display": "Cancer education"
+        }
+      ],
+      "direct_transition": "MRI Brain"
+    },
+    "MRI Brain": {
+      "type": "Procedure",
+      "reason": "Lung Cancer Condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "698354004",
+          "display": "Magnetic resonance imaging for measurement of brain volume (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 30,
+        "high": 120,
+        "unit": "minutes"
+      },
+      "direct_transition": "End_Diagnosis_Encounter_IV"
+    },
+    "End_Diagnosis_Encounter_IV": {
+      "type": "EncounterEnd",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "Lung Cancer Type",
+            "operator": "==",
+            "value": "SCLC"
+          },
+          "transition": "SCLC Treatment Path"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "Lung Cancer Type",
+            "operator": "==",
+            "value": "NSCLC"
+          },
+          "transition": "NSCLC Treatment Path"
+        }
+      ]
+    },
+    "SCLC Treatment Path": {
+      "type": "Simple",
+      "direct_transition": "SCLC Treatment Encounter"
+    },
+    "SCLC Treatment Encounter": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "reason": "Lung Cancer Condition",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem"
+        }
+      ],
+      "direct_transition": "Record_CMP_2"
+    },
+    "SCLC Chemotheraphy I": {
+      "type": "MedicationOrder",
+      "reason": "Lung Cancer Condition",
+      "assign_to_attribute": "chemotherapy1",
+      "remarks": [
+        "SCLC is generally treated with combinations of chemotherapy drugs. The combinations most often used are: Cisplatin and etoposide",
+        "http://www.cancer.org/cancer/lungcancer-smallcell/detailedguide/small-cell-lung-cancer-treating-chemotherapy"
+      ],
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "1736854",
+          "display": "Cisplatin 50 MG Injection"
+        }
+      ],
+      "direct_transition": "SCLC Chemotheraphy IB",
+      "administration": true
+    },
+    "SCLC Chemotheraphy IB": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "chemotherapy1",
+      "direct_transition": "SCLC Chemotheraphy II"
+    },
+    "SCLC Chemotheraphy II": {
+      "type": "MedicationOrder",
+      "reason": "Lung Cancer Condition",
+      "assign_to_attribute": "chemotherapy2",
+      "remarks": [
+        "SCLC is generally treated with combinations of chemotherapy drugs. The combinations most often used are: Cisplatin and etoposide",
+        "http://www.cancer.org/cancer/lungcancer-smallcell/detailedguide/small-cell-lung-cancer-treating-chemotherapy"
+      ],
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "226719",
+          "display": "Etoposide 100 MG Injection"
+        }
+      ],
+      "direct_transition": "SCLC Chemotheraphy IIB",
+      "administration": true
+    },
+    "SCLC Chemotheraphy IIB": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "chemotherapy2",
+      "direct_transition": "SCLC Radiation"
+    },
+    "SCLC Radiation": {
+      "type": "Procedure",
+      "reason": "Lung Cancer Condition",
+      "remarks": [
+        "The type of radiation therapy most often used to treat SCLC is called external beam radiation therapy (EBRT).",
+        "http://www.cancer.org/cancer/lungcancer-smallcell/detailedguide/small-cell-lung-cancer-treating-radiation-therapy"
+      ],
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "703423002",
+          "display": "Combined chemotherapy and radiation therapy (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 0.5,
+        "high": 4,
+        "unit": "hours"
+      },
+      "direct_transition": "Pain_Vital_2"
+    },
+    "End_SCLC_Treatment_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "SCLC Treatment Delay"
+    },
+    "SCLC Treatment Delay": {
+      "type": "Delay",
+      "range": {
+        "low": 21,
+        "high": 28,
+        "unit": "days"
+      },
+      "remarks": [
+        "Doctors give chemo in cycles, with a period of treatment (usually 1 to 3 days) followed by a rest period to allow your body time to recover. Each cycle generally lasts about 3 to 4 weeks",
+        "http://www.cancer.org/cancer/lungcancer-smallcell/detailedguide/small-cell-lung-cancer-treating-chemotherapy",
+        "Most often, radiation as part of the initial treatment for SCLC is given once or twice daily, 5 days a week, for 3 to 7 weeks.",
+        "http://www.cancer.org/cancer/lungcancer-smallcell/detailedguide/small-cell-lung-cancer-treating-radiation-therapy"
+      ],
+      "direct_transition": "SCLC Treatment Path"
+    },
+    "NSCLC Treatment Path": {
+      "type": "Simple",
+      "direct_transition": "NSCLC Treatment Encounter"
+    },
+    "NSCLC Treatment Encounter": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "185347001",
+          "display": "Encounter for problem"
+        }
+      ],
+      "direct_transition": "Record_CMP",
+      "reason": "Lung Cancer Condition"
+    },
+    "NSCLC Chemotheraphy I": {
+      "type": "MedicationOrder",
+      "reason": "Lung Cancer Condition",
+      "assign_to_attribute": "chemotherapy1",
+      "remarks": [
+        "Most often, treatment for NSCLC uses a combination of 2 chemo drugs.",
+        "If a combination is used, it often includes cisplatin or carboplatin plus one other drug",
+        "http://www.cancer.org/cancer/lungcancer-non-smallcell/detailedguide/non-small-cell-lung-cancer-treating-chemotherapy"
+      ],
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "1736854",
+          "display": "Cisplatin 50 MG Injection"
+        }
+      ],
+      "direct_transition": "NSCLC Chemotheraphy IB",
+      "administration": true
+    },
+    "NSCLC Chemotheraphy IB": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "chemotherapy1",
+      "direct_transition": "NSCLC Chemotheraphy II"
+    },
+    "NSCLC Chemotheraphy II": {
+      "type": "MedicationOrder",
+      "reason": "Lung Cancer Condition",
+      "assign_to_attribute": "chemotherapy2",
+      "remarks": [
+        "The chemo drugs most often used for NSCLC include ... Paclitaxel (Taxol)",
+        "http://www.cancer.org/cancer/lungcancer-non-smallcell/detailedguide/non-small-cell-lung-cancer-treating-chemotherapy"
+      ],
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "583214",
+          "display": "PACLitaxel 100 MG Injection"
+        }
+      ],
+      "direct_transition": "NSCLC Chemotheraphy IIB",
+      "administration": true
+    },
+    "NSCLC Chemotheraphy IIB": {
+      "type": "MedicationEnd",
+      "referenced_by_attribute": "chemotherapy2",
+      "direct_transition": "NSCLC Radiation"
+    },
+    "NSCLC Radiation": {
+      "type": "Procedure",
+      "reason": "Lung Cancer Condition",
+      "remarks": [
+        "External beam radiation therapy (EBRT) focuses radiation from outside the body on the cancer. This is the type of radiation therapy most often used to treat NSCLC or its spread to other organs.",
+        "http://www.cancer.org/cancer/lungcancer-non-smallcell/detailedguide/non-small-cell-lung-cancer-treating-radiation-therapy"
+      ],
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "703423002",
+          "display": "Combined chemotherapy and radiation therapy (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 0.5,
+        "high": 4,
+        "unit": "hours"
+      },
+      "direct_transition": "Pain_Vital_3"
+    },
+    "End_NSCLC_Treatment_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "NSCLC Treatment Delay"
+    },
+    "NSCLC Treatment Delay": {
+      "type": "Delay",
+      "range": {
+        "low": 28,
+        "high": 35,
+        "unit": "days"
+      },
+      "remarks": [
+        "Doctors give chemo in cycles, with a period of treatment (usually 1 to 3 days) followed by a rest period to allow the body time to recover. Some chemo drugs, though, are given every day. Chemo cycles generally last about 3 to 4 weeks.",
+        "http://www.cancer.org/cancer/lungcancer-non-smallcell/detailedguide/non-small-cell-lung-cancer-treating-radiation-therapy",
+        "Most often, radiation treatments to the lungs are given 5 days a week for 5 to 7 weeks",
+        "http://www.cancer.org/cancer/lungcancer-non-smallcell/detailedguide/non-small-cell-lung-cancer-treating-radiation-therapy"
+      ],
+      "direct_transition": "NSCLC Treatment Path"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    },
+    "Record_CMP": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "24323-8",
+          "display": "Comprehensive metabolic 2000 panel - Serum or Plasma"
+        }
+      ],
+      "observations": [
+        {
+          "category": "laboratory",
+          "vital_sign": "Glucose",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2339-0",
+              "display": "Glucose [Mass/volume] in Blood"
+            }
+          ],
+          "unit": "mg/dL"
+        },
+        {
+          "category": "laboratory",
+          "vital_sign": "Urea Nitrogen",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "6299-2",
+              "display": "Urea nitrogen [Mass/volume] in Blood"
+            }
+          ],
+          "unit": "mg/dL"
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "38483-4",
+              "display": "Creatinine [Mass/volume] in Blood"
+            }
+          ],
+          "unit": "mg/dL",
+          "range": {
+            "low": 2.5,
+            "high": 3.5
+          }
+        },
+        {
+          "category": "laboratory",
+          "vital_sign": "Calcium",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "49765-1",
+              "display": "Calcium [Mass/volume] in Blood"
+            }
+          ],
+          "unit": "mg/dL"
+        },
+        {
+          "category": "laboratory",
+          "vital_sign": "Sodium",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2947-0",
+              "display": "Sodium [Moles/volume] in Blood"
+            }
+          ],
+          "unit": "mmol/L"
+        },
+        {
+          "category": "laboratory",
+          "vital_sign": "Potassium",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "6298-4",
+              "display": "Potassium [Moles/volume] in Blood"
+            }
+          ],
+          "unit": "mmol/L"
+        },
+        {
+          "category": "laboratory",
+          "vital_sign": "Chloride",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2069-3",
+              "display": "Chloride [Moles/volume] in Blood"
+            }
+          ],
+          "unit": "mmol/L"
+        },
+        {
+          "category": "laboratory",
+          "vital_sign": "Carbon Dioxide",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "20565-8",
+              "display": "Carbon dioxide, total [Moles/volume] in Blood"
+            }
+          ],
+          "unit": "mmol/L"
+        },
+        {
+          "category": "laboratory",
+          "unit": "mL/min",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "33914-3",
+              "display": "Glomerular filtration rate/1.73 sq M.predicted [Volume Rate/Area] in Serum or Plasma by Creatinine-based formula (MDRD)"
+            }
+          ],
+          "range": {
+            "low": 4,
+            "high": 29
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "g/dL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2885-2",
+              "display": "Protein [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "range": {
+            "low": 6,
+            "high": 8
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "g/dL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "1751-7",
+              "display": "Albumin [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "range": {
+            "low": 3.5,
+            "high": 5.5
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "g/L",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "10834-0",
+              "display": "Globulin [Mass/volume] in Serum by calculation"
+            }
+          ],
+          "range": {
+            "low": 2,
+            "high": 3.5
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "mg/dL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "1975-2",
+              "display": "Bilirubin.total [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "range": {
+            "low": 0.1,
+            "high": 1.2
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "U/L",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "6768-6",
+              "display": "Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma"
+            }
+          ],
+          "range": {
+            "low": 20,
+            "high": 140
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "U/L",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "1742-6",
+              "display": "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma"
+            }
+          ],
+          "range": {
+            "low": 20,
+            "high": 60
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "U/L",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "1920-8",
+              "display": "Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma"
+            }
+          ],
+          "range": {
+            "low": 6,
+            "high": 40
+          }
+        }
+      ],
+      "direct_transition": "Record_Urinalysis"
+    },
+    "Record_CMP_2": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "24323-8",
+          "display": "Comprehensive metabolic 2000 panel - Serum or Plasma"
+        }
+      ],
+      "observations": [
+        {
+          "category": "laboratory",
+          "vital_sign": "Glucose",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2339-0",
+              "display": "Glucose [Mass/volume] in Blood"
+            }
+          ],
+          "unit": "mg/dL"
+        },
+        {
+          "category": "laboratory",
+          "vital_sign": "Urea Nitrogen",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "6299-2",
+              "display": "Urea nitrogen [Mass/volume] in Blood"
+            }
+          ],
+          "unit": "mg/dL"
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "38483-4",
+              "display": "Creatinine [Mass/volume] in Blood"
+            }
+          ],
+          "unit": "mg/dL",
+          "range": {
+            "low": 2.5,
+            "high": 3.5
+          }
+        },
+        {
+          "category": "laboratory",
+          "vital_sign": "Calcium",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "49765-1",
+              "display": "Calcium [Mass/volume] in Blood"
+            }
+          ],
+          "unit": "mg/dL"
+        },
+        {
+          "category": "laboratory",
+          "vital_sign": "Sodium",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2947-0",
+              "display": "Sodium [Moles/volume] in Blood"
+            }
+          ],
+          "unit": "mmol/L"
+        },
+        {
+          "category": "laboratory",
+          "vital_sign": "Potassium",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "6298-4",
+              "display": "Potassium [Moles/volume] in Blood"
+            }
+          ],
+          "unit": "mmol/L"
+        },
+        {
+          "category": "laboratory",
+          "vital_sign": "Chloride",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2069-3",
+              "display": "Chloride [Moles/volume] in Blood"
+            }
+          ],
+          "unit": "mmol/L"
+        },
+        {
+          "category": "laboratory",
+          "vital_sign": "Carbon Dioxide",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "20565-8",
+              "display": "Carbon dioxide, total [Moles/volume] in Blood"
+            }
+          ],
+          "unit": "mmol/L"
+        },
+        {
+          "category": "laboratory",
+          "unit": "mL/min",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "33914-3",
+              "display": "Glomerular filtration rate/1.73 sq M.predicted [Volume Rate/Area] in Serum or Plasma by Creatinine-based formula (MDRD)"
+            }
+          ],
+          "range": {
+            "low": 4,
+            "high": 29
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "g/dL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2885-2",
+              "display": "Protein [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "range": {
+            "low": 6,
+            "high": 8
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "g/dL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "1751-7",
+              "display": "Albumin [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "range": {
+            "low": 3.5,
+            "high": 5.5
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "g/L",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "10834-0",
+              "display": "Globulin [Mass/volume] in Serum by calculation"
+            }
+          ],
+          "range": {
+            "low": 2,
+            "high": 3.5
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "mg/dL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "1975-2",
+              "display": "Bilirubin.total [Mass/volume] in Serum or Plasma"
+            }
+          ],
+          "range": {
+            "low": 0.1,
+            "high": 1.2
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "U/L",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "6768-6",
+              "display": "Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma"
+            }
+          ],
+          "range": {
+            "low": 20,
+            "high": 140
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "U/L",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "1742-6",
+              "display": "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma"
+            }
+          ],
+          "range": {
+            "low": 20,
+            "high": 60
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "U/L",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "1920-8",
+              "display": "Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma"
+            }
+          ],
+          "range": {
+            "low": 6,
+            "high": 40
+          }
+        }
+      ],
+      "direct_transition": "Record_Urinalysis_3"
+    },
+    "Hearing Test": {
+      "type": "Procedure",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 398171003,
+          "display": "Hearing examination (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 30,
+        "high": 30,
+        "unit": "minutes"
+      },
+      "direct_transition": "NSCLC Chemotheraphy I"
+    },
+    "Hearing_Test": {
+      "type": "Procedure",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 398171003,
+          "display": "Hearing examination (procedure)"
+        }
+      ],
+      "duration": {
+        "low": 30,
+        "high": 30,
+        "unit": "minutes"
+      },
+      "direct_transition": "SCLC Chemotheraphy I"
+    },
+    "Chest CT": {
+      "type": "ImagingStudy",
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "16335031000119103",
+        "display": "High resolution computed tomography of chest without contrast (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": 51185008,
+            "display": "Thoracic structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "CT",
+            "display": "Computed Tomography"
+          },
+          "min_number_instances": 300,
+          "max_number_instances": 500,
+          "instances": [
+            {
+              "title": "CT Image Storage",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.2",
+                "display": "CT Image Storage"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "Delay"
+    },
+    "Chest_CT": {
+      "type": "ImagingStudy",
+      "procedure_code": {
+        "system": "SNOMED-CT",
+        "code": "16335031000119103",
+        "display": "High resolution computed tomography of chest without contrast (procedure)"
+      },
+      "series": [
+        {
+          "body_site": {
+            "system": "SNOMED-CT",
+            "code": 51185008,
+            "display": "Thoracic structure (body structure)"
+          },
+          "modality": {
+            "system": "DICOM-DCM",
+            "code": "CT",
+            "display": "Computed Tomography"
+          },
+          "min_number_instances": 300,
+          "max_number_instances": 500,
+          "instances": [
+            {
+              "title": "CT Image Storage",
+              "sop_class": {
+                "system": "DICOM-SOP",
+                "code": "1.2.840.10008.5.1.4.1.1.2",
+                "display": "CT Image Storage"
+              }
+            }
+          ]
+        }
+      ],
+      "direct_transition": "Delay_2"
+    },
+    "Record_Urinalysis_3": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "24357-6",
+          "display": "Urinalysis macro (dipstick) panel - Urine"
+        }
+      ],
+      "observations": [
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5767-9",
+              "display": "Appearance of Urine"
+            }
+          ],
+          "unit": "{nominal}",
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 7766007,
+            "display": "Cloudy urine (finding)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "34533-0",
+              "display": "Odor of Urine"
+            }
+          ],
+          "unit": "{nominal}",
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 167248002,
+            "display": "Urine smell ammoniacal (finding)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "32167-9",
+              "display": "Clarity of Urine"
+            }
+          ],
+          "unit": "{nominal}",
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 300828005,
+            "display": "Translucent (qualifier value)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5778-6",
+              "display": "Color of Urine"
+            }
+          ],
+          "unit": "{nominal}",
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 371254008,
+            "display": "Brown color (qualifier value)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5792-7",
+              "display": "Glucose [Mass/volume] in Urine by Test strip"
+            }
+          ],
+          "unit": "mg/dL",
+          "range": {
+            "low": 0.5,
+            "high": 2.5
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "25428-4",
+              "display": "Glucose [Presence] in Urine by Test strip"
+            }
+          ],
+          "unit": "{nominal}",
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 167265006,
+            "display": "Urine glucose test = ++ (finding)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "20505-4",
+              "display": "Bilirubin.total [Mass/volume] in Urine by Test strip"
+            }
+          ],
+          "unit": "mg/dL",
+          "range": {
+            "low": 0.2,
+            "high": 1.5
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5770-3",
+              "display": "Bilirubin.total [Presence] in Urine by Test strip"
+            }
+          ],
+          "unit": "{nominal}",
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 275778006,
+            "display": "Finding of bilirubin in urine (finding)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "mg/dL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5797-6",
+              "display": "Ketones [Mass/volume] in Urine by Test strip"
+            }
+          ],
+          "range": {
+            "low": 0,
+            "high": 20
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "{nominal}",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2514-8",
+              "display": "Ketones [Presence] in Urine by Test strip"
+            }
+          ],
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 167291007,
+            "display": "Urine ketone test = +++ (finding)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "{nominal}",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5811-5",
+              "display": "Specific gravity of Urine by Test strip"
+            }
+          ],
+          "range": {
+            "low": 1.001,
+            "high": 1.039
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "pH",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5803-2",
+              "display": "pH of Urine by Test strip"
+            }
+          ],
+          "range": {
+            "low": 5,
+            "high": 7
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "mg/dL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5804-0",
+              "display": "Protein [Mass/volume] in Urine by Test strip"
+            }
+          ],
+          "range": {
+            "low": 250,
+            "high": 450
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "{nominal}",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "20454-5",
+              "display": "Protein [Presence] in Urine by Test strip"
+            }
+          ],
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 167277001,
+            "display": "Urine protein test = +++ (finding)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "{nominal}",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5802-4",
+              "display": "Nitrite [Presence] in Urine by Test strip"
+            }
+          ],
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 314138001,
+            "display": "Urine nitrite negative (finding)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "{nominal}",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5794-3",
+              "display": "Hemoglobin [Presence] in Urine by Test strip"
+            }
+          ],
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 167297006,
+            "display": "Urine blood test = negative (finding)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "{nominal}",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5799-2",
+              "display": "Leukocyte esterase [Presence] in Urine by Test strip"
+            }
+          ],
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 394717006,
+            "display": "Urine leukocyte test negative (finding)"
+          }
+        }
+      ],
+      "direct_transition": "Record_CBC_Panel"
+    },
+    "Record_Urinalysis": {
+      "type": "DiagnosticReport",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "24357-6",
+          "display": "Urinalysis macro (dipstick) panel - Urine"
+        }
+      ],
+      "observations": [
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5767-9",
+              "display": "Appearance of Urine"
+            }
+          ],
+          "unit": "{nominal}",
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 7766007,
+            "display": "Cloudy urine (finding)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "34533-0",
+              "display": "Odor of Urine"
+            }
+          ],
+          "unit": "{nominal}",
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 167248002,
+            "display": "Urine smell ammoniacal (finding)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "32167-9",
+              "display": "Clarity of Urine"
+            }
+          ],
+          "unit": "{nominal}",
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 300828005,
+            "display": "Translucent (qualifier value)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5778-6",
+              "display": "Color of Urine"
+            }
+          ],
+          "unit": "{nominal}",
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 371254008,
+            "display": "Brown color (qualifier value)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5792-7",
+              "display": "Glucose [Mass/volume] in Urine by Test strip"
+            }
+          ],
+          "unit": "mg/dL",
+          "range": {
+            "low": 0.5,
+            "high": 2.5
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "25428-4",
+              "display": "Glucose [Presence] in Urine by Test strip"
+            }
+          ],
+          "unit": "{nominal}",
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 167265006,
+            "display": "Urine glucose test = ++ (finding)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "20505-4",
+              "display": "Bilirubin.total [Mass/volume] in Urine by Test strip"
+            }
+          ],
+          "unit": "mg/dL",
+          "range": {
+            "low": 0.2,
+            "high": 1.5
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5770-3",
+              "display": "Bilirubin.total [Presence] in Urine by Test strip"
+            }
+          ],
+          "unit": "{nominal}",
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 275778006,
+            "display": "Finding of bilirubin in urine (finding)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "mg/dL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5797-6",
+              "display": "Ketones [Mass/volume] in Urine by Test strip"
+            }
+          ],
+          "range": {
+            "low": 0,
+            "high": 20
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "{nominal}",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "2514-8",
+              "display": "Ketones [Presence] in Urine by Test strip"
+            }
+          ],
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 167291007,
+            "display": "Urine ketone test = +++ (finding)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "{nominal}",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5811-5",
+              "display": "Specific gravity of Urine by Test strip"
+            }
+          ],
+          "range": {
+            "low": 1.001,
+            "high": 1.039
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "pH",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5803-2",
+              "display": "pH of Urine by Test strip"
+            }
+          ],
+          "range": {
+            "low": 5,
+            "high": 7
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "mg/dL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5804-0",
+              "display": "Protein [Mass/volume] in Urine by Test strip"
+            }
+          ],
+          "range": {
+            "low": 250,
+            "high": 450
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "{nominal}",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "20454-5",
+              "display": "Protein [Presence] in Urine by Test strip"
+            }
+          ],
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 167277001,
+            "display": "Urine protein test = +++ (finding)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "{nominal}",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5802-4",
+              "display": "Nitrite [Presence] in Urine by Test strip"
+            }
+          ],
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 314138001,
+            "display": "Urine nitrite negative (finding)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "{nominal}",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5794-3",
+              "display": "Hemoglobin [Presence] in Urine by Test strip"
+            }
+          ],
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 167297006,
+            "display": "Urine blood test = negative (finding)"
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "{nominal}",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "5799-2",
+              "display": "Leukocyte esterase [Presence] in Urine by Test strip"
+            }
+          ],
+          "value_code": {
+            "system": "SNOMED-CT",
+            "code": 394717006,
+            "display": "Urine leukocyte test negative (finding)"
+          }
+        }
+      ],
+      "direct_transition": "Record_CBC_Panel_2"
+    },
+    "Record_CBC_Panel": {
+      "type": "DiagnosticReport",
+      "number_of_observations": 4,
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "58410-2",
+          "display": "CBC panel - Blood by Automated count"
+        }
+      ],
+      "observations": [
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "6690-2",
+              "display": "Leukocytes [#/volume] in Blood by Automated count"
+            }
+          ],
+          "unit": "10*3/uL",
+          "range": {
+            "low": 0.5,
+            "high": 5
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "789-8",
+              "display": "Erythrocytes [#/volume] in Blood by Automated count"
+            }
+          ],
+          "unit": "10*6/uL",
+          "range": {
+            "low": 3.9,
+            "high": 5.5
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "718-7",
+              "display": "Hemoglobin [Mass/volume] in Blood"
+            }
+          ],
+          "unit": "g/dL",
+          "range": {
+            "low": 12,
+            "high": 17.5
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "4544-3",
+              "display": "Hematocrit [Volume Fraction] of Blood by Automated count"
+            }
+          ],
+          "unit": "%",
+          "range": {
+            "low": 35,
+            "high": 50
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "fL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "787-2",
+              "display": "MCV [Entitic volume] by Automated count"
+            }
+          ],
+          "range": {
+            "low": 80,
+            "high": 95
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "pg",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "785-6",
+              "display": "MCH [Entitic mass] by Automated count"
+            }
+          ],
+          "range": {
+            "low": 27,
+            "high": 33
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "g/dL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "786-4",
+              "display": "MCHC [Mass/volume] by Automated count"
+            }
+          ],
+          "range": {
+            "low": 33,
+            "high": 36
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "fL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "21000-5",
+              "display": "Erythrocyte distribution width [Entitic volume] by Automated count"
+            }
+          ],
+          "range": {
+            "low": 39,
+            "high": 46
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "10*3/uL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "777-3",
+              "display": "Platelets [#/volume] in Blood by Automated count"
+            }
+          ],
+          "range": {
+            "low": 150,
+            "high": 450
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "fL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "32207-3",
+              "display": "Platelet distribution width [Entitic volume] in Blood by Automated count"
+            }
+          ],
+          "range": {
+            "low": 150,
+            "high": 520
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "fL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "32623-1",
+              "display": "Platelet mean volume [Entitic volume] in Blood by Automated count"
+            }
+          ],
+          "range": {
+            "low": 9.4,
+            "high": 12.3
+          }
+        }
+      ],
+      "direct_transition": "Set SCLC LOS"
+    },
+    "Record_CBC_Panel_2": {
+      "type": "DiagnosticReport",
+      "number_of_observations": 4,
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "58410-2",
+          "display": "CBC panel - Blood by Automated count"
+        }
+      ],
+      "observations": [
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "6690-2",
+              "display": "Leukocytes [#/volume] in Blood by Automated count"
+            }
+          ],
+          "unit": "10*3/uL",
+          "range": {
+            "low": 0.5,
+            "high": 5
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "789-8",
+              "display": "Erythrocytes [#/volume] in Blood by Automated count"
+            }
+          ],
+          "unit": "10*6/uL",
+          "range": {
+            "low": 3.9,
+            "high": 5.5
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "718-7",
+              "display": "Hemoglobin [Mass/volume] in Blood"
+            }
+          ],
+          "unit": "g/dL",
+          "range": {
+            "low": 12,
+            "high": 17.5
+          }
+        },
+        {
+          "category": "laboratory",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "4544-3",
+              "display": "Hematocrit [Volume Fraction] of Blood by Automated count"
+            }
+          ],
+          "unit": "%",
+          "range": {
+            "low": 35,
+            "high": 50
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "fL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "787-2",
+              "display": "MCV [Entitic volume] by Automated count"
+            }
+          ],
+          "range": {
+            "low": 80,
+            "high": 95
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "pg",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "785-6",
+              "display": "MCH [Entitic mass] by Automated count"
+            }
+          ],
+          "range": {
+            "low": 27,
+            "high": 33
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "g/dL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "786-4",
+              "display": "MCHC [Mass/volume] by Automated count"
+            }
+          ],
+          "range": {
+            "low": 33,
+            "high": 36
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "fL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "21000-5",
+              "display": "Erythrocyte distribution width [Entitic volume] by Automated count"
+            }
+          ],
+          "range": {
+            "low": 39,
+            "high": 46
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "10*3/uL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "777-3",
+              "display": "Platelets [#/volume] in Blood by Automated count"
+            }
+          ],
+          "range": {
+            "low": 150,
+            "high": 450
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "fL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "32207-3",
+              "display": "Platelet distribution width [Entitic volume] in Blood by Automated count"
+            }
+          ],
+          "range": {
+            "low": 150,
+            "high": 520
+          }
+        },
+        {
+          "category": "laboratory",
+          "unit": "fL",
+          "codes": [
+            {
+              "system": "LOINC",
+              "code": "32623-1",
+              "display": "Platelet mean volume [Entitic volume] in Blood by Automated count"
+            }
+          ],
+          "range": {
+            "low": 9.4,
+            "high": 12.3
+          }
+        }
+      ],
+      "direct_transition": "Set_NSCLC_LOS"
+    },
+    "Pain_Vital": {
+      "type": "Observation",
+      "category": "vital-signs",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "72514-3",
+          "display": "Pain severity - 0-10 verbal numeric rating [Score] - Reported"
+        }
+      ],
+      "range": {
+        "decimals": 0,
+        "low": 4,
+        "high": 8
+      },
+      "direct_transition": "Chest X-Ray"
+    },
+    "Pain_Vital_2": {
+      "type": "Observation",
+      "category": "vital-signs",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "72514-3",
+          "display": "Pain severity - 0-10 verbal numeric rating [Score] - Reported"
+        }
+      ],
+      "range": {
+        "decimals": 0,
+        "low": 4,
+        "high": 10
+      },
+      "distributed_transition": [
+        {
+          "transition": "Chest CT",
+          "distribution": 0.2
+        },
+        {
+          "transition": "Delay",
+          "distribution": 0.8
+        }
+      ]
+    },
+    "Pain_Vital_3": {
+      "type": "Observation",
+      "category": "vital-signs",
+      "unit": "{score}",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "72514-3",
+          "display": "Pain severity - 0-10 verbal numeric rating [Score] - Reported"
+        }
+      ],
+      "range": {
+        "decimals": 0,
+        "low": 4,
+        "high": 10
+      },
+      "distributed_transition": [
+        {
+          "transition": "Chest_CT",
+          "distribution": 0.2
+        },
+        {
+          "transition": "Delay_2",
+          "distribution": 0.8
+        }
+      ]
+    },
+    "Anemia_Submodule": {
+      "type": "CallSubmodule",
+      "submodule": "anemia/anemia_sub",
+      "direct_transition": "Check For Hospice"
+    },
+    "Check_Anemia_Exist": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "transition": "Anemia_Submodule",
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "anemia",
+            "operator": "is nil"
+          }
+        },
+        {
+          "transition": "Check For Hospice"
+        }
+      ]
+    },
+    "Check For Hospice": {
+      "type": "Simple",
+      "distributed_transition": [
+        {
+          "transition": "Will Use Hospice",
+          "distribution": 0.3
+        },
+        {
+          "transition": "Schedule Follow Up III",
+          "distribution": 0.7
+        }
+      ]
+    },
+    "Will Use Hospice": {
+      "type": "SetAttribute",
+      "attribute": "hospice",
+      "direct_transition": "Hospice Reason",
+      "value": true
+    },
+    "Hospice Reason": {
+      "type": "SetAttribute",
+      "attribute": "hospice_reason",
+      "direct_transition": "Schedule Follow Up III",
+      "value_attribute": "Lung Cancer"
+    },
+    "Begin SCLC Day": {
+      "type": "Counter",
+      "attribute": "lung_cancer_los",
+      "action": "decrement",
+      "direct_transition": "Hearing_Test"
+    },
+    "Set SCLC LOS": {
+      "type": "SetAttribute",
+      "attribute": "lung_cancer_los",
+      "direct_transition": "Minimum of 3 days",
+      "distribution": {
+        "kind": "EXPONENTIAL",
+        "round": true,
+        "parameters": {
+          "mean": 3
+        }
+      }
+    },
+    "Delay": {
+      "type": "Delay",
+      "distribution": {
+        "kind": "EXACT",
+        "parameters": {
+          "value": 1
+        }
+      },
+      "unit": "days",
+      "conditional_transition": [
+        {
+          "transition": "Begin SCLC Day",
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "lung_cancer_los",
+            "operator": ">",
+            "value": 0
+          }
+        },
+        {
+          "transition": "End_SCLC_Treatment_Encounter"
+        }
+      ]
+    },
+    "Set_NSCLC_LOS": {
+      "type": "SetAttribute",
+      "attribute": "lung_cancer_los",
+      "distribution": {
+        "kind": "EXPONENTIAL",
+        "round": true,
+        "parameters": {
+          "mean": 3
+        }
+      },
+      "direct_transition": "Minimum_of_3_days"
+    },
+    "Delay_2": {
+      "type": "Delay",
+      "distribution": {
+        "kind": "EXACT",
+        "parameters": {
+          "value": 1
+        }
+      },
+      "unit": "days",
+      "conditional_transition": [
+        {
+          "transition": "Begin_NSCLC_Day",
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "lung_cancer_los",
+            "operator": ">",
+            "value": 0
+          }
+        },
+        {
+          "transition": "End_NSCLC_Treatment_Encounter"
+        }
+      ]
+    },
+    "Begin_NSCLC_Day": {
+      "type": "Counter",
+      "attribute": "lung_cancer_los",
+      "action": "decrement",
+      "direct_transition": "Hearing Test"
+    },
+    "Minimum of 3 days": {
+      "type": "Counter",
+      "attribute": "lung_cancer_los",
+      "action": "increment",
+      "direct_transition": "Begin SCLC Day",
+      "amount": 2
+    },
+    "Minimum_of_3_days": {
+      "type": "Counter",
+      "attribute": "lung_cancer_los",
+      "action": "increment",
+      "amount": 2,
+      "direct_transition": "Begin_NSCLC_Day"
+    }
+  },
+  "gmf_version": 1
+}
