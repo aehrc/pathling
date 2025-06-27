@@ -70,7 +70,25 @@ class AnsiSqlTypeParserTest {
         // Simple complex types
         Arguments.of("ROW", DataTypes.createStructType(new StructField[0])),
         Arguments.of("ARRAY<INTEGER>", DataTypes.createArrayType(DataTypes.IntegerType)),
-        Arguments.of("ARRAY<VARCHAR(10)>", DataTypes.createArrayType(DataTypes.StringType))
+        Arguments.of("ARRAY<VARCHAR(10)>", DataTypes.createArrayType(DataTypes.StringType)),
+        
+        // Complex ROW types
+        Arguments.of("ROW(id INTEGER, name VARCHAR)", 
+            DataTypes.createStructType(new StructField[]{
+                DataTypes.createStructField("id", DataTypes.IntegerType, true),
+                DataTypes.createStructField("name", DataTypes.StringType, true)
+            })),
+        
+        // Nested complex types
+        Arguments.of("ARRAY<ROW(id INTEGER, values ARRAY<DECIMAL(10,2)>)>",
+            DataTypes.createArrayType(
+                DataTypes.createStructType(new StructField[]{
+                    DataTypes.createStructField("id", DataTypes.IntegerType, true),
+                    DataTypes.createStructField("values", 
+                        DataTypes.createArrayType(DataTypes.createDecimalType(10, 2)), 
+                        true)
+                })
+            ))
     );
   }
 
@@ -102,41 +120,4 @@ class AnsiSqlTypeParserTest {
     assertEquals(upperResult.get(), mixedResult.get());
   }
   
-  @Test
-  void testComplexRowType() {
-    // Test ROW type with fields
-    Optional<DataType> rowResult = AnsiSqlTypeParserUtils.parse("ROW(id INTEGER, name VARCHAR)");
-    assertTrue(rowResult.isPresent());
-    assertTrue(rowResult.get() instanceof StructType);
-    StructType rowType = (StructType) rowResult.get();
-    assertEquals(2, rowType.fields().length);
-    assertEquals("id", rowType.fields()[0].name());
-    assertEquals(DataTypes.IntegerType, rowType.fields()[0].dataType());
-    assertEquals("name", rowType.fields()[1].name());
-    assertEquals(DataTypes.StringType, rowType.fields()[1].dataType());
-  }
-  
-  @Test
-  void testNestedComplexTypes() {
-    // Test nested complex types
-    Optional<DataType> nestedResult = AnsiSqlTypeParserUtils.parse("ARRAY<ROW(id INTEGER, values ARRAY<DECIMAL(10,2)>)>");
-    assertTrue(nestedResult.isPresent());
-    assertTrue(nestedResult.get() instanceof ArrayType);
-    
-    ArrayType arrayType = (ArrayType) nestedResult.get();
-    assertTrue(arrayType.elementType() instanceof StructType);
-    
-    StructType rowType = (StructType) arrayType.elementType();
-    assertEquals(2, rowType.fields().length);
-    assertEquals("id", rowType.fields()[0].name());
-    assertEquals(DataTypes.IntegerType, rowType.fields()[0].dataType());
-    assertEquals("values", rowType.fields()[1].name());
-    assertTrue(rowType.fields()[1].dataType() instanceof ArrayType);
-    
-    ArrayType valuesArrayType = (ArrayType) rowType.fields()[1].dataType();
-    assertTrue(valuesArrayType.elementType() instanceof DecimalType);
-    DecimalType decimalType = (DecimalType) valuesArrayType.elementType();
-    assertEquals(10, decimalType.precision());
-    assertEquals(2, decimalType.scale());
-  }
 }
