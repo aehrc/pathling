@@ -20,6 +20,7 @@ package au.csiro.pathling.view;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
 import lombok.Value;
+import org.apache.spark.sql.Column;
 
 /**
  * The result of evaluating a {@link RequestedColumn} as part of a {@link ProjectionClause}.
@@ -39,4 +40,14 @@ public class ProjectedColumn {
   @Nonnull
   RequestedColumn requestedColumn;
 
+  /**
+   * Gets the column value from the collection and aliases it with the requested name.
+   *
+   * @return The column value with the appropriate alias
+   */
+  @Nonnull
+  public Column getValue() {
+    final Column collectionColumn = collection.getColumnValue();
+    return collectionColumn.alias(requestedColumn.getName());
+  }
 }

@@ -57,14 +57,9 @@ public class ColumnSelection implements ProjectionClause {
       projectedColumns.add(new ProjectedColumn(collection, requestedColumn));
     }
 
-    // Collect the columns into an array, aliasing them with the requested names.
+    // Collect the columns into an array, using the getValue method to get aliased columns
     final Column[] collectedColumns = projectedColumns.stream()
-        .map(projectedColumn -> {
-          final Column collectionColumn = projectedColumn.getCollection().getColumn()
-              .getValue();
-          final String requestedName = projectedColumn.getRequestedColumn().getName();
-          return collectionColumn.alias(requestedName);
-        })
+        .map(ProjectedColumn::getValue)
         .toArray(Column[]::new);
 
     // Create a new column that is an array of structs, where each struct has a field for each
