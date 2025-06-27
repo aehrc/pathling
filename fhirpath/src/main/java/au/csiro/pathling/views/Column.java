@@ -2,9 +2,12 @@ package au.csiro.pathling.views;
 
 import au.csiro.pathling.views.validation.ValidName;
 import jakarta.annotation.Nullable;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.util.Collections;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -98,6 +101,17 @@ public class Column implements SelectionElement {
   @Nullable
   String type;
 
+  /**
+   * Additional metadata describing the column. Tags can be used to provide database-specific type
+   * information or other metadata about the column.
+   * 
+   * @see <a href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#type-hinting-with-tags">Type Hinting with Tags</a>
+   */
+  @Nullable
+  @Valid
+  @Builder.Default
+  List<@Valid ColumnTag> tag = Collections.emptyList();
+
 
   /**
    * Checks if this column is compatible with another column for union operations. Columns are
@@ -125,7 +139,15 @@ public class Column implements SelectionElement {
       return false; // One has type, the other doesn't
     }
 
-    return this.getType().equals(other.getType());
+    // Check if types match
+    if (!this.getType().equals(other.getType())) {
+      return false;
+    }
+
+    // Tags don't affect compatibility for union operations
+    // They are metadata that don't change the underlying data type
+    
+    return true;
   }
 
 }
