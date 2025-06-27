@@ -52,4 +52,45 @@ class ColumnTest {
     List<String> emptyResult = emptyTagsColumn.getTagValues("any-tag");
     assertTrue(emptyResult.isEmpty());
   }
+  
+  @Test
+  void testGetTagValue() {
+    // Create a column with multiple tags
+    Column column = Column.builder()
+        .name("test_column")
+        .path("test.path")
+        .tag(Arrays.asList(
+            ColumnTag.of("ansi/type", "VARCHAR(255)"),
+            ColumnTag.of("description", "A test column"),
+            ColumnTag.of("ansi/type", "TEXT"),  // Duplicate tag name with different value
+            ColumnTag.of("nullable", "true")
+        ))
+        .build();
+
+    // Test getting a value for a tag that exists once
+    Optional<String> descriptionValue = column.getTagValue("description");
+    assertTrue(descriptionValue.isPresent());
+    assertEquals("A test column", descriptionValue.get());
+
+    // Test getting a value for a tag that doesn't exist
+    Optional<String> nonExistentValue = column.getTagValue("non-existent");
+    assertTrue(nonExistentValue.isEmpty());
+
+    // Test with a column that has no tags
+    Column emptyTagsColumn = Column.builder()
+        .name("empty_tags")
+        .path("empty.path")
+        .tag(Collections.emptyList())
+        .build();
+    
+    Optional<String> emptyResult = emptyTagsColumn.getTagValue("any-tag");
+    assertTrue(emptyResult.isEmpty());
+    
+    // Test exception when multiple values exist
+    Exception exception = org.junit.jupiter.api.Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> column.getTagValue("ansi/type")
+    );
+    assertTrue(exception.getMessage().contains("Multiple values found for tag 'ansi/type'"));
+  }
 }

@@ -167,4 +167,23 @@ public class Column implements SelectionElement {
         .toList();
   }
 
+  /**
+   * Returns a single value for a tag with the specified name.
+   *
+   * @param name the name of the tag to find
+   * @return an Optional containing the value of the tag, or empty if no matching tag exists
+   * @throws IllegalStateException if more than one tag with the specified name exists
+   */
+  @Nonnull
+  public Optional<String> getTagValue(@Nonnull final String name) {
+    List<String> values = getTagValues(name);
+    if (values.isEmpty()) {
+      return Optional.empty();
+    } else if (values.size() == 1) {
+      return Optional.of(values.get(0));
+    } else {
+      throw new IllegalStateException("Multiple values found for tag '" + name + "': " + values);
+    }
+  }
+
 }
