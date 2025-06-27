@@ -1,0 +1,65 @@
+{
+  "title": "Type hinting with tags",
+  "resources": [
+    {
+      "resourceType": "Patient",
+      "id": "p1",
+      "active": true,
+      "name": [
+        {
+          "family": "Smith",
+          "given": ["John"]
+        }
+      ]
+    },
+    {
+      "resourceType": "Patient",
+      "id": "p2",
+      "active": false,
+      "name": [
+        {
+          "family": "Doe",
+          "given": ["Jane"]
+        }
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "title": "Patient status with ANSI type hint",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id"
+              },
+              {
+                "name": "status",
+                "path": "active",
+                "tag": [
+                  {
+                    "name": "ansi/type",
+                    "value": "VARCHAR(10)"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "p1",
+          "status": "true"
+        },
+        {
+          "id": "p2",
+          "status": "false"
+        }
+      ]
+    }
+  ]
+}
