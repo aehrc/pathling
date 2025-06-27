@@ -1,11 +1,17 @@
-# This workflow will build the software to ensure there are no errors, and also execute the tests.
+# This workflow will build the software and documentation to ensure there are no errors, and also
+# execute the tests.
+#
+# This workflow also deploys a pre-release version of the software to Maven Central.
+#
+# This workflow only runs on main and release branches.
 
-name: Test
+name: Pre-release
 
 on:
   push:
-    branches-ignore:
-      - gh-pages
+    branches:
+      - main
+      - "release/*"
 
 env:
   # The add-exports and add-opens flags are required for Java 17
@@ -65,13 +71,25 @@ jobs:
           restore-keys: r-packages-${{ runner.os }}-
       - name: Install texlive and libcurl
         run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra libcurl4-openssl-dev
-      - name: Run verify goal
-        if: (!(startsWith(steps.extract-info.outputs.branch_name , 'release/') && endsWith(steps.extract-info.outputs.maven_version, '-SNAPSHOT')))
+      - name: Install GPG key
+        run: |
+          cat <(echo -e "${{ secrets.GPG_KEY }}") | gpg --batch --import
+          gpg --list-secret-keys --keyid-format LONG
+      - name: Configure Maven settings
+        uses: s4u/maven-settings-action@v2.6.0
+        with:
+          servers: |
+            [{
+              "id": "ossrh",
+              "username": "${{ secrets.OSSRH_USERNAME }}",
+              "password": "${{ secrets.OSSRH_PASSWORD }}"
+            }]
+      - name: Run deploy goal (pre-release)
         env:
           PYSPARK_PYTHON: ${{ steps.python-install.outputs.python-path }}
           PYSPARK_DRIVER_PYTHON: ${{ steps.python-install.outputs.python-path }}
           R_KEEP_PKG_SOURCE: yes
-        run: mvn --batch-mode verify -pl '!site'
+        run: mvn --batch-mode deploy -Pdocs,mavenPreRelease
         timeout-minutes: 60
       - name: Save test reports
         uses: actions/upload-artifact@v4
@@ -105,6 +123,11 @@ jobs:
         with:
           name: r-package
           path: lib/R/target/pathling_*.tar.gz
+      - name: Save site
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: site/target/site/
 
   upload-coverage:
     name: Upload coverage
