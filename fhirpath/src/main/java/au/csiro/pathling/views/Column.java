@@ -13,7 +13,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-
+import java.util.Optional;
 /**
  * Describes the selection of a column in the output.
  *
@@ -142,14 +142,10 @@ public class Column implements SelectionElement {
     }
 
     // Check if types match
-    if (!this.getType().equals(other.getType())) {
-      return false;
-    }
+    return this.getType().equals(other.getType());
 
     // Tags don't affect compatibility for union operations
     // They are metadata that don't change the underlying data type
-
-    return true;
   }
 
   /**

@@ -29,6 +29,7 @@ import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.catalyst.parser.CatalystSqlParser$;
 import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -234,8 +235,20 @@ public class FhirViewExecutor {
    */
   @Nonnull
   private Optional<DataType> getSqlTypeHint(@Nonnull final Column column) {
-    // If the SQL type is not null, return it as an Optional.
-    return Optional.empty();
+    // Look for the ANSI type tag in the column's tags
+    return column.getTagValue(ColumnTag.ANSI_TYPE_TAG)
+        .map(this::convertAnsiTypeToSparkType);
+  }
+
+  /**
+   * Converts an ANSI SQL type string to a Spark SQL DataType.
+   *
+   * @param ansiType the ANSI SQL type string
+   * @return the corresponding Spark SQL DataType
+   */
+  @Nonnull
+  private DataType convertAnsiTypeToSparkType(@Nonnull final String ansiType) {
+    return CatalystSqlParser$.MODULE$.parseDataType(ansiType);
   }
 
   /**
