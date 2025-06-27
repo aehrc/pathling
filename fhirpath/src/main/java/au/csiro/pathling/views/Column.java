@@ -1,10 +1,10 @@
 package au.csiro.pathling.views;
 
 import au.csiro.pathling.views.validation.ValidName;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.util.Collections;
 import java.util.List;
@@ -104,8 +104,10 @@ public class Column implements SelectionElement {
   /**
    * Additional metadata describing the column. Tags can be used to provide database-specific type
    * information or other metadata about the column.
-   * 
-   * @see <a href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#type-hinting-with-tags">Type Hinting with Tags</a>
+   *
+   * @see <a
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#type-hinting-with-tags">Type
+   * Hinting with Tags</a>
    */
   @NotNull
   @Valid
@@ -146,8 +148,23 @@ public class Column implements SelectionElement {
 
     // Tags don't affect compatibility for union operations
     // They are metadata that don't change the underlying data type
-    
+
     return true;
+  }
+
+  /**
+   * Returns a list of values for all tags with the specified name.
+   *
+   * @param name the name of the tags to find
+   * @return a list of values for tags with the specified name, may be empty if no matching tags
+   * exist
+   */
+  @Nonnull
+  public List<String> getTagValues(@Nonnull final String name) {
+    return tag.stream()
+        .filter(t -> name.equals(t.getName()))
+        .map(ColumnTag::getValue)
+        .toList();
   }
 
 }
