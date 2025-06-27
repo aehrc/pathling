@@ -13,7 +13,8 @@ import lombok.Value;
  * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#type-hinting-with-tags">Type
  * Hinting with Tags</a>
  */
-@Data(staticConstructor = "of")
+@Data
+@AllArgsConstructor(staticName = "of")
 @NoArgsConstructor
 public class ColumnTag {
 
