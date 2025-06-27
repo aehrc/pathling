@@ -18,6 +18,14 @@ import lombok.Value;
 public class ColumnTag {
 
   /**
+   * Tag for ANSI SQL type hinting.
+   * <p>
+   * This tag is used to provide a hint about the SQL type of the column, which can be useful for
+   * database-specific optimizations or type handling.
+   */
+  public static final String ANSI_TYPE_TAG = "ansi/type";
+
+  /**
    * Name of tag.
    */
   @NotNull
