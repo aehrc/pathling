@@ -107,7 +107,7 @@ public class Column implements SelectionElement {
    * 
    * @see <a href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#type-hinting-with-tags">Type Hinting with Tags</a>
    */
-  @Nullable
+  @NotNull
   @Valid
   @Builder.Default
   List<@Valid ColumnTag> tag = Collections.emptyList();
