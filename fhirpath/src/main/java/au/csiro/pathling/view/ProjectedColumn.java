@@ -42,12 +42,15 @@ public class ProjectedColumn {
 
   /**
    * Gets the column value from the collection and aliases it with the requested name.
+   * If a SQL type is specified in the requested column, the column value will be cast to that type.
    *
    * @return The column value with the appropriate alias
    */
   @Nonnull
   public Column getValue() {
-    final Column collectionColumn = collection.getColumnValue();
+    final Column collectionColumn = requestedColumn.getSqlType()
+        .map(sqlType -> collection.getColumnValue(sqlType))
+        .orElseGet(() -> collection.getColumnValue());
     return collectionColumn.alias(requestedColumn.getName());
   }
 }

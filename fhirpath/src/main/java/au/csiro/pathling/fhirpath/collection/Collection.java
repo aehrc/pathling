@@ -444,6 +444,17 @@ public class Collection {
   public Column getColumnValue() {
     return column.getValue();
   }
+  
+  /**
+   * Returns the {@link Column} value of this collection with the specified SQL type.
+   *
+   * @param sqlType The SQL type to cast the column to
+   * @return The {@link Column} value of this collection with the specified SQL type
+   */
+  @Nonnull
+  public Column getColumnValue(@Nonnull final DataType sqlType) {
+    return column.getValue().cast(sqlType);
+  }
 
   /**
    * Returns a new collection representing just the elements of this collection with the specified
