@@ -1,0 +1,41 @@
+name: Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Workflow run ID of a successful build"
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+
+    steps:
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: "zulu"
+      - name: Download artifact from specified run
+        uses: actions/download-artifact@v4
+        with:
+          name: jars
+          run-id: ${{ github.event.inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: jars/
+      - name: Run benchmark
+        run: |
+          java -Xshare:off -Xmx8g -ea -Duser.timezone=UTC \
+            --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
+            --add-opens=java.base/java.net=ALL-UNNAMED \
+            -jar jars/benchmark.jar \
+            -rf json -rff benchmark.json
+      - name: Save results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark.json
