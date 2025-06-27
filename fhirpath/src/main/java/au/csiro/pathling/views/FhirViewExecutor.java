@@ -29,6 +29,7 @@ import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -221,7 +222,20 @@ public class FhirViewExecutor {
     }
 
     // Create a RequestedColumn object that represents the column.
-    return new RequestedColumn(path, column.getName(), column.isCollection(), type);
+    return new RequestedColumn(path, column.getName(), column.isCollection(), type,
+        getSqlTypeHint(column));
+  }
+
+  /**
+   * Gets the SQL type hint for a column, if it exists.
+   *
+   * @param column the column to get the SQL type hint for
+   * @return an Optional containing the SQL type hint, or an empty Optional if there is no hint
+   */
+  @Nonnull
+  private Optional<DataType> getSqlTypeHint(@Nonnull final Column column) {
+    // If the SQL type is not null, return it as an Optional.
+    return Optional.empty();
   }
 
   /**
@@ -242,7 +256,8 @@ public class FhirViewExecutor {
         // Parse the FHIRPath expression.
         .map(parser::parse)
         // Create a PrimitiveSelection object for each FHIRPath.
-        .map(path -> new RequestedColumn(path, randomAlias(), false, Optional.empty()))
+        .map(path -> new RequestedColumn(path, randomAlias(), false, Optional.empty(),
+            Optional.empty()))
         .toList();
 
     // If there are no where components, return an empty Optional. 

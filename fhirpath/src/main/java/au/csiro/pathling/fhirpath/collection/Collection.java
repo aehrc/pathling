@@ -45,6 +45,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
