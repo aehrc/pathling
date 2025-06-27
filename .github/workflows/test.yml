@@ -91,7 +91,7 @@ jobs:
               "password": "${{ secrets.OSSRH_PASSWORD }}"
             }]
       - name: Run verify goal
-        if: (!startsWith(steps.extract-info.outputs.branch_name , 'release/') && endsWith(steps.extract-info.outputs.maven_version, '-SNAPSHOT'))
+        if: (!(startsWith(steps.extract-info.outputs.branch_name , 'release/') && endsWith(steps.extract-info.outputs.maven_version, '-SNAPSHOT')))
         env:
           PYSPARK_PYTHON: ${{ steps.python-install.outputs.python-path }}
           PYSPARK_DRIVER_PYTHON: ${{ steps.python-install.outputs.python-path }}
