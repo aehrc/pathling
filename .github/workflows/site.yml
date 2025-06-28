@@ -20,6 +20,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Download site artifact
         uses: actions/download-artifact@v4
         with:
@@ -28,6 +29,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
           run-id: ${{ github.event.workflow_run.id }}
+
       - name: Download R package artifact
         uses: actions/download-artifact@v4
         with:
@@ -36,15 +38,18 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
           run-id: ${{ github.event.workflow_run.id }}
+
       - name: Set up Helm
         uses: azure/setup-helm@v3
         with:
           version: 3.13.2
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: "zulu"
+
       - name: Cache local Maven repository
         uses: actions/cache@v4
         with:
@@ -52,19 +57,24 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
+
       - name: Build Helm chart index
         run: mvn --batch-mode verify -pl deployment/helm -am -DskipTests
         timeout-minutes: 10
+
       - name: Prepare site directory
         run: |
           mkdir -p site/target/site
           cp -r site-artifact/* site/target/site/
+
       - name: Copy R package into site
         run: |
           mkdir -p site/target/site/R
           cp r-package-artifact/pathling_*.tar.gz site/target/site/R/
+
       - name: Copy index.yaml into site
         run: cp deployment/helm/target/helm/index.yaml site/target/site/helm/
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
