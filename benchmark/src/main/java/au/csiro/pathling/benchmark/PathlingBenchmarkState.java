@@ -15,12 +15,14 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
@@ -31,16 +33,18 @@ public class PathlingBenchmarkState {
       "ConditionFlat", "EncounterFlat", "PatientAddresses", "PatientAndContactAddressUnion",
       "PatientDemographics", "UsCoreBloodPressures"
   );
+  private static final String JSON_EXTENSION = ".json";
 
   @Nonnull
   private final PathlingContext pathlingContext;
 
-  @Nonnull
-  private final QueryableDataSource dataSource;
+  @Nullable
+  private QueryableDataSource dataSource;
 
-  @Nonnull
-  private final Map<String, String> viewDefinitions;
+  @Nullable
+  private Map<String, String> viewDefinitions;
 
+  @Nullable
   @Param({"ndjson", "delta"})
   private String sourceType;
 
@@ -51,7 +55,10 @@ public class PathlingBenchmarkState {
         .master("local[*]")
         .getOrCreate();
     this.pathlingContext = PathlingContext.create(spark);
+  }
 
+  @Setup(Level.Trial)
+  public void setup() {
     final List<String> resourceTypes = List.of("Patient", "Observation", "Condition", "Encounter");
     if ("ndjson".equals(sourceType)) {
       this.dataSource = initialiseNdjsonSource(resourceTypes);
@@ -65,7 +72,7 @@ public class PathlingBenchmarkState {
         .collect(toMap(
             viewDefName -> viewDefName,
             viewDefName -> {
-              try (final InputStream in = getResourceAsStream(viewDefName + ".json")) {
+              try (final InputStream in = getResourceAsStream(viewDefName + JSON_EXTENSION)) {
                 return new String(in.readAllBytes(), StandardCharsets.UTF_8);
               } catch (final Exception e) {
                 throw new RuntimeException("Failed to read view definition: " + viewDefName, e);
@@ -90,8 +97,8 @@ public class PathlingBenchmarkState {
     return datasetSource;
   }
 
-  private @Nonnull DeltaSource initialiseDeltaSource(
-      @Nonnull final Iterable<String> resourceTypes) {
+  @Nonnull
+  private DeltaSource initialiseDeltaSource(@Nonnull final Iterable<String> resourceTypes) {
     final DatasetSource datasetSource = initialiseNdjsonSource(resourceTypes);
     // Create a temporary directory for the Delta tables.
     final Path tempDir;
@@ -107,12 +114,14 @@ public class PathlingBenchmarkState {
     return pathlingContext.read().delta(tempDir.toString());
   }
 
+  @Nonnull
   private static ClassLoader getClassLoader() {
     final ClassLoader object = Thread.currentThread().getContextClassLoader();
     return requireNonNull(object);
   }
 
-  private static InputStream getResourceAsStream(final String name) {
+  @Nonnull
+  private static InputStream getResourceAsStream(@Nonnull final String name) {
     final ClassLoader loader = getClassLoader();
     final InputStream inputStream = loader.getResourceAsStream(name);
     requireNonNull(inputStream, "Test resource not found: " + name);
@@ -120,7 +129,7 @@ public class PathlingBenchmarkState {
   }
 
   @Nonnull
-  private static Path extractResourceToTempFile(final String resourceName) {
+  private static Path extractResourceToTempFile(@Nonnull final String resourceName) {
     try (final InputStream in = getResourceAsStream(resourceName)) {
       final Path tempFile = Files.createTempFile("pathling-benchmark-",
           "-" + resourceName.replace('/', '_'));
@@ -141,11 +150,18 @@ public class PathlingBenchmarkState {
 
   @Nonnull
   public QueryableDataSource getNdjsonSource() {
+    if (dataSource == null) {
+      throw new IllegalStateException("Data source not initialized. Ensure setup() is called.");
+    }
     return dataSource;
   }
 
   @Nonnull
   public Map<String, String> getViewDefinitions() {
+    if (viewDefinitions == null) {
+      throw new IllegalStateException(
+          "View definitions not initialized. Ensure setup() is called.");
+    }
     return viewDefinitions;
   }
 
