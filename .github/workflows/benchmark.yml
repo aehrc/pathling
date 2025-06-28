@@ -53,6 +53,10 @@ jobs:
           VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -f utilities/pom.xml)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Get short SHA
+        id: get_short_sha
+        run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - name: Install library runtime
         run: |
           mvn install:install-file \
@@ -72,10 +76,10 @@ jobs:
             --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
             --add-opens=java.base/java.net=ALL-UNNAMED \
             -jar benchmark/target/benchmark-${{ steps.get_version.outputs.version }}.jar \
-            -rf json -rff benchmark.json
+            -rf json -rff benchmark-${{ steps.get_short_sha.outputs.short_sha }}.json
 
       - name: Save results
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-results
-          path: benchmark.json
+          path: benchmark-*.json
