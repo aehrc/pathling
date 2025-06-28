@@ -281,17 +281,19 @@ public class Database implements DataSource {
   void write(@Nonnull final ResourceType resourceType,
       @Nonnull final Dataset<Row> resources) {
     log.debug("Overwriting: {}", resourceType.toCode());
+
+    // Check if table exists and drop it if schema needs to be overwritten
+    if (persistence.exists(resourceType)) {
+      // Delete the existing table to avoid truncate issues
+      persistence.delete(resourceType);
+    }
+
     final DataFrameWriter<Row> writer = resources
-        // We order the resources here to reduce the amount of sorting necessary at query time.
         .orderBy(asc("id"))
         .write()
         .format("delta")
-        .mode(SaveMode.Overwrite)
-        // By default, Delta throws an error if the incoming schema is different to the existing 
-        // one. For the purposes of this method, we want to be able to rewrite the schema in cases 
-        // where it has changed, e.g. a version upgrade or a configuration change.
-        // See: https://docs.delta.io/latest/delta-batch.html#replace-table-schema
-        .option("overwriteSchema", "true");
+        .mode(SaveMode.ErrorIfExists) // or SaveMode.Append for new table
+        .option("overwriteSchema", "false"); // Remove this since we're creating fresh
     persistence.write(resourceType, writer);
   }
 

@@ -87,6 +87,25 @@ public class FileSystemPersistence implements PersistenceScheme {
     }
   }
 
+  @Override
+  public void delete(@Nonnull final ResourceType resourceType) {
+    try {
+      final String tableUrl = getTableUrl(path, resourceType);
+      final Path tablePath = new Path(tableUrl);
+      final FileSystem fileSystem = getFileSystem(spark, path);
+
+      if (fileSystem.exists(tablePath)) {
+        fileSystem.delete(tablePath, true);
+        log.debug("Deleted table directory: {}", tableUrl);
+      } else {
+        log.debug("Table directory does not exist: {}", tableUrl);
+      }
+    } catch (final IOException e) {
+      throw new RuntimeException(
+          "Failed to delete table for resource type: " + resourceType.toCode(), e);
+    }
+  }
+
   @Nonnull
   private static Optional<ResourceType> resourceTypeFromCode(@Nullable final String code) {
     try {
