@@ -65,7 +65,7 @@ jobs:
           restore-keys: r-packages-${{ runner.os }}-
       - name: Install texlive and libcurl
         run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra libcurl4-openssl-dev
-      - name: Run verify goal
+      - name: Run install goal
         if: (!(startsWith(steps.extract-info.outputs.branch_name , 'release/') && endsWith(steps.extract-info.outputs.maven_version, '-SNAPSHOT')))
         env:
           PYSPARK_PYTHON: ${{ steps.python-install.outputs.python-path }}
