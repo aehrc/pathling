@@ -40,14 +40,6 @@ jobs:
           r-version: "4.1.3"
           use-public-rspm: true
 
-      - name: Set up Pandoc
-        uses: r-lib/actions/setup-pandoc@v2
-
-      - name: Set up Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: 3.13.2
-
       - name: Cache local Maven repository
         uses: actions/cache@v4
         with:

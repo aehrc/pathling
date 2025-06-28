@@ -53,7 +53,7 @@ jobs:
         uses: azure/setup-helm@v3
         with:
           version: 3.13.2
-          
+
       - name: Cache local Maven repository
         uses: actions/cache@v4
         with:
@@ -98,7 +98,7 @@ jobs:
           PYSPARK_PYTHON: ${{ steps.python-install.outputs.python-path }}
           PYSPARK_DRIVER_PYTHON: ${{ steps.python-install.outputs.python-path }}
           R_KEEP_PKG_SOURCE: yes
-        run: mvn --batch-mode deploy -Pdocs,mavenPreRelease
+        run: mvn --batch-mode deploy -pl '!benchmark' -Pdocs,mavenPreRelease
         timeout-minutes: 60
 
       - name: Save test reports
@@ -128,8 +128,13 @@ jobs:
             library-runtime/target/library-runtime-*.jar
             lib/python/target/python-*.jar
             lib/R/target/r-*.jar
-            benchmark/target/benchmark-*.jar
           if-no-files-found: "error"
+
+      - name: Save Python wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-wheel
+          path: lib/python/target/py-dist/pathling-*.whl
 
       - name: Save R package
         uses: actions/upload-artifact@v4
