@@ -71,7 +71,7 @@ jobs:
           PYSPARK_PYTHON: ${{ steps.python-install.outputs.python-path }}
           PYSPARK_DRIVER_PYTHON: ${{ steps.python-install.outputs.python-path }}
           R_KEEP_PKG_SOURCE: yes
-        run: mvn --batch-mode install -pl '!site'
+        run: mvn --batch-mode install -pl '!site,!benchmark'
         timeout-minutes: 60
       - name: Save test reports
         uses: actions/upload-artifact@v4
@@ -98,7 +98,6 @@ jobs:
             library-runtime/target/library-runtime-*.jar
             lib/python/target/python-*.jar
             lib/R/target/r-*.jar
-            benchmark/target/benchmark-*.jar
           if-no-files-found: "error"
       - name: Save R package
         uses: actions/upload-artifact@v4
