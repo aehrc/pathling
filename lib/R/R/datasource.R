@@ -82,11 +82,10 @@ SaveMode <- list(
 #' 
 #' @family data source functions
 #' 
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
+#' @examples \dontrun{
 #' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
-#' pathling_disconnect(pc)
+#' }
 pathling_read_ndjson <- function(pc, path, extension = "ndjson", file_name_mapper = NULL) {
   #See: issue #1601 (Implement file_name_mappers in R sparkly API)
   stopifnot(file_name_mapper == NULL)
@@ -109,12 +108,11 @@ pathling_read_ndjson <- function(pc, path, extension = "ndjson", file_name_mappe
 #' 
 #' @family data source functions
 #' 
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
+#' @examples \dontrun{
 #' data_source <- pc %>% pathling_read_bundles(pathling_examples('bundle-xml'),
 #'      c("Patient", "Observation"), MimeType$FHIR_XML)
 #' data_source %>% ds_read('Observation') %>% sparklyr::sdf_nrow()
-#' pathling_disconnect(pc)
+#' }
 pathling_read_bundles <- function(pc, path, resource_types, mime_type = MimeType$FHIR_JSON) {
 
   pc %>% invoke_datasource("bundles", as.character(path),
@@ -138,13 +136,12 @@ pathling_read_bundles <- function(pc, path, resource_types, mime_type = MimeType
 #' 
 #' @family data source functions
 #' 
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
+#' @examples \dontrun{
 #' patient_df <- pc %>% pathling_example_resource('Patient')
 #' condition_df <- pc %>% pathling_example_resource('Condition')
 #' data_source <- pc %>% pathling_read_datasets(list(Patient = patient_df, Condition = condition_df))
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
-#' pathling_disconnect(pc)
+#' }
 pathling_read_datasets <- function(pc, resources) {
   resources <- as.list(resources)
   ds <- pc %>% invoke_datasource("datasets")
@@ -171,11 +168,10 @@ pathling_read_datasets <- function(pc, resources) {
 #' 
 #' @family data source functions
 #' 
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
+#' @examples \dontrun{
 #' data_source <- pc %>% pathling_read_parquet(pathling_examples('parquet'))
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
-#' pathling_disconnect(pc)
+#' }
 pathling_read_parquet <- function(pc, path) {
   pc %>% invoke_datasource("parquet", as.character(path))
 }
@@ -196,11 +192,10 @@ pathling_read_parquet <- function(pc, path) {
 #' 
 #' @family data source functions
 #' 
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
+#' @examples \dontrun{
 #' data_source <- pc %>% pathling_read_delta(pathling_examples('delta'))
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
-#' pathling_disconnect(pc)
+#' }
 pathling_read_delta <- function(pc, path) {
   pc %>% invoke_datasource("delta", as.character(path))
 }
@@ -220,12 +215,10 @@ pathling_read_delta <- function(pc, path) {
 #'
 #' @family data source functions
 #' 
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
-#' spark <- pathling_spark(pc)
+#' @examples \dontrun{
 #' data_source <- pc %>% pathling_read_tables()
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
-#' pathling_disconnect(pc)
+#' }
 pathling_read_tables <- function(pc, schema = NULL) {
   if (!is.null(schema)) {
     pc %>% invoke_datasource("tables", as.character(schema))
@@ -243,12 +236,11 @@ pathling_read_tables <- function(pc, schema = NULL) {
 #' 
 #' @export
 #'
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
+#' @examples \dontrun{
 #' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
 #' data_source %>% ds_read('Condition') %>% sparklyr::sdf_nrow()
-#' pathling_disconnect(pc)
+#' }
 ds_read <- function(ds, resource_code) {
   jdf <- j_invoke(ds, "read", resource_code)
   sdf_register(jdf)
@@ -282,14 +274,12 @@ invoke_datasink <- function(ds, name, ...) {
 #' 
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#ndjson-1}{Pathling documentation - Writing NDJSON}
 #' 
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
+#' @examples \dontrun{
 #' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
 #' 
 #' # Write the data to a directory of NDJSON files.
 #' data_source %>% ds_write_ndjson(file.path(tempdir(), 'ndjson'))
-#' 
-#' pathling_disconnect(pc)
+#' }
 #' 
 #' @family data sink functions
 #' 

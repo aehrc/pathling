@@ -131,10 +131,9 @@ pathling_examples <- function(...) {
 #'
 #' @export
 #' 
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
+#' @examples \dontrun{
 #' pathling_example_resource(pc, 'Condition')
-#' pathling_disconnect(pc)
+#' }
 pathling_example_resource <- function(pc, resource_name) {
   pc %>% pathling_spark() %>% 
       sparklyr::spark_read_parquet(pathling_examples("parquet" , paste0(resource_name, ".parquet")))
