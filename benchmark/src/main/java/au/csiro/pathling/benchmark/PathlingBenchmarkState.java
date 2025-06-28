@@ -5,10 +5,10 @@ import static java.util.stream.Collectors.toMap;
 
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DatasetSource;
+import au.csiro.pathling.library.io.source.DeltaSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,6 +19,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.openjdk.jmh.annotations.Level;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
@@ -40,6 +41,10 @@ public class PathlingBenchmarkState {
   @Nonnull
   private final Map<String, String> viewDefinitions;
 
+  @Param({"ndjson", "delta"})
+  private String sourceType;
+
+  @SuppressWarnings("ConstantValue")
   public PathlingBenchmarkState() {
     final SparkSession spark = SparkSession.builder()
         .appName("PathlingBenchmark")
@@ -48,15 +53,13 @@ public class PathlingBenchmarkState {
     this.pathlingContext = PathlingContext.create(spark);
 
     final List<String> resourceTypes = List.of("Patient", "Observation", "Condition", "Encounter");
-    final DatasetSource datasetSource = pathlingContext.read().datasets();
-    for (final String resourceType : resourceTypes) {
-      final Path ndjsonPath = extractResourceToTempFile("bulk/fhir/" + resourceType + ".ndjson");
-      final Dataset<Row> strings = this.pathlingContext.getSpark().read().format("text")
-          .load(ndjsonPath.toString());
-      final Dataset<Row> encoded = pathlingContext.encode(strings, resourceType);
-      datasetSource.dataset(resourceType, encoded);
+    if ("ndjson".equals(sourceType)) {
+      this.dataSource = initialiseNdjsonSource(resourceTypes);
+    } else if ("delta".equals(sourceType)) {
+      this.dataSource = initialiseDeltaSource(resourceTypes);
+    } else {
+      throw new IllegalArgumentException("Unknown source type: " + sourceType);
     }
-    this.dataSource = datasetSource;
 
     this.viewDefinitions = VIEW_DEFINITIONS.stream()
         .collect(toMap(
@@ -71,15 +74,42 @@ public class PathlingBenchmarkState {
         ));
   }
 
+  private @Nonnull DatasetSource initialiseNdjsonSource(
+      @Nonnull final Iterable<String> resourceTypes) {
+    // Create a DatasetSource.
+    final DatasetSource datasetSource = pathlingContext.read().datasets();
+    for (final String resourceType : resourceTypes) {
+      // Load the NDJSON file for the resource type and encode it.
+      final Path ndjsonPath = extractResourceToTempFile("bulk/fhir/" + resourceType + ".ndjson");
+      final Dataset<Row> strings = this.pathlingContext.getSpark().read().format("text")
+          .load(ndjsonPath.toString());
+      final Dataset<Row> encoded = pathlingContext.encode(strings, resourceType);
+      // Register the dataset with the DatasetSource.
+      datasetSource.dataset(resourceType, encoded);
+    }
+    return datasetSource;
+  }
+
+  private @Nonnull DeltaSource initialiseDeltaSource(
+      @Nonnull final Iterable<String> resourceTypes) {
+    final DatasetSource datasetSource = initialiseNdjsonSource(resourceTypes);
+    // Create a temporary directory for the Delta tables.
+    final Path tempDir;
+    try {
+      tempDir = Files.createTempDirectory("pathling-benchmark-delta-");
+      tempDir.toFile().deleteOnExit();
+    } catch (final Exception e) {
+      throw new RuntimeException("Failed to create temporary directory for Delta tables", e);
+    }
+    // Write each dataset to a Delta table in the temporary directory.
+    datasetSource.write().delta(tempDir.toString());
+    // Create a DeltaSource that reads from the temporary directory.
+    return pathlingContext.read().delta(tempDir.toString());
+  }
+
   private static ClassLoader getClassLoader() {
     final ClassLoader object = Thread.currentThread().getContextClassLoader();
     return requireNonNull(object);
-  }
-
-  private static URL getResourceAsUrl(final String name) {
-    final ClassLoader loader = getClassLoader();
-    final URL object = loader.getResource(name);
-    return requireNonNull(object, "Test resource not found: " + name);
   }
 
   private static InputStream getResourceAsStream(final String name) {
