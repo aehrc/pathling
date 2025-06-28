@@ -56,7 +56,7 @@ jobs:
       - name: Install library runtime
         run: |
           mvn install:install-file \
-            -Dfile=jars/library-runtime-${{ steps.get_version.outputs.version }}.jar \
+            -Dfile=jars/library-runtime/target/library-runtime-${{ steps.get_version.outputs.version }}.jar \
             -DpomFile=library-runtime/pom.xml \
             -DgroupId=au.csiro.pathling \
             -DartifactId=library-runtime \
