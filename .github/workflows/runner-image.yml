@@ -34,8 +34,8 @@ jobs:
         uses: docker/build-push-action@v5
         working-directory: docker
         with:
-          context: .
-          file: ./build.Dockerfile
+          context: docker
+          file: docker/build.Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
