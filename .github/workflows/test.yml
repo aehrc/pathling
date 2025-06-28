@@ -16,7 +16,7 @@ jobs:
     name: Build and test
     runs-on: self-hosted
     container:
-      image: ubuntu-latest
+      image: ghcr.io/actions/actions-runner:latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
