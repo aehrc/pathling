@@ -71,7 +71,7 @@ jobs:
           PYSPARK_PYTHON: ${{ steps.python-install.outputs.python-path }}
           PYSPARK_DRIVER_PYTHON: ${{ steps.python-install.outputs.python-path }}
           R_KEEP_PKG_SOURCE: yes
-        run: mvn --batch-mode verify -pl '!site'
+        run: mvn --batch-mode install -pl '!site'
         timeout-minutes: 60
       - name: Save test reports
         uses: actions/upload-artifact@v4
