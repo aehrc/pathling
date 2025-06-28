@@ -10,6 +10,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/aehrc/pathling-actions-runner:latest
     permissions:
       actions: read
       contents: read
@@ -26,16 +28,19 @@ jobs:
               run_id: ${{ github.event.inputs.run_id }}
             });
             core.setOutput('commit_sha', run.head_sha);
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ steps.get_run_info.outputs.commit_sha }}
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: "zulu"
+
       - name: Download JARs from specified run
         uses: actions/download-artifact@v4
         with:
@@ -43,11 +48,13 @@ jobs:
           run-id: ${{ github.event.inputs.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: jars/
+
       - name: Get version from POM
         id: get_version
         run: |
           VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -f utilities/pom.xml)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Install library runtime
         run: |
           mvn install:install-file \
@@ -57,8 +64,10 @@ jobs:
             -DartifactId=library-runtime \
             -Dversion=${{ steps.get_version.outputs.version }} \
             -Dpackaging=jar
+
       - name: Build benchmark JAR
         run: mvn --batch-mode package -pl benchmark
+
       - name: Run benchmark
         run: |
           java -Xshare:off -Xmx8g -ea -Duser.timezone=UTC \
@@ -66,6 +75,7 @@ jobs:
             --add-opens=java.base/java.net=ALL-UNNAMED \
             -jar benchmark/target/benchmark-${{ steps.get_version.outputs.version }}.jar \
             -rf json -rff benchmark.json
+
       - name: Save results
         uses: actions/upload-artifact@v4
         with:

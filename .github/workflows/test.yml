@@ -15,36 +15,39 @@ jobs:
   build-and-test:
     name: Build and test
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/aehrc/pathling-actions-runner:latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: "zulu"
+
       - name: Set up Python 3.8
         uses: actions/setup-python@v4
         id: python-install
         with:
           python-version: 3.8
-      - name: Set up R
-        uses: r-lib/actions/setup-r@v2
-        with:
-          r-version: "4.1.3"
-          use-public-rspm: true
+
       - name: Set up Pandoc
         uses: r-lib/actions/setup-pandoc@v2
+
       - name: Set up Helm
         uses: azure/setup-helm@v3
         with:
           version: 3.13.2
+
       - uses: actions/setup-node@v4
         with:
           node-version: "16"
+
       - name: Cache local Maven repository
         uses: actions/cache@v4
         with:
@@ -52,19 +55,20 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |-
             ${{ runner.os }}-maven-
+
       - name: Cache Python packages
         uses: actions/cache@v4
         with:
           path: /home/runner/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('lib/python/requirements/dev.txt', 'lib/python/requirements/package.txt') }}
+
       - name: Cache R packages
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/Library
           key: r-packages-${{ runner.os }}-${{ hashFiles('lib/R/DESCRIPTION.src') }}
           restore-keys: r-packages-${{ runner.os }}-
-      - name: Install texlive and libcurl
-        run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra libcurl4-openssl-dev
+
       - name: Run install goal
         if: (!(startsWith(steps.extract-info.outputs.branch_name , 'release/') && endsWith(steps.extract-info.outputs.maven_version, '-SNAPSHOT')))
         env:
@@ -73,11 +77,13 @@ jobs:
           R_KEEP_PKG_SOURCE: yes
         run: mvn --batch-mode install -pl '!site,!benchmark'
         timeout-minutes: 60
+
       - name: Save test reports
         uses: actions/upload-artifact@v4
         with:
           name: surefire-reports
           path: "**/surefire-reports/"
+
       - name: Save coverage reports
         uses: actions/upload-artifact@v4
         with:
@@ -85,6 +91,7 @@ jobs:
           path: |
             **/jacoco.xml
             lib/python/**/coverage.xml
+
       - name: Save built JARs
         uses: actions/upload-artifact@v4
         with:
@@ -99,6 +106,7 @@ jobs:
             lib/python/target/python-*.jar
             lib/R/target/r-*.jar
           if-no-files-found: "error"
+
       - name: Save R package
         uses: actions/upload-artifact@v4
         with:
@@ -113,11 +121,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Download coverage reports
         uses: actions/download-artifact@v4
         with:
           name: coverage-reports
           path: coverage-reports
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
         with:
