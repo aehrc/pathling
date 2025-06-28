@@ -110,6 +110,12 @@ jobs:
             lib/R/target/r-*.jar
           if-no-files-found: "error"
 
+      - name: Save Python wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-wheel
+          path: lib/python/target/py-dist/pathling-*.whl
+
       - name: Save R package
         uses: actions/upload-artifact@v4
         with:
