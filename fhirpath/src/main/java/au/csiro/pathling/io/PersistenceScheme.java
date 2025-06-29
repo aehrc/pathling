@@ -82,4 +82,11 @@ public interface PersistenceScheme {
   @Nonnull
   Set<ResourceType> list();
 
+  /**
+   * Delete the data for the given resource type.
+   *
+   * @param resourceType the resource type to be deleted
+   */
+  void delete(@Nonnull ResourceType resourceType);
+
 }

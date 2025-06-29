@@ -52,16 +52,14 @@ LOINC_URI <- "http://loinc.org"
 #'
 #' @export
 #' 
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
+#' @examples \dontrun{
 #' condition_df <- pathling_spark(pc) %>% sparklyr::copy_to(conditions)
 #' 
 #' # Convert codes to ICD-10 codings.
 #' condition_df %>% sparklyr::mutate(
 #'     icdCoding = !!tx_to_coding(CODE, "http://hl7.org/fhir/sid/icd-10"), .keep = 'none'
 #' )
-#' 
-#' pathling_disconnect(pc)
+#' }
 tx_to_coding <- function(coding_column, system, version = NULL) {
   rlang::expr(if (!is.null({ { coding_column } }))
                   struct(
@@ -92,15 +90,13 @@ tx_to_coding <- function(coding_column, system, version = NULL) {
 #
 #' @export
 #' 
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
+#' @examples \dontrun{
 #' condition_df <- pathling_spark(pc) %>% sparklyr::copy_to(conditions)
 #' 
 #' # Convert codes to SNOMED CT codings.
 #' # Equivalent to: tx_to_coding(CODE, "http://snomed.info/sct")
 #' condition_df %>% sparklyr::mutate(snomedCoding = !!tx_to_snomed_coding(CODE), .keep = 'none')
-#' 
-#' pathling_disconnect(pc)
+#' }
 tx_to_snomed_coding <- function(coding_column, version = NULL) {
   tx_to_coding({ { coding_column } }, SNOMED_URI, { { version } })
 }
@@ -123,15 +119,13 @@ tx_to_snomed_coding <- function(coding_column, version = NULL) {
 #' 
 #' @export
 #' 
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
+#' @examples \dontrun{
 #' condition_df <- pathling_spark(pc) %>% sparklyr::copy_to(conditions)
 #' 
 #' # Convert codes to LOINC codings.
 #' # Equivalent to: tx_to_coding(CODE, "http://loinc.org")
 #' condition_df %>% sparklyr::mutate(loincCoding = !!tx_to_loinc_coding(CODE), .keep = 'none')
-#' 
-#' pathling_disconnect(pc)
+#' }
 tx_to_loinc_coding <- function(coding_column, version = NULL) {
   tx_to_coding({ { coding_column } }, LOINC_URI, { { version } })
 }
@@ -153,9 +147,10 @@ tx_to_loinc_coding <- function(coding_column, version = NULL) {
 #' 
 #' @export
 #' 
-#' @examplesIf pathling_is_spark_installed()
+#' @examples \dontrun{
 #' # Example usage of tx_to_ecl_value_set function
 #' tx_to_ecl_value_set('<<373265006 |Analgesic (substance)|')
+#' }
 tx_to_ecl_value_set <- function(ecl) {
   paste0(SNOMED_URI, "?fhir_vs=ecl/", URLencode(ecl, reserved = TRUE))
 }

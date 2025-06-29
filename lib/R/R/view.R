@@ -31,8 +31,7 @@
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/sql-on-fhir}{Pathling documentation - SQL on FHIR}
 #' 
 #' @export
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
+#' @examples \dontrun{
 #' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
 #' data_source %>% ds_view('Patient',
 #'      select = list(
@@ -64,36 +63,36 @@
 #'         list(path = "gender = 'male'")
 #'      )
 #' )
-#' pathling_disconnect(pc)
+#' }
 ds_view <- function(ds, resource, select = NULL, constants = NULL, where = NULL, json = NULL) {
   jquery <- j_invoke(ds, "view", as.character(resource))
-  
+
   if (!is.null(json)) {
     j_invoke(jquery, "json", as.character(json))
   } else {
     # Build the query from individual components
     query <- list()
-    
+
     if (!is.null(resource)) {
       query$resource <- resource
     }
-    
+
     if (!is.null(select)) {
       query$select <- select
     }
-    
+
     if (!is.null(constants)) {
       query$constants <- constants
     }
-    
+
     if (!is.null(where)) {
       query$where <- where
     }
-    
+
     # Convert the query to JSON and pass it to the Java method
     query_json <- jsonlite::toJSON(query, auto_unbox = TRUE)
     j_invoke(jquery, "json", as.character(query_json))
   }
-  
+
   sdf_register(j_invoke(jquery, "execute"))
 }

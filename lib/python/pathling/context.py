@@ -104,6 +104,9 @@ class PathlingContext:
         token_expiry_tolerance: Optional[int] = 120,
         accept_language: Optional[str] = None,
         enable_delta=False,
+        enable_remote_debugging: Optional[bool] = False,
+        debug_port: Optional[int] = 5005,
+        debug_suspend: Optional[bool] = True,
     ) -> "PathlingContext":
         """
         Creates a :class:`PathlingContext` with the given configuration options. This should only
@@ -176,6 +179,9 @@ class PathlingContext:
                implementation and the code systems used.
         :param enable_delta: enables the use of Delta for storage of FHIR data.
                Only supported when no SparkSession is provided.
+        :param enable_remote_debugging: enables remote debugging for the JVM process.
+        :param debug_port: the port for the debugger to listen on (default: 5005)
+        :param debug_suspend: if true, the JVM will suspend until a debugger is attached
         :return: a :class:`PathlingContext` instance initialized with the specified configuration
         """
 
@@ -195,6 +201,13 @@ class PathlingContext:
                     "org.apache.spark.sql.delta.catalog.DeltaCatalog",
                 )
             )
+
+            # Add remote debugging configuration if enabled
+            if enable_remote_debugging:
+                suspend_option = "y" if debug_suspend else "n"
+                debug_options = f"-agentlib:jdwp=transport=dt_socket,server=y,suspend={suspend_option},address={debug_port}"
+                spark_builder = spark_builder.config("spark.driver.extraJavaOptions", debug_options)
+
             return spark_builder.getOrCreate()
 
         spark = spark or SparkSession.getActiveSession() or _new_spark_session()

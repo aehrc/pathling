@@ -121,9 +121,7 @@ Equivalence <- list(
 #'
 #' @export
 #' 
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
-#' 
+#' @examples \dontrun{
 #' # Test the Condition codings for membership in the SNOMED CT 'Lateralisable body structure 
 #' reference set' (723264001).
 #' pc %>% pathling_example_resource('Condition') %>%
@@ -132,8 +130,7 @@ Equivalence <- list(
 #'          is_member = !!tx_member_of(code[['coding']], 
 #'                  'http://snomed.info/sct?fhir_vs=refset/723264001'), 
 #'          .keep='none')
-#' 
-#' pathling_disconnect(pc)
+#' }
 tx_member_of <- function(codings, value_set_uri) {
   rlang::expr(member_of({ { codings } }, { { value_set_uri } }))
 }
@@ -161,9 +158,7 @@ tx_member_of <- function(codings, value_set_uri) {
 #' @family terminology functions
 #' 
 #' @export
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
-#' 
+#' @examples \dontrun{
 #' # Translates the codings of the Condition `code` using a SNOMED implicit concept map.
 #' pc %>% pathling_example_resource('Condition') %>%
 #'     sparklyr::mutate(
@@ -171,8 +166,7 @@ tx_member_of <- function(codings, value_set_uri) {
 #'          translation = !!tx_translate(code[['coding']],
 #'                  'http://snomed.info/sct?fhir_cm=900000000000527005'),
 #'          .keep='none')
-#'  
-#' pathling_disconnect(pc)
+#' }
 tx_translate <- function(codings, concept_map_uri, reverse = FALSE, equivalences = NULL, target = NULL) {
   rlang::expr(translate_coding({ { codings } }, { { concept_map_uri } }, { { reverse } },
                                !!to_array(equivalences), { { target } }))
@@ -193,9 +187,7 @@ tx_translate <- function(codings, concept_map_uri, reverse = FALSE, equivalences
 #' @family terminology functions
 #'
 #' @export
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
-#' 
+#' @examples \dontrun{
 #' # Test the codings of the Condition `code` for subsumption of a SNOMED CT code.
 #' pc %>% pathling_example_resource('Condition') %>%
 #'     sparklyr::mutate(
@@ -203,8 +195,7 @@ tx_translate <- function(codings, concept_map_uri, reverse = FALSE, equivalences
 #'          subsumes = !!tx_subsumes(code[['coding']],
 #'              !!tx_to_snomed_coding('444814009')),
 #'          .keep='none')
-#'  
-#' pathling_disconnect(pc)
+#' }
 tx_subsumes <- function(left_codings, right_codings) {
   rlang::expr(subsumes({ { left_codings } }, { { right_codings } }, FALSE))
 }
@@ -258,17 +249,14 @@ tx_subsumed_by <- function(left_codings, right_codings) {
 #' 
 #' @export
 #' 
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
-#' 
+#' @examples \dontrun{
 #' # Get the display name of the first coding of the Condition resource, with the default language.
 #' pc %>% pathling_example_resource('Condition') %>%
 #'      sparklyr::mutate(
 #'          id, 
 #'          display = !!tx_display(code[['coding']][[0]]), 
 #'          .keep='none')
-#' 
-#' pathling_disconnect(pc)
+#' }
 tx_display <- function(coding, accept_language = NULL) {
   rlang::expr(display({ { coding } }, { { accept_language } }))
 }
@@ -295,9 +283,7 @@ tx_display <- function(coding, accept_language = NULL) {
 #'
 #' @export
 #' 
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
-#' 
+#' @examples \dontrun{
 #' # Get the (first) value of the `inactive` property of the first coding of the Condition resource.
 #' pc %>% pathling_example_resource('Condition') %>%
 #'      sparklyr::mutate(id, 
@@ -305,8 +291,7 @@ tx_display <- function(coding, accept_language = NULL) {
 #'                                  "inactive",PropertyType$BOOLEAN))[[0]], 
 #'          .keep='none'
 #'      )
-#' 
-#' pathling_disconnect(pc)
+#' }
 tx_property_of <- function(coding, property_code, property_type = "string", accept_language = NULL) {
 
   if (property_type == PropertyType$CODE) {
@@ -347,18 +332,16 @@ tx_property_of <- function(coding, property_code, property_type = "string", acce
 #' 
 #' @export
 #' 
-#' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect()
-#' 
+#' @examples \dontrun{
 #' # Get the (first) SNOMED CT "Fully specified name" ('900000000000003001')  
 #' # for the first coding of the Condition resource, in the 'en' language.
-#' pc %>% pathling_example_resource('Condition') %>% 
+#' pc %>% pathling_example_resource('Condition') %>%
 #'      sparklyr::mutate(
 #'             id, 
 #'             designation = (!!tx_designation(code[['coding']][[0]], 
 #'                      !!tx_to_snomed_coding('900000000000003001'), language = 'en'))[[0]], 
 #'             .keep='none')
-#' pathling_disconnect(pc)
+#' }
 tx_designation <- function(coding, use = NULL, language = NULL) {
   rlang::expr(designation({ { coding } }, { { use } }, { { language } }))
 }

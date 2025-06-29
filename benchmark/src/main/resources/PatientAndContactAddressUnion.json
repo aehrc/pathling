@@ -1,0 +1,55 @@
+{
+  "resourceType" : "ViewDefinition",
+  "id" : "PatientAndContactAddressUnion",
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ViewDefinition PatientAndContactAddressUnion</b></p><a name=\"PatientAndContactAddressUnion\"> </a><a name=\"hcPatientAndContactAddressUnion\"> </a><p>This view acts on the Patient resource to produce a table named &quot;<code>patient_and_contact_addresses</code>&quot;.</p><p>The table contains the following columns:</p><table class=\"grid\"><tr><th>Name</th><th>Fhir Type</th><th>SQL Type</th><th>Collection</th></tr><tr><td>resource_id</td><td>string</td><td>String</td><td></td></tr></table><p>Selection Rules:</p><table border=\"1\" cellpadding=\"0\" cellspacing=\"0\" style=\"border: 1px #F0F0F0 solid; font-size: 11px; font-family: verdana; vertical-align: top;\"><tr style=\"border: 2px #F0F0F0 solid; font-size: 11px; font-family: verdana; vertical-align: top\"><th style=\"vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 1px #F0F0F0 solid; padding:0px 4px 0px 4px; padding-top: 3px; padding-bottom: 3px\" class=\"hierarchy\"><span title=\"The linkID for the item\">Item</span></th><th style=\"vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 1px #F0F0F0 solid; padding:0px 4px 0px 4px; padding-top: 3px; padding-bottom: 3px\" class=\"hierarchy\"><span title=\"Text for the item\">Coll</span></th><th style=\"vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 1px #F0F0F0 solid; padding:0px 4px 0px 4px; padding-top: 3px; padding-bottom: 3px\" class=\"hierarchy\"><span title=\"Minimum and Maximum # of times the item can appear in the instance\">Type</span></th><th style=\"vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 1px #F0F0F0 solid; padding:0px 4px 0px 4px; padding-top: 3px; padding-bottom: 3px\" class=\"hierarchy\"><span title=\"The type of the item\">Description</span></th></tr><tr style=\"border: 1px #F0F0F0 solid; padding:0px; vertical-align: top; background-color: white\"><td style=\"vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 1px #F0F0F0 solid; padding:0px 4px 0px 4px; white-space: nowrap; background-image: url(tbl_bck1.png)\" class=\"hierarchy\"><img src=\"tbl_spacer.png\" alt=\".\" style=\"background-color: inherit\" class=\"hierarchy\"/><img src=\"icon_vd_view.png\" alt=\".\" style=\"background-color: white; background-color: inherit\" title=\"QuestionnaireRoot\" class=\"hierarchy\"/> patient_and_contact_addresses</td><td style=\"vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 1px #F0F0F0 solid; padding:0px 4px 0px 4px\" class=\"hierarchy\"></td><td style=\"vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 1px #F0F0F0 solid; padding:0px 4px 0px 4px\" class=\"hierarchy\">Patient</td><td style=\"vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 1px #F0F0F0 solid; padding:0px 4px 0px 4px\" class=\"hierarchy\"/></tr>\r\n<tr style=\"border: 1px #F0F0F0 solid; padding:0px; vertical-align: top; background-color: #F7F7F7\"><td style=\"vertical-align: top; text-align : var(--ig-left,left); background-color: #F7F7F7; border: 1px #F0F0F0 solid; padding:0px 4px 0px 4px; white-space: nowrap; background-image: url(tbl_bck01.png)\" class=\"hierarchy\"><img src=\"tbl_spacer.png\" alt=\".\" style=\"background-color: inherit\" class=\"hierarchy\"/><img src=\"tbl_vjoin_end.png\" alt=\".\" style=\"background-color: inherit\" class=\"hierarchy\"/><img src=\"icon_vd_select.png\" alt=\".\" style=\"background-color: #F7F7F7; background-color: inherit\" title=\"Select\" class=\"hierarchy\"/> Select</td><td style=\"vertical-align: top; text-align : var(--ig-left,left); background-color: #F7F7F7; border: 1px #F0F0F0 solid; padding:0px 4px 0px 4px\" class=\"hierarchy\"/><td style=\"vertical-align: top; text-align : var(--ig-left,left); background-color: #F7F7F7; border: 1px #F0F0F0 solid; padding:0px 4px 0px 4px\" class=\"hierarchy\"/><td style=\"vertical-align: top; text-align : var(--ig-left,left); background-color: #F7F7F7; border: 1px #F0F0F0 solid; padding:0px 4px 0px 4px\" class=\"hierarchy\"/></tr>\r\n<tr style=\"border: 1px #F0F0F0 solid; padding:0px; vertical-align: top; background-color: white\"><td style=\"vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 1px #F0F0F0 solid; padding:0px 4px 0px 4px; white-space: nowrap; background-image: url(tbl_bck000.png)\" class=\"hierarchy\"><img src=\"tbl_spacer.png\" alt=\".\" style=\"background-color: inherit\" class=\"hierarchy\"/><img src=\"tbl_blank.png\" alt=\".\" style=\"background-color: inherit\" class=\"hierarchy\"/><img src=\"tbl_vjoin_end.png\" alt=\".\" style=\"background-color: inherit\" class=\"hierarchy\"/><img src=\"icon_vd_col.png\" alt=\".\" style=\"background-color: white; background-color: inherit\" title=\"Column\" class=\"hierarchy\"/> resource_id</td><td style=\"vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 1px #F0F0F0 solid; padding:0px 4px 0px 4px\" class=\"hierarchy\"></td><td style=\"vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 1px #F0F0F0 solid; padding:0px 4px 0px 4px\" class=\"hierarchy\"/><td style=\"vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 1px #F0F0F0 solid; padding:0px 4px 0px 4px\" class=\"hierarchy\"><span style=\"font-size: 11px\"><code>getResourceKey()</code></span></td></tr>\r\n</table></div>"
+  },
+  "name" : "patient_and_contact_addresses",
+  "status" : "draft",
+  "resource" : "Patient",
+  "select" : [{
+    "column" : [{
+      "path" : "getResourceKey()",
+      "name" : "resource_id"
+    }],
+    "unionAll" : [{
+      "column" : [{
+        "path" : "line.join('\n')",
+        "name" : "street"
+      },
+      {
+        "path" : "city",
+        "name" : "city"
+      },
+      {
+        "path" : "postalCode",
+        "name" : "zip"
+      },
+      {
+        "path" : "true",
+        "name" : "is_patient"
+      }],
+      "forEach" : "address"
+    },
+    {
+      "column" : [{
+        "path" : "line.join('\n')",
+        "name" : "street"
+      },
+      {
+        "path" : "city",
+        "name" : "city"
+      },
+      {
+        "path" : "postalCode",
+        "name" : "zip"
+      },
+      {
+        "path" : "false",
+        "name" : "is_patient"
+      }],
+      "forEach" : "contact.address"
+    }]
+  }]
+}

@@ -1,16 +1,4 @@
-# This workflow will build the software and documentation to ensure there are no errors, and also
-# execute the tests.
-#
-# The FHIR server build is separated into three tranches, to minimise overall build time:
-#
-# Tranche 1: ModificationTest, AggregateQueryTest, ExtractTest
-# Tranche 2: ManifestConverterTest, integration tests
-# Tranche 3: All other FHIR server tests, tests from utilities and terminology modules
-#
-# There are a set of performance benchmarks that run and upload their results to a S3 bucket.
-#
-# This workflow also deploys a pre-release version of the software to Docker Hub and Maven Central,
-# if the branch is a release branch (`release/**`).
+# This workflow will build the software to ensure there are no errors, and also execute the tests.
 
 name: Test
 
@@ -24,8 +12,8 @@ env:
   MAVEN_OPTS: --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
 
 jobs:
-  library-api:
-    name: Library API
+  build-and-test:
+    name: Build and test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -33,523 +21,115 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: 17
-          distribution: "zulu"
-      - name: Cache local Maven repository
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-library-api-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |-
-            ${{ runner.os }}-maven-library-api-
-      - name: Run the verify goal with Maven
-        run: >
-          mvn --batch-mode verify -pl library-runtime -am -Pdocs
-        timeout-minutes: 30
-      - name: Upload test reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: library-api-surefire-reports
-          path: |
-            utilities/target/surefire-reports
-            encoders/target/surefire-reports
-            terminology/target/surefire-reports
-            fhirpath/target/surefire-reports
-            library-api/target/surefire-reports
-      - name: Upload coverage reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: library-api-coverage
-          path: "**/jacoco.xml"
-      - name: Upload utilities JARs
-        uses: actions/upload-artifact@v4
-        with:
-          name: utilities-jars
-          path: utilities/target/utilities-*.jar
-          if-no-files-found: "error"
-      - name: Upload encoders JARs
-        uses: actions/upload-artifact@v4
-        with:
-          name: encoders-jars
-          path: encoders/target/encoders-*.jar
-          if-no-files-found: "error"
-      - name: Upload terminology JARs
-        uses: actions/upload-artifact@v4
-        with:
-          name: terminology-jars
-          path: terminology/target/terminology-*.jar
-          if-no-files-found: "error"
-      - name: Upload fhirpath JARs
-        uses: actions/upload-artifact@v4
-        with:
-          name: fhirpath-jars
-          path: fhirpath/target/fhirpath-*.jar
-          if-no-files-found: "error"
-      - name: Upload library-api JARs
-        uses: actions/upload-artifact@v4
-        with:
-          name: library-api-jars
-          path: library-api/target/library-api-*.jar
-          if-no-files-found: "error"
-      - name: Upload library-runtime JARs
-        uses: actions/upload-artifact@v4
-        with:
-          name: library-runtime-jars
-          path: library-runtime/target/library-runtime-*.jar
-          if-no-files-found: "error"
 
-  python-api:
-    name: Python API
-    runs-on: ubuntu-latest
-    needs: library-api
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          # This is required so that git-commit-id-plugin can find the latest tag.
-          fetch-depth: 0
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: "zulu"
-      - name: Cache local Maven repository
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-python-api-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |-
-            ${{ runner.os }}-maven-python-api-
-      - name: Download library-runtime JARs
-        uses: actions/download-artifact@v4
-        with:
-          name: library-runtime-jars
-          path: library-runtime/target
-      - name: Get version from POM
-        id: get_version
-        run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -f library-runtime/pom.xml)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-      - name: Install library-runtime artifact to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=library-runtime/target/library-runtime-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=library-runtime/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=library-runtime \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar
+
       - name: Set up Python 3.8
         uses: actions/setup-python@v4
-        id: pythoninstall
+        id: python-install
         with:
           python-version: 3.8
-      - name: Cache Python packages
-        uses: actions/cache@v4
-        id: pythoncache
-        with:
-          path: /home/runner/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('lib/python/requirements/dev.txt', 'lib/python/requirements/package.txt') }}
-      - name: Run the verify goal with Maven
-        working-directory: lib/python
-        env:
-          PYSPARK_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
-          PYSPARK_DRIVER_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
-        run: mvn --batch-mode verify -Pdocs
-        timeout-minutes: 30
-      - name: Upload Python API test coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-api-coverage
-          path: lib/python/**/coverage.xml
-      - name: Upload Python API JARs
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-api-jars
-          path: lib/python/target/python-*.jar
 
-  R-api:
-    name: R API
-    runs-on: ubuntu-latest
-    needs: library-api
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          # This is required so that git-commit-id-plugin can find the latest tag.
-          fetch-depth: 0
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: 17
-          distribution: "zulu"
-      - name: Cache local Maven repository
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-r-api-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |-
-            ${{ runner.os }}-maven-r-api-
-      - name: Download library-runtime JARs
-        uses: actions/download-artifact@v4
-        with:
-          name: library-runtime-jars
-          path: library-runtime/target
-      - name: Get version from POM
-        id: get_version
-        run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -f library-runtime/pom.xml)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-      - name: Install library-runtime artifact to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=library-runtime/target/library-runtime-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=library-runtime/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=library-runtime \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar
-      - name: Cache R packages
-        uses: actions/cache@v4
-        with:
-          path: ${{ runner.temp }}/Library
-          key: r-packages-${{ runner.os }}-${{ hashFiles('lib/R/DESCRIPTION.src') }}
-          restore-keys: r-packages-${{ runner.os }}-
-      - name: Extract Spark version
-        working-directory: lib/R
-        run: echo "SPARK_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.sparkVersion -q -DforceStdout)" >> $GITHUB_ENV
-      - name: Extract Hadoop version
-        working-directory: lib/R
-        run: echo "HADOOP_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.hadoopMajorVersion -q -DforceStdout)" >> $GITHUB_ENV
-      - name: Cache Spark
-        id: cache-spark
-        uses: actions/cache@v4
-        with:
-          path: /home/runner/spark/spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
-          key: spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
-      - name: Download Spark
-        if: steps.cache-spark.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p /home/runner/spark
-          curl -L https://github.com/piotrszul/spark-dist/releases/download/dist/spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}.tgz | tar -xz -C /home/runner/spark
-      - name: Install Pandoc
-        uses: r-lib/actions/setup-pandoc@v2
-      - name: Install R
+      - name: Set up R
         uses: r-lib/actions/setup-r@v2
         with:
           r-version: "4.1.3"
           use-public-rspm: true
-      - name: Install texlive and libcurl
-        run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra libcurl4-openssl-dev
-      - name: Run the verify goal with Maven
-        working-directory: lib/R
-        env:
-          R_KEEP_PKG_SOURCE: yes
-        run: mvn --batch-mode install -Pdocs
-        timeout-minutes: 60
-      - name: Upload check logs
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: r-check-logs
-          path: |
-            lib/R/target/pathling.Rcheck/*.log
-            lib/R/target/pathling.Rcheck/*.out
-            lib/R/target/pathling.Rcheck/*.fail
-      - name: Upload package as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: r-package
-          path: lib/R/target/pathling_*.tar.gz
-      - name: Upload R API JARs
-        uses: actions/upload-artifact@v4
-        with:
-          name: r-api-jars
-          path: lib/R/target/r-*.jar
 
-  site:
-    name: Site
-    runs-on: ubuntu-latest
-    needs:
-      - library-api
-      - python-api
-      - R-api
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          # This is required so that git-commit-id-plugin can find the latest tag.
-          fetch-depth: 0
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: 17
-          distribution: "zulu"
-      - name: Set up Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: 3.13.2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "16"
-      - name: Cache local Maven repository
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-site-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |-
-            ${{ runner.os }}-maven-site-
-      - name: Cache R packages
-        uses: actions/cache@v4
-        with:
-          path: ${{ runner.temp }}/Library
-          key: r-packages-${{ runner.os }}-${{ hashFiles('lib/R/DESCRIPTION.src') }}
-          restore-keys: r-packages-${{ runner.os }}-
-      - name: Download library API JARs
-        uses: actions/download-artifact@v4
-        with:
-          name: library-api-jars
-          path: library-api/target
-      - name: Download Python API JARs
-        uses: actions/download-artifact@v4
-        with:
-          name: python-api-jars
-          path: lib/python/target
-      - name: Download R API JARs
-        uses: actions/download-artifact@v4
-        with:
-          name: r-api-jars
-          path: lib/R/target
-      - name: Get version from POM
-        id: get_version
-        run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -f library-api/pom.xml)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-      - name: Install library API sources JAR to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=library-api/target/library-api-${{ steps.get_version.outputs.version }}-sources.jar \
-            -DpomFile=library-api/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=library-api \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar \
-            -Dclassifier=sources
-      - name: Install Python API docs JAR to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=lib/python/target/python-${{ steps.get_version.outputs.version }}-docs.jar \
-            -DpomFile=lib/python/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=python \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar \
-            -Dclassifier=docs
-      - name: Install R API docs JAR to local Maven repo
-        run: |
-          mvn install:install-file \
-            -Dfile=lib/R/target/r-${{ steps.get_version.outputs.version }}-docs.jar \
-            -DpomFile=lib/R/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=r \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar \
-            -Dclassifier=docs
-      - name: Extract Spark version
-        working-directory: lib/R
-        run: echo "SPARK_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.sparkVersion -q -DforceStdout)" >> $GITHUB_ENV
-      - name: Extract Hadoop version
-        working-directory: lib/R
-        run: echo "HADOOP_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.hadoopMajorVersion -q -DforceStdout)" >> $GITHUB_ENV
-      - name: Cache Spark
-        id: cache-spark
-        uses: actions/cache@v4
-        with:
-          path: /home/runner/spark/spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
-          key: spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
-      - name: Download Spark
-        if: steps.cache-spark.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p /home/runner/spark
-          curl -L https://github.com/piotrszul/spark-dist/releases/download/dist/spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}.tgz | tar -xz -C /home/runner/spark
-      - name: Install Pandoc
-        uses: r-lib/actions/setup-pandoc@v2
-      - name: Install R
-        uses: r-lib/actions/setup-r@v2
-        with:
-          r-version: "4.1.3"
-          use-public-rspm: true
-      - name: Install texlive and libcurl
-        run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra libcurl4-openssl-dev
-      - name: Run the verify goal with Maven
-        working-directory: site
-        env:
-          R_KEEP_PKG_SOURCE: yes
-        run: mvn --batch-mode verify -Pdocs
-        timeout-minutes: 45
-
-  upload-coverage:
-    name: Upload coverage
-    runs-on: ubuntu-latest
-    needs: [library-api, python-api]
-    if: github.actor != 'dependabot[bot]'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Download library API coverage reports
-        uses: actions/download-artifact@v4
-        with:
-          name: library-api-coverage
-          path: library-api-coverage
-      - name: Download Python API coverage report
-        uses: actions/download-artifact@v4
-        with:
-          name: python-api-coverage
-          path: python-api-coverage
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-  deploy-pre-release:
-    name: Pre-release deployment
-    needs:
-      - library-api
-    runs-on: ubuntu-latest
-    # If the branch starts with "release/", we deploy pre-release packages.
-    if: startsWith(github.ref, 'refs/heads/release/')
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          # This is required so that git-commit-id-plugin can find the latest tag.
-          fetch-depth: 0
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: 17
-          distribution: "zulu"
       - name: Cache local Maven repository
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
+          restore-keys: |-
             ${{ runner.os }}-maven-
-      - name: Install GPG key
-        run: |
-          cat <(echo -e "${{ secrets.GPG_KEY }}") | gpg --batch --import
-          gpg --list-secret-keys --keyid-format LONG
-      - name: Configure Maven settings
-        uses: s4u/maven-settings-action@v2.6.0
+
+      - name: Cache Python packages
+        uses: actions/cache@v4
         with:
-          servers: |
-            [{
-              "id": "ossrh",
-              "username": "${{ secrets.OSSRH_USERNAME }}",
-              "password": "${{ secrets.OSSRH_PASSWORD }}"
-            }]
-      - name: Download utilities JARs
+          path: /home/runner/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('lib/python/requirements/dev.txt', 'lib/python/requirements/package.txt') }}
+
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/Library
+          key: r-packages-${{ runner.os }}-${{ hashFiles('lib/R/DESCRIPTION.src') }}
+          restore-keys: r-packages-${{ runner.os }}-
+
+      - name: Install texlive and libcurl
+        run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra libcurl4-openssl-dev
+
+      - name: Run install goal
+        if: (!(startsWith(steps.extract-info.outputs.branch_name , 'release/') && endsWith(steps.extract-info.outputs.maven_version, '-SNAPSHOT')))
+        env:
+          PYSPARK_PYTHON: ${{ steps.python-install.outputs.python-path }}
+          PYSPARK_DRIVER_PYTHON: ${{ steps.python-install.outputs.python-path }}
+          R_KEEP_PKG_SOURCE: yes
+        run: mvn --batch-mode install -pl '!site,!benchmark'
+        timeout-minutes: 60
+
+      - name: Save test reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: "**/surefire-reports/"
+
+      - name: Save coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            **/jacoco.xml
+            lib/python/**/coverage.xml
+
+      - name: Save built JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: jars
+          path: |
+            utilities/target/utilities-*.jar
+            encoders/target/encoders-*.jar
+            terminology/target/terminology-*.jar
+            fhirpath/target/fhirpath-*.jar
+            library-api/target/library-api-*.jar
+            library-runtime/target/library-runtime-*.jar
+            lib/python/target/python-*.jar
+            lib/R/target/r-*.jar
+          if-no-files-found: "error"
+
+      - name: Save Python wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-wheel
+          path: lib/python/target/py-dist/pathling-*.whl
+
+      - name: Save R package
+        uses: actions/upload-artifact@v4
+        with:
+          name: r-package
+          path: lib/R/target/pathling_*.tar.gz
+
+  upload-coverage:
+    name: Upload coverage
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.actor != 'dependabot[bot]'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download coverage reports
         uses: actions/download-artifact@v4
         with:
-          name: utilities-jars
-          path: utilities/target
-      - name: Download encoders JARs
-        uses: actions/download-artifact@v4
+          name: coverage-reports
+          path: coverage-reports
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
         with:
-          name: encoders-jars
-          path: encoders/target
-      - name: Download terminology JARs
-        uses: actions/download-artifact@v4
-        with:
-          name: terminology-jars
-          path: terminology/target
-      - name: Download fhirpath JARs
-        uses: actions/download-artifact@v4
-        with:
-          name: fhirpath-jars
-          path: fhirpath/target
-      - name: Download library-api JARs
-        uses: actions/download-artifact@v4
-        with:
-          name: library-api-jars
-          path: library-api/target
-      - name: Download library-runtime JARs
-        uses: actions/download-artifact@v4
-        with:
-          name: library-runtime-jars
-          path: library-runtime/target
-      - name: Get version from POM
-        id: get_version
-        run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout -f utilities/pom.xml)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-      - name: Deploy utilities artifact to Sonatype snapshot repo
-        run: |
-          mvn deploy:deploy-file \
-            -Dfile=utilities/target/utilities-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=utilities/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=utilities \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar \
-            -DrepositoryId=ossrh \
-            -Durl=https://oss.sonatype.org/content/repositories/snapshots/
-      - name: Deploy encoders artifact to Sonatype snapshot repo
-        run: |
-          mvn deploy:deploy-file \
-            -Dfile=encoders/target/encoders-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=encoders/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=encoders \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar \
-            -DrepositoryId=ossrh \
-            -Durl=https://oss.sonatype.org/content/repositories/snapshots/
-      - name: Deploy terminology artifact to Sonatype snapshot repo
-        run: |
-          mvn deploy:deploy-file \
-            -Dfile=terminology/target/terminology-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=terminology/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=terminology \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar \
-            -DrepositoryId=ossrh \
-            -Durl=https://oss.sonatype.org/content/repositories/snapshots/
-      - name: Deploy fhirpath artifact to Sonatype snapshot repo
-        run: |
-          mvn deploy:deploy-file \
-            -Dfile=fhirpath/target/fhirpath-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=fhirpath/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=fhirpath \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar \
-            -DrepositoryId=ossrh \
-            -Durl=https://oss.sonatype.org/content/repositories/snapshots/
-      - name: Deploy library-api artifact to Sonatype snapshot repo
-        run: |
-          mvn deploy:deploy-file \
-            -Dfile=library-api/target/library-api-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=library-api/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=library-api \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar \
-            -DrepositoryId=ossrh \
-            -Durl=https://oss.sonatype.org/content/repositories/snapshots/
-      - name: Deploy library-runtime artifact to Sonatype snapshot repo
-        run: |
-          mvn deploy:deploy-file \
-            -Dfile=library-runtime/target/library-runtime-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=library-runtime/pom.xml \
-            -DgroupId=au.csiro.pathling \
-            -DartifactId=library-runtime \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar \
-            -DrepositoryId=ossrh \
-            -Durl=https://oss.sonatype.org/content/repositories/snapshots/
+          token: ${{ secrets.CODECOV_TOKEN }}
