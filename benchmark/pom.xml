@@ -28,6 +28,10 @@
       <artifactId>spark-sql_${pathling.scalaVersion}</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.delta</groupId>
+      <artifactId>delta-spark_${pathling.scalaVersion}</artifactId>
+    </dependency>
+    <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>test-data</artifactId>
       <version>1.0.0-SNAPSHOT</version>
