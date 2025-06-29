@@ -83,7 +83,7 @@ public interface PersistenceScheme {
   Set<ResourceType> list();
 
   /**
-   * Delete the Delta table for the given resource type.
+   * Delete the data for the given resource type.
    *
    * @param resourceType the resource type to be deleted
    */

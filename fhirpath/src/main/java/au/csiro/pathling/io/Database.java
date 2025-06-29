@@ -282,9 +282,9 @@ public class Database implements DataSource {
       @Nonnull final Dataset<Row> resources) {
     log.debug("Overwriting: {}", resourceType.toCode());
 
-    // Check if table exists and drop it if schema needs to be overwritten
+    // Check if table exists and drop it if schema needs to be overwritten.
     if (persistence.exists(resourceType)) {
-      // Delete the existing table to avoid truncate issues
+      // Delete the existing table to avoid truncate issues.
       persistence.delete(resourceType);
     }
 

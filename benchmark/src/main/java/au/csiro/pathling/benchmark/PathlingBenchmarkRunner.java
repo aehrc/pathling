@@ -4,7 +4,8 @@ import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.options.CommandLineOptions;
 
 /**
- * Main class for running the benchmarks.
+ * Main class for running the benchmarks. This class simply passes the command line arguments to the
+ * JMH runner.
  *
  * @author John Grimes
  */
