@@ -3,7 +3,11 @@ package au.csiro.pathling.test;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
+import au.csiro.pathling.fhirpath.execution.FhirpathEvaluators;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import ca.uhn.fhir.context.FhirContext;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,6 +15,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -64,8 +69,12 @@ class BulkExpressionParsingTest {
   void testExpressionParsing(final String expression) {
     final Parser parser = new Parser();
 
-    // The test passes if no exception is thrown during parsing.
-    assertDoesNotThrow(() -> parser.parse(expression),
-        "Expression should parse without errors: " + expression);
+    // The test passes if no exception is thrown during parsing and evaluation.
+    assertDoesNotThrow(() -> {
+      final FhirPath fhirPath = parser.parse(expression);
+      final FhirpathEvaluator evaluator = FhirpathEvaluators.createNull(ResourceType.PATIENT,
+          FhirContext.forR4());
+      evaluator.evaluate(fhirPath);
+    }, "Expression should parse and evaluate without errors: " + expression);
   }
 }
