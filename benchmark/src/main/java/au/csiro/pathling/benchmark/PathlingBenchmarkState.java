@@ -48,6 +48,10 @@ public class PathlingBenchmarkState {
   @Param({"ndjson", "delta"})
   private String sourceType;
 
+  public void setSourceType(@Nullable final String sourceType) {
+    this.sourceType = sourceType;
+  }
+
   @SuppressWarnings("ConstantValue")
   public PathlingBenchmarkState() {
     final SparkSession spark = SparkSession.builder()
