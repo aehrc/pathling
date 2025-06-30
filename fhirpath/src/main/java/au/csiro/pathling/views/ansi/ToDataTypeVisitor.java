@@ -3,16 +3,23 @@ package au.csiro.pathling.views.ansi;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
 
 /**
  * Visitor that converts parsed ANSI SQL type syntax into Spark SQL DataTypes.
  */
 public class ToDataTypeVisitor extends AnsiSqlTypeBaseVisitor<DataType> {
 
+  private final AnsiSqlDataTypeFactory factory;
+
+  /**
+   * Constructor.
+   */
+  public ToDataTypeVisitor() {
+    this.factory = new AnsiSqlDataTypeFactory();
+  }
+  
   @Override
   public DataType visitSqlType(@Nonnull final AnsiSqlTypeParser.SqlTypeContext ctx) {
     if (ctx.characterType() != null) {
@@ -28,77 +35,116 @@ public class ToDataTypeVisitor extends AnsiSqlTypeBaseVisitor<DataType> {
     } else if (ctx.complexType() != null) {
       return visitComplexType(ctx.complexType());
     }
-    
-    // Default to string for unrecognized types
-    return DataTypes.StringType;
+
+    // Default for unrecognized types
+    return factory.createDefault();
   }
 
   @Override
   public DataType visitCharacterType(@Nonnull final AnsiSqlTypeParser.CharacterTypeContext ctx) {
-    // All character types map to StringType in Spark SQL
-    return DataTypes.StringType;
+    String typeText = ctx.getText().toUpperCase();
+
+    if (ctx.length != null) {
+      int length = Integer.parseInt(ctx.length.getText());
+      if (typeText.startsWith("VARCHAR") || typeText.startsWith("CHARACTER VARYING")) {
+        return factory.createVarchar(length);
+      } else {
+        return factory.createCharacter(length);
+      }
+    } else {
+      if (typeText.startsWith("VARCHAR") || typeText.startsWith("CHARACTER VARYING")) {
+        return factory.createVarchar();
+      } else {
+        return factory.createCharacter();
+      }
+    }
   }
 
   @Override
   public DataType visitNumericType(@Nonnull final AnsiSqlTypeParser.NumericTypeContext ctx) {
-    if (ctx.getText().toUpperCase().startsWith("SMALLINT")) {
-      return DataTypes.ShortType;
-    } else if (ctx.getText().toUpperCase().startsWith("INTEGER") || 
-               ctx.getText().toUpperCase().startsWith("INT")) {
-      return DataTypes.IntegerType;
-    } else if (ctx.getText().toUpperCase().startsWith("BIGINT")) {
-      return DataTypes.LongType;
-    } else if (ctx.getText().toUpperCase().startsWith("REAL")) {
-      return DataTypes.FloatType;
-    } else if (ctx.getText().toUpperCase().startsWith("DOUBLE")) {
-      return DataTypes.DoubleType;
-    } else if (ctx.getText().toUpperCase().startsWith("FLOAT")) {
+    String typeText = ctx.getText().toUpperCase();
+
+    if (typeText.startsWith("SMALLINT")) {
+      return factory.createSmallInt();
+    } else if (typeText.startsWith("INTEGER") || typeText.startsWith("INT")) {
+      return factory.createInteger();
+    } else if (typeText.startsWith("BIGINT")) {
+      return factory.createBigInt();
+    } else if (typeText.startsWith("REAL")) {
+      return factory.createReal();
+    } else if (typeText.startsWith("DOUBLE")) {
+      return factory.createDouble();
+    } else if (typeText.startsWith("FLOAT")) {
       if (ctx.precision != null) {
         int precision = Integer.parseInt(ctx.precision.getText());
-        // ANSI SQL standard: FLOAT(p) maps to REAL if p <= 24, otherwise DOUBLE PRECISION
-        return precision <= 24 ? DataTypes.FloatType : DataTypes.DoubleType;
+        return factory.createFloat(precision);
       }
-      // Default FLOAT with no precision to DOUBLE
-      return DataTypes.DoubleType;
-    } else if (ctx.getText().toUpperCase().startsWith("NUMERIC") || 
-               ctx.getText().toUpperCase().startsWith("DECIMAL") || 
-               ctx.getText().toUpperCase().startsWith("DEC")) {
+      return factory.createFloat();
+    } else if (typeText.startsWith("NUMERIC") || typeText.startsWith("DECIMAL")
+        || typeText.startsWith("DEC")) {
       if (ctx.precision != null) {
         int precision = Integer.parseInt(ctx.precision.getText());
-        int scale = ctx.scale != null ? Integer.parseInt(ctx.scale.getText()) : 0;
-        return DataTypes.createDecimalType(precision, scale);
+        if (ctx.scale != null) {
+          int scale = Integer.parseInt(ctx.scale.getText());
+          return factory.createDecimal(precision, scale);
+        }
+        return factory.createDecimal(precision);
       }
-      return DataTypes.createDecimalType();
+      return factory.createDecimal();
     }
-    
-    // Default to double for unrecognized numeric types
-    return DataTypes.DoubleType;
+
+    // Default for unrecognized numeric types
+    return factory.createDouble();
   }
 
   @Override
   public DataType visitBooleanType(@Nonnull final AnsiSqlTypeParser.BooleanTypeContext ctx) {
-    return DataTypes.BooleanType;
+    return factory.createBoolean();
   }
 
   @Override
   public DataType visitBinaryType(@Nonnull final AnsiSqlTypeParser.BinaryTypeContext ctx) {
-    // All binary types map to BinaryType in Spark SQL
-    return DataTypes.BinaryType;
+    String typeText = ctx.getText().toUpperCase();
+
+    if (ctx.length != null) {
+      int length = Integer.parseInt(ctx.length.getText());
+      if (typeText.startsWith("VARBINARY") || typeText.startsWith("BINARY VARYING")) {
+        return factory.createVarbinary(length);
+      } else {
+        return factory.createBinary(length);
+      }
+    } else {
+      if (typeText.startsWith("VARBINARY") || typeText.startsWith("BINARY VARYING")) {
+        return factory.createVarbinary();
+      } else {
+        return factory.createBinary();
+      }
+    }
   }
 
   @Override
   public DataType visitTemporalType(@Nonnull final AnsiSqlTypeParser.TemporalTypeContext ctx) {
-    if (ctx.getText().toUpperCase().startsWith("DATE")) {
-      return DataTypes.DateType;
-    } else if (ctx.getText().toUpperCase().startsWith("TIMESTAMP")) {
-      return DataTypes.TimestampType;
-    } else if (ctx.getText().toUpperCase().startsWith("INTERVAL")) {
-      // Spark doesn't have a direct interval type, use string
-      return DataTypes.StringType;
+    String typeText = ctx.getText().toUpperCase();
+
+    if (typeText.startsWith("DATE")) {
+      return factory.createDate();
+    } else if (typeText.startsWith("TIMESTAMP")) {
+      boolean withTimeZone = typeText.contains("WITH TIME ZONE");
+      if (ctx.precision != null) {
+        int precision = Integer.parseInt(ctx.precision.getText());
+        return withTimeZone
+               ? factory.createTimestampWithTimeZone(precision)
+               : factory.createTimestamp(precision);
+      }
+      return withTimeZone
+             ? factory.createTimestampWithTimeZone()
+             : factory.createTimestamp();
+    } else if (typeText.startsWith("INTERVAL")) {
+      return factory.createInterval();
     }
-    
-    // Default to timestamp for unrecognized temporal types
-    return DataTypes.TimestampType;
+
+    // Default for unrecognized temporal types
+    return factory.createTimestamp();
   }
 
   @Override
@@ -108,36 +154,36 @@ public class ToDataTypeVisitor extends AnsiSqlTypeBaseVisitor<DataType> {
     } else if (ctx.arrayType() != null) {
       return visitArrayType(ctx.arrayType());
     }
-    
-    // Default to string for unrecognized complex types
-    return DataTypes.StringType;
+
+    // Default for unrecognized complex types
+    return factory.createDefault();
   }
 
   @Override
   public DataType visitRowType(@Nonnull final AnsiSqlTypeParser.RowTypeContext ctx) {
     if (ctx.fieldDefinition() == null || ctx.fieldDefinition().isEmpty()) {
       // Empty ROW type
-      return DataTypes.createStructType(new StructField[0]);
+      return factory.createRow(new ArrayList<>());
     }
-    
-    List<StructField> fields = new ArrayList<>();
+
+    List<Pair<String, DataType>> fields = new ArrayList<>();
     for (AnsiSqlTypeParser.FieldDefinitionContext fieldCtx : ctx.fieldDefinition()) {
       String fieldName = fieldCtx.fieldName.getText();
       DataType fieldType = visit(fieldCtx.sqlType());
-      fields.add(DataTypes.createStructField(fieldName, fieldType, true));
+      fields.add(Pair.of(fieldName, fieldType));
     }
-    
-    return DataTypes.createStructType(fields.toArray(new StructField[0]));
+
+    return factory.createRow(fields);
   }
 
   @Override
   public DataType visitArrayType(@Nonnull final AnsiSqlTypeParser.ArrayTypeContext ctx) {
     if (ctx.sqlType() != null) {
       DataType elementType = visit(ctx.sqlType());
-      return DataTypes.createArrayType(elementType);
+      return factory.createArray(elementType);
     }
-    
+
     // Default to string array if element type is not specified
-    return DataTypes.createArrayType(DataTypes.StringType);
+    return factory.createArray(factory.createCharacter());
   }
 }
