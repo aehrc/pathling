@@ -55,8 +55,10 @@ public class ToDataTypeVisitor extends AnsiSqlTypeBaseVisitor<DataType> {
     } else if (ctx.getText().toUpperCase().startsWith("FLOAT")) {
       if (ctx.precision != null) {
         int precision = Integer.parseInt(ctx.precision.getText());
+        // ANSI SQL standard: FLOAT(p) maps to REAL if p <= 24, otherwise DOUBLE PRECISION
         return precision <= 24 ? DataTypes.FloatType : DataTypes.DoubleType;
       }
+      // Default FLOAT with no precision to DOUBLE
       return DataTypes.DoubleType;
     } else if (ctx.getText().toUpperCase().startsWith("NUMERIC") || 
                ctx.getText().toUpperCase().startsWith("DECIMAL") || 

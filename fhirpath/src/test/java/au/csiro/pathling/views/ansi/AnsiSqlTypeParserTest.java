@@ -43,7 +43,7 @@ class AnsiSqlTypeParserTest {
         
         // Numeric types - approximate
         Arguments.of("FLOAT", DataTypes.DoubleType),
-        Arguments.of("FLOAT(10)", DataTypes.DoubleType),
+        Arguments.of("FLOAT(25)", DataTypes.DoubleType),
         Arguments.of("FLOAT(24)", DataTypes.FloatType),
         Arguments.of("REAL", DataTypes.FloatType),
         Arguments.of("DOUBLE PRECISION", DataTypes.DoubleType),
@@ -75,16 +75,16 @@ class AnsiSqlTypeParserTest {
         // Complex ROW types
         Arguments.of("ROW(id INTEGER, name VARCHAR)", 
             DataTypes.createStructType(new StructField[]{
-                DataTypes.createStructField("id", DataTypes.IntegerType, true),
-                DataTypes.createStructField("name", DataTypes.StringType, true)
+                DataTypes.createStructField("ID", DataTypes.IntegerType, true),
+                DataTypes.createStructField("NAME", DataTypes.StringType, true)
             })),
         
         // Nested complex types
         Arguments.of("ARRAY<ROW(id INTEGER, values ARRAY<DECIMAL(10,2)>)>",
             DataTypes.createArrayType(
                 DataTypes.createStructType(new StructField[]{
-                    DataTypes.createStructField("id", DataTypes.IntegerType, true),
-                    DataTypes.createStructField("values", 
+                    DataTypes.createStructField("ID", DataTypes.IntegerType, true),
+                    DataTypes.createStructField("VALUES", 
                         DataTypes.createArrayType(DataTypes.createDecimalType(10, 2)), 
                         true)
                 })

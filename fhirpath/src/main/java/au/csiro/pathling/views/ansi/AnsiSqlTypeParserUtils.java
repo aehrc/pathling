@@ -25,6 +25,7 @@ public class AnsiSqlTypeParserUtils {
       // Set up the lexer and parser
       final CharStream input = CharStreams.fromString(typeString.toUpperCase());
       final AnsiSqlTypeLexer lexer = new AnsiSqlTypeLexer(input);
+      lexer.removeErrorListeners(); // Remove default error listeners
       final CommonTokenStream tokens = new CommonTokenStream(lexer);
       final AnsiSqlTypeParser parser = new AnsiSqlTypeParser(tokens);
 
