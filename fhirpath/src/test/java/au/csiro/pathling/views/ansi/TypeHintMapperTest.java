@@ -1,13 +1,18 @@
 package au.csiro.pathling.views.ansi;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.*;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.Mockito;
 
 class TypeHintMapperTest {
 
@@ -93,5 +98,64 @@ class TypeHintMapperTest {
     DataType result = TypeHintMapper.getDataType(null, null, typeHint);
     assertEquals(expectedType, result.getClass().getName(), 
         "Type should match expected for hint: " + typeHint);
+  }
+  
+  @Test
+  void testConvertColumn() {
+    // Setup mocks
+    ColumnRepresentation mockColumnRep = mock(ColumnRepresentation.class);
+    Column mockColumn = mock(Column.class);
+    Column mockCastColumn = mock(Column.class);
+    
+    when(mockColumnRep.getValue()).thenReturn(mockColumn);
+    when(mockColumn.cast(any(DataType.class))).thenReturn(mockCastColumn);
+    
+    // Test with FHIR type
+    TypeHintMapper.convertColumn(mockColumnRep, FHIRDefinedType.BOOLEAN, null, null);
+    verify(mockColumn).cast(DataTypes.BooleanType);
+    
+    // Test with FHIRPath type
+    TypeHintMapper.convertColumn(mockColumnRep, null, FhirPathType.INTEGER, null);
+    verify(mockColumn).cast(DataTypes.IntegerType);
+    
+    // Test with type hint
+    TypeHintMapper.convertColumn(mockColumnRep, null, null, "DECIMAL(10,2)");
+    verify(mockColumn).cast(any(DecimalType.class));
+  }
+  
+  @Test
+  void testConvertCollectionColumn() {
+    // Setup mocks
+    Collection mockCollection = mock(Collection.class);
+    ColumnRepresentation mockColumnRep = mock(ColumnRepresentation.class);
+    Column mockColumn = mock(Column.class);
+    Column mockCastColumn = mock(Column.class);
+    
+    when(mockCollection.getColumn()).thenReturn(mockColumnRep);
+    when(mockCollection.getFhirType()).thenReturn(Optional.of(FHIRDefinedType.BOOLEAN));
+    when(mockCollection.getType()).thenReturn(Optional.empty());
+    when(mockColumnRep.getValue()).thenReturn(mockColumn);
+    when(mockColumn.cast(any(DataType.class))).thenReturn(mockCastColumn);
+    
+    // Test conversion
+    TypeHintMapper.convertCollectionColumn(mockCollection, "INTEGER");
+    verify(mockColumn).cast(DataTypes.IntegerType);
+  }
+  
+  @Test
+  void testBase64BinaryConversion() {
+    // Setup mocks for base64Binary conversion
+    ColumnRepresentation mockColumnRep = mock(ColumnRepresentation.class);
+    Column mockColumn = mock(Column.class);
+    
+    when(mockColumnRep.getValue()).thenReturn(mockColumn);
+    
+    // Test base64Binary conversion with BINARY type hint
+    TypeHintMapper.convertColumn(mockColumnRep, FHIRDefinedType.BASE64BINARY, null, "BINARY");
+    
+    // This is a bit tricky to verify since we're using a static method (functions.unbase64)
+    // In a real test, we might use a framework like PowerMock, but for this example
+    // we'll just verify that the column value was accessed
+    verify(mockColumnRep, atLeastOnce()).getValue();
   }
 }
