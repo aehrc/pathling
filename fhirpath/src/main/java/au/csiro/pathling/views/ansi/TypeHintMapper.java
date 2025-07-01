@@ -133,7 +133,7 @@ public class TypeHintMapper {
     
     // If there's a type hint but no type information, try to parse the hint
     if (typeHint != null && !typeHint.isEmpty()) {
-      Optional<DataType> hintedType = AnsiSqlTypeParserUtils.parse(typeHint);
+      Optional<DataType> hintedType = AnsiSqlTypeParse.parse(typeHint);
       if (hintedType.isPresent()) {
         return hintedType.get();
       }
