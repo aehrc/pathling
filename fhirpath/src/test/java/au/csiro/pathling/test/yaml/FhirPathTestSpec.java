@@ -87,6 +87,21 @@ public record FhirPathTestSpec(@Nullable Map<Object, Object> subject,
     boolean isError() {
       return nonNull(errorMsg);
     }
+
+    /**
+     * Determines whether this test case is a parse-only test.
+     * <p>
+     * A test case is considered parse-only if it has neither an expected error message nor an
+     * expected result. Parse-only tests validate that expressions can be parsed and evaluated
+     * without throwing exceptions, similar to bulk expression parsing tests. They are useful for
+     * testing expression syntax validity without needing to verify specific outputs.
+     *
+     * @return true if this test case only validates parsing, false if it expects specific results
+     * or errors
+     */
+    boolean isExpressionOnly() {
+      return errorMsg == null && result == null;
+    }
   }
 
   /**

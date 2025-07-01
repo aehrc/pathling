@@ -5,6 +5,7 @@ import au.csiro.pathling.test.yaml.YamlSpec;
 import au.csiro.pathling.test.yaml.YamlSpecCachedTestBase;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 
 @Slf4j
@@ -16,6 +17,12 @@ public class YamlFhirpathTest extends YamlSpecCachedTestBase {
 
   @YamlSpec("fhirpath-ptl/cases/math.yaml")
   void testMath(@Nonnull final RuntimeCase testCase) {
+    run(testCase);
+  }
+
+  @Disabled("Disabled until we add exclusion rules")
+  @YamlSpec("fhirpath-ptl/cases/search-params.yaml")
+  void testSearchParams(@Nonnull final RuntimeCase testCase) {
     run(testCase);
   }
 }

@@ -224,6 +224,8 @@ public abstract class YamlSpecTestBase {
       if (spec.isError()) {
         log.info("assertError({}->'{}'}):[{}]", spec.expression(), spec.errorMsg(),
             spec.description());
+      } else if (spec.isExpressionOnly()) {
+        log.info("assertParseOnly({}):[{}]", spec.expression(), spec.description());
       } else {
         log.info("assertResult({}=({})):[{}]", spec.result(), spec.expression(),
             spec.description());
@@ -300,6 +302,13 @@ public abstract class YamlSpecTestBase {
             assertEquals(spec.errorMsg(), rootCauseMsg);
           }
         }
+      } else if (spec.isExpressionOnly()) {
+        // Parse-only test: just verify the expression can be parsed and evaluated without errors
+        final FhirPath fhirPath = PARSER.parse(spec.expression());
+        log.trace("FhirPath expression: {}", fhirPath);
+        final Collection evalResult = evaluator.evaluate(fhirPath);
+        log.trace("Evaluation result: {}", evalResult);
+        // Test passes if no exception is thrown during parsing and evaluation
       } else {
         final FhirPath fhirPath = PARSER.parse(spec.expression());
         log.trace("FhirPath expression: {}", fhirPath);
