@@ -3,7 +3,7 @@
   "resources": [
     {
       "resourceType": "Patient",
-      "id": "p1",
+      "id": "123",
       "active": true,
       "name": [
         {
@@ -29,12 +29,24 @@
       "title": "Patient status with ANSI type hint",
       "view": {
         "resource": "Patient",
+        "constant": [
+          {
+            "name": "decimalValue",
+            "valueDecimal": 1232.33
+          }
+        ],
         "select": [
           {
             "column": [
               {
                 "name": "id",
-                "path": "id"
+                "path": "id",
+                "tag": [
+                  {
+                    "name": "ansi/type",
+                    "value": "INT"
+                  }
+                ]
               },
               {
                 "name": "status",
@@ -45,6 +57,10 @@
                     "value": "VARCHAR(10)"
                   }
                 ]
+              },
+              {
+                "name": "decimalValue",
+                "path": "%decimalValue"
               }
             ]
           }
@@ -52,12 +68,14 @@
       },
       "expect": [
         {
-          "id": "p1",
-          "status": "true"
+          "id": 123,
+          "status": "true",
+          "decimalValue": "1232.33"
         },
         {
-          "id": "p2",
-          "status": "false"
+          "id": null,
+          "status": "false",
+          "decimalValue": "1232.33"
         }
       ]
     }

@@ -207,6 +207,29 @@ public class StringCollection extends Collection implements Comparable, Numeric,
   }
 
   /**
+   * Returns a new instance based upon a {@link org.hl7.fhir.r4.model.CanonicalType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link StringCollection}
+   */
+  @Nonnull
+  public static StringCollection fromValue(@Nonnull final org.hl7.fhir.r4.model.CanonicalType value) {
+    return StringCollection.fromValue(value.getValueAsString());
+  }
+
+  // fromValue for MarkdownType
+  /**
+   * Returns a new instance based upon a {@link org.hl7.fhir.r4.model.MarkdownType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link StringCollection}
+   */
+  @Nonnull
+  public static StringCollection fromValue(@Nonnull final org.hl7.fhir.r4.model.MarkdownType value) {
+    return StringCollection.fromValue(value.getValueAsString());
+  }
+  
+  /**
    * Parses a FHIRPath string literal into a {@link String}.
    *
    * @param fhirPath The FHIRPath representation of the literal
