@@ -1,7 +1,7 @@
 package au.csiro.pathling.test.yaml;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsString;
-import static au.csiro.pathling.test.yaml.FhipathTestSpec.TestCase.ANY_ERROR;
+import static au.csiro.pathling.test.yaml.FhirPathTestSpec.TestCase.ANY_ERROR;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -26,7 +26,7 @@ import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.TestResources;
-import au.csiro.pathling.test.yaml.FhipathTestSpec.TestCase;
+import au.csiro.pathling.test.yaml.FhirPathTestSpec.TestCase;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -160,6 +160,7 @@ public abstract class YamlSpecTestBase {
 
     @Override
     public void check(@Nonnull final ResolverBuilder rb) {
+      // Do nothing, as there are no tests to run.
     }
 
     @Override
@@ -185,7 +186,7 @@ public abstract class YamlSpecTestBase {
     private static final Parser PARSER = new Parser();
 
     @Nonnull
-    FhipathTestSpec.TestCase spec;
+    FhirPathTestSpec.TestCase spec;
 
     @Nonnull
     @Exclude
@@ -203,7 +204,7 @@ public abstract class YamlSpecTestBase {
 
     @Nonnull
     private ColumnRepresentation getResultRepresentation() {
-      final Object result = requireNonNull(spec.getResult());
+      final Object result = requireNonNull(spec.result());
       final Object resultRepresentation = result instanceof final List<?> list && list.size() == 1
                                           ? list.get(0)
                                           : result;
@@ -221,11 +222,11 @@ public abstract class YamlSpecTestBase {
     public void log(@Nonnull final Logger log) {
       exclusion.ifPresent(s -> log.info("Exclusion: {}", s));
       if (spec.isError()) {
-        log.info("assertError({}->'{}'}):[{}]", spec.getExpression(), spec.getErrorMsg(),
-            spec.getDescription());
+        log.info("assertError({}->'{}'}):[{}]", spec.expression(), spec.errorMsg(),
+            spec.description());
       } else {
-        log.info("assertResult({}=({})):[{}]", spec.getResult(), spec.getExpression(),
-            spec.getDescription());
+        log.info("assertResult({}=({})):[{}]", spec.result(), spec.expression(),
+            spec.description());
       }
       log.debug("Subject:\n{}", resolverFactory);
     }
@@ -233,10 +234,10 @@ public abstract class YamlSpecTestBase {
     @Override
     @Nonnull
     public String getDescription() {
-      return spec.getDescription() != null
+      return spec.description() != null
              ?
-             spec.getDescription()
-             : spec.getExpression();
+             spec.description()
+             : spec.expression();
     }
 
     @Nullable
@@ -271,14 +272,14 @@ public abstract class YamlSpecTestBase {
 
       // If the spec has variables, convert them to FHIRPath collections and add them to the 
       // evaluator.
-      if (spec.getVariables() != null) {
-        builder = builder.variables(toVariableCollections(spec.getVariables()));
+      if (spec.variables() != null) {
+        builder = builder.variables(toVariableCollections(spec.variables()));
       }
 
       final FhirpathEvaluator evaluator = builder.build();
       if (spec.isError()) {
         try {
-          final FhirPath fhirPath = PARSER.parse(spec.getExpression());
+          final FhirPath fhirPath = PARSER.parse(spec.expression());
           log.trace("FhirPath expression: {}", fhirPath);
           final Collection evalResult = evaluator.evaluate(fhirPath);
           log.trace("Evaluation result: {}", evalResult);
@@ -294,13 +295,13 @@ public abstract class YamlSpecTestBase {
         } catch (final Exception e) {
           log.trace("Received expected error: {}", e.toString());
           final String rootCauseMsg = ExceptionUtils.getRootCause(e).getMessage();
-          log.debug("Expected error message: '{}', got: {}", spec.getErrorMsg(), rootCauseMsg);
-          if (!ANY_ERROR.equals(spec.getErrorMsg())) {
-            assertEquals(spec.getErrorMsg(), rootCauseMsg);
+          log.debug("Expected error message: '{}', got: {}", spec.errorMsg(), rootCauseMsg);
+          if (!ANY_ERROR.equals(spec.errorMsg())) {
+            assertEquals(spec.errorMsg(), rootCauseMsg);
           }
         }
       } else {
-        final FhirPath fhirPath = PARSER.parse(spec.getExpression());
+        final FhirPath fhirPath = PARSER.parse(spec.expression());
         log.trace("FhirPath expression: {}", fhirPath);
         final Collection evalResult = evaluator.evaluate(fhirPath);
         log.trace("Evaluation result: {}", evalResult);
@@ -320,7 +321,7 @@ public abstract class YamlSpecTestBase {
         log.debug("Comparing results - Expected: {} | Actual: {}", expected, actual);
         assertEquals(expected, actual,
             String.format("Expression evaluation mismatch for '%s'. Expected: %s, but got: %s",
-                spec.getExpression(), expected, actual));
+                spec.expression(), expected, actual));
       }
     }
 
@@ -526,7 +527,7 @@ public abstract class YamlSpecTestBase {
     @Override
     public Stream<? extends Arguments> provideArguments(final ExtensionContext context) {
       final TestConfiguration config = loadTestConfiguration(context);
-      final FhipathTestSpec spec = loadTestSpec(context);
+      final FhirPathTestSpec spec = loadTestSpec(context);
       final Function<RuntimeContext, ResourceResolver> defaultResolverFactory = createDefaultResolverFactory(
           spec);
 
@@ -576,7 +577,7 @@ public abstract class YamlSpecTestBase {
           .filter(s -> !s.isBlank());
     }
 
-    private FhipathTestSpec loadTestSpec(final ExtensionContext context) {
+    private FhirPathTestSpec loadTestSpec(final ExtensionContext context) {
       final String yamlSpecLocation = context.getTestMethod()
           .orElseThrow(() -> new IllegalStateException("Test method not found in context"))
           .getAnnotation(YamlSpec.class)
@@ -584,12 +585,12 @@ public abstract class YamlSpecTestBase {
 
       log.debug("Loading test specification from: {}", yamlSpecLocation);
       final String testSpec = getResourceAsString(yamlSpecLocation);
-      return FhipathTestSpec.fromYaml(testSpec);
+      return FhirPathTestSpec.fromYaml(testSpec);
     }
 
     private Function<RuntimeContext, ResourceResolver> createDefaultResolverFactory(
-        final FhipathTestSpec spec) {
-      return Optional.ofNullable(spec.getSubject())
+        final FhirPathTestSpec spec) {
+      return Optional.ofNullable(spec.subject())
           .map(subject -> {
             @SuppressWarnings("unchecked")
             final Map<Object, Object> convertedSubject = new HashMap<>(subject);
@@ -618,11 +619,11 @@ public abstract class YamlSpecTestBase {
     }
 
     private Stream<Arguments> createTestCases(
-        final FhipathTestSpec spec,
+        final FhirPathTestSpec spec,
         final TestConfiguration config,
         final Function<RuntimeContext, ResourceResolver> defaultResolverFactory) {
 
-      final List<Arguments> cases = spec.getCases()
+      final List<Arguments> cases = spec.cases()
           .stream()
           .filter(this::filterDisabledTests)
           .map(testCase -> createRuntimeCase(testCase, config, defaultResolverFactory))
@@ -635,7 +636,7 @@ public abstract class YamlSpecTestBase {
     }
 
     private boolean filterDisabledTests(final TestCase testCase) {
-      if (testCase.isDisable()) {
+      if (testCase.disable()) {
         log.warn("Skipping disabled test case: {}", testCase);
         return false;
       }
@@ -648,7 +649,7 @@ public abstract class YamlSpecTestBase {
         final Function<RuntimeContext, ResourceResolver> defaultResolverFactory) {
 
       final Function<RuntimeContext, ResourceResolver> resolverFactory = Optional.ofNullable(
-              testCase.getInputFile())
+              testCase.inputFile())
           .map(f -> createFileBasedResolver(f, config.resourceBase()))
           .orElse(defaultResolverFactory);
 

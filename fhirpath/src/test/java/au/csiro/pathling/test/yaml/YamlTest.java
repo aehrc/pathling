@@ -42,7 +42,7 @@ import org.yaml.snakeyaml.Yaml;
 
 @SpringBootUnitTest
 @Tag("WorkTest")
-public class YamlTest {
+class YamlTest {
 
 
   @Autowired
@@ -186,7 +186,7 @@ public class YamlTest {
   @Test
   void testLoad() {
     final String testSpec = getResourceAsString("fhirpath-js/cases/5.1_existence.yaml");
-    final FhipathTestSpec spec = FhipathTestSpec.fromYaml(testSpec);
+    final FhirPathTestSpec spec = FhirPathTestSpec.fromYaml(testSpec);
     System.out.println(spec);
   }
 

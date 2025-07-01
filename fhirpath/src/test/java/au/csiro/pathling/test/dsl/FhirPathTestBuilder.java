@@ -1,6 +1,10 @@
 package au.csiro.pathling.test.dsl;
 
+import static au.csiro.pathling.test.yaml.FhirPathTestSpec.TestCase.ANY_ERROR;
+import static java.util.Objects.nonNull;
+
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
+import au.csiro.pathling.test.yaml.FhirPathTestSpec;
 import au.csiro.pathling.test.yaml.FhirTypedLiteral;
 import au.csiro.pathling.test.yaml.YamlSpecTestBase;
 import au.csiro.pathling.test.yaml.YamlSupport;
@@ -19,9 +23,6 @@ import lombok.RequiredArgsConstructor;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.DynamicTest;
-
-import static au.csiro.pathling.test.yaml.FhipathTestSpec.TestCase.ANY_ERROR;
-import static java.util.Objects.nonNull;
 
 @RequiredArgsConstructor
 public class FhirPathTestBuilder {
@@ -448,8 +449,8 @@ public class FhirPathTestBuilder {
       }
 
       // Create a TestCase object
-      au.csiro.pathling.test.yaml.FhipathTestSpec.TestCase testCase =
-          new au.csiro.pathling.test.yaml.FhipathTestSpec.TestCase(
+      FhirPathTestSpec.TestCase testCase =
+          new FhirPathTestSpec.TestCase(
               description,
               expression,
               expectError,
