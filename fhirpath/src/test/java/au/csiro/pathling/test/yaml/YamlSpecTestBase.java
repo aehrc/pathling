@@ -277,60 +277,70 @@ public abstract class YamlSpecTestBase {
         builder.variables(toVariableCollections(spec.variables()));
       }
 
+      // Depending on the type of test, we either expect an error, just parse the expression,
+      // or evaluate it and compare the result.
       final FhirpathEvaluator evaluator = builder.build();
       if (spec.isError()) {
-        try {
-          final FhirPath fhirPath = PARSER.parse(spec.expression());
-          log.trace("FhirPath expression: {}", fhirPath);
-          final Collection evalResult = evaluator.evaluate(fhirPath);
-          log.trace("Evaluation result: {}", evalResult);
-          final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
-          final Row resultRow = evaluator.createInitialDataset().select(
-              actualRepresentation.getValue().alias("actual")
-          ).first();
-          final Object actual = getResult(resultRow, 0);
-          throw new AssertionError(
-              String.format(
-                  "Expected an error but received a valid result: %s (Expression result: %s)",
-                  actual, evalResult));
-        } catch (final Exception e) {
-          log.trace("Received expected error: {}", e.toString());
-          final String rootCauseMsg = ExceptionUtils.getRootCause(e).getMessage();
-          log.debug("Expected error message: '{}', got: {}", spec.errorMsg(), rootCauseMsg);
-          if (!ANY_ERROR.equals(spec.errorMsg())) {
-            assertEquals(spec.errorMsg(), rootCauseMsg);
-          }
-        }
+        verifyError(evaluator);
       } else if (spec.isExpressionOnly()) {
-        // Parse-only test: just verify the expression can be parsed and evaluated without errors
-        final FhirPath fhirPath = PARSER.parse(spec.expression());
-        log.trace("FhirPath expression: {}", fhirPath);
-        final Collection evalResult = evaluator.evaluate(fhirPath);
-        log.trace("Evaluation result: {}", evalResult);
-        // Test passes if no exception is thrown during parsing and evaluation
+        verifyEvaluation(evaluator);
       } else {
-        final FhirPath fhirPath = PARSER.parse(spec.expression());
-        log.trace("FhirPath expression: {}", fhirPath);
-        final Collection evalResult = evaluator.evaluate(fhirPath);
-        log.trace("Evaluation result: {}", evalResult);
-
-        final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
-        final ColumnRepresentation expectedRepresentation = getResultRepresentation();
-
-        final Row resultRow = evaluator.createInitialDataset().select(
-            actualRepresentation.getValue().alias("actual"),
-            expectedRepresentation.getValue().alias("expected")
-        ).first();
-
-        final Object actual = getResult(resultRow, 0);
-        final Object expected = getResult(resultRow, 1);
-
-        log.trace("Result schema: {}", resultRow.schema().treeString());
-        log.debug("Comparing results - Expected: {} | Actual: {}", expected, actual);
-        assertEquals(expected, actual,
-            String.format("Expression evaluation mismatch for '%s'. Expected: %s, but got: %s",
-                spec.expression(), expected, actual));
+        verifyExpectedResult(evaluator);
       }
+    }
+
+    private void verifyError(@Nonnull final FhirpathEvaluator evaluator) {
+      try {
+        final Collection evalResult = verifyEvaluation(evaluator);
+        final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
+        final Row resultRow = evaluator.createInitialDataset().select(
+            actualRepresentation.getValue().alias("actual")
+        ).first();
+        final Object actual = getResult(resultRow, 0);
+        throw new AssertionError(
+            String.format(
+                "Expected an error but received a valid result: %s (Expression result: %s)",
+                actual, evalResult));
+      } catch (final Exception e) {
+        log.trace("Received expected error: {}", e.toString());
+        final String rootCauseMsg = ExceptionUtils.getRootCause(e).getMessage();
+        log.debug("Expected error message: '{}', got: {}", spec.errorMsg(), rootCauseMsg);
+        if (!ANY_ERROR.equals(spec.errorMsg())) {
+          assertEquals(spec.errorMsg(), rootCauseMsg);
+        }
+      }
+    }
+
+    private Collection verifyEvaluation(final FhirpathEvaluator evaluator) {
+      final FhirPath fhirPath = PARSER.parse(spec.expression());
+      log.trace("FhirPath expression: {}", fhirPath);
+
+      final Collection result = evaluator.evaluate(fhirPath);
+      log.trace("Evaluation result: {}", result);
+      // Test passes if no exception is thrown during parsing and evaluation
+
+      return result;
+    }
+
+    private void verifyExpectedResult(final FhirpathEvaluator evaluator) {
+      final Collection evalResult = verifyEvaluation(evaluator);
+
+      final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
+      final ColumnRepresentation expectedRepresentation = getResultRepresentation();
+
+      final Row resultRow = evaluator.createInitialDataset().select(
+          actualRepresentation.getValue().alias("actual"),
+          expectedRepresentation.getValue().alias("expected")
+      ).first();
+
+      final Object actual = getResult(resultRow, 0);
+      final Object expected = getResult(resultRow, 1);
+
+      log.trace("Result schema: {}", resultRow.schema().treeString());
+      log.debug("Comparing results - Expected: {} | Actual: {}", expected, actual);
+      assertEquals(expected, actual,
+          String.format("Expression evaluation mismatch for '%s'. Expected: %s, but got: %s",
+              spec.expression(), expected, actual));
     }
 
     @Override
