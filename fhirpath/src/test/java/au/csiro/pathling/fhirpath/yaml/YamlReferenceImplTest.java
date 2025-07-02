@@ -1,6 +1,6 @@
 package au.csiro.pathling.fhirpath.yaml;
 
-import au.csiro.pathling.test.yaml.YamlSpecCachedTestBase;
+import au.csiro.pathling.test.yaml.YamlCachedTestBase;
 import au.csiro.pathling.test.yaml.annotations.YamlConfig;
 import au.csiro.pathling.test.yaml.annotations.YamlSpec;
 import au.csiro.pathling.test.yaml.runtimecase.RuntimeCase;
@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Tag;
     resourceBase = "fhirpath-js/resources"
 )
 
-public class YamlReferenceImplTest extends YamlSpecCachedTestBase {
+public class YamlReferenceImplTest extends YamlCachedTestBase {
 
   //   From: https://github.com/hl7/fhirpath.js/
   //   Tag: 3.16.4

@@ -6,8 +6,8 @@ import static java.util.Objects.nonNull;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.test.yaml.FhirTypedLiteral;
 import au.csiro.pathling.test.yaml.RuntimeContext;
-import au.csiro.pathling.test.yaml.YamlSpecTestBase;
 import au.csiro.pathling.test.yaml.YamlSupport;
+import au.csiro.pathling.test.yaml.YamlTestBase;
 import au.csiro.pathling.test.yaml.YamlTestDefinition;
 import au.csiro.pathling.test.yaml.resolver.ArbitraryObjectResolverFactory;
 import au.csiro.pathling.test.yaml.resolver.HapiResolverFactory;
@@ -32,7 +32,7 @@ import org.junit.jupiter.api.DynamicTest;
 @RequiredArgsConstructor
 public class FhirPathTestBuilder {
 
-  private final YamlSpecTestBase testBase;
+  private final YamlTestBase testBase;
   private final List<TestCaseBuilder> testCases = new ArrayList<>();
 
   @Nullable

@@ -9,10 +9,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-public abstract class YamlSpecCachedTestBase extends YamlSpecTestBase {
+public abstract class YamlCachedTestBase extends YamlTestBase {
 
   @Nonnull
-  private static final Map<Class<? extends YamlSpecCachedTestBase>,
+  private static final Map<Class<? extends YamlCachedTestBase>,
       Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver>> CACHE =
       Collections.synchronizedMap(new HashMap<>());
 

@@ -49,10 +49,10 @@ public class FhirpathArgumentProvider implements ArgumentsProvider {
 
   private TestConfiguration loadTestConfiguration(final ExtensionContext context) {
     final boolean exclusionsOnly = "true".equals(System.getProperty(
-        YamlSpecTestBase.PROPERTY_EXCLUSIONS_ONLY));
+        YamlTestBase.PROPERTY_EXCLUSIONS_ONLY));
     if (exclusionsOnly) {
       log.warn("Running excluded tests only (system property '{}' is set)",
-          YamlSpecTestBase.PROPERTY_EXCLUSIONS_ONLY);
+          YamlTestBase.PROPERTY_EXCLUSIONS_ONLY);
     }
 
     final Set<String> disabledExclusionIds = parseDisabledExclusions();
@@ -69,7 +69,7 @@ public class FhirpathArgumentProvider implements ArgumentsProvider {
   }
 
   private Set<String> parseDisabledExclusions() {
-    return Optional.ofNullable(System.getProperty(YamlSpecTestBase.PROPERTY_DISABLED_EXCLUSIONS))
+    return Optional.ofNullable(System.getProperty(YamlTestBase.PROPERTY_DISABLED_EXCLUSIONS))
         .stream()
         .flatMap(s -> Stream.of(s.split(",")))
         .map(String::trim)

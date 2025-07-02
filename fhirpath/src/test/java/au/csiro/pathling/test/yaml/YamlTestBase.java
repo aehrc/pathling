@@ -23,7 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 @SpringBootUnitTest
 @Slf4j
-public abstract class YamlSpecTestBase {
+public abstract class YamlTestBase {
 
   public static final String PROPERTY_DISABLED_EXCLUSIONS = "au.csiro.pathling.test.yaml.disabledExclusions";
   public static final String PROPERTY_EXCLUSIONS_ONLY = "au.csiro.pathling.test.yaml.exclusionsOnly";

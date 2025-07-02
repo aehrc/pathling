@@ -37,7 +37,7 @@
   <logger level="ERROR" name="org.apache.hadoop.util.NativeCodeLoader"/>
   <logger level="ERROR" name="org.apache.spark.scheduler.DAGScheduler"/>
   <logger level="${au.csiro.pathling.test.yaml.logLevel:-INFO}"
-    name="au.csiro.pathling.test.yaml.YamlSpecTestBase"/>
+    name="au.csiro.pathling.test.yaml.YamlTestBase"/>
   <root level="WARN">
     <appender-ref ref="STDOUT"/>
   </root>

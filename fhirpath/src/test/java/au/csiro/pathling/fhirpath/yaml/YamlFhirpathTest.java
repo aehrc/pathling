@@ -1,6 +1,6 @@
 package au.csiro.pathling.fhirpath.yaml;
 
-import au.csiro.pathling.test.yaml.YamlSpecCachedTestBase;
+import au.csiro.pathling.test.yaml.YamlCachedTestBase;
 import au.csiro.pathling.test.yaml.annotations.YamlConfig;
 import au.csiro.pathling.test.yaml.annotations.YamlSpec;
 import au.csiro.pathling.test.yaml.runtimecase.RuntimeCase;
@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Tag;
 @YamlConfig(
     resourceBase = "fhirpath-ptl/resources"
 )
-public class YamlFhirpathTest extends YamlSpecCachedTestBase {
+public class YamlFhirpathTest extends YamlCachedTestBase {
 
   @YamlSpec("fhirpath-ptl/cases/math.yaml")
   void testMath(@Nonnull final RuntimeCase testCase) {
