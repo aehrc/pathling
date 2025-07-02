@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.fhirpath.path;
 
-import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -38,7 +38,7 @@ import lombok.experimental.UtilityClass;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 @UtilityClass
-final public class Paths {
+public final class Paths {
 
   /**
    * Gets the `$this` path.
@@ -185,7 +185,7 @@ final public class Paths {
       try {
         function = context.resolveFunction(functionIdentifier);
       } catch (final NoSuchFunctionException e) {
-        throw new InvalidUserInputError(e.getMessage());
+        throw new UnsupportedFhirPathFeatureError(e.getMessage());
       }
       final FunctionInput functionInput = new FunctionInput(context, input, arguments);
       return function.invoke(functionInput);

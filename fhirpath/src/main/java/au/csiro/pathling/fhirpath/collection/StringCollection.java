@@ -21,6 +21,7 @@ import static au.csiro.pathling.fhirpath.literal.StringLiteral.unescapeFhirPathS
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
@@ -250,14 +251,13 @@ public class StringCollection extends Collection implements Comparable, Numeric,
     if (operation == MathOperation.ADDITION) {
       return numeric -> mapColumn(c -> functions.concat(c, numeric.getColumn().getValue()));
     } else {
-      throw new InvalidUserInputError(
-          "Cannot perform operation " + operation + " on String.");
+      throw new UnsupportedFhirPathFeatureError(
+          "Operation not supported on String: " + operation);
     }
   }
 
   @Override
   public @Nonnull Collection negate() {
-    throw new InvalidUserInputError(
-        "Negation is not supported for String type.");
+    throw new InvalidUserInputError("Negation is not supported on Strings");
   }
 }
