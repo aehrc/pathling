@@ -1,4 +1,4 @@
-package au.csiro.pathling.test.yaml.runtimecase;
+package au.csiro.pathling.test.yaml.executor;
 
 import static au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase.ANY_ERROR;
 import static java.util.Objects.requireNonNull;
@@ -41,7 +41,7 @@ import org.slf4j.Logger;
 import scala.collection.mutable.WrappedArray;
 
 /**
- * Standard implementation of RuntimeCase that handles the execution and validation of FHIRPath test
+ * Standard implementation of YamlTestExecutor that handles the execution and validation of FHIRPath test
  * cases. This class is responsible for:
  * <ul>
  *   <li>Parsing and evaluating FHIRPath expressions</li>
@@ -52,7 +52,7 @@ import scala.collection.mutable.WrappedArray;
  */
 @Value(staticConstructor = "of")
 @Slf4j
-public class StdRuntimeCase implements RuntimeCase {
+public class DefaultYamlTestExecutor implements YamlTestExecutor {
 
   private static final Parser PARSER = new Parser();
 

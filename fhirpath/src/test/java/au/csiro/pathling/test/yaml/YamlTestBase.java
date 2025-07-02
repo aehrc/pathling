@@ -2,9 +2,9 @@ package au.csiro.pathling.test.yaml;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.test.yaml.executor.DefaultYamlTestExecutor;
+import au.csiro.pathling.test.yaml.executor.YamlTestExecutor;
 import au.csiro.pathling.test.yaml.resolver.ResolverBuilder;
-import au.csiro.pathling.test.yaml.runtimecase.RuntimeCase;
-import au.csiro.pathling.test.yaml.runtimecase.StdRuntimeCase;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
@@ -51,11 +51,12 @@ public abstract class YamlTestBase {
    * @param testCase The test case to run
    * @throws TestAbortedException if the test case is excluded
    */
-  public void run(@Nonnull final RuntimeCase testCase) {
+  public void run(@Nonnull final YamlTestExecutor testCase) {
     testCase.log(log);
 
     // Check if the test case is excluded and skip if no outcome is defined.
-    if (testCase instanceof final StdRuntimeCase stdCase && stdCase.getExclusion().isPresent()
+    if (testCase instanceof final DefaultYamlTestExecutor stdCase && stdCase.getExclusion()
+        .isPresent()
         && stdCase.getExclusion().get().getOutcome() == null) {
       throw new TestAbortedException(
           "Test case skipped due to exclusion: " + stdCase.getExclusion().get());

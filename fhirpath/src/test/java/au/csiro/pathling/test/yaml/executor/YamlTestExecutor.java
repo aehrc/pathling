@@ -1,4 +1,4 @@
-package au.csiro.pathling.test.yaml.runtimecase;
+package au.csiro.pathling.test.yaml.executor;
 
 import au.csiro.pathling.test.yaml.resolver.ResolverBuilder;
 import jakarta.annotation.Nonnull;
@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 /**
  * Interface defining the contract for test case execution.
  */
-public interface RuntimeCase {
+public interface YamlTestExecutor {
 
   /**
    * Logs the test case details.

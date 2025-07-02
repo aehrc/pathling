@@ -3,7 +3,7 @@ package au.csiro.pathling.fhirpath.yaml;
 import au.csiro.pathling.test.yaml.YamlCachedTestBase;
 import au.csiro.pathling.test.yaml.annotations.YamlTest;
 import au.csiro.pathling.test.yaml.annotations.YamlTestConfiguration;
-import au.csiro.pathling.test.yaml.runtimecase.RuntimeCase;
+import au.csiro.pathling.test.yaml.executor.YamlTestExecutor;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Tag;
@@ -44,102 +44,102 @@ public class YamlReferenceImplTest extends YamlCachedTestBase {
   // 8_variables.yaml
 
   @YamlTest("fhirpath-js/cases/3.2_paths.yaml")
-  void testPaths(@Nonnull final RuntimeCase testCase) {
+  void testPaths(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/4.1_literals.yaml")
-  void testLiterals(@Nonnull final RuntimeCase testCase) {
+  void testLiterals(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/5.1_existence.yaml")
-  void testExistence(@Nonnull final RuntimeCase testCase) {
+  void testExistence(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/5.2.3_repeat.yaml")
-  void testRepeat(@Nonnull final RuntimeCase testCase) {
+  void testRepeat(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/5.2_filtering_and_projection.yaml")
-  void testFilteringAndProjection(@Nonnull final RuntimeCase testCase) {
+  void testFilteringAndProjection(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/5.3_subsetting.yaml")
-  void testSubsetting(@Nonnull final RuntimeCase testCase) {
+  void testSubsetting(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/5.4_combining.yaml")
-  void testCombining(@Nonnull final RuntimeCase testCase) {
+  void testCombining(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/5.5_conversion.yaml")
-  void testConversion(@Nonnull final RuntimeCase testCase) {
+  void testConversion(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/5.6_string_manipulation.yaml")
-  void testStringManipulation(@Nonnull final RuntimeCase testCase) {
+  void testStringManipulation(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/5.7_math.yaml")
-  void testMath5(@Nonnull final RuntimeCase testCase) {
+  void testMath5(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/5.8_tree_navigation.yaml")
-  void testTreeNavigation(@Nonnull final RuntimeCase testCase) {
+  void testTreeNavigation(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/5.9_utility_functions.yaml")
-  void testUtilityFunctions(@Nonnull final RuntimeCase testCase) {
+  void testUtilityFunctions(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/6.1_equality.yaml")
-  void testEquality(@Nonnull final RuntimeCase testCase) {
+  void testEquality(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/6.2_comparision.yaml")
-  void testComparison(@Nonnull final RuntimeCase testCase) {
+  void testComparison(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/6.3_types.yaml")
-  void testTypes(@Nonnull final RuntimeCase testCase) {
+  void testTypes(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/6.4_collections.yaml")
-  void testCollections(@Nonnull final RuntimeCase testCase) {
+  void testCollections(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/6.5_boolean_logic.yaml")
-  void testBooleanLogic(@Nonnull final RuntimeCase testCase) {
+  void testBooleanLogic(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/6.6_math.yaml")
-  void testMath6(@Nonnull final RuntimeCase testCase) {
+  void testMath6(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/7_aggregate.yaml")
-  void testAggregate(@Nonnull final RuntimeCase testCase) {
+  void testAggregate(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/8_variables.yaml")
-  void testVariables(@Nonnull final RuntimeCase testCase) {
+  void testVariables(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
@@ -155,32 +155,32 @@ public class YamlReferenceImplTest extends YamlCachedTestBase {
   //   simple.yaml
 
   @YamlTest("fhirpath-js/cases/extensions.yaml")
-  void testExtension(@Nonnull final RuntimeCase testCase) {
+  void testExtension(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/factory.yaml")
-  void testFactory(@Nonnull final RuntimeCase testCase) {
+  void testFactory(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/fhir-r4.yaml")
-  void testFhirR4(@Nonnull final RuntimeCase testCase) {
+  void testFhirR4(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/fhir-quantity.yaml")
-  void testFhirQuantity(@Nonnull final RuntimeCase testCase) {
+  void testFhirQuantity(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/hasValue.yaml")
-  void testHasValue(@Nonnull final RuntimeCase testCase) {
+  void testHasValue(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 
   @YamlTest("fhirpath-js/cases/simple.yaml")
-  void testSimple(@Nonnull final RuntimeCase testCase) {
+  void testSimple(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 

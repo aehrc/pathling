@@ -7,12 +7,12 @@ import au.csiro.pathling.test.TestResources;
 import au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase;
 import au.csiro.pathling.test.yaml.annotations.YamlTest;
 import au.csiro.pathling.test.yaml.annotations.YamlTestConfiguration;
+import au.csiro.pathling.test.yaml.executor.DefaultYamlTestExecutor;
+import au.csiro.pathling.test.yaml.executor.YamlTestExecutor;
 import au.csiro.pathling.test.yaml.resolver.ArbitraryObjectResolverFactory;
 import au.csiro.pathling.test.yaml.resolver.EmptyResolverFactory;
 import au.csiro.pathling.test.yaml.resolver.FhirResolverFactory;
-import au.csiro.pathling.test.yaml.runtimecase.NoTestRuntimeCase;
-import au.csiro.pathling.test.yaml.runtimecase.RuntimeCase;
-import au.csiro.pathling.test.yaml.runtimecase.StdRuntimeCase;
+import au.csiro.pathling.test.yaml.executor.EmptyYamlTestExecutor;
 import jakarta.annotation.Nonnull;
 import java.io.File;
 import java.util.HashMap;
@@ -146,7 +146,7 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
         .toList();
 
     return cases.isEmpty()
-           ? Stream.of(Arguments.of(NoTestRuntimeCase.of()))
+           ? Stream.of(Arguments.of(EmptyYamlTestExecutor.of()))
            : cases.stream();
   }
 
@@ -158,7 +158,7 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
     return true;
   }
 
-  private RuntimeCase createRuntimeCase(
+  private YamlTestExecutor createRuntimeCase(
       final TestCase testCase,
       final TestConfiguration config,
       final Function<RuntimeContext, ResourceResolver> defaultResolverFactory) {
@@ -168,7 +168,7 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
         .map(f -> createFileBasedResolver(f, config.resourceBase()))
         .orElse(defaultResolverFactory);
 
-    return StdRuntimeCase.of(
+    return DefaultYamlTestExecutor.of(
         testCase,
         resolverFactory,
         config.excluder().apply(testCase)
