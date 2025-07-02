@@ -39,10 +39,6 @@ public class TestConfig {
 
   private static final Yaml YAML_PARSER = new Yaml();
 
-  public enum ExpectedOutcome {
-    ERROR, FAILURE
-  }
-
   @Value(staticConstructor = "of")
   static class FunctionPredicate implements Predicate<FhirPathTestSpec.TestCase> {
 
@@ -149,6 +145,9 @@ public class TestConfig {
   @NoArgsConstructor
   public static class Exclude {
 
+    public static final String OUTCOME_ERROR = "error";
+    public static final String OUTCOME_FAILURE = "failure";
+
     /**
      * Provides a reference to a GitHub Issue.
      */
@@ -178,13 +177,7 @@ public class TestConfig {
      * is present and set to null, the outcome will be ERROR.
      */
     @Nonnull
-    ExpectedOutcome outcome = ExpectedOutcome.ERROR;
-
-    public void setOutcome(@Nullable final ExpectedOutcome outcome) {
-      this.outcome = outcome == null
-                     ? ExpectedOutcome.ERROR
-                     : outcome;
-    }
+    String outcome = OUTCOME_ERROR;
 
     /**
      * Provides a way to disable the exclusion without removing it from the configuration file.

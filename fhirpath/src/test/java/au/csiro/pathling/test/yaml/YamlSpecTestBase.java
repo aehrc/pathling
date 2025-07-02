@@ -336,17 +336,17 @@ public abstract class YamlSpecTestBase {
     @Override
     public void check(@Nonnull final ResolverBuilder rb) {
       if (exclusion.isPresent()) {
-        final TestConfig.ExpectedOutcome outcome = exclusion.get().getOutcome();
+        final String outcome = exclusion.get().getOutcome();
         try {
           doCheck(rb);
         } catch (final Exception e) {
-          if (outcome == TestConfig.ExpectedOutcome.ERROR) {
+          if (TestConfig.Exclude.OUTCOME_ERROR.equals(outcome)) {
             log.info("Successfully caught expected error in excluded test: {}", e.getMessage());
             return;
           }
           throw e;
         } catch (final AssertionError e) {
-          if (outcome == TestConfig.ExpectedOutcome.FAILURE) {
+          if (TestConfig.Exclude.OUTCOME_FAILURE.equals(outcome)) {
             log.info("Successfully caught expected failure in excluded test: {}", e.getMessage());
             return;
           }
