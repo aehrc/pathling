@@ -58,8 +58,9 @@ class YamlTestRunnerTest {
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 
+  @SuppressWarnings("SameParameterValue")
   @Nonnull
-  static String yamlToJsonResource(@Nonnull final String yamlData) throws Exception {
+  private static String yamlToJsonResource(@Nonnull final String yamlData) throws Exception {
     final Map<Object, Object> data = YAML_PARSER.load(yamlData);
     // Serialize the data map into a JSON string
     return OBJECT_MAPPER.writeValueAsString(data);
@@ -69,7 +70,7 @@ class YamlTestRunnerTest {
   @Test
   void testSimpleYaml() throws Exception {
 
-    String subjectString =
+    final String subjectString =
         """
               el:
                 a: 2
@@ -92,7 +93,7 @@ class YamlTestRunnerTest {
             """;
 
     final Map<Object, Object> subjectYamlModel = YAML_PARSER.load(subjectString);
-    DefResourceDefinition subjectDefinition = (DefResourceDefinition) YamlSupport.yamlToDefinition(
+    final DefResourceDefinition subjectDefinition = (DefResourceDefinition) YamlSupport.yamlToDefinition(
         "Test",
         subjectYamlModel);
 
@@ -141,7 +142,7 @@ class YamlTestRunnerTest {
     // pethaps I couild flatten the result representation here as well
 
     final Object result = testCase.get("result");
-    final Object resultRepresentation = result instanceof List<?> list && list.size() == 1
+    final Object resultRepresentation = result instanceof final List<?> list && list.size() == 1
                                         ? list.get(0)
                                         : result;
 
@@ -212,7 +213,7 @@ class YamlTestRunnerTest {
     final Dataset<Row> inputDS = spark.createDataset(List.of(resource),
         fhirEncoders.of(resource.fhirType())).toDF();
 
-    DefResourceResolver resolver = DefResourceResolver.of(
+    final DefResourceResolver resolver = DefResourceResolver.of(
         FhirResourceTag.of(ResourceType.fromCode(resource.fhirType())),
         FhirDefinitionContext.of(fhirContext),
         inputDS
