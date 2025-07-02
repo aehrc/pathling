@@ -156,7 +156,7 @@ public class YamlSupport {
       FHIRDefinedType.CODING, SparkHelpers.codingStructType(),
       FHIRDefinedType.NULL, DataTypes.NullType
   );
-  static final Yaml YAML = new Yaml(new FhirConstructor(), new FhirRepresenter());
+  public static final Yaml YAML = new Yaml(new FhirConstructor(), new FhirRepresenter());
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 

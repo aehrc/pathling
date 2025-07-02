@@ -6,8 +6,11 @@ import static java.util.Objects.nonNull;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.test.yaml.FhirPathTestSpec;
 import au.csiro.pathling.test.yaml.FhirTypedLiteral;
+import au.csiro.pathling.test.yaml.RuntimeContext;
 import au.csiro.pathling.test.yaml.YamlSpecTestBase;
 import au.csiro.pathling.test.yaml.YamlSupport;
+import au.csiro.pathling.test.yaml.resolver.ArbitraryObjectResolverFactory;
+import au.csiro.pathling.test.yaml.resolver.HapiResolverFactory;
 import au.csiro.pathling.test.yaml.runtimecase.RuntimeCase;
 import au.csiro.pathling.test.yaml.runtimecase.StdRuntimeCase;
 import jakarta.annotation.Nonnull;
@@ -153,11 +156,11 @@ public class FhirPathTestBuilder {
   @Nonnull
   public Stream<DynamicTest> build() {
 
-    final Function<YamlSpecTestBase.RuntimeContext, ResourceResolver> resolverFactory;
+    final Function<RuntimeContext, ResourceResolver> resolverFactory;
     if (resource != null) {
-      resolverFactory = YamlSpecTestBase.HapiResolverFactory.of(resource);
+      resolverFactory = HapiResolverFactory.of(resource);
     } else if (subject != null) {
-      resolverFactory = YamlSpecTestBase.OMResolverFactory.of(buildSubject());
+      resolverFactory = ArbitraryObjectResolverFactory.of(buildSubject());
     } else {
       throw new IllegalStateException("No resource or subject provided for FhirPath tests.");
     }
@@ -437,7 +440,7 @@ public class FhirPathTestBuilder {
 
 
     RuntimeCase build(
-        Function<YamlSpecTestBase.RuntimeContext, ResourceResolver> resolverFactory) {
+        Function<RuntimeContext, ResourceResolver> resolverFactory) {
       // Convert the result to the expected format
       Object formattedResult;
       if (result instanceof Number || result instanceof Boolean || result instanceof String) {

@@ -1,4 +1,4 @@
-package au.csiro.pathling.test.yaml;
+package au.csiro.pathling.test.yaml.annotations;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

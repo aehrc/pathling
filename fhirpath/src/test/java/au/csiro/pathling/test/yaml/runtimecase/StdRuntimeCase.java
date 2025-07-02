@@ -17,9 +17,9 @@ import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.yaml.FhirPathTestSpec.TestCase;
+import au.csiro.pathling.test.yaml.resolver.ResolverBuilder;
+import au.csiro.pathling.test.yaml.RuntimeContext;
 import au.csiro.pathling.test.yaml.TestConfig;
-import au.csiro.pathling.test.yaml.YamlSpecTestBase.ResolverBuilder;
-import au.csiro.pathling.test.yaml.YamlSpecTestBase.RuntimeContext;
 import au.csiro.pathling.test.yaml.YamlSupport;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -173,9 +173,9 @@ public class StdRuntimeCase implements RuntimeCase {
               "Expected an error but received a valid result: %s (Expression result: %s)",
               actual, evalResult));
     } catch (final Exception e) {
-     log.trace("Received expected error: {}", e.toString());
+      log.trace("Received expected error: {}", e.toString());
       final String rootCauseMsg = ExceptionUtils.getRootCause(e).getMessage();
-     log.debug("Expected error message: '{}', got: {}", spec.errorMsg(),
+      log.debug("Expected error message: '{}', got: {}", spec.errorMsg(),
           rootCauseMsg);
       if (!ANY_ERROR.equals(spec.errorMsg())) {
         assertEquals(spec.errorMsg(), rootCauseMsg);
@@ -185,10 +185,10 @@ public class StdRuntimeCase implements RuntimeCase {
 
   private Collection verifyEvaluation(final FhirpathEvaluator evaluator) {
     final FhirPath fhirPath = PARSER.parse(spec.expression());
-   log.trace("FhirPath expression: {}", fhirPath);
+    log.trace("FhirPath expression: {}", fhirPath);
 
     final Collection result = evaluator.evaluate(fhirPath);
-   log.trace("Evaluation result: {}", result);
+    log.trace("Evaluation result: {}", result);
     // Test passes if no exception is thrown during parsing and evaluation
 
     return result;
@@ -208,8 +208,8 @@ public class StdRuntimeCase implements RuntimeCase {
     final Object actual = getResult(resultRow, 0);
     final Object expected = getResult(resultRow, 1);
 
-   log.trace("Result schema: {}", resultRow.schema().treeString());
-   log.debug("Comparing results - Expected: {} | Actual: {}", expected, actual);
+    log.trace("Result schema: {}", resultRow.schema().treeString());
+    log.debug("Comparing results - Expected: {} | Actual: {}", expected, actual);
     assertEquals(expected, actual,
         String.format("Expression evaluation mismatch for '%s'. Expected: %s, but got: %s",
             spec.expression(), expected, actual));
@@ -223,14 +223,14 @@ public class StdRuntimeCase implements RuntimeCase {
         doCheck(rb);
       } catch (final Exception e) {
         if (TestConfig.Exclude.OUTCOME_ERROR.equals(outcome)) {
-         log.info("Successfully caught expected error in excluded test: {}",
+          log.info("Successfully caught expected error in excluded test: {}",
               e.getMessage());
           return;
         }
         throw e;
       } catch (final AssertionError e) {
         if (TestConfig.Exclude.OUTCOME_FAILURE.equals(outcome)) {
-         log.info("Successfully caught expected failure in excluded test: {}",
+          log.info("Successfully caught expected failure in excluded test: {}",
               e.getMessage());
           return;
         }

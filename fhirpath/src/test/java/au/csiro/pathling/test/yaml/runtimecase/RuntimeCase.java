@@ -1,6 +1,6 @@
 package au.csiro.pathling.test.yaml.runtimecase;
 
-import au.csiro.pathling.test.yaml.YamlSpecTestBase.ResolverBuilder;
+import au.csiro.pathling.test.yaml.resolver.ResolverBuilder;
 import jakarta.annotation.Nonnull;
 import org.slf4j.Logger;
 
