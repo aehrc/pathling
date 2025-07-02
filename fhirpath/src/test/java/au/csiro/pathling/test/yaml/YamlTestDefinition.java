@@ -1,6 +1,6 @@
 package au.csiro.pathling.test.yaml;
 
-import static au.csiro.pathling.test.yaml.FhirPathTestSpec.TestCase.ANY_ERROR;
+import static au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase.ANY_ERROR;
 import static au.csiro.pathling.test.yaml.YamlSupport.YAML;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
@@ -29,8 +29,8 @@ import lombok.extern.slf4j.Slf4j;
  */
 @SuppressWarnings("unchecked")
 @Slf4j
-public record FhirPathTestSpec(@Nullable Map<Object, Object> subject,
-                               @Nonnull List<TestCase> cases) {
+public record YamlTestDefinition(@Nullable Map<Object, Object> subject,
+                                 @Nonnull List<TestCase> cases) {
 
   /**
    * Represents an individual test case within a FHIRPath test specification.
@@ -217,12 +217,12 @@ public record FhirPathTestSpec(@Nullable Map<Object, Object> subject,
   private static List<TestCase> buildCases(@Nonnull final Collection<Object> cases) {
     return cases.stream()
         .map(c -> (Map<Object, Object>) c)
-        .flatMap(FhirPathTestSpec::mapCaseOrGroup)
+        .flatMap(YamlTestDefinition::mapCaseOrGroup)
         .toList();
   }
 
   /**
-   * Creates a FhirPathTestSpec instance by parsing YAML data.
+   * Creates a YamlTestDefinition instance by parsing YAML data.
    * <p>
    * This is the primary factory method for creating test specifications from YAML files or strings.
    * The YAML structure should follow the expected format with optional "subject" and required
@@ -237,9 +237,9 @@ public record FhirPathTestSpec(@Nullable Map<Object, Object> subject,
    * @see YamlSupport#YAML
    */
   @Nonnull
-  static FhirPathTestSpec fromYaml(@Nonnull final String yamlData) {
+  static YamlTestDefinition fromYaml(@Nonnull final String yamlData) {
     final Map<String, Object> yamlOM = YAML.load(yamlData);
-    return new FhirPathTestSpec(
+    return new YamlTestDefinition(
         (Map<Object, Object>) yamlOM.get("subject"),
         buildCases((List<Object>) requireNonNull(yamlOM.get("tests")))
     );

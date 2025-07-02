@@ -186,7 +186,7 @@ class YamlTest {
   @Test
   void testLoad() {
     final String testSpec = getResourceAsString("fhirpath-js/cases/5.1_existence.yaml");
-    final FhirPathTestSpec spec = FhirPathTestSpec.fromYaml(testSpec);
+    final YamlTestDefinition spec = YamlTestDefinition.fromYaml(testSpec);
     System.out.println(spec);
   }
 

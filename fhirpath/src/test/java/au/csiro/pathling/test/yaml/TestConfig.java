@@ -40,13 +40,13 @@ public class TestConfig {
   private static final Yaml YAML_PARSER = new Yaml();
 
   @Value(staticConstructor = "of")
-  static class FunctionPredicate implements Predicate<FhirPathTestSpec.TestCase> {
+  static class FunctionPredicate implements Predicate<YamlTestDefinition.TestCase> {
 
     @Nonnull
     String function;
 
     @Override
-    public boolean test(final FhirPathTestSpec.TestCase testCase) {
+    public boolean test(final YamlTestDefinition.TestCase testCase) {
       Objects.requireNonNull(testCase);
       return testCase.expression().contains(function + "(");
     }
@@ -54,13 +54,13 @@ public class TestConfig {
 
 
   @Value(staticConstructor = "of")
-  static class ExpressionPredicate implements Predicate<FhirPathTestSpec.TestCase> {
+  static class ExpressionPredicate implements Predicate<YamlTestDefinition.TestCase> {
 
     @Nonnull
     Pattern regex;
 
     @Override
-    public boolean test(final FhirPathTestSpec.TestCase testCase) {
+    public boolean test(final YamlTestDefinition.TestCase testCase) {
       return regex.asPredicate().test(testCase.expression());
     }
 
@@ -71,13 +71,13 @@ public class TestConfig {
 
 
   @Value(staticConstructor = "of")
-  static class AnyPredicate implements Predicate<FhirPathTestSpec.TestCase> {
+  static class AnyPredicate implements Predicate<YamlTestDefinition.TestCase> {
 
     @Nonnull
     String substring;
 
     @Override
-    public boolean test(final FhirPathTestSpec.TestCase testCase) {
+    public boolean test(final YamlTestDefinition.TestCase testCase) {
       return Stream.of(
           Stream.of(testCase.expression()),
           Stream.ofNullable(testCase.description())
@@ -86,7 +86,7 @@ public class TestConfig {
   }
 
   @Value(staticConstructor = "of")
-  static class SpELPredicate implements Predicate<FhirPathTestSpec.TestCase> {
+  static class SpELPredicate implements Predicate<YamlTestDefinition.TestCase> {
 
     private static final ExpressionParser PARSER = new SpelExpressionParser();
 
@@ -94,7 +94,7 @@ public class TestConfig {
     String spELExpression;
 
     @Override
-    public boolean test(final FhirPathTestSpec.TestCase testCase) {
+    public boolean test(final YamlTestDefinition.TestCase testCase) {
       final EvaluationContext context = new StandardEvaluationContext();
       context.setVariable("testCase", testCase);
       final Expression exp = PARSER.parseExpression(spELExpression);
@@ -103,16 +103,16 @@ public class TestConfig {
   }
 
   @Value(staticConstructor = "of")
-  static class TaggedPredicate implements Predicate<FhirPathTestSpec.TestCase> {
+  static class TaggedPredicate implements Predicate<YamlTestDefinition.TestCase> {
 
     @Nonnull
-    Predicate<FhirPathTestSpec.TestCase> predicate;
+    Predicate<YamlTestDefinition.TestCase> predicate;
 
     @Nonnull
     String tag;
 
     @Override
-    public boolean test(final FhirPathTestSpec.TestCase testCase) {
+    public boolean test(final YamlTestDefinition.TestCase testCase) {
       return predicate.test(testCase);
     }
 
@@ -123,7 +123,7 @@ public class TestConfig {
     }
 
     @Nonnull
-    static TaggedPredicate of(@Nonnull final Predicate<FhirPathTestSpec.TestCase> predicate,
+    static TaggedPredicate of(@Nonnull final Predicate<YamlTestDefinition.TestCase> predicate,
         @Nonnull final String title, @Nonnull final String category) {
       try {
         // Create a MessageDigest instance for MD5
@@ -215,7 +215,7 @@ public class TestConfig {
     List<String> spel;
 
     @Nonnull
-    Stream<Predicate<FhirPathTestSpec.TestCase>> toPredicates(@Nonnull final String category) {
+    Stream<Predicate<YamlTestDefinition.TestCase>> toPredicates(@Nonnull final String category) {
       if (!disabled) {
         //noinspection RedundantCast
         return Stream.of(
@@ -229,7 +229,8 @@ public class TestConfig {
                     .map(SpELPredicate::of)
             ).flatMap(Function.identity())
             .map(
-                p -> TaggedPredicate.of((Predicate<FhirPathTestSpec.TestCase>) p, title, category));
+                p -> TaggedPredicate.of((Predicate<YamlTestDefinition.TestCase>) p, title,
+                    category));
       } else {
         return Stream.empty();
       }
@@ -276,7 +277,7 @@ public class TestConfig {
     }
 
     @Nonnull
-    private Stream<Predicate<FhirPathTestSpec.TestCase>> toPredicates(
+    private Stream<Predicate<YamlTestDefinition.TestCase>> toPredicates(
         @Nonnull final Collection<String> disabledExclusionIds) {
       return exclude.stream()
           .filter(ex -> isNull(ex.getId()) || !disabledExclusionIds.contains(ex.id))
@@ -288,14 +289,14 @@ public class TestConfig {
   List<ExcludeSet> excludeSet = List.of();
 
   @Nonnull
-  Stream<Predicate<FhirPathTestSpec.TestCase>> toPredicates(
+  Stream<Predicate<YamlTestDefinition.TestCase>> toPredicates(
       @Nonnull final Collection<String> disabledExclusionIds) {
     return excludeSet.stream().flatMap(es -> es.toPredicates(disabledExclusionIds));
   }
 
 
   @Nonnull
-  public Function<FhirPathTestSpec.TestCase, Optional<Exclude>> toExcluder(
+  public Function<YamlTestDefinition.TestCase, Optional<Exclude>> toExcluder(
       @Nonnull final Collection<String> disabledExclusionIds) {
     final List<Exclude> exclusions = excludeSet.stream()
         .flatMap(es -> es.getExclusions(disabledExclusionIds)).toList();

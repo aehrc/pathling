@@ -1,6 +1,6 @@
 package au.csiro.pathling.test.yaml.runtimecase;
 
-import static au.csiro.pathling.test.yaml.FhirPathTestSpec.TestCase.ANY_ERROR;
+import static au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase.ANY_ERROR;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -16,11 +16,11 @@ import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.test.yaml.FhirPathTestSpec.TestCase;
-import au.csiro.pathling.test.yaml.resolver.ResolverBuilder;
 import au.csiro.pathling.test.yaml.RuntimeContext;
 import au.csiro.pathling.test.yaml.TestConfig;
 import au.csiro.pathling.test.yaml.YamlSupport;
+import au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase;
+import au.csiro.pathling.test.yaml.resolver.ResolverBuilder;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;

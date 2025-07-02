@@ -1,14 +1,14 @@
 package au.csiro.pathling.test.dsl;
 
-import static au.csiro.pathling.test.yaml.FhirPathTestSpec.TestCase.ANY_ERROR;
+import static au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase.ANY_ERROR;
 import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
-import au.csiro.pathling.test.yaml.FhirPathTestSpec;
 import au.csiro.pathling.test.yaml.FhirTypedLiteral;
 import au.csiro.pathling.test.yaml.RuntimeContext;
 import au.csiro.pathling.test.yaml.YamlSpecTestBase;
 import au.csiro.pathling.test.yaml.YamlSupport;
+import au.csiro.pathling.test.yaml.YamlTestDefinition;
 import au.csiro.pathling.test.yaml.resolver.ArbitraryObjectResolverFactory;
 import au.csiro.pathling.test.yaml.resolver.HapiResolverFactory;
 import au.csiro.pathling.test.yaml.runtimecase.RuntimeCase;
@@ -454,8 +454,8 @@ public class FhirPathTestBuilder {
       }
 
       // Create a TestCase object
-      FhirPathTestSpec.TestCase testCase =
-          new FhirPathTestSpec.TestCase(
+      YamlTestDefinition.TestCase testCase =
+          new YamlTestDefinition.TestCase(
               description,
               expression,
               expectError,

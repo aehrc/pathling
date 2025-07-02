@@ -4,7 +4,7 @@ import static au.csiro.pathling.test.TestResources.getResourceAsString;
 
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.test.TestResources;
-import au.csiro.pathling.test.yaml.FhirPathTestSpec.TestCase;
+import au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase;
 import au.csiro.pathling.test.yaml.annotations.YamlConfig;
 import au.csiro.pathling.test.yaml.annotations.YamlSpec;
 import au.csiro.pathling.test.yaml.resolver.ArbitraryObjectResolverFactory;
@@ -40,7 +40,7 @@ public class FhirpathArgumentProvider implements ArgumentsProvider {
   @Override
   public Stream<? extends Arguments> provideArguments(final ExtensionContext context) {
     final TestConfiguration config = loadTestConfiguration(context);
-    final FhirPathTestSpec spec = loadTestSpec(context);
+    final YamlTestDefinition spec = loadTestSpec(context);
     final Function<RuntimeContext, ResourceResolver> defaultResolverFactory = createDefaultResolverFactory(
         spec);
 
@@ -91,7 +91,7 @@ public class FhirpathArgumentProvider implements ArgumentsProvider {
         .filter(s -> !s.isBlank());
   }
 
-  private FhirPathTestSpec loadTestSpec(final ExtensionContext context) {
+  private YamlTestDefinition loadTestSpec(final ExtensionContext context) {
     final String yamlSpecLocation = context.getTestMethod()
         .orElseThrow(() -> new IllegalStateException("Test method not found in context"))
         .getAnnotation(YamlSpec.class)
@@ -99,11 +99,11 @@ public class FhirpathArgumentProvider implements ArgumentsProvider {
 
     log.debug("Loading test specification from: {}", yamlSpecLocation);
     final String testSpec = getResourceAsString(yamlSpecLocation);
-    return FhirPathTestSpec.fromYaml(testSpec);
+    return YamlTestDefinition.fromYaml(testSpec);
   }
 
   private Function<RuntimeContext, ResourceResolver> createDefaultResolverFactory(
-      final FhirPathTestSpec spec) {
+      final YamlTestDefinition spec) {
     return Optional.ofNullable(spec.subject())
         .map(subject -> {
           @SuppressWarnings("unchecked") final Map<Object, Object> convertedSubject = new HashMap<>(
@@ -134,7 +134,7 @@ public class FhirpathArgumentProvider implements ArgumentsProvider {
   }
 
   private Stream<Arguments> createTestCases(
-      final FhirPathTestSpec spec,
+      final YamlTestDefinition spec,
       final TestConfiguration config,
       final Function<RuntimeContext, ResourceResolver> defaultResolverFactory) {
 
