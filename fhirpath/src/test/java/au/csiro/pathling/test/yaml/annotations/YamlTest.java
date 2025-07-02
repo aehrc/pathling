@@ -9,7 +9,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 @Retention(RetentionPolicy.RUNTIME)
 @ArgumentsSource(FhirpathArgumentProvider.class)
 @ParameterizedTest
-public @interface YamlSpec {
+public @interface YamlTest {
 
   String value();
 }

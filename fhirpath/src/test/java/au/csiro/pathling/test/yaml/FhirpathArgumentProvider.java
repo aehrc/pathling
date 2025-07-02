@@ -5,8 +5,8 @@ import static au.csiro.pathling.test.TestResources.getResourceAsString;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.test.TestResources;
 import au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase;
-import au.csiro.pathling.test.yaml.annotations.YamlConfig;
-import au.csiro.pathling.test.yaml.annotations.YamlSpec;
+import au.csiro.pathling.test.yaml.annotations.YamlTest;
+import au.csiro.pathling.test.yaml.annotations.YamlTestConfiguration;
 import au.csiro.pathling.test.yaml.resolver.ArbitraryObjectResolverFactory;
 import au.csiro.pathling.test.yaml.resolver.EmptyResolverFactory;
 import au.csiro.pathling.test.yaml.resolver.FhirResolverFactory;
@@ -79,22 +79,22 @@ public class FhirpathArgumentProvider implements ArgumentsProvider {
 
   private Optional<String> getTestConfigPath(final ExtensionContext context) {
     return context.getTestClass()
-        .flatMap(c -> Optional.ofNullable(c.getAnnotation(YamlConfig.class)))
-        .map(YamlConfig::config)
+        .flatMap(c -> Optional.ofNullable(c.getAnnotation(YamlTestConfiguration.class)))
+        .map(YamlTestConfiguration::config)
         .filter(s -> !s.isBlank());
   }
 
   private Optional<String> getResourceBase(final ExtensionContext context) {
     return context.getTestClass()
-        .flatMap(c -> Optional.ofNullable(c.getAnnotation(YamlConfig.class)))
-        .map(YamlConfig::resourceBase)
+        .flatMap(c -> Optional.ofNullable(c.getAnnotation(YamlTestConfiguration.class)))
+        .map(YamlTestConfiguration::resourceBase)
         .filter(s -> !s.isBlank());
   }
 
   private YamlTestDefinition loadTestSpec(final ExtensionContext context) {
     final String yamlSpecLocation = context.getTestMethod()
         .orElseThrow(() -> new IllegalStateException("Test method not found in context"))
-        .getAnnotation(YamlSpec.class)
+        .getAnnotation(YamlTest.class)
         .value();
 
     log.debug("Loading test specification from: {}", yamlSpecLocation);
