@@ -41,8 +41,8 @@ import org.slf4j.Logger;
 import scala.collection.mutable.WrappedArray;
 
 /**
- * Standard implementation of YamlTestExecutor that handles the execution and validation of FHIRPath test
- * cases. This class is responsible for:
+ * Standard implementation of YamlTestExecutor that handles the execution and validation of FHIRPath
+ * test cases. This class is responsible for:
  * <ul>
  *   <li>Parsing and evaluating FHIRPath expressions</li>
  *   <li>Comparing actual results with expected outcomes</li>
@@ -66,6 +66,111 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
   @Nonnull
   @Exclude
   Optional<TestConfig.Exclude> exclusion;
+
+  @Override
+  public void check(@Nonnull final ResolverBuilder rb) {
+    if (exclusion.isPresent()) {
+      final String outcome = exclusion.get().getOutcome();
+      try {
+        doCheck(rb);
+      } catch (final Exception e) {
+        if (TestConfig.Exclude.OUTCOME_ERROR.equals(outcome)) {
+          log.info("Successfully caught expected error in excluded test: {}",
+              e.getMessage());
+          return;
+        }
+        throw e;
+      } catch (final AssertionError e) {
+        if (TestConfig.Exclude.OUTCOME_FAILURE.equals(outcome)) {
+          log.info("Successfully caught expected failure in excluded test: {}",
+              e.getMessage());
+          return;
+        }
+        throw e;
+      }
+      throw new AssertionError("Excluded test passed when expected outcome was " + outcome);
+    } else {
+      doCheck(rb);
+    }
+  }
+
+  private void doCheck(@Nonnull final ResolverBuilder rb) {
+    final FhirpathEvaluator.FhirpathEvaluatorBuilder builder = FhirpathEvaluator
+        .fromResolver(rb.create(resolverFactory));
+
+    // If the spec has variables, convert them to FHIRPath collections and add them to the
+    // evaluator.
+    if (spec.variables() != null) {
+      builder.variables(toVariableCollections(spec.variables()));
+    }
+
+    // Depending on the type of test, we either expect an error, just parse the expression,
+    // or evaluate it and compare the result.
+    final FhirpathEvaluator evaluator = builder.build();
+    if (spec.isError()) {
+      verifyError(evaluator);
+    } else if (spec.isExpressionOnly()) {
+      verifyEvaluation(evaluator);
+    } else {
+      verifyExpectedResult(evaluator);
+    }
+  }
+
+  private void verifyError(@Nonnull final FhirpathEvaluator evaluator) {
+    try {
+      final Collection evalResult = verifyEvaluation(evaluator);
+      final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
+      final Row resultRow = evaluator.createInitialDataset().select(
+          actualRepresentation.getValue().alias("actual")
+      ).first();
+      final Object actual = getResult(resultRow, 0);
+      throw new AssertionError(
+          String.format(
+              "Expected an error but received a valid result: %s (Expression result: %s)",
+              actual, evalResult));
+    } catch (final Exception e) {
+      log.trace("Received expected error: {}", e.toString());
+      final String rootCauseMsg = ExceptionUtils.getRootCause(e).getMessage();
+      log.debug("Expected error message: '{}', got: {}", spec.errorMsg(),
+          rootCauseMsg);
+      if (!ANY_ERROR.equals(spec.errorMsg())) {
+        assertEquals(spec.errorMsg(), rootCauseMsg);
+      }
+    }
+  }
+
+  @Nonnull
+  private Collection verifyEvaluation(@Nonnull final FhirpathEvaluator evaluator) {
+    final FhirPath fhirPath = PARSER.parse(spec.expression());
+    log.trace("FhirPath expression: {}", fhirPath);
+
+    final Collection result = evaluator.evaluate(fhirPath);
+    log.trace("Evaluation result: {}", result);
+    // Test passes if no exception is thrown during parsing and evaluation
+
+    return result;
+  }
+
+  private void verifyExpectedResult(@Nonnull final FhirpathEvaluator evaluator) {
+    final Collection evalResult = verifyEvaluation(evaluator);
+
+    final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
+    final ColumnRepresentation expectedRepresentation = getResultRepresentation();
+
+    final Row resultRow = evaluator.createInitialDataset().select(
+        actualRepresentation.getValue().alias("actual"),
+        expectedRepresentation.getValue().alias("expected")
+    ).first();
+
+    final Object actual = getResult(resultRow, 0);
+    final Object expected = getResult(resultRow, 1);
+
+    log.trace("Result schema: {}", resultRow.schema().treeString());
+    log.debug("Comparing results - Expected: {} | Actual: {}", expected, actual);
+    assertEquals(expected, actual,
+        String.format("Expression evaluation mismatch for '%s'. Expected: %s, but got: %s",
+            spec.expression(), expected, actual));
+  }
 
   @Nonnull
   @Override
@@ -135,110 +240,6 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
               : wrappedArray);
     } else {
       return adjustResultType(actualRaw);
-    }
-  }
-
-  private void doCheck(@Nonnull final ResolverBuilder rb) {
-    final FhirpathEvaluator.FhirpathEvaluatorBuilder builder = FhirpathEvaluator
-        .fromResolver(rb.create(resolverFactory));
-
-    // If the spec has variables, convert them to FHIRPath collections and add them to the
-    // evaluator.
-    if (spec.variables() != null) {
-      builder.variables(toVariableCollections(spec.variables()));
-    }
-
-    // Depending on the type of test, we either expect an error, just parse the expression,
-    // or evaluate it and compare the result.
-    final FhirpathEvaluator evaluator = builder.build();
-    if (spec.isError()) {
-      verifyError(evaluator);
-    } else if (spec.isExpressionOnly()) {
-      verifyEvaluation(evaluator);
-    } else {
-      verifyExpectedResult(evaluator);
-    }
-  }
-
-  private void verifyError(@Nonnull final FhirpathEvaluator evaluator) {
-    try {
-      final Collection evalResult = verifyEvaluation(evaluator);
-      final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
-      final Row resultRow = evaluator.createInitialDataset().select(
-          actualRepresentation.getValue().alias("actual")
-      ).first();
-      final Object actual = getResult(resultRow, 0);
-      throw new AssertionError(
-          String.format(
-              "Expected an error but received a valid result: %s (Expression result: %s)",
-              actual, evalResult));
-    } catch (final Exception e) {
-      log.trace("Received expected error: {}", e.toString());
-      final String rootCauseMsg = ExceptionUtils.getRootCause(e).getMessage();
-      log.debug("Expected error message: '{}', got: {}", spec.errorMsg(),
-          rootCauseMsg);
-      if (!ANY_ERROR.equals(spec.errorMsg())) {
-        assertEquals(spec.errorMsg(), rootCauseMsg);
-      }
-    }
-  }
-
-  private Collection verifyEvaluation(final FhirpathEvaluator evaluator) {
-    final FhirPath fhirPath = PARSER.parse(spec.expression());
-    log.trace("FhirPath expression: {}", fhirPath);
-
-    final Collection result = evaluator.evaluate(fhirPath);
-    log.trace("Evaluation result: {}", result);
-    // Test passes if no exception is thrown during parsing and evaluation
-
-    return result;
-  }
-
-  private void verifyExpectedResult(final FhirpathEvaluator evaluator) {
-    final Collection evalResult = verifyEvaluation(evaluator);
-
-    final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
-    final ColumnRepresentation expectedRepresentation = getResultRepresentation();
-
-    final Row resultRow = evaluator.createInitialDataset().select(
-        actualRepresentation.getValue().alias("actual"),
-        expectedRepresentation.getValue().alias("expected")
-    ).first();
-
-    final Object actual = getResult(resultRow, 0);
-    final Object expected = getResult(resultRow, 1);
-
-    log.trace("Result schema: {}", resultRow.schema().treeString());
-    log.debug("Comparing results - Expected: {} | Actual: {}", expected, actual);
-    assertEquals(expected, actual,
-        String.format("Expression evaluation mismatch for '%s'. Expected: %s, but got: %s",
-            spec.expression(), expected, actual));
-  }
-
-  @Override
-  public void check(@Nonnull final ResolverBuilder rb) {
-    if (exclusion.isPresent()) {
-      final String outcome = exclusion.get().getOutcome();
-      try {
-        doCheck(rb);
-      } catch (final Exception e) {
-        if (TestConfig.Exclude.OUTCOME_ERROR.equals(outcome)) {
-          log.info("Successfully caught expected error in excluded test: {}",
-              e.getMessage());
-          return;
-        }
-        throw e;
-      } catch (final AssertionError e) {
-        if (TestConfig.Exclude.OUTCOME_FAILURE.equals(outcome)) {
-          log.info("Successfully caught expected failure in excluded test: {}",
-              e.getMessage());
-          return;
-        }
-        throw e;
-      }
-      throw new AssertionError("Excluded test passed when expected outcome was " + outcome);
-    } else {
-      doCheck(rb);
     }
   }
 

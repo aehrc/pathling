@@ -48,20 +48,20 @@ public abstract class YamlTestBase {
   /**
    * Executes a runtime test case, handling logging and exclusion checks.
    *
-   * @param testCase The test case to run
+   * @param executor The test case to run
    * @throws TestAbortedException if the test case is excluded
    */
-  public void run(@Nonnull final YamlTestExecutor testCase) {
-    testCase.log(log);
+  public void run(@Nonnull final YamlTestExecutor executor) {
+    executor.log(log);
 
     // Check if the test case is excluded and skip if no outcome is defined.
-    if (testCase instanceof final DefaultYamlTestExecutor stdCase && stdCase.getExclusion()
-        .isPresent()
-        && stdCase.getExclusion().get().getOutcome() == null) {
+    if (executor instanceof final DefaultYamlTestExecutor defaultExecutor
+        && defaultExecutor.getExclusion().isPresent()
+        && defaultExecutor.getExclusion().get().getOutcome() == null) {
       throw new TestAbortedException(
-          "Test case skipped due to exclusion: " + stdCase.getExclusion().get());
+          "Test case skipped due to exclusion: " + defaultExecutor.getExclusion().get());
     }
 
-    testCase.check(createResolverBuilder());
+    executor.check(createResolverBuilder());
   }
 }
