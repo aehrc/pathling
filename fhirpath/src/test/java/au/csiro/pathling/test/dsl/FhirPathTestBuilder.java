@@ -8,6 +8,8 @@ import au.csiro.pathling.test.yaml.FhirPathTestSpec;
 import au.csiro.pathling.test.yaml.FhirTypedLiteral;
 import au.csiro.pathling.test.yaml.YamlSpecTestBase;
 import au.csiro.pathling.test.yaml.YamlSupport;
+import au.csiro.pathling.test.yaml.runtimecase.RuntimeCase;
+import au.csiro.pathling.test.yaml.runtimecase.StdRuntimeCase;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.ArrayList;
@@ -167,7 +169,7 @@ public class FhirPathTestBuilder {
 
     return testCases.stream()
         .map(tc -> {
-          YamlSpecTestBase.RuntimeCase runtimeCase = tc.build(resolverFactory);
+          RuntimeCase runtimeCase = tc.build(resolverFactory);
           return DynamicTest.dynamicTest(
               runtimeCase.getDescription(),
               () -> testBase.run(runtimeCase)
@@ -434,7 +436,7 @@ public class FhirPathTestBuilder {
     }
 
 
-    YamlSpecTestBase.RuntimeCase build(
+    RuntimeCase build(
         Function<YamlSpecTestBase.RuntimeContext, ResourceResolver> resolverFactory) {
       // Convert the result to the expected format
       Object formattedResult;
@@ -463,7 +465,7 @@ public class FhirPathTestBuilder {
           );
 
       // Create and return the RuntimeCase
-      return YamlSpecTestBase.StdRuntimeCase.of(
+      return StdRuntimeCase.of(
           testCase,
           resolverFactory,
           java.util.Optional.empty()

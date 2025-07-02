@@ -3,6 +3,7 @@ package au.csiro.pathling.fhirpath.yaml;
 import au.csiro.pathling.test.yaml.YamlConfig;
 import au.csiro.pathling.test.yaml.YamlSpec;
 import au.csiro.pathling.test.yaml.YamlSpecCachedTestBase;
+import au.csiro.pathling.test.yaml.runtimecase.RuntimeCase;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Tag;

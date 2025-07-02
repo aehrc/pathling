@@ -313,7 +313,7 @@ public class YamlSupport {
         .orElse(children);
   }
 
-  static ChildDefinition elementFromYaml(String key, Object value) {
+  public static ChildDefinition elementFromYaml(String key, Object value) {
     if (value instanceof List<?> list) {
       return elementFromValues(key, list);
     } else {
@@ -406,7 +406,7 @@ public class YamlSupport {
   }
 
   @Nonnull
-  static StructType childrendToStruct(
+  public static StructType childrendToStruct(
       @Nonnull final List<ChildDefinition> childDefinitions) {
     return new StructType(
         childDefinitions.stream()
@@ -443,7 +443,7 @@ public class YamlSupport {
     } else if (childDefinition instanceof DefChoiceDefinition choiceDefinition) {
       final StructType elementType = childrendToStruct(
           choiceDefinition.getChoices().stream().filter(c -> !c.getName().startsWith("_"))
-              .collect(Collectors.toList()));
+              .toList());
       return Stream.of(elementType.fields());
     } else {
       throw new IllegalArgumentException("Unsupported child definition: " + childDefinition);
@@ -451,7 +451,7 @@ public class YamlSupport {
   }
 
   @Nonnull
-  static String omToJson(@Nonnull final Map<Object, Object> objectModel) {
+  public static String omToJson(@Nonnull final Map<Object, Object> objectModel) {
     try {
       return OBJECT_MAPPER.writeValueAsString(objectModel);
     } catch (JsonProcessingException e) {

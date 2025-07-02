@@ -84,7 +84,7 @@ public record FhirPathTestSpec(@Nullable Map<Object, Object> subject,
      *
      * @return true if this test case expects an error, false if it expects a successful result
      */
-    boolean isError() {
+    public boolean isError() {
       return nonNull(errorMsg);
     }
 
@@ -99,7 +99,7 @@ public record FhirPathTestSpec(@Nullable Map<Object, Object> subject,
      * @return true if this test case only validates parsing, false if it expects specific results
      * or errors
      */
-    boolean isExpressionOnly() {
+    public boolean isExpressionOnly() {
       return errorMsg == null && result == null;
     }
   }
