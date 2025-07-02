@@ -194,7 +194,7 @@ public abstract class YamlSpecTestBase {
 
     @Nonnull
     @Exclude
-    Optional<String> exclusion;
+    Optional<TestConfig.Exclude> exclusion;
 
     @Nonnull
     @Override
@@ -267,15 +267,14 @@ public abstract class YamlSpecTestBase {
       }
     }
 
-    @Override
-    public void check(@Nonnull final ResolverBuilder rb) {
-      FhirpathEvaluator.FhirpathEvaluatorBuilder builder = FhirpathEvaluator
+    private void doCheck(@Nonnull final ResolverBuilder rb) {
+      final FhirpathEvaluator.FhirpathEvaluatorBuilder builder = FhirpathEvaluator
           .fromResolver(rb.create(resolverFactory));
 
-      // If the spec has variables, convert them to FHIRPath collections and add them to the 
+      // If the spec has variables, convert them to FHIRPath collections and add them to the
       // evaluator.
       if (spec.variables() != null) {
-        builder = builder.variables(toVariableCollections(spec.variables()));
+        builder.variables(toVariableCollections(spec.variables()));
       }
 
       final FhirpathEvaluator evaluator = builder.build();
@@ -331,6 +330,31 @@ public abstract class YamlSpecTestBase {
         assertEquals(expected, actual,
             String.format("Expression evaluation mismatch for '%s'. Expected: %s, but got: %s",
                 spec.expression(), expected, actual));
+      }
+    }
+
+    @Override
+    public void check(@Nonnull final ResolverBuilder rb) {
+      if (exclusion.isPresent()) {
+        final TestConfig.ExpectedOutcome outcome = exclusion.get().getOutcome();
+        try {
+          doCheck(rb);
+        } catch (final Exception e) {
+          if (outcome == TestConfig.ExpectedOutcome.ERROR) {
+            log.info("Successfully caught expected error in excluded test: {}", e.getMessage());
+            return;
+          }
+          throw e;
+        } catch (final AssertionError e) {
+          if (outcome == TestConfig.ExpectedOutcome.FAILURE) {
+            log.info("Successfully caught expected failure in excluded test: {}", e.getMessage());
+            return;
+          }
+          throw e;
+        }
+        throw new AssertionError("Excluded test passed when expected outcome was " + outcome);
+      } else {
+        doCheck(rb);
       }
     }
 
@@ -691,7 +715,8 @@ public abstract class YamlSpecTestBase {
         boolean exclusionsOnly
     ) {
 
-      private Function<TestCase, Optional<String>> excluder() {
+      @Nonnull
+      private Function<TestCase, Optional<TestConfig.Exclude>> excluder() {
         final TestConfig config = configPath
             .map(TestResources::getResourceAsString)
             .map(TestConfig::fromYaml)
@@ -720,8 +745,9 @@ public abstract class YamlSpecTestBase {
   public void run(@Nonnull final RuntimeCase testCase) {
     testCase.log(log);
 
-    // Check if the test case is excluded and skip.
-    if (testCase instanceof final StdRuntimeCase stdCase && stdCase.getExclusion().isPresent()) {
+    // Check if the test case is excluded and skip if no outcome is defined.
+    if (testCase instanceof final StdRuntimeCase stdCase && stdCase.getExclusion().isPresent()
+        && stdCase.getExclusion().get().getOutcome() == null) {
       throw new TestAbortedException(
           "Test case skipped due to exclusion: " + stdCase.getExclusion().get());
     }

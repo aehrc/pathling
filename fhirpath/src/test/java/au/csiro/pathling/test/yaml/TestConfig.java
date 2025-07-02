@@ -39,6 +39,10 @@ public class TestConfig {
 
   private static final Yaml YAML_PARSER = new Yaml();
 
+  public enum ExpectedOutcome {
+    ERROR, FAILURE
+  }
+
   @Value(staticConstructor = "of")
   static class FunctionPredicate implements Predicate<FhirPathTestSpec.TestCase> {
 
@@ -170,6 +174,19 @@ public class TestConfig {
     String type;
 
     /**
+     * The expected outcome for the test if it is excluded. If this is not present in the YAML, or
+     * is present and set to null, the outcome will be ERROR.
+     */
+    @Nonnull
+    ExpectedOutcome outcome = ExpectedOutcome.ERROR;
+
+    public void setOutcome(@Nullable final ExpectedOutcome outcome) {
+      this.outcome = outcome == null
+                     ? ExpectedOutcome.ERROR
+                     : outcome;
+    }
+
+    /**
      * Provides a way to disable the exclusion without removing it from the configuration file.
      */
     boolean disabled = false;
@@ -258,6 +275,14 @@ public class TestConfig {
     List<Exclude> exclude;
 
     @Nonnull
+    private Stream<Exclude> getExclusions(
+        @Nonnull final Collection<String> disabledExclusionIds) {
+      return exclude.stream()
+          .filter(ex -> isNull(ex.getId()) || !disabledExclusionIds.contains(ex.id));
+
+    }
+
+    @Nonnull
     private Stream<Predicate<FhirPathTestSpec.TestCase>> toPredicates(
         @Nonnull final Collection<String> disabledExclusionIds) {
       return exclude.stream()
@@ -277,15 +302,13 @@ public class TestConfig {
 
 
   @Nonnull
-  public Function<FhirPathTestSpec.TestCase, Optional<String>> toExcluder(
+  public Function<FhirPathTestSpec.TestCase, Optional<Exclude>> toExcluder(
       @Nonnull final Collection<String> disabledExclusionIds) {
-    final List<Predicate<FhirPathTestSpec.TestCase>> predicates = toPredicates(
-        disabledExclusionIds).toList();
-    return testCase -> predicates
-        .stream()
-        .filter(p -> p.test(testCase))
-        .findFirst()
-        .map(Object::toString);
+    final List<Exclude> exclusions = excludeSet.stream()
+        .flatMap(es -> es.getExclusions(disabledExclusionIds)).toList();
+    return testCase -> exclusions.stream()
+        .filter(ex -> ex.toPredicates(ex.getTitle()).anyMatch(p -> p.test(testCase)))
+        .findFirst();
   }
 
   @Nonnull
