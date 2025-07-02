@@ -35,7 +35,7 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
  * processing of YAML test specifications, configuration management, and test case creation.
  */
 @Slf4j
-public class FhirpathArgumentProvider implements ArgumentsProvider {
+public class YamlTestArgumentProvider implements ArgumentsProvider {
 
   @Override
   public Stream<? extends Arguments> provideArguments(final ExtensionContext context) {
