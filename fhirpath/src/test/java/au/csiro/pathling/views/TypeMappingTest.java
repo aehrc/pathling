@@ -1,5 +1,6 @@
 package au.csiro.pathling.views;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.encoders.FhirEncoders;
@@ -51,34 +52,39 @@ public class TypeMappingTest {
   private SparkSession sparkSession;
 
   /**
-   * Provides test cases for type mapping tests.
-   * Each argument contains:
-   * 1. Description of the test case
-   * 2. FHIR type instance with a value
-   * 3. Expected Spark SQL DataType
-   * 4. Expected value after conversion
+   * Provides test cases for type mapping tests. Each argument contains: 1. Description of the test
+   * case 2. FHIR type instance with a value 3. Expected Spark SQL DataType 4. Expected value after
+   * conversion
    */
   Stream<Arguments> typeMapppingTestCases() {
     return Stream.of(
-        Arguments.of("base64Binary", new Base64BinaryType("SGVsbG8="), DataTypes.BinaryType, "SGVsbG8=".getBytes()),
+        Arguments.of("base64Binary", new Base64BinaryType("SGVsbG8="), DataTypes.BinaryType,
+            "Hello".getBytes()),
         Arguments.of("boolean", new BooleanType(true), DataTypes.BooleanType, true),
-        Arguments.of("canonical", new CanonicalType("http://example.org/fhir/ValueSet/123"), DataTypes.StringType, "http://example.org/fhir/ValueSet/123"),
+        Arguments.of("canonical", new CanonicalType("http://example.org/fhir/ValueSet/123"),
+            DataTypes.StringType, "http://example.org/fhir/ValueSet/123"),
         Arguments.of("code", new CodeType("codeValue"), DataTypes.StringType, "codeValue"),
         Arguments.of("date", new DateType("2023-01-01"), DataTypes.StringType, "2023-01-01"),
-        Arguments.of("dateTime", new DateTimeType("2023-01-01T12:00:00Z"), DataTypes.StringType, "2023-01-01T12:00:00Z"),
+        Arguments.of("dateTime", new DateTimeType("2023-01-01T12:00:00Z"), DataTypes.StringType,
+            "2023-01-01T12:00:00Z"),
         Arguments.of("decimal", new DecimalType("123.45"), DataTypes.StringType, "123.45"),
         Arguments.of("id", new IdType("identifier123"), DataTypes.StringType, "identifier123"),
-        Arguments.of("instant", new InstantType("2023-01-01T12:00:00Z"), DataTypes.StringType, "2023-01-01T12:00:00Z"),
+        Arguments.of("instant", new InstantType("2023-01-01T12:00:00Z"), DataTypes.StringType,
+            "2023-01-01T12:00:00Z"),
         Arguments.of("integer", new IntegerType(42), DataTypes.IntegerType, 42),
-        Arguments.of("markdown", new MarkdownType("**bold text**"), DataTypes.StringType, "**bold text**"),
+        Arguments.of("markdown", new MarkdownType("**bold text**"), DataTypes.StringType,
+            "**bold text**"),
         Arguments.of("oid", new OidType("1.2.3.4.5"), DataTypes.StringType, "1.2.3.4.5"),
         Arguments.of("positiveInt", new PositiveIntType(10), DataTypes.IntegerType, 10),
         Arguments.of("string", new StringType("text value"), DataTypes.StringType, "text value"),
         Arguments.of("time", new TimeType("12:00:00"), DataTypes.StringType, "12:00:00"),
         Arguments.of("unsignedInt", new UnsignedIntType(100), DataTypes.IntegerType, 100),
-        Arguments.of("uri", new UriType("http://example.org"), DataTypes.StringType, "http://example.org"),
-        Arguments.of("url", new UrlType("http://example.org/resource"), DataTypes.StringType, "http://example.org/resource"),
-        Arguments.of("uuid", new UuidType("123e4567-e89b-12d3-a456-426614174000"), DataTypes.StringType, "123e4567-e89b-12d3-a456-426614174000")
+        Arguments.of("uri", new UriType("http://example.org"), DataTypes.StringType,
+            "http://example.org"),
+        Arguments.of("url", new UrlType("http://example.org/resource"), DataTypes.StringType,
+            "http://example.org/resource"),
+        Arguments.of("uuid", new UuidType("123e4567-e89b-12d3-a456-426614174000"),
+            DataTypes.StringType, "123e4567-e89b-12d3-a456-426614174000")
     );
   }
 
@@ -92,7 +98,8 @@ public class TypeMappingTest {
    */
   @ParameterizedTest(name = "{0} type maps to {2}")
   @MethodSource("typeMapppingTestCases")
-  void testDefaultTypeMappings(String description, Type fhirType, DataType expectedDataType, Object expectedValue) {
+  void testDefaultTypeMappings(String description, Type fhirType, DataType expectedDataType,
+      Object expectedValue) {
     final Resource patient = new Patient().setId("Patient/123");
     final ObjectDataSource dataSource = new ObjectDataSource(sparkSession, fhirEncoders,
         List.of(patient));
@@ -112,11 +119,11 @@ public class TypeMappingTest {
 
     final Dataset<Row> result = executor.buildQuery(view);
     assertEquals(expectedDataType, result.schema().apply("value").dataType());
-    
+
     Object actualValue = result.first().getAs("value");
     if (expectedDataType == DataTypes.BinaryType && expectedValue instanceof byte[]) {
       // For binary types, compare the string representation
-      assertEquals(new String((byte[]) expectedValue), new String((byte[]) actualValue));
+      assertArrayEquals((byte[]) expectedValue, (byte[]) actualValue);
     } else {
       assertEquals(expectedValue, actualValue);
     }

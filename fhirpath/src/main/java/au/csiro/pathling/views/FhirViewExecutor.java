@@ -19,6 +19,7 @@ import au.csiro.pathling.view.ProjectionClause;
 import au.csiro.pathling.view.RequestedColumn;
 import au.csiro.pathling.view.UnionSelection;
 import au.csiro.pathling.view.UnnestingSelection;
+import au.csiro.pathling.views.ansi.AnsiSqlTypeParser;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -248,6 +249,17 @@ public class FhirViewExecutor {
    */
   @Nonnull
   private DataType convertAnsiTypeToSparkType(@Nonnull final String ansiType) {
+    return AnsiSqlTypeParser.parseType(ansiType);
+  }
+
+  /**
+   * Converts an ANSI SQL type string to a Spark SQL DataType.
+   *
+   * @param ansiType the ANSI SQL type string
+   * @return the corresponding Spark SQL DataType
+   */
+  @Nonnull
+  private DataType parseSparkSqlType(@Nonnull final String ansiType) {
     return CatalystSqlParser$.MODULE$.parseDataType(ansiType);
   }
 

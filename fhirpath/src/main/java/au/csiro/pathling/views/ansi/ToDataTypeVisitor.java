@@ -9,7 +9,7 @@ import org.apache.spark.sql.types.DataType;
 /**
  * Visitor that converts parsed ANSI SQL type syntax into Spark SQL DataTypes.
  */
-public class ToDataTypeVisitor extends AnsiSqlTypeBaseVisitor<DataType> {
+public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
 
   private final AnsiSqlDataTypeFactory factory;
 
@@ -21,7 +21,7 @@ public class ToDataTypeVisitor extends AnsiSqlTypeBaseVisitor<DataType> {
   }
   
   @Override
-  public DataType visitSqlType(@Nonnull final AnsiSqlTypeParser.SqlTypeContext ctx) {
+  public DataType visitSqlType(@Nonnull final TypesOfAnsiSqlParser.SqlTypeContext ctx) {
     if (ctx.characterType() != null) {
       return visitCharacterType(ctx.characterType());
     } else if (ctx.numericType() != null) {
@@ -41,7 +41,7 @@ public class ToDataTypeVisitor extends AnsiSqlTypeBaseVisitor<DataType> {
   }
 
   @Override
-  public DataType visitCharacterType(@Nonnull final AnsiSqlTypeParser.CharacterTypeContext ctx) {
+  public DataType visitCharacterType(@Nonnull final TypesOfAnsiSqlParser.CharacterTypeContext ctx) {
     String typeText = ctx.getText().toUpperCase();
 
     if (ctx.length != null) {
@@ -61,7 +61,7 @@ public class ToDataTypeVisitor extends AnsiSqlTypeBaseVisitor<DataType> {
   }
 
   @Override
-  public DataType visitNumericType(@Nonnull final AnsiSqlTypeParser.NumericTypeContext ctx) {
+  public DataType visitNumericType(@Nonnull final TypesOfAnsiSqlParser.NumericTypeContext ctx) {
     String typeText = ctx.getText().toUpperCase();
 
     if (typeText.startsWith("SMALLINT")) {
@@ -98,12 +98,12 @@ public class ToDataTypeVisitor extends AnsiSqlTypeBaseVisitor<DataType> {
   }
 
   @Override
-  public DataType visitBooleanType(@Nonnull final AnsiSqlTypeParser.BooleanTypeContext ctx) {
+  public DataType visitBooleanType(@Nonnull final TypesOfAnsiSqlParser.BooleanTypeContext ctx) {
     return factory.createBoolean();
   }
 
   @Override
-  public DataType visitBinaryType(@Nonnull final AnsiSqlTypeParser.BinaryTypeContext ctx) {
+  public DataType visitBinaryType(@Nonnull final TypesOfAnsiSqlParser.BinaryTypeContext ctx) {
     String typeText = ctx.getText().toUpperCase();
 
     if (ctx.length != null) {
@@ -123,7 +123,7 @@ public class ToDataTypeVisitor extends AnsiSqlTypeBaseVisitor<DataType> {
   }
 
   @Override
-  public DataType visitTemporalType(@Nonnull final AnsiSqlTypeParser.TemporalTypeContext ctx) {
+  public DataType visitTemporalType(@Nonnull final TypesOfAnsiSqlParser.TemporalTypeContext ctx) {
     String typeText = ctx.getText().toUpperCase();
 
     if (typeText.startsWith("DATE")) {
@@ -148,7 +148,7 @@ public class ToDataTypeVisitor extends AnsiSqlTypeBaseVisitor<DataType> {
   }
 
   @Override
-  public DataType visitComplexType(@Nonnull final AnsiSqlTypeParser.ComplexTypeContext ctx) {
+  public DataType visitComplexType(@Nonnull final TypesOfAnsiSqlParser.ComplexTypeContext ctx) {
     if (ctx.rowType() != null) {
       return visitRowType(ctx.rowType());
     } else if (ctx.arrayType() != null) {
@@ -160,14 +160,14 @@ public class ToDataTypeVisitor extends AnsiSqlTypeBaseVisitor<DataType> {
   }
 
   @Override
-  public DataType visitRowType(@Nonnull final AnsiSqlTypeParser.RowTypeContext ctx) {
+  public DataType visitRowType(@Nonnull final TypesOfAnsiSqlParser.RowTypeContext ctx) {
     if (ctx.fieldDefinition() == null || ctx.fieldDefinition().isEmpty()) {
       // Empty ROW type
       return factory.createRow(new ArrayList<>());
     }
 
     List<Pair<String, DataType>> fields = new ArrayList<>();
-    for (AnsiSqlTypeParser.FieldDefinitionContext fieldCtx : ctx.fieldDefinition()) {
+    for (TypesOfAnsiSqlParser.FieldDefinitionContext fieldCtx : ctx.fieldDefinition()) {
       String fieldName = fieldCtx.fieldName.getText();
       DataType fieldType = visit(fieldCtx.sqlType());
       fields.add(Pair.of(fieldName, fieldType));
@@ -177,7 +177,7 @@ public class ToDataTypeVisitor extends AnsiSqlTypeBaseVisitor<DataType> {
   }
 
   @Override
-  public DataType visitArrayType(@Nonnull final AnsiSqlTypeParser.ArrayTypeContext ctx) {
+  public DataType visitArrayType(@Nonnull final TypesOfAnsiSqlParser.ArrayTypeContext ctx) {
     if (ctx.sqlType() != null) {
       DataType elementType = visit(ctx.sqlType());
       return factory.createArray(elementType);

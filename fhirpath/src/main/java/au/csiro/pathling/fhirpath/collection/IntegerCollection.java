@@ -175,7 +175,7 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
   @Nonnull
   @Override
   public Optional<Column> getNumericValue() {
-    return Optional.ofNullable(this.getColumn().cast(DataTypes.LongType).getValue());
+    return Optional.ofNullable(this.getColumn().elementCast(DataTypes.LongType).getValue());
   }
 
   @Nonnull
@@ -210,7 +210,7 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
           }
           return IntegerCollection.build(new DefaultRepresentation(valueColumn));
         case DIVISION:
-          final Column numerator = source.getColumn().cast(DecimalCollection.getDecimalType())
+          final Column numerator = source.getColumn().elementCast(DecimalCollection.getDecimalType())
               .getValue();
           valueColumn = operation.getSparkFunction().apply(numerator, targetNumeric);
           return DecimalCollection.build(new DecimalRepresentation(valueColumn));

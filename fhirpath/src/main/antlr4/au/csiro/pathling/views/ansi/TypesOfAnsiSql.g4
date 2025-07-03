@@ -1,4 +1,9 @@
-grammar AnsiSqlType;
+grammar TypesOfAnsiSql;
+
+options {
+    caseInsensitive = true;
+}
+
 
 // Parser rules
 sqlType

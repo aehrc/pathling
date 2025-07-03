@@ -8,33 +8,44 @@
       "name": [
         {
           "family": "Smith",
-          "given": ["John"]
+          "given": [
+            "John",
+            "1900",
+            "3344.60",
+            "true",
+            "2023-10-01 12:00:00.000Z"
+          ]
         }
       ]
     },
     {
-      "resourceType": "Patient",
-      "id": "p2",
-      "active": false,
-      "name": [
-        {
-          "family": "Doe",
-          "given": ["Jane"]
-        }
-      ]
+      "resourceType": "Observation",
+      "id": "Observation/xyz",
+      "effectivePeriod": {
+        "start": "2023-10-01T12:00:00Z",
+        "end": "2023-10-02T12:00:00Z"
+      },
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "2093",
+            "display": "Glucose [Moles/volume] in Blood"
+          }
+        ],
+        "text": "Glucose"
+      },
+      "valueQuantity": {
+        "value": 123.45,
+        "unit": "mg/dL"
+      }
     }
   ],
   "tests": [
     {
-      "title": "Patient status with ANSI type hint",
+      "title": "Runtime evaluation of type hints",
       "view": {
         "resource": "Patient",
-        "constant": [
-          {
-            "name": "decimalValue",
-            "valueDecimal": 1232.33
-          }
-        ],
         "select": [
           {
             "column": [
@@ -59,8 +70,59 @@
                 ]
               },
               {
-                "name": "decimalValue",
-                "path": "%decimalValue"
+                "name": "given_as_string",
+                "path": "name.given",
+                "collection": true,
+                "tag": [
+                  {
+                    "name": "ansi/type",
+                    "value": "ARRAY<VARCHAR(10)>"
+                  }
+                ]
+              },
+              {
+                "name": "given_as_int",
+                "path": "name.given",
+                "collection": true,
+                "tag": [
+                  {
+                    "name": "ansi/type",
+                    "value": "ARRAY<INT>"
+                  }
+                ]
+              },
+              {
+                "name": "given_as_boolean",
+                "path": "name.given",
+                "collection": true,
+                "tag": [
+                  {
+                    "name": "ansi/type",
+                    "value": "ARRAY<BOOLEAN>"
+                  }
+                ]
+              },
+              {
+                "name": "given_as_decimal",
+                "path": "name.given",
+                "collection": true,
+                "tag": [
+                  {
+                    "name": "ansi/type",
+                    "value": "ARRAY<DECIMAL>"
+                  }
+                ]
+              },
+              {
+                "name": "given_as_timestamp",
+                "path": "name.given",
+                "collection": true,
+                "tag": [
+                  {
+                    "name": "ansi/type",
+                    "value": "ARRAY<TIMESTAMP>"
+                  }
+                ]
               }
             ]
           }
@@ -70,12 +132,219 @@
         {
           "id": 123,
           "status": "true",
-          "decimalValue": "1232.33"
-        },
+          "given_as_string": [
+            "John",
+            "1900",
+            "3344.60",
+            "true",
+            "2023-10-01 12:00:00.000Z"
+          ],
+          "given_as_int": [
+            null,
+            1900,
+            3344,
+            null,
+            null
+          ],
+          "given_as_boolean": [
+            null,
+            null,
+            null,
+            true,
+            null
+          ],
+          "given_as_decimal": [
+            null,
+            1900,
+            3344.60,
+            null,
+            null
+          ],
+          "given_as_timestamp": [
+            null,
+            "1900-01-01 00:00:00.0",
+            null,
+            null,
+            "2023-10-01 12:00:00.000Z"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "CHAR(4) hinting",
+      "view": {
+        "resource": "Patient",
+        "constant": [
+          {
+            "name": "string_l1",
+            "valueString": "a"
+          },
+          {
+            "name": "string_l4",
+            "valueString": "abcd"
+          },
+          {
+            "name": "string_l8",
+            "valueString": "abcdefgh"
+          },
+          {
+            "name": "bool_false",
+            "valueBoolean": false
+          }
+        ],
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id"
+              },
+              {
+                "name": "string_l1",
+                "path": "%string_l1",
+                "tag": [
+                  {
+                    "name": "ansi/type",
+                    "value": "CHAR(4)"
+                  }
+                ]
+              },
+              {
+                "name": "string_l4",
+                "path": "%string_l4",
+                "tag": [
+                  {
+                    "name": "ansi/type",
+                    "value": "CHAR(4)"
+                  }
+                ]
+              },
+              {
+                "name": "string_l8",
+                "path": "%string_l8",
+                "tag": [
+                  {
+                    "name": "ansi/type",
+                    "value": "CHAR(4)"
+                  }
+                ]
+              },
+              {
+                "name": "bool_false",
+                "path": "%bool_false",
+                "tag": [
+                  {
+                    "name": "ansi/type",
+                    "value": "CHAR(4)"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
         {
-          "id": null,
-          "status": "false",
-          "decimalValue": "1232.33"
+          "id": "123",
+          "string_l1": "a",
+          "string_l4": "abcd",
+          "string_l8": "abcdefgh",
+          "bool_false": "false"
+        }
+      ]
+    },
+    {
+      "title": "Complex type hinting",
+      "view": {
+        "resource": "Observation",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id"
+              },
+              {
+                "name": "effectivePeriod_as_is",
+                "path": "effectivePeriod"
+              },
+              {
+                "name": "effectivePeriod_as_timestamp",
+                "path": "effectivePeriod",
+                "tag": [
+                  {
+                    "name": "ansi/type",
+                    "value": "ROW(id VARCHAR, begin TIMESTAMP, finish TIMESTAMP)"
+                  }
+                ]
+              },
+              {
+                "name": "codings_as_is",
+                "path": "code.coding",
+                "collection": true
+              },
+
+              {
+                "name": "codings_as_casted",
+                "path": "code.coding",
+                "collection": true,
+                "tag": [
+                  {
+                    "name": "ansi/type",
+                    "value": "ARRAY<ROW(id VARCHAR, system VARCHAR, version VARCHAR, code INT, display VARCHAR, userSelected BOOLEAN)>"
+                  }
+                ]
+              },
+              {
+                "name": "quantity_as_is",
+                "path": "value.ofType(Quantity)"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "xyz",
+          "effectivePeriod_as_is": {
+            "id": null,
+            "start": "2023-10-01T12:00:00Z",
+            "end": "2023-10-02T12:00:00Z"
+          },
+          "effectivePeriod_as_timestamp": {
+            "id": null,
+            "begin": "2023-10-01 12:00:00.0",
+            "finish": "2023-10-02 12:00:00.0"
+          },
+          "codings_as_is": [
+            {
+              "id": null,
+              "system": "http://loinc.org",
+              "version": null,
+              "code": "2093",
+              "display": "Glucose [Moles/volume] in Blood",
+              "userSelected": null
+            }
+          ],
+          "codings_as_casted": [
+            {
+              "id": null,
+              "system": "http://loinc.org",
+              "version": null,
+              "code": 2093,
+              "display": "Glucose [Moles/volume] in Blood",
+              "userSelected": null
+            }
+          ],
+          "quantity_as_is": {
+            "id": null,
+            "value": "123.450000",
+            "value_scale": 2,
+            "comparator": null,
+            "unit": "mg/dL",
+            "system": null,
+            "code": null
+          }
         }
       ]
     }
