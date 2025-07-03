@@ -91,19 +91,23 @@ public class FhirDefinitionContext implements DefinitionContext {
   static Optional<ElementDefinition> buildElement(
       @Nonnull final BaseRuntimeChildDefinition childDefinition,
       @Nonnull final String elementName) {
-    final BaseRuntimeElementDefinition<?> elementDefinition = childDefinition.getChildByName(
-        elementName);
-    if (childDefinition instanceof RuntimeChildResourceDefinition rctd) {
-      return Optional.of(new FhirReferenceDefinition(rctd));
-    } else if (isChildChoiceDefinition(childDefinition) && isReferenceDefinition(
-        elementDefinition)) {
-      return Optional.of(
-          new FhirReferenceDefinition((RuntimeChildChoiceDefinition) childDefinition, elementName));
-    } else if (nonNull(elementDefinition)) {
-      return Optional.of(new FhirElementDefinition(childDefinition, elementName));
-    } else {
-      return Optional.empty();
+
+    if (childDefinition.getValidChildNames().contains(elementName)) {
+      final BaseRuntimeElementDefinition<?> elementDefinition = childDefinition.getChildByName(
+          elementName);
+      if (childDefinition instanceof RuntimeChildResourceDefinition rctd) {
+        return Optional.of(new FhirReferenceDefinition(rctd));
+      } else if (isChildChoiceDefinition(childDefinition) && isReferenceDefinition(
+          elementDefinition)) {
+        return Optional.of(
+            new FhirReferenceDefinition((RuntimeChildChoiceDefinition) childDefinition,
+                elementName));
+      } else if (nonNull(elementDefinition)) {
+        return Optional.of(new FhirElementDefinition(childDefinition, elementName));
+      }
     }
+    return Optional.empty();
+    
   }
 
 
