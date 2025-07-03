@@ -21,6 +21,7 @@
     {
       "resourceType": "Observation",
       "id": "Observation/xyz",
+      "status": "final",
       "effectivePeriod": {
         "start": "2023-10-01T12:00:00Z",
         "end": "2023-10-02T12:00:00Z"
@@ -30,7 +31,8 @@
           {
             "system": "http://loinc.org",
             "code": "2093",
-            "display": "Glucose [Moles/volume] in Blood"
+            "display": "Glucose [Moles/volume] in Blood",
+            "userSelected": true
           }
         ],
         "text": "Glucose"
@@ -38,10 +40,104 @@
       "valueQuantity": {
         "value": 123.45,
         "unit": "mg/dL"
-      }
+      },
+      "component": [
+        {
+          "code": {
+            "coding": [
+              {
+                "system": "uuid:type",
+                "code": "integer",
+                "display": "Integer Type"
+              }
+            ],
+            "text": "integer"
+          },
+          "valueInteger": 1222
+        },
+        {
+          "code": {
+            "coding": [
+              {
+                "system": "uuid:type",
+                "code": "time",
+                "display": "Time Type"
+              }
+            ],
+            "text": "time"
+          },
+          "valueTime": "12:00:00"
+        }
+      ]
     }
   ],
   "tests": [
+    {
+      "title": "default mappings for simple types",
+      "view": {
+        "resource": "Observation",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "value_empty",
+                "path": "{}"
+              },
+              {
+                "name": "value_id",
+                "path": "id"
+              },
+              {
+                "name": "value_code",
+                "path": "status"
+              },
+              {
+                "name": "value_string",
+                "path": "code.text"
+              },
+              {
+                "name": "value_uri",
+                "path": "code.coding.first().system"
+              },
+              {
+                "name": "value_boolean",
+                "path": "code.coding.first().userSelected"
+              },
+              {
+                "name": "value_integer",
+                "path": "component.where(code.text='integer').first().value.ofType(Integer)"
+              },
+              {
+                "name": "value_decimal",
+                "path": "value.ofType(Quantity).value"
+              },
+              {
+                "name": "value_dateTime",
+                "path": "effectivePeriod.start"
+              },
+              {
+                "name": "value_time",
+                "path": "component.where(code.text='time').first().value.ofType(Time)"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "value_empty": null,
+          "value_id": "xyz",
+          "value_code": "final",
+          "value_string": "Glucose",
+          "value_uri": "http://loinc.org",
+          "value_boolean": true,
+          "value_integer": 1222,
+          "value_decimal": "123.450000",
+          "value_dateTime": "2023-10-01T12:00:00Z",
+          "value_time": "12:00:00"
+        }
+      ]
+    },
     {
       "title": "Runtime evaluation of type hints",
       "view": {
@@ -283,7 +379,6 @@
                 "path": "code.coding",
                 "collection": true
               },
-
               {
                 "name": "codings_as_casted",
                 "path": "code.coding",
@@ -291,7 +386,7 @@
                 "tag": [
                   {
                     "name": "ansi/type",
-                    "value": "ARRAY<ROW(id VARCHAR, system VARCHAR, version VARCHAR, code INT, display VARCHAR, userSelected BOOLEAN)>"
+                    "value": "ARRAY<ROW(id VARCHAR, system VARCHAR, version VARCHAR, code INT, display VARCHAR, userSelected VARCHAR)>"
                   }
                 ]
               },
@@ -323,7 +418,7 @@
               "version": null,
               "code": "2093",
               "display": "Glucose [Moles/volume] in Blood",
-              "userSelected": null
+              "userSelected": true
             }
           ],
           "codings_as_casted": [
@@ -333,7 +428,7 @@
               "version": null,
               "code": 2093,
               "display": "Glucose [Moles/volume] in Blood",
-              "userSelected": null
+              "userSelected": "true"
             }
           ],
           "quantity_as_is": {
