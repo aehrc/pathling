@@ -10,6 +10,8 @@ import au.csiro.pathling.test.yaml.annotations.YamlTestConfiguration;
 import au.csiro.pathling.test.yaml.executor.DefaultYamlTestExecutor;
 import au.csiro.pathling.test.yaml.executor.EmptyYamlTestExecutor;
 import au.csiro.pathling.test.yaml.executor.YamlTestExecutor;
+import au.csiro.pathling.test.yaml.format.ExcludeRule;
+import au.csiro.pathling.test.yaml.format.YamlTestFormat;
 import au.csiro.pathling.test.yaml.resolver.ArbitraryObjectResolverFactory;
 import au.csiro.pathling.test.yaml.resolver.EmptyResolverFactory;
 import au.csiro.pathling.test.yaml.resolver.FhirResolverFactory;
@@ -199,7 +201,7 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
   ) {
 
     @Nonnull
-    private Function<TestCase, Optional<YamlTestFormat.Exclude>> excluder() {
+    private Function<TestCase, Optional<ExcludeRule>> excluder() {
       final YamlTestFormat config = configPath
           .map(TestResources::getResourceAsString)
           .map(YamlTestFormat::fromYaml)
