@@ -5,7 +5,6 @@ import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.test.yaml.FhirTypedLiteral;
-import au.csiro.pathling.test.yaml.RuntimeContext;
 import au.csiro.pathling.test.yaml.YamlSupport;
 import au.csiro.pathling.test.yaml.YamlTestBase;
 import au.csiro.pathling.test.yaml.YamlTestDefinition;
@@ -13,6 +12,7 @@ import au.csiro.pathling.test.yaml.executor.DefaultYamlTestExecutor;
 import au.csiro.pathling.test.yaml.executor.YamlTestExecutor;
 import au.csiro.pathling.test.yaml.resolver.ArbitraryObjectResolverFactory;
 import au.csiro.pathling.test.yaml.resolver.HapiResolverFactory;
+import au.csiro.pathling.test.yaml.resolver.RuntimeContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.ArrayList;

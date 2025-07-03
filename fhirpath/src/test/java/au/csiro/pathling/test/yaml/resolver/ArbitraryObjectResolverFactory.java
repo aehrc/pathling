@@ -5,7 +5,6 @@ import au.csiro.pathling.fhirpath.definition.def.DefDefinitionContext;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceTag;
 import au.csiro.pathling.fhirpath.execution.DefResourceResolver;
-import au.csiro.pathling.test.yaml.RuntimeContext;
 import au.csiro.pathling.test.yaml.YamlSupport;
 import jakarta.annotation.Nonnull;
 import java.util.List;

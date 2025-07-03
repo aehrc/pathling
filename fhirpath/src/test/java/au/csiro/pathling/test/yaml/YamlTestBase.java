@@ -5,6 +5,7 @@ import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.yaml.executor.DefaultYamlTestExecutor;
 import au.csiro.pathling.test.yaml.executor.YamlTestExecutor;
 import au.csiro.pathling.test.yaml.resolver.ResolverBuilder;
+import au.csiro.pathling.test.yaml.resolver.RuntimeContext;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;

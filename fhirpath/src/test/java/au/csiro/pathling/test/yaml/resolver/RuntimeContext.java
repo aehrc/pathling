@@ -1,8 +1,7 @@
-package au.csiro.pathling.test.yaml;
+package au.csiro.pathling.test.yaml.resolver;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
-import au.csiro.pathling.test.yaml.resolver.ResolverBuilder;
 import jakarta.annotation.Nonnull;
 import java.util.function.Function;
 import lombok.Value;

@@ -5,7 +5,6 @@ import au.csiro.pathling.fhirpath.definition.def.DefDefinitionContext;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceTag;
 import au.csiro.pathling.fhirpath.execution.DefResourceResolver;
-import au.csiro.pathling.test.yaml.RuntimeContext;
 import java.util.function.Function;
 import lombok.AllArgsConstructor;
 import lombok.Value;

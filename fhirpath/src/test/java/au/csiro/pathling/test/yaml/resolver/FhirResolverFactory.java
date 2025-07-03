@@ -4,7 +4,6 @@ import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.fhirpath.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.fhirpath.definition.fhir.FhirResourceTag;
 import au.csiro.pathling.fhirpath.execution.DefResourceResolver;
-import au.csiro.pathling.test.yaml.RuntimeContext;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import java.util.List;
