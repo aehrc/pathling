@@ -19,7 +19,7 @@ import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.yaml.YamlSupport;
 import au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase;
-import au.csiro.pathling.test.yaml.YamlTestFormat;
+import au.csiro.pathling.test.yaml.format.ExcludeRule;
 import au.csiro.pathling.test.yaml.resolver.ResolverBuilder;
 import au.csiro.pathling.test.yaml.resolver.RuntimeContext;
 import jakarta.annotation.Nonnull;
@@ -82,7 +82,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
    */
   @Nonnull
   @Exclude
-  Optional<YamlTestFormat.Exclude> exclusion;
+  Optional<ExcludeRule> exclusion;
 
   /**
    * Executes the test case with the provided resolver builder. This is the main entry point for
@@ -100,7 +100,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
    * @throws AssertionError if the test fails validation, or if an excluded test doesn't behave
    * according to its exclusion configuration
    * @throws Exception if an unexpected error occurs during test execution
-   * @see YamlTestFormat.Exclude
+   * @see ExcludeRule
    */
   @Override
   public void check(@Nonnull final ResolverBuilder rb) {
@@ -117,7 +117,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
         skipDueToUnsupportedFeature(e);
       } catch (final Exception e) {
         // Check if this error was expected for excluded tests.
-        if (YamlTestFormat.Exclude.OUTCOME_ERROR.equals(outcome)) {
+        if (ExcludeRule.OUTCOME_ERROR.equals(outcome)) {
           log.info("Successfully caught expected error in excluded test: {}",
               e.getMessage());
           return;
@@ -125,15 +125,17 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
         throw e;
       } catch (final AssertionError e) {
         // Check if this failure was expected for excluded tests.
-        if (YamlTestFormat.Exclude.OUTCOME_FAILURE.equals(outcome)) {
+        if (ExcludeRule.OUTCOME_FAILURE.equals(outcome)) {
           log.info("Successfully caught expected failure in excluded test: {}",
               e.getMessage());
           return;
         }
         throw e;
       }
-      // If we get here, the excluded test passed when it shouldn't have.
-      throw new AssertionError("Excluded test passed when expected outcome was " + outcome);
+      if (!ExcludeRule.OUTCOME_PASS.equals(outcome)) {
+        // If we get here, the excluded test passed when it shouldn't have.
+        throw new AssertionError("Excluded test passed when expected outcome was " + outcome);
+      }
     } else {
       // Normal test execution.
       try {
