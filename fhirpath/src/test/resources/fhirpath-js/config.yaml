@@ -14,10 +14,6 @@ excludeSet:
           - last
           - exclude
           - intersect
-      - title: "join function"
-        id: "#2379"
-        function:
-          - join
       - title: "Unsupported string functions"
         id: "#2380"
         function:
@@ -102,18 +98,6 @@ excludeSet:
           - max
           - avg
           - sum
-      - title: "Type conversion functions"
-        id: "#2391"
-        function:
-          - toBoolean
-          - toDateTime
-          - toDate
-          - toDecimal
-          - toInteger
-          - toQuantity
-          - toString
-          - toTime
-          - toType
       - title: "Unsupported iif function"
         id: "#2392"
         function:
@@ -145,10 +129,6 @@ excludeSet:
           - timeOfDay
           - now
           - today
-      - title: "Unsupported union operator"
-        id: "#2398"
-        expression:
-          - ".+\\|.+"
       - title: "Unsupported math operators"
         id: "#2399"
         expression:
@@ -463,6 +443,16 @@ excludeSet:
           incorrect expectation within the test cases.
         any:
           - "`a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065`"
+  - title: String manipulation exclusions
+    glob: "fhirpath-js/cases/5.6_string_manipulation.yaml"
+    exclude:
+      - title: "Parse error"
+        type: wontfix
+        outcome: pass
+        comment: |
+          The test case is not valid FHIRPath syntax, it contains a parse error.
+        any:
+          - "('a'|'2023-05-28'.toDate()|'c').join(',')"
   - title: Existence exclusions
     glob: "fhirpath-js/cases/5.1_existence.yaml"
     exclude:

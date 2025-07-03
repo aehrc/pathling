@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.path;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
@@ -43,7 +44,7 @@ import lombok.experimental.UtilityClass;
  */
 @UtilityClass
 public class Literals {
-  
+
   /**
    * Creates a null literal value.
    *
@@ -95,7 +96,7 @@ public class Literals {
    */
   @SuppressWarnings("unused")
   public static LiteralPath dateLiteral(@Nonnull final String literalValue) {
-    throw new UnsupportedOperationException("Date literals are not supported");
+    throw new UnsupportedFhirPathFeatureError("Date literals are not supported");
   }
 
   /**
@@ -110,7 +111,7 @@ public class Literals {
    */
   @SuppressWarnings("unused")
   public static LiteralPath dateTimeLiteral(@Nonnull final String literalValue) {
-    throw new UnsupportedOperationException("DateTime literals are not supported");
+    throw new UnsupportedFhirPathFeatureError("DateTime literals are not supported");
   }
 
   /**
@@ -125,7 +126,7 @@ public class Literals {
    */
   @SuppressWarnings("unused")
   public static LiteralPath timeLiteral(@Nonnull final String literalValue) {
-    throw new UnsupportedOperationException("DateTime literals are not supported");
+    throw new UnsupportedFhirPathFeatureError("DateTime literals are not supported");
   }
 
   /**
@@ -161,7 +162,7 @@ public class Literals {
   @SuppressWarnings("unused")
   public static LiteralPath calendarDurationLiteral(
       @Nonnull final String literalValue) {
-    throw new UnsupportedOperationException("Calendar duration literals are not supported");
+    throw new UnsupportedFhirPathFeatureError("Calendar duration literals are not supported");
   }
 
   /**
@@ -176,14 +177,14 @@ public class Literals {
    */
   @SuppressWarnings("unused")
   public static LiteralPath ucumQuantityLiteral(@Nonnull final String literalValue) {
-    throw new UnsupportedOperationException("Quantity literals are not supported");
+    throw new UnsupportedFhirPathFeatureError("Quantity literals are not supported");
   }
 
   /**
    * Creates a numeric literal value, determining whether it's an integer or decimal.
    * <p>
-   * This method attempts to parse the value as an integer first. If that fails, it creates
-   * a decimal literal instead.
+   * This method attempts to parse the value as an integer first. If that fails, it creates a
+   * decimal literal instead.
    * </p>
    *
    * @param literalValue the numeric value as a string
