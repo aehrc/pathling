@@ -44,7 +44,8 @@ case class PruneSyntheticFields(child: Expression)
 
   override def dataType: DataType = {
     inputSchema match {
-      case structType: StructType => StructType(structType.fields.filter(!_.name.startsWith("_")))
+      case structType: StructType => StructType(
+        structType.fields.filter(sf => !isAnnotation(sf.name)))
       case _ => inputSchema
     }
   }
@@ -59,7 +60,7 @@ case class PruneSyntheticFields(child: Expression)
         val structSchema = inputSchema.asInstanceOf[StructType]
         val normalizedValues = structSchema.fieldNames.zip(row.toSeq(structSchema))
           .filter {
-            case (name, value) => !name.startsWith("_")
+            case (name, _) => !isAnnotation(name)
           }
           .map(_._2)
         InternalRow(normalizedValues: _*)
@@ -68,4 +69,9 @@ case class PruneSyntheticFields(child: Expression)
   }
 
   override def prettyName: String = "pruneSyntheticFields"
+
+  def isAnnotation(name: String): Boolean = {
+    name.startsWith("_") || // the typical prefix for synthetic fields
+      name.endsWith("_scale") // the scale field added for decimal representation
+  }
 }

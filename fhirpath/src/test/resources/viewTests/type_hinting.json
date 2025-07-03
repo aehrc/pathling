@@ -434,7 +434,6 @@
           "quantity_as_is": {
             "id": null,
             "value": "123.450000",
-            "value_scale": 2,
             "comparator": null,
             "unit": "mg/dL",
             "system": null,

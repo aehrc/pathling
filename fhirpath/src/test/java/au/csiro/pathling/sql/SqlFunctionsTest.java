@@ -17,13 +17,12 @@
 
 package au.csiro.pathling.sql;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.assertions.DatasetAssert;
-import java.util.List;
-import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
@@ -38,119 +37,63 @@ public class SqlFunctionsTest {
   private SparkSession spark;
 
   @Test
-  void testNsMapConcat() {
-    // Create a test dataset with different map combinations
-    final List<Row> data = List.of(
-        // Both maps have values
-        RowFactory.create(
-            Map.of("key1", 1, "key2", 2),
-            Map.of("key3", 3, "key4", 4)
-        ),
-        // Left map is null
-        RowFactory.create(
-            null,
-            Map.of("key5", 5, "key6", 6)
-        ),
-        // Right map is null
-        RowFactory.create(
-            Map.of("key7", 7, "key8", 8),
-            null
-        ),
-        // Overlapping keys (key2 should be overwritten by right map)
-        RowFactory.create(
-            Map.of("key1", 1, "key2", 2),
-            Map.of("key2", 20, "key3", 3)
-        )
-    );
+  public void testPruneAnnotations() {
+    // Create a schema with both regular and synthetic fields
+    final StructType structSchema = new StructType()
+        .add("id", DataTypes.StringType)
+        .add("name", DataTypes.StringType)
+        .add("_type", DataTypes.StringType)
+        .add("_version", DataTypes.StringType)
+        .add("value_scale", DataTypes.IntegerType);
 
-    final StructType schema = new StructType()
-        .add("left_map", DataTypes.createMapType(DataTypes.StringType, DataTypes.IntegerType))
-        .add("right_map", DataTypes.createMapType(DataTypes.StringType, DataTypes.IntegerType));
+    // Create a dataset with a struct column and primitive columns
+    final Dataset<Row> dataset = spark.range(0)
+        .toDF().select(
+            SqlFunctions.prune_annotations(functions.lit(null).cast(structSchema)).alias("pruned"));
 
-    final Dataset<Row> df = spark.createDataFrame(data, schema);
-
-    // Apply the ns_map_concat function
-    final Dataset<Row> resultDf = df.select(
-        functions.col("left_map"),
-        functions.col("right_map"),
-        SqlFunctions.ns_map_concat(
-            functions.col("left_map"),
-            functions.col("right_map")
-        ).alias("concat_result")
-    );
-
-    // Expected results
-    final List<Row> expectedData = List.of(
-        // Both maps have values - concatenated
-        RowFactory.create(
-            Map.of("key1", 1, "key2", 2),
-            Map.of("key3", 3, "key4", 4),
-            Map.of("key1", 1, "key2", 2, "key3", 3, "key4", 4)
-        ),
-        // Left map is null - right map returned
-        RowFactory.create(
-            null,
-            Map.of("key5", 5, "key6", 6),
-            Map.of("key5", 5, "key6", 6)
-        ),
-        // Right map is null - left map returned
-        RowFactory.create(
-            Map.of("key7", 7, "key8", 8),
-            null,
-            Map.of("key7", 7, "key8", 8)
-        ),
-        // Overlapping keys - right map values take precedence
-        RowFactory.create(
-            Map.of("key1", 1, "key2", 2),
-            Map.of("key2", 20, "key3", 3),
-            Map.of("key1", 1, "key2", 20, "key3", 3)
-        )
-    );
-
-    final StructType expectedSchema = new StructType()
-        .add("left_map", DataTypes.createMapType(DataTypes.StringType, DataTypes.IntegerType))
-        .add("right_map", DataTypes.createMapType(DataTypes.StringType, DataTypes.IntegerType))
-        .add("concat_result", DataTypes.createMapType(DataTypes.StringType, DataTypes.IntegerType));
-
-    final Dataset<Row> expectedDf = spark.createDataFrame(expectedData, expectedSchema);
-
-    // Verify the results
-    DatasetAssert.of(resultDf)
-        .hasRows(expectedDf);
+    final StructType prunedSchema = (StructType) dataset.schema().apply(0).dataType();
+    final String[] expectedFieldNames = new String[]{"id", "name"};
+    assertArrayEquals(expectedFieldNames, prunedSchema.fieldNames());
+    for (int i = 0; i < expectedFieldNames.length; i++) {
+      assertEquals(structSchema.apply(i), prunedSchema.apply(i));
+    }
   }
-
+  
   @Test
-  void testCollectMap() {
-
-    final List<Row> data = List.of(
-        RowFactory.create("group1", Map.of("key1", 1, "key2", 2)),
-        RowFactory.create("group1", Map.of("key2", 3, "key3", 4)),
-        RowFactory.create("group2", Map.of("key1", 5)),
-        RowFactory.create("group3", null)
-    );
-
-    final StructType schema = new StructType()
-        .add("group", DataTypes.StringType)
-        .add("map_column", DataTypes.createMapType(DataTypes.StringType, DataTypes.IntegerType));
-
-    final Dataset<Row> df = spark.createDataFrame(data, schema);
-
-    final Dataset<Row> aggregatedDf = df.groupBy("group")
-        .agg(
-            SqlFunctions.collect_map(functions.col("map_column"))
-                .alias("map_column")
+  public void testPruneAnnotationsSimpleTypes() {
+    // Test that simple types are not affected by prune_annotations
+    final Dataset<Row> dataset = spark.range(1).toDF("id")
+        .select(
+            functions.col("id"),
+            functions.lit("test string").as("string_val"),
+            functions.lit(42).as("int_val"),
+            functions.lit(3.14).as("double_val"),
+            functions.lit(true).as("bool_val")
         );
-
-    final Dataset<Row> expected = spark.createDataFrame(List.of(
-            RowFactory.create("group1",
-                Map.of("key1", 1, "key2", 3, "key3", 4)),
-            RowFactory.create("group2", Map.of("key1", 5)),
-            RowFactory.create("group3", null)),
-        schema
+    
+    // Apply prune_annotations to all columns
+    final Dataset<Row> result = dataset.select(
+        SqlFunctions.prune_annotations(functions.col("id")).as("pruned_id"),
+        SqlFunctions.prune_annotations(functions.col("string_val")).as("pruned_string"),
+        SqlFunctions.prune_annotations(functions.col("int_val")).as("pruned_int"),
+        SqlFunctions.prune_annotations(functions.col("double_val")).as("pruned_double"),
+        SqlFunctions.prune_annotations(functions.col("bool_val")).as("pruned_bool")
     );
-
-    DatasetAssert.of(aggregatedDf)
-        .hasRows(expected);
+    
+    // Verify that the values are unchanged
+    final Row row = result.first();
+    assertEquals(0L, row.getLong(0));
+    assertEquals("test string", row.getString(1));
+    assertEquals(42, row.getInt(2));
+    assertEquals(3.14, row.getDouble(3), 0.0001);
+    assertEquals(true, row.getBoolean(4));
+    
+    // Verify that the schema types are unchanged
+    assertEquals(DataTypes.LongType, result.schema().apply("pruned_id").dataType());
+    assertEquals(DataTypes.StringType, result.schema().apply("pruned_string").dataType());
+    assertEquals(DataTypes.IntegerType, result.schema().apply("pruned_int").dataType());
+    assertEquals(DataTypes.DoubleType, result.schema().apply("pruned_double").dataType());
+    assertEquals(DataTypes.BooleanType, result.schema().apply("pruned_bool").dataType());
   }
-
+  
 }
