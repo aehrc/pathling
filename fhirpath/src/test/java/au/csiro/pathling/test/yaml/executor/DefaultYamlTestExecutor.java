@@ -4,6 +4,7 @@ import static au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase.ANY_ERROR;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -37,6 +38,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructType;
+import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
 import scala.collection.mutable.WrappedArray;
 
@@ -107,6 +109,12 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
       final String outcome = exclusion.get().getOutcome();
       try {
         doCheck(rb);
+      } catch (final TestAbortedException e) {
+        // Let TestAbortedException propagate normally, this would have been thrown from a test
+        // that expected an error but skipped the test instead (e.g. due to unsupported features).
+        throw e;
+      } catch (final UnsupportedFhirPathFeatureError e) {
+        skipDueToUnsupportedFeature(e);
       } catch (final Exception e) {
         // Check if this error was expected for excluded tests
         if (TestConfig.Exclude.OUTCOME_ERROR.equals(outcome)) {
@@ -116,7 +124,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
         }
         throw e;
       } catch (final AssertionError e) {
-        // Check if this failure was expected for excluded tests
+        // Check if this failure was expected for excluded tests.
         if (TestConfig.Exclude.OUTCOME_FAILURE.equals(outcome)) {
           log.info("Successfully caught expected failure in excluded test: {}",
               e.getMessage());
@@ -124,11 +132,15 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
         }
         throw e;
       }
-      // If we get here, the excluded test passed when it shouldn't have
+      // If we get here, the excluded test passed when it shouldn't have.
       throw new AssertionError("Excluded test passed when expected outcome was " + outcome);
     } else {
-      // Normal test execution
-      doCheck(rb);
+      // Normal test execution.
+      try {
+        doCheck(rb);
+      } catch (final UnsupportedFhirPathFeatureError e) {
+        skipDueToUnsupportedFeature(e);
+      }
     }
   }
 
@@ -200,6 +212,8 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
           String.format(
               "Expected an error but received a valid result: %s (Expression result: %s)",
               actual, evalResult));
+    } catch (final UnsupportedFhirPathFeatureError e) {
+      skipDueToUnsupportedFeature(e);
     } catch (final Exception e) {
       // An exception was thrown as expected - now validate the error message
       log.trace("Received expected error: {}", e.toString());
@@ -212,6 +226,15 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
         assertEquals(spec.errorMsg(), rootCauseMsg);
       }
     }
+  }
+
+  /**
+   *
+   */
+  private static void skipDueToUnsupportedFeature(final UnsupportedFhirPathFeatureError e) {
+    throw new TestAbortedException(
+        "This test has been skipped because one or more features required by it are not supported",
+        e);
   }
 
   /**
