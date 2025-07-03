@@ -199,11 +199,11 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
   ) {
 
     @Nonnull
-    private Function<TestCase, Optional<TestConfig.Exclude>> excluder() {
-      final TestConfig config = configPath
+    private Function<TestCase, Optional<YamlTestFormat.Exclude>> excluder() {
+      final YamlTestFormat config = configPath
           .map(TestResources::getResourceAsString)
-          .map(TestConfig::fromYaml)
-          .orElse(TestConfig.getDefault());
+          .map(YamlTestFormat::fromYaml)
+          .orElse(YamlTestFormat.getDefault());
       return config.toExcluder(disabledExclusionIds);
     }
   }

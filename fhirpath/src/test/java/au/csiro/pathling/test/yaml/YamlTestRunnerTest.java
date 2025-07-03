@@ -194,9 +194,9 @@ class YamlTestRunnerTest {
   @Test
   void testLoadAndRun() {
     final String testConfigYaml = getResourceAsString("fhirpath-js/config.yaml");
-    final TestConfig testConfig = YAML_PARSER.loadAs(testConfigYaml, TestConfig.class);
-    System.out.println(testConfig);
-    testConfig.toPredicates(Set.of()).forEach(System.out::println);
+    final YamlTestFormat testFormat = YAML_PARSER.loadAs(testConfigYaml, YamlTestFormat.class);
+    System.out.println(testFormat);
+    testFormat.toPredicates(Set.of()).forEach(System.out::println);
   }
 
 

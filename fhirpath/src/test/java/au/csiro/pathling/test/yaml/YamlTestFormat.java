@@ -33,9 +33,9 @@ import org.yaml.snakeyaml.Yaml;
  */
 @Data
 @NoArgsConstructor
-public class TestConfig {
+public class YamlTestFormat {
 
-  private static final TestConfig DEFAULT = new TestConfig();
+  private static final YamlTestFormat DEFAULT = new YamlTestFormat();
 
   private static final Yaml YAML_PARSER = new Yaml();
 
@@ -306,12 +306,12 @@ public class TestConfig {
   }
 
   @Nonnull
-  public static TestConfig fromYaml(@Nonnull final String yamlData) {
-    return YAML_PARSER.loadAs(yamlData, TestConfig.class);
+  public static YamlTestFormat fromYaml(@Nonnull final String yamlData) {
+    return YAML_PARSER.loadAs(yamlData, YamlTestFormat.class);
   }
 
   @Nonnull
-  public static TestConfig getDefault() {
+  public static YamlTestFormat getDefault() {
     return DEFAULT;
   }
 
