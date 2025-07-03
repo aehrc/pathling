@@ -35,19 +35,6 @@ excludeSet:
           - decode
           - escape
           - unescape
-      - title: "Unsupported math functions"
-        id: "#2381"
-        function:
-          - abs
-          - ceiling
-          - floor
-          - exp
-          - ln
-          - log
-          - power
-          - round
-          - sqrt
-          - truncate
       - title: "Unsupported tree navigation functions"
         id: "#2382"
         function:
@@ -129,11 +116,6 @@ excludeSet:
           - timeOfDay
           - now
           - today
-      - title: "Unsupported math operators"
-        id: "#2399"
-        expression:
-          - " & "
-          - " div "
       - title: "Unsupported date and datetime literals"
         type: feature
         id: "#2409"
@@ -401,14 +383,12 @@ excludeSet:
         comment: |
           The test case is not valid FHIRPath syntax, it contains a parse error.
         any:
-          - "('a'|'2023-05-28'.toDate()|'c').join(',')"
           - "@T17:00-05:00 < timeWithT.toTime()"
           - "@T17:00-05:00 > timeWithT.toTime()"
           - "@T17:00-05:00 < timeWithOutT.toTime()"
           - "@T17:00-05:00 > timeWithOutT.toTime()"
           - "('a'|'b'|'c').join(',')"
           - "('a'|'b'|'c').join()"
-          - "('a'|'2023-05-28'.toDate()|'c').join(',')"
   - title: Path exclusions
     glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
@@ -464,6 +444,14 @@ excludeSet:
         id: "#2443"
         any:
           - "** join on empty input collection"
+      - title: "Parse error"
+        type: wontfix
+        outcome: pass
+        comment: |
+          The test case is not valid FHIRPath syntax, it contains a parse error.
+        any:
+          - "('a'|'2023-05-28'.toDate()|'c').join(',')"
+          - "('a'|'2023-05-28'.toDate()|'c').join(',')"
   - title: Existence exclusions
     glob: "fhirpath-js/cases/5.1_existence.yaml"
     exclude:
