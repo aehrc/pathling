@@ -447,6 +447,7 @@ excludeSet:
       - title: "Primitive attributes"
         id: "#437"
         type: feature
+        outcome: failure
         comment: |
           This test requires support for the primitive attribute/extension structure, as it involves 
           traversing to the `id` of a primitive element.
