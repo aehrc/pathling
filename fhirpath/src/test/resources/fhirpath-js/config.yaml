@@ -394,6 +394,7 @@ excludeSet:
     exclude:
       - title: "Mixed collections not supported"
         type: wontfix
+        outcome: failure
         comment: |
           Pathling does not support the representation of mixed collections, which is required for
           these tests.
@@ -402,6 +403,13 @@ excludeSet:
           - "Observation.value with an R5 FHIR model"
           - "Observation.value with an STU3 FHIR model"
           - "Observation.value with an DSTU2 FHIR model"
+      - title: "Mixed collections not supported"
+        type: wontfix
+        outcome: pass
+        comment: |
+          Pathling does not support the representation of mixed collections, which is required for
+          these tests.
+        any:
           - "Observation.value without a model"
       - title: "Contained resources not supported"
         type: feature
@@ -410,6 +418,7 @@ excludeSet:
           - "(^|\\W)contained(\\W|$)"
       - title: "Custom fields not supported within FHIR resources"
         type: wontfix
+        outcome: failure
         comment: Pathling does not support custom fields within FHIR resources.
         any:
           - "Access a custom field starting with a capital letter (1)"
