@@ -466,11 +466,13 @@ excludeSet:
     exclude:
       - title: "Incorrect behaviour when evaluating boolean value of collections"
         type: bug
+        outcome: failure
         id: "#2411"
         any:
           - "** error for collection that is not a singleton"
-      - title: "Support for null values within FHIR elements"
+      - title: Support for null values within FHIR elements
         type: wontfix
+        outcome: failure
         any:
           - "** null is not empty"
           - "** exists for null should return true"
@@ -552,6 +554,7 @@ excludeSet:
       - title: "ID on primitive types not supported"
         comment: "This also includes the case of an empty primitive value with non-empty attributes"
         type: feature
+        outcome: failure
         id: "#437"
         any:
           - "** id for primitive type"
