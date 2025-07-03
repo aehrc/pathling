@@ -396,6 +396,19 @@ excludeSet:
         id: "#2430"
         function:
           - hasValue
+      - title: "Parse error"
+        type: wontfix
+        comment: |
+          The test case is not valid FHIRPath syntax, it contains a parse error.
+        any:
+          - "('a'|'2023-05-28'.toDate()|'c').join(',')"
+          - "@T17:00-05:00 < timeWithT.toTime()"
+          - "@T17:00-05:00 > timeWithT.toTime()"
+          - "@T17:00-05:00 < timeWithOutT.toTime()"
+          - "@T17:00-05:00 > timeWithOutT.toTime()"
+          - "('a'|'b'|'c').join(',')"
+          - "('a'|'b'|'c').join()"
+          - "('a'|'2023-05-28'.toDate()|'c').join(',')"
   - title: Path exclusions
     glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
@@ -446,13 +459,11 @@ excludeSet:
   - title: String manipulation exclusions
     glob: "fhirpath-js/cases/5.6_string_manipulation.yaml"
     exclude:
-      - title: "Parse error"
-        type: wontfix
-        outcome: pass
-        comment: |
-          The test case is not valid FHIRPath syntax, it contains a parse error.
+      - title: "Input of empty collection to join function causes error"
+        type: bug
+        id: "#2443"
         any:
-          - "('a'|'2023-05-28'.toDate()|'c').join(',')"
+          - "** join on empty input collection"
   - title: Existence exclusions
     glob: "fhirpath-js/cases/5.1_existence.yaml"
     exclude:
