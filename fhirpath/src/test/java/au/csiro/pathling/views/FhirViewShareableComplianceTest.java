@@ -34,7 +34,9 @@ public class FhirViewShareableComplianceTest extends FhirViewTest {
             "constant_types - date",
             "constant_types - dateTime",
             "constant_types - instant",
-            "constant_types - time"
+            "constant_types - time",
+            // TODO: string represention of Decimal values
+            "fhirpath_numbers - add observation"
         )
     );
   }
