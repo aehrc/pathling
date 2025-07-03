@@ -5,8 +5,9 @@ import au.csiro.pathling.test.dsl.FhirPathTest;
 import au.csiro.pathling.test.yaml.FhirTypedLiteral;
 import java.util.List;
 import java.util.stream.Stream;
-import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.Observation;
+import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 
@@ -221,17 +222,25 @@ public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase 
   @FhirPathTest
   public Stream<DynamicTest> testOfTypeWithFhirResources() {
     return builder()
-        .withResource(new Condition().setId("Condition/1")
+        .withResource(new Observation()
+            .setValue(new StringType("observation-value"))
+            .setId("Condition/1")
         )
         .group("ofType() function with resource types")
         // Basic ofType() tests with resources
-        .testTrue("ofType(Condition).exists()",
+        .testTrue("ofType(Observation).exists()",
             "ofType() filters resources by type Patient")
         // Single resource ofType() tests
-        .testEquals("1", "ofType(FHIR.Condition).id",
+        .testEquals("1", "ofType(FHIR.Observation).id",
             "ofType() returns the resource when type matches")
         .testEmpty("ofType(Patient)",
             "ofType() returns empty when resource type doesn't match")
+        .testEquals("observation-value", "value.ofType(String)",
+            "ofType() returns the value when type matches")
+        .testEmpty("value.ofType(Integer)",
+            "ofType() returns the value when type does not match")
+        .testEmpty("value.ofType(decimal)",
+            "ofType() empty when type is not defined for the choice")
         .build();
   }
 

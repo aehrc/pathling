@@ -1,16 +1,19 @@
 package au.csiro.pathling.views;
 
 import au.csiro.pathling.views.validation.ValidName;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.util.Collections;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-
+import java.util.Optional;
 /**
  * Describes the selection of a column in the output.
  *
@@ -98,6 +101,19 @@ public class Column implements SelectionElement {
   @Nullable
   String type;
 
+  /**
+   * Additional metadata describing the column. Tags can be used to provide database-specific type
+   * information or other metadata about the column.
+   *
+   * @see <a
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#type-hinting-with-tags">Type
+   * Hinting with Tags</a>
+   */
+  @NotNull
+  @Valid
+  @Builder.Default
+  List<@Valid ColumnTag> tag = Collections.emptyList();
+
 
   /**
    * Checks if this column is compatible with another column for union operations. Columns are
@@ -125,7 +141,45 @@ public class Column implements SelectionElement {
       return false; // One has type, the other doesn't
     }
 
+    // Check if types match
     return this.getType().equals(other.getType());
+
+    // Tags don't affect compatibility for union operations
+    // They are metadata that don't change the underlying data type
+  }
+
+  /**
+   * Returns a list of values for all tags with the specified name.
+   *
+   * @param name the name of the tags to find
+   * @return a list of values for tags with the specified name, may be empty if no matching tags
+   * exist
+   */
+  @Nonnull
+  public List<String> getTagValues(@Nonnull final String name) {
+    return tag.stream()
+        .filter(t -> name.equals(t.getName()))
+        .map(ColumnTag::getValue)
+        .toList();
+  }
+
+  /**
+   * Returns a single value for a tag with the specified name.
+   *
+   * @param name the name of the tag to find
+   * @return an Optional containing the value of the tag, or empty if no matching tag exists
+   * @throws IllegalStateException if more than one tag with the specified name exists
+   */
+  @Nonnull
+  public Optional<String> getTagValue(@Nonnull final String name) {
+    List<String> values = getTagValues(name);
+    if (values.isEmpty()) {
+      return Optional.empty();
+    } else if (values.size() == 1) {
+      return Optional.of(values.get(0));
+    } else {
+      throw new IllegalStateException("Multiple values found for tag '" + name + "': " + values);
+    }
   }
 
 }

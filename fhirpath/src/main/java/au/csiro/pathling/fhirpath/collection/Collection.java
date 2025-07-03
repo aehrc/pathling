@@ -444,7 +444,7 @@ public class Collection {
   public Column getColumnValue() {
     return column.getValue();
   }
-
+  
   /**
    * Returns a new collection representing just the elements of this collection with the specified
    * type.
@@ -539,7 +539,7 @@ public class Collection {
     } else if (convertibleTo(other)) {
       return other.getType()
           .map(castType ->
-              other.map(__ -> this.getColumn().cast(castType.getSqlDataType())))
+              other.map(__ -> this.getColumn().elementCast(castType.getSqlDataType())))
           .orElse(this);
     } else {
       throw new IllegalArgumentException("Cannot cast " + this + " to " + other);

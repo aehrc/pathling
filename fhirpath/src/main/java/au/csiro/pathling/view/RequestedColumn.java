@@ -22,6 +22,7 @@ import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Value;
+import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -57,12 +58,20 @@ public class RequestedColumn {
   @Nonnull
   Optional<FHIRDefinedType> type;
 
+  /**
+   * The SQL type that has been asserted for the column.
+   */
+  @Nonnull
+  Optional<DataType> sqlType;
+
   @Override
   public String toString() {
     return "RequestedColumn{" +
         "path=" + path +
         ", name='" + name + '\'' +
         ", collection=" + collection +
+        ", type=" + type +
+        ", sqlType=" + sqlType +
         '}';
   }
 

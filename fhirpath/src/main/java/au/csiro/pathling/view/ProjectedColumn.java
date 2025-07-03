@@ -18,8 +18,10 @@
 package au.csiro.pathling.view;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.views.ansi.CollectionValue;
 import jakarta.annotation.Nonnull;
 import lombok.Value;
+import org.apache.spark.sql.Column;
 
 /**
  * The result of evaluating a {@link RequestedColumn} as part of a {@link ProjectionClause}.
@@ -39,4 +41,16 @@ public class ProjectedColumn {
   @Nonnull
   RequestedColumn requestedColumn;
 
+  /**
+   * Gets the column value from the collection and aliases it with the requested name. If a SQL type
+   * is specified in the requested column, the column value will be cast to that type.
+   *
+   * @return The column value with the appropriate alias
+   */
+  @Nonnull
+  public Column getValue() {
+
+    return CollectionValue.of(collection).get(requestedColumn.getSqlType())
+        .alias(requestedColumn.getName());
+  }
 }
