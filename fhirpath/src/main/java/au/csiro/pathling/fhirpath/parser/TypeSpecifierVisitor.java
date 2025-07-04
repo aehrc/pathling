@@ -25,6 +25,7 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AdditiveExpres
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AndExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.BooleanLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.CodingLiteralContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.CombineExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.DateLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.DateTimeLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.DateTimePrecisionContext;
@@ -122,6 +123,12 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   public FhirPath visitAdditiveExpression(
       final AdditiveExpressionContext ctx) {
     throw newUnexpectedExpressionException("AdditiveExpression");
+  }
+ 
+  @Override
+  public FhirPath visitCombineExpression(
+      final CombineExpressionContext ctx) {
+    throw newUnexpectedExpressionException("CombineExpression");
   }
 
   @Override

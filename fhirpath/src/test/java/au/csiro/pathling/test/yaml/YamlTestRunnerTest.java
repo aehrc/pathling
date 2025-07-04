@@ -140,7 +140,7 @@ class YamlTestRunnerTest {
     final String desc = (String) testCase.get("desc");
 
     // lets try something different here
-    // pethaps I couild flatten the result representation here as well
+    // perhaps I could flatten the result representation here as well
 
     final Object result = testCase.get("result");
     final Object resultRepresentation = result instanceof final List<?> list && list.size() == 1
