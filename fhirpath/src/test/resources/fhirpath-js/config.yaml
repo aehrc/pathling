@@ -624,6 +624,7 @@ excludeSet:
       - title: "Tick quotes identifiers not supported"
         id: "#2153"
         type: bug
+        outcome: failure
         any:
           - "name.`family`"
       - title: "Boolean evaluation of collections"
@@ -637,6 +638,7 @@ excludeSet:
           - "Evaluating expression for a part of a resource"
       - title: "Unsupported comparison between typed complex value and expected structure"
         type: wontfix
+        outcome: failure
         any:
           - "Patient.telecom.where($this.use = 'work')"
   - title: FHIR R4 Exclusions
