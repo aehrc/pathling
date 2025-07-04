@@ -154,7 +154,7 @@ public record YamlTestDefinition(@Nullable Map<Object, Object> subject,
     else if (caseOrGroup.size() == 1) {
       final Object singleValue = caseOrGroup.values().iterator().next();
       // If the single value is a list, recursively process it as nested test cases.
-      return singleValue instanceof List<?> lst
+      return singleValue instanceof final List<?> lst
              ? buildCases((List<Object>) lst).stream()
              : Stream.empty(); // Not a list, so no valid test cases
     }

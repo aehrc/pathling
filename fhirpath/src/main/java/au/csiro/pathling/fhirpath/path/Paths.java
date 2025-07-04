@@ -120,7 +120,7 @@ public final class Paths {
 
     @Nonnull
     private String argToExpression(@Nonnull final FhirPath arg) {
-      if (arg instanceof EvalOperator opArg) {
+      if (arg instanceof final EvalOperator opArg) {
         return BinaryOperatorType.comparePrecedence(operator.getOperatorName(),
             opArg.operator.getOperatorName()) >= 0
                ? arg.toExpression()

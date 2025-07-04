@@ -101,7 +101,7 @@ class YamlTestRunnerTest {
     System.out.println("Yaml definition:");
     System.out.println(subjectDefinition);
 
-    final StructType subjectSchema = YamlSupport.defnitiontoStruct(subjectDefinition);
+    final StructType subjectSchema = YamlSupport.definitionToStruct(subjectDefinition);
     System.out.println("Struct definition:");
     subjectSchema.printTreeString();
 
@@ -151,7 +151,7 @@ class YamlTestRunnerTest {
         "result",
         resultRepresentation);
     // now lets create child schema
-    final StructType resultSchema = YamlSupport.childrendToStruct(List.of(resultDefinition));
+    final StructType resultSchema = YamlSupport.childrenToStruct(List.of(resultDefinition));
     System.out.println("Result schema:");
     resultSchema.printTreeString();
     // now we will need to create a column out of it based on the json mapping.

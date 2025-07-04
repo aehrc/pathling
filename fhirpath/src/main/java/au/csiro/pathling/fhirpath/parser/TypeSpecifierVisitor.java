@@ -77,7 +77,7 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   private final boolean isNamespace;
 
-  TypeSpecifierVisitor(final boolean isNamespace) {
+  private TypeSpecifierVisitor(final boolean isNamespace) {
     this.isNamespace = isNamespace;
   }
 
@@ -124,7 +124,7 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
       final AdditiveExpressionContext ctx) {
     throw newUnexpectedExpressionException("AdditiveExpression");
   }
- 
+
   @Override
   public FhirPath visitCombineExpression(
       final CombineExpressionContext ctx) {

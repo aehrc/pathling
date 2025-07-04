@@ -319,7 +319,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
         resultRepresentation);
 
     // Create a Spark schema from the element definition.
-    final StructType resultSchema = YamlSupport.childrendToStruct(List.of(resultDefinition));
+    final StructType resultSchema = YamlSupport.childrenToStruct(List.of(resultDefinition));
 
     // Convert to JSON representation for Spark processing.
     final String resultJson = YamlSupport.omToJson(

@@ -47,13 +47,13 @@ import java.util.Optional;
  */
 class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
-  private static boolean canBeResourceType(@Nonnull final String identifier) {
-    // check if starts with capital letter
+  private static boolean canBeResourceType(@Nonnull final CharSequence identifier) {
+    // Check if the identifier starts with a capital letter.
     return !identifier.isEmpty() && Character.isUpperCase(identifier.charAt(0));
   }
 
 
-  final boolean isRoot;
+  private final boolean isRoot;
 
   public InvocationVisitor(final boolean isRoot) {
     this.isRoot = isRoot;

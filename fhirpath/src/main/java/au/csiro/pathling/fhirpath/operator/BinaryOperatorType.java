@@ -62,7 +62,7 @@ public enum BinaryOperatorType {
    * Retrieves an instance of the operator with the specified symbol.
    *
    * @param symbol The symbol of the operator
-   * @return The {@link BinaryOperatorType} corresponding to the specified symbol
+   * @return The BinaryOperatorType corresponding to the specified symbol
    * @throws IllegalArgumentException if no operator with the specified symbol is supported
    */
   @Nonnull

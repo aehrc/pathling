@@ -18,7 +18,7 @@ public abstract class YamlCachedTestBase extends YamlTestBase {
       Collections.synchronizedMap(new HashMap<>());
 
 
-  protected Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> getResolverCache() {
+  private Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> getResolverCache() {
     return CACHE.computeIfAbsent(getClass(), key -> new HashMap<>());
   }
 

@@ -39,7 +39,7 @@ public class ArbitraryObjectResolverFactory implements Function<RuntimeContext, 
 
     final DefResourceDefinition subjectDefinition = (DefResourceDefinition) YamlSupport
         .yamlToDefinition(subjectResourceCode, subjectOM);
-    final StructType subjectSchema = YamlSupport.defnitiontoStruct(subjectDefinition);
+    final StructType subjectSchema = YamlSupport.definitionToStruct(subjectDefinition);
 
     final String subjectOMJson = YamlSupport.omToJson(subjectOM);
     log.trace("subjectOMJson: \n{}", subjectOMJson);

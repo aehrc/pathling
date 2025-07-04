@@ -50,6 +50,7 @@ public class Literals {
    *
    * @return a new {@link NullLiteral} instance
    */
+  @Nonnull
   public static NullLiteral nullLiteral() {
     return new NullLiteral();
   }
@@ -60,6 +61,7 @@ public class Literals {
    * @param literalValue the string value
    * @return a new {@link StringLiteral} instance
    */
+  @Nonnull
   public static StringLiteral stringLiteral(@Nonnull final String literalValue) {
     return new StringLiteral(literalValue);
   }
@@ -70,6 +72,7 @@ public class Literals {
    * @param literalValue the boolean value as a string ("true" or "false")
    * @return a new {@link BooleanLiteral} instance
    */
+  @Nonnull
   public static BooleanLiteral booleanLiteral(@Nonnull final String literalValue) {
     return new BooleanLiteral(literalValue);
   }
@@ -80,6 +83,7 @@ public class Literals {
    * @param literalValue the coding value as a string
    * @return a new {@link CodingLiteral} instance
    */
+  @Nonnull
   public static CodingLiteral codingLiteral(@Nonnull final String literalValue) {
     return new CodingLiteral(literalValue);
   }
@@ -135,6 +139,8 @@ public class Literals {
    * @param literalValue the integer value as a string
    * @return a new {@link IntegerLiteral} instance
    */
+  @SuppressWarnings("WeakerAccess")
+  @Nonnull
   public static IntegerLiteral integerLiteral(@Nonnull final String literalValue) {
     return new IntegerLiteral(literalValue);
   }
@@ -145,6 +151,8 @@ public class Literals {
    * @param literalValue the decimal value as a string
    * @return a new {@link DecimalLiteral} instance
    */
+  @SuppressWarnings("WeakerAccess")
+  @Nonnull
   public static DecimalLiteral decimalLiteral(@Nonnull final String literalValue) {
     return new DecimalLiteral(literalValue);
   }
@@ -159,7 +167,7 @@ public class Literals {
    * @return a new calendar duration literal instance
    * @throws UnsupportedOperationException always, as calendar duration literals are not supported
    */
-  @SuppressWarnings("unused")
+  @SuppressWarnings({"WeakerAccess", "unused"})
   public static LiteralPath calendarDurationLiteral(
       @Nonnull final String literalValue) {
     throw new UnsupportedFhirPathFeatureError("Calendar duration literals are not supported");
@@ -175,7 +183,7 @@ public class Literals {
    * @return a new UCUM quantity literal instance
    * @throws UnsupportedOperationException always, as UCUM quantity literals are not supported
    */
-  @SuppressWarnings("unused")
+  @SuppressWarnings({"unused", "WeakerAccess"})
   public static LiteralPath ucumQuantityLiteral(@Nonnull final String literalValue) {
     throw new UnsupportedFhirPathFeatureError("Quantity literals are not supported");
   }
@@ -213,7 +221,7 @@ public class Literals {
    * @throws UnsupportedOperationException always, as quantity literals are not supported
    */
   public static LiteralPath quantityLiteral(@Nonnull final String literalValue,
-      @Nonnull final String unit, boolean isUCUM) {
+      @Nonnull final String unit, final boolean isUCUM) {
     return isUCUM
            ? calendarDurationLiteral(String.format("%s %s", literalValue, unit))
            : ucumQuantityLiteral(String.format("%s %s", literalValue, unit));
