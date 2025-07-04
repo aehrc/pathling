@@ -1,6 +1,18 @@
-// Copyright © 2018-2022, Commonwealth Scientific and Industrial Research Organisation (CSIRO)
-// ABN 41 687 119 230. Licensed under the CSIRO Open Source Software Licence Agreement.
-//
+// Copyright 2025 Commonwealth Scientific and Industrial Research
+// Organisation (CSIRO) ABN 41 687 119 230.
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//     http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // Based on the FHIRPath grammar file at: http://hl7.org/fhirpath/grammar.html
 
 grammar FhirPath;
@@ -11,6 +23,10 @@ grammar FhirPath;
 //prog: line (line)*;
 //line: ID ( '(' expr ')') ':' expr '\r'? '\n';
 
+entireExpression
+        : expression EOF
+        ;
+        
 expression
         : term                                                      #termExpression
         | expression '.' invocation                                 #invocationExpression
@@ -41,6 +57,7 @@ literal
         | ('true' | 'false')                                    #booleanLiteral
         | STRING                                                #stringLiteral
         | NUMBER                                                #numberLiteral
+        | LONGNUMBER                                            #longNumberLiteral
         | DATE                                                  #dateLiteral
         | DATETIME                                              #dateTimeLiteral
         | TIME                                                  #timeLiteral
@@ -79,11 +96,11 @@ unit
         ;
 
 dateTimePrecision
-        : 'year' | 'month' | 'week' | 'day' | 'hour' | 'minute' | 'second'
+        : 'year' | 'month' | 'week' | 'day' | 'hour' | 'minute' | 'second' | 'millisecond'
         ;
 
 pluralDateTimePrecision
-        : 'years' | 'months' | 'weeks' | 'days' | 'hours' | 'minutes' | 'seconds'
+        : 'years' | 'months' | 'weeks' | 'days' | 'hours' | 'minutes' | 'seconds' | 'milliseconds'
         ;
 
 typeSpecifier
@@ -107,6 +124,12 @@ identifier
 /****************************************************************
     Lexical rules
 *****************************************************************/
+
+/*
+NOTE: The goal of these rules in the grammar is to provide a date
+token to the parser. As such it is not attempting to validate that
+the date is a correct date, that task is for the parser or interpreter.
+*/
 
 DATE
         : '@' DATEFORMAT
@@ -141,9 +164,9 @@ DELIMITEDIDENTIFIER
         ;
 
 STRING
-        : '\'' (ESC | ~['])*? '\''
+        : '\'' (ESC | .)*? '\''
         ;
-
+        
 CODING
         : CODING_COMPONENT '|' CODING_COMPONENT ( '|' CODING_COMPONENT )? ( '|' CODING_COMPONENT )? ( '|' CODING_COMPONENT )?
         ;
@@ -164,6 +187,10 @@ fragment QUOTED_CODING_COMPONENT
 // Also allows leading zeroes now (just like CQL and XSD)
 NUMBER
         : [0-9]+('.' [0-9]+)?
+        ;
+
+LONGNUMBER
+        : [0-9]+ 'L'?
         ;
 
 // Pipe whitespace to the HIDDEN channel to support retrieving source text through the parser.
