@@ -479,9 +479,9 @@ excludeSet:
   - title: Filtering and projection exclusions
     glob: "fhirpath-js/cases/5.2_filtering_and_projection.yaml"
     exclude:
-      - title: "FHIRPath types currently not working within ofType"
-        type: bug
-        id: "#2415"
+      - title: "Test runner does not support representation of mixed collections in arbitrary objects"
+        type: wontfix
+        outcome: failure
         any:
           - "heteroattr.ofType(String)"
           - "heteroattr.ofType(Integer)"
