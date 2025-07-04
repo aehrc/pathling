@@ -48,11 +48,6 @@ excludeSet:
         expression:
           - " is " # is operator
           - " as " # as operator
-      - title: "Unsupported combining functions"
-        id: "#2384"
-        function:
-          - union
-          - combine
       - title: "Unsupported existence functions"
         id: "#2385"
         function:
@@ -440,11 +435,29 @@ excludeSet:
     exclude:
       - title: "Using ` to wrap a string is not allowed by grammar"
         type: bug
+        outcome: failure
         comment: |
           An issue has been raised on the fhirpath.js GitHub repository (#172), this may be an 
           incorrect expectation within the test cases.
         any:
           - "`a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065`"
+      - title: "Pathling grammar does not like combine as a function"
+        type: bug
+        outcome: pass
+        id: "#2444"
+        comment: |
+          Pathling previously implemented `combine` as an operator, and this conflicts with the
+          use of `combine` as a function in the test cases.
+        any:
+          - "-7.combine(3)"
+      - title: "Pathling grammar does not like combine as a function"
+        type: bug
+        id: "#2444"
+        comment: |
+          Pathling previously implemented `combine` as an operator, and this conflicts with the
+          use of `combine` as a function in the test cases.
+        any:
+          - "(-7).combine(3)"
   - title: String manipulation exclusions
     glob: "fhirpath-js/cases/5.6_string_manipulation.yaml"
     exclude:
