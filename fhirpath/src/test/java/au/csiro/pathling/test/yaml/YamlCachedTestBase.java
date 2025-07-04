@@ -19,7 +19,7 @@ public abstract class YamlCachedTestBase extends YamlTestBase {
 
 
   protected Map<Function<RuntimeContext, ResourceResolver>, ResourceResolver> getResolverCache() {
-    return CACHE.computeIfAbsent(getClass(), __ -> new HashMap<>());
+    return CACHE.computeIfAbsent(getClass(), key -> new HashMap<>());
   }
 
   @Override
