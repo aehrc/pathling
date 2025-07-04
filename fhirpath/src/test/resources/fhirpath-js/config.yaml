@@ -643,6 +643,7 @@ excludeSet:
     glob: "fhirpath-js/cases/fhir-r4.yaml"
     exclude:
       - title: "Tick quotes identifiers not supported"
+        outcome: failure
         id: "#2153"
         type: bug
         any:
@@ -692,15 +693,29 @@ excludeSet:
           - "** testWhere2"
           - "** testWhere3"
           - "** testWhere4"
-      - title: "Decimal literal exceeded maximum scale supported (6): 0.6666667"
+      - title: "Decimal literal exceeded maximum scale supported"
         id: "#2144"
         type: feature
         any:
           - "** testNEquality22"
           - "1.2 / 1.8 = 0.66666667"
+          - "1.00000001.truncate() = 1"
       - title: "Extensions on primitive types not supported"
         type: feature
+        outcome: failure
         id: "#437"
         any:
           - "Patient.birthDate.extension('http://hl7.org/fhir/StructureDefinition/patient-birthTime').exists()"
+      - title: "Extensions on primitive types not supported"
+        type: feature
+        outcome: pass
+        id: "#437"
+        any:
           - "Patient.birthDate.extension('http://hl7.org/fhir/StructureDefinition/patient-birthTime1').empty()"
+      - title: "Boolean evaluation of collections"
+        type: feature
+        outcome: failure
+        id: "#2166"
+        any:
+          - "(1|2).not() = false"
+
