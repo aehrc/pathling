@@ -497,6 +497,7 @@ excludeSet:
           - "(^|\\W)Bundle(\\W|$)"
       - title: "Support for null values within FHIR elements"
         type: wontfix
+        outcome: failure
         any:
           - "** equality for null values"
           - "** inequality for null values"
