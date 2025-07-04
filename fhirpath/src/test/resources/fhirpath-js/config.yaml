@@ -646,6 +646,14 @@ excludeSet:
         outcome: failure
         any:
           - "Patient.telecom.where($this.use = 'work')"
+      - title: "Pathling grammar does not like combine as a function"
+        type: bug
+        id: "#2444"
+        comment: |
+          Pathling previously implemented `combine` as an operator, and this conflicts with the
+          use of `combine` as a function in the test cases.
+        any:
+          - "(2).combine(3)"
   - title: Combining exclusions
     glob: "fhirpath-js/cases/5.4_combining.yaml"
     exclude:
