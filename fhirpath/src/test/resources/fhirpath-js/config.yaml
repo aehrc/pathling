@@ -545,6 +545,7 @@ excludeSet:
     exclude:
       - title: "Unsupported context definition within view runner"
         type: new-feature
+        outcome: failure
         id: "#2424"
         spel:
           - "#testCase.context == 'g1'"
