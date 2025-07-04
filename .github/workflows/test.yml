@@ -126,23 +126,3 @@ jobs:
         with:
           name: r-package
           path: lib/R/target/pathling_*.tar.gz
-
-  upload-coverage:
-    name: Upload coverage
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    if: github.actor != 'dependabot[bot]'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download coverage reports
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-reports
-          path: coverage-reports
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
