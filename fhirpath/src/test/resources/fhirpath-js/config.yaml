@@ -562,15 +562,20 @@ excludeSet:
           - "** count nodes without value, but with extensions"
       - title: "extensions on primitive types not supported"
         type: feature
+        outcome: pass
         id: "#437"
         any:
           - "** expression with extension for primitive type 1"
+      - title: "extensions on primitive types not supported"
+        type: feature
+        outcome: failure
+        id: "#437"
+        any:
           - "** expression with extension for primitive type 3"
           - "Patient.communication.preferred.extension('test').value.id"
           - "Patient.communication.preferred.extension('test').exists()"
           - "Patient.name.given[0].extension('http://hl7.org/fhir/StructureDefinition/display').value = 'Jacomus1'"
           - "Patient.name.given[3].extension('http://hl7.org/fhir/StructureDefinition/display').value = 'Jacomus2'"
-          - "** expression with extension() for primitive type (using FHIR model data)"
           - "** value of extension of extension (using FHIR model data)"
           - "** id of extension of extension"
   - title: Factory exclusions
