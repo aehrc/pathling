@@ -587,6 +587,17 @@ excludeSet:
           - "Patient.name.given[3].extension('http://hl7.org/fhir/StructureDefinition/display').value = 'Jacomus2'"
           - "** value of extension of extension (using FHIR model data)"
           - "** id of extension of extension"
+  - title: Conversion exclusions
+    glob: "fhirpath-js/cases/5.5_conversion.yaml"
+    exclude:
+      - title: "Parse error"
+        type: wontfix
+        comment: |
+          The test case is not valid FHIRPath syntax, it contains a parse error.
+        any:
+          - "time.toTime() = @T19:15-05:00"
+          - "time.toTime() = @T18:15-05:00"
+          - "time.toTime() != @T18:15-05:00"
   - title: Factory exclusions
     glob: "fhirpath-js/cases/factory.yaml"
     exclude:
