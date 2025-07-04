@@ -285,6 +285,17 @@ excludeSet:
           - "time.toTime() = @T19:15-05:00"
           - "time.toTime() = @T18:15-05:00"
           - "time.toTime() != @T18:15-05:00"
+          - "('a'|'b'|'c').aggregate($total & '-' & $this, 'concat')"
+          - "(1 'cm'|3 'cm'|1 'm').aggregate($total + $this, 0 'cm') = 104 'cm'"
+          - "(1 'cm'|3 'cm'|1 'kg'|1 'm').aggregate($total + $this, 0 'cm')"
+          - "(1|2|3|4|5|6|7|8|9).sum() = 45"
+          - "(1 'cm'|3 'cm'|1 'm').sum() = 104 'cm'"
+          - "(7|8|9|1|2|3|4|5|6).min() = 1"
+          - "(1 'cm'|3 'cm'|1 'm').min() = 1 'cm'"
+          - "(7|8|9|1|2|3|4|5|6).max() = 9"
+          - "(1 'cm'|3 'cm'|1 'm').max() = 1 'm'"
+          - "(7|8|9|1|2|3|4|5|6).avg() = 5"
+          - "(7 'm' |8 'm'|9 'm'|1 'm'|2 'm'|3 'm'|400 'cm'|5 'm'|6 'm').avg() = 5 'm'"
   - title: Path exclusions
     glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
