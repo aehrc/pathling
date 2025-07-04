@@ -539,7 +539,14 @@ excludeSet:
           - "coll contains not_el"
           - "ups in coll"
           - "coll contains empty"
-          - "coll contains ups"
+        expression:
+          - "^coll contains ups"
+      - title: Unsupported equality for complex types
+        type: new-feature
+        id: "#2420"
+        outcome: pass
+        any:
+          - "emptycoll contains ups"
   - title: Variable exclusions
     glob: "fhirpath-js/cases/8_variables.yaml"
     exclude:
