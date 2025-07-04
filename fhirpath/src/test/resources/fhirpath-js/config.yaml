@@ -4,113 +4,6 @@ excludeSet:
   - title: Global exclusions
     glob: "*.yaml"
     exclude:
-      - title: "Unsupported subsetting functions"
-        id: "#2378"
-        function:
-          - single
-          - tail
-          - take
-          - skip
-          - last
-          - exclude
-          - intersect
-      - title: "Unsupported string functions"
-        id: "#2380"
-        function:
-          - indexOf
-          - substring
-          - startsWith
-          - endsWith
-          - contains
-          - upper
-          - lower
-          - replace
-          - matches
-          - replaceMatches
-          - length
-          - split
-          - toChars
-          - trim
-          - encode
-          - decode
-          - escape
-          - unescape
-      - title: "Unsupported tree navigation functions"
-        id: "#2382"
-        function:
-          - descendants
-          - children
-      - title: "Unsupported type operators and functions"
-        id: "#2383"
-        function:
-          - is
-          - as
-        expression:
-          - " is " # is operator
-          - " as " # as operator
-      - title: "Unsupported existence functions"
-        id: "#2385"
-        function:
-          - all
-          - subsetOf
-          - supersetOf
-          - isDistinct
-          - distinct
-          - count
-          - allTrue
-          - allFalse
-          - anyTrue
-          - anyFalse
-      - title: "Unsupported filtering and projection functions"
-        id: "#2388"
-        function:
-          - select
-          - repeat
-      - title: "Unsupported $index keyword"
-        id: "#2389"
-        expression:
-          - "(^|\\W)\\$index($|\\W)"
-      - title: "Unsupported aggregate function"
-        id: "#2390"
-        function:
-          - aggregate
-      - title: "Nonexistent aggregate functions"
-        function:
-          - min
-          - max
-          - avg
-          - sum
-      - title: "Unsupported iif function"
-        id: "#2392"
-        function:
-          - iif
-      - title: "Unsupported conversion check functions"
-        id: "#2393"
-        function:
-          - convertsToBoolean
-          - convertsToInteger
-          - convertsToString
-          - convertsToDecimal
-          - convertsToQuantity
-          - convertsToDateTime
-          - convertsToTime
-          - convertsToDate
-      - title: "Unsupported equivalence operators"
-        id: "#2394"
-        expression:
-          - " !~ " # not equivalent operator
-          - " ~ " # equivalent operator
-      - title: "Unsupported reflection"
-        id: "#2395"
-        function:
-          - type
-          - trace
-      - title: "Unsupported current date and time functions"
-        id: "#2396"
-        function:
-          - timeOfDay
-          - now
-          - today
       - title: "Unsupported date and datetime literals"
         type: feature
         id: "#2409"
@@ -373,7 +266,12 @@ excludeSet:
         id: "#2430"
         function:
           - hasValue
-      - title: "Parse error"
+      - title: Unsupported resources
+        type: feature
+        id: "#2418"
+        expression:
+          - "^StructureDefinition"
+      - title: Parse error
         type: wontfix
         comment: |
           The test case is not valid FHIRPath syntax, it contains a parse error.
@@ -444,23 +342,6 @@ excludeSet:
           incorrect expectation within the test cases.
         any:
           - "`a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065`"
-      - title: "Pathling grammar does not like combine as a function"
-        type: bug
-        outcome: pass
-        id: "#2444"
-        comment: |
-          Pathling previously implemented `combine` as an operator, and this conflicts with the
-          use of `combine` as a function in the test cases.
-        any:
-          - "-7.combine(3)"
-      - title: "Pathling grammar does not like combine as a function"
-        type: bug
-        id: "#2444"
-        comment: |
-          Pathling previously implemented `combine` as an operator, and this conflicts with the
-          use of `combine` as a function in the test cases.
-        any:
-          - "(-7).combine(3)"
   - title: String manipulation exclusions
     glob: "fhirpath-js/cases/5.6_string_manipulation.yaml"
     exclude:
@@ -646,28 +527,6 @@ excludeSet:
         outcome: failure
         any:
           - "Patient.telecom.where($this.use = 'work')"
-      - title: "Pathling grammar does not like combine as a function"
-        type: bug
-        id: "#2444"
-        comment: |
-          Pathling previously implemented `combine` as an operator, and this conflicts with the
-          use of `combine` as a function in the test cases.
-        any:
-          - "(2).combine(3)"
-  - title: Combining exclusions
-    glob: "fhirpath-js/cases/5.4_combining.yaml"
-    exclude:
-      - title: "Pathling grammar does not like combine as a function"
-        type: bug
-        id: "#2444"
-        comment: |
-          Pathling previously implemented `combine` as an operator, and this conflicts with the
-          use of `combine` as a function in the test cases.
-        any:
-          - "Functions.attrempty.combine(Functions.nothing)"
-          - "Functions.attrempty.combine(Functions.coll1.colltrue.attr)"
-          - "Functions.attrdouble.combine(Functions.coll1.colltrue.attr)"
-          - "Functions.attrdouble.combine(Functions.coll1.coll2.attr)"
   - title: FHIR R4 Exclusions
     glob: "fhirpath-js/cases/fhir-r4.yaml"
     exclude:
