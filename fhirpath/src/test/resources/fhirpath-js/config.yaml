@@ -304,6 +304,10 @@ excludeSet:
           - "@T10:04:23-04:00 !~ @T18:04:24+04:00"
           - "@T10:04:23-04:00 !~ @T14:04:23Z"
           - "@T10:04:23-04:00 !~ @T14:04:24Z"
+          - "(1|2|3|4|5|6|7|8|9).aggregate($this+$total, 0) = 45"
+          - "(1|2|3|4|5|6|7|8|9).aggregate($this+$total, 2) = 47"
+          - "(1|2|3|4|5|6|7|8|9).aggregate(iif($total.empty(), $this, iif($this < $total, $this, $total))) = 1"
+          - "(1|2|3|4|5|6|7|8|9).aggregate(iif($total.empty(), $this, iif($this > $total, $this, $total)"
   - title: Path exclusions
     glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
@@ -556,6 +560,11 @@ excludeSet:
         any:
           - "** testEscapedIdentifier"
           - "** testSimpleBackTick1"
+      - title: "Tick quotes identifiers not supported"
+        id: "#2153"
+        type: bug
+        any:
+          - "Patient.ofType(FHIR.`Patient`).type().name"
       - title: "Implicit conversion of polymorphic types not supported"
         type: feature
         id: "#2163"
@@ -607,6 +616,7 @@ excludeSet:
           - "** testNEquality22"
           - "1.2 / 1.8 = 0.66666667"
           - "1.00000001.truncate() = 1"
+          - "0.00000001.convertsToDecimal()"
       - title: "Extensions on primitive types not supported"
         type: feature
         outcome: failure
