@@ -384,6 +384,9 @@ excludeSet:
           - "@T17:00-05:00 > timeWithOutT.toTime()"
           - "('a'|'b'|'c').join(',')"
           - "('a'|'b'|'c').join()"
+          - "time.toTime() = @T19:15-05:00"
+          - "time.toTime() = @T18:15-05:00"
+          - "time.toTime() != @T18:15-05:00"
   - title: Path exclusions
     glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
@@ -527,7 +530,7 @@ excludeSet:
           - "** two colls"
           - "** two colls not"
           - "** length mismatch"
-  - title: "Comparison exclusions"
+  - title: Comparison exclusions
     glob: "fhirpath-js/cases/6.2_comparision.yaml"
     exclude:
       - title: Unsupported comparison of dates, times and date times
@@ -600,17 +603,6 @@ excludeSet:
           - "Patient.name.given[3].extension('http://hl7.org/fhir/StructureDefinition/display').value = 'Jacomus2'"
           - "** value of extension of extension (using FHIR model data)"
           - "** id of extension of extension"
-  - title: Conversion exclusions
-    glob: "fhirpath-js/cases/5.5_conversion.yaml"
-    exclude:
-      - title: "Parse error"
-        type: wontfix
-        comment: |
-          The test case is not valid FHIRPath syntax, it contains a parse error.
-        any:
-          - "time.toTime() = @T19:15-05:00"
-          - "time.toTime() = @T18:15-05:00"
-          - "time.toTime() != @T18:15-05:00"
   - title: Factory exclusions
     glob: "fhirpath-js/cases/factory.yaml"
     exclude:
@@ -654,6 +646,20 @@ excludeSet:
         outcome: failure
         any:
           - "Patient.telecom.where($this.use = 'work')"
+  - title: Combining exclusions
+    glob: "fhirpath-js/cases/5.4_combining.yaml"
+    exclude:
+      - title: "Pathling grammar does not like combine as a function"
+        type: bug
+        id: "#2444"
+        comment: |
+          Pathling previously implemented `combine` as an operator, and this conflicts with the
+          use of `combine` as a function in the test cases.
+        any:
+          - "Functions.attrempty.combine(Functions.nothing)"
+          - "Functions.attrempty.combine(Functions.coll1.colltrue.attr)"
+          - "Functions.attrdouble.combine(Functions.coll1.colltrue.attr)"
+          - "Functions.attrdouble.combine(Functions.coll1.coll2.attr)"
   - title: FHIR R4 Exclusions
     glob: "fhirpath-js/cases/fhir-r4.yaml"
     exclude:
@@ -733,4 +739,3 @@ excludeSet:
         id: "#2166"
         any:
           - "(1|2).not() = false"
-
