@@ -1,21 +1,27 @@
 package au.csiro.pathling.fhirpath.yaml;
 
-import au.csiro.pathling.test.yaml.YamlConfig;
-import au.csiro.pathling.test.yaml.YamlSpec;
-import au.csiro.pathling.test.yaml.YamlSpecCachedTestBase;
+import au.csiro.pathling.test.yaml.YamlCachedTestBase;
+import au.csiro.pathling.test.yaml.annotations.YamlTest;
+import au.csiro.pathling.test.yaml.annotations.YamlTestConfiguration;
+import au.csiro.pathling.test.yaml.executor.YamlTestExecutor;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Tag;
 
 @Slf4j
 @Tag("UnitTest")
-@YamlConfig(
+@YamlTestConfiguration(
     resourceBase = "fhirpath-ptl/resources"
 )
-public class YamlFhirpathTest extends YamlSpecCachedTestBase {
+public class YamlFhirpathTest extends YamlCachedTestBase {
 
-  @YamlSpec("fhirpath-ptl/cases/math.yaml")
-  void testMath(@Nonnull final RuntimeCase testCase) {
+  @YamlTest("fhirpath-ptl/cases/math.yaml")
+  void testMath(@Nonnull final YamlTestExecutor testCase) {
+    run(testCase);
+  }
+
+  @YamlTest("fhirpath-ptl/cases/search-params.yaml")
+  void testSearchParams(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
 }

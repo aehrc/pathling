@@ -1,0 +1,1412 @@
+tests:
+- expression: Resource.id
+- expression: Resource.id
+- expression: Resource.language
+- expression: Resource.meta.lastUpdated
+- expression: Resource.meta.profile
+- expression: Resource.meta.security
+- expression: Resource.meta.source
+- expression: Resource.meta.tag
+- expression: Account.guarantor.party
+- expression: Account.identifier | AdverseEvent.identifier | AllergyIntolerance.identifier | Appointment.identifier | AppointmentResponse.identifier
+    | Basic.identifier | BodyStructure.identifier | CarePlan.identifier | CareTeam.identifier | ChargeItem.identifier | Claim.identifier
+    | ClaimResponse.identifier | ClinicalImpression.identifier | Communication.identifier | CommunicationRequest.identifier
+    | Composition.identifier | Condition.identifier | Consent.identifier | Contract.identifier | Coverage.identifier | CoverageEligibilityRequest.identifier
+    | CoverageEligibilityResponse.identifier | DetectedIssue.identifier | DeviceRequest.identifier | DeviceUsage.identifier
+    | DiagnosticReport.identifier | DocumentReference.identifier | Encounter.identifier | EnrollmentRequest.identifier | EpisodeOfCare.identifier
+    | ExplanationOfBenefit.identifier | FamilyMemberHistory.identifier | Flag.identifier | Goal.identifier | GuidanceResponse.identifier
+    | ImagingSelection.identifier | ImagingStudy.identifier | Immunization.identifier | ImmunizationEvaluation.identifier
+    | ImmunizationRecommendation.identifier | Invoice.identifier | List.identifier | MeasureReport.identifier | Medication.identifier
+    | MedicationAdministration.identifier | MedicationDispense.identifier | MedicationRequest.identifier | MedicationStatement.identifier
+    | MolecularSequence.identifier | NutritionIntake.identifier | NutritionOrder.identifier | Observation.identifier | Person.identifier
+    | Procedure.identifier | QuestionnaireResponse.identifier | RelatedPerson.identifier | RequestOrchestration.identifier
+    | ResearchSubject.identifier | RiskAssessment.identifier | ServiceRequest.identifier | Specimen.identifier | SupplyDelivery.identifier
+    | SupplyRequest.identifier | Task.identifier | VisionPrescription.identifier
+- expression: Account.name
+- expression: Account.owner
+- expression: Account.subject.where(resolve() is Patient) | AdverseEvent.subject.where(resolve() is Patient) | AllergyIntolerance.patient
+    | Appointment.participant.actor.where(resolve() is Patient) | Appointment.subject.where(resolve() is Patient) | AppointmentResponse.actor.where(resolve()
+    is Patient) | AuditEvent.patient | Basic.subject.where(resolve() is Patient) | BodyStructure.patient | CarePlan.subject.where(resolve()
+    is Patient) | CareTeam.subject.where(resolve() is Patient) | ChargeItem.subject.where(resolve() is Patient) | Claim.patient
+    | ClaimResponse.patient | ClinicalImpression.subject.where(resolve() is Patient) | Communication.subject.where(resolve()
+    is Patient) | CommunicationRequest.subject.where(resolve() is Patient) | Composition.subject.where(resolve() is Patient)
+    | Condition.subject.where(resolve() is Patient) | Consent.subject.where(resolve() is Patient) | Contract.subject.where(resolve()
+    is Patient) | Coverage.beneficiary | CoverageEligibilityRequest.patient | CoverageEligibilityResponse.patient | DetectedIssue.subject.where(resolve()
+    is Patient) | DeviceRequest.subject.where(resolve() is Patient) | DeviceUsage.patient | DiagnosticReport.subject.where(resolve()
+    is Patient) | DocumentReference.subject.where(resolve() is Patient) | Encounter.subject.where(resolve() is Patient) |
+    EnrollmentRequest.candidate | EpisodeOfCare.patient | ExplanationOfBenefit.patient | FamilyMemberHistory.patient | Flag.subject.where(resolve()
+    is Patient) | Goal.subject.where(resolve() is Patient) | GuidanceResponse.subject.where(resolve() is Patient) | ImagingSelection.subject.where(resolve()
+    is Patient) | ImagingStudy.subject.where(resolve() is Patient) | Immunization.patient | ImmunizationEvaluation.patient
+    | ImmunizationRecommendation.patient | Invoice.subject.where(resolve() is Patient) | List.subject.where(resolve() is Patient)
+    | MeasureReport.subject.where(resolve() is Patient) | MedicationAdministration.subject.where(resolve() is Patient) | MedicationDispense.subject.where(resolve()
+    is Patient) | MedicationRequest.subject.where(resolve() is Patient) | MedicationStatement.subject.where(resolve() is Patient)
+    | MolecularSequence.subject.where(resolve() is Patient) | NutritionIntake.subject.where(resolve() is Patient) | NutritionOrder.subject.where(resolve()
+    is Patient) | Observation.subject.where(resolve() is Patient) | Person.link.target.where(resolve() is Patient) | Procedure.subject.where(resolve()
+    is Patient) | Provenance.patient | QuestionnaireResponse.subject.where(resolve() is Patient) | RelatedPerson.patient |
+    RequestOrchestration.subject.where(resolve() is Patient) | ResearchSubject.subject.where(resolve() is Patient) | RiskAssessment.subject.where(resolve()
+    is Patient) | ServiceRequest.subject.where(resolve() is Patient) | Specimen.subject.where(resolve() is Patient) | SupplyDelivery.patient
+    | SupplyRequest.deliverFor | Task.for.where(resolve() is Patient) | VisionPrescription.patient
+- expression: Account.servicePeriod
+- expression: Account.relatedAccount.account
+- expression: Account.status
+- expression: Account.subject
+- expression: Account.type | AllergyIntolerance.type | Composition.type | Coverage.type | DocumentReference.type | Encounter.type
+    | EpisodeOfCare.type | Invoice.type | MedicationDispense.type | MolecularSequence.type | Specimen.type
+- expression: ActivityDefinition.relatedArtifact.where(type='composed-of').resource | EventDefinition.relatedArtifact.where(type='composed-of').resource
+    | EvidenceVariable.relatedArtifact.where(type='composed-of').resource | Library.relatedArtifact.where(type='composed-of').resource
+    | Measure.relatedArtifact.where(type='composed-of').resource | PlanDefinition.relatedArtifact.where(type='composed-of').resource
+- expression: (ActivityDefinition.useContext.value.ofType(CodeableConcept)) | (ActorDefinition.useContext.value.ofType(CodeableConcept))
+    | (CapabilityStatement.useContext.value.ofType(CodeableConcept)) | (ChargeItemDefinition.useContext.value.ofType(CodeableConcept))
+    | (Citation.useContext.value.ofType(CodeableConcept)) | (CodeSystem.useContext.value.ofType(CodeableConcept)) | (CompartmentDefinition.useContext.value.ofType(CodeableConcept))
+    | (ConceptMap.useContext.value.ofType(CodeableConcept)) | (ConditionDefinition.useContext.value.ofType(CodeableConcept))
+    | (EventDefinition.useContext.value.ofType(CodeableConcept)) | (Evidence.useContext.value.ofType(CodeableConcept)) | (EvidenceReport.useContext.value.ofType(CodeableConcept))
+    | (EvidenceVariable.useContext.value.ofType(CodeableConcept)) | (ExampleScenario.useContext.value.ofType(CodeableConcept))
+    | (GraphDefinition.useContext.value.ofType(CodeableConcept)) | (ImplementationGuide.useContext.value.ofType(CodeableConcept))
+    | (Library.useContext.value.ofType(CodeableConcept)) | (Measure.useContext.value.ofType(CodeableConcept)) | (MessageDefinition.useContext.value.ofType(CodeableConcept))
+    | (NamingSystem.useContext.value.ofType(CodeableConcept)) | (OperationDefinition.useContext.value.ofType(CodeableConcept))
+    | (PlanDefinition.useContext.value.ofType(CodeableConcept)) | (Questionnaire.useContext.value.ofType(CodeableConcept))
+    | (Requirements.useContext.value.ofType(CodeableConcept)) | (SearchParameter.useContext.value.ofType(CodeableConcept))
+    | (StructureDefinition.useContext.value.ofType(CodeableConcept)) | (StructureMap.useContext.value.ofType(CodeableConcept))
+    | (TerminologyCapabilities.useContext.value.ofType(CodeableConcept)) | (TestScript.useContext.value.ofType(CodeableConcept))
+    | (ValueSet.useContext.value.ofType(CodeableConcept))
+- expression: (ActivityDefinition.useContext.value.ofType(Quantity)) | (ActivityDefinition.useContext.value.ofType(Range))
+    | (ActorDefinition.useContext.value.ofType(Quantity)) | (ActorDefinition.useContext.value.ofType(Range)) | (CapabilityStatement.useContext.value.ofType(Quantity))
+    | (CapabilityStatement.useContext.value.ofType(Range)) | (ChargeItemDefinition.useContext.value.ofType(Quantity)) | (ChargeItemDefinition.useContext.value.ofType(Range))
+    | (Citation.useContext.value.ofType(Quantity)) | (Citation.useContext.value.ofType(Range)) | (CodeSystem.useContext.value.ofType(Quantity))
+    | (CodeSystem.useContext.value.ofType(Range)) | (CompartmentDefinition.useContext.value.ofType(Quantity)) | (CompartmentDefinition.useContext.value.ofType(Range))
+    | (ConceptMap.useContext.value.ofType(Quantity)) | (ConceptMap.useContext.value.ofType(Range)) | (ConditionDefinition.useContext.value.ofType(Quantity))
+    | (ConditionDefinition.useContext.value.ofType(Range)) | (EventDefinition.useContext.value.ofType(Quantity)) | (EventDefinition.useContext.value.ofType(Range))
+    | (Evidence.useContext.value.ofType(Quantity)) | (Evidence.useContext.value.ofType(Range)) | (EvidenceReport.useContext.value.ofType(Quantity))
+    | (EvidenceReport.useContext.value.ofType(Range)) | (EvidenceVariable.useContext.value.ofType(Quantity)) | (EvidenceVariable.useContext.value.ofType(Range))
+    | (ExampleScenario.useContext.value.ofType(Quantity)) | (ExampleScenario.useContext.value.ofType(Range)) | (GraphDefinition.useContext.value.ofType(Quantity))
+    | (GraphDefinition.useContext.value.ofType(Range)) | (ImplementationGuide.useContext.value.ofType(Quantity)) | (ImplementationGuide.useContext.value.ofType(Range))
+    | (Library.useContext.value.ofType(Quantity)) | (Library.useContext.value.ofType(Range)) | (Measure.useContext.value.ofType(Quantity))
+    | (Measure.useContext.value.ofType(Range)) | (MessageDefinition.useContext.value.ofType(Quantity)) | (MessageDefinition.useContext.value.ofType(Range))
+    | (NamingSystem.useContext.value.ofType(Quantity)) | (NamingSystem.useContext.value.ofType(Range)) | (OperationDefinition.useContext.value.ofType(Quantity))
+    | (OperationDefinition.useContext.value.ofType(Range)) | (PlanDefinition.useContext.value.ofType(Quantity)) | (PlanDefinition.useContext.value.ofType(Range))
+    | (Questionnaire.useContext.value.ofType(Quantity)) | (Questionnaire.useContext.value.ofType(Range)) | (Requirements.useContext.value.ofType(Quantity))
+    | (Requirements.useContext.value.ofType(Range)) | (SearchParameter.useContext.value.ofType(Quantity)) | (SearchParameter.useContext.value.ofType(Range))
+    | (StructureDefinition.useContext.value.ofType(Quantity)) | (StructureDefinition.useContext.value.ofType(Range)) | (StructureMap.useContext.value.ofType(Quantity))
+    | (StructureMap.useContext.value.ofType(Range)) | (TerminologyCapabilities.useContext.value.ofType(Quantity)) | (TerminologyCapabilities.useContext.value.ofType(Range))
+    | (TestScript.useContext.value.ofType(Quantity)) | (TestScript.useContext.value.ofType(Range)) | (ValueSet.useContext.value.ofType(Quantity))
+    | (ValueSet.useContext.value.ofType(Range))
+- expression: ActivityDefinition.useContext.code | ActorDefinition.useContext.code | CapabilityStatement.useContext.code |
+    ChargeItemDefinition.useContext.code | Citation.useContext.code | CodeSystem.useContext.code | CompartmentDefinition.useContext.code
+    | ConceptMap.useContext.code | ConditionDefinition.useContext.code | EventDefinition.useContext.code | Evidence.useContext.code
+    | EvidenceReport.useContext.code | EvidenceVariable.useContext.code | ExampleScenario.useContext.code | GraphDefinition.useContext.code
+    | ImplementationGuide.useContext.code | Library.useContext.code | Measure.useContext.code | MessageDefinition.useContext.code
+    | NamingSystem.useContext.code | OperationDefinition.useContext.code | PlanDefinition.useContext.code | Questionnaire.useContext.code
+    | Requirements.useContext.code | SearchParameter.useContext.code | StructureDefinition.useContext.code | StructureMap.useContext.code
+    | TerminologyCapabilities.useContext.code | TestScript.useContext.code | ValueSet.useContext.code
+- expression: ActivityDefinition.date | ActorDefinition.date | CapabilityStatement.date | ChargeItemDefinition.date | Citation.date
+    | CodeSystem.date | CompartmentDefinition.date | ConceptMap.date | ConditionDefinition.date | EventDefinition.date | Evidence.date
+    | EvidenceVariable.date | ExampleScenario.date | GraphDefinition.date | ImplementationGuide.date | Library.date | Measure.date
+    | MessageDefinition.date | NamingSystem.date | OperationDefinition.date | PlanDefinition.date | Questionnaire.date | Requirements.date
+    | SearchParameter.date | StructureDefinition.date | StructureMap.date | SubscriptionTopic.date | TerminologyCapabilities.date
+    | TestScript.date | ValueSet.date
+- expression: ActivityDefinition.relatedArtifact.where(type='depends-on').resource | ActivityDefinition.library | EventDefinition.relatedArtifact.where(type='depends-on').resource
+    | EvidenceVariable.relatedArtifact.where(type='depends-on').resource | Library.relatedArtifact.where(type='depends-on').resource
+    | Measure.relatedArtifact.where(type='depends-on').resource | Measure.library | PlanDefinition.relatedArtifact.where(type='depends-on').resource
+    | PlanDefinition.library
+- expression: ActivityDefinition.relatedArtifact.where(type='derived-from').resource | CodeSystem.relatedArtifact.where(type='derived-from').resource
+    | ConceptMap.relatedArtifact.where(type='derived-from').resource | EventDefinition.relatedArtifact.where(type='derived-from').resource
+    | EvidenceVariable.relatedArtifact.where(type='derived-from').resource | Library.relatedArtifact.where(type='derived-from').resource
+    | Measure.relatedArtifact.where(type='derived-from').resource | NamingSystem.relatedArtifact.where(type='derived-from').resource
+    | PlanDefinition.relatedArtifact.where(type='derived-from').resource | ValueSet.relatedArtifact.where(type='derived-from').resource
+- expression: ActivityDefinition.description | ActorDefinition.description | CapabilityStatement.description | ChargeItemDefinition.description
+    | Citation.description | CodeSystem.description | CompartmentDefinition.description | ConceptMap.description | ConditionDefinition.description
+    | EventDefinition.description | Evidence.description | EvidenceVariable.description | GraphDefinition.description | ImplementationGuide.description
+    | Library.description | Measure.description | MessageDefinition.description | NamingSystem.description | OperationDefinition.description
+    | PlanDefinition.description | Questionnaire.description | Requirements.description | SearchParameter.description | StructureDefinition.description
+    | StructureMap.description | TerminologyCapabilities.description | TestScript.description | ValueSet.description
+- expression: ActivityDefinition.effectivePeriod | ChargeItemDefinition.applicability.effectivePeriod | Citation.effectivePeriod
+    | CodeSystem.effectivePeriod | ConceptMap.effectivePeriod | EventDefinition.effectivePeriod | Library.effectivePeriod
+    | Measure.effectivePeriod | NamingSystem.effectivePeriod | PlanDefinition.effectivePeriod | Questionnaire.effectivePeriod
+    | ValueSet.effectivePeriod
+- expression: ActivityDefinition.identifier | ActorDefinition.identifier | CapabilityStatement.identifier | ChargeItemDefinition.identifier
+    | Citation.identifier | CodeSystem.identifier | ConceptMap.identifier | ConditionDefinition.identifier | EventDefinition.identifier
+    | Evidence.identifier | EvidenceReport.identifier | EvidenceVariable.identifier | ExampleScenario.identifier | GraphDefinition.identifier
+    | ImplementationGuide.identifier | Library.identifier | Measure.identifier | MedicationKnowledge.identifier | MessageDefinition.identifier
+    | NamingSystem.identifier | ObservationDefinition.identifier | OperationDefinition.identifier | PlanDefinition.identifier
+    | Questionnaire.identifier | Requirements.identifier | SearchParameter.identifier | SpecimenDefinition.identifier | StructureDefinition.identifier
+    | StructureMap.identifier | SubscriptionTopic.identifier | TerminologyCapabilities.identifier | TestPlan.identifier |
+    TestScript.identifier | ValueSet.identifier
+- expression: ActivityDefinition.jurisdiction | ActorDefinition.jurisdiction | CapabilityStatement.jurisdiction | ChargeItemDefinition.jurisdiction
+    | Citation.jurisdiction | CodeSystem.jurisdiction | ConceptMap.jurisdiction | ConditionDefinition.jurisdiction | EventDefinition.jurisdiction
+    | ExampleScenario.jurisdiction | GraphDefinition.jurisdiction | ImplementationGuide.jurisdiction | Library.jurisdiction
+    | Measure.jurisdiction | MessageDefinition.jurisdiction | NamingSystem.jurisdiction | OperationDefinition.jurisdiction
+    | PlanDefinition.jurisdiction | Questionnaire.jurisdiction | Requirements.jurisdiction | SearchParameter.jurisdiction
+    | StructureDefinition.jurisdiction | StructureMap.jurisdiction | TerminologyCapabilities.jurisdiction | TestScript.jurisdiction
+    | ValueSet.jurisdiction
+- expression: ActivityDefinition.kind
+- expression: ActivityDefinition.name | CapabilityStatement.name | Citation.name | CodeSystem.name | CompartmentDefinition.name
+    | ConceptMap.name | ConditionDefinition.name | EventDefinition.name | EvidenceVariable.name | ExampleScenario.name | GraphDefinition.name
+    | ImplementationGuide.name | Library.name | Measure.name | MessageDefinition.name | NamingSystem.name | OperationDefinition.name
+    | PlanDefinition.name | Questionnaire.name | Requirements.name | SearchParameter.name | StructureDefinition.name | StructureMap.name
+    | TerminologyCapabilities.name | TestScript.name | ValueSet.name
+- expression: ActivityDefinition.relatedArtifact.where(type='predecessor').resource | CodeSystem.relatedArtifact.where(type='predecessor').resource
+    | ConceptMap.relatedArtifact.where(type='predecessor').resource | EventDefinition.relatedArtifact.where(type='predecessor').resource
+    | EvidenceVariable.relatedArtifact.where(type='predecessor').resource | Library.relatedArtifact.where(type='predecessor').resource
+    | Measure.relatedArtifact.where(type='predecessor').resource | NamingSystem.relatedArtifact.where(type='predecessor').resource
+    | PlanDefinition.relatedArtifact.where(type='predecessor').resource | ValueSet.relatedArtifact.where(type='predecessor').resource
+- expression: ActivityDefinition.publisher | ActorDefinition.publisher | CapabilityStatement.publisher | ChargeItemDefinition.publisher
+    | Citation.publisher | CodeSystem.publisher | CompartmentDefinition.publisher | ConceptMap.publisher | ConditionDefinition.publisher
+    | EventDefinition.publisher | Evidence.publisher | EvidenceReport.publisher | EvidenceVariable.publisher | ExampleScenario.publisher
+    | GraphDefinition.publisher | ImplementationGuide.publisher | Library.publisher | Measure.publisher | MessageDefinition.publisher
+    | NamingSystem.publisher | OperationDefinition.publisher | PlanDefinition.publisher | Questionnaire.publisher | Requirements.publisher
+    | SearchParameter.publisher | StructureDefinition.publisher | StructureMap.publisher | TerminologyCapabilities.publisher
+    | TestScript.publisher | ValueSet.publisher
+- expression: ActivityDefinition.status | ActorDefinition.status | CapabilityStatement.status | ChargeItemDefinition.status
+    | Citation.status | CodeSystem.status | CompartmentDefinition.status | ConceptMap.status | ConditionDefinition.status
+    | EventDefinition.status | Evidence.status | EvidenceReport.status | EvidenceVariable.status | ExampleScenario.status
+    | GraphDefinition.status | ImplementationGuide.status | Library.status | Measure.status | MedicationKnowledge.status |
+    MessageDefinition.status | NamingSystem.status | ObservationDefinition.status | OperationDefinition.status | PlanDefinition.status
+    | Questionnaire.status | Requirements.status | SearchParameter.status | SpecimenDefinition.status | StructureDefinition.status
+    | StructureMap.status | SubscriptionTopic.status | TerminologyCapabilities.status | TestPlan.status | TestScript.status
+    | ValueSet.status
+- expression: ActivityDefinition.relatedArtifact.where(type='successor').resource | EventDefinition.relatedArtifact.where(type='successor').resource
+    | EvidenceVariable.relatedArtifact.where(type='successor').resource | Library.relatedArtifact.where(type='successor').resource
+    | Measure.relatedArtifact.where(type='successor').resource | PlanDefinition.relatedArtifact.where(type='successor').resource
+- expression: ActivityDefinition.title | ActorDefinition.title | CapabilityStatement.title | ChargeItemDefinition.title |
+    Citation.title | CodeSystem.title | ConceptMap.title | ConditionDefinition.title | EventDefinition.title | Evidence.title
+    | EvidenceVariable.title | ImplementationGuide.title | Library.title | Measure.title | MessageDefinition.title | ObservationDefinition.title
+    | OperationDefinition.title | PlanDefinition.title | Questionnaire.title | Requirements.title | SpecimenDefinition.title
+    | StructureDefinition.title | StructureMap.title | SubscriptionTopic.title | TerminologyCapabilities.title | TestScript.title
+    | ValueSet.title
+- expression: ActivityDefinition.topic | CodeSystem.topic | ConceptMap.topic | EventDefinition.topic | Library.topic | Measure.topic
+    | NamingSystem.topic | PlanDefinition.topic | ValueSet.topic
+- expression: ActivityDefinition.url | ActorDefinition.url | CapabilityStatement.url | ChargeItemDefinition.url | Citation.url
+    | CodeSystem.url | CompartmentDefinition.url | ConceptMap.url | ConditionDefinition.url | EventDefinition.url | Evidence.url
+    | EvidenceReport.url | EvidenceVariable.url | ExampleScenario.url | GraphDefinition.url | ImplementationGuide.url | Library.url
+    | Measure.url | MessageDefinition.url | NamingSystem.url | ObservationDefinition.url | OperationDefinition.url | PlanDefinition.url
+    | Questionnaire.url | Requirements.url | SearchParameter.url | SpecimenDefinition.url | StructureDefinition.url | StructureMap.url
+    | SubscriptionTopic.url | TerminologyCapabilities.url | TestPlan.url | TestScript.url | ValueSet.url
+- expression: ActivityDefinition.version | ActorDefinition.version | CapabilityStatement.version | ChargeItemDefinition.version
+    | Citation.version | CodeSystem.version | CompartmentDefinition.version | ConceptMap.version | ConditionDefinition.version
+    | EventDefinition.version | Evidence.version | EvidenceVariable.version | ExampleScenario.version | GraphDefinition.version
+    | ImplementationGuide.version | Library.version | Measure.version | MessageDefinition.version | NamingSystem.version |
+    OperationDefinition.version | PlanDefinition.version | Questionnaire.version | Requirements.version | SearchParameter.version
+    | StructureDefinition.version | StructureMap.version | SubscriptionTopic.version | TerminologyCapabilities.version | TestScript.version
+    | ValueSet.version
+- expression: ActivityDefinition.useContext | ActorDefinition.useContext | CapabilityStatement.useContext | ChargeItemDefinition.useContext
+    | Citation.useContext | CodeSystem.useContext | CompartmentDefinition.useContext | ConceptMap.useContext | ConditionDefinition.useContext
+    | EventDefinition.useContext | Evidence.useContext | EvidenceReport.useContext | EvidenceVariable.useContext | ExampleScenario.useContext
+    | GraphDefinition.useContext | ImplementationGuide.useContext | Library.useContext | Measure.useContext | MessageDefinition.useContext
+    | NamingSystem.useContext | OperationDefinition.useContext | PlanDefinition.useContext | Questionnaire.useContext | Requirements.useContext
+    | SearchParameter.useContext | StructureDefinition.useContext | StructureMap.useContext | TerminologyCapabilities.useContext
+    | TestScript.useContext | ValueSet.useContext
+- expression: ActivityDefinition.useContext | ActorDefinition.useContext | CapabilityStatement.useContext | ChargeItemDefinition.useContext
+    | Citation.useContext | CodeSystem.useContext | CompartmentDefinition.useContext | ConceptMap.useContext | ConditionDefinition.useContext
+    | EventDefinition.useContext | Evidence.useContext | EvidenceReport.useContext | EvidenceVariable.useContext | ExampleScenario.useContext
+    | GraphDefinition.useContext | ImplementationGuide.useContext | Library.useContext | Measure.useContext | MessageDefinition.useContext
+    | NamingSystem.useContext | OperationDefinition.useContext | PlanDefinition.useContext | Questionnaire.useContext | Requirements.useContext
+    | SearchParameter.useContext | StructureDefinition.useContext | StructureMap.useContext | TerminologyCapabilities.useContext
+    | TestScript.useContext | ValueSet.useContext
+- expression: ActorDefinition.type
+- expression: AdministrableProductDefinition.device
+- expression: AdministrableProductDefinition.administrableDoseForm
+- expression: AdministrableProductDefinition.formOf
+- expression: AdministrableProductDefinition.identifier
+- expression: AdministrableProductDefinition.ingredient
+- expression: AdministrableProductDefinition.producedFrom
+- expression: AdministrableProductDefinition.routeOfAdministration.code
+- expression: AdministrableProductDefinition.status
+- expression: AdministrableProductDefinition.routeOfAdministration.targetSpecies.code
+- expression: AdverseEvent.actuality
+- expression: AdverseEvent.category
+- expression: AdverseEvent.code | AllergyIntolerance.code | AllergyIntolerance.reaction.substance | AuditEvent.code | Basic.code
+    | ChargeItem.code | Condition.code | DetectedIssue.code | DeviceRequest.code.concept | DiagnosticReport.code | FamilyMemberHistory.condition.code
+    | ImagingSelection.status | List.code | Medication.code | MedicationAdministration.medication.concept | MedicationDispense.medication.concept
+    | MedicationRequest.medication.concept | MedicationStatement.medication.concept | NutritionIntake.code | Observation.code
+    | Procedure.code | RequestOrchestration.code | Task.code
+- expression: AdverseEvent.occurrence.ofType(dateTime) | AdverseEvent.occurrence.ofType(Period) | AdverseEvent.occurrence.ofType(Timing)
+    | AllergyIntolerance.recordedDate | (start | requestedPeriod.start).first() | AuditEvent.recorded | CarePlan.period |
+    ClinicalImpression.date | Composition.date | Consent.date | DiagnosticReport.effective.ofType(dateTime) | DiagnosticReport.effective.ofType(Period)
+    | DocumentReference.date | Encounter.actualPeriod | EpisodeOfCare.period | FamilyMemberHistory.date | Flag.period | (Immunization.occurrence.ofType(dateTime))
+    | ImmunizationEvaluation.date | ImmunizationRecommendation.date | Invoice.date | List.date | MeasureReport.date | NutritionIntake.occurrence.ofType(dateTime)
+    | NutritionIntake.occurrence.ofType(Period) | Observation.effective.ofType(dateTime) | Observation.effective.ofType(Period)
+    | Observation.effective.ofType(Timing) | Observation.effective.ofType(instant) | Procedure.occurrence.ofType(dateTime)
+    | Procedure.occurrence.ofType(Period) | Procedure.occurrence.ofType(Timing) | ResearchSubject.period | (RiskAssessment.occurrence.ofType(dateTime))
+    | SupplyRequest.authoredOn
+- expression: AdverseEvent.location
+- expression: AdverseEvent.recorder
+- expression: AdverseEvent.resultingEffect
+- expression: AdverseEvent.seriousness
+- expression: AdverseEvent.status
+- expression: AdverseEvent.study
+- expression: AdverseEvent.subject
+- expression: (AdverseEvent.suspectEntity.instance as Reference)
+- expression: AllergyIntolerance.category
+- expression: AllergyIntolerance.clinicalStatus
+- expression: AllergyIntolerance.criticality
+- expression: AllergyIntolerance.lastOccurrence
+- expression: AllergyIntolerance.reaction.manifestation.concept
+- expression: AllergyIntolerance.reaction.manifestation.reference
+- expression: AllergyIntolerance.participant.actor
+- expression: AllergyIntolerance.reaction.exposureRoute
+- expression: AllergyIntolerance.reaction.severity
+- expression: AllergyIntolerance.verificationStatus
+- expression: Appointment.participant.actor
+- expression: Appointment.appointmentType
+- expression: Appointment.basedOn
+- expression: Appointment.participant.actor.where(resolve() is Group) | Appointment.subject.where(resolve() is Group)
+- expression: Appointment.participant.actor.where(resolve() is Location)
+- expression: Appointment.participant.status
+- expression: Appointment.participant.actor.where(resolve() is Practitioner)
+- expression: Appointment.reason.concept
+- expression: Appointment.reason.reference
+- expression: requestedPeriod
+- expression: Appointment.serviceCategory
+- expression: Appointment.serviceType.concept
+- expression: Appointment.serviceType.reference
+- expression: Appointment.slot
+- expression: Appointment.specialty
+- expression: Appointment.status
+- expression: Appointment.subject
+- expression: Appointment.supportingInformation
+- expression: AppointmentResponse.actor
+- expression: AppointmentResponse.appointment
+- expression: AppointmentResponse.actor.where(resolve() is Group)
+- expression: AppointmentResponse.actor.where(resolve() is Location)
+- expression: AppointmentResponse.participantStatus
+- expression: AppointmentResponse.actor.where(resolve() is Practitioner)
+- expression: ArtifactAssessment.date
+- expression: ArtifactAssessment.identifier
+- expression: AuditEvent.action
+- expression: AuditEvent.agent.who
+- expression: AuditEvent.agent.role
+- expression: AuditEvent.basedOn
+- expression: AuditEvent.category
+- expression: AuditEvent.encounter | CarePlan.encounter | ChargeItem.encounter | Claim.item.encounter | ClinicalImpression.encounter
+    | Communication.encounter | CommunicationRequest.encounter | Composition.encounter | Condition.encounter | DeviceRequest.encounter
+    | DiagnosticReport.encounter | EncounterHistory.encounter | ExplanationOfBenefit.item.encounter | Flag.encounter | ImagingStudy.encounter
+    | List.encounter | MedicationDispense.encounter | MedicationStatement.encounter | NutritionIntake.encounter | NutritionOrder.encounter
+    | Observation.encounter | Procedure.encounter | Provenance.encounter | QuestionnaireResponse.encounter | RequestOrchestration.encounter
+    | RiskAssessment.encounter | ServiceRequest.encounter | Task.encounter | VisionPrescription.encounter
+- expression: AuditEvent.entity.what
+- expression: AuditEvent.entity.role
+- expression: AuditEvent.outcome.code
+- expression: AuditEvent.agent.policy
+- expression: AuditEvent.authorization | AuditEvent.agent.authorization
+- expression: AuditEvent.source.observer
+- expression: Basic.author
+- expression: Basic.created
+- expression: Basic.subject
+- expression: BiologicallyDerivedProduct.biologicalSourceEvent
+- expression: BiologicallyDerivedProduct.productCode
+- expression: BiologicallyDerivedProduct.collection.collector
+- expression: BiologicallyDerivedProduct.identifier
+- expression: BiologicallyDerivedProduct.productCategory
+- expression: BiologicallyDerivedProduct.productStatus
+- expression: BiologicallyDerivedProduct.request
+- expression: BiologicallyDerivedProduct.identifier
+- expression: BiologicallyDerivedProductDispense.identifier
+- expression: BiologicallyDerivedProductDispense.patient
+- expression: BiologicallyDerivedProductDispense.performer.actor
+- expression: BiologicallyDerivedProductDispense.product
+- expression: BiologicallyDerivedProductDispense.status
+- expression: BodyStructure.excludedStructure.structure
+- expression: BodyStructure.includedStructure.structure
+- expression: BodyStructure.morphology
+- expression: Bundle.entry[0].resource as Composition
+- expression: Bundle.identifier
+- expression: Bundle.entry[0].resource as MessageHeader
+- expression: Bundle.timestamp
+- expression: Bundle.type
+- expression: CapabilityStatement.fhirVersion
+- expression: CapabilityStatement.format
+- expression: CapabilityStatement.implementationGuide
+- expression: CapabilityStatement.rest.mode
+- expression: CapabilityStatement.rest.resource.type
+- expression: CapabilityStatement.rest.resource.profile
+- expression: CapabilityStatement.rest.security.service
+- expression: CapabilityStatement.software.name
+- expression: CapabilityStatement.rest.resource.supportedProfile
+- expression: CarePlan.activity.plannedActivityReference
+- expression: CarePlan.basedOn
+- expression: CarePlan.careTeam
+- expression: CarePlan.category
+- expression: CarePlan.addresses.reference
+- expression: CarePlan.custodian
+- expression: CarePlan.goal
+- expression: CarePlan.instantiatesCanonical
+- expression: CarePlan.instantiatesUri
+- expression: CarePlan.intent
+- expression: CarePlan.partOf
+- expression: CarePlan.replaces
+- expression: CarePlan.status
+- expression: CarePlan.subject
+- expression: CareTeam.category
+- expression: CareTeam.name | CareTeam.extension('http://hl7.org/fhir/StructureDefinition/careteam-alias').value
+- expression: CareTeam.participant.member
+- expression: CareTeam.status
+- expression: CareTeam.subject
+- expression: ChargeItem.account
+- expression: ChargeItem.enteredDate
+- expression: ChargeItem.enterer
+- expression: ChargeItem.totalPriceComponent.factor
+- expression: ChargeItem.occurrence.ofType(dateTime) | ChargeItem.occurrence.ofType(Period) | ChargeItem.occurrence.ofType(Timing)
+- expression: ChargeItem.performer.actor
+- expression: ChargeItem.performer.function
+- expression: ChargeItem.performingOrganization
+- expression: ChargeItem.totalPriceComponent.amount
+- expression: ChargeItem.quantity
+- expression: ChargeItem.requestingOrganization
+- expression: ChargeItem.service.reference
+- expression: ChargeItem.status
+- expression: ChargeItem.subject
+- expression: (Citation.classification.type)
+- expression: (Citation.classification.classifier)
+- expression: Citation.classification
+- expression: Claim.careTeam.provider
+- expression: Claim.created
+- expression: Claim.item.detail.udi
+- expression: Claim.enterer
+- expression: Claim.facility
+- expression: Claim.insurer
+- expression: Claim.item.udi
+- expression: Claim.payee.party
+- expression: Claim.priority
+- expression: Claim.procedure.udi
+- expression: Claim.provider
+- expression: Claim.status
+- expression: Claim.item.detail.subDetail.udi
+- expression: Claim.use
+- expression: ClaimResponse.created
+- expression: ClaimResponse.disposition
+- expression: ClaimResponse.insurer
+- expression: ClaimResponse.outcome
+- expression: ClaimResponse.payment.date
+- expression: ClaimResponse.request
+- expression: ClaimResponse.requestor
+- expression: ClaimResponse.status
+- expression: ClaimResponse.use
+- expression: ClinicalImpression.finding.item.concept
+- expression: ClinicalImpression.finding.item.reference
+- expression: ClinicalImpression.performer
+- expression: ClinicalImpression.previous
+- expression: ClinicalImpression.problem
+- expression: ClinicalImpression.status
+- expression: ClinicalImpression.subject
+- expression: ClinicalImpression.supportingInfo
+- expression: ClinicalUseDefinition.contraindication.diseaseSymptomProcedure.concept
+- expression: ClinicalUseDefinition.contraindication.diseaseSymptomProcedure.reference
+- expression: ClinicalUseDefinition.undesirableEffect.symptomConditionEffect.concept
+- expression: ClinicalUseDefinition.undesirableEffect.symptomConditionEffect.reference
+- expression: ClinicalUseDefinition.identifier
+- expression: ClinicalUseDefinition.indication.diseaseSymptomProcedure.concept
+- expression: ClinicalUseDefinition.indication.diseaseSymptomProcedure.reference
+- expression: ClinicalUseDefinition.interaction.type
+- expression: ClinicalUseDefinition.subject.where(resolve() is MedicinalProductDefinition)
+- expression: ClinicalUseDefinition.status
+- expression: ClinicalUseDefinition.subject
+- expression: ClinicalUseDefinition.type
+- expression: CodeSystem.concept.code
+- expression: CodeSystem.content
+- expression: CodeSystem.concept.designation.language
+- expression: CodeSystem.supplements
+- expression: CodeSystem.url
+- expression: Communication.basedOn
+- expression: Communication.category
+- expression: Communication.instantiatesCanonical
+- expression: Communication.instantiatesUri
+- expression: Communication.medium
+- expression: Communication.partOf
+- expression: Communication.received
+- expression: Communication.recipient
+- expression: Communication.sender
+- expression: Communication.sent
+- expression: Communication.status
+- expression: Communication.subject
+- expression: Communication.topic
+- expression: CommunicationRequest.authoredOn
+- expression: CommunicationRequest.basedOn
+- expression: CommunicationRequest.category
+- expression: CommunicationRequest.groupIdentifier
+- expression: CommunicationRequest.informationProvider
+- expression: CommunicationRequest.medium
+- expression: CommunicationRequest.occurrence.ofType(dateTime) | CommunicationRequest.occurrence.ofType(Period)
+- expression: CommunicationRequest.priority
+- expression: CommunicationRequest.recipient
+- expression: CommunicationRequest.replaces
+- expression: CommunicationRequest.requester
+- expression: CommunicationRequest.status
+- expression: CommunicationRequest.subject
+- expression: CompartmentDefinition.code
+- expression: CompartmentDefinition.resource.code
+- expression: Composition.attester.party
+- expression: Composition.author
+- expression: Composition.category
+- expression: Composition.section.entry
+- expression: Composition.event.detail.concept
+- expression: Composition.event.detail.reference
+- expression: Composition.event.period
+- expression: Composition.relatesTo.resourceReference
+- expression: Composition.section.code
+- expression: Composition.section.text | Composition.section.section.text
+- expression: Composition.status
+- expression: Composition.subject
+- expression: Composition.title
+- expression: Composition.url
+- expression: Composition.version
+- expression: Composition.section
+- expression: ConceptMap.property.uri
+- expression: ConceptMap.group.unmapped.otherMap
+- expression: ConceptMap.group.element.code
+- expression: ConceptMap.group.source
+- expression: (ConceptMap.sourceScope as canonical)
+- expression: (ConceptMap.sourceScope as uri)
+- expression: ConceptMap.group.element.target.code
+- expression: ConceptMap.group.target
+- expression: (ConceptMap.targetScope as canonical)
+- expression: (ConceptMap.targetScope as uri)
+- expression: Condition.abatement.ofType(Age) | Condition.abatement.ofType(Range)
+- expression: Condition.abatement.ofType(dateTime) | Condition.abatement.ofType(Period)
+- expression: Condition.abatement.ofType(string)
+- expression: Condition.bodySite
+- expression: Condition.category
+- expression: Condition.clinicalStatus
+- expression: Condition.evidence.concept
+- expression: Condition.evidence.reference
+- expression: Condition.onset.ofType(Age) | Condition.onset.ofType(Range)
+- expression: Condition.onset.ofType(dateTime) | Condition.onset.ofType(Period)
+- expression: Condition.onset.ofType(string)
+- expression: Condition.participant.actor
+- expression: Condition.participant.function
+- expression: Condition.recordedDate
+- expression: Condition.severity
+- expression: Condition.stage.summary
+- expression: Condition.subject
+- expression: Condition.verificationStatus
+- expression: Consent.provision.action
+- expression: Consent.provision.actor.reference
+- expression: Consent.category
+- expression: Consent.controller
+- expression: Consent.provision.data.reference
+- expression: Consent.grantee
+- expression: Consent.manager
+- expression: Consent.provision.period
+- expression: Consent.provision.purpose
+- expression: Consent.provision.securityLabel
+- expression: Consent.sourceReference
+- expression: Consent.status
+- expression: Consent.subject
+- expression: Consent.verification.verified
+- expression: Consent.verification.verificationDate
+- expression: Contract.authority
+- expression: Contract.domain
+- expression: Contract.instantiatesUri
+- expression: Contract.issued
+- expression: Contract.signer.party
+- expression: Contract.status
+- expression: Contract.subject
+- expression: Contract.url
+- expression: Coverage.beneficiary
+- expression: Coverage.class.type
+- expression: Coverage.class.value
+- expression: Coverage.dependent
+- expression: Coverage.insurer
+- expression: Coverage.paymentBy.party
+- expression: Coverage.policyHolder
+- expression: Coverage.status
+- expression: Coverage.subscriber
+- expression: Coverage.subscriberId
+- expression: CoverageEligibilityRequest.created
+- expression: CoverageEligibilityRequest.enterer
+- expression: CoverageEligibilityRequest.facility
+- expression: CoverageEligibilityRequest.provider
+- expression: CoverageEligibilityRequest.status
+- expression: CoverageEligibilityResponse.created
+- expression: CoverageEligibilityResponse.disposition
+- expression: CoverageEligibilityResponse.insurer
+- expression: CoverageEligibilityResponse.outcome
+- expression: CoverageEligibilityResponse.request
+- expression: CoverageEligibilityResponse.requestor
+- expression: CoverageEligibilityResponse.status
+- expression: DetectedIssue.author
+- expression: DetectedIssue.category
+- expression: DetectedIssue.identified.ofType(dateTime) | DetectedIssue.identified.ofType(Period)
+- expression: DetectedIssue.implicated
+- expression: DetectedIssue.status
+- expression: DetectedIssue.subject
+- expression: Device.biologicalSourceEvent
+- expression: Device.definition.concept
+- expression: Device.definition.reference
+- expression: Device.name.value | Device.type.coding.display | Device.type.text
+- expression: Device.expirationDate
+- expression: Device.identifier
+- expression: Device.location
+- expression: Device.lotNumber
+- expression: Device.manufactureDate
+- expression: Device.manufacturer
+- expression: Device.modelNumber
+- expression: Device.owner
+- expression: Device.parent
+- expression: Device.serialNumber | Device.identifier.where(type='SNO')
+- expression: Device.conformsTo.specification
+- expression: Device.status
+- expression: Device.type
+- expression: Device.udiCarrier.carrierHRF
+- expression: Device.udiCarrier.deviceIdentifier
+- expression: Device.url
+- expression: Device.version.value
+- expression: Device
+- expression: Device.conformsTo
+- expression: DeviceAssociation.device
+- expression: DeviceAssociation.identifier
+- expression: DeviceAssociation.operation.operator
+- expression: DeviceAssociation.subject.where(resolve() is Patient)
+- expression: DeviceAssociation.status
+- expression: DeviceAssociation.subject.where(resolve() is Patient)
+- expression: DeviceDefinition.deviceName.name | DeviceDefinition.classification.type.coding.display | DeviceDefinition.classification.type.text
+- expression: DeviceDefinition.identifier
+- expression: DeviceDefinition.manufacturer
+- expression: DeviceDefinition.owner
+- expression: DeviceDefinition.conformsTo.specification
+- expression: DeviceDefinition.conformsTo.category
+- expression: DeviceDefinition.conformsTo
+- expression: DeviceDispense.device.concept
+- expression: DeviceDispense.identifier
+- expression: DeviceDispense.subject.where(resolve() is Patient)
+- expression: DeviceDispense.status
+- expression: DeviceDispense.subject
+- expression: DeviceMetric.category
+- expression: DeviceMetric.device
+- expression: DeviceMetric.identifier
+- expression: DeviceMetric.type
+- expression: DeviceRequest.authoredOn
+- expression: DeviceRequest.basedOn
+- expression: DeviceRequest.code.reference
+- expression: (DeviceRequest.occurrence.ofType(dateTime)) | (DeviceRequest.occurrence.ofType(Period))
+- expression: DeviceRequest.groupIdentifier
+- expression: DeviceRequest.instantiatesCanonical
+- expression: DeviceRequest.instantiatesUri
+- expression: DeviceRequest.insurance
+- expression: DeviceRequest.intent
+- expression: DeviceRequest.performer.reference
+- expression: DeviceRequest.performer.concept
+- expression: DeviceRequest.replaces
+- expression: DeviceRequest.requester
+- expression: DeviceRequest.status
+- expression: DeviceRequest.subject
+- expression: DeviceUsage.device.concept
+- expression: DeviceUsage.status
+- expression: DiagnosticReport.basedOn
+- expression: DiagnosticReport.category
+- expression: DiagnosticReport.conclusionCode
+- expression: DiagnosticReport.issued
+- expression: DiagnosticReport.media.link
+- expression: DiagnosticReport.performer
+- expression: DiagnosticReport.result
+- expression: DiagnosticReport.resultsInterpreter
+- expression: DiagnosticReport.specimen
+- expression: DiagnosticReport.status
+- expression: DiagnosticReport.study
+- expression: DiagnosticReport.subject
+- expression: DocumentReference.attester.party
+- expression: DocumentReference.author
+- expression: DocumentReference.basedOn
+- expression: DocumentReference.bodySite.concept
+- expression: DocumentReference.bodySite.reference
+- expression: DocumentReference.category
+- expression: DocumentReference.content.attachment.contentType
+- expression: DocumentReference.context
+- expression: DocumentReference.content.attachment.creation
+- expression: DocumentReference.custodian
+- expression: DocumentReference.description
+- expression: DocumentReference.docStatus
+- expression: DocumentReference.event.concept
+- expression: DocumentReference.event.reference
+- expression: DocumentReference.facilityType
+- expression: (DocumentReference.content.profile.value.ofType(canonical))
+- expression: (DocumentReference.content.profile.value.ofType(Coding))
+- expression: (DocumentReference.content.profile.value.ofType(uri))
+- expression: DocumentReference.content.attachment.language
+- expression: DocumentReference.content.attachment.url
+- expression: DocumentReference.modality
+- expression: DocumentReference.period
+- expression: DocumentReference.relatesTo.target
+- expression: DocumentReference.relatesTo.code
+- expression: DocumentReference.securityLabel
+- expression: DocumentReference.practiceSetting
+- expression: DocumentReference.status
+- expression: DocumentReference.subject
+- expression: DocumentReference.version
+- expression: DocumentReference.relatesTo
+- expression: Encounter.account
+- expression: Encounter.appointment
+- expression: Encounter.basedOn
+- expression: Encounter.careTeam
+- expression: Encounter.class
+- expression: Encounter.actualPeriod.start
+- expression: Encounter.diagnosis.condition.concept
+- expression: Encounter.diagnosis.condition.reference
+- expression: Encounter.actualPeriod.end
+- expression: Encounter.episodeOfCare
+- expression: Encounter.length
+- expression: Encounter.location.location
+- expression: Encounter.partOf
+- expression: Encounter.participant.actor
+- expression: Encounter.participant.type
+- expression: Encounter.participant.actor.where(resolve() is Practitioner)
+- expression: Encounter.reason.value.concept
+- expression: Encounter.reason.value.reference
+- expression: Encounter.serviceProvider
+- expression: Encounter.specialArrangement
+- expression: Encounter.status
+- expression: Encounter.subject
+- expression: Encounter.subjectStatus
+- expression: Encounter.location
+- expression: EncounterHistory.identifier
+- expression: EncounterHistory.subject.where(resolve() is Patient)
+- expression: EncounterHistory.status
+- expression: EncounterHistory.subject
+- expression: Endpoint.connectionType
+- expression: Endpoint.identifier
+- expression: Endpoint.name
+- expression: Endpoint.managingOrganization
+- expression: Endpoint.payload.type
+- expression: Endpoint.status
+- expression: EnrollmentRequest.status
+- expression: EnrollmentRequest.candidate
+- expression: EnrollmentResponse.identifier
+- expression: EnrollmentResponse.request
+- expression: EnrollmentResponse.status
+- expression: EpisodeOfCare.careManager.where(resolve() is Practitioner)
+- expression: EpisodeOfCare.diagnosis.condition.concept
+- expression: EpisodeOfCare.diagnosis.condition.reference
+- expression: EpisodeOfCare.referralRequest
+- expression: EpisodeOfCare.managingOrganization
+- expression: EpisodeOfCare.reason.value.concept
+- expression: EpisodeOfCare.reason.value.reference
+- expression: EpisodeOfCare.status
+- expression: ExplanationOfBenefit.careTeam.provider
+- expression: ExplanationOfBenefit.claim
+- expression: ExplanationOfBenefit.insurance.coverage
+- expression: ExplanationOfBenefit.created
+- expression: ExplanationOfBenefit.item.detail.udi
+- expression: ExplanationOfBenefit.disposition
+- expression: ExplanationOfBenefit.enterer
+- expression: ExplanationOfBenefit.facility
+- expression: ExplanationOfBenefit.item.udi
+- expression: ExplanationOfBenefit.payee.party
+- expression: ExplanationOfBenefit.procedure.udi
+- expression: ExplanationOfBenefit.provider
+- expression: ExplanationOfBenefit.status
+- expression: ExplanationOfBenefit.item.detail.subDetail.udi
+- expression: FamilyMemberHistory.instantiatesCanonical
+- expression: FamilyMemberHistory.instantiatesUri
+- expression: FamilyMemberHistory.relationship
+- expression: FamilyMemberHistory.sex
+- expression: FamilyMemberHistory.status
+- expression: Flag.author
+- expression: Flag.category
+- expression: Flag.status
+- expression: Flag.subject
+- expression: FormularyItem.code
+- expression: FormularyItem.identifier
+- expression: GenomicStudy.analysis.focus
+- expression: GenomicStudy.identifier
+- expression: GenomicStudy.subject.where(resolve() is Patient)
+- expression: GenomicStudy.status
+- expression: GenomicStudy.subject
+- expression: Goal.achievementStatus
+- expression: Goal.addresses
+- expression: Goal.category
+- expression: Goal.description
+- expression: Goal.lifecycleStatus
+- expression: (Goal.start.ofType(date))
+- expression: Goal.subject
+- expression: (Goal.target.due.ofType(date))
+- expression: Goal.target.measure
+- expression: GraphDefinition.start
+- expression: Group.characteristic.code
+- expression: (Group.characteristic.value.ofType(Reference))
+- expression: Group.code
+- expression: Group.characteristic.exclude
+- expression: Group.identifier
+- expression: Group.managingEntity
+- expression: Group.member.entity
+- expression: Group.membership
+- expression: Group.name
+- expression: Group.type
+- expression: (Group.characteristic.value.ofType(CodeableConcept)) | (Group.characteristic.value.ofType(boolean))
+- expression: Group.characteristic
+- expression: GuidanceResponse.requestIdentifier
+- expression: GuidanceResponse.status
+- expression: GuidanceResponse.subject
+- expression: HealthcareService.active
+- expression: HealthcareService.characteristic
+- expression: HealthcareService.communication
+- expression: HealthcareService.coverageArea
+- expression: HealthcareService.eligibility.code
+- expression: HealthcareService.endpoint
+- expression: HealthcareService.identifier
+- expression: HealthcareService.location
+- expression: HealthcareService.name
+- expression: HealthcareService.offeredIn
+- expression: HealthcareService.providedBy
+- expression: HealthcareService.program
+- expression: HealthcareService.category
+- expression: HealthcareService.type
+- expression: HealthcareService.specialty
+- expression: ImagingSelection.basedOn
+- expression: ImagingSelection.bodySite.concept
+- expression: ImagingSelection.bodySite.reference
+- expression: ImagingSelection.derivedFrom
+- expression: ImagingSelection.issued
+- expression: ImagingSelection.status
+- expression: ImagingSelection.studyUid
+- expression: ImagingSelection.subject
+- expression: ImagingStudy.basedOn
+- expression: ImagingStudy.series.bodySite.concept
+- expression: ImagingStudy.series.bodySite.reference
+- expression: ImagingStudy.series.instance.sopClass
+- expression: ImagingStudy.endpoint | ImagingStudy.series.endpoint
+- expression: ImagingStudy.series.instance.uid
+- expression: ImagingStudy.series.modality
+- expression: ImagingStudy.series.performer.actor
+- expression: ImagingStudy.referrer
+- expression: ImagingStudy.series.uid
+- expression: ImagingStudy.started
+- expression: ImagingStudy.status
+- expression: ImagingStudy.subject
+- expression: Immunization.location
+- expression: Immunization.lotNumber
+- expression: Immunization.manufacturer.reference
+- expression: Immunization.performer.actor
+- expression: Immunization.reaction.manifestation.reference
+- expression: Immunization.reaction.date
+- expression: Immunization.reason.concept
+- expression: Immunization.reason.reference
+- expression: Immunization.protocolApplied.series
+- expression: Immunization.status
+- expression: Immunization.statusReason
+- expression: Immunization.protocolApplied.targetDisease
+- expression: Immunization.vaccineCode
+- expression: ImmunizationEvaluation.doseStatus
+- expression: ImmunizationEvaluation.immunizationEvent
+- expression: ImmunizationEvaluation.status
+- expression: ImmunizationEvaluation.targetDisease
+- expression: ImmunizationRecommendation.recommendation.supportingPatientInformation
+- expression: ImmunizationRecommendation.recommendation.forecastStatus
+- expression: ImmunizationRecommendation.recommendation.supportingImmunization
+- expression: ImmunizationRecommendation.recommendation.targetDisease
+- expression: ImmunizationRecommendation.recommendation.vaccineCode
+- expression: ImplementationGuide.dependsOn.uri
+- expression: ImplementationGuide.experimental
+- expression: ImplementationGuide.global.profile
+- expression: ImplementationGuide.definition.resource.reference
+- expression: Ingredient.for
+- expression: Ingredient.function
+- expression: Ingredient.identifier
+- expression: Ingredient.manufacturer.manufacturer
+- expression: Ingredient.role
+- expression: Ingredient.status
+- expression: Ingredient.substance.strength.concentration.ofType(Quantity)
+- expression: Ingredient.substance.strength.presentation.ofType(Quantity)
+- expression: Ingredient.substance.code.reference
+- expression: Ingredient.substance.code.concept
+- expression: Ingredient.substance.code.reference
+- expression: Ingredient.substance.strength.concentration.ofType(Ratio)
+- expression: Ingredient.substance.strength.presentation.ofType(Ratio)
+- expression: InsurancePlan.contact.address
+- expression: InsurancePlan.contact.address.city
+- expression: InsurancePlan.contact.address.country
+- expression: InsurancePlan.contact.address.postalCode
+- expression: InsurancePlan.contact.address.state
+- expression: InsurancePlan.contact.address.use
+- expression: InsurancePlan.administeredBy
+- expression: InsurancePlan.endpoint
+- expression: InsurancePlan.identifier
+- expression: InsurancePlan.name | InsurancePlan.alias
+- expression: InsurancePlan.ownedBy
+- expression: InsurancePlan.name
+- expression: InsurancePlan.status
+- expression: InsurancePlan.type
+- expression: InventoryItem.code
+- expression: InventoryItem.identifier
+- expression: InventoryItem.status
+- expression: InventoryItem.instance.subject
+- expression: InventoryReport.identifier
+- expression: InventoryReport.inventoryListing.item.item.concept
+- expression: InventoryReport.inventoryListing.item.item.reference
+- expression: InventoryReport.status
+- expression: Invoice.account
+- expression: Invoice.issuer
+- expression: Invoice.participant.actor
+- expression: Invoice.participant.role
+- expression: Invoice.recipient
+- expression: Invoice.status
+- expression: Invoice.subject
+- expression: Invoice.totalGross
+- expression: Invoice.totalNet
+- expression: Library.content.contentType
+- expression: Library.type
+- expression: Linkage.author
+- expression: Linkage.item.resource
+- expression: Linkage.item.resource
+- expression: List.emptyReason
+- expression: List.entry.item
+- expression: List.note.text
+- expression: List.source
+- expression: List.status
+- expression: List.subject
+- expression: List.title
+- expression: Location.address
+- expression: Location.address.city
+- expression: Location.address.country
+- expression: Location.address.postalCode
+- expression: Location.address.state
+- expression: Location.address.use
+- expression: Location.characteristic
+- expression: Location.extension('http://hl7.org/fhir/StructureDefinition/location-boundary-geojson').value
+- expression: Location.endpoint
+- expression: Location.identifier
+- expression: Location.name | Location.alias
+- expression: Location.position
+- expression: Location.operationalStatus
+- expression: Location.managingOrganization
+- expression: Location.partOf
+- expression: Location.status
+- expression: Location.type
+- expression: ManufacturedItemDefinition.manufacturedDoseForm
+- expression: ManufacturedItemDefinition.identifier
+- expression: ManufacturedItemDefinition.ingredient
+- expression: ManufacturedItemDefinition.name
+- expression: ManufacturedItemDefinition.status
+- expression: MeasureReport.evaluatedResource
+- expression: MeasureReport.location
+- expression: MeasureReport.measure
+- expression: MeasureReport.period
+- expression: MeasureReport.reporter
+- expression: MeasureReport.status
+- expression: MeasureReport.subject
+- expression: Medication.batch.expirationDate
+- expression: Medication.ingredient.item.reference
+- expression: Medication.ingredient.item.concept
+- expression: Medication.batch.lotNumber
+- expression: Medication.marketingAuthorizationHolder
+- expression: Medication.identifier
+- expression: Medication.status
+- expression: MedicationAdministration.occurence.ofType(dateTime) | MedicationAdministration.occurence.ofType(Period)
+- expression: MedicationAdministration.device.reference
+- expression: MedicationAdministration.encounter | MedicationRequest.encounter
+- expression: MedicationAdministration.medication.reference | MedicationDispense.medication.reference | MedicationRequest.medication.reference
+    | MedicationStatement.medication.reference
+- expression: MedicationAdministration.performer.actor.reference
+- expression: MedicationAdministration.performer.actor.concept
+- expression: MedicationAdministration.reason.reference
+- expression: MedicationAdministration.reason.concept
+- expression: MedicationAdministration.statusReason
+- expression: MedicationAdministration.request
+- expression: MedicationAdministration.status | MedicationDispense.status | MedicationRequest.status | MedicationStatement.status
+- expression: MedicationAdministration.subject
+- expression: MedicationDispense.destination
+- expression: MedicationDispense.location
+- expression: MedicationDispense.performer.actor
+- expression: MedicationDispense.authorizingPrescription
+- expression: MedicationDispense.receiver
+- expression: MedicationDispense.recorded
+- expression: MedicationDispense.substitution.responsibleParty
+- expression: MedicationDispense.subject
+- expression: MedicationDispense.whenHandedOver
+- expression: MedicationDispense.whenPrepared
+- expression: MedicationKnowledge.medicineClassification.classification
+- expression: MedicationKnowledge.medicineClassification.type
+- expression: MedicationKnowledge.code
+- expression: MedicationKnowledge.definitional.doseForm
+- expression: MedicationKnowledge.definitional.ingredient.item.reference
+- expression: MedicationKnowledge.definitional.ingredient.item.concept
+- expression: MedicationKnowledge.monitoringProgram.name
+- expression: MedicationKnowledge.monitoringProgram.type
+- expression: MedicationKnowledge.monograph.source
+- expression: MedicationKnowledge.monograph.type
+- expression: MedicationKnowledge.productType
+- expression: MedicationKnowledge.cost.source
+- expression: MedicationRequest.authoredOn
+- expression: MedicationRequest.category
+- expression: MedicationRequest.dosageInstruction.timing.event | (MedicationRequest.dosageInstruction.timing.repeat.bounds.ofType(Period))
+- expression: MedicationRequest.groupIdentifier
+- expression: MedicationRequest.dispenseRequest.dispenser
+- expression: MedicationRequest.performer
+- expression: MedicationRequest.performerType
+- expression: MedicationRequest.intent
+- expression: MedicationRequest.priority
+- expression: MedicationRequest.requester
+- expression: MedicationRequest.subject
+- expression: MedicationStatement.adherence.code
+- expression: MedicationStatement.category
+- expression: MedicationStatement.effective.ofType(dateTime) | MedicationStatement.effective.ofType(Period)
+- expression: MedicationStatement.informationSource
+- expression: MedicationStatement.subject
+- expression: MedicinalProductDefinition.characteristic.value.ofType(Quantity) | MedicinalProductDefinition.characteristic.value.ofType(CodeableConcept)
+- expression: MedicinalProductDefinition.characteristic.type
+- expression: MedicinalProductDefinition.contact.contact
+- expression: MedicinalProductDefinition.domain
+- expression: MedicinalProductDefinition.identifier
+- expression: MedicinalProductDefinition.ingredient
+- expression: MedicinalProductDefinition.masterFile
+- expression: MedicinalProductDefinition.name.productName
+- expression: MedicinalProductDefinition.name.usage.language
+- expression: MedicinalProductDefinition.classification
+- expression: MedicinalProductDefinition.status
+- expression: MedicinalProductDefinition.type
+- expression: MessageDefinition.category
+- expression: MessageDefinition.event.ofType(Coding)
+- expression: MessageDefinition.focus.code
+- expression: MessageDefinition.parent
+- expression: MessageHeader.author
+- expression: MessageHeader.response.code
+- expression: MessageHeader.destination.name
+- expression: MessageHeader.event.ofType(Coding) | MessageHeader.event.ofType(canonical)
+- expression: MessageHeader.focus
+- expression: MessageHeader.destination.receiver
+- expression: MessageHeader.response.identifier
+- expression: MessageHeader.responsible
+- expression: MessageHeader.sender
+- expression: MessageHeader.source.name
+- expression: MessageHeader.destination.target
+- expression: MolecularSequence.focus
+- expression: MolecularSequence.subject
+- expression: NamingSystem.contact.name
+- expression: NamingSystem.uniqueId.type
+- expression: NamingSystem.kind
+- expression: NamingSystem.uniqueId.period
+- expression: NamingSystem.responsible
+- expression: NamingSystem.contact.telecom
+- expression: NamingSystem.type
+- expression: NamingSystem.uniqueId.value
+- expression: NutritionIntake.consumedItem.nutritionProduct.concept
+- expression: (NutritionIntake.reported as Reference)
+- expression: NutritionIntake.status
+- expression: NutritionIntake.subject
+- expression: NutritionOrder.enteralFormula.additive.type.concept
+- expression: NutritionOrder.dateTime
+- expression: NutritionOrder.enteralFormula.baseFormulaType.concept
+- expression: NutritionOrder.groupIdentifier
+- expression: NutritionOrder.oralDiet.type
+- expression: NutritionOrder.orderer
+- expression: NutritionOrder.status
+- expression: NutritionOrder.subject
+- expression: NutritionOrder.supplement.type.concept
+- expression: NutritionProduct.code
+- expression: NutritionProduct.instance.identifier
+- expression: NutritionProduct.instance.lotNumber
+- expression: NutritionProduct.instance.identifier
+- expression: NutritionProduct.category
+- expression: Observation.basedOn
+- expression: Observation.category
+- expression: Observation.code | Observation.component.code
+- expression: Observation.dataAbsentReason | Observation.component.dataAbsentReason
+- expression: Observation.value.ofType(CodeableConcept) | Observation.component.value.ofType(CodeableConcept)
+- expression: Observation.value.ofType(Quantity) | Observation.value.ofType(SampledData) | Observation.component.value.ofType(Quantity)
+    | Observation.component.value.ofType(SampledData)
+- expression: Observation.component.code
+- expression: Observation.component.dataAbsentReason
+- expression: Observation.component.value.ofType(canonical)
+- expression: Observation.component.value.ofType(CodeableConcept)
+- expression: Observation.component.value.ofType(Quantity) | Observation.component.value.ofType(SampledData)
+- expression: Observation.component.value.ofType(Reference)
+- expression: Observation.dataAbsentReason
+- expression: Observation.derivedFrom
+- expression: Observation.device
+- expression: Observation.focus
+- expression: Observation.hasMember
+- expression: Observation.method
+- expression: Observation.partOf
+- expression: Observation.performer
+- expression: Observation.specimen
+- expression: Observation.status
+- expression: Observation.subject
+- expression: Observation.value.ofType(canonical)
+- expression: Observation.value.ofType(CodeableConcept)
+- expression: Observation.value.ofType(dateTime) | Observation.value.ofType(Period)
+- expression: Observation.value.ofType(markdown) | Observation.value.ofType(CodeableConcept).text
+- expression: Observation.value.ofType(Quantity) | Observation.value.ofType(SampledData)
+- expression: Observation.value.ofType(Reference)
+- expression: Observation
+- expression: Observation
+- expression: Observation
+- expression: Observation
+- expression: Observation | Observation.component
+- expression: Observation | Observation.component
+- expression: Observation.component
+- expression: Observation.component
+- expression: ObservationDefinition.category
+- expression: ObservationDefinition.code
+- expression: ObservationDefinition.experimental
+- expression: ObservationDefinition.method
+- expression: OperationDefinition.base
+- expression: OperationDefinition.code
+- expression: OperationDefinition.inputProfile
+- expression: OperationDefinition.instance
+- expression: OperationDefinition.kind
+- expression: OperationDefinition.outputProfile
+- expression: OperationDefinition.system
+- expression: OperationDefinition.type
+- expression: Organization.active
+- expression: Organization.contact.address
+- expression: Organization.contact.address.city
+- expression: Organization.contact.address.country
+- expression: Organization.contact.address.postalCode
+- expression: Organization.contact.address.state
+- expression: Organization.contact.address.use
+- expression: Organization.endpoint
+- expression: Organization.identifier | Organization.qualification.identifier
+- expression: Organization.name | Organization.alias
+- expression: Organization.partOf
+- expression: Organization.name
+- expression: Organization.type
+- expression: OrganizationAffiliation.active
+- expression: OrganizationAffiliation.period
+- expression: OrganizationAffiliation.contact.telecom.where(system='email')
+- expression: OrganizationAffiliation.endpoint
+- expression: OrganizationAffiliation.identifier
+- expression: OrganizationAffiliation.location
+- expression: OrganizationAffiliation.network
+- expression: OrganizationAffiliation.participatingOrganization
+- expression: OrganizationAffiliation.contact.telecom.where(system='phone')
+- expression: OrganizationAffiliation.organization
+- expression: OrganizationAffiliation.code
+- expression: OrganizationAffiliation.healthcareService
+- expression: OrganizationAffiliation.specialty
+- expression: OrganizationAffiliation.contact.telecom
+- expression: PackagedProductDefinition.packaging.containedItem.item.reference
+- expression: PackagedProductDefinition.packaging.containedItem.item.reference
+- expression: PackagedProductDefinition.packaging.containedItem.item.reference
+- expression: PackagedProductDefinition.identifier
+- expression: PackagedProductDefinition.packaging.containedItem.item.reference
+- expression: PackagedProductDefinition.packaging.containedItem.item.reference
+- expression: PackagedProductDefinition.name
+- expression: PackagedProductDefinition.packaging.containedItem.item.reference
+- expression: PackagedProductDefinition.packaging.containedItem.item.reference
+- expression: PackagedProductDefinition.packageFor
+- expression: PackagedProductDefinition.status
+- expression: Patient.active
+- expression: Patient.address | Person.address | Practitioner.address | RelatedPerson.address
+- expression: Patient.address.city | Person.address.city | Practitioner.address.city | RelatedPerson.address.city
+- expression: Patient.address.country | Person.address.country | Practitioner.address.country | RelatedPerson.address.country
+- expression: Patient.address.postalCode | Person.address.postalCode | Practitioner.address.postalCode | RelatedPerson.address.postalCode
+- expression: Patient.address.state | Person.address.state | Practitioner.address.state | RelatedPerson.address.state
+- expression: Patient.address.use | Person.address.use | Practitioner.address.use | RelatedPerson.address.use
+- expression: Patient.birthDate | Person.birthDate | RelatedPerson.birthDate
+- expression: (Patient.deceased.ofType(dateTime))
+- expression: Patient.deceased.exists() and Patient.deceased != false
+- expression: Patient.telecom.where(system='email') | Person.telecom.where(system='email') | Practitioner.telecom.where(system='email')
+    | PractitionerRole.contact.telecom.where(system='email') | RelatedPerson.telecom.where(system='email')
+- expression: Patient.name.family | Practitioner.name.family
+- expression: Patient.gender | Person.gender | Practitioner.gender | RelatedPerson.gender
+- expression: Patient.generalPractitioner
+- expression: Patient.name.given | Practitioner.name.given
+- expression: Patient.identifier
+- expression: Patient.communication.language
+- expression: Patient.link.other
+- expression: Patient.name
+- expression: Patient.managingOrganization
+- expression: Patient.telecom.where(system='phone') | Person.telecom.where(system='phone') | Practitioner.telecom.where(system='phone')
+    | PractitionerRole.contact.telecom.where(system='phone') | RelatedPerson.telecom.where(system='phone')
+- expression: Patient.name | Person.name | Practitioner.name | RelatedPerson.name
+- expression: Patient.telecom | Person.telecom | Practitioner.telecom | PractitionerRole.contact.telecom | RelatedPerson.telecom
+- expression: PaymentNotice.created
+- expression: PaymentNotice.identifier
+- expression: PaymentNotice.paymentStatus
+- expression: PaymentNotice.reporter
+- expression: PaymentNotice.request
+- expression: PaymentNotice.response
+- expression: PaymentNotice.status
+- expression: PaymentReconciliation.allocation.account
+- expression: PaymentReconciliation.allocation.encounter
+- expression: PaymentReconciliation.created
+- expression: PaymentReconciliation.disposition
+- expression: PaymentReconciliation.identifier
+- expression: PaymentReconciliation.outcome
+- expression: PaymentReconciliation.paymentIssuer
+- expression: PaymentReconciliation.request
+- expression: PaymentReconciliation.requestor
+- expression: PaymentReconciliation.status
+- expression: Permission.status
+- expression: (Person.deceased.ofType(dateTime))
+- expression: Person.deceased.exists() and Person.deceased != false
+- expression: Person.name.family
+- expression: Person.name.given
+- expression: Person.link.target
+- expression: Person.name
+- expression: Person.managingOrganization
+- expression: Person.link.target.where(resolve() is Practitioner)
+- expression: Person.link.target.where(resolve() is RelatedPerson)
+- expression: PlanDefinition.action.definition.ofType(canonical) | PlanDefinition.action.definition.ofType(uri)
+- expression: PlanDefinition.type
+- expression: Practitioner.active
+- expression: Practitioner.communication.language
+- expression: (Practitioner.deceased.ofType(dateTime))
+- expression: Practitioner.deceased.exists() and Practitioner.deceased != false
+- expression: Practitioner.identifier | Practitioner.qualification.identifier
+- expression: Practitioner.name
+- expression: Practitioner.qualification.period
+- expression: PractitionerRole.active
+- expression: PractitionerRole.characteristic
+- expression: PractitionerRole.communication
+- expression: PractitionerRole.period
+- expression: PractitionerRole.endpoint
+- expression: PractitionerRole.identifier
+- expression: PractitionerRole.location
+- expression: PractitionerRole.organization
+- expression: PractitionerRole.practitioner
+- expression: PractitionerRole.code
+- expression: PractitionerRole.healthcareService
+- expression: PractitionerRole.specialty
+- expression: Procedure.basedOn
+- expression: Procedure.category
+- expression: Procedure.instantiatesCanonical
+- expression: Procedure.instantiatesUri
+- expression: Procedure.location
+- expression: Procedure.partOf
+- expression: Procedure.performer.actor
+- expression: Procedure.reason.concept
+- expression: Procedure.reason.reference
+- expression: Procedure.report
+- expression: Procedure.status
+- expression: Procedure.subject
+- expression: Provenance.activity
+- expression: Provenance.agent.who
+- expression: Provenance.agent.role
+- expression: Provenance.agent.type
+- expression: Provenance.basedOn
+- expression: Provenance.entity.what
+- expression: Provenance.location
+- expression: Provenance.recorded
+- expression: Provenance.signature.type
+- expression: Provenance.target
+- expression: (Provenance.occurred.ofType(dateTime))
+- expression: Questionnaire.code | Questionnaire.item.code
+- expression: Questionnaire.item.definition
+- expression: Questionnaire.item.code
+- expression: Questionnaire.code
+- expression: Questionnaire.subjectType
+- expression: QuestionnaireResponse.author
+- expression: QuestionnaireResponse.authored
+- expression: QuestionnaireResponse.basedOn
+- expression: QuestionnaireResponse.item.where(extension('http://hl7.org/fhir/StructureDefinition/questionnaireresponse-isSubject').exists()).answer.value.ofType(Reference)
+- expression: QuestionnaireResponse.partOf
+- expression: QuestionnaireResponse.questionnaire
+- expression: QuestionnaireResponse.source
+- expression: QuestionnaireResponse.status
+- expression: QuestionnaireResponse.subject
+- expression: RegulatedAuthorization.case.identifier
+- expression: RegulatedAuthorization.case.type
+- expression: RegulatedAuthorization.holder
+- expression: RegulatedAuthorization.identifier
+- expression: RegulatedAuthorization.region
+- expression: RegulatedAuthorization.status
+- expression: RegulatedAuthorization.subject
+- expression: RelatedPerson.active
+- expression: RelatedPerson.name.family
+- expression: RelatedPerson.name.given
+- expression: RelatedPerson.name
+- expression: RelatedPerson.relationship
+- expression: RequestOrchestration.author
+- expression: RequestOrchestration.authoredOn
+- expression: RequestOrchestration.basedOn
+- expression: RequestOrchestration.groupIdentifier
+- expression: RequestOrchestration.instantiatesCanonical
+- expression: RequestOrchestration.instantiatesUri
+- expression: RequestOrchestration.intent
+- expression: RequestOrchestration.action.participant.actor.ofType(Reference) | RequestOrchestration.action.participant.actor.ofType(canonical)
+- expression: RequestOrchestration.priority
+- expression: RequestOrchestration.status
+- expression: RequestOrchestration.subject
+- expression: Requirements.actor
+- expression: Requirements.derivedFrom
+- expression: ResearchStudy.classifier
+- expression: ResearchStudy.condition
+- expression: ResearchStudy.period
+- expression: ResearchStudy.description
+- expression: ResearchStudy.recruitment.eligibility
+- expression: ResearchStudy.focus.concept
+- expression: ResearchStudy.focus.reference
+- expression: ResearchStudy.identifier
+- expression: ResearchStudy.keyword
+- expression: ResearchStudy.name
+- expression: ResearchStudy.objective.description
+- expression: ResearchStudy.objective.type
+- expression: ResearchStudy.partOf
+- expression: ResearchStudy.phase
+- expression: ResearchStudy.protocol
+- expression: ResearchStudy.recruitment.actualNumber
+- expression: ResearchStudy.recruitment.targetNumber
+- expression: ResearchStudy.region
+- expression: ResearchStudy.site
+- expression: ResearchStudy.status
+- expression: ResearchStudy.studyDesign
+- expression: ResearchStudy.title
+- expression: ResearchStudy.progressStatus
+- expression: ResearchStudy.progressStatus
+- expression: ResearchStudy.progressStatus
+- expression: ResearchSubject.status
+- expression: ResearchSubject.study
+- expression: ResearchSubject.subject
+- expression: ResearchSubject.progress.subjectState
+- expression: RiskAssessment.condition
+- expression: RiskAssessment.method
+- expression: RiskAssessment.performer
+- expression: RiskAssessment.prediction.probability.ofType(decimal)
+- expression: RiskAssessment.prediction.qualitativeRisk
+- expression: RiskAssessment.subject
+- expression: Schedule.active
+- expression: Schedule.actor
+- expression: Schedule.planningHorizon
+- expression: Schedule.identifier
+- expression: Schedule.name
+- expression: Schedule.serviceCategory
+- expression: Schedule.serviceType.concept
+- expression: Schedule.serviceType.reference
+- expression: Schedule.specialty
+- expression: SearchParameter.base
+- expression: SearchParameter.code
+- expression: SearchParameter.component.definition
+- expression: SearchParameter.derivedFrom
+- expression: SearchParameter.target
+- expression: SearchParameter.type
+- expression: ServiceRequest.authoredOn
+- expression: ServiceRequest.basedOn
+- expression: ServiceRequest.bodySite
+- expression: ServiceRequest.bodyStructure
+- expression: ServiceRequest.category
+- expression: ServiceRequest.code.concept
+- expression: ServiceRequest.code.reference
+- expression: ServiceRequest.instantiatesCanonical
+- expression: ServiceRequest.instantiatesUri
+- expression: ServiceRequest.intent
+- expression: ServiceRequest.occurrence.ofType(dateTime) | ServiceRequest.occurrence.ofType(Period) | ServiceRequest.occurrence.ofType(Timing)
+- expression: ServiceRequest.performer
+- expression: ServiceRequest.performerType
+- expression: ServiceRequest.priority
+- expression: ServiceRequest.replaces
+- expression: ServiceRequest.requester
+- expression: ServiceRequest.requisition
+- expression: ServiceRequest.specimen
+- expression: ServiceRequest.status
+- expression: ServiceRequest.subject
+- expression: Slot.appointmentType
+- expression: Slot.identifier
+- expression: Slot.schedule
+- expression: Slot.serviceCategory
+- expression: Slot.serviceType.concept
+- expression: Slot.serviceType.reference
+- expression: Slot.specialty
+- expression: Slot.start
+- expression: Slot.status
+- expression: Specimen.accessionIdentifier
+- expression: Specimen.collection.bodySite.reference
+- expression: Specimen.collection.collected.ofType(dateTime) | Specimen.collection.collected.ofType(Period)
+- expression: Specimen.collection.collector
+- expression: Specimen.container.device.where(resolve() is Device)
+- expression: Specimen.parent
+- expression: Specimen.collection.procedure
+- expression: Specimen.status
+- expression: Specimen.subject
+- expression: SpecimenDefinition.typeTested.container.type
+- expression: SpecimenDefinition.experimental
+- expression: SpecimenDefinition.typeTested.isDerived
+- expression: SpecimenDefinition.typeCollected
+- expression: SpecimenDefinition.typeTested.type
+- expression: StructureDefinition.abstract
+- expression: StructureDefinition.baseDefinition
+- expression: StructureDefinition.snapshot.element.base.path | StructureDefinition.differential.element.base.path
+- expression: StructureDefinition.derivation
+- expression: StructureDefinition.experimental
+- expression: StructureDefinition.context.expression
+- expression: StructureDefinition.context.type
+- expression: StructureDefinition.keyword
+- expression: StructureDefinition.kind
+- expression: StructureDefinition.snapshot.element.path | StructureDefinition.differential.element.path
+- expression: StructureDefinition.type
+- expression: StructureDefinition.snapshot.element.binding.valueSet
+- expression: StructureDefinition.context
+- expression: Subscription.contact
+- expression: Subscription.content
+- expression: Subscription.filterBy.value
+- expression: Subscription.identifier
+- expression: Subscription.name
+- expression: Subscription.managingEntity
+- expression: Subscription.contentType
+- expression: Subscription.status
+- expression: Subscription.topic
+- expression: Subscription.channelType
+- expression: Subscription.endpoint
+- expression: SubscriptionTopic.url | SubscriptionTopic.derivedFrom
+- expression: SubscriptionTopic.effectivePeriod
+- expression: SubscriptionTopic.eventTrigger.event
+- expression: SubscriptionTopic.resourceTrigger.resource | SubscriptionTopic.eventTrigger.resource | SubscriptionTopic.canFilterBy.resource
+    | SubscriptionTopic.notificationShape.resource
+- expression: SubscriptionTopic.resourceTrigger.description
+- expression: Substance.category
+- expression: Substance.code.concept | (Substance.ingredient.substance.ofType(CodeableConcept))
+- expression: Substance.code.reference
+- expression: Substance.expiry
+- expression: Substance.identifier
+- expression: Substance.quantity
+- expression: Substance.status
+- expression: (Substance.ingredient.substance.ofType(Reference))
+- expression: SubstanceDefinition.classification
+- expression: SubstanceDefinition.code.code
+- expression: SubstanceDefinition.domain
+- expression: SubstanceDefinition.identifier
+- expression: SubstanceDefinition.name.name
+- expression: SupplyDelivery.receiver
+- expression: SupplyDelivery.status
+- expression: SupplyDelivery.supplier
+- expression: SupplyRequest.category
+- expression: SupplyRequest.requester
+- expression: SupplyRequest.status
+- expression: SupplyRequest.deliverTo
+- expression: SupplyRequest.supplier
+- expression: Task.performer.actor
+- expression: Task.authoredOn
+- expression: Task.basedOn
+- expression: Task.businessStatus
+- expression: Task.focus
+- expression: Task.groupIdentifier
+- expression: Task.intent
+- expression: Task.lastModified
+- expression: Task.output.value.ofType(Reference)
+- expression: Task.owner
+- expression: Task.partOf
+- expression: Task.requestedPerformer.concept
+- expression: Task.executionPeriod
+- expression: Task.priority
+- expression: Task.requestedPerformer.reference
+- expression: Task.requester
+- expression: Task.status
+- expression: Task.for
+- expression: TestPlan.scope
+- expression: TestReport.identifier
+- expression: TestReport.issued
+- expression: TestReport.participant.uri
+- expression: TestReport.result
+- expression: TestReport.status
+- expression: TestReport.tester
+- expression: TestReport.testScript
+- expression: TestScript.scope.artifact
+- expression: TestScript.metadata.capability.description
+- expression: TestScript.scope
+- expression: TestScript.scope
+- expression: Transport.identifier
+- expression: Transport.status
+- expression: ValueSet.expansion.contains.code | ValueSet.compose.include.concept.code
+- expression: ValueSet.expansion.identifier
+- expression: ValueSet.compose.include.system
+- expression: VerificationResult.attestation.communicationMethod
+- expression: VerificationResult.attestation.onBehalfOf
+- expression: VerificationResult.attestation.who
+- expression: VerificationResult.primarySource.validationDate
+- expression: VerificationResult.primarySource.type
+- expression: VerificationResult.primarySource.who
+- expression: VerificationResult.status
+- expression: VerificationResult.statusDate
+- expression: VerificationResult.target
+- expression: VerificationResult.validator.organization
+- expression: VisionPrescription.dateWritten
+- expression: VisionPrescription.prescriber
+- expression: VisionPrescription.status

@@ -19,7 +19,7 @@ package au.csiro.pathling.fhirpath.parser;
 
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
@@ -220,13 +220,13 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   @Nonnull
   public FhirPath visitUnionExpression(final UnionExpressionContext ctx) {
-    throw new InvalidUserInputError("Union expressions are not supported");
+    throw new UnsupportedFhirPathFeatureError("Union expressions are not supported");
   }
 
   @Override
   @Nonnull
   public FhirPath visitTypeExpression(final TypeExpressionContext ctx) {
-    throw new InvalidUserInputError("Type expressions are not supported");
+    throw new UnsupportedFhirPathFeatureError("Type expressions are not supported");
   }
 
 }

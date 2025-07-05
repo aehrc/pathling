@@ -19,6 +19,7 @@ import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.test.yaml.format.YamlTestFormat;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,7 +43,7 @@ import org.yaml.snakeyaml.Yaml;
 
 @SpringBootUnitTest
 @Tag("WorkTest")
-public class YamlTest {
+class YamlTestRunnerTest {
 
 
   @Autowired
@@ -58,8 +59,9 @@ public class YamlTest {
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 
+  @SuppressWarnings("SameParameterValue")
   @Nonnull
-  static String yamlToJsonResource(@Nonnull final String yamlData) throws Exception {
+  private static String yamlToJsonResource(@Nonnull final String yamlData) throws Exception {
     final Map<Object, Object> data = YAML_PARSER.load(yamlData);
     // Serialize the data map into a JSON string
     return OBJECT_MAPPER.writeValueAsString(data);
@@ -69,7 +71,7 @@ public class YamlTest {
   @Test
   void testSimpleYaml() throws Exception {
 
-    String subjectString =
+    final String subjectString =
         """
               el:
                 a: 2
@@ -92,14 +94,14 @@ public class YamlTest {
             """;
 
     final Map<Object, Object> subjectYamlModel = YAML_PARSER.load(subjectString);
-    DefResourceDefinition subjectDefinition = (DefResourceDefinition) YamlSupport.yamlToDefinition(
+    final DefResourceDefinition subjectDefinition = (DefResourceDefinition) YamlSupport.yamlToDefinition(
         "Test",
         subjectYamlModel);
 
     System.out.println("Yaml definition:");
     System.out.println(subjectDefinition);
 
-    final StructType subjectSchema = YamlSupport.defnitiontoStruct(subjectDefinition);
+    final StructType subjectSchema = YamlSupport.definitionToStruct(subjectDefinition);
     System.out.println("Struct definition:");
     subjectSchema.printTreeString();
 
@@ -138,10 +140,10 @@ public class YamlTest {
     final String desc = (String) testCase.get("desc");
 
     // lets try something different here
-    // pethaps I couild flatten the result representation here as well
+    // perhaps I could flatten the result representation here as well
 
     final Object result = testCase.get("result");
-    final Object resultRepresentation = result instanceof List<?> list && list.size() == 1
+    final Object resultRepresentation = result instanceof final List<?> list && list.size() == 1
                                         ? list.get(0)
                                         : result;
 
@@ -149,7 +151,7 @@ public class YamlTest {
         "result",
         resultRepresentation);
     // now lets create child schema
-    final StructType resultSchema = YamlSupport.childrendToStruct(List.of(resultDefinition));
+    final StructType resultSchema = YamlSupport.childrenToStruct(List.of(resultDefinition));
     System.out.println("Result schema:");
     resultSchema.printTreeString();
     // now we will need to create a column out of it based on the json mapping.
@@ -186,16 +188,16 @@ public class YamlTest {
   @Test
   void testLoad() {
     final String testSpec = getResourceAsString("fhirpath-js/cases/5.1_existence.yaml");
-    final FhipathTestSpec spec = FhipathTestSpec.fromYaml(testSpec);
+    final YamlTestDefinition spec = YamlTestDefinition.fromYaml(testSpec);
     System.out.println(spec);
   }
 
   @Test
   void testLoadAndRun() {
     final String testConfigYaml = getResourceAsString("fhirpath-js/config.yaml");
-    final TestConfig testConfig = YAML_PARSER.loadAs(testConfigYaml, TestConfig.class);
-    System.out.println(testConfig);
-    testConfig.toPredicates(Set.of()).forEach(System.out::println);
+    final YamlTestFormat testFormat = YAML_PARSER.loadAs(testConfigYaml, YamlTestFormat.class);
+    System.out.println(testFormat);
+    testFormat.toPredicates(Set.of()).forEach(System.out::println);
   }
 
 
@@ -212,7 +214,7 @@ public class YamlTest {
     final Dataset<Row> inputDS = spark.createDataset(List.of(resource),
         fhirEncoders.of(resource.fhirType())).toDF();
 
-    DefResourceResolver resolver = DefResourceResolver.of(
+    final DefResourceResolver resolver = DefResourceResolver.of(
         FhirResourceTag.of(ResourceType.fromCode(resource.fhirType())),
         FhirDefinitionContext.of(fhirContext),
         inputDS

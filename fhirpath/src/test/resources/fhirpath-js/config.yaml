@@ -4,220 +4,50 @@ excludeSet:
   - title: Global exclusions
     glob: "*.yaml"
     exclude:
-      - title: "Unsupported subsetting functions"
-        id: "#2378"
-        function:
-          - single
-          - tail
-          - take
-          - skip
-          - last
-          - exclude
-          - intersect
-      - title: "join function"
-        id: "#2379"
-        function:
-          - join
-      - title: "Unsupported string functions"
-        id: "#2380"
-        function:
-          - indexOf
-          - substring
-          - startsWith
-          - endsWith
-          - contains
-          - upper
-          - lower
-          - replace
-          - matches
-          - replaceMatches
-          - length
-          - split
-          - toChars
-          - trim
-          - encode
-          - decode
-          - escape
-          - unescape
-      - title: "Unsupported math functions"
-        id: "#2381"
-        function:
-          - abs
-          - ceiling
-          - floor
-          - exp
-          - ln
-          - log
-          - power
-          - round
-          - sqrt
-          - truncate
-      - title: "Unsupported tree navigation functions"
-        id: "#2382"
-        function:
-          - descendants
-          - children
-      - title: "Unsupported type operators and functions"
-        id: "#2383"
-        function:
-          - is
-          - as
-        expression:
-          - " is " # is operator
-          - " as " # as operator
-      - title: "Unsupported combining functions"
-        id: "#2384"
-        function:
-          - union
-          - combine
-      - title: "Unsupported existence functions"
-        id: "#2385"
-        function:
-          - all
-          - subsetOf
-          - supersetOf
-          - isDistinct
-          - distinct
-          - count
-          - allTrue
-          - allFalse
-          - anyTrue
-          - anyFalse
-      - title: "Unsupported filtering and projection functions"
-        id: "#2388"
-        function:
-          - select
-          - repeat
-      - title: "Unsupported $index keyword"
-        id: "#2389"
-        expression:
-          - "(^|\\W)\\$index($|\\W)"
-      - title: "Unsupported aggregate function"
-        id: "#2390"
-        function:
-          - aggregate
-      - title: "Nonexistent aggregate functions"
-        function:
-          - min
-          - max
-          - avg
-          - sum
-      - title: "Type conversion functions"
-        id: "#2391"
-        function:
-          - toBoolean
-          - toDateTime
-          - toDate
-          - toDecimal
-          - toInteger
-          - toQuantity
-          - toString
-          - toTime
-          - toType
-      - title: "Unsupported iif function"
-        id: "#2392"
-        function:
-          - iif
-      - title: "Unsupported conversion check functions"
-        id: "#2393"
-        function:
-          - convertsToBoolean
-          - convertsToInteger
-          - convertsToString
-          - convertsToDecimal
-          - convertsToQuantity
-          - convertsToDateTime
-          - convertsToTime
-          - convertsToDate
-      - title: "Unsupported equivalence operators"
-        id: "#2394"
-        expression:
-          - " !~ " # not equivalent operator
-          - " ~ " # equivalent operator
-      - title: "Unsupported reflection"
-        id: "#2395"
-        function:
-          - type
-          - trace
-      - title: "Unsupported current date and time functions"
-        id: "#2396"
-        function:
-          - timeOfDay
-          - now
-          - today
-      - title: "Unsupported union operator"
-        id: "#2398"
-        expression:
-          - ".+\\|.+"
-      - title: "Unsupported math operators"
-        id: "#2399"
-        expression:
-          - " & "
-          - " div "
-      - title: "Unsupported date and datetime literals"
+      - title: Unsupported resources
         type: feature
-        id: "#2409"
+        id: "#2418"
+        expression:
+          - "^StructureDefinition"
+      - title: Parse error
+        type: wontfix
+        comment: |
+          The test case is not valid FHIRPath syntax, it contains a parse error.
         any:
-          - "@2019"
-          - "@2019-02-03T01:00Z = @2019-02-02T21:00-04:00"
-          - "@2019-02-03T02:00Z = @2019-02-02T21:00-04:00"
-          - "@2018 = @2018"
-          - "@2018 = @2017"
-          - "@2018 = @2018-02"
-          - "@2018-02 = @2018-02"
-          - "@2018-02 = @2018-03"
-          - "@2018-02-02 = @2018-02-02"
-          - "@2018-02-02 = @2018-02-03"
-          - "@2018-02-02T11:01:03 = @2018-02-02T11:01:03"
-          - "@2018-02-02T11:01:03 = @2018-02-02T11:01:04"
-          - "@2018-02-02T11:01:03.123 = @2018-02-02T11:01:03.123"
-          - "@2018-02-02T11:01:03.123 = @2018-02-02T11:01:03.124"
-          - "@2018-02-02T11:01:03.123+02:00 = @2018-02-02T11:01:03.123+04:00"
-          - "@2018 != @2018"
-          - "@2018 != @2017"
-          - "@2018 != @2018-02"
-          - "@2018 != @2018-01"
-          - "@2018-02-03 != @2018-01"
-          - "@2018 = int1"
-          - "@2018 = 'zzz'"
-          - "@2018 > @2017"
-          - "@2018 >= @2017"
-          - "@2018 >= @2018"
-          - "@2018 <= @2017"
-          - "@2018 <= @2018"
-          - "@2018 < @2017"
-          - "@2018 < @2018"
-          - "@T12:03 > @T12:01"
-          - "@T12:01:34.123 > @T12:01:34.122"
-          - "@T12:02:34.324 > @T12:01"
-          - "DiagnosticReport.issued = @2005-01-27T06:40:01Z"
-          - "@2018-12-31 > @2018"
-          - "@T12:01 > @T12:03"
-          - "@T12:01 > @T12"
+          - "@T17:00-05:00 < timeWithT.toTime()"
+          - "@T17:00-05:00 > timeWithT.toTime()"
+          - "@T17:00-05:00 < timeWithOutT.toTime()"
+          - "@T17:00-05:00 > timeWithOutT.toTime()"
+          - "('a'|'b'|'c').join(',')"
+          - "('a'|'b'|'c').join()"
+          - "time.toTime() = @T19:15-05:00"
+          - "time.toTime() = @T18:15-05:00"
+          - "time.toTime() != @T18:15-05:00"
+          - "('a'|'b'|'c').aggregate($total & '-' & $this, 'concat')"
+          - "(1 'cm'|3 'cm'|1 'm').aggregate($total + $this, 0 'cm') = 104 'cm'"
+          - "(1 'cm'|3 'cm'|1 'kg'|1 'm').aggregate($total + $this, 0 'cm')"
+          - "(1|2|3|4|5|6|7|8|9).sum() = 45"
+          - "(1 'cm'|3 'cm'|1 'm').sum() = 104 'cm'"
+          - "(7|8|9|1|2|3|4|5|6).min() = 1"
+          - "(1 'cm'|3 'cm'|1 'm').min() = 1 'cm'"
+          - "(7|8|9|1|2|3|4|5|6).max() = 9"
+          - "(1 'cm'|3 'cm'|1 'm').max() = 1 'm'"
+          - "(7|8|9|1|2|3|4|5|6).avg() = 5"
+          - "(7 'm' |8 'm'|9 'm'|1 'm'|2 'm'|3 'm'|400 'cm'|5 'm'|6 'm').avg() = 5 'm'"
+          - "@T10:04:23-04:00 ~ @T18:04:23+04:00"
+          - "@T10:04:23-04:00 ~ @T18:04:24+04:00"
+          - "@T10:04:23-04:00 ~ @T14:04:23Z"
+          - "@T10:04:23-04:00 ~ @T14:04:24Z"
+          - "@T10:04:23-04:00 !~ @T18:04:23+04:00"
+          - "@T10:04:23-04:00 !~ @T18:04:24+04:00"
+          - "@T10:04:23-04:00 !~ @T14:04:23Z"
+          - "@T10:04:23-04:00 !~ @T14:04:24Z"
+          - "(1|2|3|4|5|6|7|8|9).aggregate($this+$total, 0) = 45"
+          - "(1|2|3|4|5|6|7|8|9).aggregate($this+$total, 2) = 47"
+          - "(1|2|3|4|5|6|7|8|9).aggregate(iif($total.empty(), $this, iif($this < $total, $this, $total))) = 1"
+          - "(1|2|3|4|5|6|7|8|9).aggregate(iif($total.empty(), $this, iif($this > $total, $this, $total)"
           - "@T12+04:00 > @T12:02:34.324+05:00"
           - "@T12:02:34.324+05:00 > @T12+05:00"
-          - "@2018 + 1 year"
-          - "@2016 + 364 days"
-          - "@2016 - 365 days"
-          - "@2016 + 11 months"
-          - "@2016 + 12 months"
-          - "@2018 + 2 years"
-          - "@2018-02 + 1 month"
-          - "@2018-02 + 2 months"
-          - "@2016-01 + 29 days"
-          - "@2016-01 + 1 hour"
-          - "@2018-01-03 + 2 years"
-          - "@2016-02-29 + 1 month"
-          - "@2016-02-29 + 1 year"
-          - "@2016-01-31 + 1 month"
-          - "@2016-01-31 + 1 month + 1 day"
-          - "@2016-02-28 + 1 week"
-          - "@2016-02-28 + 1 day"
-          - "@2016-02-28 + 2 days"
-          - "@2016-02-28 - 2 days"
-          - "@2016-01-01 + 1 month"
-          - "@2016-01-01 + 24 hours"
-          - "@2016-01-01 + 47 hours"
           - "@T23:59:23-05:00 + 2 minutes = @T00:01:23-05:00"
           - "@T23:59:23-05:00 + 5 milliseconds = @T23:59:23.005-05:00"
           - "@T23:59:23-05:00 + 1.5 seconds = @T23:59:24.500-05:00"
@@ -226,100 +56,7 @@ excludeSet:
           - "@T23:59:23-05:00 + 1000 milliseconds = @T23:59:24-05:00"
           - "@T23:59:23.005-05:00 + 995 milliseconds = @T23:59:24-05:00"
           - "@T23:59:23.005-05:00 + 1990 milliseconds = @T23:59:24.995-05:00"
-          - "@2016-02-28 + 1.5 weeks"
-          - "@2016-02-28 - 1.5 weeks"
           - "@T23:59:23-05:00 + 1.5 hours = @T00:59:23-05:00"
-          - "Patient.birthDate - 1 day = @1974-12-24"
-          - "Patient.birthDate + 1 day = @1974-12-26"
-          - "@2018-02-18T12:23:45-05:00 + 2 years"
-          - "@T09:45Z + 120 seconds = @T04:47-05:00"
-          - "@T09:45Z + 59 seconds = @T09:45Z"
-          - "@T09:45:23Z + 2 minutes = @T04:47:23.000-05:00"
-          - "@T23:59:23Z + 2 minutes = @T00:01:23Z"
-          - "@2016 - 364 days"
-          - "@2016 + 365 days"
-          - "@2016-01 + 30 days"
-          - "1 year + @2016-02-29"
-          - "1 year - 6 months - 1 year + 18 months = 1 year"
-          - "1 year * 2 = 2 year"
-          - "2 * 5 months = 10 months"
-          - "1 year / 6 months = 2"
-          - "@2016-02-29 + 1.5 year"
-          - "@2016-02-28 + 1.5 day"
-          - "Patient.birthDate = @1974-12-25"
-          - "Patient.birthDate != @1974-12-25T12:34:00"
-          - "@2017-11-05T01:30:00.0-04:00 > @2017-11-05T01:15:00.0-05:00"
-          - "@2017-11-05T01:30:00.0-04:00 < @2017-11-05T01:15:00.0-05:00"
-          - "@2017-11-05T01:30:00.0-04:00 = @2017-11-05T01:15:00.0-05:00"
-          - "@2017-11-05T01:30:00.0-04:00 = @2017-11-05T00:30:00.0-05:00"
-          - "@2012-04-15 = @2012-04-15"
-          - "@2012-04-15 = @2012-04-16"
-          - "@2012-04-15 = @2012-04-15T10:00:00"
-          - "@2012-04-15T15:00:00 = @2012-04-15T10:00:00"
-          - "@2012-04-15T15:30:31 = @2012-04-15T15:30:31.0"
-          - "@2012-04-15T15:30:31 = @2012-04-15T15:30:31.1"
-          - "@2012-04-15T15:00:00+02:00 = @2012-04-15T16:00:00+03:00"
-          - "@2012-04-15 != @2012-04-15"
-          - "@2012-04-15 != @2012-04-16"
-          - "@2012-04-15 != @2012-04-15T10:00:00"
-          - "@2012-04-15T15:00:00 != @2012-04-15T10:00:00"
-          - "@2012-04-15T15:30:31 != @2012-04-15T15:30:31.0"
-          - "@2012-04-15T15:30:31 != @2012-04-15T15:30:31.1"
-          - "@2012-04-15T15:00:00+02:00 != @2012-04-15T16:00:00+03:00"
-          - "@2014-12-12 < @2014-12-13"
-          - "@2014-12-13T12:00:00 < @2014-12-13T12:00:01"
-          - "@T12:00:00 < @T14:00:00"
-          - "@2014-12-12 < @2014-12-12"
-          - "@2014-12-13T12:00:00 < @2014-12-13T12:00:00"
-          - "@T12:00:00 < @T12:00:00"
-          - "@2014-12-13 < @2014-12-12"
-          - "@2014-12-13T12:00:01 < @2014-12-13T12:00:00"
-          - "@T12:00:01 < @T12:00:00"
-          - "@2018-03-01T10:30:00 < @2018-03-01T10:30:00.0"
-          - "@2014-12-12 <= @2014-12-13"
-          - "@2014-12-13T12:00:00 <= @2014-12-13T12:00:01"
-          - "@T12:00:00 <= @T14:00:00"
-          - "@2014-12-12 <= @2014-12-12"
-          - "@2014-12-13T12:00:00 <= @2014-12-13T12:00:00"
-          - "@T12:00:00 <= @T12:00:00"
-          - "@2014-12-13 <= @2014-12-12"
-          - "@2014-12-13T12:00:01 <= @2014-12-13T12:00:00"
-          - "@T12:00:01 <= @T12:00:00"
-          - "@2018-03 <= @2018-03-01"
-          - "@2018-03-01T10:30:00  <= @2018-03-01T10:30:00.0"
-          - "@T10:30:00 <= @T10:30:00.0"
-          - "@2014-12-12 >= @2014-12-13"
-          - "@2014-12-13T12:00:00 >= @2014-12-13T12:00:01"
-          - "@T12:00:00 >= @T14:00:00"
-          - "@2014-12-12 >= @2014-12-12"
-          - "@2014-12-13T12:00:00 >= @2014-12-13T12:00:00"
-          - "@T12:00:00 >= @T12:00:00"
-          - "@2014-12-13 >= @2014-12-12"
-          - "@2014-12-13T12:00:01 >= @2014-12-13T12:00:00"
-          - "@T12:00:01 >= @T12:00:00"
-          - "@2018-03 >= @2018-03-01"
-          - "@2018-03-01T10:30:00 >= @2018-03-01T10:30:00.0"
-          - "@2014-12-12 > @2014-12-13"
-          - "@2014-12-13T12:00:00 > @2014-12-13T12:00:01"
-          - "@T12:00:00 > @T14:00:00"
-          - "@2014-12-12 > @2014-12-12"
-          - "@2014-12-13T12:00:00 > @2014-12-13T12:00:00"
-          - "@T12:00:00 > @T12:00:00"
-          - "@2014-12-13 > @2014-12-12"
-          - "@2014-12-13T12:00:01 > @2014-12-13T12:00:00"
-          - "@T12:00:01 > @T12:00:00"
-          - "@2018-03-01T10:30:00 > @2018-03-01T10:30:00.0"
-          - "@T10:30:00 > @T10:30:00.0"
-          - "Patient.birthDate != @T12:14:15"
-          - "Patient.birthDate != @T12:14"
-          - "@2018-03 < @2018-03-01"
-          - "@T10 < @T10:30"
-          - "@T10:30:00 < @T10:30:00.0"
-          - "@T10 <= @T10:30"
-          - "@T10 >= @T10:30"
-          - "@T10:30:00 >= @T10:30:00.0"
-          - "@2018-03 > @2018-03-01"
-          - "@T10 > @T10:30"
           - "@T10:04:23-04:00 = @T18:04:23+04:00"
           - "@T19:01:23-05:00 = @T00:01:23-00:00"
           - "@T10:04:23-04:00 = @T18:04:24+04:00"
@@ -331,96 +68,12 @@ excludeSet:
           - "@T10:04:23-04:00 != @T18:04:24+04:00"
           - "@T10:04:23-04:00 != @T14:04:23Z"
           - "@T10:04:23-04:00 != @T14:04:24Z"
-        expression:
-          - "@\\d{4}-\\d{2}-\\d{2}T\\d{2}[^:]"
-          - "@\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}[^:]"
-      - title: "Unsupported quantity literals"
-        type: feature
-        id: "#2410"
-        any:
-          - "2 'mo'"
-          - "^2 years$"
-          - "\\(2 years\\).value"
-          - "1 month = 30 'd'"
-          - "1 week = 1 'wk'"
-          - "1 day = 1 'd'"
-          - "1 day = 24 'h'"
-          - "1 second = 1 's'"
-          - "1 year != 1 'a'"
-          - "12 months = 1 year"
-          - "1 year = 1 year"
-          - "1 month != 1 'mo'"
-          - "1 month = 30 days"
-          - "1 day = 24 hours"
-          - "10 'kg.m/s2' = 5 'kg' * 4 'm' / (2 seconds * 1000 'ms')"
-          - "1 week = 7 days"
-          - "1 year > 1 'a'"
-          - "1 's' > 1 year"
-          - "1 'min' < 2 minutes"
-          - "1 'kg' < 2 's'"
-          - "1 'min' < 61 seconds"
-          - "10 seconds > 1 's'"
-          - "10 seconds < 1 's'"
-          - "1 's' > 10 seconds"
-          - "1 's' < 10 seconds"
-          - "999 'g' < 1 'kg'"
-          - "999 'g' > 1 'kg'"
-          - "1001 'g' > 1 'kg'"
-          - "1001 'g' < 1 'kg'"
-          - "1 'm' * 1 year"
-          - "1 year * 1 year"
-          - "1 'mo' / 1 year"
-          - "1 year / 1 'mo'"
-          - "3 minutes / 1 's'"
-          - "1 'kg' / 3 months"
-          - "1 year / 0 months"
-          - "3 'm' + 3 'cm' = 303 'cm'"
-          - "1 'a' + 1 year"
-          - "1 year + 1 'a'"
-          - "2 'a' + 1 'a' = 3 'a'"
-          - "3 'm' - 3 'cm' = 297 'cm'"
-          - "1 'a' - 1 year"
-          - "1 year - 1 'a'"
-          - "3 'a' - 1 'a' = 2 'a'"
-          - "2 'kg' * 5 'm' = 10 'kg.m'"
-          - "2 'kg' * 5 = 10 'kg'"
-          - "2 * 5 'kg' = 10 'kg'"
-          - "1 'B' * 2"
-          - "1 'B' / 2"
-          - "1 'B' + 1 'B'"
-          - "1 'B' - 1 'B'"
-          - "10 'kg' / 5 'm' = 2 'kg/m'"
-          - "20 'kg' / 5 = 4 'kg'"
-          - "20 / 5 'kg' = 4 '1/kg'"
-          - "3 's' / 3 milliseconds = 1000"
-          - "1 / 3 months"
-          - "3 month / 2 year = 1 / 8"
-          - "1 year / 2 = 6 months"
-          - "Observation.value / 185 months = 1"
-          - "Observation.value / 185 'mo'"
-          - "3 '1' + 2 = 5 '1'"
-          - "3 + 2 '1' = 5 '1'"
-          - "3 - 2 '1' = 1 '1'"
-          - "3 '1' - 2 = 1 '1'"
-          - "2 years + 6 months = 2.5 year"
-          - "3 year - 1 year = 2 year"
-          - "4.0000 'g' = 4000.0 'mg'"
-          - "4 'g' != 4040 'mg'"
-          - "1.0 'm' / 1.0 'm' = 1 '1'"
-          - "7 days = 1 week"
-          - "6 days < 1 week"
-          - "8 days > 1 week"
-          - "2 years"
-          - "(2 years).value"
-      - title: "Unsupported hasValue function"
-        id: "#2430"
-        function:
-          - hasValue
   - title: Path exclusions
     glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
       - title: "Mixed collections not supported"
         type: wontfix
+        outcome: failure
         comment: |
           Pathling does not support the representation of mixed collections, which is required for
           these tests.
@@ -429,6 +82,13 @@ excludeSet:
           - "Observation.value with an R5 FHIR model"
           - "Observation.value with an STU3 FHIR model"
           - "Observation.value with an DSTU2 FHIR model"
+      - title: "Mixed collections not supported"
+        type: wontfix
+        outcome: pass
+        comment: |
+          Pathling does not support the representation of mixed collections, which is required for
+          these tests.
+        any:
           - "Observation.value without a model"
       - title: "Contained resources not supported"
         type: feature
@@ -437,6 +97,7 @@ excludeSet:
           - "(^|\\W)contained(\\W|$)"
       - title: "Custom fields not supported within FHIR resources"
         type: wontfix
+        outcome: failure
         comment: Pathling does not support custom fields within FHIR resources.
         any:
           - "Access a custom field starting with a capital letter (1)"
@@ -447,6 +108,7 @@ excludeSet:
       - title: "Primitive attributes"
         id: "#437"
         type: feature
+        outcome: failure
         comment: |
           This test requires support for the primitive attribute/extension structure, as it involves 
           traversing to the `id` of a primitive element.
@@ -457,30 +119,49 @@ excludeSet:
     exclude:
       - title: "Using ` to wrap a string is not allowed by grammar"
         type: bug
+        outcome: failure
         comment: |
           An issue has been raised on the fhirpath.js GitHub repository (#172), this may be an 
           incorrect expectation within the test cases.
         any:
           - "`a\\\\b\\'\\\"\\`\\r\\n\\t\\u0065`"
+  - title: String manipulation exclusions
+    glob: "fhirpath-js/cases/5.6_string_manipulation.yaml"
+    exclude:
+      - title: "Input of empty collection to join function causes error"
+        type: bug
+        id: "#2443"
+        any:
+          - "** join on empty input collection"
+      - title: "Parse error"
+        type: wontfix
+        outcome: pass
+        comment: |
+          The test case is not valid FHIRPath syntax, it contains a parse error.
+        any:
+          - "('a'|'2023-05-28'.toDate()|'c').join(',')"
+          - "('a'|'2023-05-28'.toDate()|'c').join(',')"
   - title: Existence exclusions
     glob: "fhirpath-js/cases/5.1_existence.yaml"
     exclude:
       - title: "Incorrect behaviour when evaluating boolean value of collections"
         type: bug
+        outcome: failure
         id: "#2411"
         any:
           - "** error for collection that is not a singleton"
-      - title: "Support for null values within FHIR elements"
+      - title: Support for null values within FHIR elements
         type: wontfix
+        outcome: failure
         any:
           - "** null is not empty"
           - "** exists for null should return true"
   - title: Filtering and projection exclusions
     glob: "fhirpath-js/cases/5.2_filtering_and_projection.yaml"
     exclude:
-      - title: "FHIRPath types currently not working within ofType"
-        type: bug
-        id: "#2415"
+      - title: "Test runner does not support representation of mixed collections in arbitrary objects"
+        type: wontfix
+        outcome: failure
         any:
           - "heteroattr.ofType(String)"
           - "heteroattr.ofType(Integer)"
@@ -496,6 +177,7 @@ excludeSet:
           - "(^|\\W)Bundle(\\W|$)"
       - title: "Support for null values within FHIR elements"
         type: wontfix
+        outcome: failure
         any:
           - "** equality for null values"
           - "** inequality for null values"
@@ -512,7 +194,7 @@ excludeSet:
           - "** two colls"
           - "** two colls not"
           - "** length mismatch"
-  - title: "Comparison exclusions"
+  - title: Comparison exclusions
     glob: "fhirpath-js/cases/6.2_comparision.yaml"
     exclude:
       - title: Unsupported comparison of dates, times and date times
@@ -538,12 +220,20 @@ excludeSet:
           - "coll contains not_el"
           - "ups in coll"
           - "coll contains empty"
-          - "coll contains ups"
+        expression:
+          - "^coll contains ups"
+      - title: Unsupported equality for complex types
+        type: new-feature
+        id: "#2420"
+        outcome: pass
+        any:
+          - "emptycoll contains ups"
   - title: Variable exclusions
     glob: "fhirpath-js/cases/8_variables.yaml"
     exclude:
       - title: "Unsupported context definition within view runner"
         type: new-feature
+        outcome: failure
         id: "#2424"
         spel:
           - "#testCase.context == 'g1'"
@@ -553,6 +243,7 @@ excludeSet:
       - title: "ID on primitive types not supported"
         comment: "This also includes the case of an empty primitive value with non-empty attributes"
         type: feature
+        outcome: failure
         id: "#437"
         any:
           - "** id for primitive type"
@@ -560,15 +251,20 @@ excludeSet:
           - "** count nodes without value, but with extensions"
       - title: "extensions on primitive types not supported"
         type: feature
+        outcome: pass
         id: "#437"
         any:
           - "** expression with extension for primitive type 1"
+      - title: "extensions on primitive types not supported"
+        type: feature
+        outcome: failure
+        id: "#437"
+        any:
           - "** expression with extension for primitive type 3"
           - "Patient.communication.preferred.extension('test').value.id"
           - "Patient.communication.preferred.extension('test').exists()"
           - "Patient.name.given[0].extension('http://hl7.org/fhir/StructureDefinition/display').value = 'Jacomus1'"
           - "Patient.name.given[3].extension('http://hl7.org/fhir/StructureDefinition/display').value = 'Jacomus2'"
-          - "** expression with extension() for primitive type (using FHIR model data)"
           - "** value of extension of extension (using FHIR model data)"
           - "** id of extension of extension"
   - title: Factory exclusions
@@ -597,6 +293,7 @@ excludeSet:
       - title: "Tick quotes identifiers not supported"
         id: "#2153"
         type: bug
+        outcome: failure
         any:
           - "name.`family`"
       - title: "Boolean evaluation of collections"
@@ -610,17 +307,24 @@ excludeSet:
           - "Evaluating expression for a part of a resource"
       - title: "Unsupported comparison between typed complex value and expected structure"
         type: wontfix
+        outcome: failure
         any:
           - "Patient.telecom.where($this.use = 'work')"
   - title: FHIR R4 Exclusions
     glob: "fhirpath-js/cases/fhir-r4.yaml"
     exclude:
       - title: "Tick quotes identifiers not supported"
+        outcome: failure
         id: "#2153"
         type: bug
         any:
           - "** testEscapedIdentifier"
           - "** testSimpleBackTick1"
+      - title: "Tick quotes identifiers not supported"
+        id: "#2153"
+        type: bug
+        any:
+          - "Patient.ofType(FHIR.`Patient`).type().name"
       - title: "Implicit conversion of polymorphic types not supported"
         type: feature
         id: "#2163"
@@ -665,15 +369,29 @@ excludeSet:
           - "** testWhere2"
           - "** testWhere3"
           - "** testWhere4"
-      - title: "Decimal literal exceeded maximum scale supported (6): 0.6666667"
+      - title: "Decimal literal exceeded maximum scale supported"
         id: "#2144"
         type: feature
         any:
           - "** testNEquality22"
           - "1.2 / 1.8 = 0.66666667"
+          - "1.00000001.truncate() = 1"
+          - "0.00000001.convertsToDecimal()"
       - title: "Extensions on primitive types not supported"
         type: feature
+        outcome: failure
         id: "#437"
         any:
           - "Patient.birthDate.extension('http://hl7.org/fhir/StructureDefinition/patient-birthTime').exists()"
+      - title: "Extensions on primitive types not supported"
+        type: feature
+        outcome: pass
+        id: "#437"
+        any:
           - "Patient.birthDate.extension('http://hl7.org/fhir/StructureDefinition/patient-birthTime1').empty()"
+      - title: "Boolean evaluation of collections"
+        type: feature
+        outcome: failure
+        id: "#2166"
+        any:
+          - "(1|2).not() = false"

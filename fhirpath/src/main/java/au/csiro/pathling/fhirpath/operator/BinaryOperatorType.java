@@ -1,5 +1,6 @@
 package au.csiro.pathling.fhirpath.operator;
 
+import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.operator.BooleanOperator.BooleanOperatorType;
 import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
@@ -61,7 +62,7 @@ public enum BinaryOperatorType {
    * Retrieves an instance of the operator with the specified symbol.
    *
    * @param symbol The symbol of the operator
-   * @return The {@link BinaryOperatorType} corresponding to the specified symbol
+   * @return The BinaryOperatorType corresponding to the specified symbol
    * @throws IllegalArgumentException if no operator with the specified symbol is supported
    */
   @Nonnull
@@ -69,7 +70,7 @@ public enum BinaryOperatorType {
       throws IllegalArgumentException {
     final BinaryOperatorType operatorType = SYMBOL_TO_TYPE.get(symbol);
     if (operatorType == null) {
-      throw new IllegalArgumentException("Unsupported operator: " + symbol);
+      throw new UnsupportedFhirPathFeatureError("Unsupported operator: " + symbol);
     }
     return operatorType;
   }

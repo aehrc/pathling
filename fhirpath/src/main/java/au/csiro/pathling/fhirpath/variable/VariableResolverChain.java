@@ -45,6 +45,7 @@ public class VariableResolverChain implements EnvironmentVariableResolver {
     resolvers.add(new ContextVariableResolver(resource, inputContext));
     resolvers.add(new Hl7ValueSetResolver());
     resolvers.add(new Hl7ExtensionResolver());
+    resolvers.add(new UnsupportedVariableResolver());
     return new VariableResolverChain(resolvers);
   }
 
