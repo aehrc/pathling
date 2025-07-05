@@ -1,16 +1,13 @@
 # This workflow will build the software and documentation to ensure there are no errors, and also
-# execute the tests.
-#
-# This workflow also deploys a pre-release version of the software to Maven Central.
-#
-# This workflow only runs on main and release branches.
+# execute the tests. It also deploys a pre-release version of the library API to Maven Central (as
+# long as the POM versions are correctly set to a SNAPSHOT version).
 
 name: Pre-release
 
+# This workflow only runs on release branches.
 on:
   push:
     branches:
-      - main
       - "release/*"
 
 env:
@@ -18,8 +15,8 @@ env:
   MAVEN_OPTS: --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
 
 jobs:
-  build-and-test:
-    name: Build and test
+  prerelease:
+    name: Build, test and pre-release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -75,6 +72,13 @@ jobs:
           key: r-packages-${{ runner.os }}-${{ hashFiles('lib/R/DESCRIPTION.src') }}
           restore-keys: r-packages-${{ runner.os }}-
 
+      - name: Cache SonarQube packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
       - name: Install texlive and libcurl
         run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra libcurl4-openssl-dev
 
@@ -98,7 +102,14 @@ jobs:
           PYSPARK_PYTHON: ${{ steps.python-install.outputs.python-path }}
           PYSPARK_DRIVER_PYTHON: ${{ steps.python-install.outputs.python-path }}
           R_KEEP_PKG_SOURCE: yes
-        run: mvn --batch-mode deploy -pl '!benchmark' -Pdocs,mavenPreRelease
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          mvn --batch-mode deploy \
+          org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+          -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
+          -Dsonar.host.url=https://sonarcloud.io \
+          -pl '!benchmark' -Pdocs,mavenPreRelease\
+          -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
         timeout-minutes: 60
 
       - name: Save test reports
@@ -147,23 +158,3 @@ jobs:
         with:
           name: site
           path: site/target/site/
-
-  upload-coverage:
-    name: Upload coverage
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    if: github.actor != 'dependabot[bot]'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download coverage reports
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-reports
-          path: coverage-reports
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}

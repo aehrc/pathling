@@ -2,10 +2,13 @@
 
 name: Test
 
+# This workflow runs on all pushes to all branches except for main and release branches.
 on:
   push:
     branches-ignore:
       - gh-pages
+      - main
+      - "release/*"
 
 env:
   # The add-exports and add-opens flags are required for Java 17
