@@ -78,7 +78,7 @@
     <pathling.deltaVersion>3.3.2</pathling.deltaVersion>
     <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
     <pathling.hadoopMajorVersion>3</pathling.hadoopMajorVersion>
-    <pathling.hapiFhirVersion>7.0.2</pathling.hapiFhirVersion>
+    <pathling.hapiFhirVersion>8.2.0</pathling.hapiFhirVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.3.4</pathling.dockerJavaVersion>
     <pathling.awsSdkVersion>1.12.603</pathling.awsSdkVersion>

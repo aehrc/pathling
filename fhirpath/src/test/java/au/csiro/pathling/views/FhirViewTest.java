@@ -33,10 +33,17 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoField;
+import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +60,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.api.java.UDF1;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.functions;
@@ -61,7 +69,6 @@ import org.apache.spark.sql.types.DecimalType;
 import org.apache.spark.sql.types.StringType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.hl7.fhir.utilities.Utilities;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -77,24 +84,23 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 @Slf4j
 abstract class FhirViewTest {
 
+  private static final DateTimeFormatter FHIR_DATE_PARSER = new DateTimeFormatterBuilder()
+      .appendPattern("yyyy[-MM[-dd]]")
+      .parseDefaulting(ChronoField.MONTH_OF_YEAR, 1)
+      .parseDefaulting(ChronoField.DAY_OF_MONTH, 1)
+      .toFormatter();
 
-  /**
-   * Precision that includes only the year, month and day of a date string.
-   */
-  protected static final int DATE_BOUNDARY_PRECISION = 8;
+  private static final DateTimeFormatter FHIR_TIME_FORMATTER = new DateTimeFormatterBuilder()
+      .appendPattern("HH:mm:ss")
+      .toFormatter();
 
-  /**
-   * Precision that includes all components of a time string.
-   */
-  protected static final int TIME_BOUNDARY_PRECISION = 9;
-
-  protected static final UserDefinedFunction LOW_BOUNDARY_FOR_DATE_TIME_UDF = functions.udf(
-      (String s) -> Utilities.lowBoundaryForDate(s, DATE_BOUNDARY_PRECISION),
+  private static final UserDefinedFunction LOW_BOUNDARY_FOR_DATE_TIME_UDF = functions.udf(
+      (UDF1<String, String>) FhirViewTest::lowBoundaryForDate,
       DataTypes.StringType
   );
 
-  protected static final UserDefinedFunction LOW_BOUNDARY_FOR_TIME_UDF = functions.udf(
-      (String s) -> Utilities.lowBoundaryForTime(s, TIME_BOUNDARY_PRECISION),
+  private static final UserDefinedFunction LOW_BOUNDARY_FOR_TIME_UDF = functions.udf(
+      (UDF1<String, String>) FhirViewTest::lowBoundaryForTime,
       DataTypes.StringType
   );
 
@@ -204,8 +210,7 @@ abstract class FhirViewTest {
               // Add the field to the selection without alteration.
               return col(field.name());
             }
-          })
-          .collect(toList());
+          }).toList();
 
       // Select the data with the dynamically created column expressions.
       final Dataset<Row> selectedExpectedResult = expectedResult.select(
@@ -329,7 +334,7 @@ abstract class FhirViewTest {
           final Dataset<String> dataset = spark.createDataset(jsonStrings, Encoders.STRING());
           final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(resourceType);
           final Dataset<Row> resourceDataset = dataset.map(
-              (MapFunction<String, IBaseResource>) (json) -> jsonParser(fhirContext())
+              (MapFunction<String, IBaseResource>) json -> jsonParser(fhirContext())
                   .parseResource(json), encoder).toDF().cache();
           result.put(ResourceType.fromCode(resourceType), resourceDataset);
         });
@@ -508,7 +513,8 @@ abstract class FhirViewTest {
   @Slf4j
   public static class TestDataSource implements DataSource {
 
-    private static final Map<ResourceType, Dataset<Row>> resourceTypeToDataset = new HashMap<>();
+    private static final Map<ResourceType, Dataset<Row>> resourceTypeToDataset = new EnumMap<>(
+        ResourceType.class);
 
     public void put(@Nonnull final ResourceType resourceType, @Nonnull final Dataset<Row> dataset) {
       resourceTypeToDataset.put(resourceType, dataset);
@@ -532,4 +538,33 @@ abstract class FhirViewTest {
       return resourceTypeToDataset.keySet();
     }
   }
+
+  @Nullable
+  private static String lowBoundaryForDate(@Nullable final String dateString) {
+    if (dateString == null) {
+      return null;
+    }
+    try {
+      final TemporalAccessor temporalAccessor = FHIR_DATE_PARSER.parse(dateString);
+      return DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDate.from(temporalAccessor));
+    } catch (final DateTimeParseException e) {
+      // Fallback for invalid date strings.
+      return null;
+    }
+  }
+
+  @Nullable
+  private static String lowBoundaryForTime(@Nullable final String timeString) {
+    if (timeString == null) {
+      return null;
+    }
+    try {
+      final LocalTime localTime = LocalTime.parse(timeString);
+      return FHIR_TIME_FORMATTER.format(localTime);
+    } catch (final DateTimeParseException e) {
+      // Fallback for invalid time strings.
+      return null;
+    }
+  }
+
 }
