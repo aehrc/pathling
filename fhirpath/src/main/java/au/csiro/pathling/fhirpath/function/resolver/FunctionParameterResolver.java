@@ -224,14 +224,9 @@ public record FunctionParameterResolver(EvaluationContext evaluationContext, Col
       // Try to find and invoke the static empty() method on the target collection class.
       final Method emptyMethod = targetType.getMethod("empty");
       return emptyMethod.invoke(null);
-    } catch (final NoSuchMethodException e) {
+    } catch (final NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
       return context.reportError(
-          "Cannot convert empty collection to " + targetType.getSimpleName() +
-              ": no static empty() method found");
-    } catch (final IllegalAccessException | InvocationTargetException e) {
-      return context.reportError(
-          "Cannot convert empty collection to " + targetType.getSimpleName() +
-              ": failed to invoke empty() method - " + e.getMessage());
+          "Cannot convert empty collection to " + targetType.getSimpleName());
     }
   }
 }
