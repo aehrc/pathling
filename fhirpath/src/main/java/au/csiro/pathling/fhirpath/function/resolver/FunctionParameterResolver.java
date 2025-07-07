@@ -67,10 +67,10 @@ public record FunctionParameterResolver(EvaluationContext evaluationContext, Col
   @Nonnull
   public FunctionInvocation bind(@Nonnull final Method method) {
 
-    // this is the  actual runtime error as this is an unexpected situation
+    // This check ensures that the method has at least one parameter.
     if (method.getParameterCount() == 0) {
-      throw new RuntimeException("Function '" + method.getName()
-          + "' does not accept any parameters and is a not a valid Fhirpath function backend.");
+      throw new AssertionError("Function '" + method.getName()
+          + "' does not accept any parameters and is a not a valid FhirPath function implementation");
     }
 
     final BindingContext context = BindingContext.forMethod(method);
@@ -139,7 +139,7 @@ public record FunctionParameterResolver(EvaluationContext evaluationContext, Col
       return (CollectionTransform) (c -> argument.apply(c, evaluationContext));
     } else if (TypeSpecifier.class.isAssignableFrom(parameter.getType())) {
       // bind type specifier
-      if (argument instanceof ParserPaths.TypeSpecifierPath typeSpecifierPath) {
+      if (argument instanceof final ParserPaths.TypeSpecifierPath typeSpecifierPath) {
         return typeSpecifierPath.getValue();
       } else {
         return context.reportError(
@@ -147,7 +147,7 @@ public record FunctionParameterResolver(EvaluationContext evaluationContext, Col
       }
     } else {
       // This is an unexpected situation - likely a programming error
-      throw new RuntimeException("Cannot resolve parameter type: " + parameter.getType().getName());
+      throw new AssertionError("Cannot resolve parameter type: " + parameter.getType().getName());
     }
   }
 
@@ -171,22 +171,33 @@ public record FunctionParameterResolver(EvaluationContext evaluationContext, Col
   @Nonnull
   private Object resolveCollection(@Nonnull final Collection collection,
       @Nonnull final Parameter parameter, @Nonnull final BindingContext context) {
+    // Check if the parameter expects a BooleanCollection type.
     if (BooleanCollection.class.isAssignableFrom(parameter.getType())) {
+      // Convert the collection to a boolean path representation.
       return collection.asBooleanPath();
+
     } else if (Concepts.class.isAssignableFrom(parameter.getType())) {
-      // evaluate collection types 
+      // Check if the parameter expects a Concepts type. Attempt to convert the collection to 
+      // Concepts, reporting an error if conversion fails.
       return collection.toConcepts().orElseGet(
           () -> context.reportError("Cannot convert collection of type " +
               collection.getClass().getSimpleName() + " to Concepts")
       );
-    } else if (parameter.getType().isAssignableFrom(collection.getClass())) {
-      // evaluate collection types 
-      return collection;
+
     } else if (collection instanceof EmptyCollection && Collection.class.isAssignableFrom(
         parameter.getType())) {
-      // Handle empty collection conversion to specific collection types.
+      // Handle the case where we have an empty collection and the parameter expects a Collection 
+      // type. Convert the empty collection to the expected collection type.
       return convertEmptyCollectionToType(parameter.getType(), context);
+
+    } else if (parameter.getType().isAssignableFrom(collection.getClass())) {
+      // Check if the parameter type can directly accept the collection type.
+      // Return the collection directly as it's already compatible.
+      return collection;
+
     } else {
+      // None of the above conditions matched, indicating a type mismatch. Report an error for 
+      // unsupported type conversion.
       return context.reportError("Type mismatch: expected " + parameter.getType().getSimpleName() +
           " but got " + collection.getClass().getSimpleName());
     }
@@ -210,7 +221,7 @@ public record FunctionParameterResolver(EvaluationContext evaluationContext, Col
   private Object convertEmptyCollectionToType(@Nonnull final Class<?> targetType,
       @Nonnull final BindingContext context) {
     try {
-      // Try to find and invoke the static empty() method on the target collection class
+      // Try to find and invoke the static empty() method on the target collection class.
       final Method emptyMethod = targetType.getMethod("empty");
       return emptyMethod.invoke(null);
     } catch (final NoSuchMethodException e) {
