@@ -64,5 +64,13 @@ public abstract class YamlTestBase {
     }
 
     executor.check(createResolverBuilder());
+
+    // If the test case is excluded, throw an exception to mark the test as skipped after any checks 
+    // have completed.
+    if (executor instanceof final DefaultYamlTestExecutor defaultExecutor
+        && defaultExecutor.getExclusion().isPresent()) {
+      throw new TestAbortedException(
+          "Test case skipped due to exclusion: " + defaultExecutor.getExclusion().get());
+    }
   }
 }
