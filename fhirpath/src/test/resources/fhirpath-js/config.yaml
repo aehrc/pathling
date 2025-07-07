@@ -128,11 +128,6 @@ excludeSet:
   - title: String manipulation exclusions
     glob: "fhirpath-js/cases/5.6_string_manipulation.yaml"
     exclude:
-      - title: "Input of empty collection to join function causes error"
-        type: bug
-        id: "#2443"
-        any:
-          - "** join on empty input collection"
       - title: "Parse error"
         type: wontfix
         outcome: pass

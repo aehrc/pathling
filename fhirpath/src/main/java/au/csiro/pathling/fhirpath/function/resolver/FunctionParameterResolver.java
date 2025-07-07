@@ -23,11 +23,15 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
+ * Resolves function parameters for method-defined FHIRPath functions.
+ *
  * @param evaluationContext The evaluation context for resolving variables and executing
  * expressions
  * @param input The input collection that the function will operate on
  * @param actualArguments The list of FHIRPath expressions that will be bound to function
  * parameters
+ * @author Piotr Szul
+ * @author John Grimes
  */
 public record FunctionParameterResolver(EvaluationContext evaluationContext, Collection input,
                                         List<FhirPath> actualArguments) {
