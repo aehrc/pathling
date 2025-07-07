@@ -4,28 +4,18 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.lang.reflect.Method;
-import lombok.Value;
 
 /**
  * Provides context for parameter binding operations, including error reporting.
  * <p>
  * This class helps generate consistent, informative error messages that include the function name
  * and context (input or specific argument).
+ *
+ * @param method The method being bound
+ * @param contextDescription Description of the current binding context (e.g., "input" or "argument
+ * 0")
  */
-@Value
-public class BindingContext {
-
-  /**
-   * The method being bound
-   */
-  @Nonnull
-  Method method;
-
-  /**
-   * Description of the current binding context (e.g., "input" or "argument 0")
-   */
-  @Nullable
-  String contextDescription;
+public record BindingContext(@Nonnull Method method, @Nullable String contextDescription) {
 
   /**
    * Creates a binding context for a method.

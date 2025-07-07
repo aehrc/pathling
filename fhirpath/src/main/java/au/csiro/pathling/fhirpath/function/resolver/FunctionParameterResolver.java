@@ -99,7 +99,7 @@ public record FunctionParameterResolver(EvaluationContext evaluationContext, Col
               context.forArgument(i, parameter.getType()));
         });
 
-    return FunctionInvocation.of(method,
+    return new FunctionInvocation(method,
         Stream.concat(Stream.of(resolvedInput), resolvedArguments)
             .toArray(Object[]::new));
   }
