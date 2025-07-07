@@ -81,7 +81,7 @@ public class ExcludeRule {
    * Test cases will be evaluated using these SpEL expressions to determine whether they should be
    * excluded.
    */
-  @Nonnull
+  @Nullable
   List<String> spel;
 
   @Nonnull
