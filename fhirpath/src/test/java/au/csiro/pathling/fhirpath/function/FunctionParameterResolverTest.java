@@ -15,7 +15,8 @@ import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.function.FunctionParameterResolver.FunctionInvocation;
+import au.csiro.pathling.fhirpath.function.resolver.FunctionInvocation;
+import au.csiro.pathling.fhirpath.function.resolver.FunctionParameterResolver;
 import au.csiro.pathling.fhirpath.path.ParserPaths;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -125,9 +126,9 @@ class FunctionParameterResolverTest {
         ));
     final Method method = getMethod("funcAllTypes");
     final FunctionInvocation invocation = resolver.bind(method);
-    assertEquals(FunctionInvocation.of(method, new Object[]{input,
-            stringArgument, booleanRepresentation, concepts, typeSpecifier
-        }
+    assertEquals(new FunctionInvocation(method, new Object[]{input,
+        stringArgument, booleanRepresentation, concepts, typeSpecifier
+    }
     ), invocation);
   }
 
@@ -147,11 +148,11 @@ class FunctionParameterResolverTest {
         ));
     final Method method = getMethod("funcTransform");
     final FunctionInvocation invocation = resolver.bind(method);
-    assertEquals(method, invocation.getMethod());
-    assertEquals(input, invocation.getArguments()[0]);
+    assertEquals(method, invocation.method());
+    assertEquals(input, invocation.arguments()[0]);
     // test that the transform is bound correctly to the evaluation context
     assertEquals(transformResult,
-        ((CollectionTransform) invocation.getArguments()[1]).apply(transformArgument));
+        ((CollectionTransform) invocation.arguments()[1]).apply(transformArgument));
   }
 
 
@@ -163,7 +164,7 @@ class FunctionParameterResolverTest {
     final Method method = getMethod("funcStringCollection");
 
     final FunctionInvocation invocation = resolver.bind(method);
-    assertEquals(FunctionInvocation.of(method, new Object[]{input}), invocation);
+    assertEquals(new FunctionInvocation(method, new Object[]{input}), invocation);
   }
 
 
@@ -178,7 +179,7 @@ class FunctionParameterResolverTest {
         codingInput, List.of());
     final Method method = getMethod("funcConcepts");
     final FunctionInvocation invocation = resolver.bind(method);
-    assertEquals(FunctionInvocation.of(method, new Object[]{concepts}), invocation);
+    assertEquals(new FunctionInvocation(method, new Object[]{concepts}), invocation);
   }
 
   @Test
@@ -192,7 +193,7 @@ class FunctionParameterResolverTest {
         inputCollection, List.of());
     final Method method = getMethod("funcBooleanCollection");
     final FunctionInvocation invocation = resolver.bind(method);
-    assertEquals(FunctionInvocation.of(method, new Object[]{booleanRepresentation}), invocation);
+    assertEquals(new FunctionInvocation(method, new Object[]{booleanRepresentation}), invocation);
   }
 
   @Test
@@ -204,7 +205,7 @@ class FunctionParameterResolverTest {
     final Method method = getMethod("funcOptionalArg");
 
     final FunctionInvocation invocation = resolver.bind(method);
-    assertEquals(FunctionInvocation.of(method, new Object[]{input, null}),
+    assertEquals(new FunctionInvocation(method, new Object[]{input, null}),
         invocation);
   }
 

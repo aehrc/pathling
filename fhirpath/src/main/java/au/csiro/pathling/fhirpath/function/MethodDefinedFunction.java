@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.function;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.function.resolver.FunctionParameterResolver;
 import jakarta.annotation.Nonnull;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -25,7 +26,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.Value;
 
 /**
  * A {@link NamedFunction} that is defined using a static method.
@@ -33,11 +33,8 @@ import lombok.Value;
  * @author Piotr Szul
  * @author John Grimes
  */
-@Value
-public class MethodDefinedFunction implements NamedFunction<Collection> {
-
-  String name;
-  Method method;
+public record MethodDefinedFunction(String name, Method method) implements
+    NamedFunction<Collection> {
 
   @Override
   @Nonnull
@@ -47,10 +44,10 @@ public class MethodDefinedFunction implements NamedFunction<Collection> {
   }
 
   /**
-   * Builds a {@link MethodDefinedFunction} from a {@link Method}.
+   * Builds a MethodDefinedFunction from a {@link Method}.
    *
    * @param method The method to build the function from
-   * @return A new {@link MethodDefinedFunction}
+   * @return A new MethodDefinedFunction
    */
   @Nonnull
   public static MethodDefinedFunction build(@Nonnull final Method method) {
@@ -64,7 +61,7 @@ public class MethodDefinedFunction implements NamedFunction<Collection> {
    * @return A list of {@link NamedFunction}s
    */
   @Nonnull
-  public static List<NamedFunction<?>> build(@Nonnull final Class<?> clazz) {
+  public static List<NamedFunction<Collection>> build(@Nonnull final Class<?> clazz) {
     return Stream.of(clazz.getDeclaredMethods())
         .filter(m -> m.getAnnotation(FhirPathFunction.class) != null)
         .map(MethodDefinedFunction::build).collect(Collectors.toUnmodifiableList());
@@ -77,8 +74,8 @@ public class MethodDefinedFunction implements NamedFunction<Collection> {
    * @return A map of {@link NamedFunction}s
    */
   @Nonnull
-  public static Map<String, NamedFunction<?>> mapOf(@Nonnull final Class<?> clazz) {
-    return build(clazz).stream().collect(Collectors.toUnmodifiableMap(NamedFunction::getName,
+  public static Map<String, NamedFunction<Collection>> mapOf(@Nonnull final Class<?> clazz) {
+    return build(clazz).stream().collect(Collectors.toUnmodifiableMap(NamedFunction::name,
         Function.identity()));
   }
 
