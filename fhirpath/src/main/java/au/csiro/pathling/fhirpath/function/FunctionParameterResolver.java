@@ -9,6 +9,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.path.ParserPaths;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -246,8 +247,8 @@ public class FunctionParameterResolver {
    * @throws RuntimeException if the parameter type is not supported
    */
   @Nullable
-  Object resolveArgument(@Nonnull final Parameter parameter,
-      final FhirPath argument, @Nonnull final BindingContext context) {
+  private Object resolveArgument(@Nonnull final Parameter parameter,
+      @Nullable final FhirPath argument, @Nonnull final BindingContext context) {
 
     if (isNull(argument)) {
       // check the parameter is happy with a null value
@@ -267,8 +268,8 @@ public class FunctionParameterResolver {
       return (CollectionTransform) (c -> argument.apply(c, evaluationContext));
     } else if (TypeSpecifier.class.isAssignableFrom(parameter.getType())) {
       // bind type specifier
-      if (argument instanceof ParserPaths.TypeSpecifierPath) {
-        return ((ParserPaths.TypeSpecifierPath) argument).getValue();
+      if (argument instanceof ParserPaths.TypeSpecifierPath typeSpecifierPath) {
+        return typeSpecifierPath.getValue();
       } else {
         return context.reportError(
             "Expected a type specifier but got " + argument.getClass().getSimpleName());
@@ -284,7 +285,9 @@ public class FunctionParameterResolver {
    * <p>
    * This method handles:
    * <ul>
+   *   <li>Converting collections to BooleanCollection when the parameter type is BooleanCollection</li>
    *   <li>Converting collections to Concepts when the parameter type is Concepts</li>
+   *   <li>Converting EmptyCollection to specific collection types when needed</li>
    *   <li>Passing collections directly when the parameter type is assignable from the collection type</li>
    * </ul>
    *
@@ -295,7 +298,7 @@ public class FunctionParameterResolver {
    * @throws InvalidUserInputError if the collection cannot be converted to the parameter type
    */
   @Nonnull
-  Object resolveCollection(@Nonnull final Collection collection,
+  private Object resolveCollection(@Nonnull final Collection collection,
       @Nonnull final Parameter parameter, @Nonnull final BindingContext context) {
     if (BooleanCollection.class.isAssignableFrom(parameter.getType())) {
       return collection.asBooleanPath();
@@ -308,10 +311,45 @@ public class FunctionParameterResolver {
     } else if (parameter.getType().isAssignableFrom(collection.getClass())) {
       // evaluate collection types 
       return collection;
+    } else if (collection instanceof EmptyCollection && Collection.class.isAssignableFrom(
+        parameter.getType())) {
+      // Handle empty collection conversion to specific collection types.
+      return convertEmptyCollectionToType(parameter.getType(), context);
     } else {
       return context.reportError("Type mismatch: expected " + parameter.getType().getSimpleName() +
           " but got " + collection.getClass().getSimpleName());
     }
   }
 
+  /**
+   * Converts an EmptyCollection to a specific collection type by calling the static empty()
+   * method.
+   * <p>
+   * This method uses reflection to invoke the static empty() method on the target collection class.
+   * According to the FHIRPath specification, empty collections should be handled gracefully by
+   * functions, and functions that operate on empty collections should return appropriate empty
+   * results.
+   *
+   * @param targetType The target collection class
+   * @param context The binding context for error reporting
+   * @return An empty instance of the target collection type
+   * @throws InvalidUserInputError if the conversion cannot be performed
+   */
+  @Nonnull
+  private Object convertEmptyCollectionToType(@Nonnull final Class<?> targetType,
+      @Nonnull final BindingContext context) {
+    try {
+      // Try to find and invoke the static empty() method on the target collection class
+      final Method emptyMethod = targetType.getMethod("empty");
+      return emptyMethod.invoke(null);
+    } catch (final NoSuchMethodException e) {
+      return context.reportError(
+          "Cannot convert empty collection to " + targetType.getSimpleName() +
+              ": no static empty() method found");
+    } catch (final IllegalAccessException | InvocationTargetException e) {
+      return context.reportError(
+          "Cannot convert empty collection to " + targetType.getSimpleName() +
+              ": failed to invoke empty() method - " + e.getMessage());
+    }
+  }
 }
