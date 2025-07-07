@@ -21,25 +21,16 @@ import java.lang.reflect.Parameter;
 import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import lombok.Value;
 
-@Value
-public class FunctionParameterResolver {
-
-  /**
-   * The evaluation context for resolving variables and executing expressions
-   */
-  EvaluationContext evaluationContext;
-
-  /**
-   * The input collection that the function will operate on
-   */
-  Collection input;
-
-  /**
-   * The list of FHIRPath expressions that will be bound to function parameters
-   */
-  List<FhirPath> actualArguments;
+/**
+ * @param evaluationContext The evaluation context for resolving variables and executing
+ * expressions
+ * @param input The input collection that the function will operate on
+ * @param actualArguments The list of FHIRPath expressions that will be bound to function
+ * parameters
+ */
+public record FunctionParameterResolver(EvaluationContext evaluationContext, Collection input,
+                                        List<FhirPath> actualArguments) {
 
   /**
    * Creates a FunctionParameterResolver from a FunctionInput object.
