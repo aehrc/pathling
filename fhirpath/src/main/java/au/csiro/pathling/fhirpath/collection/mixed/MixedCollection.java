@@ -1,7 +1,7 @@
 package au.csiro.pathling.fhirpath.collection.mixed;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.column.UnsupportedRepresentation;
 import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
@@ -15,9 +15,14 @@ import lombok.Getter;
 @Getter
 public abstract class MixedCollection extends Collection {
 
+  protected MixedCollection(@Nonnull final String unsupportedDescription) {
+    super(new UnsupportedRepresentation(unsupportedDescription),
+        Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+  }
+
+  @SuppressWarnings("unused")
   protected MixedCollection() {
-    super(DefaultRepresentation.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
-        Optional.empty());
+    this("mixed collection (do you need to use ofType?)");
   }
 
   /**
@@ -25,7 +30,7 @@ public abstract class MixedCollection extends Collection {
    *
    * @param parent The parent collection
    * @param definition The definition to use
-   * @return A new instance of {@link MixedCollection}
+   * @return A new instance of MixedCollection
    */
   @Nonnull
   public static MixedCollection buildElement(@Nonnull final Collection parent,
