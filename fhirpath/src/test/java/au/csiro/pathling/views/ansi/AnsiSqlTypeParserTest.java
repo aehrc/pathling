@@ -8,7 +8,6 @@ import java.util.stream.Stream;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -113,7 +112,6 @@ class AnsiSqlTypeParserTest {
   }
 
   @Test
-  @Disabled("Case insensitivity is not implemented yet")
   void testCaseInsensitivity() {
     DataType upperResult = AnsiSqlTypeParser.parseType("INTEGER");
     DataType lowerResult = AnsiSqlTypeParser.parseType("integer");
