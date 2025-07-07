@@ -175,9 +175,9 @@ public record FunctionParameterResolver(EvaluationContext evaluationContext, Col
   @Nonnull
   private Object resolveCollection(@Nonnull final Collection collection,
       @Nonnull final Parameter parameter, @Nonnull final BindingContext context) {
-    // Check if the parameter expects a BooleanCollection type.
+    // Check if the parameter expects a BooleanCollection type, if so convert the collection to a 
+    // Boolean representation.
     if (BooleanCollection.class.isAssignableFrom(parameter.getType())) {
-      // Convert the collection to a boolean path representation.
       return collection.asBooleanPath();
 
     } else if (Concepts.class.isAssignableFrom(parameter.getType())) {
@@ -188,16 +188,16 @@ public record FunctionParameterResolver(EvaluationContext evaluationContext, Col
               collection.getClass().getSimpleName() + " to Concepts")
       );
 
+    } else if (parameter.getType().isAssignableFrom(collection.getClass())) {
+      // Check if the parameter type can directly accept the collection type. Return the collection 
+      // directly as it's already compatible.
+      return collection;
+
     } else if (collection instanceof EmptyCollection && Collection.class.isAssignableFrom(
         parameter.getType())) {
       // Handle the case where we have an empty collection and the parameter expects a Collection 
       // type. Convert the empty collection to the expected collection type.
       return convertEmptyCollectionToType(parameter.getType(), context);
-
-    } else if (parameter.getType().isAssignableFrom(collection.getClass())) {
-      // Check if the parameter type can directly accept the collection type.
-      // Return the collection directly as it's already compatible.
-      return collection;
 
     } else {
       // None of the above conditions matched, indicating a type mismatch. Report an error for 
