@@ -143,7 +143,7 @@ public class CodingCollection extends Collection implements Comparable, StringCo
 
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
-    return path instanceof CodingCollection || Comparable.super.isComparableTo(path);
+    return path instanceof CodingCollection || super.isComparableTo(path);
   }
 
   @Override

@@ -34,6 +34,7 @@ import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
+import au.csiro.pathling.fhirpath.operator.Comparable;
 import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
 import java.lang.reflect.Constructor;
@@ -54,8 +55,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 @Getter
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
-public class Collection {
-
+public class Collection implements Comparable {
 
   // Additional mappings for collection classes that don't directly map to FhirPathType
   @Nonnull

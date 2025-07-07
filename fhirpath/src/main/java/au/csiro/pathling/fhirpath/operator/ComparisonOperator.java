@@ -58,16 +58,13 @@ public class ComparisonOperator implements BinaryOperator {
     checkUserInput(right instanceof Comparable,
         "Right operand to " + type + " operator must be Comparable");
 
-    final Comparable leftComparable = (Comparable) left;
-    final Comparable rightComparable = (Comparable) right;
-
-    checkUserInput(leftComparable.isComparableTo(rightComparable), "Operands must be comparable");
+    checkUserInput(left.isComparableTo(right), "Operands must be comparable");
 
     return BooleanCollection.build(
         ColumnRepresentation.binaryOperator(
             left.getColumn().singular(),
             right.getColumn().singular(),
-            leftComparable.getSqlComparator(rightComparable, type))
+            left.getSqlComparator(right, type))
     );
   }
 

@@ -187,13 +187,6 @@ excludeSet:
         any:
           - "** two objects"
           - "** two objects not"
-      - title: Unsupported equality for collections
-        type: new-feature
-        id: "#2164"
-        any:
-          - "** two colls"
-          - "** two colls not"
-          - "** length mismatch"
   - title: Comparison exclusions
     glob: "fhirpath-js/cases/6.2_comparision.yaml"
     exclude:
@@ -340,14 +333,6 @@ excludeSet:
           - "** testLessOrEqual22"
           - "Observation.value >= 100 '[lb_av]'"
           - "Observation.value > 100 '[lb_av]'"
-      - title: "Comparison ('=' and '!=') of collections not supported"
-        id: "#2164"
-        comment: "Also against an empty collection"
-        type: ???
-        any:
-          - "** testCollectionNotEqualEmpty"
-          - "** testEquality25"
-          - "** testNEquality19"
       - title: "incorrect multiplication/division of quantity literals"
         id: "#2168"
         comment: "E.g: 2.0 'cm' * 2.0 'm' = 0.040 'm2'"
@@ -361,14 +346,6 @@ excludeSet:
         any:
           - "** testCollectionBoolean5"
           - "** testCollectionBoolean6"
-      - title: "where() results in SQL runtime singularity exception"
-        id: "#2164"
-        comment: "'java.lang.RuntimeException: Expected a single value, but found multiple values thrown' in evaluation"
-        type: bug
-        any:
-          - "** testWhere2"
-          - "** testWhere3"
-          - "** testWhere4"
       - title: "Decimal literal exceeded maximum scale supported"
         id: "#2144"
         type: feature
