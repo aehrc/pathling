@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.function;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.function.resolver.FunctionParameterResolver;
 import jakarta.annotation.Nonnull;
 import java.lang.reflect.Method;
 import java.util.List;
