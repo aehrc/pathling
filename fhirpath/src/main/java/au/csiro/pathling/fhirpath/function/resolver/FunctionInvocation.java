@@ -1,5 +1,6 @@
 package au.csiro.pathling.fhirpath.function.resolver;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
 import java.lang.reflect.InvocationTargetException;
@@ -24,8 +25,17 @@ public record FunctionInvocation(Method method, Object[] arguments) {
   public Collection invoke() {
     try {
       return (Collection) method.invoke(null, arguments);
-    } catch (final IllegalAccessException | InvocationTargetException e) {
-      throw new AssertionError("Error invoking function: " + method.getName(), e);
+    } catch (final IllegalAccessException e) {
+      throw new AssertionError("Error accessing function: " + method.getName(), e);
+    } catch (final InvocationTargetException e) {
+      if (e.getCause() instanceof final InvalidUserInputError userInputError) {
+        // If the cause is an InvalidUserInputError, rethrow it directly.
+        throw userInputError;
+      } else {
+        // Otherwise, wrap the exception in a RuntimeException.
+        throw new FunctionInvocationError(
+            "Error occurred while invoking function: " + method.getName(), e);
+      }
     }
   }
 
