@@ -28,6 +28,13 @@ public class ChoiceElementCollection extends MixedCollection {
   @Nonnull
   Collection parent;
 
+  public ChoiceElementCollection(@Nonnull final ChoiceDefinition choiceDefinition,
+      @Nonnull final Collection parent) {
+    super("choice element '" + choiceDefinition.getName() + "' (do you need to use ofType?)");
+    this.choiceDefinition = choiceDefinition;
+    this.parent = parent;
+  }
+
   /**
    * Returns a new collection representing just the elements of this collection with the specified
    * type.
@@ -66,7 +73,7 @@ public class ChoiceElementCollection extends MixedCollection {
 
     if (selectedTypes.length <= 1) {
       // delegate to the single choice mapping
-      // this will take care of Decimal case (creation of DecimalCollection and DecimalRepsentation)
+      // this will take care of Decimal case (creation of DecimalCollection and DecimalRepresentation)
       return resolveElement(Arrays.stream(selectedTypes).findFirst());
     } else {
       return Collection.build(parent.getColumn().traverseChoice(selectedTypes),
