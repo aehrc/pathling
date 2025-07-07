@@ -1,20 +1,69 @@
 package au.csiro.pathling.views;
 
+import au.csiro.pathling.test.SpringBootUnitTest;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.parser.CatalystSqlParser$;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import java.util.Arrays;
+import java.util.Map;
 
 // TODO: remove
+
+@SpringBootUnitTest
 public class TypesTest {
-  
-  
+
+
+  @Autowired
+  SparkSession spark;
+
+  @Test
+  void testTimestmapType() {
+
+    spark.sql("SET TIME ZONE 'America/Los_Angeles'");
+    //spark.sql("SET spark.sql.session.timeZone = America/Los_Angeles");
+    
+    spark.sql("SELECT current_timezone()").show();
+    
+    final Map<@NotNull String, @NotNull String> timestamps = Map.of(
+        "ts_date", "2010-01-09",
+        "ts_tz_UTC", "2010-01-09T19:04:32.323+00:00",
+        "ts_tz_Z", "2010-01-09T19:04:32.323Z",
+        "ts_tz_10", "2010-01-09T19:04:32.3232+10:00"
+    );
+
+    final Dataset<Row> resultTS = spark.range(1).toDF()
+        .select(timestamps.entrySet().stream()
+            .map(entry -> {
+              final String name = entry.getKey();
+              final String value = entry.getValue();
+              final Column column = functions.lit(value).cast(DataTypes.TimestampType);
+              return column.alias(name);
+            }).toArray(Column[]::new));
+
+    resultTS.show(false);
+
+    final Dataset<Row> resultTS_NTZ = spark.range(1).toDF()
+        .select(timestamps.entrySet().stream()
+            .map(entry -> {
+              final String name = entry.getKey();
+              final String value = entry.getValue();
+              final Column column = functions.lit(value).cast(DataTypes.TimestampNTZType);
+              return column.alias(name);
+            }).toArray(Column[]::new));
+
+    resultTS_NTZ.show(false);
+  }
+
   @Test
   void testTypes() {
-
 
     // CHARACTER(n) / CHAR(n)
     // CHARACTER VARYING(n) / VARCHAR(n)
@@ -32,7 +81,7 @@ public class TypesTest {
     // DATE
     // TIMESTAMP [(p)] [ WITHOUT TIME ZONE | WITH TIME ZONE ]
     // INTERVAL
-    
+
     // create a list with strings respresenting all the above types
     final String[] types = {
         "CHARACTER(10)", "CHAR(10)", "CHARACTER VARYING(10)", "VARCHAR(10)",

@@ -64,10 +64,13 @@ class AnsiSqlTypeParserTest {
 
         // Temporal types
         Arguments.of("DATE", DataTypes.DateType),
-        Arguments.of("TIMESTAMP", DataTypes.TimestampType),
-        Arguments.of("TIMESTAMP(3)", DataTypes.TimestampType),
-        Arguments.of("TIMESTAMP WITHOUT TIME ZONE", DataTypes.TimestampType),
+        Arguments.of("TIMESTAMP", DataTypes.TimestampNTZType),
+        Arguments.of("TIMESTAMP(3)", DataTypes.TimestampNTZType),
+        Arguments.of("TIMESTAMP WITHOUT TIME ZONE", DataTypes.TimestampNTZType),
+        Arguments.of("TIMESTAMP(4) WITHOUT TIME ZONE", DataTypes.TimestampNTZType),
         Arguments.of("TIMESTAMP WITH TIME ZONE", DataTypes.TimestampType),
+        Arguments.of("TIMESTAMP(4) WITH TIME ZONE", DataTypes.TimestampType),
+
         Arguments.of("INTERVAL", DataTypes.StringType),
 
         // Simple complex types

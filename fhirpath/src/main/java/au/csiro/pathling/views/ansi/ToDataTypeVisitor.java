@@ -46,13 +46,13 @@ public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
 
     if (ctx.length != null) {
       int length = Integer.parseInt(ctx.length.getText());
-      if (typeText.startsWith("VARCHAR") || typeText.startsWith("CHARACTER VARYING")) {
+      if (typeText.startsWith("VARCHAR") || typeText.startsWith("CHARACTERVARYING")) {
         return factory.createVarchar(length);
       } else {
         return factory.createCharacter(length);
       }
     } else {
-      if (typeText.startsWith("VARCHAR") || typeText.startsWith("CHARACTER VARYING")) {
+      if (typeText.startsWith("VARCHAR") || typeText.startsWith("CHARACTERVARYING")) {
         return factory.createVarchar();
       } else {
         return factory.createCharacter();
@@ -108,13 +108,13 @@ public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
 
     if (ctx.length != null) {
       int length = Integer.parseInt(ctx.length.getText());
-      if (typeText.startsWith("VARBINARY") || typeText.startsWith("BINARY VARYING")) {
+      if (typeText.startsWith("VARBINARY") || typeText.startsWith("BINARYVARYING")) {
         return factory.createVarbinary(length);
       } else {
         return factory.createBinary(length);
       }
     } else {
-      if (typeText.startsWith("VARBINARY") || typeText.startsWith("BINARY VARYING")) {
+      if (typeText.startsWith("VARBINARY") || typeText.startsWith("BINARYVARYING")) {
         return factory.createVarbinary();
       } else {
         return factory.createBinary();
@@ -129,7 +129,7 @@ public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
     if (typeText.startsWith("DATE")) {
       return factory.createDate();
     } else if (typeText.startsWith("TIMESTAMP")) {
-      boolean withTimeZone = typeText.contains("WITH TIME ZONE");
+      boolean withTimeZone = typeText.contains("WITHTIMEZONE");
       if (ctx.precision != null) {
         int precision = Integer.parseInt(ctx.precision.getText());
         return withTimeZone

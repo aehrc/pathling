@@ -236,7 +236,7 @@ public class AnsiSqlDataTypeFactory {
    */
   @Nonnull
   public DataType createTimestamp() {
-    return DataTypes.TimestampType;
+    return DataTypes.TimestampNTZType;
   }
 
   /**
@@ -248,7 +248,7 @@ public class AnsiSqlDataTypeFactory {
   @Nonnull
   public DataType createTimestamp(final int precision) {
     // Spark doesn't support timestamp precision, always returns TimestampType
-    return DataTypes.TimestampType;
+    return DataTypes.TimestampNTZType;
   }
 
   /**
