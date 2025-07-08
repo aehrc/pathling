@@ -111,7 +111,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
   @Override
   public ColumnRepresentation traverse(@Nonnull final String fieldName) {
     // TODO: consider implementing a custom expression here 
-    //  to simplify query plan represntation
+    //  to simplify query plan representation
     return copyOf(value.getField(fieldName)).removeNulls().flatten();
   }
 

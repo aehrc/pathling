@@ -41,6 +41,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -123,6 +124,7 @@ public class Collection {
    * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
    * @param definition the {@link ElementDefinition} that this path should be based upon
    * @return a new {@link Collection}
+   * @throws CollectionConstructionError if there is a problem constructing the collection
    */
   @Nonnull
   public static Collection build(@Nonnull final ColumnRepresentation columnRepresentation,
@@ -141,10 +143,11 @@ public class Collection {
    * @param columnRepresentation a {@link Column} containing the result of the expression
    * @param definition the {@link ElementDefinition} that this path should be based upon
    * @return a new {@link Collection}
+   * @throws CollectionConstructionError if there is a problem constructing the collection
    */
   @Nonnull
   public static Collection build(@Nonnull final ColumnRepresentation columnRepresentation,
-      @Nonnull Optional<Column> extensionMapColumn,
+      @Nonnull final Optional<Column> extensionMapColumn,
       @Nonnull final ElementDefinition definition) {
     final Optional<FHIRDefinedType> optionalFhirType = definition.getFhirType();
     if (optionalFhirType.isPresent()) {
@@ -166,6 +169,7 @@ public class Collection {
    * expression
    * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
    * @return a new {@link Collection}
+   * @throws CollectionConstructionError if there is a problem constructing the collection
    */
   @Nonnull
   public static Collection build(@Nonnull final ColumnRepresentation columnRepresentation,
@@ -174,6 +178,19 @@ public class Collection {
         Optional.empty());
   }
 
+  /**
+   * Builds the appropriate subtype of {@link Collection} based upon the supplied
+   * {@link ColumnRepresentation}, {@link FHIRDefinedType} and {@link ElementDefinition}.
+   *
+   * @param columnRepresentation a {@link ColumnRepresentation} containing the result of the
+   * expression
+   * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
+   * @param definition the {@link ElementDefinition} that this path should be based upon
+   * @param extensionMapColumn an optional {@link Column} representing the extension map, if this
+   * path is an extension
+   * @return a new {@link Collection} representing the specified path
+   * @throws CollectionConstructionError if there is a problem constructing the collection
+   */
   @Nonnull
   private static Collection getInstance(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
@@ -198,10 +215,9 @@ public class Collection {
               extensionMapColumn);
     } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
                    InvocationTargetException e) {
-      throw new RuntimeException("Problem building a Collection object", e);
+      throw new CollectionConstructionError("Problem building a Collection object", e);
     }
   }
-
 
   /**
    * @param fhirType a {@link FHIRDefinedType}
@@ -211,7 +227,7 @@ public class Collection {
   public static Optional<Class<? extends Collection>> classForType(
       @Nonnull final FHIRDefinedType fhirType) {
     // First check if there's a direct mapping through FhirPathType
-    Optional<FhirPathType> pathType = FhirPathType.forFhirType(fhirType);
+    final Optional<FhirPathType> pathType = FhirPathType.forFhirType(fhirType);
     if (pathType.isPresent()) {
       return Optional.of(pathType.get().getCollectionClass());
     }
@@ -260,21 +276,21 @@ public class Collection {
    * Return the child {@link Collection} that results from traversing to the given child
    * definition.
    *
-   * @param childDef the child definition
+   * @param childDefinition the child definition
    * @return a new {@link Collection} representing the child element
    */
   @Nonnull
-  protected Collection traverseChild(@Nonnull final ChildDefinition childDef) {
+  protected Collection traverseChild(@Nonnull final ChildDefinition childDefinition) {
     // There are two paths here:
     // 1. If the child is a choice, we have special behaviour for traversing to the choice that 
     //    results in a mixed collection.
     // 2. If the child is a regular element, we use the standard traversal method.
-    if (childDef instanceof ChoiceDefinition) {
-      return MixedCollection.buildElement(this, (ChoiceDefinition) childDef);
-    } else if (childDef instanceof ElementDefinition) {
-      return traverseElement((ElementDefinition) childDef);
+    if (childDefinition instanceof final ChoiceDefinition choiceChildDefinition) {
+      return MixedCollection.buildElement(this, choiceChildDefinition);
+    } else if (childDefinition instanceof final ElementDefinition elementChildDefinition) {
+      return traverseElement(elementChildDefinition);
     } else {
-      throw new IllegalArgumentException("Unsupported child definition type: " + childDef
+      throw new IllegalArgumentException("Unsupported child definition type: " + childDefinition
           .getClass().getSimpleName());
     }
   }
@@ -322,6 +338,7 @@ public class Collection {
    *
    * @param newValue The new {@link ColumnRepresentation} to use
    * @return A new {@link Collection} with the specified {@link ColumnRepresentation}
+   * @throws CollectionConstructionError if there was a problem constructing the collection
    */
   @Nonnull
   public Collection copyWith(@Nonnull final ColumnRepresentation newValue) {
@@ -349,7 +366,7 @@ public class Collection {
   /**
    * Returns a new collection representing the elements of this collection as a singular value.
    *
-   * @param errorMessage the error messsage to produce if the collection cannot be singularized.
+   * @param errorMessage the error message to produce if the collection cannot be singularized.
    * @return A new collection representing the elements of this collection as a singular value
    */
   @Nonnull
@@ -403,7 +420,7 @@ public class Collection {
 
   @Nonnull
   public Collection mapColumn(
-      @Nonnull final Function<Column, Column> columnMapper) {
+      @Nonnull final UnaryOperator<Column> columnMapper) {
     return map(cr -> cr.map(columnMapper));
   }
 
@@ -416,7 +433,7 @@ public class Collection {
   @Nonnull
   public Collection withColumn(
       @Nonnull final Column columnValue) {
-    return mapColumn(__ -> columnValue);
+    return mapColumn(c -> columnValue);
   }
 
   /**
@@ -455,8 +472,8 @@ public class Collection {
   @Nonnull
   public Collection filterByType(@Nonnull final TypeSpecifier type) {
     final Optional<Collection> maybeCollection = switch (type.getNamespace()) {
-      case SYSTEM_NAMESPACE -> getType().filter(type.toSystemType()::equals).map(__ -> this);
-      case FHIR_NAMESPACE -> getFhirType().filter(type.toFhirType()::equals).map(__ -> this);
+      case SYSTEM_NAMESPACE -> getType().filter(type.toSystemType()::equals).map(t -> this);
+      case FHIR_NAMESPACE -> getFhirType().filter(type.toFhirType()::equals).map(t -> this);
       default -> Optional.empty();
     };
     return maybeCollection.orElse(EmptyCollection.getInstance());
@@ -483,7 +500,7 @@ public class Collection {
   public Optional<Concepts> toConcepts() {
     return getFhirType()
         .filter(FHIRDefinedType.CODEABLECONCEPT::equals)
-        .map(__ -> Concepts.union(getColumn().getField("coding"),
+        .map(t -> Concepts.union(getColumn().getField("coding"),
             (CodingCollection) traverse("coding").orElseThrow()));
   }
 
@@ -538,7 +555,7 @@ public class Collection {
     } else if (convertibleTo(other)) {
       return other.getType()
           .map(castType ->
-              other.map(__ -> this.getColumn().cast(castType.getSqlDataType())))
+              other.map(t -> this.getColumn().cast(castType.getSqlDataType())))
           .orElse(this);
     } else {
       throw new IllegalArgumentException("Cannot cast " + this + " to " + other);
@@ -563,7 +580,7 @@ public class Collection {
 
   /**
    * Gets a new {@link BooleanCollection} representing this collection as a singular Boolean value.
-   * Throws an exception during evalution if the collection is not singular.
+   * Throws an exception during evaluation if the collection is not singular.
    *
    * @return a new {@link Collection} represented as singular Boolean value.
    */

@@ -1,5 +1,6 @@
 package au.csiro.pathling.fhirpath.operator;
 
+import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 
@@ -9,21 +10,27 @@ import org.apache.spark.sql.functions;
  */
 public interface ColumnComparator {
 
-  Column equalsTo(Column left, Column right);
+  @Nonnull
+  Column equalsTo(@Nonnull Column left, @Nonnull Column right);
 
-  default Column notEqual(final Column left, final Column right) {
+  @Nonnull
+  default Column notEqual(@Nonnull final Column left, @Nonnull final Column right) {
     return functions.not(equalsTo(left, right));
   }
 
-  Column lessThan(Column left, Column right);
+  @Nonnull
+  Column lessThan(@Nonnull Column left, @Nonnull Column right);
 
-  default Column lessThanOrEqual(final Column left, final Column right) {
+  @Nonnull
+  default Column lessThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
     return lessThan(left, right).or(equalsTo(left, right));
   }
 
-  Column greaterThan(Column left, Column right);
+  @Nonnull
+  Column greaterThan(@Nonnull Column left, @Nonnull Column right);
 
-  default Column greaterThanOrEqual(final Column left, final Column right) {
+  @Nonnull
+  default Column greaterThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
     return greaterThan(left, right).or(equalsTo(left, right));
   }
 }

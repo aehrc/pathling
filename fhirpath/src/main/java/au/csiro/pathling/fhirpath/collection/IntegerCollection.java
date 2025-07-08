@@ -201,10 +201,7 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
       Column valueColumn = operation.getSparkFunction().apply(sourceNumeric, targetNumeric);
 
       switch (operation) {
-        case ADDITION:
-        case SUBTRACTION:
-        case MULTIPLICATION:
-        case MODULUS:
+        case ADDITION, SUBTRACTION, MULTIPLICATION, MODULUS:
           if (target instanceof DecimalCollection) {
             valueColumn = valueColumn.cast(DataTypes.LongType);
           }

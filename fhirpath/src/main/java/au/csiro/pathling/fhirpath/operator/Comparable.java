@@ -103,7 +103,7 @@ public interface Comparable {
   /**
    * @return {@code true} if this path can be compared to the specified class
    */
-  default boolean isComparableTo(@Nonnull Comparable path) {
+  default boolean isComparableTo(@Nonnull final Comparable path) {
     return true;
   }
 
