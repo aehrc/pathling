@@ -108,7 +108,7 @@ jobs:
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
           -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
           -Dsonar.host.url=https://sonarcloud.io \
-          -pl '!benchmark' -Pdocs,mavenPreRelease\
+          -pl '!benchmark' -Pdocs,mavenPreRelease \
           -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
         timeout-minutes: 60
 
