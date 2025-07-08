@@ -17,12 +17,13 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
 import jakarta.annotation.Nonnull;
 
@@ -53,22 +54,34 @@ public class ComparisonOperator implements BinaryOperator {
     final Collection left = input.getLeft();
     final Collection right = input.getRight();
 
-    checkUserInput(left instanceof Comparable,
-        "Left operand to " + type + " operator must be Comparable");
-    checkUserInput(right instanceof Comparable,
-        "Right operand to " + type + " operator must be Comparable");
+    // If either operand is an EmptyCollection, return an EmptyCollection.
+    if (left instanceof EmptyCollection || right instanceof EmptyCollection) {
+      return EmptyCollection.getInstance();
+    }
 
+    checkUserInput(left instanceof Comparable,
+        "Left operand to " + type + " operator must be comparable");
+    checkUserInput(right instanceof Comparable,
+        "Right operand to " + type + " operator must be comparable");
     final Comparable leftComparable = (Comparable) left;
     final Comparable rightComparable = (Comparable) right;
 
-    checkUserInput(leftComparable.isComparableTo(rightComparable), "Operands must be comparable");
+    checkUserInput(leftComparable.isComparableTo(rightComparable),
+        "Comparison of paths is not supported: " + left.getDisplayExpression() + ", "
+            + right.getDisplayExpression());
 
-    return BooleanCollection.build(
-        ColumnRepresentation.binaryOperator(
-            left.getColumn().singular(),
-            right.getColumn().singular(),
-            leftComparable.getSqlComparator(rightComparable, type))
-    );
+    // If the comparison operation is equality, we can use the operands directly. If it is any other
+    // type of comparison, we need to enforce that the operands are both singular values.
+    if (type == ComparisonOperation.EQUALS || type == ComparisonOperation.NOT_EQUALS) {
+      return BooleanCollection.build(leftComparable.getComparison(type).apply(rightComparable));
+    } else {
+      final Collection leftSingular = left.asSingular(
+          "Comparison operator requires singular values");
+      check(leftSingular instanceof Comparable);
+      return BooleanCollection.build(
+          ((Comparable) leftSingular).getComparison(type).apply((Comparable) right));
+    }
+
   }
 
   @Override

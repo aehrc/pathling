@@ -34,8 +34,8 @@ import au.csiro.pathling.sql.misc.ToNull;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Optional;
-import java.util.function.BiFunction;
-import java.util.function.Function;
+import java.util.function.BinaryOperator;
+import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.catalyst.expressions.ArrayJoin;
@@ -71,7 +71,7 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public static ColumnRepresentation binaryOperator(@Nonnull final ColumnRepresentation left,
       @Nonnull final ColumnRepresentation right,
-      @Nonnull final BiFunction<Column, Column, Column> operator) {
+      @Nonnull final BinaryOperator<Column> operator) {
     return new DefaultRepresentation(operator.apply(left.getValue(), right.getValue()));
   }
 
@@ -83,7 +83,7 @@ public abstract class ColumnRepresentation {
    * @return A new {@link ColumnRepresentation} containing the result of the function
    */
   @Nonnull
-  public ColumnRepresentation call(@Nonnull final Function<Column, Column> function) {
+  public ColumnRepresentation call(@Nonnull final UnaryOperator<Column> function) {
     return copyOf(function.apply(getValue()));
   }
 
@@ -95,6 +95,14 @@ public abstract class ColumnRepresentation {
   public abstract Column getValue();
 
   /**
+   * Get the raw value of this representation, which is the underlying {@link Column} without any
+   * transformations.
+   *
+   * @return The raw {@link Column} that this representation is based on
+   */
+  public abstract Column getRawValue();
+
+  /**
    * Create a new {@link ColumnRepresentation} from a new {@link Column}.
    *
    * @param newValue The new {@link Column} to represent
@@ -104,7 +112,7 @@ public abstract class ColumnRepresentation {
 
 
   @Nonnull
-  public ColumnRepresentation map(@Nonnull final Function<Column, Column> lambda) {
+  public ColumnRepresentation map(@Nonnull final UnaryOperator<Column> lambda) {
     return copyOf(lambda.apply(getValue()));
   }
 
@@ -119,8 +127,8 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public abstract ColumnRepresentation vectorize(
-      @Nonnull final Function<Column, Column> arrayExpression,
-      @Nonnull final Function<Column, Column> singularExpression);
+      @Nonnull final UnaryOperator<Column> arrayExpression,
+      @Nonnull final UnaryOperator<Column> singularExpression);
 
   /**
    * Flattens the current {@link ColumnRepresentation}.
@@ -182,7 +190,7 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation toArray() {
     return vectorize(
-        Function.identity(),
+        UnaryOperator.identity(),
         c -> when(c.isNotNull(), array(c))
     );
   }
@@ -237,7 +245,7 @@ public abstract class ColumnRepresentation {
             .otherwise(raise_error(lit(nonNull(errorMessage)
                                        ? errorMessage
                                        : DEF_NOT_SINGULAR_ERROR))),
-        Function.identity()
+        UnaryOperator.identity()
     );
   }
 
@@ -273,7 +281,7 @@ public abstract class ColumnRepresentation {
    * @return A new {@link ColumnRepresentation} that is filtered
    */
   @Nonnull
-  public ColumnRepresentation filter(@Nonnull final Function<Column, Column> lambda) {
+  public ColumnRepresentation filter(@Nonnull final UnaryOperator<Column> lambda) {
     return vectorize(
         c -> functions.filter(c, lambda::apply),
         c -> when(c.isNotNull(), when(lambda.apply(c), c))
@@ -311,7 +319,7 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation removeNulls() {
     return vectorize(
         c -> functions.filter(c, Column::isNotNull),
-        Function.identity()
+        UnaryOperator.identity()
     );
   }
 
@@ -325,7 +333,7 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation normaliseNull() {
     return vectorize(
         c -> functions.when(size(c).equalTo(0), null).otherwise(c),
-        Function.identity()
+        UnaryOperator.identity()
     );
   }
 
@@ -345,7 +353,7 @@ public abstract class ColumnRepresentation {
    * @return A new {@link ColumnRepresentation} that is transformed
    */
   @Nonnull
-  public ColumnRepresentation transform(final Function<Column, Column> lambda) {
+  public ColumnRepresentation transform(final UnaryOperator<Column> lambda) {
     return vectorize(
         c -> functions.transform(c, lambda::apply),
         c -> when(c.isNotNull(), lambda.apply(c))
@@ -362,7 +370,7 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation aggregate(@Nonnull final Object zeroValue,
-      final BiFunction<Column, Column, Column> aggregator) {
+      final BinaryOperator<Column> aggregator) {
 
     return vectorize(
         c -> when(c.isNull(), zeroValue)
@@ -380,7 +388,7 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation first() {
 
-    return vectorize(c -> c.getItem(0), Function.identity());
+    return vectorize(c -> c.getItem(0), UnaryOperator.identity());
   }
 
   /**
@@ -394,7 +402,7 @@ public abstract class ColumnRepresentation {
     return vectorize(
         c -> when(c.isNull().or(size(c).equalTo(0)), null)
             .otherwise(element_at(c, size(c))),
-        Function.identity()
+        UnaryOperator.identity()
     );
   }
 
@@ -407,21 +415,6 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation count() {
     return vectorize(
         c -> when(c.isNull(), 0).otherwise(size(c)),
-        c -> when(c.isNull(), 0).otherwise(1)
-    );
-  }
-
-
-  /**
-   * Counts the distinct values in the current {@link ColumnRepresentation}.
-   *
-   * @return A new {@link ColumnRepresentation} that is the count of values
-   */
-  @Nonnull
-  public ColumnRepresentation countDistinct() {
-
-    return vectorize(
-        c -> when(c.isNull(), 0).otherwise(size(functions.array_distinct(c))),
         c -> when(c.isNull(), 0).otherwise(1)
     );
   }
@@ -463,7 +456,7 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation join(@Nonnull final ColumnRepresentation separator) {
     return vectorize(c -> new Column(new ArrayJoin(c.expr(), separator.getValue().expr())),
-        Function.identity());
+        UnaryOperator.identity());
   }
 
   /**
@@ -493,7 +486,7 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation max() {
-    return vectorize(functions::array_max, Function.identity());
+    return vectorize(functions::array_max, UnaryOperator.identity());
   }
 
   /**
@@ -503,7 +496,7 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation min() {
-    return vectorize(functions::array_min, Function.identity());
+    return vectorize(functions::array_min, UnaryOperator.identity());
   }
 
   /**
@@ -606,7 +599,7 @@ public abstract class ColumnRepresentation {
 
   /**
    * Checks if the current {@link ColumnRepresentation} contains to another one using a specified
-   * comparator. If the tested element is NULL the reuslt is also NULL. If the tested collection is
+   * comparator. If the tested element is NULL the result is also NULL. If the tested collection is
    * NULL the result is false.
    *
    * @param element The element to check for
@@ -615,30 +608,13 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation contains(@Nonnull final ColumnRepresentation element,
-      @Nonnull final BiFunction<Column, Column, Column> comparator) {
+      @Nonnull final BinaryOperator<Column> comparator) {
     return vectorize(
         a -> functions.when(element.getValue().isNotNull(),
             functions.coalesce(functions.exists(a, e -> comparator.apply(e, element.getValue())),
                 functions.lit(false))),
         c -> functions.when(element.getValue().isNotNull(),
             functions.coalesce(comparator.apply(c, element.getValue()), functions.lit(false)))
-    );
-  }
-
-
-  @Nonnull
-  public ColumnRepresentation vectorize2(@Nonnull final ColumnRepresentation other,
-      @Nonnull final BiFunction<Column, Column, Column> arrayExpression,
-      @Nonnull final BiFunction<Column, Column, Column> singularExpression) {
-    return vectorize(
-        a1 -> other.vectorize(
-            a2 -> arrayExpression.apply(a1, a2),
-            s2 -> arrayExpression.apply(a1, functions.array(s2))
-        ).getValue(),
-        s1 -> other.vectorize(
-            a2 -> arrayExpression.apply(functions.array(s1), a2),
-            s2 -> singularExpression.apply(s1, s2)
-        ).getValue()
     );
   }
 
@@ -650,7 +626,6 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation asEmpty() {
     return callUdf(ToNull.FUNCTION_NAME);
   }
-
 
   /**
    * Traverses the current {@link ColumnRepresentation} to a selected elements in a choice and

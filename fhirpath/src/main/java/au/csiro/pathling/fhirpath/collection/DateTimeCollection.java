@@ -96,7 +96,7 @@ public class DateTimeCollection extends Collection implements StringCoercible {
     return DateTimeCollection.build(
         DefaultRepresentation.literal(value.getValueAsString()));
   }
-  
+
   @Nonnull
   @Override
   public StringCollection asStringPath() {
