@@ -22,8 +22,10 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
+import java.util.Optional;
 import java.util.function.BinaryOperator;
 import lombok.experimental.UtilityClass;
 import org.apache.commons.lang3.StringUtils;
@@ -60,12 +62,9 @@ public class CollectionOperations {
    */
   @FhirPathOperator
   @Nonnull
-  public static BooleanCollection in(@Nonnull final Collection element,
+  public static Collection in(@Nonnull final Collection element,
       @Nonnull final Collection collection) {
-    checkComparable(element, IN_OPERATOR, LEFT_OPERAND);
-    checkComparable(collection, IN_OPERATOR, RIGHT_OPERAND);
-    checkOperandsAreComparable(collection, element);
-    return executeContains(collection, element);
+    return executeContains(collection, element, IN_OPERATOR, true);
   }
 
   /**
@@ -82,36 +81,28 @@ public class CollectionOperations {
    */
   @FhirPathOperator
   @Nonnull
-  public static BooleanCollection contains(@Nonnull final Collection collection,
+  public static Collection contains(@Nonnull final Collection collection,
       @Nonnull final Collection element) {
-    checkComparable(collection, CONTAINS_OPERATOR, LEFT_OPERAND);
-    checkComparable(element, CONTAINS_OPERATOR, RIGHT_OPERAND);
-    checkOperandsAreComparable(collection, element);
-    return executeContains(collection, element);
-  }
-
-  private static void checkComparable(@Nonnull final Collection collection,
-      @Nonnull final String operator,
-      @Nonnull final String operand) {
-    checkUserInput(collection instanceof Comparable,
-        StringUtils.capitalize(operand) + " operand to " + operator
-            + " operator must be comparable");
-  }
-
-  private static void checkOperandsAreComparable(final @Nonnull Collection collection,
-      final @Nonnull Collection element) {
-    // Check that the collection and element are compatible for comparison.
-    final Comparable collectionComparable = (Comparable) collection;
-    final Comparable elementComparable = (Comparable) element;
-    checkUserInput(collectionComparable.isComparableTo(elementComparable),
-        "Comparison of paths is not supported: " + collection.getDisplayExpression() + ", "
-            + element.getDisplayExpression());
+    return executeContains(collection, element, CONTAINS_OPERATOR, false);
   }
 
   @Nonnull
-  private static BooleanCollection executeContains(@Nonnull final Collection collection,
-      @Nonnull final Collection element) {
+  private static Collection executeContains(@Nonnull final Collection collection,
+      @Nonnull final Collection element, final String operator, final boolean invert) {
+    // Check if either operand is an EmptyCollection and handle accordingly.
+    final Optional<Collection> returnValue = checkForEmptyOperands(element, collection);
+    if (returnValue.isPresent()) {
+      return returnValue.get();
+    }
 
+    // Check that both operands are comparable, and that they can be compared to each other.
+    checkComparable(collection, operator, invert
+                                          ? RIGHT_OPERAND
+                                          : LEFT_OPERAND);
+    checkComparable(element, operator, invert
+                                       ? LEFT_OPERAND
+                                       : RIGHT_OPERAND);
+    checkOperandsAreComparable(collection, element);
     check(collection instanceof Comparable);
     check(element instanceof Comparable);
     final Comparable collectionComparable = (Comparable) collection;
@@ -134,6 +125,35 @@ public class CollectionOperations {
     // Return a BooleanCollection containing the result.
     final ColumnRepresentation column = collection.getColumn().contains(singular, comparator);
     return BooleanCollection.build(column);
+  }
+
+  @Nonnull
+  private static Optional<Collection> checkForEmptyOperands(final @Nonnull Collection element,
+      final @Nonnull Collection collection) {
+    if (element instanceof EmptyCollection) {
+      return Optional.of(EmptyCollection.getInstance());
+    } else if (collection instanceof EmptyCollection) {
+      return Optional.of(BooleanCollection.fromValue(false));
+    }
+    return Optional.empty();
+  }
+
+  private static void checkComparable(@Nonnull final Collection collection,
+      @Nonnull final String operator,
+      @Nonnull final String operand) {
+    checkUserInput(collection instanceof Comparable,
+        StringUtils.capitalize(operand) + " operand to " + operator
+            + " operator must be comparable");
+  }
+
+  private static void checkOperandsAreComparable(final @Nonnull Collection collection,
+      final @Nonnull Collection element) {
+    // Check that the collection and element are compatible for comparison.
+    final Comparable collectionComparable = (Comparable) collection;
+    final Comparable elementComparable = (Comparable) element;
+    checkUserInput(collectionComparable.isComparableTo(elementComparable),
+        "Comparison of paths is not supported: " + collection.getDisplayExpression() + ", "
+            + element.getDisplayExpression());
   }
 
 }
