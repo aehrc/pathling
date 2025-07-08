@@ -83,11 +83,6 @@ public class DefaultRepresentation extends ColumnRepresentation {
   }
 
   @Override
-  public Column getRawValue() {
-    return value;
-  }
-
-  @Override
   protected DefaultRepresentation copyOf(@Nonnull final Column newValue) {
     return new DefaultRepresentation(newValue);
   }

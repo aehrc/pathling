@@ -95,14 +95,6 @@ public abstract class ColumnRepresentation {
   public abstract Column getValue();
 
   /**
-   * Get the raw value of this representation, which is the underlying {@link Column} without any
-   * transformations.
-   *
-   * @return The raw {@link Column} that this representation is based on
-   */
-  public abstract Column getRawValue();
-
-  /**
    * Create a new {@link ColumnRepresentation} from a new {@link Column}.
    *
    * @param newValue The new {@link Column} to represent

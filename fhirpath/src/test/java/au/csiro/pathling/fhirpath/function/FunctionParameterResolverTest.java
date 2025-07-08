@@ -244,16 +244,14 @@ class FunctionParameterResolverTest {
   void failsForInvalidFunction() {
     final Collection input = mock(Collection.class);
     final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
-        input,
-        List.of()
-    );
+        input, List.of());
     final Method method = getMethod("invalidFunction");
 
-    final RuntimeException ex = assertThrows(
-        RuntimeException.class, () -> resolver.bind(method));
+    final AssertionError ex = assertThrows(
+        AssertionError.class, () -> resolver.bind(method));
 
     assertEquals(
-        "Function 'invalidFunction' does not accept any parameters and is a not a valid Fhirpath function backend.",
+        "Function 'invalidFunction' does not accept any parameters and is a not a valid FhirPath function implementation",
         ex.getMessage());
   }
 

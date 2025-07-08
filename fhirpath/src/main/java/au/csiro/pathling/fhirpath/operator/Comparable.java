@@ -88,7 +88,7 @@ public interface Comparable {
           singularExpression);
       // The result needs to be wrapped in a DefaultRepresentation, as the vectorize method
       // may have been called on a different type of ColumnRepresentation.
-      return new DefaultRepresentation(result.getRawValue());
+      return new DefaultRepresentation(result.getValue());
     };
   }
 
