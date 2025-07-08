@@ -31,48 +31,56 @@ class FunctionParameterResolverTest {
 
   final EvaluationContext evaluationContext = mock(EvaluationContext.class);
 
+  @Nullable
   @SuppressWarnings("unused")
-  static Collection funcOptionalArg(@Nonnull Collection input,
-      @Nullable Collection optionalArgument) {
+  static Collection funcOptionalArg(@Nonnull final Collection input,
+      @Nullable final Collection optionalArgument) {
     return null;
   }
 
+  @Nullable
   @SuppressWarnings("unused")
-  static Collection funcRequiredArg(@Nonnull Collection input,
-      @Nonnull IntegerCollection requiredArgument) {
+  static Collection funcRequiredArg(@Nonnull final Collection input,
+      @Nonnull final IntegerCollection requiredArgument) {
     return null;
   }
 
+  @Nullable
   @SuppressWarnings("unused")
-  static Collection funcAllTypes(@Nonnull Collection input,
-      @Nonnull Collection collectionArgument,
-      @Nonnull BooleanCollection booleanArgument, @Nonnull Concepts concepts,
-      @Nonnull TypeSpecifier typeSpecifier) {
+  static Collection funcAllTypes(@Nonnull final Collection input,
+      @Nonnull final Collection collectionArgument,
+      @Nonnull final BooleanCollection booleanArgument, @Nonnull final Concepts concepts,
+      @Nonnull final TypeSpecifier typeSpecifier) {
     return null;
   }
 
+  @Nullable
   @SuppressWarnings("unused")
-  public static Collection funcTransform(@Nonnull Collection input,
-      @Nonnull CollectionTransform transform) {
+  public static Collection funcTransform(@Nonnull final Collection input,
+      @Nonnull final CollectionTransform transform) {
     return null;
   }
 
 
+  @Nullable
   @SuppressWarnings("unused")
-  public static Collection funcConcepts(@Nonnull Concepts input) {
+  public static Collection funcConcepts(@Nonnull final Concepts input) {
     return null;
   }
 
+  @Nullable
   @SuppressWarnings("unused")
-  public static Collection funcStringCollection(@Nonnull StringCollection input) {
+  public static Collection funcStringCollection(@Nonnull final StringCollection input) {
     return null;
   }
 
+  @Nullable
   @SuppressWarnings("unused")
-  public static Collection funcBooleanCollection(@Nonnull BooleanCollection input) {
+  public static Collection funcBooleanCollection(@Nonnull final BooleanCollection input) {
     return null;
   }
 
+  @Nullable
   @SuppressWarnings("unused")
   static Collection invalidFunction() {
     return null;
