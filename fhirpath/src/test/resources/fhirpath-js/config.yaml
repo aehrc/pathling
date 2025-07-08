@@ -187,6 +187,12 @@ excludeSet:
         any:
           - "** two objects"
           - "** two objects not"
+      - title: Unsupported equality for complex types
+        type: new-feature
+        id: "#2420"
+        expression:
+          - "Ops.coll = Ops.collsame"
+          - "Ops.coll = Ops.collother"
   - title: Comparison exclusions
     glob: "fhirpath-js/cases/6.2_comparision.yaml"
     exclude:
@@ -372,3 +378,9 @@ excludeSet:
         id: "#2166"
         any:
           - "(1|2).not() = false"
+      - title: Unsupported equality for complex types
+        type: new-feature
+        id: "#2420"
+        expression:
+          - "name = name"
+          - "name != name"

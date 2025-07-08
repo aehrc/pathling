@@ -24,10 +24,12 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.Optional;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
@@ -61,6 +63,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
   /**
    * The column value represented by this object.
    */
+  @Setter(AccessLevel.PROTECTED)
   private Column value;
 
   /**
@@ -80,6 +83,11 @@ public class DefaultRepresentation extends ColumnRepresentation {
   }
 
   @Override
+  public Column getRawValue() {
+    return value;
+  }
+
+  @Override
   protected DefaultRepresentation copyOf(@Nonnull final Column newValue) {
     return new DefaultRepresentation(newValue);
   }
@@ -87,8 +95,8 @@ public class DefaultRepresentation extends ColumnRepresentation {
   @Override
   @Nonnull
   public DefaultRepresentation vectorize(
-      @Nonnull final Function<Column, Column> arrayExpression,
-      @Nonnull final Function<Column, Column> singularExpression) {
+      @Nonnull final UnaryOperator<Column> arrayExpression,
+      @Nonnull final UnaryOperator<Column> singularExpression) {
     return copyOf(
         ValueFunctions.ifArray(value, arrayExpression::apply, singularExpression::apply));
   }
@@ -117,7 +125,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
       return DecimalRepresentation.fromTraversal(this, fieldName);
     } else if (FHIRDefinedType.BASE64BINARY.equals(resolvedFhirType)) {
       // If the field is a base64Binary, represent it using a BinaryRepresentation.
-      return new BinaryRepresentation(traverse(fieldName).getValue());
+      return BinaryRepresentation.fromBinaryColumn(traverse(fieldName).getValue());
     } else {
       // Otherwise, use the default representation.
       return traverse(fieldName);

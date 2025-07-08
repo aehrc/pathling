@@ -243,7 +243,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
 
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
-    return path instanceof StringCollection || super.isComparableTo(path);
+    return path instanceof StringCollection;
   }
 
   @Override

@@ -17,13 +17,14 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
-import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
 import lombok.experimental.UtilityClass;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.spark.sql.Column;
@@ -63,7 +64,8 @@ public class CollectionOperations {
       @Nonnull final Collection collection) {
     checkComparable(element, IN_OPERATOR, LEFT_OPERAND);
     checkComparable(collection, IN_OPERATOR, RIGHT_OPERAND);
-    return containsImpl(collection, element);
+    checkOperandsAreComparable(collection, element);
+    return executeContains(collection, element);
   }
 
   /**
@@ -84,7 +86,8 @@ public class CollectionOperations {
       @Nonnull final Collection element) {
     checkComparable(collection, CONTAINS_OPERATOR, LEFT_OPERAND);
     checkComparable(element, CONTAINS_OPERATOR, RIGHT_OPERAND);
-    return containsImpl(collection, element);
+    checkOperandsAreComparable(collection, element);
+    return executeContains(collection, element);
   }
 
   private static void checkComparable(@Nonnull final Collection collection,
@@ -92,22 +95,45 @@ public class CollectionOperations {
       @Nonnull final String operand) {
     checkUserInput(collection instanceof Comparable,
         StringUtils.capitalize(operand) + " operand to " + operator
-            + " operator must be Comparable");
+            + " operator must be comparable");
+  }
+
+  private static void checkOperandsAreComparable(final @Nonnull Collection collection,
+      final @Nonnull Collection element) {
+    // Check that the collection and element are compatible for comparison.
+    final Comparable collectionComparable = (Comparable) collection;
+    final Comparable elementComparable = (Comparable) element;
+    checkUserInput(collectionComparable.isComparableTo(elementComparable),
+        "Comparison of paths is not supported: " + collection.getDisplayExpression() + ", "
+            + element.getDisplayExpression());
   }
 
   @Nonnull
-  private static BooleanCollection containsImpl(@Nonnull final Collection collection,
+  private static BooleanCollection executeContains(@Nonnull final Collection collection,
       @Nonnull final Collection element) {
 
-    final BiFunction<Column, Column, Column> columnComparator = ((Comparable) collection)
-        .getSqlComparator((Comparable) element, ComparisonOperation.EQUALS);
+    check(collection instanceof Comparable);
+    check(element instanceof Comparable);
+    final Comparable collectionComparable = (Comparable) collection;
 
-    // In the future, type adjustment may be done before the operator is called.
+    // Cast the element to the type of the collection if it is convertible, otherwise use the
+    // element as is. This allows for type adjustments in cases where the element is not of the
+    // same type as the collection.
     final Collection typeAdjustedElement = element.convertibleTo(collection)
                                            ? element.castAs(collection)
                                            : element;
-    return BooleanCollection.build(
-        collection.getColumn()
-            .contains(typeAdjustedElement.getColumn().singular(), columnComparator));
+
+    // The element must be a singular value for the contains operation.
+    final ColumnRepresentation singular = typeAdjustedElement.getColumn().singular();
+
+    // Use the collection's equality comparator to check if the singular value is contained within 
+    // the collection.
+    final BinaryOperator<Column> comparator =
+        (left, right) -> collectionComparable.getComparator().equalsTo(left, right);
+
+    // Return a BooleanCollection containing the result.
+    final ColumnRepresentation column = collection.getColumn().contains(singular, comparator);
+    return BooleanCollection.build(column);
   }
+
 }

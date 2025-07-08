@@ -123,7 +123,7 @@ public class BooleanCollection extends Collection implements Comparable, StringC
    */
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
-    return path instanceof BooleanCollection || super.isComparableTo(path);
+    return path instanceof BooleanCollection;
   }
 
   /**

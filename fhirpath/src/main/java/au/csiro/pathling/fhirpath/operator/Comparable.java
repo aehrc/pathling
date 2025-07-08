@@ -19,11 +19,13 @@ package au.csiro.pathling.fhirpath.operator;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import jakarta.annotation.Nonnull;
-import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import org.apache.commons.lang3.function.TriFunction;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 
 /**
  * Describes a set of methods that can be used to compare {@link Collection} objects to other paths,
@@ -36,58 +38,9 @@ public interface Comparable {
 
   ColumnComparator DEFAULT_COMPARATOR = new DefaultComparator();
 
-  /**
-   * Get a function that can take two Comparable paths and return a function that can compare their
-   * columnar representations. The type of comparison is controlled by supplying a
-   * {@link ComparisonOperation}.
-   *
-   * @param other The other path to compare to
-   * @param operation The {@link ComparisonOperation} type to retrieve a comparison for
-   * @return A {@link BiFunction} that takes two {@link Column} objects as its parameters, and
-   * returns a {@link Column} with the result of the comparison.
-   */
   @Nonnull
-  default BiFunction<Column, Column, Column> getSqlComparator(@Nonnull final Comparable other,
-      @Nonnull final ComparisonOperation operation) {
-    return buildSqlComparator(this, other, operation);
-  }
-
-  /**
-   * Get a function that can take two Comparable paths and return a function that can compare their
-   * columnar representations. The type of comparison is controlled by supplying a
-   * {@link ComparisonOperation}.
-   *
-   * @param left The left path to compare
-   * @param right The right path to compare
-   * @param operation The {@link ComparisonOperation} type to retrieve a comparison for
-   * @param comparator The {@link ColumnComparator} to use
-   * @return A {@link BiFunction} that takes two {@link Column} objects as its parameters, and
-   * returns a {@link Column} with the result of the comparison.
-   */
-  @Nonnull
-  static BiFunction<Column, Column, Column> buildSqlComparator(
-      @Nonnull final Comparable left, @Nonnull final Comparable right,
-      @Nonnull final ComparisonOperation operation, @Nonnull final ColumnComparator comparator) {
-    if (!left.isComparableTo(right)) {
-      throw new IllegalArgumentException("Cannot compare " + left + " to " + right);
-    }
-    return (x, y) -> operation.compFunction.apply(comparator, x, y);
-  }
-
-  /**
-   * Get a function that can take two Comparable paths and return a function that can compare their
-   * columnar representations using the default comparator.
-   *
-   * @param left The left path to compare
-   * @param right The right path to compare
-   * @param operation The {@link ComparisonOperation} type to retrieve a comparison for
-   * @return A {@link BiFunction} that takes two {@link Column} objects as its parameters, and
-   */
-  @Nonnull
-  static BiFunction<Column, Column, Column> buildSqlComparator(
-      @Nonnull final Comparable left, @Nonnull final Comparable right,
-      @Nonnull final ComparisonOperation operation) {
-    return buildSqlComparator(left, right, operation, DEFAULT_COMPARATOR);
+  default ColumnComparator getComparator() {
+    return DEFAULT_COMPARATOR;
   }
 
   /**
@@ -100,15 +53,42 @@ public interface Comparable {
    *
    * @param operation The {@link ComparisonOperation} type to retrieve a comparison for
    * @return A {@link Function} that takes a Comparable as its parameter, and returns a
-   * {@link Column}
+   * {@link ColumnRepresentation}
    */
   @Nonnull
-  default Function<Comparable, Column> getComparison(@Nonnull ComparisonOperation operation) {
+  default Function<Comparable, ColumnRepresentation> getComparison(
+      @Nonnull final ComparisonOperation operation) {
     return target -> {
-      final BiFunction<Column, Column, Column> sqlComparator = getSqlComparator(target,
-          operation);
-      return sqlComparator.apply(getColumn().singular().getValue(),
-          target.getColumn().singular().getValue());
+
+      final UnaryOperator<Column> arrayExpression = sourceArray -> {
+        final Column targetArray = target.getColumn().toArray().getValue();
+
+        // If the comparison is between two arrays, use the zip_with function to compare element-wise.
+        final Column zip = functions.zip_with(sourceArray, targetArray,
+            (left, right) -> operation.comparisonFunction.apply(getComparator(), left, right));
+
+        // Check if all elements in the zipped array are true.
+        final Column allTrue = functions.forall(zip, c -> c);
+
+        // If the arrays are of different sizes, return false.
+        return functions.when(
+                functions.size(sourceArray).equalTo(functions.size(targetArray)), allTrue)
+            .otherwise(functions.lit(false));
+      };
+
+      // If the comparison is between singular values, use the comparison function directly.
+      final UnaryOperator<Column> singularExpression = column ->
+          operation.comparisonFunction.apply(getComparator(), column,
+              // We need to assert that the target is singular. We already know that the source is
+              // singular, but in the case of equality we may still be looking at an array
+              // target.
+              target.getColumn().singular("Comparison requires singular target").getValue());
+
+      final ColumnRepresentation result = getColumn().vectorize(arrayExpression,
+          singularExpression);
+      // The result needs to be wrapped in a DefaultRepresentation, as the vectorize method
+      // may have been called on a different type of ColumnRepresentation.
+      return new DefaultRepresentation(result.getRawValue());
     };
   }
 
@@ -165,12 +145,12 @@ public interface Comparable {
     private final String fhirPath;
 
     @Nonnull
-    private final TriFunction<ColumnComparator, Column, Column, Column> compFunction;
+    private final TriFunction<ColumnComparator, Column, Column, Column> comparisonFunction;
 
     ComparisonOperation(@Nonnull final String fhirPath,
-        @Nonnull final TriFunction<ColumnComparator, Column, Column, Column> compFunction) {
+        @Nonnull final TriFunction<ColumnComparator, Column, Column, Column> comparisonFunction) {
       this.fhirPath = fhirPath;
-      this.compFunction = compFunction;
+      this.comparisonFunction = comparisonFunction;
     }
 
     @Override

@@ -31,12 +31,12 @@ import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefCompositeDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
+import au.csiro.pathling.fhirpath.operator.ColumnComparator;
 import au.csiro.pathling.fhirpath.operator.Comparable;
 import au.csiro.pathling.sql.misc.CodingToLiteral;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.BiFunction;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
@@ -48,6 +48,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 public class CodingCollection extends Collection implements Comparable, StringCoercible {
+
+  private static final ColumnComparator COMPARATOR = new CodingComparator();
 
   /**
    * Creates a definition for a Coding element with the specified name and cardinality.
@@ -143,14 +145,13 @@ public class CodingCollection extends Collection implements Comparable, StringCo
 
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
-    return path instanceof CodingCollection || super.isComparableTo(path);
+    return path instanceof CodingCollection;
   }
 
-  @Override
   @Nonnull
-  public BiFunction<Column, Column, Column> getSqlComparator(@Nonnull final Comparable other,
-      @Nonnull final ComparisonOperation operation) {
-    return CodingComparator.buildSqlComparator(this, other, operation);
+  @Override
+  public ColumnComparator getComparator() {
+    return COMPARATOR;
   }
 
   @Override

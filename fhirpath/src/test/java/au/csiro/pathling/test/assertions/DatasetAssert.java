@@ -227,6 +227,11 @@ public class DatasetAssert {
     return this;
   }
 
+  public DatasetAssert explain() {
+    dataset.explain(true);
+    return this;
+  }
+
   @Nonnull
   @SuppressWarnings({"unused", "UnusedReturnValue"})
   public DatasetAssert saveAllRowsToCsv(@Nonnull final SparkSession spark,
@@ -260,7 +265,7 @@ public class DatasetAssert {
 
 
   private static class DeleteDirectoryVisitor extends SimplePathVisitor {
-    
+
     @Override
     public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs)
         throws IOException {

@@ -339,7 +339,7 @@ class SingleResourceFhirpathTest {
 
 
   @Test
-  void testComparisonBase64Binay() {
+  void testComparisonBase64Binary() {
 
     final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
         List.of(
@@ -357,6 +357,7 @@ class SingleResourceFhirpathTest {
     Assertions.assertThat(evalResult)
         .isElementPath(BooleanCollection.class)
         .toCanonicalResult()
+        .explain()
         .hasRowsUnordered(
             RowFactory.create("1", true)
         );
