@@ -302,8 +302,45 @@ public class TypeMappingTest {
 
   Stream<Arguments> ansiLegalCasts() {
     return Stream.of(
+        // Character types
         Arguments.of("VARCHAR(10)", "value", DataTypes.StringType, "value"),
-        Arguments.of("INT", "123", DataTypes.IntegerType, "123")
+        Arguments.of("CHAR(10)", "value", DataTypes.StringType, "value"),
+        Arguments.of("CHARACTER(10)", "value", DataTypes.StringType, "value"),
+        Arguments.of("CHARACTER VARYING(10)", "value", DataTypes.StringType, "value"),
+        
+        // Numeric types - exact
+        Arguments.of("INT", "123", DataTypes.IntegerType, "123"),
+        Arguments.of("INTEGER", "123", DataTypes.IntegerType, "123"),
+        Arguments.of("SMALLINT", "123", DataTypes.ShortType, "123"),
+        Arguments.of("BIGINT", "123", DataTypes.LongType, "123"),
+        Arguments.of("DECIMAL(10,2)", "123.45", DataTypes.createDecimalType(10, 2), "123.45"),
+        Arguments.of("NUMERIC(10,2)", "123.45", DataTypes.createDecimalType(10, 2), "123.45"),
+        Arguments.of("DEC(10,2)", "123.45", DataTypes.createDecimalType(10, 2), "123.45"),
+        
+        // Numeric types - approximate
+        Arguments.of("FLOAT", "123.45", DataTypes.DoubleType, "123.45"),
+        Arguments.of("FLOAT(25)", "123.45", DataTypes.DoubleType, "123.45"),
+        Arguments.of("FLOAT(24)", "123.45", DataTypes.FloatType, "123.45"),
+        Arguments.of("REAL", "123.45", DataTypes.FloatType, "123.45"),
+        Arguments.of("DOUBLE PRECISION", "123.45", DataTypes.DoubleType, "123.45"),
+        
+        // Boolean type
+        Arguments.of("BOOLEAN", "true", DataTypes.BooleanType, "true"),
+        
+        // Binary types
+        Arguments.of("BINARY", "value", DataTypes.BinaryType, "value"),
+        Arguments.of("BINARY(10)", "value", DataTypes.BinaryType, "value"),
+        Arguments.of("BINARY VARYING", "value", DataTypes.BinaryType, "value"),
+        Arguments.of("BINARY VARYING(10)", "value", DataTypes.BinaryType, "value"),
+        Arguments.of("VARBINARY", "value", DataTypes.BinaryType, "value"),
+        Arguments.of("VARBINARY(10)", "value", DataTypes.BinaryType, "value"),
+        
+        // Temporal types
+        Arguments.of("DATE", "2023-01-01", DataTypes.DateType, "2023-01-01"),
+        Arguments.of("TIMESTAMP", "2023-01-01T12:00:00Z", DataTypes.TimestampNTZType, "2023-01-01T12:00:00Z"),
+        Arguments.of("TIMESTAMP(3)", "2023-01-01T12:00:00Z", DataTypes.TimestampNTZType, "2023-01-01T12:00:00Z"),
+        Arguments.of("TIMESTAMP WITHOUT TIME ZONE", "2023-01-01T12:00:00Z", DataTypes.TimestampNTZType, "2023-01-01T12:00:00Z"),
+        Arguments.of("TIMESTAMP WITH TIME ZONE", "2023-01-01T12:00:00Z", DataTypes.TimestampType, "2023-01-01T12:00:00Z")
     );
   }
 
