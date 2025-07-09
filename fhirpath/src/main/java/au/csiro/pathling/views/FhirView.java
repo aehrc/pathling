@@ -15,6 +15,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * View definitions are the heart of this proposal. In a nutshell, view is tabular projection of a
@@ -73,6 +74,17 @@ public class FhirView {
   @Nonnull
   public static FhirViewBuilder withResource(@Nonnull final String resource) {
     return builder().resource(resource);
+  }
+
+  /**
+   * Creates a builder with the resource already set.
+   *
+   * @param resource the {@link ResourceType} to set
+   * @return a builder with the resource set
+   */
+  @Nonnull
+  public static FhirViewBuilder withResource(@Nonnull final ResourceType resource) {
+    return builder().resource(resource.toCode());
   }
 
   /**
