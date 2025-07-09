@@ -40,23 +40,26 @@ public class FhirView {
   public static class FhirViewBuilder {
 
     /**
-     * Convenience method to create select clauses from a var arg of {@link SelectClause}.
+     * Convenience method to create select clauses from a variable-length argument list of
+     * {@link SelectClause}.
      */
-    public FhirViewBuilder selects(@Nonnull final SelectClause... selects) {
+    public FhirViewBuilder select(@Nonnull final SelectClause... selects) {
       return select(List.of(selects));
     }
 
     /**
-     * Convenience method to create where clauses from a var arg of {@link WhereClause}.
+     * Convenience method to create where clauses from a variable-length argument list of
+     * {@link WhereClause}.
      */
-    public FhirViewBuilder wheres(@Nonnull final WhereClause... wheres) {
+    public FhirViewBuilder where(@Nonnull final WhereClause... wheres) {
       return where(List.of(wheres));
     }
 
     /**
-     * Convenience method to create constants from a var arg of {@link ConstantDeclaration}.
+     * Convenience method to create constants from a variable-length argument list of
+     * {@link ConstantDeclaration}.
      */
-    public FhirViewBuilder constants(@Nonnull final ConstantDeclaration... constants) {
+    public FhirViewBuilder constant(@Nonnull final ConstantDeclaration... constants) {
       return constant(List.of(constants));
     }
   }
