@@ -1,11 +1,13 @@
 package au.csiro.pathling.views.ansi;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.annotations.SqlPrimitive;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import lombok.Value;
@@ -29,6 +31,19 @@ public class CollectionValue {
   @Nonnull
   Collection collection;
 
+  boolean asArray;
+
+  @Nonnull
+  public static CollectionValue singular(@Nonnull final Collection collection) {
+    return new CollectionValue(collection, false);
+  }
+
+  @Nonnull
+  public static CollectionValue array(@Nonnull final Collection collection) {
+    return new CollectionValue(collection, true);
+  }
+
+
   /**
    * Creates a function that performs element-wise cast of a column representation to the specified
    * data type.
@@ -48,9 +63,14 @@ public class CollectionValue {
    */
   @Nonnull
   private static Function<ColumnRepresentation, Column> makeCast(@Nonnull final DataType typeHint) {
-    return cr -> cr.pruneAnnotations().getValue().cast(typeHint);
-    
-    
+    return cr -> cr.getValue().cast(typeHint);
+  }
+
+  private static Function<ColumnRepresentation, Column> notImplemented(
+      @Nonnull final String message) {
+    return __ -> {
+      throw new UnsupportedOperationException(message);
+    };
   }
 
 
@@ -108,7 +128,7 @@ public class CollectionValue {
     // First check for FHIR type, then FHIRPath type, falling back to identity function
     return collection.getFhirType()
         .map(fhirType -> FHIR_CONVERTER_MAP.getOrDefault(fhirType,
-            cr -> cr.pruneAnnotations().getValue()))
+            notImplemented("No default converter for FHIR type: " + fhirType)))
         .orElseGet(
             () -> collection.getType()
                 .map(type -> FHIRPATH_CONVERTER_MAP.getOrDefault(type,
@@ -127,8 +147,18 @@ public class CollectionValue {
    */
   @Nonnull
   public Column get(@Nonnull final Optional<DataType> maybeDataType) {
+
+    if (Objects.isNull(collection.getClass().getAnnotation(SqlPrimitive.class))) {
+      throw new UnsupportedOperationException(
+          "Cannot obtain value for non-primitive collection of FHIR type: "
+              + collection.getFhirType().map(Objects::toString).orElse("unknown"));
+    }
+
+    final Collection valueCollection = asArray
+                                       ? collection.asPlural()
+                                       : collection.asSingular();
     return maybeDataType.map(CollectionValue::makeCast)
         .orElseGet(() -> getDefaultConverter(collection))
-        .apply(collection.getColumn());
+        .apply(valueCollection.getColumn());
   }
 }

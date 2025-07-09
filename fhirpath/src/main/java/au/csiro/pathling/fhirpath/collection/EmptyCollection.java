@@ -3,6 +3,7 @@ package au.csiro.pathling.fhirpath.collection;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
+import au.csiro.pathling.fhirpath.annotations.SqlPrimitive;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
@@ -16,6 +17,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 /**
  * Represents an empty collection.
  */
+@SqlPrimitive
 public class EmptyCollection extends Collection implements Comparable, Numeric, StringCoercible {
 
   private static final EmptyCollection INSTANCE = new EmptyCollection(

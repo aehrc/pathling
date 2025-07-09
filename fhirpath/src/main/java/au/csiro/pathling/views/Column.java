@@ -8,12 +8,13 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import java.util.Optional;
+
 /**
  * Describes the selection of a column in the output.
  *
@@ -32,18 +33,67 @@ public class Column implements SelectionElement {
   }
 
   /**
-   * Static factory method to create a new non collection {@link Column} instance with required
+   * Static factory method to create a new non collection {@link ColumnBuilder} instance with
+   * required fields.
+   *
+   * @param name the name of the column (must be a valid identifier)
+   * @param path the FHIRPath expression that evaluates to the value for the column
+   * @return a new {@link ColumnBuilder} instance
+   */
+
+  @Nonnull
+  public static ColumnBuilder singleBuilder(@Nonnull final String name,
+      @Nonnull final String path) {
+    return builder()
+        .name(name)
+        .path(path);
+  }
+
+  /**
+   * Static factory method to create a new collection {@link ColumnBuilder} instance with required
    * fields.
    *
-   * @param name the name of the column, must be in a database-friendly format
+   * @param name the name of the column (must be a valid identifier)
    * @param path the FHIRPath expression that evaluates to the value for the column
-   * @return a new {@link Column} instance
+   * @return a new {@link ColumnBuilder} instance
    */
-  public static Column single(@NotNull final String name,
-      @NotNull final String path) {
+  @Nonnull
+  public static ColumnBuilder collectionBuilder(@Nonnull final String name,
+      @Nonnull final String path) {
     return builder()
         .name(name)
         .path(path)
+        .collection(true);
+  }
+
+
+  /**
+   * Static factory method to create a new non collection {@link Column} instance with required
+   * fields.
+   *
+   * @param name the name of the column (must be a valid identifier)
+   * @param path the FHIRPath expression that evaluates to the value for the column
+   * @return a new {@link Column} instance
+   */
+  @Nonnull
+  public static Column single(@Nonnull final String name,
+      @Nonnull final String path) {
+    return singleBuilder(name, path)
+        .collection(false)
+        .build();
+  }
+
+  /**
+   * Static factory method to create a new collection {@link Column} instance with required fields.
+   *
+   * @param name the name of the column (must be a valid identifier)
+   * @param path the FHIRPath expression that evaluates to the value for the column
+   * @return a new {@link Column} instance
+   */
+  @Nonnull
+  public static Column collection(@Nonnull final String name,
+      @Nonnull final String path) {
+    return collectionBuilder(name, path)
         .build();
   }
 

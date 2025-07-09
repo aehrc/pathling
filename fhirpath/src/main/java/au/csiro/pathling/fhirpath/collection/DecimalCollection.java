@@ -24,6 +24,7 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
+import au.csiro.pathling.fhirpath.annotations.SqlPrimitive;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DecimalRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -43,6 +44,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
+@SqlPrimitive
 public class DecimalCollection extends Collection implements Comparable, Numeric, StringCoercible {
 
   public static final org.apache.spark.sql.types.DecimalType DECIMAL_TYPE = DataTypes

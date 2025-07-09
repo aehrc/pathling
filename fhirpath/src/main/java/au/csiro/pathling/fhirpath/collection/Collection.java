@@ -45,6 +45,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Column;
+import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -444,7 +445,7 @@ public class Collection {
   public Column getColumnValue() {
     return column.getValue();
   }
-  
+
   /**
    * Returns a new collection representing just the elements of this collection with the specified
    * type.
@@ -571,6 +572,32 @@ public class Collection {
   @Nonnull
   public BooleanCollection asBooleanSingleton() {
     return asSingular().map(ColumnRepresentation::toBoolean, BooleanCollection::build);
+  }
+
+
+  /**
+   * Creates a new collection from the given FHIR resource value.
+   *
+   * @param value the FHIR resource value to convert to a collection
+   * @return a new collection representing the FHIR resource value
+   */
+  @Nonnull
+  public static Collection fromValue(@Nonnull IBase value) {
+    final FHIRDefinedType fhirType = FHIRDefinedType.fromCode(value.fhirType());
+
+    // Get the collection class for the FHIR type.
+    final Class<? extends Collection> collectionClass = Collection.classForType(fhirType)
+        .orElseThrow(() ->
+            new InvalidUserInputError("Unsupported constant type: " + fhirType.toCode()));
+    try {
+      // Invoke the fromValue method on the collection class to get the return value.
+      final Object returnValue = collectionClass.getMethod("fromValue", value.getClass())
+          .invoke(null, value);
+      check(returnValue instanceof Collection);
+      return (Collection) returnValue;
+    } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+      throw new RuntimeException(e);
+    }
   }
 
 }

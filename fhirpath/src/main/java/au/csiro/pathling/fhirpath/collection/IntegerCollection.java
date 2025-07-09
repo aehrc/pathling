@@ -22,6 +22,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
+import au.csiro.pathling.fhirpath.annotations.SqlPrimitive;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DecimalRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -44,6 +45,7 @@ import org.hl7.fhir.r4.model.UnsignedIntType;
  *
  * @author John Grimes
  */
+@SqlPrimitive
 public class IntegerCollection extends Collection implements Comparable, Numeric, StringCoercible {
 
   private static final Set<FHIRDefinedType> INTEGER_TYPES = Set.of(FHIRDefinedType.INTEGER,

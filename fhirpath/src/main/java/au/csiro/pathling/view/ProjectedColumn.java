@@ -50,7 +50,8 @@ public class ProjectedColumn {
   @Nonnull
   public Column getValue() {
 
-    return CollectionValue.of(collection).get(requestedColumn.getSqlType())
+    return CollectionValue.of(collection, requestedColumn.isCollection())
+        .get(requestedColumn.getSqlType())
         .alias(requestedColumn.getName());
   }
 }

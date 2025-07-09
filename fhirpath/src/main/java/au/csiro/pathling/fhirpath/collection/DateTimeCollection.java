@@ -21,6 +21,7 @@ import static org.apache.spark.sql.functions.date_format;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.StringCoercible;
+import au.csiro.pathling.fhirpath.annotations.SqlPrimitive;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
@@ -36,6 +37,7 @@ import org.hl7.fhir.r4.model.InstantType;
  *
  * @author John Grimes
  */
+@SqlPrimitive
 public class DateTimeCollection extends Collection implements StringCoercible {
 
   private static final String SPARK_FHIRPATH_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";

@@ -262,6 +262,8 @@ public class FhirViewExecutor {
   private DataType parseSparkSqlType(@Nonnull final String ansiType) {
     return CatalystSqlParser$.MODULE$.parseDataType(ansiType);
   }
+  
+  
 
   /**
    * Parses the where clause from a FHIR view into a {@link ProjectionClause} object.

@@ -9,6 +9,7 @@ import org.apache.spark.sql.catalyst.parser.CatalystSqlParser$;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.VarcharType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,13 +26,43 @@ public class TypesTest {
   SparkSession spark;
 
   @Test
+  void testCharTypes() {
+
+    final Dataset<Row> resultTS = spark.range(1).toDF()
+        .select(functions.lit(null)
+            .cast(DataTypes.NullType)
+            .cast(DataTypes.StringType));
+
+    resultTS.show(false);
+  }
+
+  @Test
+  void testArrayType() {
+    final Dataset<Row> inputDS = spark.range(1).toDF()
+        .select(functions.array(
+            functions.lit(1)
+        ).alias("array_col"));
+
+    
+    DataTypes.createDayTimeIntervalType();
+    inputDS.select(functions.col("array_col").cast(DataTypes.StringType))
+        .show(false);
+
+    inputDS.selectExpr("TRY_CAST(array_col AS INTERVAL) AS array_col")
+        .show(false);
+    inputDS.select(functions.col("array_col").cast(DataTypes.IntegerType))
+        .show(false);
+
+  }
+
+  @Test
   void testTimestmapType() {
 
     spark.sql("SET TIME ZONE 'America/Los_Angeles'");
     //spark.sql("SET spark.sql.session.timeZone = America/Los_Angeles");
-    
+
     spark.sql("SELECT current_timezone()").show();
-    
+
     final Map<@NotNull String, @NotNull String> timestamps = Map.of(
         "ts_date", "2010-01-09",
         "ts_tz_UTC", "2010-01-09T19:04:32.323+00:00",
@@ -58,7 +89,6 @@ public class TypesTest {
               final Column column = functions.lit(value).cast(DataTypes.TimestampNTZType);
               return column.alias(name);
             }).toArray(Column[]::new));
-
     resultTS_NTZ.show(false);
   }
 

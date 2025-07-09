@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.StringCoercible;
+import au.csiro.pathling.fhirpath.annotations.SqlPrimitive;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
@@ -33,6 +34,7 @@ import org.hl7.fhir.r4.model.TimeType;
  *
  * @author John Grimes
  */
+@SqlPrimitive
 public class TimeCollection extends Collection implements StringCoercible {
 
   protected TimeCollection(@Nonnull final ColumnRepresentation columnRepresentation,
