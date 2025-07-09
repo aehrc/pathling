@@ -137,26 +137,22 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
-   * {@link SparkSession}.
+   * Creates a new {@link PathlingContext} with a default setup for Spark, FHIR encoders, and
+   * terminology services.
    *
-   * @param sparkSession the Spark session to use
-   * @param encodingConfiguration the encoding configuration to use
-   * @param terminologyConfiguration the terminology configuration to use
    * @return a new {@link PathlingContext} instance
    */
   @Nonnull
-  public static PathlingContext create(@Nonnull final SparkSession sparkSession,
-      @Nonnull final EncodingConfiguration encodingConfiguration,
-      @Nonnull final TerminologyConfiguration terminologyConfiguration) {
+  public static PathlingContext create() {
+    final SparkSession spark = SparkSession.builder()
+        .appName("Pathling")
+        .master("local[*]")
+        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+        .config("spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+        .getOrCreate();
 
-    ValidationUtils.ensureValid(terminologyConfiguration, "Invalid terminology configuration");
-    ValidationUtils.ensureValid(encodingConfiguration, "Invalid encoding configuration");
-
-    final Builder encoderBuilder = getEncoderBuilder(encodingConfiguration);
-    final TerminologyServiceFactory terminologyServiceFactory = getTerminologyServiceFactory(
-        terminologyConfiguration);
-    return create(sparkSession, encoderBuilder.getOrCreate(), terminologyServiceFactory);
+    return create(spark);
   }
 
   /**
@@ -199,6 +195,29 @@ public class PathlingContext {
       @Nonnull final TerminologyConfiguration terminologyConfig) {
     final EncodingConfiguration encodingConfig = EncodingConfiguration.builder().build();
     return create(sparkSession, encodingConfig, terminologyConfig);
+  }
+
+  /**
+   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
+   * {@link SparkSession}.
+   *
+   * @param sparkSession the Spark session to use
+   * @param encodingConfiguration the encoding configuration to use
+   * @param terminologyConfiguration the terminology configuration to use
+   * @return a new {@link PathlingContext} instance
+   */
+  @Nonnull
+  public static PathlingContext create(@Nonnull final SparkSession sparkSession,
+      @Nonnull final EncodingConfiguration encodingConfiguration,
+      @Nonnull final TerminologyConfiguration terminologyConfiguration) {
+
+    ValidationUtils.ensureValid(terminologyConfiguration, "Invalid terminology configuration");
+    ValidationUtils.ensureValid(encodingConfiguration, "Invalid encoding configuration");
+
+    final Builder encoderBuilder = getEncoderBuilder(encodingConfiguration);
+    final TerminologyServiceFactory terminologyServiceFactory = getTerminologyServiceFactory(
+        terminologyConfiguration);
+    return create(sparkSession, encoderBuilder.getOrCreate(), terminologyServiceFactory);
   }
 
   /**
