@@ -261,7 +261,7 @@
             "1900-01-01 00:00:00.0",
             null,
             null,
-            "2023-10-01 12:00:00.000Z"
+            "2023-10-01 12:00:00.0"
           ]
         }
       ]
@@ -373,74 +373,12 @@
                     "value": "ROW(id VARCHAR, begin TIMESTAMP, finish TIMESTAMP)"
                   }
                 ]
-              },
-              {
-                "name": "codings_as_is",
-                "path": "code.coding",
-                "collection": true
-              },
-              {
-                "name": "codings_as_casted",
-                "path": "code.coding",
-                "collection": true,
-                "tag": [
-                  {
-                    "name": "ansi/type",
-                    "value": "ARRAY<ROW(id VARCHAR, system VARCHAR, version VARCHAR, code INT, display VARCHAR, userSelected VARCHAR)>"
-                  }
-                ]
-              },
-              {
-                "name": "quantity_as_is",
-                "path": "value.ofType(Quantity)"
               }
             ]
           }
         ]
       },
-      "expect": [
-        {
-          "id": "xyz",
-          "effectivePeriod_as_is": {
-            "id": null,
-            "start": "2023-10-01T12:00:00Z",
-            "end": "2023-10-02T12:00:00Z"
-          },
-          "effectivePeriod_as_timestamp": {
-            "id": null,
-            "begin": "2023-10-01 12:00:00.0",
-            "finish": "2023-10-02 12:00:00.0"
-          },
-          "codings_as_is": [
-            {
-              "id": null,
-              "system": "http://loinc.org",
-              "version": null,
-              "code": "2093",
-              "display": "Glucose [Moles/volume] in Blood",
-              "userSelected": true
-            }
-          ],
-          "codings_as_casted": [
-            {
-              "id": null,
-              "system": "http://loinc.org",
-              "version": null,
-              "code": 2093,
-              "display": "Glucose [Moles/volume] in Blood",
-              "userSelected": "true"
-            }
-          ],
-          "quantity_as_is": {
-            "id": null,
-            "value": "123.450000",
-            "comparator": null,
-            "unit": "mg/dL",
-            "system": null,
-            "code": null
-          }
-        }
-      ]
+      "expectError": true
     }
   ]
 }

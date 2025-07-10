@@ -395,7 +395,7 @@
         <version>${pathling.springBootVersion}</version>
       </dependency>
       <dependency>
-      <groupId>org.springframework.boot</groupId>
+        <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-actuator</artifactId>
         <version>${pathling.springBootVersion}</version>
       </dependency>
@@ -607,7 +607,7 @@
         <artifactId>snakeyaml</artifactId>
         <version>2.2</version>
       </dependency>
-      
+
       <!-- CVE-2023-44981 -->
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
@@ -626,8 +626,8 @@
         <artifactId>avro-mapred</artifactId>
         <version>1.11.4</version>
       </dependency>
-      
-      
+
+
     </dependencies>
   </dependencyManagement>
 
@@ -722,7 +722,7 @@
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
             <!-- The add-exports and add-opens flags are required for Java 17 -->
-            <argLine>@{argLine} -Xshare:off -Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED</argLine>
+            <argLine>@{argLine} -Xshare:off -Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED</argLine>
             <forkCount>1C</forkCount>
             <failIfNoTests>false</failIfNoTests>
           </configuration>

@@ -4,6 +4,7 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.annotations.SqlPrimitive;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import jakarta.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
@@ -73,6 +74,12 @@ public class CollectionValue {
     };
   }
 
+  private static Column tsToString(@Nonnull Column col) {
+    return functions.date_format(functions.to_utc_timestamp(col, functions.current_timezone()),
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+
+  }
+
 
   // Maps from FHIR types to column conversion functions
   private static final Map<FHIRDefinedType, Function<ColumnRepresentation, Column>> FHIR_CONVERTER_MAP = new HashMap<>();
@@ -83,7 +90,8 @@ public class CollectionValue {
   static {
     // Initialize FHIR type converters
     // Special case for Base64Binary to handle decoding
-    FHIR_CONVERTER_MAP.put(FHIRDefinedType.BASE64BINARY, cr -> functions.unbase64(cr.getValue()));
+    FHIR_CONVERTER_MAP.put(FHIRDefinedType.BASE64BINARY,
+        cr -> new DefaultRepresentation(cr.getValue()).transform(functions::unbase64).getValue());
     FHIR_CONVERTER_MAP.put(FHIRDefinedType.BOOLEAN, makeElementCast(DataTypes.BooleanType));
     FHIR_CONVERTER_MAP.put(FHIRDefinedType.CANONICAL, makeElementCast(DataTypes.StringType));
     FHIR_CONVERTER_MAP.put(FHIRDefinedType.CODE, makeElementCast(DataTypes.StringType));
@@ -91,7 +99,8 @@ public class CollectionValue {
     FHIR_CONVERTER_MAP.put(FHIRDefinedType.DATETIME, makeElementCast(DataTypes.StringType));
     FHIR_CONVERTER_MAP.put(FHIRDefinedType.DECIMAL, makeElementCast(DataTypes.StringType));
     FHIR_CONVERTER_MAP.put(FHIRDefinedType.ID, makeElementCast(DataTypes.StringType));
-    FHIR_CONVERTER_MAP.put(FHIRDefinedType.INSTANT, makeElementCast(DataTypes.StringType));
+    FHIR_CONVERTER_MAP.put(FHIRDefinedType.INSTANT,
+        cr -> cr.transform(CollectionValue::tsToString).getValue());
     FHIR_CONVERTER_MAP.put(FHIRDefinedType.INTEGER, makeElementCast(DataTypes.IntegerType));
     FHIR_CONVERTER_MAP.put(FHIRDefinedType.MARKDOWN, makeElementCast(DataTypes.StringType));
     FHIR_CONVERTER_MAP.put(FHIRDefinedType.OID, makeElementCast(DataTypes.StringType));

@@ -11,9 +11,11 @@ import au.csiro.pathling.views.Column.ColumnBuilder;
 import au.csiro.pathling.views.FhirView.FhirViewBuilder;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Builder;
 import lombok.Value;
@@ -24,6 +26,7 @@ import org.apache.spark.sql.catalyst.ExtendedAnalysisException;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.instance.model.api.IBase;
+import org.hl7.fhir.r4.model.Attachment;
 import org.hl7.fhir.r4.model.Base64BinaryType;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CanonicalType;
@@ -38,7 +41,9 @@ import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.MarkdownType;
 import org.hl7.fhir.r4.model.Observation;
+import org.hl7.fhir.r4.model.Observation.ObservationComponentComponent;
 import org.hl7.fhir.r4.model.OidType;
+import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.PositiveIntType;
 import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Resource;
@@ -56,10 +61,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import scala.collection.JavaConverters;
+import scala.collection.mutable.WrappedArray;
 
 @SpringBootUnitTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class TypeMappingTest {
+public class AnsiTypeHintingTest {
 
   @Autowired
   private FhirEncoders fhirEncoders;
@@ -69,6 +76,8 @@ public class TypeMappingTest {
 
 
   private FhirViewExecutor fhirViewExecutor;
+
+  private ObjectDataSource dataSource;
 
   @BeforeAll
   void setUp() {
@@ -81,10 +90,25 @@ public class TypeMappingTest {
                 .addCoding(new Coding("http://example.org/fhir/CodeSystem/test", "test-code1",
                     "Test Code1"))
                 .addCoding(new Coding("http://example.org/fhir/CodeSystem/test", "test-code2",
-                    "Test Code2"))
-        ).setId("Observation/123");
-    final ObjectDataSource dataSource = new ObjectDataSource(sparkSession, fhirEncoders,
-        List.of(observation));
+                    "Test Code2")))
+        .addComponent(
+            new ObservationComponentComponent(new CodeableConcept().setText("integer")).setValue(
+                new IntegerType(2)))
+        .addComponent(
+            new ObservationComponentComponent(new CodeableConcept().setText("dateTime")).setValue(
+                new DateTimeType("2023-01-01T12:00:00+08:00")))
+        .addComponent(
+            new ObservationComponentComponent(new CodeableConcept().setText("time")).setValue(
+                new TimeType("12:00:00")))
+        .setId("Observation/123");
+
+    final Resource patient = new Patient().addPhoto(new Attachment()
+            .setData("data".getBytes(StandardCharsets.UTF_8)))
+        .setId("Patient/123");
+
+    dataSource = new ObjectDataSource(sparkSession, fhirEncoders,
+        List.of(observation, patient));
+
     fhirViewExecutor = new FhirViewExecutor(fhirEncoders.getContext(), sparkSession,
         dataSource);
     System.out.println("Setting up TypeMappingTest with FhirViewExecutor");
@@ -112,7 +136,12 @@ public class TypeMappingTest {
 
     @Nonnull
     FhirView create() {
-      FhirViewBuilder viewBuilder = FhirView.withResource("Observation");
+
+      final String resourceType = expression.startsWith("Patient.")
+                                  ? "Patient"
+                                  : "Observation";
+
+      FhirViewBuilder viewBuilder = FhirView.withResource(resourceType);
       if (constValue != null) {
         viewBuilder = viewBuilder.constants(
             ConstantDeclaration.builder().name("constValue")
@@ -155,9 +184,9 @@ public class TypeMappingTest {
   }
 
   String makeArrayStr(@Nonnull Object... values) {
-    return "WrappedArray(" + String.join(", ", Stream.of(values)
+    return "[" + Stream.of(values)
         .map(Objects::toString)
-        .toArray(String[]::new)) + ")";
+        .collect(Collectors.joining(",")) + "]";
   }
 
 
@@ -166,10 +195,27 @@ public class TypeMappingTest {
     return fhirViewExecutor.buildQuery(testView.create());
   }
 
+  @Nonnull
+  static String sqlValueToString(@Nonnull Object value) {
+    if (value instanceof WrappedArray<?> array) {
+      return "[" + JavaConverters.seqAsJavaList(array).stream()
+          .map(AnsiTypeHintingTest::sqlValueToString).collect(
+              Collectors.joining(",")) + "]";
+    }
+    if (value instanceof byte[]) {
+      return new String((byte[]) value);
+    } else {
+      return value.toString();
+    }
+  }
+
   @Nullable
   String evalToStrValue(@Nonnull final TestView testView,
       @Nonnull final DataType expectedDataType) {
     final Dataset<Row> resultDataset = evalView(testView);
+    resultDataset.printSchema();
+    resultDataset.explain();
+
     assertEquals(1, resultDataset.count(), "Expected exactly one row in the result");
     final DataType actualDataType = resultDataset.schema().apply(0).dataType();
     assertEquals(expectedDataType, actualDataType, "Unexpected data type for the column");
@@ -177,9 +223,7 @@ public class TypeMappingTest {
     return Optional.ofNullable(resultRow.isNullAt(0)
                                ? null
                                : resultRow.get(0))
-        .map(obj -> obj instanceof byte[]
-                    ? new String((byte[]) obj)
-                    : obj.toString())
+        .map(AnsiTypeHintingTest::sqlValueToString)
         .orElse(null);
   }
 
@@ -252,7 +296,7 @@ public class TypeMappingTest {
         Arguments.of("Decimal", "23.4", DataTypes.StringType, "23.4")
     );
   }
-  
+
   @ParameterizedTest(name = "{0} type maps to {2}")
   @MethodSource("fhirpathDefaultMappings")
   void defaultSingleFhirpathMappings(String ignoreDescription, String literalExpr,
@@ -282,7 +326,18 @@ public class TypeMappingTest {
         Arguments.of("decimal", "value.ofType(Quantity).value", false, DataTypes.StringType,
             "23.400000"),
         Arguments.of("instant", "issued", false, DataTypes.StringType,
-            "2023-01-01T12:00:00+10:00"),
+            "2023-01-01T02:00:00.000Z"),
+        // there is no way atm to get the original timezone so try UTC
+        Arguments.of("dateTime", "component.where(code.text='dateTime').value.ofType(dateTime)",
+            false, DataTypes.StringType,
+            "2023-01-01T12:00:00+08:00"),
+        Arguments.of("time", "component.where(code.text='time').value.ofType(time)",
+            false, DataTypes.StringType,
+            "12:00:00"),
+        Arguments.of("base64Binary",
+            "Patient.photo.data",
+            false, DataTypes.BinaryType,
+            "data"),
         Arguments.of("array of strings", "code.coding.code", true,
             DataTypes.createArrayType(DataTypes.StringType, true),
             makeArrayStr("test-code1", "test-code2"))
@@ -307,7 +362,7 @@ public class TypeMappingTest {
         Arguments.of("CHAR(10)", "value", DataTypes.StringType, "value"),
         Arguments.of("CHARACTER(10)", "value", DataTypes.StringType, "value"),
         Arguments.of("CHARACTER VARYING(10)", "value", DataTypes.StringType, "value"),
-        
+
         // Numeric types - exact
         Arguments.of("INT", "123", DataTypes.IntegerType, "123"),
         Arguments.of("INTEGER", "123", DataTypes.IntegerType, "123"),
@@ -316,17 +371,17 @@ public class TypeMappingTest {
         Arguments.of("DECIMAL(10,2)", "123.45", DataTypes.createDecimalType(10, 2), "123.45"),
         Arguments.of("NUMERIC(10,2)", "123.45", DataTypes.createDecimalType(10, 2), "123.45"),
         Arguments.of("DEC(10,2)", "123.45", DataTypes.createDecimalType(10, 2), "123.45"),
-        
+
         // Numeric types - approximate
         Arguments.of("FLOAT", "123.45", DataTypes.DoubleType, "123.45"),
         Arguments.of("FLOAT(25)", "123.45", DataTypes.DoubleType, "123.45"),
         Arguments.of("FLOAT(24)", "123.45", DataTypes.FloatType, "123.45"),
         Arguments.of("REAL", "123.45", DataTypes.FloatType, "123.45"),
         Arguments.of("DOUBLE PRECISION", "123.45", DataTypes.DoubleType, "123.45"),
-        
+
         // Boolean type
         Arguments.of("BOOLEAN", "true", DataTypes.BooleanType, "true"),
-        
+
         // Binary types
         Arguments.of("BINARY", "value", DataTypes.BinaryType, "value"),
         Arguments.of("BINARY(10)", "value", DataTypes.BinaryType, "value"),
@@ -334,13 +389,18 @@ public class TypeMappingTest {
         Arguments.of("BINARY VARYING(10)", "value", DataTypes.BinaryType, "value"),
         Arguments.of("VARBINARY", "value", DataTypes.BinaryType, "value"),
         Arguments.of("VARBINARY(10)", "value", DataTypes.BinaryType, "value"),
-        
+
         // Temporal types
         Arguments.of("DATE", "2023-01-01", DataTypes.DateType, "2023-01-01"),
-        Arguments.of("TIMESTAMP", "2023-01-01T12:00:00Z", DataTypes.TimestampNTZType, "2023-01-01T12:00:00Z"),
-        Arguments.of("TIMESTAMP(3)", "2023-01-01T12:00:00Z", DataTypes.TimestampNTZType, "2023-01-01T12:00:00Z"),
-        Arguments.of("TIMESTAMP WITHOUT TIME ZONE", "2023-01-01T12:00:00Z", DataTypes.TimestampNTZType, "2023-01-01T12:00:00Z"),
-        Arguments.of("TIMESTAMP WITH TIME ZONE", "2023-01-01T12:00:00Z", DataTypes.TimestampType, "2023-01-01T12:00:00Z")
+        Arguments.of("TIMESTAMP", "2023-01-01T12:00:00Z", DataTypes.TimestampNTZType,
+            "2023-01-01T12:00"),
+        Arguments.of("TIMESTAMP(3)", "2023-01-01T12:00:00+02:00", DataTypes.TimestampNTZType,
+            "2023-01-01T12:00"),
+        Arguments.of("TIMESTAMP WITHOUT TIME ZONE", "2023-01-01T12:00:00-02:00",
+            DataTypes.TimestampNTZType, "2023-01-01T12:00"),
+        Arguments.of("TIMESTAMP WITH TIME ZONE", "2023-01-01T12:00:00+10:00",
+            DataTypes.TimestampType,
+            "2023-01-01 02:00:00.0")
     );
   }
 
@@ -428,7 +488,7 @@ public class TypeMappingTest {
   @MethodSource("ansiFailingCasts")
   void failingAnsiCasts(String ansiType, Type value, boolean collection,
       DataType expectedDataType) {
-    final ExtendedAnalysisException ex = assertThrows(ExtendedAnalysisException.class,
+    assertThrows(ExtendedAnalysisException.class,
         () -> evalToStrValue(TestView.builder().
                 constValue(value)
                 .ansiType(ansiType)

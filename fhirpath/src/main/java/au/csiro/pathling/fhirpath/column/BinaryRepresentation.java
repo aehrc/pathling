@@ -1,12 +1,11 @@
 package au.csiro.pathling.fhirpath.column;
 
-import static org.apache.spark.sql.functions.base64;
-
 import jakarta.annotation.Nonnull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 
 /**
  * Describes a representation of a binary value, which is stored as a byte array but surfaced as a
@@ -29,7 +28,7 @@ public class BinaryRepresentation extends DefaultRepresentation {
   @Override
   @Nonnull
   public Column getValue() {
-    return base64(super.getValue());
+    return new DefaultRepresentation(super.getValue()).transform(functions::base64).getValue();
   }
 
   @Override
@@ -37,5 +36,5 @@ public class BinaryRepresentation extends DefaultRepresentation {
   protected BinaryRepresentation copyOf(@Nonnull final Column newValue) {
     return new BinaryRepresentation(newValue);
   }
-  
+
 }

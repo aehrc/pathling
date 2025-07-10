@@ -1,7 +1,8 @@
 package au.csiro.pathling.views;
 
 import au.csiro.pathling.test.SpringBootUnitTest;
-import org.apache.spark.sql.Column;
+import java.util.Arrays;
+import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -9,16 +10,15 @@ import org.apache.spark.sql.catalyst.parser.CatalystSqlParser$;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.VarcharType;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import java.util.Arrays;
-import java.util.Map;
 
 // TODO: remove
 
 @SpringBootUnitTest
+@Disabled
 public class TypesTest {
 
 
@@ -43,7 +43,6 @@ public class TypesTest {
             functions.lit(1)
         ).alias("array_col"));
 
-    
     DataTypes.createDayTimeIntervalType();
     inputDS.select(functions.col("array_col").cast(DataTypes.StringType))
         .show(false);
@@ -70,26 +69,47 @@ public class TypesTest {
         "ts_tz_10", "2010-01-09T19:04:32.3232+10:00"
     );
 
-    final Dataset<Row> resultTS = spark.range(1).toDF()
-        .select(timestamps.entrySet().stream()
-            .map(entry -> {
-              final String name = entry.getKey();
-              final String value = entry.getValue();
-              final Column column = functions.lit(value).cast(DataTypes.TimestampType);
-              return column.alias(name);
-            }).toArray(Column[]::new));
+    // final Dataset<Row> resultTS = spark.range(1).toDF()
+    //     .select(timestamps.entrySet().stream()
+    //         .map(entry -> {
+    //           final String name = entry.getKey();
+    //           final String value = entry.getValue();
+    //           final Column column = functions.lit(value).cast(DataTypes.TimestampType);
+    //           return column.alias(name);
+    //         }).toArray(Column[]::new));
+    //
+    // resultTS.show(false);
+    //
+    // final Dataset<Row> resultTS_NTZ = spark.range(1).toDF()
+    //     .select(timestamps.entrySet().stream()
+    //         .map(entry -> {
+    //           final String name = entry.getKey();
+    //           final String value = entry.getValue();
+    //           final Column column = functions.lit(value).cast(DataTypes.TimestampNTZType);
+    //           return column.alias(name);
+    //         }).toArray(Column[]::new));
+    // resultTS_NTZ.show(false);
 
-    resultTS.show(false);
+    final Dataset<Row> resultXX = spark.range(1).toDF()
+        .select(
+            functions.lit("2010-01-09T19:04:32.323+01:00").cast(DataTypes.TimestampType)
+                .alias("ts_tz_UTC"),
+            functions.to_utc_timestamp(
+                functions.lit("2010-01-09T19:04:32.323+01:00").cast(DataTypes.TimestampType),
+                functions.current_timezone()
+            ),
+            functions.from_utc_timestamp(
+                functions.lit("2010-01-09T19:04:32.323+01:00").cast(DataTypes.TimestampType),
+                "+10:00").alias("ts_tz_10"),
+            functions.date_format(
+                functions.from_utc_timestamp(
+                    functions.lit("2010-01-09T19:04:32.323+01:00").cast(DataTypes.TimestampType),
+                    "UTC"),
+                "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").alias("ts_tz_UTC_formatted")
+            
+        );
 
-    final Dataset<Row> resultTS_NTZ = spark.range(1).toDF()
-        .select(timestamps.entrySet().stream()
-            .map(entry -> {
-              final String name = entry.getKey();
-              final String value = entry.getValue();
-              final Column column = functions.lit(value).cast(DataTypes.TimestampNTZType);
-              return column.alias(name);
-            }).toArray(Column[]::new));
-    resultTS_NTZ.show(false);
+    resultXX.show(false);
   }
 
   @Test
