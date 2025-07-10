@@ -199,6 +199,6 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
   @Override
   @Nonnull
   public Column toExternalValue() {
-    return getColumn().elementCast(DataTypes.StringType).getValue();
+    return getColumn().asString().getValue();
   }
 }

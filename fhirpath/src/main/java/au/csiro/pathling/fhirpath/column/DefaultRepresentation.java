@@ -71,9 +71,9 @@ public class DefaultRepresentation extends ColumnRepresentation {
    */
   @Nonnull
   public static DefaultRepresentation literal(@Nonnull final Object value) {
-    if (value instanceof BigDecimal) {
+    if (value instanceof BigDecimal bd) {
       // If the literal is a BigDecimal, represent it as a DecimalRepresentation.
-      return new DecimalRepresentation(lit(value));
+      return new DecimalRepresentation(bd);
     }
     // Otherwise use the default representation.
     return new DefaultRepresentation(lit(value));

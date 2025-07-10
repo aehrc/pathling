@@ -65,7 +65,7 @@ public class DecimalToLiteral implements SqlFunction2<BigDecimal, Integer, Strin
     }
     return Optional.ofNullable(scale)
         .map(s -> value.setScale(s, RoundingMode.FLOOR))
-        .orElse(value)
+        .orElse(value.stripTrailingZeros())
         .toString();
   }
 }

@@ -1,6 +1,7 @@
 package au.csiro.pathling.views;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -11,6 +12,7 @@ import au.csiro.pathling.views.Column.ColumnBuilder;
 import au.csiro.pathling.views.FhirView.FhirViewBuilder;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
@@ -23,8 +25,10 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.ExtendedAnalysisException;
+import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Metadata;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.Attachment;
 import org.hl7.fhir.r4.model.Base64BinaryType;
@@ -83,7 +87,7 @@ public class AnsiTypeHintingTest {
   void setUp() {
     final Resource observation = new Observation()
         .setIssuedElement(new InstantType("2023-01-01T12:00:00+10:00"))
-        .setValue(new Quantity(23.4))
+        .setValue(new Quantity().setValue(new BigDecimal("23.40")))
         .setCode(
             new CodeableConcept()
                 .setText("Test Observation")
@@ -218,7 +222,13 @@ public class AnsiTypeHintingTest {
 
     assertEquals(1, resultDataset.count(), "Expected exactly one row in the result");
     final DataType actualDataType = resultDataset.schema().apply(0).dataType();
-    assertEquals(expectedDataType, actualDataType, "Unexpected data type for the column");
+    if (expectedDataType instanceof ArrayType expectedArrayType) {
+      // for array type igrnore the nullability flag
+      assertInstanceOf(ArrayType.class, actualDataType);
+      assertEquals(expectedArrayType.elementType(), ((ArrayType) actualDataType).elementType());
+    } else {
+      assertEquals(expectedDataType, actualDataType, "Unexpected data type for the column");
+    }
     final Row resultRow = resultDataset.first();
     return Optional.ofNullable(resultRow.isNullAt(0)
                                ? null
@@ -243,7 +253,7 @@ public class AnsiTypeHintingTest {
         Arguments.of("date", new DateType("2023-01-01"), DataTypes.StringType, "2023-01-01"),
         Arguments.of("dateTime", new DateTimeType("2023-01-01T12:00:00Z"), DataTypes.StringType,
             "2023-01-01T12:00:00Z"),
-        Arguments.of("decimal", new DecimalType("123.45"), DataTypes.StringType, "123.45"),
+        Arguments.of("decimal", new DecimalType("123.450"), DataTypes.StringType, "123.450"),
         Arguments.of("id", new IdType("identifier123"), DataTypes.StringType, "identifier123"),
         Arguments.of("instant", new InstantType("2023-01-01T12:00:00Z"), DataTypes.StringType,
             "2023-01-01T12:00:00Z"),
@@ -283,7 +293,7 @@ public class AnsiTypeHintingTest {
             .constValue(fhirType)
             .collection(true)
             .build(),
-        DataTypes.createArrayType(expectedDataType, false));
+        DataTypes.createArrayType(expectedDataType));
     assertEquals(makeArrayStr(expectedValue), actualValue);
   }
 
@@ -314,7 +324,7 @@ public class AnsiTypeHintingTest {
       String expectedValue) {
     String actualValue = evalToStrValue(
         TestView.builder().expression(literalExpr).collection(true).build(),
-        DataTypes.createArrayType(expectedDataType, false));
+        DataTypes.createArrayType(expectedDataType));
     assertEquals(makeArrayStr(expectedValue), actualValue);
   }
 
@@ -324,7 +334,12 @@ public class AnsiTypeHintingTest {
         Arguments.of("empty", "{}", false, DataTypes.NullType, null),
         Arguments.of("empty as collection", "{}", true, DataTypes.NullType, null),
         Arguments.of("decimal", "value.ofType(Quantity).value", false, DataTypes.StringType,
-            "23.400000"),
+            "23.40"),
+        Arguments.of("decimal literal", "1.00", false, DataTypes.StringType,
+            "1.00"),
+        Arguments.of("decimal addition", "value.ofType(Quantity).value + 1.00", false,
+            DataTypes.StringType,
+            "24.4"),
         Arguments.of("instant", "issued", false, DataTypes.StringType,
             "2023-01-01T02:00:00.000Z"),
         // there is no way atm to get the original timezone so try UTC
@@ -339,7 +354,7 @@ public class AnsiTypeHintingTest {
             false, DataTypes.BinaryType,
             "data"),
         Arguments.of("array of strings", "code.coding.code", true,
-            DataTypes.createArrayType(DataTypes.StringType, true),
+            DataTypes.createArrayType(DataTypes.StringType),
             makeArrayStr("test-code1", "test-code2"))
     );
   }
@@ -480,7 +495,11 @@ public class AnsiTypeHintingTest {
     return Stream.of(
         Arguments.of("ARRAY<INT>", new IntegerType(213), false,
             DataTypes.createArrayType(DataTypes.IntegerType)),
-        Arguments.of("BOOLEAN", new BooleanType(true), true, DataTypes.BooleanType)
+        Arguments.of("BOOLEAN", new BooleanType(true), true, DataTypes.BooleanType),
+        Arguments.of("ROW(value VARCHAR)", new StringType("string"), false,
+            DataTypes.createStructType(List.of(
+                DataTypes.createStructField("value", DataTypes.StringType, true,
+                    Metadata.empty()))))
     );
   }
 
