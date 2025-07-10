@@ -26,7 +26,6 @@ import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.column.BinaryRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
@@ -155,7 +154,8 @@ public class StringCollection extends Collection implements Comparable, Numeric,
   @Nonnull
   public static StringCollection fromValue(@Nonnull final Base64BinaryType value) {
     // special case for Base64BinaryType, as it needs to be decoded
-    return StringCollection.build(new BinaryRepresentation(functions.lit(value.getValue())),
+    return StringCollection.build(
+        DefaultRepresentation.literal(value.getValue()),
         FHIRDefinedType.BASE64BINARY);
   }
 
