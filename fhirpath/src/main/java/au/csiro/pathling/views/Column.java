@@ -167,13 +167,18 @@ public class Column implements SelectionElement {
 
   /**
    * Checks if this column is compatible with another column for union operations. Columns are
-   * compatible if they have the same type and collection indicator.
+   * compatible if they have the same name, type and collection indicator.
    *
    * @param other the other column to compare with
    * @return true if the columns are compatible, false otherwise
    */
   public boolean isCompatibleWith(@Nullable final Column other) {
     if (other == null) {
+      return false;
+    }
+
+    // Check name equality
+    if (!this.getName().equals(other.getName())) {
       return false;
     }
 

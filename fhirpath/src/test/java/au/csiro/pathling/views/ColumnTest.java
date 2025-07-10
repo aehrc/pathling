@@ -1,6 +1,7 @@
 package au.csiro.pathling.views;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
@@ -49,11 +50,11 @@ class ColumnTest {
         .path("empty.path")
         .tag(Collections.emptyList())
         .build();
-    
+
     List<String> emptyResult = emptyTagsColumn.getTagValues("any-tag");
     assertTrue(emptyResult.isEmpty());
   }
-  
+
   @Test
   void testGetTagValue() {
     // Create a column with multiple tags
@@ -83,15 +84,78 @@ class ColumnTest {
         .path("empty.path")
         .tag(Collections.emptyList())
         .build();
-    
+
     Optional<String> emptyResult = emptyTagsColumn.getTagValue("any-tag");
     assertTrue(emptyResult.isEmpty());
-    
+
     // Test exception when multiple values exist
     Exception exception = org.junit.jupiter.api.Assertions.assertThrows(
         IllegalStateException.class,
         () -> column.getTagValue("ansi/type")
     );
     assertTrue(exception.getMessage().contains("Multiple values found for tag 'ansi/type'"));
+  }
+
+  @Test
+  void testIsCompatibleWith() {
+    // Create base column
+    Column column1 = Column.builder()
+        .name("test_column")
+        .path("test.path")
+        .type("string")
+        .collection(false)
+        .build();
+
+    // Create identical column
+    Column column2 = Column.builder()
+        .name("test_column")
+        .path("different.path") // Path doesn't affect compatibility
+        .type("string")
+        .collection(false)
+        .build();
+
+    // Create column with different name
+    Column column3 = Column.builder()
+        .name("different_name")
+        .path("test.path")
+        .type("string")
+        .collection(false)
+        .build();
+
+    // Create column with different type
+    Column column4 = Column.builder()
+        .name("test_column")
+        .path("test.path")
+        .type("integer")
+        .collection(false)
+        .build();
+
+    // Create column with different collection flag
+    Column column5 = Column.builder()
+        .name("test_column")
+        .path("test.path")
+        .type("string")
+        .collection(true)
+        .build();
+
+    // Test compatibility
+    assertTrue(column1.isCompatibleWith(column2), "Identical columns should be compatible");
+    assertTrue(column1.isCompatibleWith(column1), "Column should be compatible with itself");
+
+    // Test incompatibility due to different name
+    assertFalse(column1.isCompatibleWith(column3),
+        "Columns with different names should not be compatible");
+
+    // Test incompatibility due to different type
+    assertFalse(column1.isCompatibleWith(column4),
+        "Columns with different types should not be compatible");
+
+    // Test incompatibility due to different collection flag
+    assertFalse(column1.isCompatibleWith(column5),
+        "Columns with different collection flags should not be compatible");
+
+    // Test incompatibility with null
+    assertFalse(column1.isCompatibleWith(null),
+        "Column should not be compatible with null");
   }
 }
