@@ -1,5 +1,6 @@
 package au.csiro.pathling.views;
 
+import au.csiro.pathling.views.validation.UniqueTags;
 import au.csiro.pathling.views.validation.ValidName;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -146,7 +147,7 @@ public class Column implements SelectionElement {
    * <p>
    * This field must be provided if a ViewDefinition returns a non-primitive type. Implementations
    * should report an error if the returned type does not match the type set here, or if a
-   * non-primitive type is returned but this field is unset.
+   * non-primitive type is returned, but this field is unset.
    */
   @Nullable
   String type;
@@ -161,6 +162,7 @@ public class Column implements SelectionElement {
    */
   @NotNull
   @Valid
+  @UniqueTags(ColumnTag.ANSI_TYPE_TAG)
   @Builder.Default
   List<@Valid ColumnTag> tag = Collections.emptyList();
 

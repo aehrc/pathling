@@ -95,7 +95,7 @@ class ColumnTest {
     );
     assertTrue(exception.getMessage().contains("Multiple values found for tag 'ansi/type'"));
   }
-
+  
   @Test
   void testIsCompatibleWith() {
     // Create base column
