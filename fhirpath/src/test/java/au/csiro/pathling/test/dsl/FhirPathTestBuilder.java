@@ -1,17 +1,28 @@
 package au.csiro.pathling.test.dsl;
 
+import static au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase.ANY_ERROR;
+import static java.util.Objects.nonNull;
+
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.test.yaml.FhirTypedLiteral;
-import au.csiro.pathling.test.yaml.YamlSpecTestBase;
 import au.csiro.pathling.test.yaml.YamlSupport;
+import au.csiro.pathling.test.yaml.YamlTestBase;
+import au.csiro.pathling.test.yaml.YamlTestDefinition;
+import au.csiro.pathling.test.yaml.executor.DefaultYamlTestExecutor;
+import au.csiro.pathling.test.yaml.executor.YamlTestExecutor;
+import au.csiro.pathling.test.yaml.resolver.ArbitraryObjectResolverFactory;
+import au.csiro.pathling.test.yaml.resolver.HapiResolverFactory;
+import au.csiro.pathling.test.yaml.resolver.RuntimeContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -20,52 +31,51 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.DynamicTest;
 
-import static au.csiro.pathling.test.yaml.FhipathTestSpec.TestCase.ANY_ERROR;
-import static java.util.Objects.nonNull;
-
 @RequiredArgsConstructor
 public class FhirPathTestBuilder {
 
-  private final YamlSpecTestBase testBase;
-  private final List<TestCaseBuilder> testCases = new ArrayList<>();
+  private final YamlTestBase testBase;
+  private final Collection<TestCaseBuilder> testCases = new ArrayList<>();
 
   @Nullable
   private Map<String, Object> subject = null;
+
   @Nullable
   IBaseResource resource = null;
   private String currentGroup;
 
   @Nonnull
-  public FhirPathTestBuilder withResource(@Nonnull IBaseResource resource) {
+  public FhirPathTestBuilder withResource(@Nonnull final IBaseResource resource) {
     this.subject = null;
     this.resource = resource;
     return this;
   }
 
   @Nonnull
-  public FhirPathTestBuilder withSubject(Map<String, Object> subject) {
+  public FhirPathTestBuilder withSubject(final Map<String, Object> subject) {
     this.subject = subject;
     this.resource = null;
     return this;
   }
 
-  public FhirPathTestBuilder withSubject(Function<ModelBuilder, ModelBuilder> builderFunction) {
+  public FhirPathTestBuilder withSubject(
+      final Function<ModelBuilder, ModelBuilder> builderFunction) {
     return withSubject(builderFunction.apply(new ModelBuilder()).model);
   }
 
-  public FhirPathTestBuilder group(String name) {
+  public FhirPathTestBuilder group(final String name) {
     this.currentGroup = name;
     return this;
   }
 
-  public FhirPathTestBuilder test(String description,
-      Function<TestCaseBuilder, TestCaseBuilder> builderFunction) {
-    TestCaseBuilder builder = new TestCaseBuilder(this, description);
+  public FhirPathTestBuilder test(final String description,
+      final Function<TestCaseBuilder, TestCaseBuilder> builderFunction) {
+    final TestCaseBuilder builder = new TestCaseBuilder(this, description);
     testCases.add(builderFunction.apply(builder));
     return this;
   }
 
-  public FhirPathTestBuilder test(String description) {
+  public FhirPathTestBuilder test(final String description) {
     return test(description, builder -> builder);
   }
 
@@ -77,7 +87,8 @@ public class FhirPathTestBuilder {
    * @param description The test description
    * @return This builder for method chaining
    */
-  public FhirPathTestBuilder testEquals(Object expected, String expression, String description) {
+  public FhirPathTestBuilder testEquals(final Object expected, final String expression,
+      final String description) {
     return test(description, tc -> tc.expression(expression).expectResult(expected));
   }
 
@@ -88,7 +99,7 @@ public class FhirPathTestBuilder {
    * @param description The test description
    * @return This builder for method chaining
    */
-  public FhirPathTestBuilder testTrue(String expression, String description) {
+  public FhirPathTestBuilder testTrue(final String expression, final String description) {
     return test(description, tc -> tc.expression(expression).expectResult(true));
   }
 
@@ -99,7 +110,7 @@ public class FhirPathTestBuilder {
    * @param description The test description
    * @return This builder for method chaining
    */
-  public FhirPathTestBuilder testFalse(String expression, String description) {
+  public FhirPathTestBuilder testFalse(final String expression, final String description) {
     return test(description, tc -> tc.expression(expression).expectResult(false));
   }
 
@@ -110,7 +121,7 @@ public class FhirPathTestBuilder {
    * @param description The test description
    * @return This builder for method chaining
    */
-  public FhirPathTestBuilder testEmpty(String expression, String description) {
+  public FhirPathTestBuilder testEmpty(final String expression, final String description) {
     return test(description, tc -> tc.expression(expression).expectResult(Collections.emptyList()));
   }
 
@@ -121,7 +132,7 @@ public class FhirPathTestBuilder {
    * @param description The test description
    * @return This builder for method chaining
    */
-  public FhirPathTestBuilder testError(String expression, String description) {
+  public FhirPathTestBuilder testError(final String expression, final String description) {
     return test(description, tc -> tc.expression(expression).expectError());
   }
 
@@ -133,28 +144,28 @@ public class FhirPathTestBuilder {
    * @param description The test description
    * @return This builder for method chaining
    */
-  public FhirPathTestBuilder testError(@Nonnull final String errorMessage, String expression,
-      String description) {
+  public FhirPathTestBuilder testError(@Nonnull final String errorMessage, final String expression,
+      final String description) {
     return test(description, tc -> tc.expression(expression).expectError(errorMessage));
   }
 
 
   @Nonnull
   public Map<Object, Object> buildSubject() {
-    Map<Object, Object> result = new HashMap<>();
+    final Map<Object, Object> result = new HashMap<>();
     result.put("resourceType", "Test");
-    result.putAll(subject);
+    result.putAll(Objects.requireNonNull(subject));
     return result;
   }
 
   @Nonnull
   public Stream<DynamicTest> build() {
 
-    final Function<YamlSpecTestBase.RuntimeContext, ResourceResolver> resolverFactory;
+    final Function<RuntimeContext, ResourceResolver> resolverFactory;
     if (resource != null) {
-      resolverFactory = YamlSpecTestBase.HapiResolverFactory.of(resource);
+      resolverFactory = HapiResolverFactory.of(resource);
     } else if (subject != null) {
-      resolverFactory = YamlSpecTestBase.OMResolverFactory.of(buildSubject());
+      resolverFactory = ArbitraryObjectResolverFactory.of(buildSubject());
     } else {
       throw new IllegalStateException("No resource or subject provided for FhirPath tests.");
     }
@@ -166,10 +177,10 @@ public class FhirPathTestBuilder {
 
     return testCases.stream()
         .map(tc -> {
-          YamlSpecTestBase.RuntimeCase runtimeCase = tc.build(resolverFactory);
+          final YamlTestExecutor executor = tc.build(resolverFactory);
           return DynamicTest.dynamicTest(
-              runtimeCase.getDescription(),
-              () -> testBase.run(runtimeCase)
+              executor.getDescription(),
+              () -> testBase.run(executor)
           );
         });
   }
@@ -200,7 +211,7 @@ public class FhirPathTestBuilder {
       return this;
     }
 
-    public ModelBuilder stringArray(@Nonnull final String name, String... values) {
+    public ModelBuilder stringArray(@Nonnull final String name, final String... values) {
       model.put(name, Arrays.asList(values));
       return this;
     }
@@ -215,9 +226,9 @@ public class FhirPathTestBuilder {
       return this;
     }
 
-    public ModelBuilder integerArray(@Nonnull final String name, int... values) {
-      List<Integer> list = new ArrayList<>();
-      for (int value : values) {
+    public ModelBuilder integerArray(@Nonnull final String name, final int... values) {
+      final List<Integer> list = new ArrayList<>();
+      for (final int value : values) {
         list.add(value);
       }
       model.put(name, list);
@@ -234,16 +245,16 @@ public class FhirPathTestBuilder {
       return this;
     }
 
-    public ModelBuilder decimalArray(@Nonnull final String name, double... values) {
-      List<Double> list = new ArrayList<>();
-      for (double value : values) {
+    public ModelBuilder decimalArray(@Nonnull final String name, final double... values) {
+      final List<Double> list = new ArrayList<>();
+      for (final double value : values) {
         list.add(value);
       }
       model.put(name, list);
       return this;
     }
 
-    public ModelBuilder bool(@Nonnull final String name, @Nullable Boolean value) {
+    public ModelBuilder bool(@Nonnull final String name, @Nullable final Boolean value) {
       model.put(name, value);
       return this;
     }
@@ -253,9 +264,9 @@ public class FhirPathTestBuilder {
       return this;
     }
 
-    public ModelBuilder boolArray(String name, boolean... values) {
-      List<Boolean> list = new ArrayList<>();
-      for (boolean value : values) {
+    public ModelBuilder boolArray(final String name, final boolean... values) {
+      final List<Boolean> list = new ArrayList<>();
+      for (final boolean value : values) {
         list.add(value);
       }
       model.put(name, list);
@@ -368,8 +379,8 @@ public class FhirPathTestBuilder {
     }
 
 
-    public ModelBuilder element(String name, Consumer<ModelBuilder> builderConsumer) {
-      ModelBuilder builder = new ModelBuilder();
+    public ModelBuilder element(final String name, final Consumer<ModelBuilder> builderConsumer) {
+      final ModelBuilder builder = new ModelBuilder();
       builderConsumer.accept(builder);
       model.put(name, builder.model);
       return this;
@@ -381,10 +392,10 @@ public class FhirPathTestBuilder {
     }
 
     @SafeVarargs
-    public final ModelBuilder elementArray(String name, Consumer<ModelBuilder>... builders) {
-      List<Map<String, Object>> list = new ArrayList<>();
-      for (Consumer<ModelBuilder> builderConsumer : builders) {
-        ModelBuilder builder = new ModelBuilder();
+    public final ModelBuilder elementArray(final String name, final Consumer<ModelBuilder>... builders) {
+      final List<Map<String, Object>> list = new ArrayList<>();
+      for (final Consumer<ModelBuilder> builderConsumer : builders) {
+        final ModelBuilder builder = new ModelBuilder();
         builderConsumer.accept(builder);
         list.add(builder.model);
       }
@@ -407,12 +418,12 @@ public class FhirPathTestBuilder {
     @Nullable
     private String expectError = null;
 
-    public TestCaseBuilder expression(String expression) {
+    public TestCaseBuilder expression(final String expression) {
       this.expression = expression;
       return this;
     }
 
-    public TestCaseBuilder expectResult(Object result) {
+    public TestCaseBuilder expectResult(final Object result) {
       this.result = result;
       this.expectError = null;
       return this;
@@ -428,15 +439,15 @@ public class FhirPathTestBuilder {
       return this;
     }
 
-    public TestCaseBuilder apply(Function<TestCaseBuilder, TestCaseBuilder> function) {
+    public TestCaseBuilder apply(final Function<TestCaseBuilder, TestCaseBuilder> function) {
       return function.apply(this);
     }
 
 
-    YamlSpecTestBase.RuntimeCase build(
-        Function<YamlSpecTestBase.RuntimeContext, ResourceResolver> resolverFactory) {
+    YamlTestExecutor build(
+        final Function<RuntimeContext, ResourceResolver> resolverFactory) {
       // Convert the result to the expected format
-      Object formattedResult;
+      final Object formattedResult;
       if (result instanceof Number || result instanceof Boolean || result instanceof String) {
         formattedResult = result;
       } else if (result == null && nonNull(expectError)) {
@@ -448,8 +459,8 @@ public class FhirPathTestBuilder {
       }
 
       // Create a TestCase object
-      au.csiro.pathling.test.yaml.FhipathTestSpec.TestCase testCase =
-          new au.csiro.pathling.test.yaml.FhipathTestSpec.TestCase(
+      final YamlTestDefinition.TestCase testCase =
+          new YamlTestDefinition.TestCase(
               description,
               expression,
               expectError,
@@ -461,8 +472,8 @@ public class FhirPathTestBuilder {
               null // variables
           );
 
-      // Create and return the RuntimeCase
-      return YamlSpecTestBase.StdRuntimeCase.of(
+      // Create and return the YamlTestExecutor
+      return DefaultYamlTestExecutor.of(
           testCase,
           resolverFactory,
           java.util.Optional.empty()

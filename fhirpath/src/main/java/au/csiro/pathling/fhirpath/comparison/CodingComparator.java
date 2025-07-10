@@ -22,12 +22,9 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.operator.ColumnComparator;
-import au.csiro.pathling.fhirpath.operator.Comparable;
-import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.BiFunction;
 import org.apache.spark.sql.Column;
 
 /**
@@ -40,43 +37,28 @@ public class CodingComparator implements ColumnComparator {
   private static final List<String> EQUALITY_COLUMNS = Arrays
       .asList("system", "code", "version", "display", "userSelected");
 
-  private static final CodingComparator INSTANCE = new CodingComparator();
-
+  @Nonnull
   @Override
   public Column equalsTo(@Nonnull final Column left, @Nonnull final Column right) {
-    //noinspection OptionalGetWithoutIsPresent
     return when(left.isNull().or(right.isNull()), lit(null))
         .otherwise(
             EQUALITY_COLUMNS.stream()
                 .map(f -> left.getField(f).eqNullSafe(right.getField(f)))
-                .reduce(Column::and).get()
+                .reduce(Column::and).orElseThrow(() -> new AssertionError("No fields to compare"))
         );
   }
 
+  @Nonnull
   @Override
-  public Column lessThan(final Column left, final Column right) {
+  public Column lessThan(@Nonnull final Column left, @Nonnull final Column right) {
     throw new InvalidUserInputError("Coding type does not support the less than operator");
 
   }
 
-  @Override
-  public Column greaterThan(final Column left, final Column right) {
-    throw new InvalidUserInputError("Coding type does not support the greater than operator");
-  }
-
-  /**
-   * Builds a comparison function for Coding collections
-   *
-   * @param left the left collection
-   * @param right the right collection
-   * @param operation the operation to perform
-   * @return a sql function that compares the columns representing the values of the collections
-   */
   @Nonnull
-  public static BiFunction<Column, Column, Column> buildSqlComparator(
-      @Nonnull final Comparable left, @Nonnull final Comparable right,
-      @Nonnull final ComparisonOperation operation) {
-    return Comparable.buildSqlComparator(left, right, operation, INSTANCE);
+  @Override
+  public Column greaterThan(@Nonnull final Column left, @Nonnull final Column right) {
+    throw new InvalidUserInputError("Coding type does not support the greater than operator");
   }
 
 }

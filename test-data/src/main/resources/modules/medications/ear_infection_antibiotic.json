@@ -1,0 +1,622 @@
+{
+  "name": "Ear Infection Antibiotic",
+  "remarks": [
+    "This submodule prescribes an antibiotic used to treat ear infections ",
+    "(otitis media). If no medication is available in the current year of ",
+    "the simulation then none is prescribed.",
+    "IT IS UP TO THE CALLING MODULE TO END THIS MEDICATION BY ATTRIBUTE.",
+    "All antibiotics prescribed in this module are assigned to the attribute ",
+    "'antibiotic_prescription'.",
+    "Source for common antibiotics used to treat otitis media: ",
+    "http://www.nps.org.au/conditions/ear-nose-mouth-and-throat-disorders/ear-nose-and-throat-infections/ear-infection-middle/for-individuals/medicines-and-treatments",
+    "Availability dates for different drugs came from the FDA: ",
+    "http://www.accessdata.fda.gov/scripts/cder/daf/",
+    "Dosage information came from FDA reference sheets available at: ",
+    "https://www.drugs.com/dosage/",
+    "Medications prescribed in this module:     ",
+    "1. Penicillin        available after 1945  ",
+    "2. Ampicillin        available after 1961  ",
+    "3. Doxycycline       available after 1967  ",
+    "4. Amoxicillin       available after 1979  ",
+    "5. Cefaclor          available 1979 - 2004 ",
+    "6. Cefuroxime        available after 1983  "
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "antibiotic_prescription",
+            "operator": "is nil"
+          },
+          "transition": "Prescribe_Ear_Infection_Antibiotic"
+        },
+        {
+          "transition": "Ear_Infection_Antibiotic_Terminal"
+        }
+      ],
+      "name": "Initial"
+    },
+    "Prescribe_Ear_Infection_Antibiotic": {
+      "type": "Simple",
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Date",
+            "operator": "<",
+            "year": 1945
+          },
+          "distributions": [
+            {
+              "distribution": 1,
+              "transition": "Ear_Infection_Antibiotic_Terminal"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Date",
+            "operator": "<",
+            "year": 1961
+          },
+          "distributions": [
+            {
+              "distribution": 1,
+              "transition": "Prescribe_Penicillin"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Date",
+            "operator": "<",
+            "year": 1967
+          },
+          "distributions": [
+            {
+              "distribution": 0.4,
+              "transition": "Prescribe_Penicillin"
+            },
+            {
+              "distribution": 0.4,
+              "transition": "Prescribe_Ampicillin"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Date",
+            "operator": "<",
+            "year": 1979
+          },
+          "distributions": [
+            {
+              "distribution": 0.2,
+              "transition": "Prescribe_Penicillin"
+            },
+            {
+              "distribution": 0.2,
+              "transition": "Prescribe_Ampicillin"
+            },
+            {
+              "distribution": 0.6,
+              "transition": "Prescribe_Doxycycline"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Date",
+            "operator": "<",
+            "year": 1983
+          },
+          "distributions": [
+            {
+              "distribution": 0.6,
+              "transition": "Prescribe_Amoxicillin"
+            },
+            {
+              "distribution": 0.3,
+              "transition": "Prescribe_Cefaclor"
+            },
+            {
+              "distribution": 0.1,
+              "transition": "Prescribe_Doxycycline"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Date",
+            "operator": "<",
+            "year": 2004
+          },
+          "distributions": [
+            {
+              "distribution": 0.6,
+              "transition": "Prescribe_Amoxicillin"
+            },
+            {
+              "distribution": 0.2,
+              "transition": "Prescribe_Cefaclor"
+            },
+            {
+              "distribution": 0.2,
+              "transition": "Prescribe_Cefuroxime"
+            }
+          ]
+        },
+        {
+          "distributions": [
+            {
+              "distribution": 0.8,
+              "transition": "Prescribe_Amoxicillin"
+            },
+            {
+              "distribution": 0.2,
+              "transition": "Prescribe_Cefuroxime"
+            }
+          ]
+        }
+      ],
+      "name": "Prescribe_Ear_Infection_Antibiotic"
+    },
+    "Prescribe_Penicillin": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "antibiotic_prescription",
+      "remarks": [
+        "Historically this was injected, not ingested. There are still modern ",
+        "variant of penicillin that come as oral or injectable solutions. There ",
+        "is no distinction between a pediatric and adult dose."
+      ],
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "105078",
+          "display": "Penicillin G 375 MG/ML Injectable Solution",
+          "value_set": ""
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 4,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 2,
+          "unit": "weeks"
+        },
+        "instructions": [
+          {
+            "system": "SNOMED-CT",
+            "code": "418577003",
+            "display": "Take at regular intervals. Complete the prescribed course unless otherwise directed (qualifier value)"
+          }
+        ]
+      },
+      "direct_transition": "Ear_Infection_Antibiotic_Terminal",
+      "name": "Prescribe_Penicillin"
+    },
+    "Prescribe_Ampicillin": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "antibiotic_prescription",
+      "remarks": [
+        "Historically this was injected, not ingested. There are still modern ",
+        "variant of ampicillin that come as oral or injectable solutions. There ",
+        "is no distinction between a pediatric and adult dose."
+      ],
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "789980",
+          "display": "Ampicillin 100 MG/ML Injectable Solution",
+          "value_set": ""
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 2,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 2,
+          "unit": "weeks"
+        },
+        "instructions": [
+          {
+            "system": "SNOMED-CT",
+            "code": "418577003",
+            "display": "Take at regular intervals. Complete the prescribed course unless otherwise directed (qualifier value)"
+          }
+        ]
+      },
+      "direct_transition": "Ear_Infection_Antibiotic_Terminal",
+      "name": "Prescribe_Ampicillin"
+    },
+    "Prescribe_Doxycycline": {
+      "type": "Simple",
+      "remarks": [
+        "Not recommended for children < 8 years old. For children the dose is ",
+        "100 - 200mg/day. For adults, the dose is 200mg/day."
+      ],
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": "<",
+            "quantity": 12,
+            "unit": "years"
+          },
+          "transition": "Pediatric_Doxycycline"
+        },
+        {
+          "transition": "Adult_Doxycycline"
+        }
+      ],
+      "name": "Prescribe_Doxycycline"
+    },
+    "Pediatric_Doxycycline": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "antibiotic_prescription",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "1652673",
+          "display": "Doxycycline Monohydrate 50 MG Oral Tablet",
+          "value_set": ""
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 2,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 2,
+          "unit": "weeks"
+        },
+        "instructions": [
+          {
+            "system": "SNOMED-CT",
+            "code": "418577003",
+            "display": "Take at regular intervals. Complete the prescribed course unless otherwise directed (qualifier value)"
+          },
+          {
+            "system": "SNOMED-CT",
+            "code": "419115000",
+            "display": "Do not take milk, indigestion remedies, or medicines containing iron or zinc at the same time of day as this medicine"
+          }
+        ]
+      },
+      "direct_transition": "Ear_Infection_Antibiotic_Terminal",
+      "name": "Pediatric_Doxycycline"
+    },
+    "Adult_Doxycycline": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "antibiotic_prescription",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "1650142",
+          "display": "Doxycycline Monohydrate 100 MG Oral Tablet",
+          "value_set": ""
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 2,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 2,
+          "unit": "weeks"
+        },
+        "instructions": [
+          {
+            "system": "SNOMED-CT",
+            "code": "418577003",
+            "display": "Take at regular intervals. Complete the prescribed course unless otherwise directed (qualifier value)"
+          },
+          {
+            "system": "SNOMED-CT",
+            "code": "419115000",
+            "display": "Do not take milk, indigestion remedies, or medicines containing iron or zinc at the same time of day as this medicine"
+          }
+        ]
+      },
+      "direct_transition": "Ear_Infection_Antibiotic_Terminal",
+      "name": "Adult_Doxycycline"
+    },
+    "Prescribe_Amoxicillin": {
+      "type": "Simple",
+      "name": "Prescribe_Amoxicillin",
+      "conditional_transition": [
+        {
+          "transition": "Pediatric_Allergy_Check",
+          "condition": {
+            "condition_type": "Age",
+            "operator": ">",
+            "quantity": 12,
+            "unit": "years"
+          }
+        },
+        {
+          "transition": "Adult_Allergy_Check"
+        }
+      ]
+    },
+    "Pediatric_Amoxicillin": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "antibiotic_prescription",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "308182",
+          "display": "Amoxicillin 250 MG Oral Capsule",
+          "value_set": ""
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 2,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 2,
+          "unit": "weeks"
+        },
+        "instructions": [
+          {
+            "system": "SNOMED-CT",
+            "code": "418577003",
+            "display": "Take at regular intervals. Complete the prescribed course unless otherwise directed (qualifier value)"
+          }
+        ]
+      },
+      "direct_transition": "Ear_Infection_Antibiotic_Terminal",
+      "name": "Pediatric_Amoxicillin"
+    },
+    "Adult_Amoxicillin": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "antibiotic_prescription",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "308192",
+          "display": "Amoxicillin 500 MG Oral Tablet",
+          "value_set": ""
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 3,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 2,
+          "unit": "weeks"
+        },
+        "instructions": [
+          {
+            "system": "SNOMED-CT",
+            "code": "418577003",
+            "display": "Take at regular intervals. Complete the prescribed course unless otherwise directed (qualifier value)"
+          }
+        ]
+      },
+      "direct_transition": "Ear_Infection_Antibiotic_Terminal",
+      "name": "Adult_Amoxicillin"
+    },
+    "Prescribe_Cefaclor": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Age",
+            "operator": "<",
+            "quantity": 12,
+            "unit": "years"
+          },
+          "transition": "Pediatric_Cefaclor"
+        },
+        {
+          "transition": "Adult_Cefaclor"
+        }
+      ],
+      "name": "Prescribe_Cefaclor"
+    },
+    "Pediatric_Cefaclor": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "antibiotic_prescription",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "309045",
+          "display": "Cefaclor 250 MG Oral Capsule",
+          "value_set": ""
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 2,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 2,
+          "unit": "weeks"
+        },
+        "instructions": [
+          {
+            "system": "SNOMED-CT",
+            "code": "418577003",
+            "display": "Take at regular intervals. Complete the prescribed course unless otherwise directed (qualifier value)"
+          }
+        ]
+      },
+      "direct_transition": "Ear_Infection_Antibiotic_Terminal",
+      "name": "Pediatric_Cefaclor"
+    },
+    "Adult_Cefaclor": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "antibiotic_prescription",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "309043",
+          "display": "12 HR Cefaclor 500 MG Extended Release Oral Tablet",
+          "value_set": ""
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 2,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 2,
+          "unit": "weeks"
+        },
+        "instructions": [
+          {
+            "system": "SNOMED-CT",
+            "code": "418577003",
+            "display": "Take at regular intervals. Complete the prescribed course unless otherwise directed (qualifier value)"
+          }
+        ]
+      },
+      "direct_transition": "Ear_Infection_Antibiotic_Terminal",
+      "name": "Adult_Cefaclor"
+    },
+    "Prescribe_Cefuroxime": {
+      "type": "MedicationOrder",
+      "assign_to_attribute": "antibiotic_prescription",
+      "remarks": [
+        "The pediatric and adult doses of Cefuroxime are the same."
+      ],
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": "309097",
+          "display": "Cefuroxime 250 MG Oral Tablet",
+          "value_set": ""
+        }
+      ],
+      "prescription": {
+        "dosage": {
+          "amount": 1,
+          "frequency": 2,
+          "period": 1,
+          "unit": "days"
+        },
+        "duration": {
+          "quantity": 10,
+          "unit": "days"
+        },
+        "instructions": [
+          {
+            "system": "SNOMED-CT",
+            "code": "418577003",
+            "display": "Take at regular intervals. Complete the prescribed course unless otherwise directed (qualifier value)"
+          }
+        ]
+      },
+      "direct_transition": "Ear_Infection_Antibiotic_Terminal",
+      "name": "Prescribe_Cefuroxime"
+    },
+    "Ear_Infection_Antibiotic_Terminal": {
+      "type": "Terminal",
+      "name": "Ear_Infection_Antibiotic_Terminal"
+    },
+    "Pediatric_Allergy_Check": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Active Allergy",
+            "codes": [
+              {
+                "system": "RxNorm",
+                "code": "7984",
+                "display": "Penicillin V"
+              }
+            ]
+          },
+          "transition": "Pediatric_Cefdinir"
+        },
+        {
+          "transition": "Pediatric_Amoxicillin"
+        }
+      ],
+      "name": "Pediatric_Allergy_Check"
+    },
+    "Adult_Allergy_Check": {
+      "type": "Simple",
+      "name": "Adult_Allergy_Check",
+      "conditional_transition": [
+        {
+          "transition": "Adult_Azithromycin",
+          "condition": {
+            "condition_type": "Active Allergy",
+            "codes": [
+              {
+                "system": "RxNorm",
+                "code": "7984",
+                "display": "Penicillin V"
+              }
+            ]
+          }
+        },
+        {
+          "transition": "Adult_Amoxicillin"
+        }
+      ]
+    },
+    "Pediatric_Cefdinir": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": 200346,
+          "display": "Cefdinir",
+          "value_set": ""
+        }
+      ],
+      "direct_transition": "Ear_Infection_Antibiotic_Terminal",
+      "name": "Pediatric_Cefdinir",
+      "assign_to_attribute": "antibiotic_prescription"
+    },
+    "Adult_Azithromycin": {
+      "type": "MedicationOrder",
+      "codes": [
+        {
+          "system": "RxNorm",
+          "code": 141962,
+          "display": "Azithromycin 250 MG Oral Capsule",
+          "value_set": ""
+        }
+      ],
+      "direct_transition": "Ear_Infection_Antibiotic_Terminal",
+      "name": "Adult_Azithromycin",
+      "assign_to_attribute": "antibiotic_prescription"
+    }
+  },
+  "gmf_version": 2
+}

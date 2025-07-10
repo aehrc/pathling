@@ -24,10 +24,9 @@ import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.utilities.Datasets;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
-import java.nio.file.FileVisitResult;
+import java.io.Serial;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -38,7 +37,6 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MultiSet;
 import org.apache.commons.collections4.multiset.HashMultiSet;
-import org.apache.commons.io.file.SimplePathVisitor;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -55,10 +53,10 @@ import org.apache.spark.sql.functions;
 @SuppressWarnings("UnusedReturnValue")
 public class DatasetAssert {
 
-  public static boolean LOG_PHYSICAL_PLAN =
+  public static final boolean LOG_PHYSICAL_PLAN =
       Boolean.parseBoolean(System.getProperty("pathling.test.ds.logPhysicalPlan", "false"));
 
-  public static boolean LOG_DATASET =
+  public static final boolean LOG_DATASET =
       Boolean.parseBoolean(System.getProperty("pathling.test.ds.logRows", "false"));
 
   public static void logDataset(@Nonnull final Dataset<Row> dataset) {
@@ -127,6 +125,9 @@ public class DatasetAssert {
   }
 
   private static class MyMultiSet<T> extends HashMultiSet<T> {
+
+    @Serial
+    private static final long serialVersionUID = -2511025757690743888L;
 
     public MyMultiSet(@Nonnull final Collection<T> collection) {
       super(collection);
@@ -227,6 +228,11 @@ public class DatasetAssert {
     return this;
   }
 
+  public DatasetAssert explain() {
+    dataset.explain(true);
+    return this;
+  }
+
   @Nonnull
   @SuppressWarnings({"unused", "UnusedReturnValue"})
   public DatasetAssert saveAllRowsToCsv(@Nonnull final SparkSession spark,
@@ -258,21 +264,4 @@ public class DatasetAssert {
     return this;
   }
 
-
-  private static class DeleteDirectoryVisitor extends SimplePathVisitor {
-    
-    @Override
-    public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs)
-        throws IOException {
-      Files.delete(file);
-      return FileVisitResult.CONTINUE;
-    }
-
-    @Override
-    public FileVisitResult postVisitDirectory(final Path dir, final IOException exc)
-        throws IOException {
-      Files.delete(dir);
-      return FileVisitResult.CONTINUE;
-    }
-  }
 }

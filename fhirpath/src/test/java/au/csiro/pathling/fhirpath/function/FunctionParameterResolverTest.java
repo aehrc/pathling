@@ -15,7 +15,8 @@ import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.function.FunctionParameterResolver.FunctionInvocation;
+import au.csiro.pathling.fhirpath.function.resolver.FunctionInvocation;
+import au.csiro.pathling.fhirpath.function.resolver.FunctionParameterResolver;
 import au.csiro.pathling.fhirpath.path.ParserPaths;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -30,48 +31,56 @@ class FunctionParameterResolverTest {
 
   final EvaluationContext evaluationContext = mock(EvaluationContext.class);
 
+  @Nullable
   @SuppressWarnings("unused")
-  static Collection funcOptionalArg(@Nonnull Collection input,
-      @Nullable Collection optionalArgument) {
+  static Collection funcOptionalArg(@Nonnull final Collection input,
+      @Nullable final Collection optionalArgument) {
     return null;
   }
 
+  @Nullable
   @SuppressWarnings("unused")
-  static Collection funcRequiredArg(@Nonnull Collection input,
-      @Nonnull IntegerCollection requiredArgument) {
+  static Collection funcRequiredArg(@Nonnull final Collection input,
+      @Nonnull final IntegerCollection requiredArgument) {
     return null;
   }
 
+  @Nullable
   @SuppressWarnings("unused")
-  static Collection funcAllTypes(@Nonnull Collection input,
-      @Nonnull Collection collectionArgument,
-      @Nonnull BooleanCollection booleanArgument, @Nonnull Concepts concepts,
-      @Nonnull TypeSpecifier typeSpecifier) {
+  static Collection funcAllTypes(@Nonnull final Collection input,
+      @Nonnull final Collection collectionArgument,
+      @Nonnull final BooleanCollection booleanArgument, @Nonnull final Concepts concepts,
+      @Nonnull final TypeSpecifier typeSpecifier) {
     return null;
   }
 
+  @Nullable
   @SuppressWarnings("unused")
-  public static Collection funcTransform(@Nonnull Collection input,
-      @Nonnull CollectionTransform transform) {
+  public static Collection funcTransform(@Nonnull final Collection input,
+      @Nonnull final CollectionTransform transform) {
     return null;
   }
 
 
+  @Nullable
   @SuppressWarnings("unused")
-  public static Collection funcConcepts(@Nonnull Concepts input) {
+  public static Collection funcConcepts(@Nonnull final Concepts input) {
     return null;
   }
 
+  @Nullable
   @SuppressWarnings("unused")
-  public static Collection funcStringCollection(@Nonnull StringCollection input) {
+  public static Collection funcStringCollection(@Nonnull final StringCollection input) {
     return null;
   }
 
+  @Nullable
   @SuppressWarnings("unused")
-  public static Collection funcBooleanCollection(@Nonnull BooleanCollection input) {
+  public static Collection funcBooleanCollection(@Nonnull final BooleanCollection input) {
     return null;
   }
 
+  @Nullable
   @SuppressWarnings("unused")
   static Collection invalidFunction() {
     return null;
@@ -125,9 +134,9 @@ class FunctionParameterResolverTest {
         ));
     final Method method = getMethod("funcAllTypes");
     final FunctionInvocation invocation = resolver.bind(method);
-    assertEquals(FunctionInvocation.of(method, new Object[]{input,
-            stringArgument, booleanRepresentation, concepts, typeSpecifier
-        }
+    assertEquals(new FunctionInvocation(method, new Object[]{input,
+        stringArgument, booleanRepresentation, concepts, typeSpecifier
+    }
     ), invocation);
   }
 
@@ -147,11 +156,11 @@ class FunctionParameterResolverTest {
         ));
     final Method method = getMethod("funcTransform");
     final FunctionInvocation invocation = resolver.bind(method);
-    assertEquals(method, invocation.getMethod());
-    assertEquals(input, invocation.getArguments()[0]);
+    assertEquals(method, invocation.method());
+    assertEquals(input, invocation.arguments()[0]);
     // test that the transform is bound correctly to the evaluation context
     assertEquals(transformResult,
-        ((CollectionTransform) invocation.getArguments()[1]).apply(transformArgument));
+        ((CollectionTransform) invocation.arguments()[1]).apply(transformArgument));
   }
 
 
@@ -163,7 +172,7 @@ class FunctionParameterResolverTest {
     final Method method = getMethod("funcStringCollection");
 
     final FunctionInvocation invocation = resolver.bind(method);
-    assertEquals(FunctionInvocation.of(method, new Object[]{input}), invocation);
+    assertEquals(new FunctionInvocation(method, new Object[]{input}), invocation);
   }
 
 
@@ -178,7 +187,7 @@ class FunctionParameterResolverTest {
         codingInput, List.of());
     final Method method = getMethod("funcConcepts");
     final FunctionInvocation invocation = resolver.bind(method);
-    assertEquals(FunctionInvocation.of(method, new Object[]{concepts}), invocation);
+    assertEquals(new FunctionInvocation(method, new Object[]{concepts}), invocation);
   }
 
   @Test
@@ -192,7 +201,7 @@ class FunctionParameterResolverTest {
         inputCollection, List.of());
     final Method method = getMethod("funcBooleanCollection");
     final FunctionInvocation invocation = resolver.bind(method);
-    assertEquals(FunctionInvocation.of(method, new Object[]{booleanRepresentation}), invocation);
+    assertEquals(new FunctionInvocation(method, new Object[]{booleanRepresentation}), invocation);
   }
 
   @Test
@@ -204,7 +213,7 @@ class FunctionParameterResolverTest {
     final Method method = getMethod("funcOptionalArg");
 
     final FunctionInvocation invocation = resolver.bind(method);
-    assertEquals(FunctionInvocation.of(method, new Object[]{input, null}),
+    assertEquals(new FunctionInvocation(method, new Object[]{input, null}),
         invocation);
   }
 
@@ -243,16 +252,14 @@ class FunctionParameterResolverTest {
   void failsForInvalidFunction() {
     final Collection input = mock(Collection.class);
     final FunctionParameterResolver resolver = new FunctionParameterResolver(evaluationContext,
-        input,
-        List.of()
-    );
+        input, List.of());
     final Method method = getMethod("invalidFunction");
 
-    final RuntimeException ex = assertThrows(
-        RuntimeException.class, () -> resolver.bind(method));
+    final AssertionError ex = assertThrows(
+        AssertionError.class, () -> resolver.bind(method));
 
     assertEquals(
-        "Function 'invalidFunction' does not accept any parameters and is a not a valid Fhirpath function backend.",
+        "Function 'invalidFunction' does not accept any parameters and is a not a valid FhirPath function implementation",
         ex.getMessage());
   }
 

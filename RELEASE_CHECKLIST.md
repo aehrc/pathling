@@ -3,12 +3,12 @@
 - [ ] Create a release branch (`release/[version]`)
 - [ ] Update the version to a SNAPSHOT version for pre-release activities
 - [ ] Update all dependencies
-- [ ] Get all tests and checks passing on CI ("Test" workflow)
+- [ ] Get all tests and checks passing on CI ("Build, test and pre-release"
+  workflow)
 - [ ] Create a Python pre-release ("Python pre-release" workflow, manually
   triggered)
 - [ ] Test snapshot library API, dev Python library release and R package on
   target Databricks release
-- [ ] Deploy pre-release Docker image to demo cluster and test
 - [ ] Update the supported Databricks Runtime versions in the
   documentation (`site/docs/libraries/installation/databricks.md`)
 - [ ] Update licenses (`mvn install -DskipTests -Plicenses`)
@@ -27,18 +27,6 @@ The version number needs to be changed in the following places:
   POMs)
 - [ ] `lib/python/Dockerfile`
 - [ ] `docs/libraries/installation/spark.md`
-
-## JavaScript libraries
-
-The JavaScript libraries (`lib/import` and `lib/js`) are versioned independently
-of the rest of the project. To release changes to these libraries, follow these
-steps:
-
-- [ ] Update the version in `lib/import/package.json`
-  and/or `lib/js/package.json` (using `npm version`)
-- [ ] Tag the repository with `pathling-import-v[version]`
-  and/or `pathling-client-v[version]`
-- [ ] Push the tag to GitHub
 
 ## Helm chart
 

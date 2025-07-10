@@ -7,7 +7,7 @@
 <br/>
 <br/>
 
-[![Test](https://github.com/aehrc/pathling/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/aehrc/pathling/actions/workflows/test.yml) [![CodeFactor](https://www.codefactor.io/repository/github/aehrc/pathling/badge)](https://www.codefactor.io/repository/github/aehrc/pathling) [![codecov](https://codecov.io/gh/aehrc/pathling/branch/main/graph/badge.svg?token=A2RDYU05DT)](https://codecov.io/gh/aehrc/pathling)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=aehrc_pathling&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=aehrc_pathling)
 
 Pathling is a set of tools that make it easier to
 use [FHIR&reg;](https://hl7.org/fhir/R4) and clinical terminology within health
@@ -30,13 +30,14 @@ includes both language libraries and a server implementation.
 
 ### Query and transformation of FHIR data
 
-[FHIR R4](https://hl7.org/fhir/R4) is the dominant standard for exchanging health
+[FHIR R4](https://hl7.org/fhir/R4) is the dominant standard for exchanging
+health
 data. It comes in both [JSON](https://hl7.org/fhir/json.html)
 or [XML](https://hl7.org/fhir/xml.html) formats, and can contain over 140
 different types of resources, such
-as [Patient](https://hl7.org/fhir/patient.html), 
-[Observation](https://hl7.org/fhir/observation.html), 
-[Condition](https://hl7.org/fhir/condition.html), 
+as [Patient](https://hl7.org/fhir/patient.html),
+[Observation](https://hl7.org/fhir/observation.html),
+[Condition](https://hl7.org/fhir/condition.html),
 [Procedure](https://hl7.org/fhir/procedure.html), and many more.
 
 Pathling is capable of reading all the different types of FHIR resources into a
@@ -48,7 +49,8 @@ possible:
   or [Parquet](https://parquet.apache.org/)
 - Performing terminology queries against coded fields within the FHIR data
 
-See [Encoders](https://pathling.csiro.au/docs/libraries/encoders) for more information.
+See [Encoders](https://pathling.csiro.au/docs/libraries/encoders) for more
+information.
 
 ### Terminology queries
 
@@ -71,7 +73,8 @@ Examples of the types of questions that can be answered include:
 - Is this ICD-10 code within the pre-defined list of codes within my cohort
   definition?
 
-See [Terminology functions](https://pathling.csiro.au/docs/libraries/terminology) for more information.
+See [Terminology functions](https://pathling.csiro.au/docs/libraries/terminology)
+for more information.
 
 ### FHIR analytics API
 
@@ -92,9 +95,9 @@ the [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0).
 This means that you are free to use, modify and redistribute the software as
 you wish, even for commercial purposes.
 
-If you use this software in your research, please consider citing our paper, 
+If you use this software in your research, please consider citing our paper,
 [Pathling: analytics on FHIR](https://doi.org/10.1186/s13326-022-00277-1).
 
 **Pathling is experimental software, use it at your own risk!** You can get a
-full description of the current set of known issues 
+full description of the current set of known issues
 [here](https://github.com/aehrc/pathling/issues).

@@ -88,16 +88,14 @@ StorageType <- list(
 #'
 #' @export
 #' 
-#' @examplesIf pathling_is_spark_installed()
+#' @examples \dontrun{
 #' # Create PathlingContext for an existing Spark connecton.
-#' sc <- sparklyr::spark_connect(master = "local")
 #' pc <- pathling_connect(spark = sc)
-#' pathling_disconnect(pc)
 #' 
 #' # Create PathlingContext with a new Spark connection.
 #' pc <- pathling_connect()
 #' spark <- pathling_spark(pc)
-#' pathling_disconnect_all()
+#' }
 pathling_connect <- function(
     spark = NULL,
     max_nesting_level = 3,

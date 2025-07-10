@@ -132,4 +132,15 @@ public class CatalogPersistence implements PersistenceScheme {
     return tablesDataset.collectAsList();
   }
 
+  @Override
+  public void delete(@Nonnull final ResourceType resourceType) {
+    final String tableName = getTableName(resourceType);
+    try {
+      spark.sql("DROP TABLE IF EXISTS " + tableName);
+      log.debug("Deleted table: {}", tableName);
+    } catch (final Exception e) {
+      throw new RuntimeException("Failed to delete table: " + tableName, e);
+    }
+  }
+
 }

@@ -22,6 +22,7 @@ import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.External;
+import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
@@ -49,6 +50,7 @@ import org.hl7.fhir.r4.model.UuidType;
  *
  * @author John Grimes
  */
+@SuppressWarnings("TypeMayBeWeakened")
 public class StringCollection extends Collection implements Comparable, Numeric, StringCoercible,
     External {
 
@@ -89,7 +91,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
   /**
    * Returns an empty string collection.
    *
-   * @return A new instance of {@link StringCollection}
+   * @return A new instance of StringCollection
    */
   @Nonnull
   public static StringCollection empty() {
@@ -100,7 +102,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * Returns a new instance, parsed from a FHIRPath literal.
    *
    * @param stringLiteral The FHIRPath representation of the literal
-   * @return A new instance of {@link StringCollection}
+   * @return A new instance of StringCollection
    */
   @Nonnull
   public static StringCollection fromLiteral(@Nonnull final String stringLiteral) {
@@ -114,7 +116,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * {@link au.csiro.pathling.view.ProjectionContext#of}.
    *
    * @param value The value to use
-   * @return A new instance of {@link StringCollection}
+   * @return A new instance of StringCollection
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final StringType value) {
@@ -125,7 +127,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * Returns a new instance based upon a literal value.
    *
    * @param value The value to use
-   * @return A new instance of {@link StringCollection}
+   * @return A new instance of StringCollection
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final String value) {
@@ -148,7 +150,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * Returns a new instance based upon a {@link Base64BinaryType}.
    *
    * @param value The value to use
-   * @return A new instance of {@link StringCollection}
+   * @return A new instance of StringCollection
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final Base64BinaryType value) {
@@ -161,7 +163,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * Returns a new instance based upon a {@link CodeType}.
    *
    * @param value The value to use
-   * @return A new instance of {@link StringCollection}
+   * @return A new instance of StringCollection
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final CodeType value) {
@@ -172,7 +174,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * Returns a new instance based upon a {@link IdType}.
    *
    * @param value The value to use
-   * @return A new instance of {@link StringCollection}
+   * @return A new instance of StringCollection
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final IdType value) {
@@ -183,7 +185,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * Returns a new instance based upon a {@link OidType}.
    *
    * @param value The value to use
-   * @return A new instance of {@link StringCollection}
+   * @return A new instance of StringCollection
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final OidType value) {
@@ -194,7 +196,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * Returns a new instance based upon a {@link UriType}.
    *
    * @param value The value to use
-   * @return A new instance of {@link StringCollection}
+   * @return A new instance of StringCollection
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final UriType value) {
@@ -205,7 +207,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * Returns a new instance based upon a {@link org.hl7.fhir.r4.model.UrlType}.
    *
    * @param value The value to use
-   * @return A new instance of {@link StringCollection}
+   * @return A new instance of StringCollection
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final org.hl7.fhir.r4.model.UrlType value) {
@@ -216,7 +218,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * Returns a new instance based upon a {@link UuidType}.
    *
    * @param value The value to use
-   * @return A new instance of {@link StringCollection}
+   * @return A new instance of StringCollection
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final UuidType value) {
@@ -284,7 +286,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
 
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
-    return path instanceof StringCollection || Comparable.super.isComparableTo(path);
+    return path instanceof StringCollection;
   }
 
   @Override
@@ -293,15 +295,14 @@ public class StringCollection extends Collection implements Comparable, Numeric,
     if (operation == MathOperation.ADDITION) {
       return numeric -> mapColumn(c -> functions.concat(c, numeric.getColumn().getValue()));
     } else {
-      throw new InvalidUserInputError(
-          "Cannot perform operation " + operation + " on String.");
+      throw new UnsupportedFhirPathFeatureError(
+          "Operation not supported on String: " + operation);
     }
   }
 
   @Override
   public @Nonnull Collection negate() {
-    throw new InvalidUserInputError(
-        "Negation is not supported for String type.");
+    throw new InvalidUserInputError("Negation is not supported on Strings");
   }
 
   @Nonnull

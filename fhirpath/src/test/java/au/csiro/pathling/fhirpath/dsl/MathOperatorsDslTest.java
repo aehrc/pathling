@@ -140,7 +140,7 @@ public class MathOperatorsDslTest extends FhirPathDslTestBase {
             "Multiplication with boolean literal where empty collection")
         .testError("2 / true.where(1 = 2)",
             "Division with boolean literal where condition is false")
-        .testError("Negation is not supported for String type.",
+        .testError("Negation is not supported on Strings",
             "-emptyStr", "Polarity with empty string collection")
         .build();
   }

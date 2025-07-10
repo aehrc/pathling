@@ -47,7 +47,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * This is a test class to explore issues related to implementation of reverseResolve and resolve
  * functions.
  * <p>
- * This attemps to use 'purification approch' where elements that are not pure are replaced with
+ * This attempts to use 'purification approach' where elements that are not pure are replaced with
  * pure elements in a preprocessing step that constructs the input dataset.
  */
 @SpringBootUnitTest
@@ -68,7 +68,7 @@ class SingleResourceFhirpathTest {
       @Nonnull final ResourceType subjectResource,
       @Nonnull final String fhirExpression) {
 
-    return createEvaluator(subjectResource, dataSource)
+    return createEvaluator(dataSource)
         .evaluate(subjectResource, fhirExpression)
         .toCanonical();
 
@@ -84,8 +84,7 @@ class SingleResourceFhirpathTest {
   }
 
   @Nonnull
-  FhirpathExecutor createEvaluator(@Nonnull final ResourceType subjectResource,
-      @Nonnull final DataSource datasource) {
+  FhirpathExecutor createEvaluator(@Nonnull final DataSource datasource) {
     return FhirpathExecutor.of(new Parser(), new SingleEvaluatorProvider(encoders.getContext(),
         StaticFunctionRegistry.getInstance(),
         Map.of(),
@@ -339,7 +338,7 @@ class SingleResourceFhirpathTest {
 
 
   @Test
-  void testComparisonBase64Binay() {
+  void testComparisonBase64Binary() {
 
     final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
         List.of(
@@ -357,6 +356,7 @@ class SingleResourceFhirpathTest {
     Assertions.assertThat(evalResult)
         .isElementPath(BooleanCollection.class)
         .toCanonicalResult()
+        .explain()
         .hasRowsUnordered(
             RowFactory.create("1", true)
         );

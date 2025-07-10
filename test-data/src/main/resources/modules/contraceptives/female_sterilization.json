@@ -1,0 +1,194 @@
+{
+  "name": "Female Sterilization",
+  "remarks": [
+    "This submodule performs a female sterilization procedure. This procedure ",
+    "is not reversible."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Set_Contraceptive_Type"
+    },
+    "Set_Contraceptive_Type": {
+      "type": "SetAttribute",
+      "attribute": "contraceptive_type",
+      "value": "sterilization",
+      "direct_transition": "Sterilization Requested"
+    },
+    "Consultation_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "outpatient",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "698314001",
+          "display": "Consultation for treatment"
+        }
+      ],
+      "direct_transition": "Consultation",
+      "reason": "Sterilization Requested"
+    },
+    "End_Consultation": {
+      "type": "EncounterEnd",
+      "direct_transition": "Delay_For_Procedure"
+    },
+    "Delay_For_Procedure": {
+      "type": "Delay",
+      "range": {
+        "low": 1,
+        "high": 3,
+        "unit": "weeks"
+      },
+      "direct_transition": "Tubal_Ligation_Surgery_Encounter"
+    },
+    "Tubal_Ligation_Surgery_Encounter": {
+      "type": "Encounter",
+      "encounter_class": "inpatient",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "305408004",
+          "display": "Admission to surgical department"
+        }
+      ],
+      "direct_transition": "Tubal_Ligation_Procedure",
+      "reason": "Sterilization Requested"
+    },
+    "Tubal_Ligation_Procedure": {
+      "type": "Procedure",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "287664005",
+          "display": "Bilateral tubal ligation"
+        }
+      ],
+      "duration": {
+        "low": 2,
+        "high": 3,
+        "unit": "hours"
+      },
+      "direct_transition": "Sterilization Complete",
+      "reason": "Sterilization Requested"
+    },
+    "Become_Infertile": {
+      "type": "SetAttribute",
+      "attribute": "infertile",
+      "value": true,
+      "direct_transition": "Post_Surgery_Care"
+    },
+    "Post_Surgery_Care": {
+      "type": "CarePlanStart",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "737471002",
+          "display": "Minor surgery care management (procedure)"
+        }
+      ],
+      "activities": [
+        {
+          "system": "SNOMED-CT",
+          "code": "183051005",
+          "display": "Recommendation to rest"
+        },
+        {
+          "system": "SNOMED-CT",
+          "code": "243077000",
+          "display": "Recommendation to limit sexual activity"
+        }
+      ],
+      "direct_transition": "Postoperative Care",
+      "reason": "History_of_Tubal_Ligation"
+    },
+    "End_Surgery_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Recovery_Period"
+    },
+    "Recovery_Period": {
+      "type": "Delay",
+      "range": {
+        "low": 2,
+        "high": 3,
+        "unit": "weeks"
+      },
+      "direct_transition": "End_Post_Surgery_Care"
+    },
+    "End_Post_Surgery_Care": {
+      "type": "CarePlanEnd",
+      "careplan": "Post_Surgery_Care",
+      "direct_transition": "Terminal"
+    },
+    "Terminal": {
+      "type": "Terminal"
+    },
+    "Consultation": {
+      "type": "Procedure",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 268533009,
+          "display": "Sterilization education (procedure)"
+        }
+      ],
+      "distribution": {
+        "kind": "UNIFORM",
+        "parameters": {
+          "high": 60,
+          "low": 45
+        }
+      },
+      "unit": "minutes",
+      "direct_transition": "End_Consultation"
+    },
+    "Postoperative Care": {
+      "type": "Procedure",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 133899007,
+          "display": "Postoperative care (regime/therapy)"
+        }
+      ],
+      "distribution": {
+        "kind": "EXPONENTIAL",
+        "parameters": {
+          "mean": 5
+        }
+      },
+      "unit": "hours",
+      "direct_transition": "End_Surgery_Encounter",
+      "reason": "History_of_Tubal_Ligation"
+    },
+    "History_of_Tubal_Ligation": {
+      "type": "ConditionOnset",
+      "target_encounter": "Tubal_Ligation_Surgery_Encounter",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 267020005,
+          "display": "History of tubal ligation (situation)"
+        }
+      ],
+      "direct_transition": "Become_Infertile"
+    },
+    "Sterilization Requested": {
+      "type": "ConditionOnset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 183996000,
+          "display": "Sterilization requested (situation)"
+        }
+      ],
+      "direct_transition": "Consultation_Encounter",
+      "target_encounter": "Consultation_Encounter"
+    },
+    "Sterilization Complete": {
+      "type": "ConditionEnd",
+      "direct_transition": "History_of_Tubal_Ligation",
+      "condition_onset": "Sterilization Requested"
+    }
+  },
+  "gmf_version": 1
+}

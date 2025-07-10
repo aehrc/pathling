@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.errors;
 
+import java.io.Serial;
+
 /**
  * Thrown when a response from the upstream server does not match expectations.
  *
@@ -13,6 +15,7 @@ package au.csiro.pathling.errors;
  */
 public class UnexpectedResponseException extends RuntimeException {
 
+  @Serial
   private static final long serialVersionUID = 5953491164133388069L;
 
   /**

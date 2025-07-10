@@ -28,7 +28,7 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>python</artifactId>
-  <packaging>jar</packaging>
+  <packaging>pom</packaging>
 
   <name>Pathling Python API</name>
   <description>A library for using Pathling with Python.</description>

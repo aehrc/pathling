@@ -34,7 +34,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.springframework.http.MediaType;
 
 /**
  * @author John Grimes
@@ -43,10 +42,11 @@ public abstract class TestHelpers {
 
   public static final String LOINC_URL = "http://loinc.org";
   public static final String SNOMED_URL = "http://snomed.info/sct";
-  public static final String WAREHOUSE_URL = System.getProperty("pathling.storage.warehouseUrl", "src/test/resources/test-data");
-  public static final String DATABASE_NAME = System.getProperty("pathling.storage.databaseName", "parquet");
+  public static final String WAREHOUSE_URL = System.getProperty("pathling.storage.warehouseUrl",
+      "src/test/resources/test-data");
+  public static final String DATABASE_NAME = System.getProperty("pathling.storage.databaseName",
+      "parquet");
   public static final String UCUM_URL = "http://unitsofmeasure.org";
-  public static final MediaType FHIR_MEDIA_TYPE = new MediaType("application", "fhir+json");
 
   public static void mockResource(@Nonnull final DataSource dataSource,
       @Nonnull final SparkSession spark, @Nonnull final ResourceType... resourceTypes) {

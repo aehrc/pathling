@@ -18,9 +18,8 @@
 package au.csiro.pathling.fhirpath.parser;
 
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toList;
 
-import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.FunctionInvocationContext;
@@ -48,13 +47,13 @@ import java.util.Optional;
  */
 class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
-  private static boolean canBeResourceType(@Nonnull final String identifier) {
-    // check if starts with capital letter
+  private static boolean canBeResourceType(@Nonnull final CharSequence identifier) {
+    // Check if the identifier starts with a capital letter.
     return !identifier.isEmpty() && Character.isUpperCase(identifier.charAt(0));
   }
 
 
-  final boolean isRoot;
+  private final boolean isRoot;
 
   public InvocationVisitor(final boolean isRoot) {
     this.isRoot = isRoot;
@@ -114,14 +113,10 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
         .map(ParamListContext::expression)
         .map(p -> p.stream()
             .map(paramListVisitor::visit)
-            .collect(toList())
+            .toList()
         ).orElse(Collections.emptyList());
 
-    // if ("resolve".equals(functionIdentifier)) {
-    //   return ResolvePath.of(arguments);
-    // } else {
     return new EvalFunction(functionIdentifier, arguments);
-    // }
   }
 
   @Override
@@ -135,14 +130,14 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Nonnull
   public FhirPath visitIndexInvocation(
       @Nullable final IndexInvocationContext ctx) {
-    throw new InvalidUserInputError("$index is not supported");
+    throw new UnsupportedFhirPathFeatureError("$index is not supported");
   }
 
   @Override
   @Nonnull
   public FhirPath visitTotalInvocation(
       @Nullable final TotalInvocationContext ctx) {
-    throw new InvalidUserInputError("$total is not supported");
+    throw new UnsupportedFhirPathFeatureError("$total is not supported");
   }
 
 }

@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.path;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
@@ -43,12 +44,13 @@ import lombok.experimental.UtilityClass;
  */
 @UtilityClass
 public class Literals {
-  
+
   /**
    * Creates a null literal value.
    *
    * @return a new {@link NullLiteral} instance
    */
+  @Nonnull
   public static NullLiteral nullLiteral() {
     return new NullLiteral();
   }
@@ -59,6 +61,7 @@ public class Literals {
    * @param literalValue the string value
    * @return a new {@link StringLiteral} instance
    */
+  @Nonnull
   public static StringLiteral stringLiteral(@Nonnull final String literalValue) {
     return new StringLiteral(literalValue);
   }
@@ -69,6 +72,7 @@ public class Literals {
    * @param literalValue the boolean value as a string ("true" or "false")
    * @return a new {@link BooleanLiteral} instance
    */
+  @Nonnull
   public static BooleanLiteral booleanLiteral(@Nonnull final String literalValue) {
     return new BooleanLiteral(literalValue);
   }
@@ -79,6 +83,7 @@ public class Literals {
    * @param literalValue the coding value as a string
    * @return a new {@link CodingLiteral} instance
    */
+  @Nonnull
   public static CodingLiteral codingLiteral(@Nonnull final String literalValue) {
     return new CodingLiteral(literalValue);
   }
@@ -95,7 +100,7 @@ public class Literals {
    */
   @SuppressWarnings("unused")
   public static LiteralPath dateLiteral(@Nonnull final String literalValue) {
-    throw new UnsupportedOperationException("Date literals are not supported");
+    throw new UnsupportedFhirPathFeatureError("Date literals are not supported");
   }
 
   /**
@@ -110,7 +115,7 @@ public class Literals {
    */
   @SuppressWarnings("unused")
   public static LiteralPath dateTimeLiteral(@Nonnull final String literalValue) {
-    throw new UnsupportedOperationException("DateTime literals are not supported");
+    throw new UnsupportedFhirPathFeatureError("DateTime literals are not supported");
   }
 
   /**
@@ -125,7 +130,7 @@ public class Literals {
    */
   @SuppressWarnings("unused")
   public static LiteralPath timeLiteral(@Nonnull final String literalValue) {
-    throw new UnsupportedOperationException("DateTime literals are not supported");
+    throw new UnsupportedFhirPathFeatureError("DateTime literals are not supported");
   }
 
   /**
@@ -134,6 +139,8 @@ public class Literals {
    * @param literalValue the integer value as a string
    * @return a new {@link IntegerLiteral} instance
    */
+  @SuppressWarnings("WeakerAccess")
+  @Nonnull
   public static IntegerLiteral integerLiteral(@Nonnull final String literalValue) {
     return new IntegerLiteral(literalValue);
   }
@@ -144,6 +151,8 @@ public class Literals {
    * @param literalValue the decimal value as a string
    * @return a new {@link DecimalLiteral} instance
    */
+  @SuppressWarnings("WeakerAccess")
+  @Nonnull
   public static DecimalLiteral decimalLiteral(@Nonnull final String literalValue) {
     return new DecimalLiteral(literalValue);
   }
@@ -158,10 +167,10 @@ public class Literals {
    * @return a new calendar duration literal instance
    * @throws UnsupportedOperationException always, as calendar duration literals are not supported
    */
-  @SuppressWarnings("unused")
+  @SuppressWarnings({"WeakerAccess", "unused"})
   public static LiteralPath calendarDurationLiteral(
       @Nonnull final String literalValue) {
-    throw new UnsupportedOperationException("Calendar duration literals are not supported");
+    throw new UnsupportedFhirPathFeatureError("Calendar duration literals are not supported");
   }
 
   /**
@@ -174,16 +183,16 @@ public class Literals {
    * @return a new UCUM quantity literal instance
    * @throws UnsupportedOperationException always, as UCUM quantity literals are not supported
    */
-  @SuppressWarnings("unused")
+  @SuppressWarnings({"unused", "WeakerAccess"})
   public static LiteralPath ucumQuantityLiteral(@Nonnull final String literalValue) {
-    throw new UnsupportedOperationException("Quantity literals are not supported");
+    throw new UnsupportedFhirPathFeatureError("Quantity literals are not supported");
   }
 
   /**
    * Creates a numeric literal value, determining whether it's an integer or decimal.
    * <p>
-   * This method attempts to parse the value as an integer first. If that fails, it creates
-   * a decimal literal instead.
+   * This method attempts to parse the value as an integer first. If that fails, it creates a
+   * decimal literal instead.
    * </p>
    *
    * @param literalValue the numeric value as a string
@@ -212,7 +221,7 @@ public class Literals {
    * @throws UnsupportedOperationException always, as quantity literals are not supported
    */
   public static LiteralPath quantityLiteral(@Nonnull final String literalValue,
-      @Nonnull final String unit, boolean isUCUM) {
+      @Nonnull final String unit, final boolean isUCUM) {
     return isUCUM
            ? calendarDurationLiteral(String.format("%s %s", literalValue, unit))
            : ucumQuantityLiteral(String.format("%s %s", literalValue, unit));

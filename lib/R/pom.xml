@@ -63,7 +63,7 @@
       of the sparklyr version that we depend upon that is on the archive site. The reason we can't 
       use the latest from the CDN is that the files drop off the CDN when a new version is released.
     -->
-    <pathling.Rapi.sparkVersion>3.5.5</pathling.Rapi.sparkVersion>
+    <pathling.Rapi.sparkVersion>3.5.6</pathling.Rapi.sparkVersion>
     <pathling.Rapi.scalaVersion>${pathling.scalaVersion}</pathling.Rapi.scalaVersion>
     <pathling.Rapi.hadoopMajorVersion>${pathling.hadoopMajorVersion}</pathling.Rapi.hadoopMajorVersion>
     <pathling.Rapi.hadoopVersion>${pathling.hadoopVersion}</pathling.Rapi.hadoopVersion>
@@ -277,25 +277,6 @@
             </configuration>
           </execution>
           <execution>
-            <id>check-package</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <skip>${skipRapiTests}</skip>
-              <executable>R</executable>
-              <workingDirectory>${project.basedir}</workingDirectory>
-              <arguments>
-                <argument>CMD</argument>
-                <argument>check</argument>
-                <argument>--output=${project.basedir}/target</argument>
-                <argument>--as-cran</argument>
-                <argument>target/${pathling.Rapi.packageName}_${pathling.Rapi.version}.tar.gz</argument>
-              </arguments>
-            </configuration>
-          </execution>
-          <execution>
             <id>install-package</id>
             <phase>install</phase>
             <goals>
@@ -375,6 +356,38 @@
                 <configuration>
                   <classesDirectory>${project.build.directory}/docs</classesDirectory>
                   <classifier>docs</classifier>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>check</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>check-package</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${skipRapiTests}</skip>
+                  <executable>R</executable>
+                  <workingDirectory>${project.basedir}</workingDirectory>
+                  <arguments>
+                    <argument>CMD</argument>
+                    <argument>check</argument>
+                    <argument>--output=${project.basedir}/target</argument>
+                    <argument>--as-cran</argument>
+                    <argument>target/${pathling.Rapi.packageName}_${pathling.Rapi.version}.tar.gz</argument>
+                  </arguments>
                 </configuration>
               </execution>
             </executions>

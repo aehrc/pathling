@@ -1,0 +1,751 @@
+{
+  "name": "Metabolic Syndrome Standards of Care",
+  "remarks": [],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "remarks": [
+        "Initial impl == direct translation of ruby module"
+      ],
+      "direct_transition": "Metabolic_Syndrome_Review_Reason"
+    },
+    "Wellness_Encounter": {
+      "type": "Encounter",
+      "wellness": true,
+      "direct_transition": "check CKD",
+      "reason": "metabolic_syndrome_review"
+    },
+    "Check_Diabetes": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Or",
+            "conditions": [
+              {
+                "condition_type": "Attribute",
+                "attribute": "diabetes",
+                "operator": "is not nil"
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "prediabetes",
+                "operator": "is not nil"
+              }
+            ]
+          },
+          "transition": "Record_HA1C"
+        },
+        {
+          "transition": "End_Wellness_Encounter"
+        }
+      ]
+    },
+    "Record_HA1C": {
+      "type": "Observation",
+      "vital_sign": "Blood Glucose",
+      "category": "laboratory",
+      "codes": [
+        {
+          "system": "LOINC",
+          "code": "4548-4",
+          "display": "Hemoglobin A1c/Hemoglobin.total in Blood"
+        }
+      ],
+      "unit": "%",
+      "direct_transition": "Blood_Sugar_Check"
+    },
+    "Blood_Sugar_Check": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "transition": "Hyperglycemia",
+          "condition": {
+            "condition_type": "Vital Sign",
+            "vital_sign": "Glucose",
+            "operator": ">=",
+            "value": 130
+          }
+        },
+        {
+          "transition": "Triglyceride_Check"
+        }
+      ]
+    },
+    "Hyperglycemia": {
+      "type": "ConditionOnset",
+      "assign_to_attribute": "hyperglycemia",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 80394007,
+          "display": "Hyperglycemia (disorder)"
+        }
+      ],
+      "direct_transition": "Triglyceride_Check"
+    },
+    "Triglyceride_Check": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "transition": "Hypertriglyceridemia",
+          "condition": {
+            "condition_type": "Vital Sign",
+            "vital_sign": "Triglycerides",
+            "operator": ">=",
+            "value": 150
+          }
+        },
+        {
+          "transition": "Metabolic_Check"
+        }
+      ]
+    },
+    "Hypertriglyceridemia": {
+      "type": "ConditionOnset",
+      "assign_to_attribute": "hypertriglyceridemia",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 302870006,
+          "display": "Hypertriglyceridemia (disorder)"
+        }
+      ],
+      "direct_transition": "Metabolic_Check"
+    },
+    "Metabolic_Check": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "transition": "Metabolic_Syndrome",
+          "condition": {
+            "condition_type": "At Least",
+            "minimum": 3,
+            "conditions": [
+              {
+                "condition_type": "Attribute",
+                "attribute": "obesity",
+                "operator": "is not nil"
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "hypertension",
+                "operator": "is not nil"
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "hyperglycemia",
+                "operator": "is not nil"
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "hypertriglyceridemia",
+                "operator": "is not nil"
+              },
+              {
+                "condition_type": "Vital Sign",
+                "vital_sign": "HDL",
+                "operator": "<",
+                "value": 50
+              }
+            ]
+          }
+        },
+        {
+          "transition": "Diagnosis"
+        }
+      ]
+    },
+    "Metabolic_Syndrome": {
+      "type": "ConditionOnset",
+      "assign_to_attribute": "metabolic_syndrome",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": 237602007,
+          "display": "Metabolic syndrome X (disorder)"
+        }
+      ],
+      "direct_transition": "Diagnosis"
+    },
+    "Diagnosis": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Observation",
+            "codes": [
+              {
+                "system": "LOINC",
+                "code": "4548-4",
+                "display": "Hemoglobin A1c/Hemoglobin.total in Blood"
+              }
+            ],
+            "operator": "<=",
+            "value": 5.7
+          },
+          "remarks": [
+            "Normal level"
+          ],
+          "transition": "End_Wellness_Encounter"
+        },
+        {
+          "condition": {
+            "condition_type": "Observation",
+            "codes": [
+              {
+                "system": "LOINC",
+                "code": "4548-4",
+                "display": "Hemoglobin A1c/Hemoglobin.total in Blood"
+              }
+            ],
+            "operator": "<=",
+            "value": 6.5
+          },
+          "remarks": [
+            "Prediabetic level"
+          ],
+          "transition": "Set_Severity_0"
+        },
+        {
+          "condition": {
+            "condition_type": "Observation",
+            "codes": [
+              {
+                "system": "LOINC",
+                "code": "4548-4",
+                "display": "Hemoglobin A1c/Hemoglobin.total in Blood"
+              }
+            ],
+            "operator": "<=",
+            "value": 7.5
+          },
+          "remarks": [
+            "Diabetic level"
+          ],
+          "transition": "Set_Severity_1"
+        },
+        {
+          "condition": {
+            "condition_type": "Observation",
+            "codes": [
+              {
+                "system": "LOINC",
+                "code": "4548-4",
+                "display": "Hemoglobin A1c/Hemoglobin.total in Blood"
+              }
+            ],
+            "operator": "<=",
+            "value": 9
+          },
+          "remarks": [
+            "Severe level"
+          ],
+          "transition": "Set_Severity_2"
+        },
+        {
+          "condition": {
+            "condition_type": "And",
+            "conditions": [
+              {
+                "condition_type": "Attribute",
+                "attribute": "diabetes_severity",
+                "operator": "is not nil"
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "diabetes_severity",
+                "operator": ">=",
+                "value": 3
+              },
+              {
+                "condition_type": "PriorState",
+                "name": "Set_Severity_3",
+                "within": {
+                  "quantity": 1,
+                  "unit": "years"
+                }
+              }
+            ]
+          },
+          "remarks": [
+            "in words - if the severity is >= 3 and they have been set severity 3 within a year"
+          ],
+          "transition": "Set_Severity_4"
+        },
+        {
+          "remarks": [
+            "> severe level"
+          ],
+          "transition": "Set_Severity_3"
+        }
+      ]
+    },
+    "Set_Severity_0": {
+      "type": "SetAttribute",
+      "attribute": "diabetes_severity",
+      "value": 0,
+      "remarks": [
+        "setting prediabetes as severity 0 makes some things easier"
+      ],
+      "direct_transition": "Diagnose_Prediabetes"
+    },
+    "Diagnose_Prediabetes": {
+      "type": "ConditionOnset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "15777000",
+          "display": "Prediabetes"
+        }
+      ],
+      "assign_to_attribute": "diabetes_stage",
+      "direct_transition": "Check_CarePlan"
+    },
+    "Set_Severity_1": {
+      "type": "SetAttribute",
+      "attribute": "diabetes_severity",
+      "value": 1,
+      "direct_transition": "Diagnose_Diabetes"
+    },
+    "Set_Severity_2": {
+      "type": "SetAttribute",
+      "attribute": "diabetes_severity",
+      "value": 2,
+      "direct_transition": "Diagnose_Diabetes"
+    },
+    "Set_Severity_3": {
+      "type": "SetAttribute",
+      "attribute": "diabetes_severity",
+      "value": 3,
+      "direct_transition": "Diagnose_Diabetes"
+    },
+    "Set_Severity_4": {
+      "type": "SetAttribute",
+      "attribute": "diabetes_severity",
+      "value": 4,
+      "direct_transition": "Diagnose_Diabetes"
+    },
+    "Diagnose_Diabetes": {
+      "type": "ConditionOnset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "44054006",
+          "display": "Diabetes mellitus type 2 (disorder)"
+        }
+      ],
+      "assign_to_attribute": "diabetes_stage",
+      "direct_transition": "Check_CarePlan"
+    },
+    "Check_CarePlan": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Active CarePlan",
+            "codes": [
+              {
+                "system": "SNOMED-CT",
+                "code": "698360004",
+                "display": "Diabetes self management plan"
+              }
+            ]
+          },
+          "transition": "Prescribe_Medications"
+        },
+        {
+          "transition": "Diabetic_CarePlan"
+        }
+      ]
+    },
+    "Diabetic_CarePlan": {
+      "type": "CarePlanStart",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "698360004",
+          "display": "Diabetes self management plan"
+        }
+      ],
+      "activities": [
+        {
+          "system": "SNOMED-CT",
+          "code": "160670007",
+          "display": "Diabetic diet"
+        },
+        {
+          "system": "SNOMED-CT",
+          "code": "229065009",
+          "display": "Exercise therapy"
+        }
+      ],
+      "goals": [
+        {
+          "observation": {
+            "codes": [
+              {
+                "system": "LOINC",
+                "code": "4548-4",
+                "display": "Hemoglobin A1c total in Blood"
+              }
+            ],
+            "operator": "<",
+            "value": "7.0"
+          },
+          "addresses": [
+            "diabetes_stage"
+          ]
+        },
+        {
+          "observation": {
+            "codes": [
+              {
+                "system": "LOINC",
+                "code": "2339-0",
+                "display": "Glucose [Mass/volume] in Blood"
+              }
+            ],
+            "operator": "<",
+            "value": "108"
+          },
+          "addresses": [
+            "diabetes_stage"
+          ]
+        },
+        {
+          "text": "Maintain blood pressure below 140/90 mmHg",
+          "addresses": [
+            "diabetes_stage"
+          ]
+        },
+        {
+          "text": "Improve and maintenance of optimal foot health: aim at early detection of peripheral vascular problems and neuropathy presumed due to diabetes; and prevention of diabetic foot ulcer, gangrene",
+          "addresses": [
+            "diabetes_stage"
+          ]
+        },
+        {
+          "text": "Address patient knowledge deficit on diabetic self-care",
+          "addresses": [
+            "diabetes_stage"
+          ]
+        }
+      ],
+      "remarks": [
+        "based on https://github.com/clinical-cloud/sample-careplans"
+      ],
+      "reason": "diabetes_stage",
+      "direct_transition": "Glucose_Monitor"
+    },
+    "Prescribe_Medications": {
+      "type": "CallSubmodule",
+      "submodule": "metabolic_syndrome/medications",
+      "direct_transition": "DME and Supplies"
+    },
+    "Check_Complications": {
+      "type": "Simple",
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "ckd",
+            "operator": "==",
+            "value": 1
+          },
+          "distributions": [
+            {
+              "transition": "Check_Anemia_Exist",
+              "distribution": 0.084
+            },
+            {
+              "transition": "Check_Eye_Conditions",
+              "distribution": 0.916
+            }
+          ]
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "ckd",
+            "operator": "==",
+            "value": 2
+          },
+          "distributions": [
+            {
+              "transition": "Check_Anemia_Exist",
+              "distribution": 0.121
+            },
+            {
+              "transition": "Check_Eye_Conditions",
+              "distribution": 0.879
+            }
+          ]
+        },
+        {
+          "distributions": [
+            {
+              "transition": "Check_Anemia_Exist",
+              "distribution": 0.174
+            },
+            {
+              "transition": "Check_Eye_Conditions",
+              "distribution": 0.826
+            }
+          ],
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "ckd",
+            "operator": "==",
+            "value": 3
+          }
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "ckd",
+            "operator": "==",
+            "value": 4
+          },
+          "distributions": [
+            {
+              "transition": "Check_Anemia_Exist",
+              "distribution": 0.503
+            },
+            {
+              "transition": "Check_Eye_Conditions",
+              "distribution": 0.497
+            }
+          ]
+        }
+      ],
+      "remarks": [
+        "The prevalence of anemia increased with stage of CKD, from 8.4% at stage 1 to 53.4% at stage 5 - see https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3879360/"
+      ]
+    },
+    "check CKD": {
+      "type": "CallSubmodule",
+      "submodule": "metabolic_syndrome/kidney_conditions",
+      "direct_transition": "Check_Diabetes"
+    },
+    "Check_Eye_Conditions": {
+      "type": "CallSubmodule",
+      "submodule": "metabolic_syndrome/eye_conditions",
+      "direct_transition": "Check_Neuropathy"
+    },
+    "Check_Neuropathy": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "And",
+            "conditions": [
+              {
+                "condition_type": "Attribute",
+                "attribute": "neuropathy",
+                "operator": "is not nil"
+              },
+              {
+                "condition_type": "Not",
+                "condition": {
+                  "condition_type": "Active Condition",
+                  "codes": [
+                    {
+                      "system": "SNOMED-CT",
+                      "code": "368581000119106",
+                      "display": "Neuropathy due to type 2 diabetes mellitus (disorder)"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "transition": "Diagnose_Neuropathy"
+        },
+        {
+          "condition": {
+            "condition_type": "And",
+            "conditions": [
+              {
+                "condition_type": "Attribute",
+                "attribute": "neuropathy",
+                "operator": "is nil"
+              },
+              {
+                "condition_type": "Active Condition",
+                "codes": [
+                  {
+                    "system": "SNOMED-CT",
+                    "code": "368581000119106",
+                    "display": "Neuropathy due to type 2 diabetes mellitus (disorder)"
+                  }
+                ]
+              }
+            ]
+          },
+          "transition": "End_Neuropathy"
+        },
+        {
+          "transition": "Consider_Procedures"
+        }
+      ]
+    },
+    "Diagnose_Neuropathy": {
+      "type": "ConditionOnset",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "368581000119106",
+          "display": "Neuropathy due to type 2 diabetes mellitus (disorder)"
+        }
+      ],
+      "direct_transition": "Consider_Procedures",
+      "assign_to_attribute": "diabetic_neuropathy"
+    },
+    "End_Neuropathy": {
+      "type": "ConditionEnd",
+      "codes": [
+        {
+          "system": "SNOMED-CT",
+          "code": "368581000119106",
+          "display": "Neuropathy due to type 2 diabetes mellitus (disorder)"
+        }
+      ],
+      "direct_transition": "Consider_Procedures"
+    },
+    "Consider_Procedures": {
+      "type": "Simple",
+      "direct_transition": "Potential_Amputation"
+    },
+    "Potential_Amputation": {
+      "type": "Simple",
+      "complex_transition": [
+        {
+          "condition": {
+            "condition_type": "PriorState",
+            "name": "Amputation_Necessary",
+            "within": {
+              "quantity": 1,
+              "unit": "years"
+            }
+          },
+          "remarks": [
+            "dialysis means this check is made every few days which can skew results.",
+            "we only want to consider amputation once a year"
+          ],
+          "transition": "No_Amputation_Necessary"
+        },
+        {
+          "condition": {
+            "condition_type": "Active Condition",
+            "codes": [
+              {
+                "system": "SNOMED-CT",
+                "code": "368581000119106",
+                "display": "Neuropathy due to type 2 diabetes mellitus (disorder)"
+              }
+            ]
+          },
+          "distributions": [
+            {
+              "distribution": 0.0025,
+              "transition": "Amputation_Necessary"
+            },
+            {
+              "distribution": 0.9975,
+              "transition": "No_Amputation_Necessary"
+            }
+          ],
+          "remarks": [
+            "In 2010, about 73,000 non-traumatic lower-limb amputations were performed in adults aged 20 years or older with diagnosed diabetes.",
+            "28.9 million adults had diagnosed diabetes. 73,000/ 28,900,000 = 0.0025 or 0.25% per year",
+            "https://www.cdc.gov/diabetes/data/statistics/2014statisticsreport.html"
+          ]
+        },
+        {
+          "transition": "No_Amputation_Necessary"
+        }
+      ]
+    },
+    "Amputation_Necessary": {
+      "type": "SetAttribute",
+      "attribute": "diabetes_amputation_necessary",
+      "value": true,
+      "direct_transition": "Schedule_Followup"
+    },
+    "No_Amputation_Necessary": {
+      "type": "SetAttribute",
+      "attribute": "diabetes_amputation_necessary",
+      "value": false,
+      "direct_transition": "Living_With_Diabetes"
+    },
+    "Schedule_Followup": {
+      "type": "EncounterEnd",
+      "direct_transition": "Amputations"
+    },
+    "Amputations": {
+      "type": "CallSubmodule",
+      "submodule": "metabolic_syndrome/amputations",
+      "direct_transition": "Living_With_Diabetes"
+    },
+    "Living_With_Diabetes": {
+      "type": "Simple",
+      "direct_transition": "End_Wellness_Encounter"
+    },
+    "Anemia_Submodule": {
+      "type": "CallSubmodule",
+      "submodule": "anemia/anemia_sub",
+      "direct_transition": "Check_Eye_Conditions"
+    },
+    "Check_Anemia_Exist": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "transition": "Anemia_Submodule",
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "anemia",
+            "operator": "is nil"
+          }
+        },
+        {
+          "transition": "Check_Eye_Conditions"
+        }
+      ],
+      "remarks": [
+        "The prevalence of anemia increased with stage of CKD, from 8.4% at stage 1 to 53.4% at stage 5 - see https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3879360/",
+        "",
+        ""
+      ]
+    },
+    "End_Wellness_Encounter": {
+      "type": "EncounterEnd",
+      "direct_transition": "Wellness_Encounter"
+    },
+    "Glucose_Monitor": {
+      "type": "Device",
+      "code": {
+        "system": "SNOMED-CT",
+        "code": 337414009,
+        "display": "Blood glucose meter (physical object)"
+      },
+      "direct_transition": "Prescribe_Medications"
+    },
+    "DME and Supplies": {
+      "type": "CallSubmodule",
+      "submodule": "metabolic_syndrome/dme_supplies",
+      "direct_transition": "Check_Complications"
+    },
+    "Metabolic_Syndrome_Review_Reason": {
+      "type": "SetAttribute",
+      "attribute": "metabolic_syndrome_review",
+      "direct_transition": "Wellness_Encounter",
+      "value_code": {
+        "system": "SNOMED-CT",
+        "code": 763288003,
+        "display": "Patient review (procedure)"
+      }
+    }
+  },
+  "gmf_version": 1
+}

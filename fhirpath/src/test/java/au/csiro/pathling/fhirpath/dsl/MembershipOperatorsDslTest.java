@@ -157,16 +157,16 @@ public class MembershipOperatorsDslTest extends FhirPathDslTestBase {
         .testError("'http://loinc.org|8480-6||\\'Systolic blood pressure\\'' in manyCoding",
             "String in Coding many")
         .group("Test illegal membership operations")
-        .testError("Left operand to contains operator must be Comparable",
+        .testError("Left operand to contains operator must be comparable",
             "name contains true",
             "Contains with not comparable collection")
-        .testError("Right operand to in operator must be Comparable",
+        .testError("Right operand to in operator must be comparable",
             "1 in name",
             "In with not comparable collection")
-        .testError("Right operand to contains operator must be Comparable",
+        .testError("Right operand to contains operator must be comparable",
             "true contains name",
             "Contains with not comparable element")
-        .testError("Left operand to in operator must be Comparable",
+        .testError("Left operand to in operator must be comparable",
             "name in 10",
             "In with not comparable element")
         .build();

@@ -165,7 +165,7 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
 
   @Override
   public boolean isComparableTo(@Nonnull final Comparable path) {
-    return COMPARABLE_TYPES.contains(path.getClass()) || Comparable.super.isComparableTo(path);
+    return COMPARABLE_TYPES.contains(path.getClass());
   }
 
   @Nonnull
@@ -203,10 +203,7 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
       Column valueColumn = operation.getSparkFunction().apply(sourceNumeric, targetNumeric);
 
       switch (operation) {
-        case ADDITION:
-        case SUBTRACTION:
-        case MULTIPLICATION:
-        case MODULUS:
+        case ADDITION, SUBTRACTION, MULTIPLICATION, MODULUS:
           if (target instanceof DecimalCollection) {
             valueColumn = valueColumn.cast(DataTypes.LongType);
           }

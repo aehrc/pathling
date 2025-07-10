@@ -8,9 +8,7 @@ import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
-import au.csiro.pathling.fhirpath.operator.Comparable;
 import jakarta.annotation.Nonnull;
 
 /**
@@ -18,13 +16,16 @@ import jakarta.annotation.Nonnull;
  *
  * @author Piotr Szul
  * @author John Grimes
- * @see <a href="https://build.fhir.org/fhirpath.html#functions">FHIR specification - Additional
+ * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#functions">FHIR specification - Additional
  * functions</a>
  */
 public class FhirFunctions {
 
   private static final String URL_ELEMENT_NAME = "url";
   private static final String EXTENSION_ELEMENT_NAME = "extension";
+
+  private FhirFunctions() {
+  }
 
   /**
    * Will filter the input collection for items named "extension" with the given url. This is a
@@ -40,12 +41,20 @@ public class FhirFunctions {
   @Nonnull
   public static Collection extension(@Nonnull final Collection input,
       @Nonnull final StringCollection url) {
+    // Traverse to the "extension" child element.
     return input.traverse(EXTENSION_ELEMENT_NAME).map(extensionCollection ->
-        FilteringAndProjectionFunctions.where(extensionCollection, c -> c.traverse(
-                URL_ELEMENT_NAME).map(
-                urlCollection -> ((Comparable) urlCollection).getComparison(EQUALS).apply(url))
-            .map(col -> BooleanCollection.build(new DefaultRepresentation(col)))
-            .orElse(BooleanCollection.fromValue(false)))
+        // Filter the "extension" collection for items with the specified URL.
+        FilteringAndProjectionFunctions.where(extensionCollection,
+            // Traverse to the "url" child element of the extension.
+            c -> c.traverse(URL_ELEMENT_NAME)
+                .filter(StringCollection.class::isInstance)
+                // Use the comparison operation to check if the URL matches the input URL.
+                .map(urlCollection ->
+                    ((StringCollection) urlCollection).getComparison(EQUALS).apply(url))
+                // If the URL is present, build a BooleanCollection from the result.
+                .map(BooleanCollection::build)
+                // If the URL is not present, return a false Boolean literal.
+                .orElse(BooleanCollection.fromValue(false)))
     ).orElse(EmptyCollection.getInstance());
   }
 

@@ -23,9 +23,9 @@ import org.apache.spark.sql.Column;
 /**
  * Pathling-specific SQL functions that extend Spark SQL functionality.
  * <p>
- * This interface provides utility functions for working with Spark SQL columns in the context
- * of FHIR data processing. These functions handle common operations like pruning annotations,
- * safely concatenating maps, and collecting maps during aggregation.
+ * This interface provides utility functions for working with Spark SQL columns in the context of
+ * FHIR data processing. These functions handle common operations like pruning annotations, safely
+ * concatenating maps, and collecting maps during aggregation.
  */
 public interface SqlFunctions {
 
