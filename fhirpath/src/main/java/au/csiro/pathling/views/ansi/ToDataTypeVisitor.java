@@ -36,8 +36,8 @@ public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
       return visitComplexType(ctx.complexType());
     }
 
-    // Default for unrecognized types
-    return factory.createDefault();
+    // This should never happen unless there's a bug in the parser or visitor
+    throw new IllegalStateException("Unrecognized SQL type: " + ctx.getText());
   }
 
   @Override
@@ -93,8 +93,8 @@ public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
       return factory.createDecimal();
     }
 
-    // Default for unrecognized numeric types
-    return factory.createDouble();
+    // This should never happen unless there's a bug in the parser or visitor
+    throw new IllegalStateException("Unrecognized numeric type: " + typeText);
   }
 
   @Override
@@ -143,8 +143,8 @@ public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
       return factory.createInterval();
     }
 
-    // Default for unrecognized temporal types
-    return factory.createTimestamp();
+    // This should never happen unless there's a bug in the parser or visitor
+    throw new IllegalStateException("Unrecognized temporal type: " + typeText);
   }
 
   @Override
@@ -155,8 +155,8 @@ public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
       return visitArrayType(ctx.arrayType());
     }
 
-    // Default for unrecognized complex types
-    return factory.createDefault();
+    // This should never happen unless there's a bug in the parser or visitor
+    throw new IllegalStateException("Unrecognized complex type: " + ctx.getText());
   }
 
   @Override

@@ -34,7 +34,9 @@ public class AnsiSqlDataTypeFactory {
   @Nonnull
   public DataType createCharacter(final int length) {
     // Spark doesn't differentiate character lengths, always returns StringType
-    log.warn("CHAR({}) cannot be precisely represented in Spark SQL, using StringType without length constraint", length);
+    log.warn(
+        "CHAR({}) cannot be precisely represented in Spark SQL, using StringType without length constraint",
+        length);
     return DataTypes.StringType;
   }
 
@@ -57,7 +59,9 @@ public class AnsiSqlDataTypeFactory {
   @Nonnull
   public DataType createVarchar(final int length) {
     // Spark doesn't differentiate varchar lengths, always returns StringType
-    log.warn("VARCHAR({}) cannot be precisely represented in Spark SQL, using StringType without length constraint", length);
+    log.warn(
+        "VARCHAR({}) cannot be precisely represented in Spark SQL, using StringType without length constraint",
+        length);
     return DataTypes.StringType;
   }
 
@@ -198,7 +202,9 @@ public class AnsiSqlDataTypeFactory {
   @Nonnull
   public DataType createBinary(final int length) {
     // Spark doesn't differentiate binary lengths, always returns BinaryType
-    log.warn("BINARY({}) cannot be precisely represented in Spark SQL, using BinaryType without length constraint", length);
+    log.warn(
+        "BINARY({}) cannot be precisely represented in Spark SQL, using BinaryType without length constraint",
+        length);
     return DataTypes.BinaryType;
   }
 
@@ -221,7 +227,9 @@ public class AnsiSqlDataTypeFactory {
   @Nonnull
   public DataType createVarbinary(final int length) {
     // Spark doesn't differentiate varbinary lengths, always returns BinaryType
-    log.warn("VARBINARY({}) cannot be precisely represented in Spark SQL, using BinaryType without length constraint", length);
+    log.warn(
+        "VARBINARY({}) cannot be precisely represented in Spark SQL, using BinaryType without length constraint",
+        length);
     return DataTypes.BinaryType;
   }
 
@@ -254,7 +262,9 @@ public class AnsiSqlDataTypeFactory {
   @Nonnull
   public DataType createTimestamp(final int precision) {
     // Spark doesn't support timestamp precision, always returns TimestampType
-    log.warn("TIMESTAMP({}) precision cannot be precisely represented in Spark SQL, using TimestampNTZType", precision);
+    log.warn(
+        "TIMESTAMP({}) precision cannot be precisely represented in Spark SQL, using TimestampNTZType",
+        precision);
     return DataTypes.TimestampNTZType;
   }
 
@@ -266,7 +276,8 @@ public class AnsiSqlDataTypeFactory {
   @Nonnull
   public DataType createTimestampWithTimeZone() {
     // Spark doesn't have a direct timestamp with time zone type
-    log.warn("TIMESTAMP WITH TIME ZONE cannot be precisely represented in Spark SQL, using TimestampType");
+    log.warn(
+        "TIMESTAMP WITH TIME ZONE cannot be precisely represented in Spark SQL, using TimestampType");
     return DataTypes.TimestampType;
   }
 
@@ -279,7 +290,9 @@ public class AnsiSqlDataTypeFactory {
   @Nonnull
   public DataType createTimestampWithTimeZone(final int precision) {
     // Spark doesn't have a direct timestamp with time zone type
-    log.warn("TIMESTAMP({}) WITH TIME ZONE cannot be precisely represented in Spark SQL, using TimestampType", precision);
+    log.warn(
+        "TIMESTAMP({}) WITH TIME ZONE cannot be precisely represented in Spark SQL, using TimestampType",
+        precision);
     return DataTypes.TimestampType;
   }
 
@@ -319,15 +332,5 @@ public class AnsiSqlDataTypeFactory {
   @Nonnull
   public DataType createArray(@Nonnull final DataType elementType) {
     return DataTypes.createArrayType(elementType);
-  }
-
-  /**
-   * Create a default type for unrecognized types.
-   *
-   * @return the default Spark SQL DataType
-   */
-  @Nonnull
-  public DataType createDefault() {
-    return DataTypes.StringType;
   }
 }
