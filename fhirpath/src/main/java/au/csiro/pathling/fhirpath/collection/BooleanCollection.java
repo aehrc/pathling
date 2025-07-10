@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import au.csiro.pathling.fhirpath.External;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.annotations.SqlPrimitive;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
@@ -35,8 +35,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-@SqlPrimitive
-public class BooleanCollection extends Collection implements Comparable, StringCoercible {
+public class BooleanCollection extends Collection implements Comparable, StringCoercible, External {
 
   protected BooleanCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,

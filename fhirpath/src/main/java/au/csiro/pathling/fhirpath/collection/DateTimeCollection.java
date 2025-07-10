@@ -19,15 +19,16 @@ package au.csiro.pathling.fhirpath.collection;
 
 import static org.apache.spark.sql.functions.date_format;
 
+import au.csiro.pathling.fhirpath.External;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.annotations.SqlPrimitive;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.InstantType;
@@ -37,8 +38,7 @@ import org.hl7.fhir.r4.model.InstantType;
  *
  * @author John Grimes
  */
-@SqlPrimitive
-public class DateTimeCollection extends Collection implements StringCoercible {
+public class DateTimeCollection extends Collection implements StringCoercible, External {
 
   private static final String SPARK_FHIRPATH_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
 
@@ -98,7 +98,7 @@ public class DateTimeCollection extends Collection implements StringCoercible {
     return DateTimeCollection.build(
         DefaultRepresentation.literal(value.getValueAsString()));
   }
-  
+
   @Nonnull
   @Override
   public StringCollection asStringPath() {
@@ -110,6 +110,21 @@ public class DateTimeCollection extends Collection implements StringCoercible {
       valueColumn = getColumn();
     }
     return StringCollection.build(valueColumn);
+  }
+
+  private static Column tsToFhirString(@Nonnull Column col) {
+    return functions.date_format(functions.to_utc_timestamp(col, functions.current_timezone()),
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+  }
+
+  @Nonnull
+  @Override
+  public Column toExternalValue() {
+    // special case to convert instant back from TIMESTAMP to STRING
+    return getFhirType()
+        .filter(FHIRDefinedType.INSTANT::equals)
+        .map(__ -> getColumn().transform(DateTimeCollection::tsToFhirString).getValue())
+        .orElseGet(External.super::toExternalValue);
   }
 
 }

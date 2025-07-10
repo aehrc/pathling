@@ -21,10 +21,10 @@ import static au.csiro.pathling.fhirpath.literal.StringLiteral.unescapeFhirPathS
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.fhirpath.External;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.annotations.SqlPrimitive;
 import au.csiro.pathling.fhirpath.column.BinaryRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -49,8 +49,8 @@ import org.hl7.fhir.r4.model.UuidType;
  *
  * @author John Grimes
  */
-@SqlPrimitive
-public class StringCollection extends Collection implements Comparable, Numeric, StringCoercible {
+public class StringCollection extends Collection implements Comparable, Numeric, StringCoercible,
+    External {
 
   protected StringCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
@@ -303,4 +303,16 @@ public class StringCollection extends Collection implements Comparable, Numeric,
     throw new InvalidUserInputError(
         "Negation is not supported for String type.");
   }
+
+  @Nonnull
+  @Override
+  public Column toExternalValue() {
+    // special case to convert base64String back to Binary
+    return getFhirType()
+        .filter(FHIRDefinedType.BASE64BINARY::equals)
+        .map(__ -> new DefaultRepresentation(getColumnValue()).transform(functions::unbase64)
+            .getValue())
+        .orElseGet(External.super::toExternalValue);
+  }
+
 }

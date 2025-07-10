@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.view;
 
+import au.csiro.pathling.fhirpath.External;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.views.ansi.CollectionValue;
 import jakarta.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.Column;
@@ -49,9 +49,23 @@ public class ProjectedColumn {
    */
   @Nonnull
   public Column getValue() {
-
-    return CollectionValue.of(collection, requestedColumn.isCollection())
-        .get(requestedColumn.getSqlType())
+    // If a type was asserted for the column, check that the collection is of that type.
+    requestedColumn.getType().ifPresent(requestedType ->
+        collection.getFhirType().ifPresent(actualType -> {
+          if (!requestedType.equals(actualType)) {
+            throw new IllegalArgumentException(
+                "Collection " + collection + " has type " + actualType
+                    + ", expected " + requestedType);
+          }
+        })
+    );
+    final Column rawResult = External.getExternalValue(requestedColumn.isCollection()
+                                                       ? collection.asPlural()
+                                                       : collection.asSingular());
+    return requestedColumn.getSqlType()
+        .map(rawResult::cast)
+        .orElse(rawResult)
         .alias(requestedColumn.getName());
+
   }
 }
