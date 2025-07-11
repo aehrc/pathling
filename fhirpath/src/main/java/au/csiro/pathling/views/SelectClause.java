@@ -60,46 +60,6 @@ public class SelectClause implements SelectionElement {
   }
 
   /**
-   * Creates a new {@link SelectClause} with the given columns.
-   *
-   * @param columns the columns to include
-   * @return a new {@link SelectClause} instance
-   */
-  @Nonnull
-  public static SelectClause ofColumns(@Nonnull final Column... columns) {
-    return builder().column(List.of(columns)).build();
-  }
-
-  /**
-   * Creates a new 'forEach' {@link SelectClause} with the given columns.
-   *
-   * @param path the path to set in the 'forEach' clause
-   * @param columns the columns to include
-   * @return a new {@link SelectClause} instance
-   */
-  @Nonnull
-  public static SelectClause forEach(@Nonnull String path, @Nonnull final Column... columns) {
-    return builder()
-        .forEach(path)
-        .column(List.of(columns)).build();
-  }
-
-
-  /**
-   * Creates a new 'forEachOrNull' {@link SelectClause} with the given columns.
-   *
-   * @param path the path to set in the 'forEachOrNull' clause
-   * @param columns the columns to include
-   * @return a new {@link SelectClause} instance
-   */
-  @Nonnull
-  public static SelectClause forEachOrNull(@Nonnull String path, @Nonnull final Column... columns) {
-    return builder()
-        .forEachOrNull(path)
-        .column(List.of(columns)).build();
-  }
-
-  /**
    * A column to be produced in the resulting table. The column is relative to the select structure
    * that contains it.
    *

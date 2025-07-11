@@ -2,6 +2,7 @@ package au.csiro.pathling.views;
 
 import static java.util.Objects.nonNull;
 
+import au.csiro.pathling.views.SelectClause.SelectClauseBuilder;
 import au.csiro.pathling.views.validation.UniqueColumnNames;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -35,45 +36,29 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public class FhirView {
 
   /**
-   * The customized Lombok builder for {@link FhirView}. This builder provides convenience methods.
+   * Creates a new 'forEachOrNull' {@link SelectClause} with the given columns.
+   *
+   * @param path the path to set in the 'forEachOrNull' clause
+   * @param columns the columns to include
+   * @return a new {@link SelectClause} instance
    */
-  @SuppressWarnings("unused")
-  public static class FhirViewBuilder {
-
-    /**
-     * Convenience method to create select clauses from a variable-length argument list of
-     * {@link SelectClause}.
-     */
-    public FhirViewBuilder select(@Nonnull final SelectClause... selects) {
-      return select(List.of(selects));
-    }
-
-    /**
-     * Convenience method to create where clauses from a variable-length argument list of
-     * {@link WhereClause}.
-     */
-    public FhirViewBuilder where(@Nonnull final WhereClause... wheres) {
-      return where(List.of(wheres));
-    }
-
-    /**
-     * Convenience method to create constants from a variable-length argument list of
-     * {@link ConstantDeclaration}.
-     */
-    public FhirViewBuilder constant(@Nonnull final ConstantDeclaration... constants) {
-      return constant(List.of(constants));
-    }
+  @Nonnull
+  public static SelectClause forEachOrNull(@Nonnull final String path,
+      @Nonnull final Column... columns) {
+    return SelectClause.builder()
+        .forEachOrNull(path)
+        .column(List.of(columns)).build();
   }
 
   /**
    * Creates a builder with the resource already set.
    *
-   * @param resource the resource to set
+   * @param resource the resource name to set
    * @return a builder with the resource set
    */
   @Nonnull
-  public static FhirViewBuilder withResource(@Nonnull final String resource) {
-    return builder().resource(resource);
+  public static FhirViewBuilder ofResource(@Nonnull final String resource) {
+    return FhirView.builder().resource(resource);
   }
 
   /**
@@ -83,8 +68,46 @@ public class FhirView {
    * @return a builder with the resource set
    */
   @Nonnull
-  public static FhirViewBuilder withResource(@Nonnull final ResourceType resource) {
-    return builder().resource(resource.toCode());
+  public static FhirViewBuilder ofResource(@Nonnull final ResourceType resource) {
+    return FhirView.builder().resource(resource.toCode());
+  }
+
+  /**
+   * Creates a new {@link SelectClause} with the given columns.
+   *
+   * @param columns the columns to include
+   * @return a new {@link SelectClause} instance
+   */
+  @Nonnull
+  public static SelectClause columns(@Nonnull final Column... columns) {
+    return SelectClause.builder().column(List.of(columns)).build();
+  }
+
+  @Nonnull
+  public static SelectClauseBuilder select(@Nonnull final SelectClause... selects) {
+    return SelectClause.builder().select(List.of(selects));
+  }
+
+
+  @Nonnull
+  public static Column column(@Nonnull final String name, @Nonnull final String path) {
+    return new Column(name, path);
+  }
+
+  @Nonnull
+  public static SelectClause forEach(@Nonnull final String forEach,
+      @Nonnull final Column... columns) {
+    return SelectClause.builder()
+        .forEach(forEach)
+        .column(List.of(columns)).build();
+  }
+
+  @Nonnull
+  public static SelectClause forEach(@Nonnull final String forEach,
+      @Nonnull final SelectClause... selects) {
+    return SelectClause.builder()
+        .forEach(forEach)
+        .select(List.of(selects)).build();
   }
 
   /**
@@ -150,4 +173,41 @@ public class FhirView {
                .flatMap(SelectClause::getAllColumns)
            : Stream.empty();
   }
+
+  /**
+   * The customized Lombok builder for {@link FhirView}. This builder provides convenience methods.
+   */
+  @SuppressWarnings("unused")
+  public static class FhirViewBuilder {
+
+    @Nonnull
+    public static FhirViewBuilder resource(@Nonnull final ResourceType resource) {
+      return FhirView.builder().resource(resource.toCode());
+    }
+
+    /**
+     * Convenience method to create select clauses from a variable-length argument list of
+     * {@link SelectClause}.
+     */
+    public FhirViewBuilder select(@Nonnull final SelectClause... selects) {
+      return select(List.of(selects));
+    }
+
+    /**
+     * Convenience method to create where clauses from a variable-length argument list of
+     * {@link WhereClause}.
+     */
+    public FhirViewBuilder where(@Nonnull final WhereClause... wheres) {
+      return where(List.of(wheres));
+    }
+
+    /**
+     * Convenience method to create constants from a variable-length argument list of
+     * {@link ConstantDeclaration}.
+     */
+    public FhirViewBuilder constant(@Nonnull final ConstantDeclaration... constants) {
+      return constant(List.of(constants));
+    }
+  }
+
 }

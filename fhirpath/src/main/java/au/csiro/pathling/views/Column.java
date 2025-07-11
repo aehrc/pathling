@@ -3,7 +3,6 @@ package au.csiro.pathling.views;
 import au.csiro.pathling.views.validation.ValidName;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,6 +21,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @EqualsAndHashCode(callSuper = false)
 public class Column implements SelectionElement {
+
+  public Column(final String name, final String path) {
+    this.name = name;
+    this.path = path;
+  }
 
   @SuppressWarnings("unused")
   public static class ColumnBuilder {
