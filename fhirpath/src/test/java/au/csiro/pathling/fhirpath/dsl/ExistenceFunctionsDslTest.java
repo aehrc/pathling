@@ -35,11 +35,14 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
                 person1 -> person1
                     .string("name", "Alice")
                     .integer("age", 25)
-                    .bool("active", true),
+                    .bool("active", true)
+                    .stringArray("alias", "Alias2", "Alias1"),
                 person2 -> person2
                     .string("name", "Bob")
                     .integer("age", 40)
-                    .bool("active", false))
+                    .bool("active", false)
+                    .stringArray("alias", "Alias4", "Alias5")
+            )
         )
         .group("exists() function")
         // Basic exists() tests
@@ -64,6 +67,10 @@ public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
             "exists() with criteria on complex type returns false when criteria doesn't match")
         .testTrue("people.exists(active = true)",
             "exists() with criteria on complex type returns true when criteria matches multiple items")
+        .testTrue("people.exists(name)",
+            "exists() with criteria on complex type returns true with boolean eval of singletons for singular element")
+        .testError("people.exists(alias)",
+            "exists() with criteria on complex type fails with boolean eval of non-singleton")
         .build();
   }
 

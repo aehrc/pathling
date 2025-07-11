@@ -2,6 +2,7 @@ package au.csiro.pathling.fhirpath.dsl;
 
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
+import java.util.List;
 import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Resource;
@@ -89,6 +90,18 @@ public class SystemDslTest extends FhirPathDslTestBase {
                     .string("valueString", "123")
                     .integerEmpty("valueInteger")
             )
+            .elementArray("complex",
+                person1 -> person1
+                    .string("id", "1")
+                    .stringEmpty("singularString")
+                    .stringArray("oneString", "Alias2")
+                    .stringArray("manyStrings", "Alias2", "Alias1"),
+                person2 -> person2
+                    .string("id", "2")
+                    .string("singularString", "Alice")
+                    .stringArray("oneString", "Alias1")
+                    .stringArray("manyStrings", "Alias2", "Alias1")
+            )
         )
         .group("empty evaluation for functions")
         .testEmpty("booleanEmpty.not()", "empty boolean evaluates to empty in function")
@@ -157,6 +170,14 @@ public class SystemDslTest extends FhirPathDslTestBase {
             "array of many strings evaluates to error in  boolean operators")
         .testError("true and stringArray.where($this.exists())",
             "computed array many of strings evaluates to error in  boolean operators")
+        .group("boolean evaluation in boolean expressions")
+        .testEquals("2", "complex.where($this.singularString).id",
+            "boolean expression evaluates for non-empty singular string")
+        .testEquals(List.of("1", "2"), "complex.where($this.oneString).id",
+            "boolean expression evaluates to true for one ")
+        .testError("Expecting a collection with a single element but it has many.",
+            "complex.where($this.manyStrings).id",
+            "boolean expression fails collection with many elements")
         .build();
   }
 
