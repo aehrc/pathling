@@ -131,18 +131,13 @@ excludeSet:
   - title: Existence exclusions
     glob: "fhirpath-js/cases/5.1_existence.yaml"
     exclude:
-      - title: "Incorrect behaviour when evaluating boolean value of collections"
-        type: bug
-        outcome: failure
-        id: "#2411"
-        any:
-          - "** error for collection that is not a singleton"
       - title: Support for null values within FHIR elements
         type: wontfix
         outcome: failure
         any:
           - "** null is not empty"
           - "** exists for null should return true"
+          - "** error for collection that is not a singleton"
   - title: Filtering and projection exclusions
     glob: "fhirpath-js/cases/5.2_filtering_and_projection.yaml"
     exclude:
