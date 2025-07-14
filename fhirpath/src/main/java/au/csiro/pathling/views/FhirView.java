@@ -2,7 +2,6 @@ package au.csiro.pathling.views;
 
 import static java.util.Objects.nonNull;
 
-import au.csiro.pathling.views.SelectClause.SelectClauseBuilder;
 import au.csiro.pathling.views.validation.UniqueColumnNames;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -16,6 +15,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -34,21 +34,6 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Builder
 @UniqueColumnNames
 public class FhirView {
-
-  /**
-   * Creates a new 'forEachOrNull' {@link SelectClause} with the given columns.
-   *
-   * @param path the path to set in the 'forEachOrNull' clause
-   * @param columns the columns to include
-   * @return a new {@link SelectClause} instance
-   */
-  @Nonnull
-  public static SelectClause forEachOrNull(@Nonnull final String path,
-      @Nonnull final Column... columns) {
-    return SelectClause.builder()
-        .forEachOrNull(path)
-        .column(List.of(columns)).build();
-  }
 
   /**
    * Creates a builder with the resource already set.
@@ -84,8 +69,13 @@ public class FhirView {
   }
 
   @Nonnull
-  public static SelectClauseBuilder select(@Nonnull final SelectClause... selects) {
-    return SelectClause.builder().select(List.of(selects));
+  public static SelectClause select(@Nonnull final Column... columns) {
+    return SelectClause.builder().columns(columns).build();
+  }
+
+  @Nonnull
+  public static SelectClause select(@Nonnull final SelectClause... selects) {
+    return SelectClause.builder().select(List.of(selects)).build();
   }
 
 
@@ -108,6 +98,28 @@ public class FhirView {
     return SelectClause.builder()
         .forEach(forEach)
         .select(List.of(selects)).build();
+  }
+
+  /**
+   * Creates a new 'forEachOrNull' {@link SelectClause} with the given columns.
+   *
+   * @param path the path to set in the 'forEachOrNull' clause
+   * @param columns the columns to include
+   * @return a new {@link SelectClause} instance
+   */
+  @Nonnull
+  public static SelectClause forEachOrNull(@Nonnull final String path,
+      @Nonnull final Column... columns) {
+    return SelectClause.builder()
+        .forEachOrNull(path)
+        .column(List.of(columns)).build();
+  }
+
+  @Nonnull
+  public static SelectClause unionAll(@Nonnull final SelectClause... selects) {
+    return SelectClause.builder()
+        .unionAll(List.of(selects))
+        .build();
   }
 
   /**
@@ -201,12 +213,18 @@ public class FhirView {
       return where(List.of(wheres));
     }
 
+    public FhirViewBuilder where(@Nonnull final String... expressions) {
+      return where(Stream.of(expressions)
+          .map(e -> new WhereClause(e, null))
+          .toList());
+    }
+
     /**
      * Convenience method to create constants from a variable-length argument list of
      * {@link ConstantDeclaration}.
      */
-    public FhirViewBuilder constant(@Nonnull final ConstantDeclaration... constants) {
-      return constant(List.of(constants));
+    public FhirViewBuilder constant(@Nonnull final String name, @Nonnull final IBase value) {
+      return constant(List.of(new ConstantDeclaration(name, value)));
     }
   }
 
