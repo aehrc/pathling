@@ -92,10 +92,6 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
     return invocationSubject.andThen(invocationVerb);
   }
 
-
-  // TODO: encapsulate in operator resolver
-  // Decide when do perform the operator resolution (maybe should be at execution time same as for functions)
-  // or maybe the functions should be resolved at parse time as well.
   private static final Map<String, BinaryOperator> BINARY_OPERATORS = MethodDefinedOperator.mapOf(
       CollectionOperations.class);
 
