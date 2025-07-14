@@ -1,8 +1,12 @@
 package au.csiro.pathling.views.ansi;
 
-import java.util.ArrayList;
-import java.util.List;
+import static java.util.Objects.nonNull;
+import static java.util.Objects.requireNonNull;
+
+import java.util.Objects;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import org.antlr.v4.runtime.tree.TerminalNode;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.spark.sql.types.DataType;
 
@@ -19,69 +23,50 @@ public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
   public ToDataTypeVisitor() {
     this.factory = new AnsiSqlDataTypeFactory();
   }
-  
+
+  private static DataType fail(@Nonnull final String msg) {
+    throw new IllegalStateException(msg);
+  }
+
+  private static boolean anyOf(@Nonnull TerminalNode... nodes) {
+    return Stream.of(nodes).anyMatch(Objects::nonNull);
+  }
+
   @Override
   public DataType visitSqlType(@Nonnull final TypesOfAnsiSqlParser.SqlTypeContext ctx) {
-    if (ctx.characterType() != null) {
-      return visitCharacterType(ctx.characterType());
-    } else if (ctx.numericType() != null) {
-      return visitNumericType(ctx.numericType());
-    } else if (ctx.booleanType() != null) {
-      return visitBooleanType(ctx.booleanType());
-    } else if (ctx.binaryType() != null) {
-      return visitBinaryType(ctx.binaryType());
-    } else if (ctx.temporalType() != null) {
-      return visitTemporalType(ctx.temporalType());
-    } else if (ctx.complexType() != null) {
-      return visitComplexType(ctx.complexType());
-    }
-
-    // This should never happen unless there's a bug in the parser or visitor
-    throw new IllegalStateException("Unrecognized SQL type: " + ctx.getText());
+    return visitChildren(ctx);
   }
 
   @Override
   public DataType visitCharacterType(@Nonnull final TypesOfAnsiSqlParser.CharacterTypeContext ctx) {
-    String typeText = ctx.getText().toUpperCase();
-
-    if (ctx.length != null) {
-      int length = Integer.parseInt(ctx.length.getText());
-      if (typeText.startsWith("VARCHAR") || typeText.startsWith("CHARACTERVARYING")) {
-        return factory.createVarchar(length);
-      } else {
-        return factory.createCharacter(length);
-      }
+    if (anyOf(ctx.K_VARCHAR(), ctx.K_VARYING())) {
+      return nonNull(ctx.length)
+             ? factory.createVarchar(Integer.parseInt(ctx.length.getText()))
+             : factory.createVarchar();
     } else {
-      if (typeText.startsWith("VARCHAR") || typeText.startsWith("CHARACTERVARYING")) {
-        return factory.createVarchar();
-      } else {
-        return factory.createCharacter();
-      }
+      return nonNull(ctx.length)
+             ? factory.createCharacter(Integer.parseInt(ctx.length.getText()))
+             : factory.createCharacter();
     }
   }
 
   @Override
   public DataType visitNumericType(@Nonnull final TypesOfAnsiSqlParser.NumericTypeContext ctx) {
-    String typeText = ctx.getText().toUpperCase();
-
-    if (typeText.startsWith("SMALLINT")) {
+    if (anyOf(ctx.K_SMALLINT())) {
       return factory.createSmallInt();
-    } else if (typeText.startsWith("INTEGER") || typeText.startsWith("INT")) {
+    } else if (anyOf(ctx.K_INTEGER(), ctx.K_INT())) {
       return factory.createInteger();
-    } else if (typeText.startsWith("BIGINT")) {
+    } else if (anyOf(ctx.K_BIGINT())) {
       return factory.createBigInt();
-    } else if (typeText.startsWith("REAL")) {
+    } else if (anyOf(ctx.K_REAL())) {
       return factory.createReal();
-    } else if (typeText.startsWith("DOUBLE")) {
+    } else if (anyOf(ctx.K_DOUBLE())) {
       return factory.createDouble();
-    } else if (typeText.startsWith("FLOAT")) {
-      if (ctx.precision != null) {
-        int precision = Integer.parseInt(ctx.precision.getText());
-        return factory.createFloat(precision);
-      }
-      return factory.createFloat();
-    } else if (typeText.startsWith("NUMERIC") || typeText.startsWith("DECIMAL")
-        || typeText.startsWith("DEC")) {
+    } else if (anyOf(ctx.K_FLOAT())) {
+      return nonNull(ctx.precision)
+             ? factory.createFloat(Integer.parseInt(ctx.precision.getText()))
+             : factory.createFloat();
+    } else if (anyOf(ctx.K_NUMERIC(), ctx.K_DECIMAL(), ctx.K_DEC())) {
       if (ctx.precision != null) {
         int precision = Integer.parseInt(ctx.precision.getText());
         if (ctx.scale != null) {
@@ -91,10 +76,10 @@ public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
         return factory.createDecimal(precision);
       }
       return factory.createDecimal();
+    } else {
+      // This should never happen unless there's a bug in the parser or visitor
+      return fail("Unrecognized numeric type: " + ctx.getText());
     }
-
-    // This should never happen unless there's a bug in the parser or visitor
-    throw new IllegalStateException("Unrecognized numeric type: " + typeText);
   }
 
   @Override
@@ -104,32 +89,25 @@ public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
 
   @Override
   public DataType visitBinaryType(@Nonnull final TypesOfAnsiSqlParser.BinaryTypeContext ctx) {
-    String typeText = ctx.getText().toUpperCase();
-
-    if (ctx.length != null) {
-      int length = Integer.parseInt(ctx.length.getText());
-      if (typeText.startsWith("VARBINARY") || typeText.startsWith("BINARYVARYING")) {
-        return factory.createVarbinary(length);
-      } else {
-        return factory.createBinary(length);
-      }
+    if (anyOf(ctx.K_BINARY(), ctx.K_VARYING())) {
+      return nonNull(ctx.length)
+             ? factory.createVarbinary(Integer.parseInt(ctx.length.getText()))
+             : factory.createVarbinary();
     } else {
-      if (typeText.startsWith("VARBINARY") || typeText.startsWith("BINARYVARYING")) {
-        return factory.createVarbinary();
-      } else {
-        return factory.createBinary();
-      }
+      return nonNull(ctx.length)
+             ? factory.createBinary(Integer.parseInt(ctx.length.getText()))
+             : factory.createBinary();
     }
   }
 
   @Override
   public DataType visitTemporalType(@Nonnull final TypesOfAnsiSqlParser.TemporalTypeContext ctx) {
-    String typeText = ctx.getText().toUpperCase();
-
-    if (typeText.startsWith("DATE")) {
+    if (anyOf(ctx.K_DATE())) {
       return factory.createDate();
-    } else if (typeText.startsWith("TIMESTAMP")) {
-      boolean withTimeZone = typeText.contains("WITHTIMEZONE");
+    } else if (anyOf(ctx.K_INTERVAL())) {
+      return factory.createInterval();
+    } else if (anyOf(ctx.K_TIMESTAMP())) {
+      boolean withTimeZone = nonNull(ctx.timeZone()) && anyOf(ctx.timeZone().K_WITH());
       if (ctx.precision != null) {
         int precision = Integer.parseInt(ctx.precision.getText());
         return withTimeZone
@@ -139,51 +117,31 @@ public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
       return withTimeZone
              ? factory.createTimestampWithTimeZone()
              : factory.createTimestamp();
-    } else if (typeText.startsWith("INTERVAL")) {
-      return factory.createInterval();
+    } else {
+      // This should never happen unless there's a bug in the parser or visitor
+      return fail("Unrecognized temporal type: " + ctx.getText());
     }
-
-    // This should never happen unless there's a bug in the parser or visitor
-    throw new IllegalStateException("Unrecognized temporal type: " + typeText);
   }
 
   @Override
   public DataType visitComplexType(@Nonnull final TypesOfAnsiSqlParser.ComplexTypeContext ctx) {
-    if (ctx.rowType() != null) {
-      return visitRowType(ctx.rowType());
-    } else if (ctx.arrayType() != null) {
-      return visitArrayType(ctx.arrayType());
-    }
-
-    // This should never happen unless there's a bug in the parser or visitor
-    throw new IllegalStateException("Unrecognized complex type: " + ctx.getText());
+    return visitChildren(ctx);
   }
 
   @Override
   public DataType visitRowType(@Nonnull final TypesOfAnsiSqlParser.RowTypeContext ctx) {
-    if (ctx.fieldDefinition() == null || ctx.fieldDefinition().isEmpty()) {
-      // Empty ROW type
-      return factory.createRow(new ArrayList<>());
-    }
-
-    List<Pair<String, DataType>> fields = new ArrayList<>();
-    for (TypesOfAnsiSqlParser.FieldDefinitionContext fieldCtx : ctx.fieldDefinition()) {
-      String fieldName = fieldCtx.fieldName.getText();
-      DataType fieldType = visit(fieldCtx.sqlType());
-      fields.add(Pair.of(fieldName, fieldType));
-    }
-
-    return factory.createRow(fields);
+    return factory.createRow(
+        requireNonNull(ctx.fieldDefinition()).stream()
+            .map(fieldCtx -> Pair.of(
+                requireNonNull(fieldCtx.fieldName).getText(),
+                visit(requireNonNull(fieldCtx.sqlType()))))
+            .toList()
+    );
   }
 
   @Override
   public DataType visitArrayType(@Nonnull final TypesOfAnsiSqlParser.ArrayTypeContext ctx) {
-    if (ctx.sqlType() != null) {
-      DataType elementType = visit(ctx.sqlType());
-      return factory.createArray(elementType);
-    }
-
-    // Default to string array if element type is not specified
-    return factory.createArray(factory.createCharacter());
+    final DataType elementType = visit(requireNonNull(ctx.sqlType()));
+    return factory.createArray(requireNonNull(elementType));
   }
 }
