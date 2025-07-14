@@ -267,8 +267,8 @@ excludeSet:
         any:
           - "name.`family`"
       - title: "Boolean evaluation of collections"
-        type: feature
-        id: "#2166"
+        comment: "This seem to be incorrect expectation as name.given is not singular and should fail when evaluated as boolean."
+        type: wontfix
         any:
           - "Patient.name.exists(given)"
       - title: "Unsupported type runner feature: expression maps"
@@ -343,10 +343,10 @@ excludeSet:
         id: "#437"
         any:
           - "Patient.birthDate.extension('http://hl7.org/fhir/StructureDefinition/patient-birthTime1').empty()"
-      - title: "Boolean evaluation of collections"
-        type: feature
+      - title: "Ambiguous expression"
+        comment: "In Pathling '(1|2)' is interpreted as one element coding literal and not as the union of two integer literals."
+        type: wontfix
         outcome: failure
-        id: "#2166"
         any:
           - "(1|2).not() = false"
       - title: Unsupported equality for complex types
