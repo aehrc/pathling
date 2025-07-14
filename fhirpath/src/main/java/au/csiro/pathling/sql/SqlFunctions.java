@@ -18,7 +18,9 @@
 package au.csiro.pathling.sql;
 
 import jakarta.annotation.Nonnull;
+import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 
 /**
  * Pathling-specific SQL functions that extend Spark SQL functionality.
@@ -27,20 +29,37 @@ import org.apache.spark.sql.Column;
  * FHIR data processing. These functions handle common operations like pruning annotations, safely
  * concatenating maps, and collecting maps during aggregation.
  */
-public interface SqlFunctions {
+@UtilityClass
+public class SqlFunctions {
 
-    /**
-     * Removes all fields starting with '_' (underscore) from struct values.
-     * <p>
-     * This function is used to clean up internal/synthetic fields from FHIR resources
-     * before presenting them to users. Fields that don't start with underscore are preserved.
-     * Non-struct values are not affected by this function.
-     *
-     * @param col The column containing struct values to prune
-     * @return A new column with underscore-prefixed fields removed from structs
-     */
-    @Nonnull
-    static Column prune_annotations(@Nonnull final Column col) {
-        return new Column(new PruneSyntheticFields(col.expr()));
-    }
+  private static final String FHIR_INSTANT_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
+
+  /**
+   * Removes all fields starting with '_' (underscore) from struct values.
+   * <p>
+   * This function is used to clean up internal/synthetic fields from FHIR resources before
+   * presenting them to users. Fields that don't start with underscore are preserved. Non-struct
+   * values are not affected by this function.
+   *
+   * @param col The column containing struct values to prune
+   * @return A new column with underscore-prefixed fields removed from structs
+   */
+  @Nonnull
+  public static Column prune_annotations(@Nonnull final Column col) {
+    return new Column(new PruneSyntheticFields(col.expr()));
+  }
+
+
+  /**
+   * Formats a TIMESTAMP column to a string in FHIR instant format. Always returns UTC time as Spark
+   * TIMESTAMP does not preserve the original timezone.
+   *
+   * @param col The column containing TIMESTAMP values to format
+   * @return A new column with TIMESTAMP values formatted as strings in FHIR instant format
+   */
+  @Nonnull
+  public static Column to_fhir_instant(@Nonnull final Column col) {
+    return functions.date_format(functions.to_utc_timestamp(col, functions.current_timezone()),
+        FHIR_INSTANT_FORMAT);
+  }
 }

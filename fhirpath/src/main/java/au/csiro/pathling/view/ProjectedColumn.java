@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.view;
 
-import au.csiro.pathling.fhirpath.External;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
 import lombok.Value;
@@ -59,7 +59,7 @@ public class ProjectedColumn {
           }
         })
     );
-    final Column rawResult = External.getExternalValue(requestedColumn.isCollection()
+    final Column rawResult = Materializable.getExternalValue(requestedColumn.isCollection()
                                                        ? collection.asPlural()
                                                        : collection.asSingular());
     return requestedColumn.getSqlType()

@@ -19,7 +19,7 @@ package au.csiro.pathling.fhirpath.collection;
 
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
-import au.csiro.pathling.fhirpath.External;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
@@ -46,7 +46,7 @@ import org.hl7.fhir.r4.model.UnsignedIntType;
  * @author John Grimes
  */
 public class IntegerCollection extends Collection implements Comparable, Numeric, StringCoercible,
-    External {
+        Materializable {
 
   private static final Set<FHIRDefinedType> INTEGER_TYPES = Set.of(FHIRDefinedType.INTEGER,
       FHIRDefinedType.UNSIGNEDINT, FHIRDefinedType.POSITIVEINT);

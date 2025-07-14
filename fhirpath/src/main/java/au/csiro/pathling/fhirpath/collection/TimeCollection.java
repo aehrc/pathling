@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import au.csiro.pathling.fhirpath.External;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
@@ -34,7 +34,7 @@ import org.hl7.fhir.r4.model.TimeType;
  *
  * @author John Grimes
  */
-public class TimeCollection extends Collection implements StringCoercible, External {
+public class TimeCollection extends Collection implements StringCoercible, Materializable {
 
   protected TimeCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,

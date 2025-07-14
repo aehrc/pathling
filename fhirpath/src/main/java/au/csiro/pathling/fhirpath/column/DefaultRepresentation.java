@@ -87,10 +87,12 @@ public class DefaultRepresentation extends ColumnRepresentation {
 
 
   /**
-   * Creates a new BinaryRepresentation from a binary-typed column.
+   * Creates a new {@link ColumnRepresentation} that represents a binary column as a base64 encoded
+   * string.
    *
    * @param column a column containing binary data
-   * @return a new instance of BinaryRepresentation
+   * @return A new {@link ColumnRepresentation} representing the binary data as a base64 encoded
+   * string.
    */
   @Nonnull
   public static ColumnRepresentation fromBinaryColumn(@Nonnull final Column column) {

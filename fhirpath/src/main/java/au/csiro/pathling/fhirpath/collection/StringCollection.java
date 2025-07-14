@@ -21,7 +21,7 @@ import static au.csiro.pathling.fhirpath.literal.StringLiteral.unescapeFhirPathS
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.External;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
@@ -51,7 +51,7 @@ import org.hl7.fhir.r4.model.UuidType;
  */
 @SuppressWarnings("TypeMayBeWeakened")
 public class StringCollection extends Collection implements Comparable, Numeric, StringCoercible,
-    External {
+    Materializable {
 
   protected StringCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
@@ -313,7 +313,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
         .filter(FHIRDefinedType.BASE64BINARY::equals)
         .map(__ -> new DefaultRepresentation(getColumnValue()).transform(functions::unbase64)
             .getValue())
-        .orElseGet(External.super::toExternalValue);
+        .orElseGet(Materializable.super::toExternalValue);
   }
 
 }

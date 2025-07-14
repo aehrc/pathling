@@ -30,7 +30,6 @@ import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.catalyst.parser.CatalystSqlParser$;
 import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -252,18 +251,6 @@ public class FhirViewExecutor {
     return AnsiSqlTypeParser.parseType(ansiType);
   }
 
-  /**
-   * Converts an ANSI SQL type string to a Spark SQL DataType.
-   *
-   * @param ansiType the ANSI SQL type string
-   * @return the corresponding Spark SQL DataType
-   */
-  @Nonnull
-  private DataType parseSparkSqlType(@Nonnull final String ansiType) {
-    return CatalystSqlParser$.MODULE$.parseDataType(ansiType);
-  }
-  
-  
 
   /**
    * Parses the where clause from a FHIR view into a {@link ProjectionClause} object.

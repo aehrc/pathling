@@ -19,6 +19,8 @@ package au.csiro.pathling.sql;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.test.SpringBootUnitTest;
 import org.apache.spark.sql.Dataset;
@@ -58,7 +60,7 @@ public class SqlFunctionsTest {
       assertEquals(structSchema.apply(i), prunedSchema.apply(i));
     }
   }
-  
+
   @Test
   public void testPruneAnnotationsSimpleTypes() {
     // Test that simple types are not affected by prune_annotations
@@ -70,7 +72,7 @@ public class SqlFunctionsTest {
             functions.lit(3.14).as("double_val"),
             functions.lit(true).as("bool_val")
         );
-    
+
     // Apply prune_annotations to all columns
     final Dataset<Row> result = dataset.select(
         SqlFunctions.prune_annotations(functions.col("id")).as("pruned_id"),
@@ -79,15 +81,15 @@ public class SqlFunctionsTest {
         SqlFunctions.prune_annotations(functions.col("double_val")).as("pruned_double"),
         SqlFunctions.prune_annotations(functions.col("bool_val")).as("pruned_bool")
     );
-    
+
     // Verify that the values are unchanged
     final Row row = result.first();
     assertEquals(0L, row.getLong(0));
     assertEquals("test string", row.getString(1));
     assertEquals(42, row.getInt(2));
     assertEquals(3.14, row.getDouble(3), 0.0001);
-    assertEquals(true, row.getBoolean(4));
-    
+    assertTrue(row.getBoolean(4));
+
     // Verify that the schema types are unchanged
     assertEquals(DataTypes.LongType, result.schema().apply("pruned_id").dataType());
     assertEquals(DataTypes.StringType, result.schema().apply("pruned_string").dataType());
@@ -95,5 +97,30 @@ public class SqlFunctionsTest {
     assertEquals(DataTypes.DoubleType, result.schema().apply("pruned_double").dataType());
     assertEquals(DataTypes.BooleanType, result.schema().apply("pruned_bool").dataType());
   }
-  
+
+
+  @Test
+  public void testToFhirInstant() {
+    final Dataset<Row> result = spark.range(1).toDF()
+        .select(
+            SqlFunctions.to_fhir_instant(
+                    functions.lit("2023-01-01T12:34:56.789Z").cast(DataTypes.TimestampType))
+                .as("instant_utc"),
+            SqlFunctions.to_fhir_instant(
+                    functions.lit("2023-01-01T12:34:56.7+10:00").cast(DataTypes.TimestampType))
+                .as("instant_plus_10")
+        );
+    final Row resultRow = result.first();
+
+    assertEquals("2023-01-01T12:34:56.789Z", resultRow.getString(0));
+    assertEquals("2023-01-01T02:34:56.700Z", resultRow.getString(1));
+  }
+
+  @Test
+  public void testToFhirInstantNull() {
+    // Dataset with null timestamp
+    final Dataset<Row> result = spark.range(1).toDF()
+        .select(SqlFunctions.to_fhir_instant(functions.lit(null)).as("instant"));
+    assertNull(result.first().get(0));
+  }
 }

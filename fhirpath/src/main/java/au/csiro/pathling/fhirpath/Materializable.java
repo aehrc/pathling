@@ -7,10 +7,17 @@ import org.apache.spark.sql.Column;
 import java.util.Objects;
 
 /**
- * Interface for collections that can be converted to external values (e.g.: for SQL on FHIR view
- * results).
+ * An interface for collections that can be converted to an external value suitable for Spark SQL
+ * operations.
+ * <p>
+ * This interface is intended for collections that can be represented as a column in a Spark
+ * DataFrame. Implementations should provide a way to convert the collection into a Spark SQL
+ * column.
+ * </p>
+ *
+ * @see Collection
  */
-public interface External {
+public interface Materializable {
 
   /**
    * Converts this collection to an external value that can be used in Spark SQL operations.
@@ -36,16 +43,17 @@ public interface External {
   /**
    * Gets the external value of a collection.
    * <p>
-   * If the collection implements {@link External}, its {@link #toExternalValue()} method is called.
-   * Otherwise, an exception is thrown.
+   * If the collection implements {@link Materializable}, its {@link #toExternalValue()} method is
+   * called. Otherwise, an exception is thrown.
    *
    * @param collection The collection to get the external value from
    * @return A Spark SQL column representing the external value of the collection
-   * @throws UnsupportedOperationException If the collection does not implement {@link External}
+   * @throws UnsupportedOperationException If the collection does not implement
+   * {@link Materializable}
    */
   @Nonnull
   static Column getExternalValue(@Nonnull final Collection collection) {
-    if (collection instanceof External external) {
+    if (collection instanceof Materializable external) {
       return external.toExternalValue();
     } else {
       throw new UnsupportedOperationException(
