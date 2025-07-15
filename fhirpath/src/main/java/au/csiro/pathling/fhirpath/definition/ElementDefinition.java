@@ -21,4 +21,11 @@ public interface ElementDefinition extends ChildDefinition {
    */
   @Nonnull
   Optional<FHIRDefinedType> getFhirType();
+  
+  /**
+   * @return true if this element is a choice element, false otherwise
+   */
+  default boolean isChoiceElement() {
+    return false;
+  }
 }

@@ -45,6 +45,7 @@ import java.util.function.UnaryOperator;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -55,6 +56,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 @Getter
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
+@Slf4j
 public class Collection {
 
   // Additional mappings for collection classes that don't directly map to FhirPathType
@@ -288,6 +290,12 @@ public class Collection {
     if (childDefinition instanceof final ChoiceDefinition choiceChildDefinition) {
       return MixedCollection.buildElement(this, choiceChildDefinition);
     } else if (childDefinition instanceof final ElementDefinition elementChildDefinition) {
+      if (elementChildDefinition.isChoiceElement()) {
+        log.warn(
+            "Traversing a choice element `{}` without using ofType() is not portable and may not work in some Fhirpath implementations. "
+                + "Consider using ofType() to specify the type of element you want to traverse.",
+            elementChildDefinition.getElementName());
+      }
       return traverseElement(elementChildDefinition);
     } else {
       throw new IllegalArgumentException("Unsupported child definition type: " + childDefinition
