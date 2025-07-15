@@ -267,7 +267,7 @@ excludeSet:
         any:
           - "name.`family`"
       - title: "Boolean evaluation of collections"
-        comment: "This seem to be incorrect expectation as name.given is not singular and should fail when evaluated as boolean."
+        comment: "This seems to be incorrect expectation as name.given is not singular and should fail when evaluated as boolean."
         type: wontfix
         any:
           - "Patient.name.exists(given)"

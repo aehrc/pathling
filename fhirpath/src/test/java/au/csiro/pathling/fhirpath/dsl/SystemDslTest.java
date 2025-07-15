@@ -174,7 +174,7 @@ public class SystemDslTest extends FhirPathDslTestBase {
         .testEquals("2", "complex.where($this.singularString).id",
             "boolean expression evaluates for non-empty singular string")
         .testEquals(List.of("1", "2"), "complex.where($this.oneString).id",
-            "boolean expression evaluates to true for one ")
+            "boolean expression evaluates to true for a collection containing one element")
         .testError("Expecting a collection with a single element but it has many.",
             "complex.where($this.manyStrings).id",
             "boolean expression fails collection with many elements")
