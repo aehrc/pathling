@@ -7,3 +7,4 @@ wheel==0.43.0
 twine==5.0.0
 build==1.2.1
 pytest-cov==5.0.0
+http-server-mock==1.7

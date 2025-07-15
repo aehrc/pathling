@@ -28,6 +28,8 @@ from pathling._version import (
     __hadoop_version__,
 )
 
+from tests.mockserver import MockServer
+
 HERE = os.path.abspath(os.path.dirname(__file__))
 LIB_API_DIR = os.path.normpath(os.path.join(HERE, "..", "..", "..", "library-api"))
 TEST_DATA_DIR = os.path.join(LIB_API_DIR, "src", "test", "resources", "test-data")
@@ -107,3 +109,8 @@ def pathling_ctx(request, temp_warehouse_dir):
         spark._jsparkSession, encoders, terminology_service_factory
     )
     return PathlingContext(spark, pathling_context)
+
+
+@fixture(scope="function")
+def mock_server():
+    return MockServer(__name__, "localhost", 9876)
