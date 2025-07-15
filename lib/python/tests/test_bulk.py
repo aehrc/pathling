@@ -25,12 +25,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import os
+
 from flask import Response
+
 from pathling.bulk import BulkExportClient
-from datetime import datetime, timezone
 
 
-def test_runs_export(pathling_ctx, mock_server, temp_dir):
+def test_bulk_client(pathling_ctx, mock_server, temp_dir):
     @mock_server.route("/fhir/$export", methods=["GET"])
     def export():
         resp = Response(status=202)

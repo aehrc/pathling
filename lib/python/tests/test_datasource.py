@@ -14,10 +14,9 @@
 #  limitations under the License.
 
 import os
-from datetime import datetime, timezone
 from tempfile import TemporaryDirectory
-from unittest.mock import Mock, patch
 
+from flask import Response
 from pyspark.sql import Row, DataFrame
 from pytest import fixture
 
@@ -192,6 +191,46 @@ def test_datasource_tables_schema(ndjson_test_data_dir, pathling_ctx):
         ResultRow(71),
     ]
 
+
+
+def test_datasource_bulk(pathling_ctx, mock_server, ndjson_test_data_dir, temp_dir):
+    
+    def setup_mock_server():
+        @mock_server.route("/fhir/$export", methods=["GET"])
+        def export():
+            resp = Response(status=202)
+            resp.headers["content-location"] = mock_server.url("/pool")
+            return resp
+    
+        @mock_server.route("/pool", methods=["GET"])
+        def pool():
+            return dict(
+                transactionTime="1970-01-01T00:00:00.000Z",
+                output=[
+                    dict(type=resource, url=mock_server.url(f"/download/{resource}"), count=1) for
+                    resource in ["Patient", "Condition"]
+                ],
+            )
+    
+        @mock_server.route("/download/<resource>", methods=["GET"])
+        def download(resource):
+            with open(os.path.join(ndjson_test_data_dir, f"{resource}.ndjson"), "r") as f:
+                return f.read()
+
+    setup_mock_server()
+    # !!! this directory cannot exist for the datasource to work
+    output_dir = os.path.join(temp_dir, "bulk-storage")
+
+    with mock_server.run():
+        data_source = pathling_ctx.read.bulk(
+            fhir_endpoint_url=mock_server.url("/fhir"),
+            output_dir=output_dir,
+        )
+        result = ndjson_query(data_source)
+        assert result.columns == list(ResultRow)
+        assert result.collect() == [
+            ResultRow(71),
+        ]
 
 def ndjson_query(data_source: DataSource) -> DataFrame:
     return data_source.view(
