@@ -324,9 +324,13 @@ public class YamlSupport {
 
   static ChildDefinition elementFromValues(@Nonnull final String key,
       @Nonnull final List<?> values) {
-    // Get the set of unique types from the list of values.
-    final Set<Class<?>> types = values.stream()
+    
+    final List<?> nonNullValues = values.stream()
         .filter(Objects::nonNull)
+        .toList();
+    
+    // Get the set of unique types from the list of values.
+    final Set<Class<?>> types = nonNullValues.stream()
         .map(Object::getClass)
         .map(clazz -> Map.class.isAssignableFrom(clazz)
                       // We treat all maps as the same type.
@@ -339,8 +343,7 @@ public class YamlSupport {
       // If the type is a map, we merge all the maps into one. This is useful for when a
       // choice contains a complex type, and the examples are split across multiple lines.
       if (types.contains(Map.class)) {
-        final Map mergedValues = values.stream()
-            .filter(Objects::nonNull)
+        final Map<?,?> mergedValues = nonNullValues.stream()
             .map(Map.class::cast)
             .reduce(new HashMap<>(), (acc, m) -> {
               //noinspection unchecked
@@ -352,11 +355,11 @@ public class YamlSupport {
       } else {
         // If there is only one type, and it's not a map, we just use the first value as the
         // representative.
-        return elementFromValue(key, values.get(0), -1);
+        return elementFromValue(key, nonNullValues.get(0), -1);
       }
     } else if (types.size() > 1) {
       // If there are multiple types, we just use the first value as the representative.
-      return elementFromValue(key, values.get(0), -1);
+      return elementFromValue(key, nonNullValues.get(0), -1);
     } else {
       // If there are no types, it means the list is empty or contains only nulls.
       return elementFromValue(key, null, -1);

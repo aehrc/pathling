@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
 import java.util.function.Function;
@@ -31,18 +30,14 @@ import java.util.function.Function;
 public interface CollectionTransform extends Function<Collection, Collection> {
 
   /**
-   * @return the input collection if it returns a {@link BooleanCollection}, otherwise throws an
-   * exception
+   * Ensures that the result of the transformation is a singleton boolean collection.
+   *
+   * @return the {@link CollectionTransform} that is guaranteed to return a singleton boolean
+   * collection (or throws an evaluation error if the input collection cannot be coerced to a
+   * boolean singleton).
    */
-  default CollectionTransform requireBoolean() {
-    return input -> {
-      final Collection result = apply(input);
-      if (result instanceof BooleanCollection) {
-        return result;
-      } else {
-        throw new RuntimeException("Expected boolean result");
-      }
-    };
+  default CollectionTransform requireBooleanSingleton() {
+    return input -> apply(input).asBooleanSingleton();
   }
 
   /**

@@ -41,7 +41,7 @@ public class FilteringAndProjectionFunctions {
   @Nonnull
   public static Collection where(@Nonnull final Collection input,
       @Nonnull final CollectionTransform expression) {
-    return input.filter(expression.requireBoolean().toColumnTransformation(input));
+    return input.filter(expression.requireBooleanSingleton().toColumnTransformation(input));
   }
   
   /**

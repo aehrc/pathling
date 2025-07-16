@@ -85,22 +85,13 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
   public FhirPath visitInvocationExpression(
       @Nullable final InvocationExpressionContext ctx) {
 
-    // TODO: Is this really OK (now I am a bit confused of what the context is vs input)
-
     final FhirPath invocationSubject = new Visitor().visit(
         requireNonNull(ctx).expression());
     final FhirPath invocationVerb = ctx.invocation()
         .accept(new InvocationVisitor());
-
-    // TODO: change to paths
-    // return new Invocation(invocationSubject, invocationVerb);
     return invocationSubject.andThen(invocationVerb);
   }
 
-
-  // TODO: encapsulate in operator resolver
-  // Decide when do perform the operator resolution (maybe should be at execution time same as for functions)
-  // or maybe the functions should be resolved at parse time as well.
   private static final Map<String, BinaryOperator> BINARY_OPERATORS = MethodDefinedOperator.mapOf(
       CollectionOperations.class);
 
