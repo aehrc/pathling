@@ -24,22 +24,22 @@ use in the tool of your choice.
 from pathling import PathlingContext
 
 pc = PathlingContext.create()
-data = pc.read.ndjson("s3://somebucket/synthea/ndjson")
+data = pc.read.ndjson("/some/file/location")
 
 result = data.view(
-        resource="Patient",
-        select=[
-            {"column": [{"path": "getResourceKey()", "name": "patient_id"}]},
-            {
-                "forEach": "address",
-                "column": [
-                    {"path": "line.join('\\n')", "name": "street"},
-                    {"path": "use", "name": "use"},
-                    {"path": "city", "name": "city"},
-                    {"path": "postalCode", "name": "zip"},
-                ],
-            },
-        ],
+    resource="Patient",
+    select=[
+        {"column": [{"path": "getResourceKey()", "name": "patient_id"}]},
+        {
+            "forEach": "address",
+            "column": [
+                {"path": "line.join('\\n')", "name": "street"},
+                {"path": "use", "name": "use"},
+                {"path": "city", "name": "city"},
+                {"path": "postalCode", "name": "zip"},
+            ],
+        },
+    ],
 )
 
 display(result)
@@ -49,54 +49,40 @@ display(result)
 <TabItem value="java" label="Java">
 
 ```java
+package au.csiro.pathling.examples;
+
+import static au.csiro.pathling.views.FhirView.column;
+import static au.csiro.pathling.views.FhirView.columns;
+import static au.csiro.pathling.views.FhirView.forEach;
+
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.source.NdjsonSource;
+import au.csiro.pathling.views.FhirView;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import au.csiro.pathling.library.io.source.NdjsonSource;
+import org.hl7.fhir.r4.model.StringType;
 
 class MyApp {
 
     public static void main(String[] args) {
         PathlingContext pc = PathlingContext.create();
-        NdjsonSource data = pc.read.ndjson("s3://somebucket/synthea/ndjson");
+        NdjsonSource data = pc.read()
+                .ndjson("/some/file/location");
 
-        Dataset<Row> result = data.view(ResourceType.PATIENT)
-                .json("{\n" +
-                        "  \"resource\": \"Patient\",\n" +
-                        "  \"select\": [\n" +
-                        "    {\n" +
-                        "      \"column\": [\n" +
-                        "        {\n" +
-                        "          \"path\": \"getResourceKey()\",\n" +
-                        "          \"name\": \"patient_id\"\n" +
-                        "        }\n" +
-                        "      ]\n" +
-                        "    },\n" +
-                        "    {\n" +
-                        "      \"forEach\": \"address\",\n" +
-                        "      \"column\": [\n" +
-                        "        {\n" +
-                        "          \"path\": \"line.join('\\\\n')\",\n" +
-                        "          \"name\": \"street\"\n" +
-                        "        },\n" +
-                        "        {\n" +
-                        "          \"path\": \"use\",\n" +
-                        "          \"name\": \"use\"\n" +
-                        "        },\n" +
-                        "        {\n" +
-                        "          \"path\": \"city\",\n" +
-                        "          \"name\": \"city\"\n" +
-                        "        },\n" +
-                        "        {\n" +
-                        "          \"path\": \"postalCode\",\n" +
-                        "          \"name\": \"zip\"\n" +
-                        "        }\n" +
-                        "      ]\n" +
-                        "    }\n" +
-                        "  ]\n" +
-                        "}")
-                .execute();
+        FhirView view = FhirView.ofResource(ResourceType.OBSERVATION)
+                .select(
+                        columns(
+                                column("patient_id", "getResourceKey()")
+                        ),
+                        forEach("code.coding",
+                                column("code_system", "system"),
+                                column("code_code", "code"),
+                                column("code_display", "display")
+                        )
+                ).build();
+
+        Dataset<Row> result = data.view(view).execute();
 
         result.show();
     }
@@ -108,49 +94,32 @@ class MyApp {
 
 ```scala
 import au.csiro.pathling.library.PathlingContext
+import au.csiro.pathling.library.io.source.NdjsonSource
+import au.csiro.pathling.views.FhirView
+import au.csiro.pathling.views.FhirView._
+import org.apache.spark.sql.{Dataset, Row, SparkSession}
 import org.hl7.fhir.r4.model.Enumerations.ResourceType
+import org.hl7.fhir.r4.model.StringType
 
 val pc = PathlingContext.create()
-val data = pc.read.ndjson("s3://somebucket/synthea/ndjson")
+val data: NdjsonSource = pc.read()
+        .ndjson("/some/file/location")
 
-val result = data.view(ResourceType.PATIENT)
-        .json("""{
-    "resource": "Patient",
-    "select": [
-      {
-        "column": [
-          {
-            "path": "getResourceKey()",
-            "name": "patient_id"
-          }
-        ]
-      },
-      {
-        "forEach": "address",
-        "column": [
-          {
-            "path": "line.join('\\n')",
-            "name": "street"
-          },
-          {
-            "path": "use",
-            "name": "use"
-          },
-          {
-            "path": "city",
-            "name": "city"
-          },
-          {
-            "path": "postalCode",
-            "name": "zip"
-          }
-        ]
-      }
-    ]
-  }""")
-        .execute()
+val view: FhirView = FhirView.ofResource(ResourceType.OBSERVATION)
+        .select(
+            columns(
+                column("patient_id", "getResourceKey()")
+            ),
+            forEach("code.coding",
+                column("code_system", "system"),
+                column("code_code", "code"),
+                column("code_display", "display")
+            ),
+        ).build()
 
-display(result)
+val result: Dataset[Row] = data.view(view).execute()
+
+result.show()
 ```
 
 </TabItem>
