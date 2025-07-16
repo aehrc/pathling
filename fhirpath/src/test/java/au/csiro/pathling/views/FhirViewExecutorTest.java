@@ -10,7 +10,7 @@ import jakarta.validation.ConstraintViolationException;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.Test;
 
-public class FhirViewExecutorTest {
+class FhirViewExecutorTest {
 
   @Test
   void failsWhenInvalidView() {
