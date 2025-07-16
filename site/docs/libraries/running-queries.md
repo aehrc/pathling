@@ -61,7 +61,6 @@ import au.csiro.pathling.views.FhirView;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.hl7.fhir.r4.model.StringType;
 
 class MyApp {
 
@@ -99,7 +98,6 @@ import au.csiro.pathling.views.FhirView
 import au.csiro.pathling.views.FhirView._
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 import org.hl7.fhir.r4.model.Enumerations.ResourceType
-import org.hl7.fhir.r4.model.StringType
 
 val pc = PathlingContext.create()
 val data: NdjsonSource = pc.read()
