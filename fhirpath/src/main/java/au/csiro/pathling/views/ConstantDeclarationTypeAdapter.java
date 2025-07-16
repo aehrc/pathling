@@ -133,7 +133,7 @@ public class ConstantDeclarationTypeAdapter extends TypeAdapter<ConstantDeclarat
     } catch (final NoSuchMethodException | InvocationTargetException | InstantiationException |
                    IllegalAccessException e) {
       // Throw a runtime exception if the value cannot be instantiated.
-      throw new RuntimeException(e);
+      throw new ConstantConstructionException(e);
     }
     // Return the instantiated value.
     return value;
