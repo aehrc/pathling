@@ -54,6 +54,13 @@ public class FhirViewQuery extends QueryBuilder<FhirViewQuery> {
     }
     return this;
   }
+  
+  @Nonnull
+  public FhirViewQuery view(@Nonnull final FhirView fhirView) {
+    this.fhirView = fhirView;
+    ensureValid(fhirView, "View is not valid");
+    return this;
+  }
 
   @Nonnull
   @Override

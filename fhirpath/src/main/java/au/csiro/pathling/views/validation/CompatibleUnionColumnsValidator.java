@@ -15,9 +15,9 @@ import java.util.stream.Stream;
  * Columns are considered compatible when they have the same number of columns, and each
  * corresponding column pair is compatible according to {@link Column#isCompatibleWith(Column)}.
  * <p>
- * The validator compares the first element's columns with all other elements in the list.
- * If any incompatibility is found, a detailed constraint violation message is created
- * indicating which element is incompatible.
+ * The validator compares the first element's columns with all other elements in the list. If any
+ * incompatibility is found, a detailed constraint violation message is created indicating which
+ * element is incompatible.
  */
 public class CompatibleUnionColumnsValidator implements
     ConstraintValidator<CompatibleUnionColumns, List<SelectClause>> {
@@ -41,8 +41,8 @@ public class CompatibleUnionColumnsValidator implements
       return false; // Different number of columns
     }
     for (int i = 0; i < left.size(); i++) {
-      Column leftColumn = left.get(i);
-      Column rightColumn = right.get(i);
+      final Column leftColumn = left.get(i);
+      final Column rightColumn = right.get(i);
       if (!leftColumn.isCompatibleWith(rightColumn)) {
         return false; // Columns are not compatible
       }
@@ -61,7 +61,7 @@ public class CompatibleUnionColumnsValidator implements
    *   <li>If any incompatibility is found, creates a detailed constraint violation message</li>
    * </ol>
    * <p>
-   * Empty or null lists are considered valid (other constraints like {@code @NotNull} 
+   * Empty or null lists are considered valid (other constraints like {@code @NotNull}
    * should handle those cases).
    *
    * @param value the list of {@link SelectClause} to validate
@@ -90,9 +90,9 @@ public class CompatibleUnionColumnsValidator implements
       if (!areCompatible(firstSchema, unionSchemas.get(i))) {
         isValid = false;
         // Create a custom message with the incompatible union
-        String message = "Incompatible columns found in unionAll element at index " + i + ":" +
-            " expected " + firstSchema + " but found " +
-            unionSchemas.get(i).toString();
+        final String message =
+            "Incompatible columns found in unionAll element at index " + i + ": expected "
+                + firstSchema + " but found " + unionSchemas.get(i).toString();
         context.buildConstraintViolationWithTemplate(message)
             .addBeanNode()
             .inIterable().atIndex(i)

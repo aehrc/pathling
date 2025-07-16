@@ -8,12 +8,14 @@ import static au.csiro.pathling.views.FhirView.select;
 import static au.csiro.pathling.views.FhirView.unionAll;
 
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.source.NdjsonSource;
 import au.csiro.pathling.views.FhirView;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.StringType;
-import au.csiro.pathling.library.io.source.NdjsonSource;
 
 class FhirViewExample {
 
@@ -40,10 +42,10 @@ class FhirViewExample {
             ),
             unionAll(
                 select(
-                    column("value.ofType(dateTime)", "value")
+                    column("value", "value.ofType(dateTime)")
                 ),
                 select(
-                    column("value.ofType(Period).start", "value")
+                    column("value", "value.ofType(Period).start")
                 )
             )
         )
@@ -52,8 +54,10 @@ class FhirViewExample {
             "status = 'final'"
         ).build();
 
-    Dataset<Row> result = data.view(ResourceType.PATIENT)
-        .execute();
+    Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    System.out.println(gson.toJson(view));
+
+    Dataset<Row> result = data.view(view).execute();
 
     result.show();
   }

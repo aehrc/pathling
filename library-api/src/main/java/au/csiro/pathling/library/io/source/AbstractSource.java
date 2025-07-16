@@ -24,6 +24,7 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.query.FhirViewQuery;
 import au.csiro.pathling.library.query.QueryDispatcher;
+import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -68,5 +69,13 @@ public abstract class AbstractSource implements QueryableDataSource {
   @Override
   public FhirViewQuery view(@Nullable final ResourceType subjectResource) {
     return new FhirViewQuery(dispatcher, requireNonNull(subjectResource), context.getGson());
+  }
+
+  @Nonnull
+  @Override
+  public FhirViewQuery view(@Nullable final FhirView view) {
+    requireNonNull(view);
+    return new FhirViewQuery(dispatcher, ResourceType.fromCode(view.getResource()), context.getGson())
+        .view(view);
   }
 }

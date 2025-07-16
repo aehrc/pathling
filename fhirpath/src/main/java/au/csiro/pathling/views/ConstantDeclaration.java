@@ -3,9 +3,7 @@ package au.csiro.pathling.views;
 import au.csiro.pathling.views.validation.ValidName;
 import jakarta.annotation.Nonnull;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hl7.fhir.instance.model.api.IBase;
@@ -23,7 +21,6 @@ import org.hl7.fhir.instance.model.api.IBase;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
 public class ConstantDeclaration {
 
   /**

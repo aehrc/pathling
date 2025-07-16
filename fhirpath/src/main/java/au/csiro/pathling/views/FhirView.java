@@ -1,7 +1,5 @@
 package au.csiro.pathling.views;
 
-import static java.util.Objects.nonNull;
-
 import au.csiro.pathling.views.validation.UniqueColumnNames;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -12,10 +10,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -31,9 +27,13 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
 @UniqueColumnNames
 public class FhirView {
+
+  @Nonnull
+  public static FhirViewBuilder builder() {
+    return new FhirViewBuilder();
+  }
 
   /**
    * Creates a builder with the resource already set.
@@ -54,7 +54,7 @@ public class FhirView {
    */
   @Nonnull
   public static FhirViewBuilder ofResource(@Nonnull final ResourceType resource) {
-    return FhirView.builder().resource(resource.toCode());
+    return ofResource(resource.toCode());
   }
 
   /**
@@ -65,19 +65,8 @@ public class FhirView {
    */
   @Nonnull
   public static SelectClause columns(@Nonnull final Column... columns) {
-    return SelectClause.builder().column(List.of(columns)).build();
+    return SelectClause.builder().column(columns).build();
   }
-
-  @Nonnull
-  public static SelectClause select(@Nonnull final Column... columns) {
-    return SelectClause.builder().columns(columns).build();
-  }
-
-  @Nonnull
-  public static SelectClause select(@Nonnull final SelectClause... selects) {
-    return SelectClause.builder().select(List.of(selects)).build();
-  }
-
 
   @Nonnull
   public static Column column(@Nonnull final String name, @Nonnull final String path) {
@@ -85,11 +74,21 @@ public class FhirView {
   }
 
   @Nonnull
+  public static SelectClause select(@Nonnull final Column... columns) {
+    return SelectClause.builder().column(columns).build();
+  }
+
+  @Nonnull
+  public static SelectClause select(@Nonnull final SelectClause... selects) {
+    return SelectClause.builder().select(selects).build();
+  }
+
+  @Nonnull
   public static SelectClause forEach(@Nonnull final String forEach,
       @Nonnull final Column... columns) {
     return SelectClause.builder()
         .forEach(forEach)
-        .column(List.of(columns)).build();
+        .column(columns).build();
   }
 
   @Nonnull
@@ -97,7 +96,7 @@ public class FhirView {
       @Nonnull final SelectClause... selects) {
     return SelectClause.builder()
         .forEach(forEach)
-        .select(List.of(selects)).build();
+        .select(selects).build();
   }
 
   /**
@@ -112,14 +111,20 @@ public class FhirView {
       @Nonnull final Column... columns) {
     return SelectClause.builder()
         .forEachOrNull(path)
-        .column(List.of(columns)).build();
+        .column(columns).build();
+  }
+
+  @Nonnull
+  public static SelectClause forEachOrNull(@Nonnull final String path,
+      @Nonnull final SelectClause... selects) {
+    return SelectClause.builder()
+        .forEachOrNull(path)
+        .select(selects).build();
   }
 
   @Nonnull
   public static SelectClause unionAll(@Nonnull final SelectClause... selects) {
-    return SelectClause.builder()
-        .unionAll(List.of(selects))
-        .build();
+    return SelectClause.builder().unionAll(selects).build();
   }
 
   /**
@@ -128,6 +133,7 @@ public class FhirView {
    * @see <a
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.resource">ViewDefinition.resource</a>
    */
+  @Nonnull
   @NotNull
   String resource;
 
@@ -140,9 +146,9 @@ public class FhirView {
    * @see <a
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant">ViewDefinition.constant</a>
    */
+  @Nonnull
   @NotNull
   @Valid
-  @Builder.Default
   List<@Valid ConstantDeclaration> constant = Collections.emptyList();
 
   /**
@@ -151,10 +157,10 @@ public class FhirView {
    * @see <a
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select">ViewDefinition.select</a>
    */
+  @Nonnull
   @NotNull
   @NotEmpty
   @Valid
-  @Builder.Default
   List<@Valid SelectClause> select = Collections.emptyList();
 
   /**
@@ -170,7 +176,6 @@ public class FhirView {
    */
   @Nullable
   @Valid
-  @Builder.Default
   List<@Valid WhereClause> where = null;
 
   /**
@@ -180,52 +185,8 @@ public class FhirView {
    */
   @Nonnull
   public Stream<Column> getAllColumns() {
-    return nonNull(select)
-           ? select.stream()
-               .flatMap(SelectClause::getAllColumns)
-           : Stream.empty();
-  }
-
-  /**
-   * The customized Lombok builder for {@link FhirView}. This builder provides convenience methods.
-   */
-  @SuppressWarnings("unused")
-  public static class FhirViewBuilder {
-
-    @Nonnull
-    public static FhirViewBuilder resource(@Nonnull final ResourceType resource) {
-      return FhirView.builder().resource(resource.toCode());
-    }
-
-    /**
-     * Convenience method to create select clauses from a variable-length argument list of
-     * {@link SelectClause}.
-     */
-    public FhirViewBuilder select(@Nonnull final SelectClause... selects) {
-      return select(List.of(selects));
-    }
-
-    /**
-     * Convenience method to create where clauses from a variable-length argument list of
-     * {@link WhereClause}.
-     */
-    public FhirViewBuilder where(@Nonnull final WhereClause... wheres) {
-      return where(List.of(wheres));
-    }
-
-    public FhirViewBuilder where(@Nonnull final String... expressions) {
-      return where(Stream.of(expressions)
-          .map(e -> new WhereClause(e, null))
-          .toList());
-    }
-
-    /**
-     * Convenience method to create constants from a variable-length argument list of
-     * {@link ConstantDeclaration}.
-     */
-    public FhirViewBuilder constant(@Nonnull final String name, @Nonnull final IBase value) {
-      return constant(List.of(new ConstantDeclaration(name, value)));
-    }
+    return select.stream()
+        .flatMap(SelectClause::getAllColumns);
   }
 
 }

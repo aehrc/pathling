@@ -7,12 +7,13 @@ import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -26,37 +27,12 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor()
 @NoArgsConstructor()
-@Builder
 @AtMostOneNonNull({"forEach", "forEachOrNull"})
 public class SelectClause implements SelectionElement {
 
-  /**
-   * The customized Lombok builder for {@link SelectClause}. This builder provides convenience
-   * methods.
-   */
-  @SuppressWarnings("unused")
-  public static class SelectClauseBuilder {
-
-    /**
-     * Convenience method to create columns from a var arg of  {@link Column}.
-     */
-    public SelectClauseBuilder columns(@Nonnull final Column... columns) {
-      return column(List.of(columns));
-    }
-
-    /**
-     * Convenience method to build select from a var arg of {@link SelectClause}.
-     */
-    public SelectClauseBuilder selects(@Nonnull final SelectClause... selects) {
-      return select(List.of(selects));
-    }
-
-    /**
-     * Convenience method to create unions from a var arg of {@link SelectClause}.
-     */
-    public SelectClauseBuilder unionsAll(@Nonnull final SelectClause... unionsAll) {
-      return unionAll(List.of(unionsAll));
-    }
+  @Nonnull
+  public static SelectClauseBuilder builder() {
+    return new SelectClauseBuilder();
   }
 
   /**
@@ -69,7 +45,6 @@ public class SelectClause implements SelectionElement {
   @Nonnull
   @NotNull
   @Valid
-  @Builder.Default
   List<@Valid Column> column = Collections.emptyList();
 
   /**
@@ -82,7 +57,6 @@ public class SelectClause implements SelectionElement {
   @NotNull
   @Size()
   @Valid
-  @Builder.Default
   List<@Valid SelectClause> select = Collections.emptyList();
 
   /**
@@ -94,8 +68,7 @@ public class SelectClause implements SelectionElement {
    * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.forEach">ViewDefinition.select.forEach</a>
    */
   @Nullable
-  @Builder.Default
-  String forEach = null;
+  String forEach;
 
   /**
    * Same as forEach, but produces a single row with null values in the nested expression if the
@@ -105,8 +78,7 @@ public class SelectClause implements SelectionElement {
    * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.forEachOrNull">ViewDefinition.select.forEachOrNull</a>
    */
   @Nullable
-  @Builder.Default
-  String forEachOrNull = null;
+  String forEachOrNull;
 
   /**
    * A `unionAll` combines the results of multiple selection structures. Each structure under the
@@ -120,7 +92,6 @@ public class SelectClause implements SelectionElement {
   @Size()
   @Valid
   @CompatibleUnionColumns
-  @Builder.Default
   List<@Valid SelectClause> unionAll = Collections.emptyList();
 
 
@@ -139,4 +110,5 @@ public class SelectClause implements SelectionElement {
         getUnionAll().stream().limit(1).flatMap(SelectClause::getAllColumns)
     ).flatMap(Function.identity());
   }
+
 }

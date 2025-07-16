@@ -16,13 +16,15 @@
  */
 package au.csiro.pathling.library.io.source;
 
+import static au.csiro.pathling.fhir.FhirUtils.getResourceType;
+
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.query.FhirViewQuery;
+import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import static au.csiro.pathling.fhir.FhirUtils.getResourceType;
 
 /**
  * A FHIR data source that can be queried using the aggregate and extract operations, and can also
@@ -41,17 +43,25 @@ public interface QueryableDataSource extends DataSource {
 
   /**
    * @param subjectResource the subject resource type
-   * @return a query builder for the view operation
+   * @return an executable {@link FhirViewQuery}
    */
   @Nonnull
   FhirViewQuery view(@Nullable ResourceType subjectResource);
 
   /**
    * @param subjectResource the subject resource code
-   * @return a query builder for the view operation
+   * @return an executable {@link FhirViewQuery}
    */
   @Nonnull
   default FhirViewQuery view(@Nullable String subjectResource) {
     return view(getResourceType(subjectResource));
   }
+
+  /**
+   * @param view a {@link FhirView} to be executed
+   * @return an executable {@link FhirViewQuery}
+   */
+  @Nonnull
+  FhirViewQuery view(@Nullable FhirView view);
+  
 }
