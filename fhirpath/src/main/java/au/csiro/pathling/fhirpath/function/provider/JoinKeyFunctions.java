@@ -33,12 +33,14 @@ import java.util.Optional;
  *
  * @author Piotr Szul
  * @see <a
- * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html#required-additional-functions">SQL
+ * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#required-additional-functions">SQL
  * on FHIR specification - Required Additional Functions</a>
  */
 @SuppressWarnings("unused")
 public class JoinKeyFunctions {
 
+  private JoinKeyFunctions() {
+  }
 
   /**
    * Returns a {@link Collection} of keys for the input {@link ResourceCollection}.
@@ -46,7 +48,7 @@ public class JoinKeyFunctions {
    * @param input The input {@link ResourceCollection}
    * @return A {@link Collection} of keys
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html#getresourcekey--keytype">SQL
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#getresourcekey--keytype">SQL
    * on FHIR specification - getResourceKey</a>
    */
   @FhirPathFunction
@@ -63,7 +65,7 @@ public class JoinKeyFunctions {
    * @param typeSpecifier An optional {@link TypeSpecifier} to filter the reference keys by
    * @return A {@link Collection} of keys
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html#getreferencekeyresource-type-specifier--keytype">SQL
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#getreferencekeyresource-type-specifier--keytype">SQL
    * on FHIR specification - getReferenceKey</a>
    */
   @FhirPathFunction

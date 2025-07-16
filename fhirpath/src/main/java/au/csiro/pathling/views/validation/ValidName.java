@@ -25,7 +25,7 @@ import java.lang.annotation.Target;
  * and database systems, ensuring that names are valid across different contexts.
  * <p>
  * The constraint is implemented using the {@link Pattern} annotation with the regular expression
- * {@code ^[A-Za-z][A-Za-z0-9_]*$}, which enforces these rules.
+ * {@code ^[A-Za-z]\w*$}, which enforces these rules.
  * <p>
  * Usage example:
  * <pre>
@@ -38,7 +38,7 @@ import java.lang.annotation.Target;
  * This constraint is used for validating column names, constant names, and other identifiers
  * throughout the application to ensure they follow a consistent naming convention.
  */
-@Pattern(regexp = "^[A-Za-z][A-Za-z0-9_]*$")
+@Pattern(regexp = "^[A-Za-z]\\w*$")
 @Constraint(validatedBy = {})  // required, even if no validator class
 @Target(FIELD)
 @Retention(RUNTIME)
@@ -53,7 +53,7 @@ public @interface ValidName {
    *
    * @return the error message template
    */
-  String message() default "must be a valid name ([A-Za-z][A-Za-z0-9_]*)";
+  String message() default "must be a valid name ([A-Za-z]\\w*)";
 
   /**
    * The validation groups this constraint belongs to.

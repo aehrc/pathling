@@ -32,28 +32,28 @@ import java.lang.annotation.Target;
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface CompatibleUnionColumns {
-    
-    /**
-     * Error message template to use when the validation fails.
-     * <p>
-     * The default message is overridden by the validator with a more specific message
-     * that includes details about which element is incompatible and why.
-     *
-     * @return the error message template
-     */
-    String message() default "All elements in unionAll must have compatible columns";
-    
-    /**
-     * The validation groups this constraint belongs to.
-     *
-     * @return the validation groups
-     */
-    Class<?>[] groups() default {};
-    
-    /**
-     * Payload that can be attached to a constraint declaration.
-     *
-     * @return the payload
-     */
-    Class<? extends Payload>[] payload() default {};
+
+  /**
+   * Error message template to use when the validation fails.
+   * <p>
+   * The default message is overridden by the validator with a more specific message that includes
+   * details about which element is incompatible and why.
+   *
+   * @return the error message template
+   */
+  String message() default "All elements in unionAll must have compatible columns";
+
+  /**
+   * The validation groups this constraint belongs to.
+   *
+   * @return the validation groups
+   */
+  Class<?>[] groups() default {};
+
+  /**
+   * Payload that can be attached to a constraint declaration.
+   *
+   * @return the payload
+   */
+  Class<? extends Payload>[] payload() default {};
 }

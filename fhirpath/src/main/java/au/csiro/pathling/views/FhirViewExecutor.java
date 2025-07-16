@@ -219,6 +219,7 @@ public class FhirViewExecutor {
       try {
         type = Optional.ofNullable(FHIRDefinedType.fromCode(fhirType));
       } catch (final FHIRException ignored) {
+        // If the FHIR type is not valid, we ignore it and leave the type as empty.
       }
     }
 

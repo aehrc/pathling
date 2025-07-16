@@ -1,7 +1,5 @@
 package au.csiro.pathling.views;
 
-import static java.util.Objects.nonNull;
-
 import au.csiro.pathling.views.validation.UniqueColumnNames;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -12,9 +10,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * View definitions are the heart of this proposal. In a nutshell, view is tabular projection of a
@@ -24,60 +22,118 @@ import lombok.NoArgsConstructor;
  *
  * @author John Grimes
  * @see <a
- * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html">ViewDefinition</a>
+ * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html">ViewDefinition</a>
  */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
 @UniqueColumnNames
 public class FhirView {
 
-  /**
-   * The customized Lombok builder for {@link FhirView}. This builder provides convenience methods.
-   */
-  @SuppressWarnings("unused")
-  public static class FhirViewBuilder {
-
-    /**
-     * Convenience method to create select clauses from a var arg of {@link SelectClause}.
-     */
-    public FhirViewBuilder selects(@Nonnull final SelectClause... selects) {
-      return select(List.of(selects));
-    }
-
-    /**
-     * Convenience method to create where clauses from a var arg of {@link WhereClause}.
-     */
-    public FhirViewBuilder wheres(@Nonnull final WhereClause... wheres) {
-      return where(List.of(wheres));
-    }
-
-    /**
-     * Convenience method to create constants from a var arg of {@link ConstantDeclaration}.
-     */
-    public FhirViewBuilder constants(@Nonnull final ConstantDeclaration... constants) {
-      return constant(List.of(constants));
-    }
+  @Nonnull
+  public static FhirViewBuilder builder() {
+    return new FhirViewBuilder();
   }
 
   /**
    * Creates a builder with the resource already set.
    *
-   * @param resource the resource to set
+   * @param resource the resource name to set
    * @return a builder with the resource set
    */
   @Nonnull
-  public static FhirViewBuilder withResource(@Nonnull final String resource) {
-    return builder().resource(resource);
+  public static FhirViewBuilder ofResource(@Nonnull final String resource) {
+    return FhirView.builder().resource(resource);
+  }
+
+  /**
+   * Creates a builder with the resource already set.
+   *
+   * @param resource the {@link ResourceType} to set
+   * @return a builder with the resource set
+   */
+  @Nonnull
+  public static FhirViewBuilder ofResource(@Nonnull final ResourceType resource) {
+    return ofResource(resource.toCode());
+  }
+
+  /**
+   * Creates a new {@link SelectClause} with the given columns.
+   *
+   * @param columns the columns to include
+   * @return a new {@link SelectClause} instance
+   */
+  @Nonnull
+  public static SelectClause columns(@Nonnull final Column... columns) {
+    return SelectClause.builder().column(columns).build();
+  }
+
+  @Nonnull
+  public static Column column(@Nonnull final String name, @Nonnull final String path) {
+    return new Column(name, path);
+  }
+
+  @Nonnull
+  public static SelectClause select(@Nonnull final Column... columns) {
+    return SelectClause.builder().column(columns).build();
+  }
+
+  @Nonnull
+  public static SelectClause select(@Nonnull final SelectClause... selects) {
+    return SelectClause.builder().select(selects).build();
+  }
+
+  @Nonnull
+  public static SelectClause forEach(@Nonnull final String forEach,
+      @Nonnull final Column... columns) {
+    return SelectClause.builder()
+        .forEach(forEach)
+        .column(columns).build();
+  }
+
+  @Nonnull
+  public static SelectClause forEach(@Nonnull final String forEach,
+      @Nonnull final SelectClause... selects) {
+    return SelectClause.builder()
+        .forEach(forEach)
+        .select(selects).build();
+  }
+
+  /**
+   * Creates a new 'forEachOrNull' {@link SelectClause} with the given columns.
+   *
+   * @param path the path to set in the 'forEachOrNull' clause
+   * @param columns the columns to include
+   * @return a new {@link SelectClause} instance
+   */
+  @Nonnull
+  public static SelectClause forEachOrNull(@Nonnull final String path,
+      @Nonnull final Column... columns) {
+    return SelectClause.builder()
+        .forEachOrNull(path)
+        .column(columns).build();
+  }
+
+  @Nonnull
+  public static SelectClause forEachOrNull(@Nonnull final String path,
+      @Nonnull final SelectClause... selects) {
+    return SelectClause.builder()
+        .forEachOrNull(path)
+        .select(selects).build();
+  }
+
+  @Nonnull
+  public static SelectClause unionAll(@Nonnull final SelectClause... selects) {
+    return SelectClause.builder().unionAll(selects).build();
   }
 
   /**
    * The FHIR resource that the view is based upon, e.g. 'Patient' or 'Observation'.
    *
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.resource">ViewDefinition.resource</a>
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.resource">ViewDefinition.resource</a>
    */
+  @Nonnull
   @NotNull
   String resource;
 
@@ -88,23 +144,23 @@ public class FhirView {
    * FHIRPath external constant with the same name.
    *
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant">ViewDefinition.constant</a>
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant">ViewDefinition.constant</a>
    */
+  @Nonnull
   @NotNull
   @Valid
-  @Builder.Default
   List<@Valid ConstantDeclaration> constant = Collections.emptyList();
 
   /**
    * Defines the content of a column within the view.
    *
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select">ViewDefinition.select</a>
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select">ViewDefinition.select</a>
    */
+  @Nonnull
   @NotNull
   @NotEmpty
   @Valid
-  @Builder.Default
   List<@Valid SelectClause> select = Collections.emptyList();
 
   /**
@@ -116,11 +172,10 @@ public class FhirView {
    * {@code %[name]}. The result of the expression must be of type Boolean.
    *
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.where">ViewDefinition.where</a>
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.where">ViewDefinition.where</a>
    */
   @Nullable
   @Valid
-  @Builder.Default
   List<@Valid WhereClause> where = null;
 
   /**
@@ -130,9 +185,8 @@ public class FhirView {
    */
   @Nonnull
   public Stream<Column> getAllColumns() {
-    return nonNull(select)
-           ? select.stream()
-               .flatMap(SelectClause::getAllColumns)
-           : Stream.empty();
+    return select.stream()
+        .flatMap(SelectClause::getAllColumns);
   }
+
 }

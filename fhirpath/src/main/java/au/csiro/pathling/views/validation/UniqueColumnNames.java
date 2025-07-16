@@ -11,8 +11,8 @@ import java.lang.annotation.Target;
 /**
  * Validation constraint that ensures all Column names within a FhirView are unique.
  * <p>
- * This constraint is applied at the class level to {@code FhirView} objects to validate
- * that all columns defined within the view have unique names. This is essential for:
+ * This constraint is applied at the class level to {@code FhirView} objects to validate that all
+ * columns defined within the view have unique names. This is essential for:
  * <ul>
  *   <li>Preventing ambiguity when referencing columns by name</li>
  *   <li>Ensuring valid SQL generation (as SQL requires unique column names)</li>
@@ -32,28 +32,28 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface UniqueColumnNames {
-    
-    /**
-     * Error message template to use when the validation fails.
-     * <p>
-     * The default message is overridden by the validator with a more specific message
-     * that includes details about which column names are duplicated.
-     *
-     * @return the error message template
-     */
-    String message() default "Column names must be unique within a view";
-    
-    /**
-     * The validation groups this constraint belongs to.
-     *
-     * @return the validation groups
-     */
-    Class<?>[] groups() default {};
-    
-    /**
-     * Payload that can be attached to a constraint declaration.
-     *
-     * @return the payload
-     */
-    Class<? extends Payload>[] payload() default {};
+
+  /**
+   * Error message template to use when the validation fails.
+   * <p>
+   * The default message is overridden by the validator with a more specific message that includes
+   * details about which column names are duplicated.
+   *
+   * @return the error message template
+   */
+  String message() default "Column names must be unique within a view";
+
+  /**
+   * The validation groups this constraint belongs to.
+   *
+   * @return the validation groups
+   */
+  Class<?>[] groups() default {};
+
+  /**
+   * Payload that can be attached to a constraint declaration.
+   *
+   * @return the payload
+   */
+  Class<? extends Payload>[] payload() default {};
 }

@@ -15,8 +15,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import lombok.Value;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.Base64BinaryType;
 import org.hl7.fhir.r4.model.BooleanType;
@@ -85,7 +83,7 @@ public class ConstantDeclarationTypeAdapter extends TypeAdapter<ConstantDeclarat
     // Extract the value of the constant from the JSON object.
     final IBase value;
     final List<String> valueKeys = jsonObject.keySet().stream()
-        .filter(key -> key.startsWith("value")).collect(Collectors.toList());
+        .filter(key -> key.startsWith("value")).toList();
     if (valueKeys.size() != 1) {
       throw new InvalidUserInputError("Constant must have one value");
     }
@@ -115,17 +113,17 @@ public class ConstantDeclarationTypeAdapter extends TypeAdapter<ConstantDeclarat
     final IBase value;
     try {
       // Get the constructor of the value type class.
-      final Constructor<? extends IBase> constructor = valueType.getTypeClass()
-          .getDeclaredConstructor(valueType.getInputClass());
+      final Constructor<? extends IBase> constructor = valueType.typeClass()
+          .getDeclaredConstructor(valueType.inputClass());
       final Object valueObject;
       // Determine the input class and get the value accordingly.
-      if (valueType.getInputClass() == Boolean.class) {
+      if (valueType.inputClass() == Boolean.class) {
         valueObject = jsonObject.get(valueKey).getAsBoolean();
-      } else if (valueType.getInputClass() == int.class) {
+      } else if (valueType.inputClass() == int.class) {
         valueObject = jsonObject.get(valueKey).getAsInt();
-      } else if (valueType.getInputClass() == Long.class) {
+      } else if (valueType.inputClass() == Long.class) {
         valueObject = jsonObject.get(valueKey).getAsLong();
-      } else if (valueType.getInputClass() == BigDecimal.class) {
+      } else if (valueType.inputClass() == BigDecimal.class) {
         valueObject = jsonObject.get(valueKey).getAsBigDecimal();
       } else {
         valueObject = jsonObject.get(valueKey).getAsString();
@@ -135,20 +133,14 @@ public class ConstantDeclarationTypeAdapter extends TypeAdapter<ConstantDeclarat
     } catch (final NoSuchMethodException | InvocationTargetException | InstantiationException |
                    IllegalAccessException e) {
       // Throw a runtime exception if the value cannot be instantiated.
-      throw new RuntimeException(e);
+      throw new ConstantConstructionException(e);
     }
     // Return the instantiated value.
     return value;
   }
 
-  @Value
-  private static class ValueType {
-
-    @Nonnull
-    Class<? extends IBase> typeClass;
-
-    @Nonnull
-    Class inputClass;
+  private record ValueType(@Nonnull Class<? extends IBase> typeClass,
+                           @Nonnull Class<?> inputClass) {
 
   }
 
