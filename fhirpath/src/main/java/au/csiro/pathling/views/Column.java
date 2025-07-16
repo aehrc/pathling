@@ -52,7 +52,7 @@ public class Column implements SelectionElement {
    * Name of the column produced in the output, must be in a database-friendly format.
    *
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.name">ViewDefinition.select.name</a>
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.name">ViewDefinition.select.name</a>
    */
   @NotNull
   @Size(max = 255)
@@ -66,7 +66,7 @@ public class Column implements SelectionElement {
    * {@code %[name]}.
    *
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.path">ViewDefinition.select.path</a>
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.path">ViewDefinition.select.path</a>
    */
   @NotNull
   String path;
@@ -75,7 +75,7 @@ public class Column implements SelectionElement {
    * A human-readable description of the column.
    *
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.description">ViewDefinition.select.description</a>
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.description">ViewDefinition.select.description</a>
    */
   @Nullable
   String description;
@@ -84,7 +84,7 @@ public class Column implements SelectionElement {
    * Indicates whether the column may have multiple values. Defaults to false if unset.
    *
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.collection">ViewDefinition.select.collection</a>
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.collection">ViewDefinition.select.collection</a>
    */
   boolean collection;
 

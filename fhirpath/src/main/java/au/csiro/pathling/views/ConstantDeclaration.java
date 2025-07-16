@@ -16,7 +16,7 @@ import org.hl7.fhir.instance.model.api.IBase;
  *
  * @author John Grimes
  * @see <a
- * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant">ViewDefinition.constant</a>
+ * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant">ViewDefinition.constant</a>
  */
 @Data
 @AllArgsConstructor
@@ -27,7 +27,7 @@ public class ConstantDeclaration {
    * Name of constant (referred to in FHIRPath as {@code %[name]}).
    *
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant.name">ViewDefinition.constant.name</a>
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant.name">ViewDefinition.constant.name</a>
    */
   @Nonnull
   @NotNull
@@ -38,7 +38,7 @@ public class ConstantDeclaration {
    * The string that will be substituted in place of the constant reference.
    *
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant.value">ViewDefinition.constant.value</a>
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant.value">ViewDefinition.constant.value</a>
    */
   @Nonnull
   @NotNull

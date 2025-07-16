@@ -22,7 +22,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author John Grimes
  * @see <a
- * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html">ViewDefinition</a>
+ * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html">ViewDefinition</a>
  */
 @Data
 @AllArgsConstructor
@@ -131,7 +131,7 @@ public class FhirView {
    * The FHIR resource that the view is based upon, e.g. 'Patient' or 'Observation'.
    *
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.resource">ViewDefinition.resource</a>
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.resource">ViewDefinition.resource</a>
    */
   @Nonnull
   @NotNull
@@ -144,7 +144,7 @@ public class FhirView {
    * FHIRPath external constant with the same name.
    *
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant">ViewDefinition.constant</a>
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant">ViewDefinition.constant</a>
    */
   @Nonnull
   @NotNull
@@ -155,7 +155,7 @@ public class FhirView {
    * Defines the content of a column within the view.
    *
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select">ViewDefinition.select</a>
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select">ViewDefinition.select</a>
    */
   @Nonnull
   @NotNull
@@ -172,7 +172,7 @@ public class FhirView {
    * {@code %[name]}. The result of the expression must be of type Boolean.
    *
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.where">ViewDefinition.where</a>
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.where">ViewDefinition.where</a>
    */
   @Nullable
   @Valid

@@ -13,7 +13,7 @@ understand your use case.
 ## SQL on FHIR support
 
 We are working on adding support for
-executing [SQL on FHIR views](https://build.fhir.org/ig/FHIR/sql-on-fhir-v2)
+executing [SQL on FHIR views](https://sql-on-fhir.org/ig/2.0.0)
 within both the language libraries and server implementation.
 
 ## Additional FHIRPath functions
