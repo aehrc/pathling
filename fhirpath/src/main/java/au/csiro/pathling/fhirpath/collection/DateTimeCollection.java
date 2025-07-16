@@ -19,11 +19,13 @@ package au.csiro.pathling.fhirpath.collection;
 
 import static org.apache.spark.sql.functions.date_format;
 
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import au.csiro.pathling.sql.SqlFunctions;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
@@ -36,7 +38,7 @@ import org.hl7.fhir.r4.model.InstantType;
  *
  * @author John Grimes
  */
-public class DateTimeCollection extends Collection implements StringCoercible {
+public class DateTimeCollection extends Collection implements StringCoercible, Materializable {
 
   private static final String SPARK_FHIRPATH_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
 
@@ -110,4 +112,13 @@ public class DateTimeCollection extends Collection implements StringCoercible {
     return StringCollection.build(valueColumn);
   }
 
+  @Nonnull
+  @Override
+  public Column toExternalValue() {
+    // special case to convert instant back from TIMESTAMP to STRING
+    return getFhirType()
+        .filter(FHIRDefinedType.INSTANT::equals)
+        .map(ignore -> getColumn().transform(SqlFunctions::to_fhir_instant).getValue())
+        .orElseGet(Materializable.super::toExternalValue);
+  }
 }

@@ -17,9 +17,11 @@
 
 package au.csiro.pathling.view;
 
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
 import lombok.Value;
+import org.apache.spark.sql.Column;
 
 /**
  * The result of evaluating a {@link RequestedColumn} as part of a {@link ProjectionClause}.
@@ -39,4 +41,31 @@ public class ProjectedColumn {
   @Nonnull
   RequestedColumn requestedColumn;
 
+  /**
+   * Gets the column value from the collection and aliases it with the requested name. If a SQL type
+   * is specified in the requested column, the column value will be cast to that type.
+   *
+   * @return The column value with the appropriate alias
+   */
+  @Nonnull
+  public Column getValue() {
+    // If a type was asserted for the column, check that the collection is of that type.
+    requestedColumn.getType().ifPresent(requestedType ->
+        collection.getFhirType().ifPresent(actualType -> {
+          if (!requestedType.equals(actualType)) {
+            throw new IllegalArgumentException(
+                "Collection " + collection + " has type " + actualType
+                    + ", expected " + requestedType);
+          }
+        })
+    );
+    final Column rawResult = Materializable.getExternalValue(requestedColumn.isCollection()
+                                                       ? collection.asPlural()
+                                                       : collection.asSingular());
+    return requestedColumn.getSqlType()
+        .map(rawResult::cast)
+        .orElse(rawResult)
+        .alias(requestedColumn.getName());
+
+  }
 }

@@ -21,6 +21,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
@@ -43,7 +44,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class DecimalCollection extends Collection implements Comparable, Numeric, StringCoercible {
+public class DecimalCollection extends Collection implements Comparable, Numeric, StringCoercible,
+        Materializable {
 
   public static final org.apache.spark.sql.types.DecimalType DECIMAL_TYPE = DataTypes
       .createDecimalType(DecimalCustomCoder.precision(), DecimalCustomCoder.scale());
@@ -190,5 +192,12 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
   @Nonnull
   public Collection negate() {
     return Numeric.defaultNegate(this);
+  }
+
+
+  @Override
+  @Nonnull
+  public Column toExternalValue() {
+    return getColumn().asString().getValue();
   }
 }

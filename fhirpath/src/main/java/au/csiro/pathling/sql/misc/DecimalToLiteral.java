@@ -42,7 +42,7 @@ public class DecimalToLiteral implements SqlFunction2<BigDecimal, Integer, Strin
   /**
    * The name of this function when used within SQL.
    */
-  public static final String FUNCTION_NAME = "decima;_to_literal";
+  public static final String FUNCTION_NAME = "decimal_to_literal";
 
   @Serial
   private static final long serialVersionUID = 1L;
@@ -65,7 +65,7 @@ public class DecimalToLiteral implements SqlFunction2<BigDecimal, Integer, Strin
     }
     return Optional.ofNullable(scale)
         .map(s -> value.setScale(s, RoundingMode.FLOOR))
-        .orElse(value)
+        .orElse(value.stripTrailingZeros())
         .toString();
   }
 }

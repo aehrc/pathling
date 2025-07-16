@@ -21,6 +21,7 @@ import static au.csiro.pathling.fhirpath.literal.StringLiteral.unescapeFhirPathS
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
@@ -49,7 +50,8 @@ import org.hl7.fhir.r4.model.UuidType;
  * @author John Grimes
  */
 @SuppressWarnings("TypeMayBeWeakened")
-public class StringCollection extends Collection implements Comparable, Numeric, StringCoercible {
+public class StringCollection extends Collection implements Comparable, Numeric, StringCoercible,
+    Materializable {
 
   protected StringCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
@@ -63,14 +65,14 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * Returns a new instance with the specified columnCtx and definition.
    *
    * @param columnRepresentation The columnCtx to use
-   * @param definition The definition to use
-   * @return A new instance of StringCollection
+   * @param fhirDefinedType the FHIR type of the collection
+   * @return A new instance of {@link StringCollection}
    */
   @Nonnull
   public static StringCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
-      @Nonnull final Optional<NodeDefinition> definition) {
+      @Nonnull final FHIRDefinedType fhirDefinedType) {
     return new StringCollection(columnRepresentation, Optional.of(FhirPathType.STRING),
-        Optional.of(FHIRDefinedType.STRING), definition, Optional.empty());
+        Optional.of(fhirDefinedType), Optional.empty(), Optional.empty());
   }
 
   /**
@@ -81,7 +83,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    */
   @Nonnull
   public static StringCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
-    return build(columnRepresentation, Optional.empty());
+    return build(columnRepresentation, FHIRDefinedType.STRING);
   }
 
 
@@ -128,7 +130,19 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final String value) {
-    return StringCollection.build(DefaultRepresentation.literal(value));
+    return fromValue(value, FHIRDefinedType.STRING);
+  }
+
+  /**
+   * Returns a new instance based upon a literal value with specified FHIR type.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link StringCollection}
+   */
+  @Nonnull
+  public static StringCollection fromValue(@Nonnull final String value,
+      @Nonnull final FHIRDefinedType fhirDefinedType) {
+    return StringCollection.build(DefaultRepresentation.literal(value), fhirDefinedType);
   }
 
   /**
@@ -139,7 +153,10 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final Base64BinaryType value) {
-    return StringCollection.fromValue(value.getValueAsString());
+    // special case for Base64BinaryType, as it needs to be decoded
+    return StringCollection.build(
+        DefaultRepresentation.literal(value.getValue()),
+        FHIRDefinedType.BASE64BINARY);
   }
 
   /**
@@ -150,7 +167,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final CodeType value) {
-    return StringCollection.fromValue(value.getValueAsString());
+    return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.CODE);
   }
 
   /**
@@ -161,7 +178,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final IdType value) {
-    return StringCollection.fromValue(value.getValueAsString());
+    return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.ID);
   }
 
   /**
@@ -172,7 +189,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final OidType value) {
-    return StringCollection.fromValue(value.getValueAsString());
+    return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.OID);
   }
 
   /**
@@ -183,7 +200,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final UriType value) {
-    return StringCollection.fromValue(value.getValueAsString());
+    return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.URI);
   }
 
   /**
@@ -194,7 +211,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final org.hl7.fhir.r4.model.UrlType value) {
-    return StringCollection.fromValue(value.getValueAsString());
+    return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.URL);
   }
 
   /**
@@ -205,7 +222,33 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final UuidType value) {
-    return StringCollection.fromValue(value.getValueAsString());
+    return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.UUID);
+  }
+
+  /**
+   * Returns a new instance based upon a {@link org.hl7.fhir.r4.model.CanonicalType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link StringCollection}
+   */
+  @Nonnull
+  public static StringCollection fromValue(
+      @Nonnull final org.hl7.fhir.r4.model.CanonicalType value) {
+    return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.CANONICAL);
+  }
+
+  // fromValue for MarkdownType
+
+  /**
+   * Returns a new instance based upon a {@link org.hl7.fhir.r4.model.MarkdownType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link StringCollection}
+   */
+  @Nonnull
+  public static StringCollection fromValue(
+      @Nonnull final org.hl7.fhir.r4.model.MarkdownType value) {
+    return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.MARKDOWN);
   }
 
   /**
@@ -261,4 +304,16 @@ public class StringCollection extends Collection implements Comparable, Numeric,
   public @Nonnull Collection negate() {
     throw new InvalidUserInputError("Negation is not supported on Strings");
   }
+
+  @Nonnull
+  @Override
+  public Column toExternalValue() {
+    // special case to convert base64String back to Binary
+    return getFhirType()
+        .filter(FHIRDefinedType.BASE64BINARY::equals)
+        .map(__ -> new DefaultRepresentation(getColumnValue()).transform(functions::unbase64)
+            .getValue())
+        .orElseGet(Materializable.super::toExternalValue);
+  }
+
 }

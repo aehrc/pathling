@@ -19,6 +19,7 @@ import au.csiro.pathling.view.ProjectionClause;
 import au.csiro.pathling.view.RequestedColumn;
 import au.csiro.pathling.view.UnionSelection;
 import au.csiro.pathling.view.UnnestingSelection;
+import au.csiro.pathling.views.ansi.AnsiSqlTypeParser;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -29,6 +30,7 @@ import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -221,8 +223,34 @@ public class FhirViewExecutor {
     }
 
     // Create a RequestedColumn object that represents the column.
-    return new RequestedColumn(path, column.getName(), column.isCollection(), type);
+    return new RequestedColumn(path, column.getName(), column.isCollection(), type,
+        getSqlTypeHint(column));
   }
+
+  /**
+   * Gets the SQL type hint for a column, if it exists.
+   *
+   * @param column the column to get the SQL type hint for
+   * @return an Optional containing the SQL type hint, or an empty Optional if there is no hint
+   */
+  @Nonnull
+  private Optional<DataType> getSqlTypeHint(@Nonnull final Column column) {
+    // Look for the ANSI type tag in the column's tags
+    return column.getTagValue(ColumnTag.ANSI_TYPE_TAG)
+        .map(this::convertAnsiTypeToSparkType);
+  }
+
+  /**
+   * Converts an ANSI SQL type string to a Spark SQL DataType.
+   *
+   * @param ansiType the ANSI SQL type string
+   * @return the corresponding Spark SQL DataType
+   */
+  @Nonnull
+  private DataType convertAnsiTypeToSparkType(@Nonnull final String ansiType) {
+    return AnsiSqlTypeParser.parseType(ansiType);
+  }
+
 
   /**
    * Parses the where clause from a FHIR view into a {@link ProjectionClause} object.
@@ -242,7 +270,8 @@ public class FhirViewExecutor {
         // Parse the FHIRPath expression.
         .map(parser::parse)
         // Create a PrimitiveSelection object for each FHIRPath.
-        .map(path -> new RequestedColumn(path, randomAlias(), false, Optional.empty()))
+        .map(path -> new RequestedColumn(path, randomAlias(), false, Optional.empty(),
+            Optional.empty()))
         .toList();
 
     // If there are no where components, return an empty Optional. 

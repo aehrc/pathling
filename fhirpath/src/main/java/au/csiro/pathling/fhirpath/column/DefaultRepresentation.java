@@ -73,13 +73,30 @@ public class DefaultRepresentation extends ColumnRepresentation {
    * @return A new {@link ColumnRepresentation} representing the value
    */
   @Nonnull
-  public static DefaultRepresentation literal(@Nonnull final Object value) {
-    if (value instanceof BigDecimal) {
+  public static ColumnRepresentation literal(@Nonnull final Object value) {
+    if (value instanceof BigDecimal bd) {
       // If the literal is a BigDecimal, represent it as a DecimalRepresentation.
-      return new DecimalRepresentation(lit(value));
+      return new DecimalRepresentation(bd);
+    } else if (value instanceof byte[] ba) {
+      return fromBinaryColumn(functions.lit(ba));
+    } else {
+      // Otherwise use the default representation.
+      return new DefaultRepresentation(lit(value));
     }
-    // Otherwise use the default representation.
-    return new DefaultRepresentation(lit(value));
+  }
+
+
+  /**
+   * Creates a new {@link ColumnRepresentation} that represents a binary column as a base64 encoded
+   * string.
+   *
+   * @param column a column containing binary data
+   * @return A new {@link ColumnRepresentation} representing the binary data as a base64 encoded
+   * string.
+   */
+  @Nonnull
+  public static ColumnRepresentation fromBinaryColumn(@Nonnull final Column column) {
+    return new DefaultRepresentation(column).transform(functions::base64);
   }
 
   @Override
@@ -120,7 +137,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
       return DecimalRepresentation.fromTraversal(this, fieldName);
     } else if (FHIRDefinedType.BASE64BINARY.equals(resolvedFhirType)) {
       // If the field is a base64Binary, represent it using a BinaryRepresentation.
-      return BinaryRepresentation.fromBinaryColumn(traverse(fieldName).getValue());
+      return DefaultRepresentation.fromBinaryColumn(traverse(fieldName).getValue());
     } else {
       // Otherwise, use the default representation.
       return traverse(fieldName);

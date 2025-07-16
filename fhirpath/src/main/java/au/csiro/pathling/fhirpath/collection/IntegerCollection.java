@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.collection;
 
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
@@ -44,7 +45,8 @@ import org.hl7.fhir.r4.model.UnsignedIntType;
  *
  * @author John Grimes
  */
-public class IntegerCollection extends Collection implements Comparable, Numeric, StringCoercible {
+public class IntegerCollection extends Collection implements Comparable, Numeric, StringCoercible,
+        Materializable {
 
   private static final Set<FHIRDefinedType> INTEGER_TYPES = Set.of(FHIRDefinedType.INTEGER,
       FHIRDefinedType.UNSIGNEDINT, FHIRDefinedType.POSITIVEINT);
@@ -175,7 +177,7 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
   @Nonnull
   @Override
   public Optional<Column> getNumericValue() {
-    return Optional.ofNullable(this.getColumn().cast(DataTypes.LongType).getValue());
+    return Optional.ofNullable(this.getColumn().elementCast(DataTypes.LongType).getValue());
   }
 
   @Nonnull
@@ -207,7 +209,8 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
           }
           return IntegerCollection.build(new DefaultRepresentation(valueColumn));
         case DIVISION:
-          final Column numerator = source.getColumn().cast(DecimalCollection.getDecimalType())
+          final Column numerator = source.getColumn()
+              .elementCast(DecimalCollection.getDecimalType())
               .getValue();
           valueColumn = operation.getSparkFunction().apply(numerator, targetNumeric);
           return DecimalCollection.build(new DecimalRepresentation(valueColumn));

@@ -1,5 +1,6 @@
 package au.csiro.pathling.fhirpath.collection;
 
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
@@ -16,7 +17,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 /**
  * Represents an empty collection.
  */
-public class EmptyCollection extends Collection implements Comparable, Numeric, StringCoercible {
+public class EmptyCollection extends Collection implements Comparable, Numeric, StringCoercible,
+        Materializable {
 
   private static final EmptyCollection INSTANCE = new EmptyCollection(
       DefaultRepresentation.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
@@ -68,7 +70,7 @@ public class EmptyCollection extends Collection implements Comparable, Numeric, 
   public BooleanCollection asBooleanPath() {
     return BooleanCollection.empty();
   }
-  
+
   /**
    * {@inheritDoc}
    * <p>

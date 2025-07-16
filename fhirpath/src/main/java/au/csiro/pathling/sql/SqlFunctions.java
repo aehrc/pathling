@@ -18,6 +18,7 @@
 package au.csiro.pathling.sql;
 
 import jakarta.annotation.Nonnull;
+import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 
@@ -28,7 +29,10 @@ import org.apache.spark.sql.functions;
  * FHIR data processing. These functions handle common operations like pruning annotations, safely
  * concatenating maps, and collecting maps during aggregation.
  */
-public interface SqlFunctions {
+@UtilityClass
+public class SqlFunctions {
+
+  private static final String FHIR_INSTANT_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
 
   /**
    * Removes all fields starting with '_' (underscore) from struct values.
@@ -41,56 +45,21 @@ public interface SqlFunctions {
    * @return A new column with underscore-prefixed fields removed from structs
    */
   @Nonnull
-  static Column prune_annotations(@Nonnull final Column col) {
+  public static Column prune_annotations(@Nonnull final Column col) {
     return new Column(new PruneSyntheticFields(col.expr()));
   }
 
-  /**
-   * Safely concatenates two map columns, handling null values appropriately.
-   * <p>
-   * This function:
-   * <ul>
-   *   <li>Returns the right map if the left map is null</li>
-   *   <li>Returns the left map if the right map is null</li>
-   *   <li>Concatenates both maps if neither is null</li>
-   * </ul>
-   * <p>
-   * When maps are concatenated and contain the same keys, the values from the right map
-   * take precedence (overwrite values from the left map).
-   *
-   * @param left The left map column
-   * @param right The right map column
-   * @return A new column containing the concatenated map
-   */
-  @Nonnull
-  static Column ns_map_concat(@Nonnull final Column left, @Nonnull final Column right) {
-    return functions.when(left.isNull(), right)
-        .when(right.isNull(), left)
-        .otherwise(functions.map_concat(left, right));
-  }
 
   /**
-   * Aggregates multiple map columns into a single map by concatenating them.
-   * <p>
-   * This function is designed to be used in Spark SQL aggregation operations to combine multiple
-   * maps into a single map. It handles null values appropriately and ensures that when maps contain
-   * the same keys, the last value wins.
-   * <p>
-   * Note: To work this function requires the Spark SQL configuration
-   * {@code spark.sql.mapKeyDedupPolicy=LAST_WIN}.
+   * Formats a TIMESTAMP column to a string in FHIR instant format. Always returns UTC time as Spark
+   * TIMESTAMP does not preserve the original timezone.
    *
-   * @param mapColumn The map column to aggregate
-   * @return A new column containing the aggregated map
+   * @param col The column containing TIMESTAMP values to format
+   * @return A new column with TIMESTAMP values formatted as strings in FHIR instant format
    */
   @Nonnull
-  static Column collect_map(@Nonnull final Column mapColumn) {
-    // TODO: try to implement this more efficiently and in a way
-    // that does not require:
-    // .config("spark.sql.mapKeyDedupPolicy", "LAST_WIN")
-    return functions.reduce(
-        functions.collect_list(mapColumn),
-        functions.any_value(mapColumn),
-        (acc, elem) -> functions.when(acc.isNull(), elem).otherwise(ns_map_concat(acc, elem))
-    );
+  public static Column to_fhir_instant(@Nonnull final Column col) {
+    return functions.date_format(functions.to_utc_timestamp(col, functions.current_timezone()),
+        FHIR_INSTANT_FORMAT);
   }
 }

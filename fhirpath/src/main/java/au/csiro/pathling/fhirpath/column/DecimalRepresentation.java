@@ -2,11 +2,13 @@ package au.csiro.pathling.fhirpath.column;
 
 import au.csiro.pathling.sql.misc.DecimalToLiteral;
 import jakarta.annotation.Nonnull;
+import java.math.BigDecimal;
 import java.util.Optional;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 
 /**
  * Describes a representation of a decimal value, which includes:
@@ -58,6 +60,10 @@ public class DecimalRepresentation extends DefaultRepresentation {
     this.scaleValue = Optional.empty();
   }
 
+  public DecimalRepresentation(@Nonnull final BigDecimal value) {
+    this(functions.lit(value), functions.lit(value.scale()));
+  }
+
   /**
    * @param value The value to represent
    * @param scaleValue The original scale of the value
@@ -70,7 +76,7 @@ public class DecimalRepresentation extends DefaultRepresentation {
   @Override
   @Nonnull
   public ColumnRepresentation asString() {
-    return callUdf(DecimalToLiteral.FUNCTION_NAME,
+    return transformWithUdf(DecimalToLiteral.FUNCTION_NAME,
         scaleValue.map(DefaultRepresentation::new)
             .orElse(DefaultRepresentation.empty()));
   }

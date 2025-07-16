@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.validation.ValidationUtils;
 import jakarta.validation.ConstraintViolation;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.StringType;
@@ -80,10 +81,10 @@ public class FhirViewValidationTest {
     final ConstraintViolation<FhirView> violation = validationResult.iterator().next();
     assertEquals(
         "Incompatible columns found in unionAll element at index 2: "
-            + "expected [Column(name=name, path=Patient.name, description=null, collection=false, type=null), "
-            + "Column(name=gender, path=Patient.gender, description=null, collection=false, type=null)] "
-            + "but found [Column(name=name, path=Patient.name, description=null, collection=true, type=null), "
-            + "Column(name=gender, path=Patient.gender, description=null, collection=false, type=null)]",
+            + "expected [Column(name=name, path=Patient.name, description=null, collection=false, type=null, tag=[]), "
+            + "Column(name=gender, path=Patient.gender, description=null, collection=false, type=null, tag=[])] "
+            + "but found [Column(name=name, path=Patient.name, description=null, collection=true, type=null, tag=[]), "
+            + "Column(name=gender, path=Patient.gender, description=null, collection=false, type=null, tag=[])]",
         violation.getMessage());
     assertEquals(fhirView, violation.getRootBean());
   }
@@ -188,6 +189,29 @@ public class FhirViewValidationTest {
     final ConstraintViolation<FhirView> violation = validationResult.iterator().next();
     assertEquals("Only one of the fields [forEach, forEachOrNull] can be non-null", violation.getMessage());
     assertEquals("select[0]", violation.getPropertyPath().toString());
+  }
+  
+  @Test
+  public void testDuplicateAnsiTypeTags() {
+    // Create a column with duplicate ANSI_TYPE_TAG tags
+    ColumnTag tag1 = ColumnTag.of(ColumnTag.ANSI_TYPE_TAG, "VARCHAR");
+    ColumnTag tag2 = ColumnTag.of(ColumnTag.ANSI_TYPE_TAG, "INTEGER");
+    
+    Column columnWithDuplicateTags = Column.builder()
+        .name("duplicateTagColumn")
+        .path("Patient.id")
+        .tag(List.of(tag1, tag2))
+        .build();
+
+    final FhirView fhirView = FhirView.withResource("Patient")
+        .selects(SelectClause.ofColumns(columnWithDuplicateTags))
+        .build();
+
+    final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(fhirView);
+    assertEquals(1, validationResult.size());
+    final ConstraintViolation<FhirView> violation = validationResult.iterator().next();
+    assertEquals("List must not contain more than one 'ansi/type' tag", violation.getMessage());
+    assertEquals("select[0].column[0].tag", violation.getPropertyPath().toString());
   }
 
   @ParameterizedTest(name = "{0}")

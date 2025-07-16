@@ -1,10 +1,15 @@
 package au.csiro.pathling.views;
 
+import au.csiro.pathling.views.validation.UniqueTags;
 import au.csiro.pathling.views.validation.ValidName;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -29,18 +34,67 @@ public class Column implements SelectionElement {
   }
 
   /**
-   * Static factory method to create a new non collection {@link Column} instance with required
+   * Static factory method to create a new non collection {@link ColumnBuilder} instance with
+   * required fields.
+   *
+   * @param name the name of the column (must be a valid identifier)
+   * @param path the FHIRPath expression that evaluates to the value for the column
+   * @return a new {@link ColumnBuilder} instance
+   */
+
+  @Nonnull
+  public static ColumnBuilder singleBuilder(@Nonnull final String name,
+      @Nonnull final String path) {
+    return builder()
+        .name(name)
+        .path(path);
+  }
+
+  /**
+   * Static factory method to create a new collection {@link ColumnBuilder} instance with required
    * fields.
    *
-   * @param name the name of the column, must be in a database-friendly format
+   * @param name the name of the column (must be a valid identifier)
    * @param path the FHIRPath expression that evaluates to the value for the column
-   * @return a new {@link Column} instance
+   * @return a new {@link ColumnBuilder} instance
    */
-  public static Column single(@NotNull final String name,
-      @NotNull final String path) {
+  @Nonnull
+  public static ColumnBuilder collectionBuilder(@Nonnull final String name,
+      @Nonnull final String path) {
     return builder()
         .name(name)
         .path(path)
+        .collection(true);
+  }
+
+
+  /**
+   * Static factory method to create a new non collection {@link Column} instance with required
+   * fields.
+   *
+   * @param name the name of the column (must be a valid identifier)
+   * @param path the FHIRPath expression that evaluates to the value for the column
+   * @return a new {@link Column} instance
+   */
+  @Nonnull
+  public static Column single(@Nonnull final String name,
+      @Nonnull final String path) {
+    return singleBuilder(name, path)
+        .collection(false)
+        .build();
+  }
+
+  /**
+   * Static factory method to create a new collection {@link Column} instance with required fields.
+   *
+   * @param name the name of the column (must be a valid identifier)
+   * @param path the FHIRPath expression that evaluates to the value for the column
+   * @return a new {@link Column} instance
+   */
+  @Nonnull
+  public static Column collection(@Nonnull final String name,
+      @Nonnull final String path) {
+    return collectionBuilder(name, path)
         .build();
   }
 
@@ -93,21 +147,40 @@ public class Column implements SelectionElement {
    * <p>
    * This field must be provided if a ViewDefinition returns a non-primitive type. Implementations
    * should report an error if the returned type does not match the type set here, or if a
-   * non-primitive type is returned but this field is unset.
+   * non-primitive type is returned, but this field is unset.
    */
   @Nullable
   String type;
 
+  /**
+   * Additional metadata describing the column. Tags can be used to provide database-specific type
+   * information or other metadata about the column.
+   *
+   * @see <a
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition.html#type-hinting-with-tags">Type
+   * Hinting with Tags</a>
+   */
+  @NotNull
+  @Valid
+  @UniqueTags(ColumnTag.ANSI_TYPE_TAG)
+  @Builder.Default
+  List<@Valid ColumnTag> tag = Collections.emptyList();
+
 
   /**
    * Checks if this column is compatible with another column for union operations. Columns are
-   * compatible if they have the same type and collection indicator.
+   * compatible if they have the same name, type and collection indicator.
    *
    * @param other the other column to compare with
    * @return true if the columns are compatible, false otherwise
    */
   public boolean isCompatibleWith(@Nullable final Column other) {
     if (other == null) {
+      return false;
+    }
+
+    // Check name equality
+    if (!this.getName().equals(other.getName())) {
       return false;
     }
 
@@ -125,7 +198,45 @@ public class Column implements SelectionElement {
       return false; // One has type, the other doesn't
     }
 
+    // Check if types match
     return this.getType().equals(other.getType());
+
+    // Tags don't affect compatibility for union operations
+    // They are metadata that don't change the underlying data type
+  }
+
+  /**
+   * Returns a list of values for all tags with the specified name.
+   *
+   * @param name the name of the tags to find
+   * @return a list of values for tags with the specified name, may be empty if no matching tags
+   * exist
+   */
+  @Nonnull
+  public List<String> getTagValues(@Nonnull final String name) {
+    return tag.stream()
+        .filter(t -> name.equals(t.getName()))
+        .map(ColumnTag::getValue)
+        .toList();
+  }
+
+  /**
+   * Returns a single value for a tag with the specified name.
+   *
+   * @param name the name of the tag to find
+   * @return an Optional containing the value of the tag, or empty if no matching tag exists
+   * @throws IllegalStateException if more than one tag with the specified name exists
+   */
+  @Nonnull
+  public Optional<String> getTagValue(@Nonnull final String name) {
+    List<String> values = getTagValues(name);
+    if (values.isEmpty()) {
+      return Optional.empty();
+    } else if (values.size() == 1) {
+      return Optional.of(values.get(0));
+    } else {
+      throw new IllegalStateException("Multiple values found for tag '" + name + "': " + values);
+    }
   }
 
 }

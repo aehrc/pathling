@@ -57,14 +57,9 @@ public class ColumnSelection implements ProjectionClause {
       projectedColumns.add(new ProjectedColumn(collection, requestedColumn));
     }
 
-    // Collect the columns into an array, aliasing them with the requested names.
+    // Collect the columns into an array, using the getValue method to get aliased columns
     final Column[] collectedColumns = projectedColumns.stream()
-        .map(projectedColumn -> {
-          final Column collectionColumn = projectedColumn.getCollection().getColumn()
-              .getValue();
-          final String requestedName = projectedColumn.getRequestedColumn().getName();
-          return collectionColumn.alias(requestedName);
-        })
+        .map(ProjectedColumn::getValue)
         .toArray(Column[]::new);
 
     // Create a new column that is an array of structs, where each struct has a field for each
@@ -84,26 +79,7 @@ public class ColumnSelection implements ProjectionClause {
   private @Nonnull Iterator<Collection> getCollectionIterator(
       final @Nonnull ProjectionContext context) {
     final Stream<Collection> collections = columns.stream()
-        .map(col -> {
-          final Collection collection = context.evalExpression(col.getPath());
-
-          // If a type was asserted for the column, check that the collection is of that type.
-          col.getType().ifPresent(type -> {
-            if (collection.getFhirType().isPresent() && !collection.getFhirType().get()
-                .equals(type)) {
-              throw new IllegalArgumentException(
-                  "Collection " + collection + " has type " + collection.getFhirType().get()
-                      + ", expected " + type);
-            }
-          });
-
-          return col.isCollection()
-                 ? collection.asPlural()
-                 : collection.asSingular();
-        });
-
-    // Zip stream of requested columns with the stream of collections, creating a ProjectedColumn 
-    // for each pair.
+        .map(col -> context.evalExpression(col.getPath()));
     return collections.iterator();
   }
 
