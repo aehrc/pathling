@@ -1,5 +1,6 @@
 package au.csiro.pathling.views;
 
+import static au.csiro.pathling.views.FhirView.columns;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -9,7 +10,6 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.datasource.ObjectDataSource;
 import au.csiro.pathling.views.Column.ColumnBuilder;
-import au.csiro.pathling.views.FhirView.FhirViewBuilder;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
@@ -145,11 +145,11 @@ public class AnsiTypeHintingTest {
                                   ? "Patient"
                                   : "Observation";
 
-      FhirViewBuilder viewBuilder = FhirView.withResource(resourceType);
+      FhirViewBuilder viewBuilder = FhirView.ofResource(
+          resourceType);
       if (constValue != null) {
-        viewBuilder = viewBuilder.constants(
-            ConstantDeclaration.builder().name("constValue")
-                .value(Objects.requireNonNull(constValue)).build()
+        viewBuilder = viewBuilder.constant(
+            new ConstantDeclaration("constValue", Objects.requireNonNull(constValue))
         );
       }
 
@@ -163,10 +163,8 @@ public class AnsiTypeHintingTest {
             List.of(ColumnTag.of("ansi/type", Objects.requireNonNull(ansiType))));
       }
 
-      return viewBuilder.selects(
-          SelectClause.ofColumns(
-              columnBuilder.build()
-          )
+      return viewBuilder.select(
+          columns(columnBuilder.build())
       ).build();
     }
 

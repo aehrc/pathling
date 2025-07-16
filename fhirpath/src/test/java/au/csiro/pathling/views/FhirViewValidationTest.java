@@ -200,8 +200,8 @@ class FhirViewValidationTest {
         .tag(List.of(tag1, tag2))
         .build();
 
-    final FhirView fhirView = FhirView.withResource("Patient")
-        .selects(SelectClause.ofColumns(columnWithDuplicateTags))
+    final FhirView fhirView = FhirView.ofResource("Patient")
+        .select(FhirView.columns(columnWithDuplicateTags))
         .build();
 
     final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(fhirView);
