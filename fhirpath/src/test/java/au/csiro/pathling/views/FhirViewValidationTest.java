@@ -173,7 +173,7 @@ class FhirViewValidationTest {
     final SelectClause invalidSelectClause = SelectClause.builder()
         .forEach("Patient.name")
         .forEachOrNull("Patient.address")
-        .column(new Column("id", "Patient.id"))
+        .column(Column.single("id", "Patient.id"))
         .build();
 
     final FhirView fhirView = FhirView.ofResource("Patient")

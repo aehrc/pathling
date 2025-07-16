@@ -70,7 +70,7 @@ public class FhirView {
 
   @Nonnull
   public static Column column(@Nonnull final String name, @Nonnull final String path) {
-    return new Column(name, path);
+    return Column.single(name, path);
   }
 
   @Nonnull

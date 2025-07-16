@@ -28,11 +28,6 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = false)
 public class Column implements SelectionElement {
 
-  public Column(final String name, final String path) {
-    this.name = name;
-    this.path = path;
-  }
-
   @SuppressWarnings("unused")
   public static class ColumnBuilder {
     // for javadocs
