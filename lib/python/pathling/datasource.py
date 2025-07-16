@@ -34,7 +34,6 @@ class DataSource(SparkConversionsMixin):
     """
     A data source that can be used to run queries against FHIR data.
     """
-
     def __init__(self, jds: JavaObject, pc: PathlingContext):
         SparkConversionsMixin.__init__(self, pc.spark)
         self._jds = jds
@@ -109,6 +108,11 @@ class DataSources(SparkConversionsMixin):
     A factory for creating data sources.
     """
 
+
+    # Default extension and MIME type for NDJSON files
+    NDJSON_EXTENSION = "ndjson"
+    NDJSON_MIMETYPE = "application/fhir+ndjson"
+
     def __init__(self, pathling: PathlingContext):
         SparkConversionsMixin.__init__(self, pathling.spark)
         self._pc = pathling
@@ -120,7 +124,7 @@ class DataSources(SparkConversionsMixin):
     def ndjson(
         self,
         path,
-        extension: Optional[str] = "ndjson",
+        extension: Optional[str] = None,
         file_name_mapper: Callable[[str], Sequence[str]] = None,
     ) -> DataSource:
         """
@@ -134,6 +138,9 @@ class DataSources(SparkConversionsMixin):
                types that it contains.
         :return: A DataSource object that can be used to run queries against the data.
         """
+
+        extension = extension or DataSources.NDJSON_EXTENSION
+
         if file_name_mapper:
             wrapped_mapper = StringToStringSetMapper(
                 self.spark._jvm._gateway_client, file_name_mapper
@@ -236,19 +243,18 @@ class DataSources(SparkConversionsMixin):
         auth_config: Optional[Dict] = None
     ) -> DataSource:
         """
-        Creates a data source from a FHIR Bulk Data Access API endpoint.
-
+        Creates a data source from a FHIR Bulk Data Access API endpoint. 
+        Currently only supports bulk export in the jndjson format.
+        
         :param fhir_endpoint_url: The URL of the FHIR server to export from
         :param output_dir: The directory to write the output files to
         :param group_id: Optional group ID for group-level export
         :param patients: Optional list of patient references for patient-level export
-        :param output_format: The format of the output data
         :param since: Only include resources modified after this timestamp
         :param types: List of FHIR resource types to include
         :param elements: List of FHIR elements to include
         :param include_associated_data: Pre-defined set of FHIR resources to include
         :param type_filters: FHIR search queries to filter resources
-        :param output_extension: File extension for output files. Defaults to "ndjson"
         :param timeout: Optional timeout duration in seconds
         :param max_concurrent_downloads: Maximum number of concurrent downloads. Defaults to 10
         :param auth_config: Optional authentication configuration dictionary with the following possible keys:
@@ -264,6 +270,9 @@ class DataSources(SparkConversionsMixin):
         :return: A DataSource object that can be used to run queries against the data
         """
         from pathling.bulk import BulkExportClient
+
+        output_format = DataSources.NDJSON_MIMETYPE
+        output_extension = DataSources.NDJSON_EXTENSION
 
         # Create appropriate client based on parameters
         if group_id is not None:
