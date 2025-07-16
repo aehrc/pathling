@@ -27,8 +27,7 @@ import jakarta.annotation.Nullable;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * A FHIR data source that can be queried using the aggregate and extract operations, and can also
- * be written out to a data sink.
+ * A FHIR data source that can be queried, and can also be written out to a data sink.
  *
  * @author Piotr Szul
  * @author John Grimes
@@ -53,7 +52,7 @@ public interface QueryableDataSource extends DataSource {
    * @return an executable {@link FhirViewQuery}
    */
   @Nonnull
-  default FhirViewQuery view(@Nullable String subjectResource) {
+  default FhirViewQuery view(@Nullable final String subjectResource) {
     return view(getResourceType(subjectResource));
   }
 
@@ -63,5 +62,5 @@ public interface QueryableDataSource extends DataSource {
    */
   @Nonnull
   FhirViewQuery view(@Nullable FhirView view);
-  
+
 }
