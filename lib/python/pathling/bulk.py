@@ -13,16 +13,79 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import List, Optional
 
-from pathling import PathlingContext
+from py4j.java_gateway import JavaObject
+
+
+@dataclass
+class FileResult:
+    """
+    Represents the result of a single file export operation.
+    """
+    source: str
+    """
+    The source URL of the exported file.
+    """
+    destination: str
+    """
+    The destination URL where the file was saved.
+    """
+    size: int
+    """
+    The size of the exported file in bytes.
+    """
+
+
+@dataclass
+class ExportResult:
+    """
+    Represents the result of a bulk export operation.
+    """
+    transaction_time: datetime
+    """
+    The time at which the transaction was processed at the server.
+    Corresponds to `transactionTime` in the bulk export response.
+    """
+    results: List[FileResult]
+    """
+    A list of FileResult objects representing the exported files.
+    """
+
+    @classmethod
+    def from_java(cls, java_result: JavaObject) -> 'ExportResult':
+        """
+        Create an ExportResult from a Java export result object.
+        
+        :param java_result: The Java export result object
+        :return: A Python ExportResult object
+        """
+        # Convert transaction time from Java Instant to Python datetime
+        transaction_time = datetime.fromtimestamp(
+            java_result.getTransactionTime().toEpochMilli() / 1000.0, tz=timezone.utc)
+
+        # Convert file results
+        file_results = [
+            FileResult(
+                source=str(java_file_result.getSource()),
+                destination=str(java_file_result.getDestination()),
+                size=java_file_result.getSize())
+            for java_file_result in java_result.getResults()
+        ]
+
+        return cls(
+            transaction_time=transaction_time,
+            results=file_results
+        )
 
 
 class BulkExportClient:
     """
     A client for exporting data from the FHIR Bulk Data Access API.
     """
+
     def __init__(self, java_client):
         """
         Create a new BulkExportClient that wraps a Java BulkExportClient.
@@ -31,26 +94,27 @@ class BulkExportClient:
         """
         self._java_client = java_client
 
-    def export(self):
+    def export(self) -> ExportResult:
         """
         Export data from the FHIR server.
         
-        :return: The result of the export operation
+        :return: The result of the export operation as a Python ExportResult object
         """
-        return self._java_client.export()
+        java_result = self._java_client.export()
+        return ExportResult.from_java(java_result)
 
     @classmethod
     def _configure_builder(cls, jvm, builder, fhir_endpoint_url: str, output_dir: str,
-                      output_format: str = "application/fhir+ndjson",
-                      since: Optional[datetime] = None,
-                      types: Optional[List[str]] = None, 
-                      elements: Optional[List[str]] = None,
-                      include_associated_data: Optional[List[str]] = None,
-                      type_filters: Optional[List[str]] = None,
-                      output_extension: str = "ndjson",
-                      timeout: Optional[int] = None,
-                      max_concurrent_downloads: int = 10,
-                      auth_config: Optional[dict] = None):
+                           output_format: str = "application/fhir+ndjson",
+                           since: Optional[datetime] = None,
+                           types: Optional[List[str]] = None,
+                           elements: Optional[List[str]] = None,
+                           include_associated_data: Optional[List[str]] = None,
+                           type_filters: Optional[List[str]] = None,
+                           output_extension: str = "ndjson",
+                           timeout: Optional[int] = None,
+                           max_concurrent_downloads: int = 10,
+                           auth_config: Optional[dict] = None):
         """
         Configure common builder parameters.
         
@@ -119,7 +183,7 @@ class BulkExportClient:
 
         if auth_config is not None:
             auth_builder = jvm.au.csiro.fhir.auth.AuthConfig.builder()
-            
+
             # Set defaults to match Java class
             auth_builder.enabled(False)
             auth_builder.useSMART(True)
@@ -174,7 +238,7 @@ class BulkExportClient:
         cls._configure_builder(jvm, builder, *args, **kwargs)
         return cls(builder.build())
 
-    @classmethod  
+    @classmethod
     def for_group(cls, jvm, fhir_endpoint_url: str, output_dir: str,
                   group_id: str, *args, **kwargs) -> 'BulkExportClient':
         """

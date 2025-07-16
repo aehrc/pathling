@@ -41,7 +41,7 @@ def test_bulk_client(pathling_ctx, mock_server, temp_dir):
     @mock_server.route("/pool", methods=["GET"])
     def pool():
         return dict(
-            transactionTime="1970-01-01T00:00:00.000Z",
+            transactionTime="1970-01-01T01:02:03.004Z",
             output=[
                 dict(type="Patient", url=mock_server.url("/download"), count=1),
             ],
@@ -65,4 +65,9 @@ def test_bulk_client(pathling_ctx, mock_server, temp_dir):
         assert os.path.exists(os.path.join(output_dir, "Patient.0000.ndjson"))
         with open(os.path.join(output_dir, "Patient.0000.ndjson")) as f:
             assert f.read() == '{"id":"123"}'
-        assert result.getTransactionTime().toString() == '1970-01-01T00:00:00Z'
+        assert result.transaction_time.isoformat() == "1970-01-01T01:02:03.004000+00:00"
+        assert 1 == len(result.results)
+        file_result = result.results[0]
+        assert 12 == file_result.size
+        assert "file:" + os.path.join(output_dir, "Patient.0000.ndjson") == file_result.destination
+        assert mock_server.url("/download") == file_result.source
