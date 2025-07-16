@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Resource;
+import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 
@@ -213,6 +214,7 @@ public class SystemDslTest extends FhirPathDslTestBase {
   public Stream<DynamicTest> testPathTraversalOnFhirResource() {
 
     final Resource observation = new Observation()
+        .setValue(new StringType("testValue"))
         .setId("1");
 
     return builder()
@@ -222,6 +224,14 @@ public class SystemDslTest extends FhirPathDslTestBase {
             "traversal to undefined property returns {}")
         .testEquals("1", "id",
             "correct traversal an ID property")
+        .testEquals("testValue", "value.ofType(string)",
+            "correct typeOf() traversal to an existing choice value in FHIR resource")
+        .testEquals("testValue", "valueString",
+            "correct direct traversal to an existing choice value in FHIR resource")
+        .testEmpty("value.ofType(integer)",
+            "correct typeOf() traversal to an missing choice value in FHIR resource")
+        .testEmpty("valueInteger",
+            "correct direct traversal to an missing choice value in FHIR resource")
         .build();
   }
 

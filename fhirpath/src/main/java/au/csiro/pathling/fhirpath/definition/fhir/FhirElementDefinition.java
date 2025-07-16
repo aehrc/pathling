@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.definition.fhir;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
+import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Objects;
 import java.util.Optional;
@@ -49,7 +50,7 @@ class FhirElementDefinition extends
   }
 
   protected FhirElementDefinition(@Nonnull final BaseRuntimeChildDefinition childDefinition,
-                                  @Nonnull final String elementName) {
+      @Nonnull final String elementName) {
     this(Objects.requireNonNull(childDefinition.getChildByName(elementName)), childDefinition,
         elementName);
   }
@@ -75,5 +76,10 @@ class FhirElementDefinition extends
   @Override
   public Optional<Integer> getMaxCardinality() {
     return Optional.of(childDefinition.getMax());
+  }
+
+  @Override
+  public boolean isChoiceElement() {
+    return childDefinition instanceof RuntimeChildChoiceDefinition;
   }
 }
