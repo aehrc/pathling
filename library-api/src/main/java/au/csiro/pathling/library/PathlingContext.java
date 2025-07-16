@@ -45,6 +45,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -286,7 +287,7 @@ public class PathlingContext {
 
     final ExpressionEncoder<T> encoder = fhirEncoders.of(resourceClass);
     final Dataset<T> typedResources = resources.as(encoder);
-    final DecodeResourceMapPartitions<T> mapper = new DecodeResourceMapPartitions<>(fhirVersion,
+    final MapPartitionsFunction<T, String> mapper = new DecodeResourceMapPartitions<>(fhirVersion,
         outputMimeType, resourceClass);
 
     return typedResources.mapPartitions(mapper, Encoders.STRING());
