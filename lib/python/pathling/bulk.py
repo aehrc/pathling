@@ -15,9 +15,10 @@
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Tuple, Callable
 
-from py4j.java_gateway import JavaObject
+from py4j.java_gateway import JavaObject, JVMView
+from pyspark.sql import SparkSession
 
 
 @dataclass
@@ -214,11 +215,11 @@ class BulkExportClient:
             builder.withAuthConfig(auth_config_obj)
 
     @classmethod
-    def for_system(cls, jvm, *args, **kwargs) -> 'BulkExportClient':
+    def for_system(cls, spark, *args, **kwargs) -> 'BulkExportClient':
         """
         Create a builder for a system-level export.
         
-        :param jvm: The JVM instance
+        :param spark: The SparkSession instance
         :param fhir_endpoint_url: The URL of the FHIR server to export from
         :param output_dir: The directory to write the output files to
         :param output_format: The format of the output data
@@ -233,18 +234,17 @@ class BulkExportClient:
         :param auth_config: Optional authentication configuration dictionary
         :return: A BulkExportClient configured for system-level export
         """
-        client_class = jvm.au.csiro.fhir.export.BulkExportClient
-        builder = client_class.systemBuilder()  # Returns a builder directly
+        builder, jvm = cls._create_builder(spark, lambda bc: bc.systemBuilder())
         cls._configure_builder(jvm, builder, *args, **kwargs)
         return cls(builder.build())
 
     @classmethod
-    def for_group(cls, jvm, fhir_endpoint_url: str, output_dir: str,
+    def for_group(cls, spark, fhir_endpoint_url: str, output_dir: str,
                   group_id: str, *args, **kwargs) -> 'BulkExportClient':
         """
         Create a builder for a group-level export.
         
-        :param jvm: The JVM instance
+        :param spark: The SparkSession instance
         :param fhir_endpoint_url: The URL of the FHIR server to export from
         :param output_dir: The directory to write the output files to
         :param group_id: The ID of the group to export
@@ -260,19 +260,18 @@ class BulkExportClient:
         :param auth_config: Optional authentication configuration dictionary
         :return: A BulkExportClient configured for group-level export
         """
-        client_class = jvm.au.csiro.fhir.export.BulkExportClient
         # Pass group_id directly to groupBuilder
-        builder = client_class.groupBuilder(group_id)
+        builder, jvm = cls._create_builder(spark, lambda bc: bc.groupBuilder(group_id))
         cls._configure_builder(jvm, builder, fhir_endpoint_url, output_dir, *args, **kwargs)
         return cls(builder.build())
 
     @classmethod
-    def for_patient(cls, jvm, fhir_endpoint_url: str, output_dir: str,
+    def for_patient(cls, spark, fhir_endpoint_url: str, output_dir: str,
                     patients: Optional[List[str]] = None, *args, **kwargs) -> 'BulkExportClient':
         """
         Create a builder for a patient-level export.
         
-        :param jvm: The JVM instance
+        :param spark: The SparkSession instance
         :param fhir_endpoint_url: The URL of the FHIR server to export from
         :param output_dir: The directory to write the output files to
         :param patients: List of patient references to include
@@ -288,11 +287,24 @@ class BulkExportClient:
         :param auth_config: Optional authentication configuration dictionary
         :return: A BulkExportClient configured for patient-level export
         """
-        client_class = jvm.au.csiro.fhir.export.BulkExportClient
-        builder = client_class.patientBuilder()  # Returns a builder directly
+        builder, jvm = cls._create_builder(spark, lambda bc: bc.patientBuilder())
         if patients is not None:
             for patient in patients:
                 ref = jvm.au.csiro.fhir.model.Reference.of(patient)
                 builder.withPatient(ref)
         cls._configure_builder(jvm, builder, fhir_endpoint_url, output_dir, *args, **kwargs)
         return cls(builder.build())
+
+    @classmethod
+    def _create_builder(cls,
+                        spark: SparkSession,
+                        factory_f: Callable[[JavaObject], JavaObject]) -> Tuple[
+        JavaObject, JVMView]:
+
+        jvm: JVMView = spark._jvm
+        client_class = jvm.au.csiro.fhir.export.BulkExportClient
+        builder: JavaObject = factory_f(client_class)
+        builder = builder.withFileStoreFactory(
+            jvm.au.csiro.filestore.hdfs.HdfsFileStoreFactory(spark._jsc.sc().hadoopConfiguration())
+        )
+        return (builder, jvm)

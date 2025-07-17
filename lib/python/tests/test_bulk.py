@@ -55,7 +55,7 @@ def test_bulk_client(pathling_ctx, mock_server, temp_dir):
 
     with mock_server.run():
         result = BulkExportClient.for_system(
-            pathling_ctx.spark._jvm,
+            pathling_ctx.spark,
             fhir_endpoint_url=mock_server.url("/fhir"),
             output_dir=output_dir
         ).export()
@@ -69,5 +69,5 @@ def test_bulk_client(pathling_ctx, mock_server, temp_dir):
         assert 1 == len(result.results)
         file_result = result.results[0]
         assert 12 == file_result.size
-        assert "file:" + os.path.join(output_dir, "Patient.0000.ndjson") == file_result.destination
+        assert os.path.join(output_dir, "Patient.0000.ndjson") == file_result.destination
         assert mock_server.url("/download") == file_result.source
