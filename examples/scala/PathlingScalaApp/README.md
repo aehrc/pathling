@@ -154,7 +154,7 @@ to see output similar to the following:
 | Observation/eb170e05-fed2-326a-09cb-d79c4fe498ff | http://loinc.org | 9279-1    | Respiratory rate                                              |
 | Observation/9960d02d-7666-f3f4-59ca-65222f4b73ea | http://loinc.org | 77606-2   | Weight-for-length Per age and sex                             |
 
-We ran this on the `paper-sm` dataset from
+We ran this on the `sm` dataset from
 the [Pathling paper](https://doi.org/10.1186/s13326-022-00277-1), which is
 available from
 the [CSIRO Data Access Portal](https://doi.org/10.25919/er9r-0228).
