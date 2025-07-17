@@ -136,26 +136,72 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>unpack-library-api-sources</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>au.csiro.pathling</groupId>
+                  <artifactId>library-api</artifactId>
+                  <version>${project.version}</version>
+                  <classifier>sources</classifier>
+                  <type>jar</type>
+                  <outputDirectory>${project.build.directory}/unpacked-sources</outputDirectory>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+          <execution>
+            <id>unpack-library-api-javadoc</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>au.csiro.pathling</groupId>
+                  <artifactId>library-api</artifactId>
+                  <version>${project.version}</version>
+                  <classifier>javadoc</classifier>
+                  <type>jar</type>
+                  <outputDirectory>${project.build.directory}/unpacked-javadoc</outputDirectory>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
           <execution>
-            <id>empty-sources</id>
+            <id>library-api-sources</id>
             <phase>package</phase>
             <goals>
               <goal>jar</goal>
             </goals>
             <configuration>
               <classifier>sources</classifier>
+              <classesDirectory>${project.build.directory}/unpacked-sources</classesDirectory>
             </configuration>
           </execution>
           <execution>
-            <id>empty-javadoc</id>
+            <id>library-api-javadoc</id>
             <phase>package</phase>
             <goals>
               <goal>jar</goal>
             </goals>
             <configuration>
               <classifier>javadoc</classifier>
+              <classesDirectory>${project.build.directory}/unpacked-javadoc</classesDirectory>
             </configuration>
           </execution> 
         </executions>
