@@ -157,7 +157,7 @@ to see output similar to the following:
 We ran this on the `paper-sm` dataset from
 the [Pathling paper](https://doi.org/10.1186/s13326-022-00277-1), which is
 available from
-the [CSIRO Data Access Portal](https://doi.org/10.25919/e4eh-6155).
+the [CSIRO Data Access Portal](https://doi.org/10.25919/er9r-0228).
 
 ## Customisation
 
