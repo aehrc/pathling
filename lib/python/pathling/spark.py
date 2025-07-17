@@ -37,8 +37,7 @@ class Dfs:
         self._hadoop_conf: JavaObject = sc._jsc.hadoopConfiguration()
         self._fs = self._jvm.org.apache.hadoop.fs.FileSystem.get(self._hadoop_conf)
 
-    def get_temp_dir_path(self, infix: str = "app-tmp",
-                          def_temp_base: str = "/tmp", qualified=True) -> str:
+    def get_temp_dir_path(self, prefix: str = "tmp-app", qualified=True) -> str:
         """
         Returns a unique path for a temporary directory in Spark's filesystem.
     
@@ -46,16 +45,17 @@ class Dfs:
         ensuring uniqueness for each call.
         The directory itself is not created, only the path is returned.
         
-        :param infix: String to insert between the base directory and the UUID (default: "app-tmp").
-        :param def_temp_base: Fallback base directory if `hadoop.tmp.dir` is not set in Hadoop configuration (default: "/tmp").
+        :param prefix: String to insert between the base directory and the UUID (default: "tmp-app").
         :param qualified: If True, returns a fully qualified Hadoop path; if False, returns a raw path string.
         :return: String representing the unique temporary directory path.
         """
-        base_tmp = self._hadoop_conf.get("hadoop.tmp.dir") or def_temp_base
+        base_tmp_dir = self._hadoop_conf.get("hadoop.tmp.dir")
+        if not base_tmp_dir:
+            raise ValueError("`hadoop.tmp.dir` must be set in Hadoop configuration.")
         uuid_suffix = str(uuid.uuid4())
-        tmp_path = f"{base_tmp}/{infix}-{uuid_suffix}"
-        path = self._jvm.org.apache.hadoop.fs.Path(tmp_path)
-        return self._fs.makeQualified(path).toString() if qualified else path.toString()
+        base_tmp_path = self._jvm.org.apache.hadoop.fs.Path(base_tmp_dir)
+        tmp_path = self._jvm.org.apache.hadoop.fs.Path(base_tmp_path, f"{prefix}{uuid_suffix}")
+        return self._fs.makeQualified(tmp_path).toString() if qualified else tmp_path.toString()
 
     def exists(self, path: str) -> bool:
         """

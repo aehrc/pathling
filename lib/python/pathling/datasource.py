@@ -277,7 +277,7 @@ class DataSources(SparkConversionsMixin):
         dfs = Dfs(self._pc.spark)
 
         # If `output_dir` is not provided, create a temporary directory
-        output_dir = output_dir or dfs.get_temp_dir_path(infix="bulk-export", qualified=True)
+        output_dir = output_dir or dfs.get_temp_dir_path(prefix="tmp-bulk-export", qualified=True)
         # If `overwrite`, then ensure the output directory does not exist
         if overwrite and dfs.exists(output_dir):
             dfs.delete(output_dir, recursive=True)
