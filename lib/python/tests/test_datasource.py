@@ -244,7 +244,6 @@ def test_datasource_bulk_with_temp_dir(pathling_ctx, bulk_server):
 
 
 def test_datasource_bulk_with_existing_dir(pathling_ctx, bulk_server, func_temp_dir):
-    
     assert os.path.exists(func_temp_dir)
     with bulk_server.run():
         data_source = pathling_ctx.read.bulk(

@@ -244,12 +244,12 @@ class DataSources(SparkConversionsMixin):
     ) -> DataSource:
         """
         Creates a data source from a FHIR Bulk Data Access API endpoint. 
-        Currently only supports bulk export in the jndjson format.
+        Currently only supports bulk export in the ndjson format.
         
         :param fhir_endpoint_url: The URL of the FHIR server to export from
         :param output_dir: The directory to write the output files to. 
                 This should be a valid path in the Spark's filesystem.
-                If not provided, a temporary directory will be used.
+                If set to `None`, a temporary directory will be used instead.
         :param overwrite: Whether to overwrite the output directory if it already exists. Defaults to True.
         :param group_id: Optional group ID for group-level export
         :param patients: Optional list of patient references for patient-level export
