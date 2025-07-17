@@ -197,10 +197,28 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Bundle-Name>Pathling Library API Sources (including FHIRPath)</Bundle-Name>
+            </manifestEntries>
+          </archive>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <includeDependencySources>true</includeDependencySources>
+          <dependencySourceIncludes>
+            <dependencySourceInclude>au.csiro.pathling:fhirpath</dependencySourceInclude>
+          </dependencySourceIncludes>
+          <archive>
+            <manifestEntries>
+              <Bundle-Name>Pathling Library API Javadoc (including FHIRPath)</Bundle-Name>
+            </manifestEntries>
+          </archive>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -219,6 +237,62 @@
               <includeScope>test</includeScope>
               <excludeTransitive>true</excludeTransitive>
               <outputDirectory>${project.build.directory}/encoders-tests</outputDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <id>unpack-fhirpath-sources</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>au.csiro.pathling</groupId>
+                  <artifactId>fhirpath</artifactId>
+                  <version>${project.version}</version>
+                  <classifier>sources</classifier>
+                  <type>jar</type>
+                  <outputDirectory>${project.build.directory}/aggregated-sources</outputDirectory>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+          <execution>
+            <id>unpack-fhirpath-javadoc</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>au.csiro.pathling</groupId>
+                  <artifactId>fhirpath</artifactId>
+                  <version>${project.version}</version>
+                  <classifier>javadoc</classifier>
+                  <type>jar</type>
+                  <outputDirectory>${project.build.directory}/aggregated-javadoc</outputDirectory>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>add-fhirpath-sources</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/aggregated-sources</source>
+              </sources>
             </configuration>
           </execution>
         </executions>
