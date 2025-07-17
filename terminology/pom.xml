@@ -137,10 +137,6 @@
       <artifactId>wiremock-jre8-standalone</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-    </dependency>
   </dependencies>
 
   <build>
