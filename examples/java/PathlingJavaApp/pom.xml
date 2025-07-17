@@ -27,4 +27,26 @@
     </dependency>
   </dependencies>
 
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.1</version>
+        <configuration>
+          <executable>java</executable>
+          <arguments>
+            <argument>-ea</argument>
+            <argument>-Duser.timezone=UTC</argument>
+            <argument>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</argument>
+            <argument>--add-opens=java.base/java.net=ALL-UNNAMED</argument>
+            <argument>-classpath</argument>
+            <classpath/>
+            <argument>au.csiro.pathling.examples.PathlingJavaApp</argument>
+          </arguments>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
 </project>
