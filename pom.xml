@@ -763,6 +763,9 @@
               </goals>
             </execution>
           </executions>
+          <configuration>
+            <keyname>pathling@csiro.au</keyname>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>org.sonatype.central</groupId>
