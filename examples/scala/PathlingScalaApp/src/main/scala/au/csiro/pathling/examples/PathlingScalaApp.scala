@@ -24,6 +24,6 @@ object PathlingScalaApp {
 
     val result = data.view(view).execute()
 
-    result.show()
+    result.show(truncate = false)
   }
 }
