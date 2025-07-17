@@ -56,4 +56,3 @@ view_ds = datasource.view(
 )
 
 view_ds.show()
-view_ds.explain(True)
