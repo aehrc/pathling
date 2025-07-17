@@ -85,6 +85,16 @@ aggregate, group and transform FHIR data.
 
 See [Server](https://pathling.csiro.au/docs/server) for more information.
 
+## Artifact signing
+
+Published Maven artifacts are signed with the following GPG key:
+
+- **Key ID**: `ED48678D`
+- **Fingerprint**: `F814 751C 64B5 F5E7 08A8 C73F C3C6 291F ED48 678D`
+- **User ID**: `Pathling Developers <pathling@csiro.au>`
+
+The public key is available on [keys.openpgp.org](https://keys.openpgp.org/search?q=F814751C64B5F5E708A8C73FC3C6291FED48678D).
+
 ## Licensing and attribution
 
 Pathling is copyright © 2018-2023, Commonwealth Scientific and Industrial
