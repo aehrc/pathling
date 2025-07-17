@@ -23,6 +23,18 @@ from pytest import fixture
 from pathling.datasource import DataSource
 
 
+@fixture(scope="function", autouse=True)
+def func_temp_dir(temp_dir):
+    """
+    Fixture to create a temporary directory for each test function.
+    :param temp_dir: 
+    :return: existing temporary directory for each test function.
+    """
+    temp_ndjson_dir = TemporaryDirectory(dir=temp_dir, prefix="function")
+    yield temp_ndjson_dir.name
+    temp_ndjson_dir.cleanup()
+
+
 @fixture(scope="module")
 def ndjson_test_data_dir(test_data_dir):
     return os.path.join(test_data_dir, "ndjson")
@@ -62,6 +74,32 @@ def temp_delta_dir(temp_dir):
     temp_delta_dir = TemporaryDirectory(dir=temp_dir, prefix="delta")
     yield temp_delta_dir.name
     temp_delta_dir.cleanup()
+
+
+@fixture(scope="function")
+def bulk_server(mock_server, ndjson_test_data_dir):
+    @mock_server.route("/fhir/$export", methods=["GET"])
+    def export():
+        resp = Response(status=202)
+        resp.headers["content-location"] = mock_server.url("/pool")
+        return resp
+
+    @mock_server.route("/pool", methods=["GET"])
+    def pool():
+        return dict(
+            transactionTime="1970-01-01T00:00:00.000Z",
+            output=[
+                dict(type=resource, url=mock_server.url(f"/download/{resource}"), count=1) for
+                resource in ["Patient", "Condition"]
+            ],
+        )
+
+    @mock_server.route("/download/<resource>", methods=["GET"])
+    def download(resource):
+        with open(os.path.join(ndjson_test_data_dir, f"{resource}.ndjson"), "r") as f:
+            return f.read()
+
+    return mock_server
 
 
 ResultRow = Row("count")
@@ -192,45 +230,34 @@ def test_datasource_tables_schema(ndjson_test_data_dir, pathling_ctx):
     ]
 
 
-
-def test_datasource_bulk(pathling_ctx, mock_server, ndjson_test_data_dir, temp_dir):
-    
-    def setup_mock_server():
-        @mock_server.route("/fhir/$export", methods=["GET"])
-        def export():
-            resp = Response(status=202)
-            resp.headers["content-location"] = mock_server.url("/pool")
-            return resp
-    
-        @mock_server.route("/pool", methods=["GET"])
-        def pool():
-            return dict(
-                transactionTime="1970-01-01T00:00:00.000Z",
-                output=[
-                    dict(type=resource, url=mock_server.url(f"/download/{resource}"), count=1) for
-                    resource in ["Patient", "Condition"]
-                ],
-            )
-    
-        @mock_server.route("/download/<resource>", methods=["GET"])
-        def download(resource):
-            with open(os.path.join(ndjson_test_data_dir, f"{resource}.ndjson"), "r") as f:
-                return f.read()
-
-    setup_mock_server()
+def test_datasource_bulk_with_temp_dir(pathling_ctx, bulk_server):
     # !!! this directory cannot exist for the datasource to work
-    output_dir = os.path.join(temp_dir, "bulk-storage")
-
-    with mock_server.run():
+    with bulk_server.run():
         data_source = pathling_ctx.read.bulk(
-            fhir_endpoint_url=mock_server.url("/fhir"),
-            output_dir=output_dir,
+            fhir_endpoint_url=bulk_server.url("/fhir")
         )
         result = ndjson_query(data_source)
         assert result.columns == list(ResultRow)
         assert result.collect() == [
             ResultRow(71),
         ]
+
+
+def test_datasource_bulk_with_existing_dir(pathling_ctx, bulk_server, func_temp_dir):
+    
+    assert os.path.exists(func_temp_dir)
+    with bulk_server.run():
+        data_source = pathling_ctx.read.bulk(
+            fhir_endpoint_url=bulk_server.url("/fhir"),
+            output_dir=func_temp_dir,
+            overwrite=True  # default anyway, but explicit for clarity
+        )
+        result = ndjson_query(data_source)
+        assert result.columns == list(ResultRow)
+        assert result.collect() == [
+            ResultRow(71),
+        ]
+
 
 def ndjson_query(data_source: DataSource) -> DataFrame:
     return data_source.view(
@@ -256,7 +283,6 @@ def bundles_query(data_source: DataSource) -> DataFrame:
             }
         ]
     ).groupby().count()
-
 
 
 def parquet_query(data_source: DataSource) -> DataFrame:
