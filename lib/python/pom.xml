@@ -28,7 +28,7 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>python</artifactId>
-  <packaging>pom</packaging>
+  <packaging>jar</packaging>
 
   <name>Pathling Python API</name>
   <description>A library for using Pathling with Python.</description>
@@ -162,6 +162,12 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <!-- We need this here or Maven will complain that we are not creating a JAR when the 
+        packaging is set to 'jar'. -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
