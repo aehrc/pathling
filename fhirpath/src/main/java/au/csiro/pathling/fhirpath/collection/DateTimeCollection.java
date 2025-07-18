@@ -28,6 +28,7 @@ import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.operator.ColumnComparator;
 import au.csiro.pathling.fhirpath.operator.Comparable;
 import au.csiro.pathling.fhirpath.operator.DateTimeComparator;
+import au.csiro.pathling.fhirpath.operator.DefaultComparator;
 import au.csiro.pathling.sql.SqlFunctions;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
@@ -45,7 +46,8 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
     Comparable {
 
   private static final String SPARK_FHIRPATH_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
-  private static final ColumnComparator COMPARATOR = new DateTimeComparator();
+  private static final ColumnComparator DATE_TIME_COMPARATOR = new DateTimeComparator();
+  private static final ColumnComparator INSTANT_COMPARATOR = new DefaultComparator();
 
   protected DateTimeCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
@@ -131,6 +133,10 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
   @Nonnull
   @Override
   public ColumnComparator getComparator() {
-    return COMPARATOR;
+    final Optional<FHIRDefinedType> fhirType = getFhirType();
+    if (fhirType.isPresent() && fhirType.get() == FHIRDefinedType.INSTANT) {
+      return INSTANT_COMPARATOR;
+    }
+    return DATE_TIME_COMPARATOR;
   }
 }
