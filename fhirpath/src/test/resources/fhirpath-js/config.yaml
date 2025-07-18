@@ -182,7 +182,6 @@ excludeSet:
         type: new-feature
         id: "#2421"
         any:
-          - "DiagnosticReport.issued < DiagnosticReport.effectiveDateTime"
           - "1 year > 12 months"
           - "1 year < 12 months"
           - "1 minute > 59 seconds"
