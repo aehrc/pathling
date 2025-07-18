@@ -25,6 +25,7 @@ from pyspark.sql import DataFrame
 from pathling import PathlingContext
 from pathling.core import StringToStringSetMapper, SparkConversionsMixin
 from pathling.fhir import MimeType
+from pathling.spark import Dfs
 
 if TYPE_CHECKING:
     from pathling.datasink import DataSinks
@@ -109,6 +110,10 @@ class DataSources(SparkConversionsMixin):
     A factory for creating data sources.
     """
 
+    # Default extension and MIME type for NDJSON files
+    NDJSON_EXTENSION = "ndjson"
+    NDJSON_MIMETYPE = "application/fhir+ndjson"
+
     def __init__(self, pathling: PathlingContext):
         SparkConversionsMixin.__init__(self, pathling.spark)
         self._pc = pathling
@@ -120,7 +125,7 @@ class DataSources(SparkConversionsMixin):
     def ndjson(
         self,
         path,
-        extension: Optional[str] = "ndjson",
+        extension: Optional[str] = None,
         file_name_mapper: Callable[[str], Sequence[str]] = None,
     ) -> DataSource:
         """
@@ -134,6 +139,9 @@ class DataSources(SparkConversionsMixin):
                types that it contains.
         :return: A DataSource object that can be used to run queries against the data.
         """
+
+        extension = extension or DataSources.NDJSON_EXTENSION
+
         if file_name_mapper:
             wrapped_mapper = StringToStringSetMapper(
                 self.spark._jvm._gateway_client, file_name_mapper
@@ -221,34 +229,35 @@ class DataSources(SparkConversionsMixin):
     def bulk(
         self,
         fhir_endpoint_url: str,
-        output_dir: str,
+        output_dir: Optional[str] = None,
+        overwrite: bool = True,
         group_id: Optional[str] = None,
         patients: Optional[List[str]] = None,
-        output_format: str = "application/fhir+ndjson",
         since: Optional[datetime] = None,
         types: Optional[List[str]] = None,
         elements: Optional[List[str]] = None,
         include_associated_data: Optional[List[str]] = None,
         type_filters: Optional[List[str]] = None,
-        output_extension: str = "ndjson",
         timeout: Optional[int] = None,
         max_concurrent_downloads: int = 10,
         auth_config: Optional[Dict] = None
     ) -> DataSource:
         """
-        Creates a data source from a FHIR Bulk Data Access API endpoint.
-
+        Creates a data source from a FHIR Bulk Data Access API endpoint. 
+        Currently only supports bulk export in the ndjson format.
+        
         :param fhir_endpoint_url: The URL of the FHIR server to export from
-        :param output_dir: The directory to write the output files to
+        :param output_dir: The directory to write the output files to. 
+                This should be a valid path in the Spark's filesystem.
+                If set to `None`, a temporary directory will be used instead.
+        :param overwrite: Whether to overwrite the output directory if it already exists. Defaults to True.
         :param group_id: Optional group ID for group-level export
         :param patients: Optional list of patient references for patient-level export
-        :param output_format: The format of the output data
         :param since: Only include resources modified after this timestamp
         :param types: List of FHIR resource types to include
         :param elements: List of FHIR elements to include
         :param include_associated_data: Pre-defined set of FHIR resources to include
         :param type_filters: FHIR search queries to filter resources
-        :param output_extension: File extension for output files. Defaults to "ndjson"
         :param timeout: Optional timeout duration in seconds
         :param max_concurrent_downloads: Maximum number of concurrent downloads. Defaults to 10
         :param auth_config: Optional authentication configuration dictionary with the following possible keys:
@@ -265,10 +274,21 @@ class DataSources(SparkConversionsMixin):
         """
         from pathling.bulk import BulkExportClient
 
+        dfs = Dfs(self._pc.spark)
+
+        # If `output_dir` is not provided, create a temporary directory
+        output_dir = output_dir or dfs.get_temp_dir_path(prefix="tmp-bulk-export", qualified=True)
+        # If `overwrite`, then ensure the output directory does not exist
+        if overwrite and dfs.exists(output_dir):
+            dfs.delete(output_dir, recursive=True)
+
+        output_format = DataSources.NDJSON_MIMETYPE
+        output_extension = DataSources.NDJSON_EXTENSION
+
         # Create appropriate client based on parameters
         if group_id is not None:
             client = BulkExportClient.for_group(
-                self.spark._jvm,
+                self.spark,
                 fhir_endpoint_url=fhir_endpoint_url,
                 output_dir=output_dir,
                 group_id=group_id,
@@ -285,7 +305,7 @@ class DataSources(SparkConversionsMixin):
             )
         elif patients is not None:
             client = BulkExportClient.for_patient(
-                self.spark._jvm,
+                self.spark,
                 fhir_endpoint_url=fhir_endpoint_url,
                 output_dir=output_dir,
                 patients=patients,
@@ -302,7 +322,7 @@ class DataSources(SparkConversionsMixin):
             )
         else:
             client = BulkExportClient.for_system(
-                self.spark._jvm,
+                self.spark,
                 fhir_endpoint_url=fhir_endpoint_url,
                 output_dir=output_dir,
                 output_format=output_format,
@@ -318,7 +338,7 @@ class DataSources(SparkConversionsMixin):
             )
 
         # Perform the export
-        result = client.export()
+        client.export()
 
         # Return a DataSource that reads from the exported files
         return self.ndjson(output_dir)
