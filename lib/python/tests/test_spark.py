@@ -19,10 +19,10 @@ from pathling.spark import Dfs
 
 def test_dfs_temp_dir(pathling_ctx):
     dfs = Dfs(pathling_ctx.spark)
-    temp_path = dfs.get_temp_dir_path(infix="test", def_temp_base="/tmp", qualified=True)
+    temp_path = dfs.get_temp_dir_path(prefix="test", qualified=True)
     # In local setup the path should be something like: 
     # file:/tmp/hadoop-username/test-8e4756c1-46e4-44a5-b36d-d6afff1b168a
-    
+
     # Validate the format of the temp path using regex
     regex_pattern = r'^file:/tmp/hadoop-[^/]+/test-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
     assert re.match(regex_pattern, temp_path), f"Temp path {temp_path} does not match expected format"
@@ -30,11 +30,10 @@ def test_dfs_temp_dir(pathling_ctx):
 
 def test_dfs_operations(pathling_ctx):
     dfs = Dfs(pathling_ctx.spark)
-    temp_path = dfs.get_temp_dir_path(infix="test", def_temp_base="/tmp", qualified=True)
+    temp_path = dfs.get_temp_dir_path(prefix="test", qualified=True)
     # Check if the temporary directory exists (it should not exist yet)
-    assert not dfs.exists(temp_path), f"Temporary path {temp_path} should not exist before creation"  
+    assert not dfs.exists(temp_path), f"Temporary path {temp_path} should not exist before creation"
     assert dfs.mkdirs(temp_path), f"Temporary path {temp_path} can be created"
     assert dfs.exists(temp_path), f"Temporary path {temp_path} should exist after creation"
     dfs.delete(temp_path, recursive=True)
     assert not dfs.exists(temp_path), f"Temporary path {temp_path} should not exist after deletion"
-    

@@ -54,7 +54,7 @@ class Dfs:
             raise ValueError("`hadoop.tmp.dir` must be set in Hadoop configuration.")
         uuid_suffix = str(uuid.uuid4())
         base_tmp_path = self._jvm.org.apache.hadoop.fs.Path(base_tmp_dir)
-        tmp_path = self._jvm.org.apache.hadoop.fs.Path(base_tmp_path, f"{prefix}{uuid_suffix}")
+        tmp_path = self._jvm.org.apache.hadoop.fs.Path(base_tmp_path, f"{prefix}-{uuid_suffix}")
         return self._fs.makeQualified(tmp_path).toString() if qualified else tmp_path.toString()
 
     def exists(self, path: str) -> bool:
