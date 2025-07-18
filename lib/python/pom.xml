@@ -28,7 +28,7 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>python</artifactId>
-  <packaging>jar</packaging>
+  <packaging>pom</packaging>
 
   <name>Pathling Python API</name>
   <description>A library for using Pathling with Python.</description>
@@ -164,12 +164,6 @@
         </executions>
       </plugin>
       <plugin>
-        <!-- We need this here or Maven will complain that we are not creating a JAR when the 
-        packaging is set to 'jar'. -->
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-      </plugin>
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-deploy-plugin</artifactId>
         <configuration>
@@ -296,10 +290,19 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-jar-plugin</artifactId>
-            <configuration>
-              <classesDirectory>${project.build.directory}/docs/_build/html</classesDirectory>
-              <classifier>docs</classifier>
-            </configuration>
+            <executions>
+              <execution>
+                <id>docs-jar</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+                <configuration>
+                  <classesDirectory>${project.build.directory}/docs/_build/html</classesDirectory>
+                  <classifier>docs</classifier>
+                </configuration>
+              </execution>
+            </executions>
           </plugin>
         </plugins>
       </build>
