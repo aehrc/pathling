@@ -157,3 +157,12 @@ jobs:
         with:
           name: site
           path: site/target/site/
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::865780493209:role/PathlingBenchmarkUpload
+          aws-region: ap-southeast-2
+
+      - name: Upload SQL on FHIR test report to S3
+        run: aws s3 cp fhirpath/target/fhir-view-compliance-test.json s3://pathling-benchmark/test-reports/${{ github.ref }}/sof-test-results.json
