@@ -293,7 +293,7 @@ public class Collection {
     } else if (childDefinition instanceof final ElementDefinition elementChildDefinition) {
       if (elementChildDefinition.isChoiceElement()) {
         log.warn(
-            "Traversing a choice element `{}` without using ofType() is not portable and may not work in some Fhirpath implementations. "
+            "Traversing a choice element `{}` without using ofType() is not portable and may not work in some FHIRPath implementations. "
                 + "Consider using ofType() to specify the type of element you want to traverse.",
             elementChildDefinition.getElementName());
       }
@@ -604,9 +604,10 @@ public class Collection {
    *
    * @param value the FHIR resource value to convert to a collection
    * @return a new collection representing the FHIR resource value
+   * @throws CollectionConstructionError if there is a problem constructing the collection
    */
   @Nonnull
-  public static Collection fromValue(@Nonnull IBase value) {
+  public static Collection fromValue(@Nonnull final IBase value) {
     final FHIRDefinedType fhirType = FHIRDefinedType.fromCode(value.fhirType());
 
     // Get the collection class for the FHIR type.
@@ -619,8 +620,8 @@ public class Collection {
           .invoke(null, value);
       check(returnValue instanceof Collection);
       return (Collection) returnValue;
-    } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-      throw new RuntimeException(e);
+    } catch (final IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+      throw new CollectionConstructionError("Problem constructing collection from value", e);
     }
   }
 
