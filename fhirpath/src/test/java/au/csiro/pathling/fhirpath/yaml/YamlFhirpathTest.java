@@ -24,4 +24,9 @@ public class YamlFhirpathTest extends YamlCachedTestBase {
   void testSearchParams(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
+  
+  @YamlTest("fhirpath-ptl/cases/datetime_comparison.yaml")
+  void testDateTimeComparison(@Nonnull final YamlTestExecutor testCase) {
+    run(testCase);
+  }
 }
