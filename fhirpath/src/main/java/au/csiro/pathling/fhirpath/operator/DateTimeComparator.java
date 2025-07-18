@@ -1,21 +1,21 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
-import au.csiro.pathling.sql.misc.HighBoundaryForDate;
-import au.csiro.pathling.sql.misc.LowBoundaryForDate;
+import au.csiro.pathling.sql.misc.HighBoundaryForDateTime;
+import au.csiro.pathling.sql.misc.LowBoundaryForDateTime;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 
-public class DateComparator implements ColumnComparator {
+public class DateTimeComparator implements ColumnComparator {
 
   @Nonnull
   @Override
   public Column equalsTo(@Nonnull final Column left, @Nonnull final Column right) {
-    return functions.callUDF(LowBoundaryForDate.FUNCTION_NAME, left)
-        .equalTo(functions.callUDF(LowBoundaryForDate.FUNCTION_NAME, right)).and(
-            functions.callUDF(HighBoundaryForDate.FUNCTION_NAME, left)
-                .equalTo(functions.callUDF(HighBoundaryForDate.FUNCTION_NAME, right)));
+    return functions.callUDF(LowBoundaryForDateTime.FUNCTION_NAME, left)
+        .equalTo(functions.callUDF(LowBoundaryForDateTime.FUNCTION_NAME, right)).and(
+            functions.callUDF(HighBoundaryForDateTime.FUNCTION_NAME, left)
+                .equalTo(functions.callUDF(HighBoundaryForDateTime.FUNCTION_NAME, right)));
   }
 
   @Nonnull

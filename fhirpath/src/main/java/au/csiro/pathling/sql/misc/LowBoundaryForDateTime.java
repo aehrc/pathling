@@ -2,11 +2,15 @@ package au.csiro.pathling.sql.misc;
 
 import au.csiro.pathling.sql.udf.SqlFunction1;
 import jakarta.annotation.Nullable;
+import java.io.Serial;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.utilities.DateTimeUtil;
 
-public class LowBoundaryForDate implements SqlFunction1<String, String> {
+public class LowBoundaryForDateTime implements SqlFunction1<String, String> {
+  
+  @Serial
+  private static final long serialVersionUID = -2161361690351000200L;
 
   public static final String FUNCTION_NAME = "low_boundary_for_date";
 

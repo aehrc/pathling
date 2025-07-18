@@ -29,7 +29,7 @@ public class MiscUDFRegistrar extends AbstractUDFRegistrar {
         .register(new CodingToLiteral())
         .register(new DecimalToLiteral())
         .register(new ToNull())
-        .register(new LowBoundaryForDate())
-        .register(new HighBoundaryForDate());
+        .register(new LowBoundaryForDateTime())
+        .register(new HighBoundaryForDateTime());
   }
 }

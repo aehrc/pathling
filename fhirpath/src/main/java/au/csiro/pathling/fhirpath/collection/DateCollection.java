@@ -25,7 +25,7 @@ import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.operator.ColumnComparator;
 import au.csiro.pathling.fhirpath.operator.Comparable;
-import au.csiro.pathling.fhirpath.operator.DateComparator;
+import au.csiro.pathling.fhirpath.operator.DateTimeComparator;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +42,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class DateCollection extends Collection implements StringCoercible, Materializable,
     Comparable {
 
-  public static final DateComparator COMPARATOR = new DateComparator();
+  private static final ColumnComparator COMPARATOR = new DateTimeComparator();
 
   protected DateCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
