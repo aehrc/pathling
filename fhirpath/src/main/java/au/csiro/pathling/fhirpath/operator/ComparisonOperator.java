@@ -20,7 +20,6 @@ package au.csiro.pathling.fhirpath.operator;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
@@ -35,7 +34,6 @@ import jakarta.annotation.Nonnull;
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#equality">Equality</a>
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#comparison">Comparison</a>
  */
-@NotImplemented
 public class ComparisonOperator implements BinaryOperator {
 
   @Nonnull
