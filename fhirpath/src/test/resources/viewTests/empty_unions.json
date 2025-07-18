@@ -1,0 +1,67 @@
+{
+  "title": "empty unions",
+  "description": "Tests that clarify the behavior of unions that produce empty collections.",
+  "fhirVersion": "4.0.1",
+  "resources": [
+    {
+      "resourceType": "Observation",
+      "id": "1"
+    }
+  ],
+  "tests": [
+    {
+      "title": "column sub-selections that produce empty collections",
+      "view": {
+        "resource": "Observation",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "getResourceKey()"
+              }
+            ],
+            "unionAll": [
+              {
+                "column": [
+                  {
+                    "name": "value",
+                    "path": "value.ofType(dateTime)"
+                  }
+                ]
+              },
+              {
+                "column": [
+                  {
+                    "name": "value",
+                    "path": "value.ofType(Period).start"
+                  }
+                ]
+              },
+              {
+                "forEach": "value.ofType(dateTime)",
+                "column": [
+                  {
+                    "name": "value",
+                    "path": "$this"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "Observation/1",
+          "value": null
+        },
+        {
+          "id": "Observation/1",
+          "value": null
+        }
+      ]
+    }
+  ]
+}
