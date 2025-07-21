@@ -5,131 +5,136 @@ tests:
 
   - "group: Date/DateTime Equality (=)":
       - desc: "Same DateTime precision - equal"
-        expression: "Observation.effectiveDateTime = issued"
+        expression: "Observation.effective.ofType(dateTime) = component.where(code.coding.code = 'same-datetime').value.ofType(dateTime)"
         result: [true]
 
       - desc: "Different precision - DateTime vs Date - returns empty"
-        expression: "Observation.effectiveDateTime = component.where(code.coding.code = 'date-only').valueDate"
+        expression: "Observation.effective.ofType(dateTime) = component.where(code.coding.code = 'date-only').value.ofType(date)"
         result: [false]
 
       - desc: "Different dates - same precision"
-        expression: "Observation.effectiveDateTime = component.where(code.coding.code = 'different-datetime').valueDateTime"
+        expression: "Observation.effective.ofType(dateTime) = component.where(code.coding.code = 'different-datetime').value.ofType(dateTime)"
         result: [false]
 
       - desc: "Date equality - same date"
-        expression: "Observation.component.where(code.coding.code = 'date-only').valueDate = component.where(code.coding.code = 'date-only').valueDate"
+        expression: "Observation.component.where(code.coding.code = 'date-only').value.ofType(date) = component.where(code.coding.code = 'date-only').value.ofType(date)"
         result: [true]
 
       - desc: "Partial date equality - different precision"
-        expression: "Observation.component.where(code.coding.code = 'date-only').valueDate = component.where(code.coding.code = 'partial-date').valueDate"
+        expression: "Observation.component.where(code.coding.code = 'date-only').value.ofType(date) = component.where(code.coding.code = 'partial-date').value.ofType(date)"
         result: [false]
 
   - "group: Date/DateTime Inequality (!=)":
       - desc: "Same DateTime precision - not equal"
-        expression: "Observation.effectiveDateTime != issued"
+        expression: "Observation.effective.ofType(dateTime) != component.where(code.coding.code = 'same-datetime').value.ofType(dateTime)"
         result: [false]
 
       - desc: "Different precision - returns empty"
-        expression: "Observation.effectiveDateTime != component.where(code.coding.code = 'date-only').valueDate"
+        expression: "Observation.effective.ofType(dateTime) != component.where(code.coding.code = 'date-only').value.ofType(date)"
         result: [true]
 
       - desc: "Different dates - same precision"
-        expression: "Observation.effectiveDateTime != component.where(code.coding.code = 'different-datetime').valueDateTime"
+        expression: "Observation.effective.ofType(dateTime) != component.where(code.coding.code = 'different-datetime').value.ofType(dateTime)"
         result: [true]
 
   - "group: Date/DateTime Less Than (<)":
       - desc: "DateTime comparison - first before second"
-        expression: "Observation.effectiveDateTime < component.where(code.coding.code = 'later-datetime').valueDateTime"
+        expression: "Observation.effective.ofType(dateTime) < component.where(code.coding.code = 'later-datetime').value.ofType(dateTime)"
         result: [true]
 
       - desc: "DateTime comparison - first after second"
-        expression: "Observation.effectiveDateTime < component.where(code.coding.code = 'earlier-datetime').valueDateTime"
+        expression: "Observation.effective.ofType(dateTime) < component.where(code.coding.code = 'earlier-datetime').value.ofType(dateTime)"
         result: [false]
 
       - desc: "Date comparison - overlapping ranges (different precision)"
-        expression: "Observation.effectiveDateTime < component.where(code.coding.code = 'partial-date').valueDate"
+        expression: "Observation.effective.ofType(dateTime) < component.where(code.coding.code = 'partial-date').value.ofType(date)"
         result: []
 
       - desc: "Date comparison - same dates"
-        expression: "Observation.effectiveDateTime < issued"
+        expression: "Observation.effective.ofType(dateTime) < component.where(code.coding.code = 'same-datetime').value.ofType(dateTime)"
         result: [false]
 
   - "group: Date/DateTime Less Than or Equal (<=)":
       - desc: "DateTime comparison - first before second"
-        expression: "Observation.effectiveDateTime <= component.where(code.coding.code = 'later-datetime').valueDateTime"
+        expression: "Observation.effective.ofType(dateTime) <= component.where(code.coding.code = 'later-datetime').value.ofType(dateTime)"
         result: [true]
 
       - desc: "DateTime comparison - same dates"
-        expression: "Observation.effectiveDateTime <= issued"
+        expression: "Observation.effective.ofType(dateTime) <= component.where(code.coding.code = 'same-datetime').value.ofType(dateTime)"
         result: [true]
 
       - desc: "DateTime comparison - first after second"
-        expression: "Observation.effectiveDateTime <= component.where(code.coding.code = 'earlier-datetime').valueDateTime"
+        expression: "Observation.effective.ofType(dateTime) <= component.where(code.coding.code = 'earlier-datetime').value.ofType(dateTime)"
         result: [false]
 
       - desc: "Date comparison - overlapping ranges (different precision)"
-        expression: "Observation.effectiveDateTime <= component.where(code.coding.code = 'partial-date').valueDate"
+        expression: "Observation.effective.ofType(dateTime) <= component.where(code.coding.code = 'partial-date').value.ofType(date)"
         result: []
 
   - "group: Date/DateTime Greater Than (>)":
       - desc: "DateTime comparison - first after second"
-        expression: "Observation.effectiveDateTime > component.where(code.coding.code = 'earlier-datetime').valueDateTime"
+        expression: "Observation.effective.ofType(dateTime) > component.where(code.coding.code = 'earlier-datetime').value.ofType(dateTime)"
         result: [true]
 
       - desc: "DateTime comparison - first before second"
-        expression: "Observation.effectiveDateTime > component.where(code.coding.code = 'later-datetime').valueDateTime"
+        expression: "Observation.effective.ofType(dateTime) > component.where(code.coding.code = 'later-datetime').value.ofType(dateTime)"
         result: [false]
 
       - desc: "DateTime comparison - same dates"
-        expression: "Observation.effectiveDateTime > issued"
+        expression: "Observation.effective.ofType(dateTime) > component.where(code.coding.code = 'same-datetime').value.ofType(dateTime)"
         result: [false]
 
       - desc: "Date comparison - overlapping ranges (different precision)"
-        expression: "Observation.effectiveDateTime > component.where(code.coding.code = 'partial-date').valueDate"
+        expression: "Observation.effective.ofType(dateTime) > component.where(code.coding.code = 'partial-date').value.ofType(date)"
         result: []
 
   - "group: Date/DateTime Greater Than or Equal (>=)":
       - desc: "DateTime comparison - first after second"
-        expression: "Observation.effectiveDateTime >= component.where(code.coding.code = 'earlier-datetime').valueDateTime"
+        expression: "Observation.effective.ofType(dateTime) >= component.where(code.coding.code = 'earlier-datetime').value.ofType(dateTime)"
         result: [true]
 
       - desc: "DateTime comparison - same dates"
-        expression: "Observation.effectiveDateTime >= issued"
+        expression: "Observation.effective.ofType(dateTime) >= component.where(code.coding.code = 'same-datetime').value.ofType(dateTime)"
         result: [true]
 
       - desc: "DateTime comparison - first before second"
-        expression: "Observation.effectiveDateTime >= component.where(code.coding.code = 'later-datetime').valueDateTime"
+        expression: "Observation.effective.ofType(dateTime) >= component.where(code.coding.code = 'later-datetime').value.ofType(dateTime)"
         result: [false]
 
       - desc: "Date comparison - overlapping ranges (different precision)"
-        expression: "Observation.effectiveDateTime >= component.where(code.coding.code = 'partial-date').valueDate"
+        expression: "Observation.effective.ofType(dateTime) >= component.where(code.coding.code = 'partial-date').value.ofType(date)"
         result: []
 
   - "group: Complex Date/DateTime Comparisons":
       - desc: "Multiple date comparisons with filtering"
-        expression: "Observation.component.where(valueDateTime >= issued).exists()"
+        expression: "Observation.component.where(value.ofType(dateTime) >= effective.ofType(dateTime)).exists()"
         result: [true]
 
       - desc: "Date range validation with Period"
         expression: "Observation.component.where(code.coding.code = 'period-test').valuePeriod.start <= component.where(code.coding.code = 'period-test').valuePeriod.end"
         result: [true]
 
-      - desc: "Comparison with Instant type"
-        expression: "Observation.effectiveDateTime = component.where(code.coding.code = 'instant-test').valueInstant"
+      - desc: "Comparison with different DateTime"
+        expression: "Observation.effective.ofType(dateTime) = component.where(code.coding.code = 'same-datetime').value.ofType(dateTime)"
         result: [true]
 
   - "group: Boundary Cases":
       - desc: "Year-only date comparison"
-        expression: "Observation.component.where(code.coding.code = 'year-only').valueDate = component.where(code.coding.code = 'different-year').valueDate"
+        expression: "Observation.component.where(code.coding.code = 'year-only').value.ofType(date) = component.where(code.coding.code = 'different-year').value.ofType(date)"
         result: [false]
 
       - desc: "Partial date overlapping with full date"
-        expression: "Observation.component.where(code.coding.code = 'partial-date').valueDate < component.where(code.coding.code = 'date-only').valueDate"
+        expression: "Observation.component.where(code.coding.code = 'partial-date').value.ofType(date) < component.where(code.coding.code = 'date-only').value.ofType(date)"
         result: []
 
       - desc: "Cross-component date comparison"
-        expression: "Observation.component.where(code.coding.code = 'date-only').valueDate = component.where(code.coding.code = 'same-date').valueDate"
+        expression: "Observation.component.where(code.coding.code = 'date-only').value.ofType(date) = component.where(code.coding.code = 'same-date').value.ofType(date)"
         result: [true]
+
+  - "group: Error Cases":
+      - desc: "DateTime vs issued (Instant) comparison - should error"
+        expression: "Observation.effective.ofType(dateTime) = issued"
+        error: true
 
 subject:
   resourceType: Observation
@@ -147,22 +152,22 @@ subject:
         coding:
           - system: http://example.org/test
             code: "date-only"
-      valueDate: "2023-03-15"
+      valueDateTime: "2023-03-15"
     - code:
         coding:
           - system: http://example.org/test
             code: "partial-date"
-      valueDate: "2023-03"
+      valueDateTime: "2023-03"
     - code:
         coding:
           - system: http://example.org/test
             code: "year-only"
-      valueDate: "2023"
+      valueDateTime: "2023"
     - code:
         coding:
           - system: http://example.org/test
             code: "different-year"
-      valueDate: "2022"
+      valueDateTime: "2022"
     - code:
         coding:
           - system: http://example.org/test
@@ -181,8 +186,8 @@ subject:
     - code:
         coding:
           - system: http://example.org/test
-            code: "instant-test"
-      valueInstant: "2023-03-15T10:30:00Z"
+            code: "same-datetime"
+      valueDateTime: "2023-03-15T10:30:00Z"
     - code:
         coding:
           - system: http://example.org/test
@@ -190,3 +195,8 @@ subject:
       valuePeriod:
         start: "2023-03-15T10:00:00Z"
         end: "2023-03-15T11:00:00Z"
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "same-date"
+      valueDateTime: "2023-03-15"
