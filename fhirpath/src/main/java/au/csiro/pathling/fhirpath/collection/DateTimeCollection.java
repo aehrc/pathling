@@ -24,9 +24,9 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
+import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.operator.DateTimeComparator;
 import au.csiro.pathling.fhirpath.operator.DefaultComparator;
 import au.csiro.pathling.sql.SqlFunctions;
@@ -138,5 +138,25 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
       return INSTANT_COMPARATOR;
     }
     return DATE_TIME_COMPARATOR;
+  }
+
+  @Override
+  public boolean isComparableTo(@Nonnull final Comparable path) {
+    if (!(path instanceof final DateTimeCollection other)) {
+      return false;
+    }
+
+    final Optional<FHIRDefinedType> thisFhirType = getFhirType();
+    final Optional<FHIRDefinedType> otherFhirType = other.getFhirType();
+
+    // Both must have FHIR types defined.
+    if (thisFhirType.isEmpty() || otherFhirType.isEmpty()) {
+      return false;
+    }
+
+    // DateTime and Instant types cannot be compared to each other. This is because we currently
+    // represent Instant using the TIMESTAMP type in Spark, which involves changing the precision
+    // from the original source data. The original precision is necessary for correct comparison.
+    return thisFhirType.get() == otherFhirType.get();
   }
 }

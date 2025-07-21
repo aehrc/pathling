@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.operator;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
+import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -27,6 +28,8 @@ import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.comparison.Comparable.ComparisonOperation;
 import jakarta.annotation.Nonnull;
+import java.util.Optional;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Provides the functionality of the family of comparison operators within FHIRPath, i.e. {@code =},
@@ -67,9 +70,18 @@ public class ComparisonOperator implements BinaryOperator {
     final au.csiro.pathling.fhirpath.comparison.Comparable leftComparable = (au.csiro.pathling.fhirpath.comparison.Comparable) left;
     final au.csiro.pathling.fhirpath.comparison.Comparable rightComparable = (au.csiro.pathling.fhirpath.comparison.Comparable) right;
 
+    String leftDisplay = left.getType().map(FhirPathType::getTypeSpecifier).orElse("unknown");
+    final Optional<FHIRDefinedType> leftFhirType = left.getFhirType();
+    if (leftFhirType.isPresent()) {
+      leftDisplay += " (" + leftFhirType.get().toCode() + ")";
+    }
+    String rightDisplay = right.getType().map(FhirPathType::getTypeSpecifier).orElse("unknown");
+    final Optional<FHIRDefinedType> rightFhirType = right.getFhirType();
+    if (rightFhirType.isPresent()) {
+      rightDisplay += " (" + rightFhirType.get().toCode() + ")";
+    }
     checkUserInput(leftComparable.isComparableTo(rightComparable),
-        "Comparison of paths is not supported: " + left.getDisplayExpression() + ", "
-            + right.getDisplayExpression());
+        "Comparison of paths is not supported: " + leftDisplay + ", " + rightDisplay);
 
     // If the comparison operation is equality, we can use the operands directly. If it is any other
     // type of comparison, we need to enforce that the operands are both singular values.
