@@ -4,12 +4,12 @@ tests:
   - desc: "Date/DateTime Equality and Comparison Operations"
 
   - "group: Date/DateTime Equality (=)":
-      - desc: "Same DateTime precision - equal"
+      - desc: "Same DateTime with same precision is equal"
         expression: "Observation.effective.ofType(dateTime) = component.where(code.coding.code = 'same-datetime').value.ofType(dateTime)"
         result: [true]
 
-      - desc: "Different precision - DateTime vs Date - returns empty"
-        expression: "Observation.effective.ofType(dateTime) = component.where(code.coding.code = 'date-only').value.ofType(date)"
+      - desc: "Different precisions are not equal"
+        expression: "Observation.effective.ofType(dateTime) = component.where(code.coding.code = 'date-only').value.ofType(dateTime)"
         result: [false]
 
       - desc: "Different dates - same precision"
@@ -17,11 +17,11 @@ tests:
         result: [false]
 
       - desc: "Date equality - same date"
-        expression: "Observation.component.where(code.coding.code = 'date-only').value.ofType(date) = component.where(code.coding.code = 'date-only').value.ofType(date)"
+        expression: "Observation.component.where(code.coding.code = 'date-only').value.ofType(dateTime) = component.where(code.coding.code = 'date-only').value.ofType(dateTime)"
         result: [true]
 
       - desc: "Partial date equality - different precision"
-        expression: "Observation.component.where(code.coding.code = 'date-only').value.ofType(date) = component.where(code.coding.code = 'partial-date').value.ofType(date)"
+        expression: "Observation.component.where(code.coding.code = 'date-only').value.ofType(dateTime) = component.where(code.coding.code = 'partial-date').value.ofType(dateTime)"
         result: [false]
 
   - "group: Date/DateTime Inequality (!=)":
@@ -30,7 +30,7 @@ tests:
         result: [false]
 
       - desc: "Different precision - returns empty"
-        expression: "Observation.effective.ofType(dateTime) != component.where(code.coding.code = 'date-only').value.ofType(date)"
+        expression: "Observation.effective.ofType(dateTime) != component.where(code.coding.code = 'date-only').value.ofType(dateTime)"
         result: [true]
 
       - desc: "Different dates - same precision"
@@ -47,7 +47,7 @@ tests:
         result: [false]
 
       - desc: "Date comparison - overlapping ranges (different precision)"
-        expression: "Observation.effective.ofType(dateTime) < component.where(code.coding.code = 'partial-date').value.ofType(date)"
+        expression: "Observation.effective.ofType(dateTime) < component.where(code.coding.code = 'partial-date').value.ofType(dateTime)"
         result: []
 
       - desc: "Date comparison - same dates"
@@ -68,7 +68,7 @@ tests:
         result: [false]
 
       - desc: "Date comparison - overlapping ranges (different precision)"
-        expression: "Observation.effective.ofType(dateTime) <= component.where(code.coding.code = 'partial-date').value.ofType(date)"
+        expression: "Observation.effective.ofType(dateTime) <= component.where(code.coding.code = 'partial-date').value.ofType(dateTime)"
         result: []
 
   - "group: Date/DateTime Greater Than (>)":
@@ -85,7 +85,7 @@ tests:
         result: [false]
 
       - desc: "Date comparison - overlapping ranges (different precision)"
-        expression: "Observation.effective.ofType(dateTime) > component.where(code.coding.code = 'partial-date').value.ofType(date)"
+        expression: "Observation.effective.ofType(dateTime) > component.where(code.coding.code = 'partial-date').value.ofType(dateTime)"
         result: []
 
   - "group: Date/DateTime Greater Than or Equal (>=)":
@@ -102,7 +102,7 @@ tests:
         result: [false]
 
       - desc: "Date comparison - overlapping ranges (different precision)"
-        expression: "Observation.effective.ofType(dateTime) >= component.where(code.coding.code = 'partial-date').value.ofType(date)"
+        expression: "Observation.effective.ofType(dateTime) >= component.where(code.coding.code = 'partial-date').value.ofType(dateTime)"
         result: []
 
   - "group: Complex Date/DateTime Comparisons":
@@ -120,15 +120,15 @@ tests:
 
   - "group: Boundary Cases":
       - desc: "Year-only date comparison"
-        expression: "Observation.component.where(code.coding.code = 'year-only').value.ofType(date) = component.where(code.coding.code = 'different-year').value.ofType(date)"
+        expression: "Observation.component.where(code.coding.code = 'year-only').value.ofType(dateTime) = component.where(code.coding.code = 'different-year').value.ofType(dateTime)"
         result: [false]
 
       - desc: "Partial date overlapping with full date"
-        expression: "Observation.component.where(code.coding.code = 'partial-date').value.ofType(date) < component.where(code.coding.code = 'date-only').value.ofType(date)"
+        expression: "Observation.component.where(code.coding.code = 'partial-date').value.ofType(dateTime) < component.where(code.coding.code = 'date-only').value.ofType(dateTime)"
         result: []
 
       - desc: "Cross-component date comparison"
-        expression: "Observation.component.where(code.coding.code = 'date-only').value.ofType(date) = component.where(code.coding.code = 'same-date').value.ofType(date)"
+        expression: "Observation.component.where(code.coding.code = 'date-only').value.ofType(dateTime) = component.where(code.coding.code = 'same-date').value.ofType(dateTime)"
         result: [true]
 
   - "group: Error Cases":
