@@ -1,5 +1,6 @@
 package au.csiro.pathling.fhirpath.operator;
 
+import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.sql.misc.HighBoundaryForDateTime;
 import au.csiro.pathling.sql.misc.LowBoundaryForDateTime;
 import jakarta.annotation.Nonnull;
@@ -24,7 +25,7 @@ public class DateTimeComparator implements ColumnComparator {
     final Column rightLow = functions.callUDF(LowBoundaryForDateTime.FUNCTION_NAME, right);
     final Column leftLow = functions.callUDF(LowBoundaryForDateTime.FUNCTION_NAME, left);
     final Column rightHigh = functions.callUDF(HighBoundaryForDateTime.FUNCTION_NAME, right);
-    
+
     // true if left.highBoundary < right.lowBoundary (no overlap, left < right)
     // false if left.lowBoundary >= right.highBoundary (no overlap, left >= right)
     // null if ranges overlap (uncertain)
@@ -38,7 +39,7 @@ public class DateTimeComparator implements ColumnComparator {
   public Column lessThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
     final Column lessThanResult = lessThan(left, right);
     final Column equalsResult = equalsTo(left, right);
-    
+
     // true if lessThan is true OR equals is true
     // false if lessThan is false (meaning left > right with no overlap)
     // null if lessThan is null (meaning ranges overlap)
@@ -55,7 +56,7 @@ public class DateTimeComparator implements ColumnComparator {
     final Column rightHigh = functions.callUDF(HighBoundaryForDateTime.FUNCTION_NAME, right);
     final Column leftHigh = functions.callUDF(HighBoundaryForDateTime.FUNCTION_NAME, left);
     final Column rightLow = functions.callUDF(LowBoundaryForDateTime.FUNCTION_NAME, right);
-    
+
     // true if left.lowBoundary > right.highBoundary (no overlap, left > right)
     // false if left.highBoundary <= right.lowBoundary (no overlap, left <= right)
     // null if ranges overlap (uncertain)
@@ -69,7 +70,7 @@ public class DateTimeComparator implements ColumnComparator {
   public Column greaterThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
     final Column greaterThanResult = greaterThan(left, right);
     final Column equalsResult = equalsTo(left, right);
-    
+
     // true if greaterThan is true OR equals is true
     // false if greaterThan is false (meaning left < right with no overlap)
     // null if greaterThan is null (meaning ranges overlap)

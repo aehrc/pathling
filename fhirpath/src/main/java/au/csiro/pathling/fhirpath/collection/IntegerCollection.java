@@ -27,7 +27,7 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DecimalRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import au.csiro.pathling.fhirpath.operator.Comparable;
+import au.csiro.pathling.fhirpath.comparison.Comparable;
 import com.google.common.collect.ImmutableSet;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
@@ -46,7 +46,7 @@ import org.hl7.fhir.r4.model.UnsignedIntType;
  * @author John Grimes
  */
 public class IntegerCollection extends Collection implements Comparable, Numeric, StringCoercible,
-        Materializable {
+    Materializable {
 
   private static final Set<FHIRDefinedType> INTEGER_TYPES = Set.of(FHIRDefinedType.INTEGER,
       FHIRDefinedType.UNSIGNEDINT, FHIRDefinedType.POSITIVEINT);

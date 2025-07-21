@@ -23,6 +23,7 @@ import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.comparison.Comparable;
 import jakarta.annotation.Nonnull;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -66,11 +67,12 @@ public class MathOperator implements BinaryOperator {
     checkUserInput(right instanceof Numeric,
         type + " operator does not support right operand: " + right.getDisplayExpression());
 
-    checkUserInput(left instanceof Comparable && right instanceof Comparable,
+    checkUserInput(left instanceof au.csiro.pathling.fhirpath.comparison.Comparable
+            && right instanceof au.csiro.pathling.fhirpath.comparison.Comparable,
         "Left and right operands are not comparable: " + left.getDisplayExpression() + " "
             + type + " " + right.getDisplayExpression());
-    final Comparable comparableLeft = (Comparable) left;
-    final Comparable comparableRight = (Comparable) right;
+    final au.csiro.pathling.fhirpath.comparison.Comparable comparableLeft = (au.csiro.pathling.fhirpath.comparison.Comparable) left;
+    final au.csiro.pathling.fhirpath.comparison.Comparable comparableRight = (Comparable) right;
     checkUserInput(comparableLeft.isComparableTo(comparableRight),
         "Left and right operands are not comparable: " + left.getDisplayExpression() + " "
             + type + " " + right.getDisplayExpression());

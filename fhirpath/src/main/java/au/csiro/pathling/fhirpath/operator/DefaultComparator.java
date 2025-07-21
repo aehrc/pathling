@@ -1,5 +1,6 @@
 package au.csiro.pathling.fhirpath.operator;
 
+import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 

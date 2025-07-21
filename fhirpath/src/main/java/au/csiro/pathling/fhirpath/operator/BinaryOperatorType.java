@@ -3,7 +3,7 @@ package au.csiro.pathling.fhirpath.operator;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.operator.BooleanOperator.BooleanOperatorType;
-import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
+import au.csiro.pathling.fhirpath.comparison.Comparable.ComparisonOperation;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import jakarta.annotation.Nonnull;

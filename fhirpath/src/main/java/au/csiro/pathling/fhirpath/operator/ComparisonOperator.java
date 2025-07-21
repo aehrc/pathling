@@ -24,7 +24,8 @@ import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
-import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
+import au.csiro.pathling.fhirpath.comparison.Comparable;
+import au.csiro.pathling.fhirpath.comparison.Comparable.ComparisonOperation;
 import jakarta.annotation.Nonnull;
 
 /**
@@ -59,12 +60,12 @@ public class ComparisonOperator implements BinaryOperator {
       return EmptyCollection.getInstance();
     }
 
-    checkUserInput(left instanceof Comparable,
+    checkUserInput(left instanceof au.csiro.pathling.fhirpath.comparison.Comparable,
         "Left operand to " + type + " operator must be comparable");
-    checkUserInput(right instanceof Comparable,
+    checkUserInput(right instanceof au.csiro.pathling.fhirpath.comparison.Comparable,
         "Right operand to " + type + " operator must be comparable");
-    final Comparable leftComparable = (Comparable) left;
-    final Comparable rightComparable = (Comparable) right;
+    final au.csiro.pathling.fhirpath.comparison.Comparable leftComparable = (au.csiro.pathling.fhirpath.comparison.Comparable) left;
+    final au.csiro.pathling.fhirpath.comparison.Comparable rightComparable = (au.csiro.pathling.fhirpath.comparison.Comparable) right;
 
     checkUserInput(leftComparable.isComparableTo(rightComparable),
         "Comparison of paths is not supported: " + left.getDisplayExpression() + ", "
@@ -77,9 +78,10 @@ public class ComparisonOperator implements BinaryOperator {
     } else {
       final Collection leftSingular = left.asSingular(
           "Comparison operator requires singular values");
-      check(leftSingular instanceof Comparable);
+      check(leftSingular instanceof au.csiro.pathling.fhirpath.comparison.Comparable);
       return BooleanCollection.build(
-          ((Comparable) leftSingular).getComparison(type).apply((Comparable) right));
+          ((au.csiro.pathling.fhirpath.comparison.Comparable) leftSingular).getComparison(type)
+              .apply((Comparable) right));
     }
 
   }

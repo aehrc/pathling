@@ -15,11 +15,12 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.operator;
+package au.csiro.pathling.fhirpath.comparison;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.operator.DefaultComparator;
 import jakarta.annotation.Nonnull;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
