@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.config;
 
-import jakarta.annotation.Nonnull;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
