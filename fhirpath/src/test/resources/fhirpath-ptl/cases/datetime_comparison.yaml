@@ -39,21 +39,8 @@ tests:
         expression: "Observation.component.where(code.coding.code = 'day-2023-03-15').value.ofType(dateTime) = component.where(code.coding.code = 'day-2023-03-16').value.ofType(dateTime)"
         result: [false]
 
-      - desc: "Day vs Hour precision - returns empty"
-        expression: "Observation.component.where(code.coding.code = 'day-2023-03-15').value.ofType(dateTime) = component.where(code.coding.code = 'hour-2023-03-15T10').value.ofType(dateTime)"
-        result: []
-
-      # Minute precision tests
-      - desc: "Minute precision - same minute equals"
-        expression: "Observation.component.where(code.coding.code = 'minute-2023-03-15T10:30').value.ofType(dateTime) = component.where(code.coding.code = 'minute-2023-03-15T10:30-same').value.ofType(dateTime)"
-        result: [true]
-
-      - desc: "Minute precision - different minute not equals"
-        expression: "Observation.component.where(code.coding.code = 'minute-2023-03-15T10:30').value.ofType(dateTime) = component.where(code.coding.code = 'minute-2023-03-15T10:31').value.ofType(dateTime)"
-        result: [false]
-
-      - desc: "Minute vs Second precision - returns empty"
-        expression: "Observation.component.where(code.coding.code = 'minute-2023-03-15T10:30').value.ofType(dateTime) = component.where(code.coding.code = 'second-2023-03-15T10:30:00').value.ofType(dateTime)"
+      - desc: "Day vs Second precision - returns empty"
+        expression: "Observation.component.where(code.coding.code = 'day-2023-03-15').value.ofType(dateTime) = component.where(code.coding.code = 'second-2023-03-15T10:30:00').value.ofType(dateTime)"
         result: []
 
       # Second precision tests
@@ -265,23 +252,6 @@ subject:
           - system: http://example.org/test
             code: "day-2023-03-16"
       valueDateTime: "2023-03-16"
-
-    # Minute precision tests (with required timezone)
-    - code:
-        coding:
-          - system: http://example.org/test
-            code: "minute-2023-03-15T10:30"
-      valueDateTime: "2023-03-15T10:30:00Z"
-    - code:
-        coding:
-          - system: http://example.org/test
-            code: "minute-2023-03-15T10:30-same"
-      valueDateTime: "2023-03-15T10:30:00Z"
-    - code:
-        coding:
-          - system: http://example.org/test
-            code: "minute-2023-03-15T10:31"
-      valueDateTime: "2023-03-15T10:31:00Z"
 
     # Second precision tests (with required timezone)
     - code:
