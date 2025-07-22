@@ -253,7 +253,7 @@ public class AnsiTypeHintingTest {
             "2023-01-01T12:00:00Z"),
         Arguments.of("decimal", new DecimalType("123.450"), DataTypes.StringType, "123.450"),
         Arguments.of("id", new IdType("identifier123"), DataTypes.StringType, "identifier123"),
-        Arguments.of("instant", new InstantType("2023-01-01T12:00:00Z"), DataTypes.StringType,
+        Arguments.of("instant", new InstantType("2023-01-01T12:00:00Z"), DataTypes.TimestampType,
             "2023-01-01T12:00:00Z"),
         Arguments.of("integer", new IntegerType(42), DataTypes.IntegerType, "42"),
         Arguments.of("markdown", new MarkdownType("**bold text**"), DataTypes.StringType,
