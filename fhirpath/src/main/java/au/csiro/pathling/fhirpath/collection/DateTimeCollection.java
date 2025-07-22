@@ -29,10 +29,11 @@ import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.operator.DateTimeComparator;
 import au.csiro.pathling.fhirpath.operator.DefaultComparator;
-import au.csiro.pathling.sql.SqlFunctions;
 import jakarta.annotation.Nonnull;
+import java.sql.Timestamp;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.InstantType;
@@ -102,8 +103,11 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
    */
   @Nonnull
   public static DateTimeCollection fromValue(@Nonnull final InstantType value) {
+    final Timestamp timestamp = new Timestamp(
+        value.getValue().toInstant().toEpochMilli());
+    final ColumnRepresentation column = new DefaultRepresentation(functions.lit(timestamp));
     return new DateTimeCollection(
-        DefaultRepresentation.literal(value.getValueAsString()),
+        column,
         Optional.of(FhirPathType.DATETIME),
         Optional.of(FHIRDefinedType.INSTANT),
         Optional.empty(), Optional.empty());
@@ -121,16 +125,6 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
       valueColumn = getColumn();
     }
     return StringCollection.build(valueColumn);
-  }
-
-  @Nonnull
-  @Override
-  public Column toExternalValue() {
-    // special case to convert instant back from TIMESTAMP to STRING
-    return getFhirType()
-        .filter(FHIRDefinedType.INSTANT::equals)
-        .map(ignore -> getColumn().transform(SqlFunctions::to_fhir_instant).getValue())
-        .orElseGet(Materializable.super::toExternalValue);
   }
 
   @Nonnull
