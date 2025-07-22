@@ -109,7 +109,7 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
       final YamlTestDefinition spec) {
     return Optional.ofNullable(spec.subject())
         .map(subject -> {
-          @SuppressWarnings("unchecked") final Map<Object, Object> convertedSubject = new HashMap<>(
+          final Map<Object, Object> convertedSubject = new HashMap<>(
               subject);
           return createResolverFactoryFromSubject(convertedSubject);
         })

@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
-import static scala.collection.JavaConversions.asScalaBuffer;
+import static scala.collection.JavaConverters.asScalaBuffer;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
@@ -262,7 +262,7 @@ abstract class FhirViewTest {
    */
   protected FhirViewTest(@Nonnull final String testLocationGlob,
       @Nonnull final Set<String> includeTags) {
-    this(testLocationGlob, Collections.emptySet(), Collections.emptySet());
+    this(testLocationGlob, includeTags, Collections.emptySet());
   }
 
   protected FhirViewTest(@Nonnull final String testLocationGlob) {

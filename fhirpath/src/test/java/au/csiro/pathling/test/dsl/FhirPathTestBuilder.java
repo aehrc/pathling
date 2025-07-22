@@ -42,7 +42,6 @@ public class FhirPathTestBuilder {
 
   @Nullable
   IBaseResource resource = null;
-  private String currentGroup;
 
   @Nonnull
   public FhirPathTestBuilder withResource(@Nonnull final IBaseResource resource) {
@@ -63,8 +62,7 @@ public class FhirPathTestBuilder {
     return withSubject(builderFunction.apply(new ModelBuilder()).model);
   }
 
-  public FhirPathTestBuilder group(final String name) {
-    this.currentGroup = name;
+  public FhirPathTestBuilder group(final String ignoredName) {
     return this;
   }
 

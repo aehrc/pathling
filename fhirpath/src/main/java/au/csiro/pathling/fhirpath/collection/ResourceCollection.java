@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
@@ -28,17 +27,12 @@ import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.fhir.FhirDefinitionContext;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
-import java.util.EnumSet;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.Getter;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import scala.collection.JavaConverters;
 
 /**
  * Represents any FHIRPath expression which refers to a resource type.
@@ -132,49 +126,12 @@ public class ResourceCollection extends Collection {
   }
 
 
-  /**
-   * @return The set of resource types currently supported by this implementation.
-   */
-  @Nonnull
-  public static Set<ResourceType> supportedResourceTypes() {
-    final Set<ResourceType> availableResourceTypes = EnumSet.allOf(
-        ResourceType.class);
-    final Set<ResourceType> unsupportedResourceTypes =
-        JavaConverters.setAsJavaSet(EncoderBuilder.UNSUPPORTED_RESOURCES()).stream()
-            .map(ResourceType::fromCode)
-            .collect(Collectors.toSet());
-    availableResourceTypes.removeAll(unsupportedResourceTypes);
-    availableResourceTypes.remove(ResourceType.RESOURCE);
-    availableResourceTypes.remove(ResourceType.DOMAINRESOURCE);
-    availableResourceTypes.remove(ResourceType.NULL);
-    availableResourceTypes.remove(ResourceType.OPERATIONDEFINITION);
-    return availableResourceTypes;
-  }
-
-  /**
-   * @param elementName the name of the element
-   * @return the {@link Column} within the dataset pertaining to this element
-   */
-  @Nonnull
-  public Optional<ColumnRepresentation> getElementColumn(@Nonnull final String elementName) {
-    return Optional.of(functions.col(elementName))
-        .map(DefaultRepresentation::new);
-  }
-
-
   @Nonnull
   @Override
   protected ColumnRepresentation getFid() {
     return getColumn().traverse(ExtensionSupport.FID_FIELD_NAME());
   }
-
-  /**
-   * @return the {@link ResourceType} of this resource collection
-   */
-  public ResourceType getResourceType() {
-    return resourceDefinition.getResourceType();
-  }
-
+  
   @Nonnull
   @Override
   public Collection copyWith(@Nonnull final ColumnRepresentation newValue) {

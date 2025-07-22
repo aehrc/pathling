@@ -81,8 +81,6 @@ public class AnsiTypeHintingTest {
 
   private FhirViewExecutor fhirViewExecutor;
 
-  private ObjectDataSource dataSource;
-
   @BeforeAll
   void setUp() {
     final Resource observation = new Observation()
@@ -110,7 +108,7 @@ public class AnsiTypeHintingTest {
             .setData("data".getBytes(StandardCharsets.UTF_8)))
         .setId("Patient/123");
 
-    dataSource = new ObjectDataSource(sparkSession, fhirEncoders,
+    final ObjectDataSource dataSource = new ObjectDataSource(sparkSession, fhirEncoders,
         List.of(observation, patient));
 
     fhirViewExecutor = new FhirViewExecutor(fhirEncoders.getContext(), sparkSession,
