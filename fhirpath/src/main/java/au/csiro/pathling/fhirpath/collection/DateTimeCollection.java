@@ -102,8 +102,11 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
    */
   @Nonnull
   public static DateTimeCollection fromValue(@Nonnull final InstantType value) {
-    return DateTimeCollection.build(
-        DefaultRepresentation.literal(value.getValueAsString()));
+    return new DateTimeCollection(
+        DefaultRepresentation.literal(value.getValueAsString()),
+        Optional.of(FhirPathType.DATETIME),
+        Optional.of(FHIRDefinedType.INSTANT),
+        Optional.empty(), Optional.empty());
   }
 
   @Nonnull
