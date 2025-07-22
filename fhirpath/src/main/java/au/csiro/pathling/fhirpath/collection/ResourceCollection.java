@@ -165,8 +165,6 @@ public class ResourceCollection extends Collection {
   @Nonnull
   @Override
   protected ColumnRepresentation getFid() {
-    // return getElementColumn(ExtensionSupport.FID_FIELD_NAME()).orElseThrow(
-    //     () -> new IllegalStateException("Resource does not have an 'id' column"));
     return getColumn().traverse(ExtensionSupport.FID_FIELD_NAME());
   }
 
