@@ -3,7 +3,7 @@ tests:
 
   - desc: "Date/DateTime Equality and Comparison Operations"
 
-  - "group: Date/DateTime Equality (=) - Precision Testing":
+  - "Equality (=)":
       # Year precision tests
       - desc: "Year precision - same year equals"
         expression: "Observation.component.where(code.coding.code = 'year-2023').value.ofType(dateTime) = component.where(code.coding.code = 'year-2023-same').value.ofType(dateTime)"
@@ -91,7 +91,7 @@ tests:
         expression: "Observation.component.where(code.coding.code = 'tz-utc').value.ofType(dateTime) = component.where(code.coding.code = 'tz-plus4-different').value.ofType(dateTime)"
         result: [false]
 
-  - "group: Date/DateTime Inequality (!=)":
+  - "Inequality (!=)":
       - desc: "Same DateTime precision - not equal"
         expression: "Observation.effective.ofType(dateTime) != component.where(code.coding.code = 'same-datetime').value.ofType(dateTime)"
         result: [false]
@@ -104,7 +104,7 @@ tests:
         expression: "Observation.effective.ofType(dateTime) != component.where(code.coding.code = 'different-datetime').value.ofType(dateTime)"
         result: [true]
 
-  - "group: Date/DateTime Less Than (<)":
+  - "Less Than (<)":
       - desc: "DateTime comparison - first before second"
         expression: "Observation.effective.ofType(dateTime) < component.where(code.coding.code = 'later-datetime').value.ofType(dateTime)"
         result: [true]
@@ -121,7 +121,7 @@ tests:
         expression: "Observation.effective.ofType(dateTime) < component.where(code.coding.code = 'same-datetime').value.ofType(dateTime)"
         result: [false]
 
-  - "group: Date/DateTime Less Than or Equal (<=)":
+  - "Less Than or Equal (<=)":
       - desc: "DateTime comparison - first before second"
         expression: "Observation.effective.ofType(dateTime) <= component.where(code.coding.code = 'later-datetime').value.ofType(dateTime)"
         result: [true]
@@ -138,7 +138,7 @@ tests:
         expression: "Observation.effective.ofType(dateTime) <= component.where(code.coding.code = 'partial-date').value.ofType(dateTime)"
         result: []
 
-  - "group: Date/DateTime Greater Than (>)":
+  - "Greater Than (>)":
       - desc: "DateTime comparison - first after second"
         expression: "Observation.effective.ofType(dateTime) > component.where(code.coding.code = 'earlier-datetime').value.ofType(dateTime)"
         result: [true]
@@ -155,7 +155,7 @@ tests:
         expression: "Observation.effective.ofType(dateTime) > component.where(code.coding.code = 'partial-date').value.ofType(dateTime)"
         result: []
 
-  - "group: Date/DateTime Greater Than or Equal (>=)":
+  - "Greater Than or Equal (>=)":
       - desc: "DateTime comparison - first after second"
         expression: "Observation.effective.ofType(dateTime) >= component.where(code.coding.code = 'earlier-datetime').value.ofType(dateTime)"
         result: [true]
@@ -172,7 +172,7 @@ tests:
         expression: "Observation.effective.ofType(dateTime) >= component.where(code.coding.code = 'partial-date').value.ofType(dateTime)"
         result: []
 
-  - "group: Complex Date/DateTime Comparisons":
+  - "Complex Date/DateTime Comparisons":
       - desc: "Multiple date comparisons with filtering"
         expression: "Observation.component.where(value.ofType(dateTime) >= effective.ofType(dateTime)).exists()"
         result: [true]
@@ -185,7 +185,7 @@ tests:
         expression: "Observation.effective.ofType(dateTime) = component.where(code.coding.code = 'same-datetime').value.ofType(dateTime)"
         result: [true]
 
-  - "group: Boundary Cases":
+  - "Boundary Cases":
       - desc: "Year-only date comparison"
         expression: "Observation.component.where(code.coding.code = 'year-only').value.ofType(dateTime) = component.where(code.coding.code = 'different-year').value.ofType(dateTime)"
         result: [false]
@@ -198,7 +198,7 @@ tests:
         expression: "Observation.component.where(code.coding.code = 'date-only').value.ofType(dateTime) = component.where(code.coding.code = 'same-date').value.ofType(dateTime)"
         result: [true]
 
-  - "group: Error Cases":
+  - "Error Cases":
       - desc: "DateTime vs issued (Instant) comparison - should error"
         expression: "Observation.effective.ofType(dateTime) = issued"
         error: true
