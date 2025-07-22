@@ -12,10 +12,17 @@ public class DateTimeComparator implements ColumnComparator {
   @Nonnull
   @Override
   public Column equalsTo(@Nonnull final Column left, @Nonnull final Column right) {
-    return functions.callUDF(LowBoundaryForDateTime.FUNCTION_NAME, left)
-        .equalTo(functions.callUDF(LowBoundaryForDateTime.FUNCTION_NAME, right)).and(
-            functions.callUDF(HighBoundaryForDateTime.FUNCTION_NAME, left)
-                .equalTo(functions.callUDF(HighBoundaryForDateTime.FUNCTION_NAME, right)));
+    final Column leftLow = functions.callUDF(LowBoundaryForDateTime.FUNCTION_NAME, left);
+    final Column leftHigh = functions.callUDF(HighBoundaryForDateTime.FUNCTION_NAME, left);
+    final Column rightLow = functions.callUDF(LowBoundaryForDateTime.FUNCTION_NAME, right);
+    final Column rightHigh = functions.callUDF(HighBoundaryForDateTime.FUNCTION_NAME, right);
+
+    // true if ranges are identical (same low and high boundaries)
+    // false if ranges don't overlap at all
+    // null if ranges overlap but are not identical (uncertain)
+    return functions.when(leftLow.equalTo(rightLow).and(leftHigh.equalTo(rightHigh)), functions.lit(true))
+        .when(leftHigh.lt(rightLow).or(leftLow.gt(rightHigh)), functions.lit(false))
+        .otherwise(functions.lit(null));
   }
 
   @Nonnull
