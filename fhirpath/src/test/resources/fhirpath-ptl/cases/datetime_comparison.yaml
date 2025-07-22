@@ -84,7 +84,7 @@ tests:
         result: [false]
 
       - desc: "Different precision - returns empty"
-        expression: "Observation.effective.ofType(dateTime) != component.where(code.coding.code = 'date-only').value.ofType(dateTime)"
+        expression: "Observation.effective.ofType(dateTime) != component.where(code.coding.code = 'day-2023-03-15').value.ofType(dateTime)"
         result: []
 
       - desc: "Different dates - same precision"
@@ -101,7 +101,7 @@ tests:
         result: [false]
 
       - desc: "Date comparison - overlapping ranges (different precision)"
-        expression: "Observation.effective.ofType(dateTime) < component.where(code.coding.code = 'partial-date').value.ofType(dateTime)"
+        expression: "Observation.effective.ofType(dateTime) < component.where(code.coding.code = 'month-2023-03').value.ofType(dateTime)"
         result: []
 
       - desc: "Date comparison - same dates"
@@ -122,7 +122,7 @@ tests:
         result: [false]
 
       - desc: "Date comparison - overlapping ranges (different precision)"
-        expression: "Observation.effective.ofType(dateTime) <= component.where(code.coding.code = 'partial-date').value.ofType(dateTime)"
+        expression: "Observation.effective.ofType(dateTime) <= component.where(code.coding.code = 'month-2023-03').value.ofType(dateTime)"
         result: []
 
   - "Greater Than (>)":
@@ -139,7 +139,7 @@ tests:
         result: [false]
 
       - desc: "Date comparison - overlapping ranges (different precision)"
-        expression: "Observation.effective.ofType(dateTime) > component.where(code.coding.code = 'partial-date').value.ofType(dateTime)"
+        expression: "Observation.effective.ofType(dateTime) > component.where(code.coding.code = 'month-2023-03').value.ofType(dateTime)"
         result: []
 
   - "Greater Than or Equal (>=)":
@@ -156,7 +156,7 @@ tests:
         result: [false]
 
       - desc: "Date comparison - overlapping ranges (different precision)"
-        expression: "Observation.effective.ofType(dateTime) >= component.where(code.coding.code = 'partial-date').value.ofType(dateTime)"
+        expression: "Observation.effective.ofType(dateTime) >= component.where(code.coding.code = 'month-2023-03').value.ofType(dateTime)"
         result: []
 
   - "Error Cases":
@@ -304,20 +304,3 @@ subject:
           - system: http://example.org/test
             code: "later-datetime"
       valueDateTime: "2023-03-15T11:30:00Z"
-    - code:
-        coding:
-          - system: http://example.org/test
-            code: "period-test"
-      valuePeriod:
-        start: "2023-03-15T10:00:00Z"
-        end: "2023-03-15T11:00:00Z"
-    - code:
-        coding:
-          - system: http://example.org/test
-            code: "date-only"
-      valueDateTime: "2023-03-15"
-    - code:
-        coding:
-          - system: http://example.org/test
-            code: "partial-date"
-      valueDateTime: "2023-03"
