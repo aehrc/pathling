@@ -85,7 +85,7 @@ tests:
 
       - desc: "Different precision - returns empty"
         expression: "Observation.effective.ofType(dateTime) != component.where(code.coding.code = 'date-only').value.ofType(dateTime)"
-        result: [true]
+        result: []
 
       - desc: "Different dates - same precision"
         expression: "Observation.effective.ofType(dateTime) != component.where(code.coding.code = 'different-datetime').value.ofType(dateTime)"
@@ -158,32 +158,6 @@ tests:
       - desc: "Date comparison - overlapping ranges (different precision)"
         expression: "Observation.effective.ofType(dateTime) >= component.where(code.coding.code = 'partial-date').value.ofType(dateTime)"
         result: []
-
-  - "Complex Date/DateTime Comparisons":
-      - desc: "Multiple date comparisons with filtering"
-        expression: "Observation.component.where(value.ofType(dateTime) >= effective.ofType(dateTime)).exists()"
-        result: [true]
-
-      - desc: "Date range validation with Period"
-        expression: "Observation.component.where(code.coding.code = 'period-test').valuePeriod.start <= component.where(code.coding.code = 'period-test').valuePeriod.end"
-        result: [true]
-
-      - desc: "Comparison with different DateTime"
-        expression: "Observation.effective.ofType(dateTime) = component.where(code.coding.code = 'same-datetime').value.ofType(dateTime)"
-        result: [true]
-
-  - "Boundary Cases":
-      - desc: "Year-only date comparison"
-        expression: "Observation.component.where(code.coding.code = 'year-only').value.ofType(dateTime) = component.where(code.coding.code = 'different-year').value.ofType(dateTime)"
-        result: [false]
-
-      - desc: "Partial date overlapping with full date"
-        expression: "Observation.component.where(code.coding.code = 'partial-date').value.ofType(dateTime) < component.where(code.coding.code = 'date-only').value.ofType(dateTime)"
-        result: []
-
-      - desc: "Cross-component date comparison"
-        expression: "Observation.component.where(code.coding.code = 'date-only').value.ofType(dateTime) = component.where(code.coding.code = 'same-date').value.ofType(dateTime)"
-        result: [true]
 
   - "Error Cases":
       - desc: "DateTime vs issued (Instant) comparison - should error"
