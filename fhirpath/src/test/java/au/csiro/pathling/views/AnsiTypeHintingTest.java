@@ -147,9 +147,9 @@ public class AnsiTypeHintingTest {
 
       FhirViewBuilder viewBuilder = FhirView.ofResource(
           resourceType);
-      if (constValue != null) {
+      if (getConstValue() != null) {
         viewBuilder = viewBuilder.constant(
-            new ConstantDeclaration("constValue", Objects.requireNonNull(constValue))
+            new ConstantDeclaration("constValue", Objects.requireNonNull(getConstValue()))
         );
       }
 
@@ -158,9 +158,9 @@ public class AnsiTypeHintingTest {
           .path(expression)
           .collection(collection);
 
-      if (ansiType != null) {
+      if (getAnsiType() != null) {
         columnBuilder = columnBuilder.tag(
-            List.of(ColumnTag.of("ansi/type", Objects.requireNonNull(ansiType))));
+            List.of(ColumnTag.of("ansi/type", Objects.requireNonNull(getAnsiType()))));
       }
 
       return viewBuilder.select(
