@@ -253,7 +253,7 @@ class SingleResourceFhirpathTest {
         "value.ofType(integer)");
 
     Assertions.assertThat(evalResult)
-        .isElementPath(IntegerCollection.class)
+        .hasClass(IntegerCollection.class)
         .toCanonicalResult()
         .hasRowsUnordered(
             RowFactory.create("1", 17),
@@ -276,7 +276,7 @@ class SingleResourceFhirpathTest {
         "order - 11");
 
     Assertions.assertThat(evalResult)
-        .isElementPath(IntegerCollection.class)
+        .hasClass(IntegerCollection.class)
         .hasFhirType(FHIRDefinedType.INTEGER)
         .toCanonicalResult()
         .hasRowsUnordered(
@@ -301,7 +301,7 @@ class SingleResourceFhirpathTest {
         "extension.value.ofType(Reference).reference");
 
     Assertions.assertThat(evalResult)
-        .isElementPath(StringCollection.class)
+        .hasClass(StringCollection.class)
         .toCanonicalResult()
         .hasRowsUnordered(
             RowFactory.create("1", sql_array("MolecularSequence/1")),
@@ -329,7 +329,7 @@ class SingleResourceFhirpathTest {
         "maritalStatus.coding contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S||S");
 
     Assertions.assertThat(evalResult)
-        .isElementPath(BooleanCollection.class)
+        .hasClass(BooleanCollection.class)
         .toCanonicalResult()
         .hasRowsUnordered(
             RowFactory.create("1", true)
@@ -354,7 +354,7 @@ class SingleResourceFhirpathTest {
         "udiCarrier.carrierAIDC = 'QUlEMQ=='");
 
     Assertions.assertThat(evalResult)
-        .isElementPath(BooleanCollection.class)
+        .hasClass(BooleanCollection.class)
         .toCanonicalResult()
         .explain()
         .hasRowsUnordered(
@@ -372,7 +372,7 @@ class SingleResourceFhirpathTest {
         "code.subsumes(http://loinc.org|LA11165-0||Platelet%20anisocytosis)");
 
     Assertions.assertThat(evalResult)
-        .isElementPath(BooleanCollection.class)
+        .hasClass(BooleanCollection.class)
         .toCanonicalResult()
         .hasRowsUnordered(
             RowFactory.create("1", true)
@@ -389,7 +389,7 @@ class SingleResourceFhirpathTest {
         "category.subsumes(http://terminology.hl7.org/CodeSystem/v3-ObservationCategory|vital-signs||Vital%20Signs)");
 
     Assertions.assertThat(evalResult)
-        .isElementPath(BooleanCollection.class)
+        .hasClass(BooleanCollection.class)
         .toCanonicalResult()
         .hasRowsUnordered(
             RowFactory.create("1", sql_array(true, false))
@@ -407,7 +407,7 @@ class SingleResourceFhirpathTest {
         "code.coding.subsumes(http://loinc.org|LA11165-0||Platelet%20anisocytosis)");
 
     Assertions.assertThat(evalResult)
-        .isElementPath(BooleanCollection.class)
+        .hasClass(BooleanCollection.class)
         .toCanonicalResult()
         .hasRowsUnordered(
             RowFactory.create("1", sql_array(true, false))
@@ -425,7 +425,7 @@ class SingleResourceFhirpathTest {
         "code.coding.first().subsumes(http://loinc.org|LA11165-0||Platelet%20anisocytosis)");
 
     Assertions.assertThat(evalResult)
-        .isElementPath(BooleanCollection.class)
+        .hasClass(BooleanCollection.class)
         .toCanonicalResult()
         .hasRowsUnordered(
             RowFactory.create("1", true)
