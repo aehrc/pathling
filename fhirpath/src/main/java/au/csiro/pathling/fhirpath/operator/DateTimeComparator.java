@@ -9,35 +9,50 @@ import org.apache.spark.sql.functions;
 
 public class DateTimeComparator implements ColumnComparator {
 
+  /**
+   * Record to hold the low and high boundary columns for a dateTime value.
+   */
+  private record Bounds(@Nonnull Column low, @Nonnull Column high) {}
+
+  /**
+   * Gets the low and high boundary columns for a dateTime column.
+   *
+   * @param column The dateTime column to get boundaries for.
+   * @return A Bounds record containing the low and high boundary columns.
+   */
+  @Nonnull
+  private static Bounds getBounds(@Nonnull final Column column) {
+    return new Bounds(
+        functions.callUDF(LowBoundaryForDateTime.FUNCTION_NAME, column),
+        functions.callUDF(HighBoundaryForDateTime.FUNCTION_NAME, column)
+    );
+  }
+
   @Nonnull
   @Override
   public Column equalsTo(@Nonnull final Column left, @Nonnull final Column right) {
-    final Column leftLow = functions.callUDF(LowBoundaryForDateTime.FUNCTION_NAME, left);
-    final Column leftHigh = functions.callUDF(HighBoundaryForDateTime.FUNCTION_NAME, left);
-    final Column rightLow = functions.callUDF(LowBoundaryForDateTime.FUNCTION_NAME, right);
-    final Column rightHigh = functions.callUDF(HighBoundaryForDateTime.FUNCTION_NAME, right);
+    final Bounds leftBounds = getBounds(left);
+    final Bounds rightBounds = getBounds(right);
 
     // true if ranges are identical (same low and high boundaries)
     // false if ranges don't overlap at all
     // null if ranges overlap but are not identical (uncertain)
-    return functions.when(leftLow.equalTo(rightLow).and(leftHigh.equalTo(rightHigh)), functions.lit(true))
-        .when(leftHigh.lt(rightLow).or(leftLow.gt(rightHigh)), functions.lit(false))
+    return functions.when(leftBounds.low.equalTo(rightBounds.low).and(leftBounds.high.equalTo(rightBounds.high)), functions.lit(true))
+        .when(leftBounds.high.lt(rightBounds.low).or(leftBounds.low.gt(rightBounds.high)), functions.lit(false))
         .otherwise(functions.lit(null));
   }
 
   @Nonnull
   @Override
   public Column lessThan(@Nonnull final Column left, @Nonnull final Column right) {
-    final Column leftHigh = functions.callUDF(HighBoundaryForDateTime.FUNCTION_NAME, left);
-    final Column rightLow = functions.callUDF(LowBoundaryForDateTime.FUNCTION_NAME, right);
-    final Column leftLow = functions.callUDF(LowBoundaryForDateTime.FUNCTION_NAME, left);
-    final Column rightHigh = functions.callUDF(HighBoundaryForDateTime.FUNCTION_NAME, right);
+    final Bounds leftBounds = getBounds(left);
+    final Bounds rightBounds = getBounds(right);
 
-    // true if left.highBoundary < right.lowBoundary (no overlap, left < right)
+    // true if left.highBoundary < right.lowBoundary (no overlap, left < right)  
     // false if left.lowBoundary >= right.highBoundary (no overlap, left >= right)
     // null if ranges overlap (uncertain)
-    return functions.when(leftHigh.lt(rightLow), functions.lit(true))
-        .when(leftLow.geq(rightHigh), functions.lit(false))
+    return functions.when(leftBounds.high.lt(rightBounds.low), functions.lit(true))
+        .when(leftBounds.low.geq(rightBounds.high), functions.lit(false))
         .otherwise(functions.lit(null));
   }
 
@@ -59,16 +74,14 @@ public class DateTimeComparator implements ColumnComparator {
   @Nonnull
   @Override
   public Column greaterThan(@Nonnull final Column left, @Nonnull final Column right) {
-    final Column leftLow = functions.callUDF(LowBoundaryForDateTime.FUNCTION_NAME, left);
-    final Column rightHigh = functions.callUDF(HighBoundaryForDateTime.FUNCTION_NAME, right);
-    final Column leftHigh = functions.callUDF(HighBoundaryForDateTime.FUNCTION_NAME, left);
-    final Column rightLow = functions.callUDF(LowBoundaryForDateTime.FUNCTION_NAME, right);
+    final Bounds leftBounds = getBounds(left);
+    final Bounds rightBounds = getBounds(right);
 
     // true if left.lowBoundary > right.highBoundary (no overlap, left > right)
-    // false if left.highBoundary <= right.lowBoundary (no overlap, left <= right)
+    // false if left.highBoundary <= right.lowBoundary (no overlap, left <= right)  
     // null if ranges overlap (uncertain)
-    return functions.when(leftLow.gt(rightHigh), functions.lit(true))
-        .when(leftHigh.leq(rightLow), functions.lit(false))
+    return functions.when(leftBounds.low.gt(rightBounds.high), functions.lit(true))
+        .when(leftBounds.high.leq(rightBounds.low), functions.lit(false))
         .otherwise(functions.lit(null));
   }
 
