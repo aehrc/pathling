@@ -1,8 +1,9 @@
 // @ts-check
 // Note: type annotations allow type checking and IDEs autocompletion
 
-const lightCodeTheme = require("prism-react-renderer/themes/github");
-const darkCodeTheme = require("prism-react-renderer/themes/dracula");
+const { themes } = require("prism-react-renderer");
+const lightCodeTheme = themes.github;
+const darkCodeTheme = themes.dracula;
 
 /** @type {import("@docusaurus/types").Config} */
 const config = {
@@ -20,7 +21,7 @@ const config = {
 
   i18n: {
     defaultLocale: "en",
-    locales: ["en"]
+    locales: ["en"],
   },
 
   presets: [
@@ -35,25 +36,25 @@ const config = {
           versions: {
             current: {
               label: "8.0.0",
-              path: "8.0.0"
+              path: "8.0.0",
             },
             "7.2.0": {
               label: "7.2.0",
               path: "7.2.0",
-              banner: "none"
-            }
-          }
+              banner: "none",
+            },
+          },
         },
         theme: {
-          customCss: require.resolve("./src/css/custom.css")
+          customCss: require.resolve("./src/css/custom.css"),
         },
-        sitemap: {}
-      })
-    ]
+        sitemap: {},
+      }),
+    ],
   ],
 
   themeConfig:
-  /** @type {import("@docusaurus/preset-classic").ThemeConfig} */
+    /** @type {import("@docusaurus/preset-classic").ThemeConfig} */
     ({
       navbar: {
         title: null,
@@ -61,53 +62,53 @@ const config = {
           alt: "Pathling",
           src: "assets/images/logo-colour.svg",
           srcDark: "assets/images/logo-colour-dark.svg",
-          href: "https://pathling.csiro.au"
+          href: "https://pathling.csiro.au",
         },
         items: [
           {
             type: "doc",
             position: "left",
             docId: "index",
-            label: "Overview"
+            label: "Overview",
           },
           {
             type: "docSidebar",
             position: "left",
             sidebarId: "libraries",
-            label: "Libraries"
+            label: "Libraries",
           },
           {
             type: "doc",
             docId: "fhirpath",
-            label: "FHIRPath"
+            label: "FHIRPath",
           },
           {
             type: "doc",
             docId: "roadmap",
-            label: "Roadmap"
+            label: "Roadmap",
           },
           {
             type: "docsVersionDropdown",
             position: "right",
-            dropdownActiveClassDisabled: true
+            dropdownActiveClassDisabled: true,
           },
           {
             href: "https://github.com/aehrc/pathling",
             label: "GitHub",
-            position: "right"
-          }
-        ]
+            position: "right",
+          },
+        ],
       },
       footer: {
-        copyright: `This documentation is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.`
+        copyright: `This documentation is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.`,
       },
       prism: {
         theme: lightCodeTheme,
         darkTheme: darkCodeTheme,
-        additionalLanguages: ["java", "scala", "yaml", "docker", "r"]
+        additionalLanguages: ["java", "scala", "yaml", "docker", "r"],
       },
-      image: "/assets/images/social-preview.png"
-    })
+      image: "/assets/images/social-preview.png",
+    }),
 };
 
 module.exports = config;
