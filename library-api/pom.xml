@@ -243,25 +243,6 @@
               </artifactItems>
             </configuration>
           </execution>
-          <execution>
-            <id>unpack-fhirpath-javadoc</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>unpack</goal>
-            </goals>
-            <configuration>
-              <artifactItems>
-                <artifactItem>
-                  <groupId>au.csiro.pathling</groupId>
-                  <artifactId>fhirpath</artifactId>
-                  <version>${project.version}</version>
-                  <classifier>javadoc</classifier>
-                  <type>jar</type>
-                  <outputDirectory>${project.build.directory}/aggregated-javadoc</outputDirectory>
-                </artifactItem>
-              </artifactItems>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -354,6 +335,31 @@
                 </manifestEntries>
               </archive>
             </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>unpack-fhirpath-javadoc</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>unpack</goal>
+                </goals>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem>
+                      <groupId>au.csiro.pathling</groupId>
+                      <artifactId>fhirpath</artifactId>
+                      <version>${project.version}</version>
+                      <classifier>javadoc</classifier>
+                      <type>jar</type>
+                      <outputDirectory>${project.build.directory}/aggregated-javadoc</outputDirectory>
+                    </artifactItem>
+                  </artifactItems>
+                </configuration>
+              </execution>
+            </executions>
           </plugin>
         </plugins>
       </build>
