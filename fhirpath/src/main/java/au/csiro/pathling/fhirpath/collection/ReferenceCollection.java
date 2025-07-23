@@ -4,8 +4,6 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import au.csiro.pathling.fhirpath.definition.ReferenceDefinition;
-import au.csiro.pathling.fhirpath.definition.ResourceTypeSet;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
@@ -57,10 +55,4 @@ public class ReferenceCollection extends Collection {
         .like(pattern);
   }
 
-  @Nonnull
-  public ResourceTypeSet getReferenceTypes() {
-    return getDefinition().map(ReferenceDefinition.class::cast)
-        .map(ReferenceDefinition::getReferenceTypes)
-        .orElseThrow();
-  }
 }

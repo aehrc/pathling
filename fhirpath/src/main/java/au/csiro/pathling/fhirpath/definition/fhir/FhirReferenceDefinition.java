@@ -19,19 +19,14 @@ package au.csiro.pathling.fhirpath.definition.fhir;
 
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.fhirpath.definition.ReferenceDefinition;
-import au.csiro.pathling.fhirpath.definition.ResourceTypeSet;
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import ca.uhn.fhir.context.RuntimeChildResourceDefinition;
 import jakarta.annotation.Nonnull;
-import java.lang.reflect.InvocationTargetException;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Reference;
 
 /**
@@ -39,7 +34,7 @@ import org.hl7.fhir.r4.model.Reference;
  *
  * @author John Grimes
  */
-class FhirReferenceDefinition extends FhirElementDefinition implements ReferenceDefinition {
+class FhirReferenceDefinition extends FhirElementDefinition implements ElementDefinition {
 
 
   private final List<Class<? extends IBaseResource>> resourceTypes;
@@ -58,33 +53,6 @@ class FhirReferenceDefinition extends FhirElementDefinition implements Reference
     super(childDefinition);
     resourceTypes = childDefinition.getResourceTypes();
     requireNonNull(resourceTypes);
-  }
-
-  /**
-   * Returns the set of resources that a reference can refer to.
-   *
-   * @return A set of {@link ResourceType} objects, if this element is a reference
-   */
-  @Nonnull
-  public ResourceTypeSet getReferenceTypes() {
-    // final List<Class<? extends IBaseResource>> resourceTypes = ((RuntimeChildResourceDefinition) childDefinition).getResourceTypes();
-    // requireNonNull(resourceTypes);
-    return ResourceTypeSet.from(resourceTypes.stream()
-        .map(clazz -> {
-          final String resourceCode;
-          try {
-            if (clazz.getName().equals("org.hl7.fhir.instance.model.api.IAnyResource")) {
-              return Enumerations.ResourceType.RESOURCE;
-            } else {
-              resourceCode = clazz.getConstructor().newInstance().fhirType();
-              return Enumerations.ResourceType.fromCode(resourceCode);
-            }
-          } catch (final InstantiationException | IllegalAccessException |
-                         InvocationTargetException | NoSuchMethodException e) {
-            throw new RuntimeException("Problem accessing resource types on element", e);
-          }
-        })
-        .collect(Collectors.toSet()));
   }
 
   public static boolean isReferenceDefinition(
