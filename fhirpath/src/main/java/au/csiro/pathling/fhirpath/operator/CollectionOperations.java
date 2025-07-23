@@ -24,6 +24,7 @@ import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.comparison.Comparable;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.BinaryOperator;
@@ -103,9 +104,9 @@ public class CollectionOperations {
                                        ? LEFT_OPERAND
                                        : RIGHT_OPERAND);
     checkOperandsAreComparable(collection, element);
-    check(collection instanceof Comparable);
-    check(element instanceof Comparable);
-    final Comparable collectionComparable = (Comparable) collection;
+    check(collection instanceof au.csiro.pathling.fhirpath.comparison.Comparable);
+    check(element instanceof au.csiro.pathling.fhirpath.comparison.Comparable);
+    final au.csiro.pathling.fhirpath.comparison.Comparable collectionComparable = (au.csiro.pathling.fhirpath.comparison.Comparable) collection;
 
     // Cast the element to the type of the collection if it is convertible, otherwise use the
     // element as is. This allows for type adjustments in cases where the element is not of the
@@ -141,7 +142,7 @@ public class CollectionOperations {
   private static void checkComparable(@Nonnull final Collection collection,
       @Nonnull final String operator,
       @Nonnull final String operand) {
-    checkUserInput(collection instanceof Comparable,
+    checkUserInput(collection instanceof au.csiro.pathling.fhirpath.comparison.Comparable,
         StringUtils.capitalize(operand) + " operand to " + operator
             + " operator must be comparable");
   }
@@ -149,8 +150,8 @@ public class CollectionOperations {
   private static void checkOperandsAreComparable(final @Nonnull Collection collection,
       final @Nonnull Collection element) {
     // Check that the collection and element are compatible for comparison.
-    final Comparable collectionComparable = (Comparable) collection;
-    final Comparable elementComparable = (Comparable) element;
+    final au.csiro.pathling.fhirpath.comparison.Comparable collectionComparable = (au.csiro.pathling.fhirpath.comparison.Comparable) collection;
+    final au.csiro.pathling.fhirpath.comparison.Comparable elementComparable = (Comparable) element;
     checkUserInput(collectionComparable.isComparableTo(elementComparable),
         "Comparison of paths is not supported: " + collection.getDisplayExpression() + ", "
             + element.getDisplayExpression());

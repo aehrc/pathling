@@ -17,12 +17,15 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
+import au.csiro.pathling.fhirpath.comparison.Comparable;
+import au.csiro.pathling.fhirpath.operator.DateTimeComparator;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +39,10 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 @Slf4j
-public class DateCollection extends Collection implements StringCoercible, Materializable {
+public class DateCollection extends Collection implements StringCoercible, Materializable,
+    Comparable {
+
+  private static final ColumnComparator COMPARATOR = new DateTimeComparator();
 
   protected DateCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
@@ -81,4 +87,11 @@ public class DateCollection extends Collection implements StringCoercible, Mater
   public StringCollection asStringPath() {
     return Collection.defaultAsStringPath(this);
   }
+
+  @Nonnull
+  @Override
+  public ColumnComparator getComparator() {
+    return COMPARATOR;
+  }
+
 }

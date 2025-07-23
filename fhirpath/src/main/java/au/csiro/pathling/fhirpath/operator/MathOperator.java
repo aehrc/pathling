@@ -22,6 +22,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.comparison.Comparable;
 import jakarta.annotation.Nonnull;
 import org.apache.commons.lang3.tuple.Pair;
 

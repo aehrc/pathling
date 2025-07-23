@@ -207,21 +207,6 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <configuration>
-          <includeDependencySources>true</includeDependencySources>
-          <dependencySourceIncludes>
-            <dependencySourceInclude>au.csiro.pathling:fhirpath</dependencySourceInclude>
-          </dependencySourceIncludes>
-          <archive>
-            <manifestEntries>
-              <Bundle-Name>Pathling Library API Javadoc (including FHIRPath)</Bundle-Name>
-            </manifestEntries>
-          </archive>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
@@ -254,25 +239,6 @@
                   <classifier>sources</classifier>
                   <type>jar</type>
                   <outputDirectory>${project.build.directory}/aggregated-sources</outputDirectory>
-                </artifactItem>
-              </artifactItems>
-            </configuration>
-          </execution>
-          <execution>
-            <id>unpack-fhirpath-javadoc</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>unpack</goal>
-            </goals>
-            <configuration>
-              <artifactItems>
-                <artifactItem>
-                  <groupId>au.csiro.pathling</groupId>
-                  <artifactId>fhirpath</artifactId>
-                  <version>${project.version}</version>
-                  <classifier>javadoc</classifier>
-                  <type>jar</type>
-                  <outputDirectory>${project.build.directory}/aggregated-javadoc</outputDirectory>
                 </artifactItem>
               </artifactItems>
             </configuration>
@@ -347,6 +313,53 @@
             <configuration>
               <skip>true</skip>
             </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>docs</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+              <includeDependencySources>true</includeDependencySources>
+              <dependencySourceIncludes>
+                <dependencySourceInclude>au.csiro.pathling:fhirpath</dependencySourceInclude>
+              </dependencySourceIncludes>
+              <archive>
+                <manifestEntries>
+                  <Bundle-Name>Pathling Library API Javadoc (including FHIRPath)</Bundle-Name>
+                </manifestEntries>
+              </archive>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>unpack-fhirpath-javadoc</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>unpack</goal>
+                </goals>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem>
+                      <groupId>au.csiro.pathling</groupId>
+                      <artifactId>fhirpath</artifactId>
+                      <version>${project.version}</version>
+                      <classifier>javadoc</classifier>
+                      <type>jar</type>
+                      <outputDirectory>${project.build.directory}/aggregated-javadoc</outputDirectory>
+                    </artifactItem>
+                  </artifactItems>
+                </configuration>
+              </execution>
+            </executions>
           </plugin>
         </plugins>
       </build>

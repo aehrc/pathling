@@ -182,11 +182,15 @@ excludeSet:
         type: new-feature
         id: "#2421"
         any:
-          - "DiagnosticReport.issued < DiagnosticReport.effectiveDateTime"
           - "1 year > 12 months"
           - "1 year < 12 months"
           - "1 minute > 59 seconds"
           - "1 minute < 61 seconds"
+      - title: Unsupported comparison of dates and instants
+        type: new-feature
+        id: "#2421"
+        any:
+          - "DiagnosticReport.issued < DiagnosticReport.effectiveDateTime"
   - title: Collections exclusions
     glob: "fhirpath-js/cases/6.4_collections.yaml"
     exclude:

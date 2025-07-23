@@ -17,9 +17,11 @@
 
 package au.csiro.pathling.views;
 
+import static java.util.Collections.emptySet;
+
+import java.util.Set;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import java.util.Set;
 
 public class FhirViewShareableComplianceTest extends FhirViewTest {
 
@@ -30,12 +32,7 @@ public class FhirViewShareableComplianceTest extends FhirViewTest {
   public FhirViewShareableComplianceTest() {
     super("classpath:tests/sql-on-fhir/*.json",
         Set.of("shareable"),
-        Set.of(
-            "constant_types - date",
-            "constant_types - dateTime",
-            "constant_types - instant",
-            "constant_types - time"
-        )
+        emptySet()
     );
   }
 }

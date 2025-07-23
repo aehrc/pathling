@@ -28,6 +28,8 @@ public class MiscUDFRegistrar extends AbstractUDFRegistrar {
     udfRegistrar
         .register(new CodingToLiteral())
         .register(new DecimalToLiteral())
-        .register(new ToNull());
+        .register(new ToNull())
+        .register(new LowBoundaryForDateTime())
+        .register(new HighBoundaryForDateTime());
   }
 }

@@ -1,4 +1,4 @@
-package au.csiro.pathling.fhirpath.operator;
+package au.csiro.pathling.fhirpath.comparison;
 
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;

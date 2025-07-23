@@ -127,6 +127,32 @@ public record YamlTestDefinition(@Nullable Map<Object, Object> subject,
    */
   @Nonnull
   static Stream<TestCase> mapCaseOrGroup(@Nonnull final Map<Object, Object> caseOrGroup) {
+    return mapCaseOrGroup(caseOrGroup, null);
+  }
+
+  /**
+   * Maps a YAML case or group object into a stream of individual test cases.
+   * <p>
+   * This method handles the parsing of different YAML structures that can represent test cases. It
+   * supports:
+   * <ul>
+   *   <li>Direct test case objects with an "expression" field</li>
+   *   <li>Group objects containing lists of test cases</li>
+   *   <li>Multiple expressions within a single test case definition</li>
+   * </ul>
+   * <p>
+   * When a test case contains multiple expressions (as a list), each expression
+   * is converted into a separate {@link TestCase} instance with the same configuration
+   * but different expression values.
+   *
+   * @param caseOrGroup A map representing either a single test case or a group of test cases from
+   * the YAML structure. Must not be null.
+   * @param groupName Optional group name to prepend to test descriptions for better test identification.
+   * @return A stream of {@link TestCase} objects parsed from the input map. May be empty if the if
+   * the input doesn't contain valid test case data.
+   */
+  @Nonnull
+  static Stream<TestCase> mapCaseOrGroup(@Nonnull final Map<Object, Object> caseOrGroup, @Nullable final String groupName) {
     // Check if this is a direct test case (contains an "expression" field).
     if (caseOrGroup.containsKey("expression")) {
       // Extract expression(s) - could be a single string or list of strings.
@@ -135,7 +161,7 @@ public record YamlTestDefinition(@Nullable Map<Object, Object> subject,
       // Create a TestCase for each expression, sharing all other properties.
       return expressions.stream()
           .map(expr -> new TestCase(
-              (String) caseOrGroup.get("desc"),           // Test description
+              createDescription((String) caseOrGroup.get("desc"), groupName), // Test description with group prefix
               expr,                                       // Current expression from the list
               // Set error message to ANY_ERROR if "error" flag is true, otherwise null
               (boolean) caseOrGroup.computeIfAbsent("error", k -> false)
@@ -152,10 +178,11 @@ public record YamlTestDefinition(@Nullable Map<Object, Object> subject,
     }
     // Check if this is a group object (single key-value pair where value is a list).
     else if (caseOrGroup.size() == 1) {
+      final String currentGroupName = (String) caseOrGroup.keySet().iterator().next();
       final Object singleValue = caseOrGroup.values().iterator().next();
-      // If the single value is a list, recursively process it as nested test cases.
+      // If the single value is a list, recursively process it as nested test cases with the group name.
       return singleValue instanceof final List<?> lst
-             ? buildCases((List<Object>) lst).stream()
+             ? buildCases((List<Object>) lst, currentGroupName).stream()
              : Stream.empty(); // Not a list, so no valid test cases
     }
     // Object doesn't match expected structure for test cases or groups.
@@ -193,6 +220,27 @@ public record YamlTestDefinition(@Nullable Map<Object, Object> subject,
   }
 
   /**
+   * Creates a description by prepending the group name to the test description if both are present.
+   * <p>
+   * This method helps with test identification in IDE test runners by including the group context
+   * in the test description. The format is "groupName - description" when both are available.
+   *
+   * @param description The original test description from the YAML.
+   * @param groupName The group name to prepend, or null if not in a group.
+   * @return A formatted description string, or null if both inputs are null.
+   */
+  @Nullable
+  private static String createDescription(@Nullable final String description, @Nullable final String groupName) {
+    if (groupName != null && description != null) {
+      return groupName + " - " + description;
+    } else if (groupName != null) {
+      return groupName;
+    } else {
+      return description;
+    }
+  }
+
+  /**
    * Builds a list of test cases from a raw list of case objects parsed from YAML.
    * <p>
    * This method processes the "tests" section of a YAML test specification, converting each element
@@ -218,6 +266,28 @@ public record YamlTestDefinition(@Nullable Map<Object, Object> subject,
     return cases.stream()
         .map(c -> (Map<Object, Object>) c)
         .flatMap(YamlTestDefinition::mapCaseOrGroup)
+        .toList();
+  }
+
+  /**
+   * Builds a list of test cases from a raw list of case objects parsed from YAML with group context.
+   * <p>
+   * This overloaded method is used when processing test cases within a group. The group name
+   * is passed down to be included in the test descriptions for better identification in test runners.
+   *
+   * @param cases List of raw case objects from YAML parsing. Each object should be a Map
+   * representing a test case or group. Must not be null.
+   * @param groupName The name of the group containing these test cases, used for test identification.
+   * @return A flattened list of {@link TestCase} objects ready for execution. Never null, but may
+   * but may be empty if no valid test cases are found.
+   * @throws ClassCastException if the cases list contains objects that cannot be cast to Map
+   * @throws NullPointerException if cases is null
+   */
+  @Nonnull
+  private static List<TestCase> buildCases(@Nonnull final Collection<Object> cases, @Nullable final String groupName) {
+    return cases.stream()
+        .map(c -> (Map<Object, Object>) c)
+        .flatMap(caseOrGroup -> mapCaseOrGroup(caseOrGroup, groupName))
         .toList();
   }
 

@@ -20,11 +20,15 @@ package au.csiro.pathling.fhirpath.operator;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
+import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
-import au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation;
+import au.csiro.pathling.fhirpath.comparison.Comparable;
+import au.csiro.pathling.fhirpath.comparison.Comparable.ComparisonOperation;
 import jakarta.annotation.Nonnull;
+import java.util.Optional;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Provides the functionality of the family of comparison operators within FHIRPath, i.e. {@code =},
@@ -57,16 +61,25 @@ public class ComparisonOperator implements BinaryOperator {
       return EmptyCollection.getInstance();
     }
 
-    checkUserInput(left instanceof Comparable,
+    checkUserInput(left instanceof au.csiro.pathling.fhirpath.comparison.Comparable,
         "Left operand to " + type + " operator must be comparable");
-    checkUserInput(right instanceof Comparable,
+    checkUserInput(right instanceof au.csiro.pathling.fhirpath.comparison.Comparable,
         "Right operand to " + type + " operator must be comparable");
-    final Comparable leftComparable = (Comparable) left;
-    final Comparable rightComparable = (Comparable) right;
+    final au.csiro.pathling.fhirpath.comparison.Comparable leftComparable = (au.csiro.pathling.fhirpath.comparison.Comparable) left;
+    final au.csiro.pathling.fhirpath.comparison.Comparable rightComparable = (au.csiro.pathling.fhirpath.comparison.Comparable) right;
 
+    String leftDisplay = left.getType().map(FhirPathType::getTypeSpecifier).orElse("unknown");
+    final Optional<FHIRDefinedType> leftFhirType = left.getFhirType();
+    if (leftFhirType.isPresent()) {
+      leftDisplay += " (" + leftFhirType.get().toCode() + ")";
+    }
+    String rightDisplay = right.getType().map(FhirPathType::getTypeSpecifier).orElse("unknown");
+    final Optional<FHIRDefinedType> rightFhirType = right.getFhirType();
+    if (rightFhirType.isPresent()) {
+      rightDisplay += " (" + rightFhirType.get().toCode() + ")";
+    }
     checkUserInput(leftComparable.isComparableTo(rightComparable),
-        "Comparison of paths is not supported: " + left.getDisplayExpression() + ", "
-            + right.getDisplayExpression());
+        "Comparison of paths is not supported: " + leftDisplay + ", " + rightDisplay);
 
     // If the comparison operation is equality, we can use the operands directly. If it is any other
     // type of comparison, we need to enforce that the operands are both singular values.
@@ -75,9 +88,10 @@ public class ComparisonOperator implements BinaryOperator {
     } else {
       final Collection leftSingular = left.asSingular(
           "Comparison operator requires singular values");
-      check(leftSingular instanceof Comparable);
+      check(leftSingular instanceof au.csiro.pathling.fhirpath.comparison.Comparable);
       return BooleanCollection.build(
-          ((Comparable) leftSingular).getComparison(type).apply((Comparable) right));
+          ((au.csiro.pathling.fhirpath.comparison.Comparable) leftSingular).getComparison(type)
+              .apply((Comparable) right));
     }
 
   }

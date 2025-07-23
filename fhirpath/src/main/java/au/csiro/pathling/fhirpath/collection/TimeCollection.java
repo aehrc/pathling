@@ -17,12 +17,13 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import au.csiro.pathling.fhirpath.comparison.Comparable;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
@@ -34,7 +35,8 @@ import org.hl7.fhir.r4.model.TimeType;
  *
  * @author John Grimes
  */
-public class TimeCollection extends Collection implements StringCoercible, Materializable {
+public class TimeCollection extends Collection implements StringCoercible, Materializable,
+    Comparable {
 
   protected TimeCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,

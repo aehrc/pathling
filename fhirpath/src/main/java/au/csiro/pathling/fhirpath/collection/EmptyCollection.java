@@ -7,7 +7,7 @@ import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import au.csiro.pathling.fhirpath.operator.Comparable;
+import au.csiro.pathling.fhirpath.comparison.Comparable;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.Function;
@@ -18,7 +18,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * Represents an empty collection.
  */
 public class EmptyCollection extends Collection implements Comparable, Numeric, StringCoercible,
-        Materializable {
+    Materializable {
 
   private static final EmptyCollection INSTANCE = new EmptyCollection(
       DefaultRepresentation.empty(), Optional.empty(), Optional.empty(), Optional.empty(),

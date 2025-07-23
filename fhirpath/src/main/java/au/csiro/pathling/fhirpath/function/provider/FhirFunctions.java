@@ -1,6 +1,6 @@
 package au.csiro.pathling.fhirpath.function.provider;
 
-import static au.csiro.pathling.fhirpath.operator.Comparable.ComparisonOperation.EQUALS;
+import static au.csiro.pathling.fhirpath.comparison.Comparable.ComparisonOperation.EQUALS;
 
 import au.csiro.pathling.fhirpath.annotations.SofCompatibility;
 import au.csiro.pathling.fhirpath.annotations.SofCompatibility.Profile;

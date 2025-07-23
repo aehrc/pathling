@@ -1,0 +1,306 @@
+tests:
+  # Date/DateTime Comparison Tests - Non-literal paths only
+
+  - desc: "Date/DateTime Equality and Comparison Operations"
+
+  - "Equality (=)":
+      # Year precision tests
+      - desc: "Year precision - same year equals"
+        expression: "Observation.component.where(code.coding.code = 'year-2023').value.ofType(dateTime) = component.where(code.coding.code = 'year-2023-same').value.ofType(dateTime)"
+        result: [true]
+
+      - desc: "Year precision - different year not equals"
+        expression: "Observation.component.where(code.coding.code = 'year-2023').value.ofType(dateTime) = component.where(code.coding.code = 'year-2022').value.ofType(dateTime)"
+        result: [false]
+
+      - desc: "Year vs Year-Month precision - returns empty"
+        expression: "Observation.component.where(code.coding.code = 'year-2023').value.ofType(dateTime) = component.where(code.coding.code = 'month-2023-03').value.ofType(dateTime)"
+        result: []
+
+      # Month precision tests
+      - desc: "Month precision - same month equals"
+        expression: "Observation.component.where(code.coding.code = 'month-2023-03').value.ofType(dateTime) = component.where(code.coding.code = 'month-2023-03-same').value.ofType(dateTime)"
+        result: [true]
+
+      - desc: "Month precision - different month not equals"
+        expression: "Observation.component.where(code.coding.code = 'month-2023-03').value.ofType(dateTime) = component.where(code.coding.code = 'month-2023-04').value.ofType(dateTime)"
+        result: [false]
+
+      - desc: "Month vs Day precision - returns empty"
+        expression: "Observation.component.where(code.coding.code = 'month-2023-03').value.ofType(dateTime) = component.where(code.coding.code = 'day-2023-03-15').value.ofType(dateTime)"
+        result: []
+
+      # Day precision tests
+      - desc: "Day precision - same day equals"
+        expression: "Observation.component.where(code.coding.code = 'day-2023-03-15').value.ofType(dateTime) = component.where(code.coding.code = 'day-2023-03-15-same').value.ofType(dateTime)"
+        result: [true]
+
+      - desc: "Day precision - different day not equals"
+        expression: "Observation.component.where(code.coding.code = 'day-2023-03-15').value.ofType(dateTime) = component.where(code.coding.code = 'day-2023-03-16').value.ofType(dateTime)"
+        result: [false]
+
+      - desc: "Day vs Second precision - returns empty"
+        expression: "Observation.component.where(code.coding.code = 'day-2023-03-15').value.ofType(dateTime) = component.where(code.coding.code = 'second-2023-03-15T10:30:00').value.ofType(dateTime)"
+        result: []
+
+      # Second precision tests
+      - desc: "Second precision - same second equals"
+        expression: "Observation.component.where(code.coding.code = 'second-2023-03-15T10:30:00').value.ofType(dateTime) = component.where(code.coding.code = 'second-2023-03-15T10:30:00-same').value.ofType(dateTime)"
+        result: [true]
+
+      - desc: "Second precision - different second not equals"
+        expression: "Observation.component.where(code.coding.code = 'second-2023-03-15T10:30:00').value.ofType(dateTime) = component.where(code.coding.code = 'second-2023-03-15T10:30:01').value.ofType(dateTime)"
+        result: [false]
+
+      - desc: "Second vs Millisecond precision - same second with zero milliseconds equals"
+        expression: "Observation.component.where(code.coding.code = 'second-2023-03-15T10:30:00').value.ofType(dateTime) = component.where(code.coding.code = 'second-with-zero-ms').value.ofType(dateTime)"
+        result: [true]
+
+      - desc: "Second vs Millisecond precision - different values not equal"
+        expression: "Observation.component.where(code.coding.code = 'second-2023-03-15T10:30:00').value.ofType(dateTime) = component.where(code.coding.code = 'millisecond-2023-03-15T10:30:00.123').value.ofType(dateTime)"
+        result: [false]
+
+      # Millisecond precision tests
+      - desc: "Millisecond precision - same millisecond equals"
+        expression: "Observation.component.where(code.coding.code = 'millisecond-2023-03-15T10:30:00.123').value.ofType(dateTime) = component.where(code.coding.code = 'millisecond-2023-03-15T10:30:00.123-same').value.ofType(dateTime)"
+        result: [true]
+
+      - desc: "Millisecond precision - different millisecond not equals"
+        expression: "Observation.component.where(code.coding.code = 'millisecond-2023-03-15T10:30:00.123').value.ofType(dateTime) = component.where(code.coding.code = 'millisecond-2023-03-15T10:30:00.124').value.ofType(dateTime)"
+        result: [false]
+
+      # Cross-timezone tests
+      - desc: "Cross-timezone - same instant equals"
+        expression: "Observation.component.where(code.coding.code = 'tz-utc').value.ofType(dateTime) = component.where(code.coding.code = 'tz-plus4').value.ofType(dateTime)"
+        result: [true]
+
+      - desc: "Cross-timezone - different instant not equals"
+        expression: "Observation.component.where(code.coding.code = 'tz-utc').value.ofType(dateTime) = component.where(code.coding.code = 'tz-plus4-different').value.ofType(dateTime)"
+        result: [false]
+
+  - "Inequality (!=)":
+      - desc: "Same DateTime precision - not equal"
+        expression: "Observation.effective.ofType(dateTime) != component.where(code.coding.code = 'same-datetime').value.ofType(dateTime)"
+        result: [false]
+
+      - desc: "Different precision - returns empty"
+        expression: "Observation.effective.ofType(dateTime) != component.where(code.coding.code = 'day-2023-03-15').value.ofType(dateTime)"
+        result: []
+
+      - desc: "Different dates - same precision"
+        expression: "Observation.effective.ofType(dateTime) != component.where(code.coding.code = 'different-datetime').value.ofType(dateTime)"
+        result: [true]
+
+  - "Less Than (<)":
+      - desc: "DateTime comparison - first before second"
+        expression: "Observation.effective.ofType(dateTime) < component.where(code.coding.code = 'later-datetime').value.ofType(dateTime)"
+        result: [true]
+
+      - desc: "DateTime comparison - first after second"
+        expression: "Observation.effective.ofType(dateTime) < component.where(code.coding.code = 'earlier-datetime').value.ofType(dateTime)"
+        result: [false]
+
+      - desc: "Date comparison - overlapping ranges (different precision)"
+        expression: "Observation.effective.ofType(dateTime) < component.where(code.coding.code = 'month-2023-03').value.ofType(dateTime)"
+        result: []
+
+      - desc: "Date comparison - same dates"
+        expression: "Observation.effective.ofType(dateTime) < component.where(code.coding.code = 'same-datetime').value.ofType(dateTime)"
+        result: [false]
+
+  - "Less Than or Equal (<=)":
+      - desc: "DateTime comparison - first before second"
+        expression: "Observation.effective.ofType(dateTime) <= component.where(code.coding.code = 'later-datetime').value.ofType(dateTime)"
+        result: [true]
+
+      - desc: "DateTime comparison - same dates"
+        expression: "Observation.effective.ofType(dateTime) <= component.where(code.coding.code = 'same-datetime').value.ofType(dateTime)"
+        result: [true]
+
+      - desc: "DateTime comparison - first after second"
+        expression: "Observation.effective.ofType(dateTime) <= component.where(code.coding.code = 'earlier-datetime').value.ofType(dateTime)"
+        result: [false]
+
+      - desc: "Date comparison - overlapping ranges (different precision)"
+        expression: "Observation.effective.ofType(dateTime) <= component.where(code.coding.code = 'month-2023-03').value.ofType(dateTime)"
+        result: []
+
+  - "Greater Than (>)":
+      - desc: "DateTime comparison - first after second"
+        expression: "Observation.effective.ofType(dateTime) > component.where(code.coding.code = 'earlier-datetime').value.ofType(dateTime)"
+        result: [true]
+
+      - desc: "DateTime comparison - first before second"
+        expression: "Observation.effective.ofType(dateTime) > component.where(code.coding.code = 'later-datetime').value.ofType(dateTime)"
+        result: [false]
+
+      - desc: "DateTime comparison - same dates"
+        expression: "Observation.effective.ofType(dateTime) > component.where(code.coding.code = 'same-datetime').value.ofType(dateTime)"
+        result: [false]
+
+      - desc: "Date comparison - overlapping ranges (different precision)"
+        expression: "Observation.effective.ofType(dateTime) > component.where(code.coding.code = 'month-2023-03').value.ofType(dateTime)"
+        result: []
+
+  - "Greater Than or Equal (>=)":
+      - desc: "DateTime comparison - first after second"
+        expression: "Observation.effective.ofType(dateTime) >= component.where(code.coding.code = 'earlier-datetime').value.ofType(dateTime)"
+        result: [true]
+
+      - desc: "DateTime comparison - same dates"
+        expression: "Observation.effective.ofType(dateTime) >= component.where(code.coding.code = 'same-datetime').value.ofType(dateTime)"
+        result: [true]
+
+      - desc: "DateTime comparison - first before second"
+        expression: "Observation.effective.ofType(dateTime) >= component.where(code.coding.code = 'later-datetime').value.ofType(dateTime)"
+        result: [false]
+
+      - desc: "Date comparison - overlapping ranges (different precision)"
+        expression: "Observation.effective.ofType(dateTime) >= component.where(code.coding.code = 'month-2023-03').value.ofType(dateTime)"
+        result: []
+
+  - "Error Cases":
+      - desc: "DateTime vs issued (Instant) comparison - should error"
+        expression: "Observation.effective.ofType(dateTime) = issued"
+        error: true
+
+subject:
+  resourceType: Observation
+  id: datetime-comparison-test
+  status: final
+  code:
+    coding:
+      - system: http://loinc.org
+        code: "85354-9"
+        display: "Blood pressure panel"
+  effectiveDateTime: "2023-03-15T10:30:00Z"
+  issued: "2023-03-15T10:30:00Z"
+  component:
+    # Year precision tests
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "year-2023"
+      valueDateTime: "2023"
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "year-2023-same"
+      valueDateTime: "2023"
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "year-2022"
+      valueDateTime: "2022"
+
+    # Month precision tests
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "month-2023-03"
+      valueDateTime: "2023-03"
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "month-2023-03-same"
+      valueDateTime: "2023-03"
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "month-2023-04"
+      valueDateTime: "2023-04"
+
+    # Day precision tests
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "day-2023-03-15"
+      valueDateTime: "2023-03-15"
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "day-2023-03-15-same"
+      valueDateTime: "2023-03-15"
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "day-2023-03-16"
+      valueDateTime: "2023-03-16"
+
+    # Second precision tests (with required timezone)
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "second-2023-03-15T10:30:00"
+      valueDateTime: "2023-03-15T10:30:00Z"
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "second-2023-03-15T10:30:00-same"
+      valueDateTime: "2023-03-15T10:30:00Z"
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "second-2023-03-15T10:30:01"
+      valueDateTime: "2023-03-15T10:30:01Z"
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "second-with-zero-ms"
+      valueDateTime: "2023-03-15T10:30:00.000Z"
+
+    # Millisecond precision tests (with required timezone)
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "millisecond-2023-03-15T10:30:00.123"
+      valueDateTime: "2023-03-15T10:30:00.123Z"
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "millisecond-2023-03-15T10:30:00.123-same"
+      valueDateTime: "2023-03-15T10:30:00.123Z"
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "millisecond-2023-03-15T10:30:00.124"
+      valueDateTime: "2023-03-15T10:30:00.124Z"
+
+    # Cross-timezone tests (same instant, different timezone)
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "tz-utc"
+      valueDateTime: "2023-03-15T10:30:00Z"
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "tz-plus4"
+      valueDateTime: "2023-03-15T14:30:00+04:00"
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "tz-plus4-different"
+      valueDateTime: "2023-03-15T15:30:00+04:00"
+
+    # Test data for non-precision specific tests
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "same-datetime"
+      valueDateTime: "2023-03-15T10:30:00Z"
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "different-datetime"
+      valueDateTime: "2023-03-16T10:30:00Z"
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "earlier-datetime"
+      valueDateTime: "2023-03-15T09:30:00Z"
+    - code:
+        coding:
+          - system: http://example.org/test
+            code: "later-datetime"
+      valueDateTime: "2023-03-15T11:30:00Z"
