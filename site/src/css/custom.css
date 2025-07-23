@@ -105,6 +105,23 @@ table {
     height: 315px;
 }
 
+.content-page h1 {
+    font-size: 3rem;
+    margin-bottom: 1.25rem;
+}
+
+.content-page h2 {
+    font-size: 2rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+
+.content-page h3 {
+    font-size: 1.5rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+
 @media screen and (max-width: 560px) {
     .yt-embed {
         /* Adjustments for screens 560px wide or less */

@@ -36,12 +36,13 @@ const config = {
           versions: {
             current: {
               label: "8.0.0",
-              path: "8.0.0",
+              path: "/",
             },
             "7.2.0": {
               label: "7.2.0",
               path: "7.2.0",
               banner: "none",
+              noIndex: true,
             },
           },
         },
@@ -78,14 +79,20 @@ const config = {
             label: "Libraries",
           },
           {
-            type: "doc",
-            docId: "fhirpath",
+            type: "docSidebar",
+            position: "left",
+            sidebarId: "fhirpath",
             label: "FHIRPath",
           },
           {
-            type: "doc",
-            docId: "roadmap",
+            type: "docSidebar",
+            position: "left",
+            sidebarId: "server",
+            label: "Server",
+          },
+          {
             label: "Roadmap",
+            to: "/roadmap",
           },
           {
             type: "docsVersionDropdown",

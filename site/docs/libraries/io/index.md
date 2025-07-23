@@ -5,8 +5,8 @@ description: The Pathling library can read and write data in a variety of differ
 
 # Data in and out
 
-The Pathling library provides convenience functions that help you to read FHIR 
-data in ahead of querying it. Functions are also provided to assist with the 
+The Pathling library provides convenience functions that help you to read FHIR
+data in ahead of querying it. Functions are also provided to assist with the
 persistence of FHIR data in various formats
 
 ## Reading FHIR data
@@ -26,6 +26,9 @@ Spark dataset using the corresponding resource encoder.
 The tag can be any string, and is used to accommodate multiple different files
 that contain the same resource type. For example, you might have one file called
 `Observation.chart.ndjson` and another called `Observation.lab.ndjson`.
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -70,10 +73,11 @@ argument. Here is an example of how to import the
 
 ```python
 data = pc.read.ndjson(
-        "/usr/share/staging/ndjson",
-        file_name_mapper=lambda file_name: re.findall(r"Mimic(\w+?)(?:ED|ICU|"
-        r"Chartevents|Datetimeevents|Labevents|MicroOrg|MicroSusc|MicroTest|"
-        r"Outputevents|Lab|Mix|VitalSigns|VitalSignsED)?$", file_name))
+    "/usr/share/staging/ndjson",
+    file_name_mapper=lambda file_name: re.findall(r"Mimic(\w+?)(?:ED|ICU|"
+                                                  r"Chartevents|Datetimeevents|Labevents|MicroOrg|MicroSusc|MicroTest|"
+                                                  r"Outputevents|Lab|Mix|VitalSigns|VitalSignsED)?$",
+                                                  file_name))
 ```
 
 </TabItem>
@@ -99,7 +103,7 @@ data = pc.read.bundles("/usr/share/staging/bundles",
 
 ```r
 data <- pc %>% pathling_read_bundles("/usr/share/staging/bundles",
-                                resource_types = c("Patient", "Condition", "Immunization"))
+                                     resource_types = c("Patient", "Condition", "Immunization"))
 ```
 
 </TabItem>
@@ -115,7 +119,7 @@ val data = pc.read().bundles("/usr/share/staging/bundles",
 
 ```java
 BundlesSource data = pc.read().bundles("/usr/share/staging/bundles",
-        Set.of("Patient","Condition","Immunization"),FhirMimeTypes.FHIR_JSON) 
+        Set.of("Patient", "Condition", "Immunization"), FhirMimeTypes.FHIR_JSON) 
 ```
 
 </TabItem>
@@ -165,9 +169,9 @@ val data = pc.read().datasets()
 
 ```java
 DatasetSource data = pc.read().datasets()
-        .dataset("Patient",patientDataset)
-        .dataset("Condition",conditionDataset)
-        .dataset("Immunization",immunizationDataset);
+        .dataset("Patient", patientDataset)
+        .dataset("Condition", conditionDataset)
+        .dataset("Immunization", immunizationDataset);
 ```
 
 </TabItem>
@@ -347,7 +351,9 @@ data.write().ndjson("/tmp/ndjson")
 <TabItem value="java" label="Java">
 
 ```java
-data.write().ndjson("/tmp/ndjson");
+data.write().
+
+ndjson("/tmp/ndjson");
 ```
 
 </TabItem>
@@ -386,7 +392,9 @@ data.write().parquet("/usr/share/warehouse/parquet")
 <TabItem value="java" label="Java">
 
 ```java
-data.write().parquet("/usr/share/warehouse/parquet");
+data.write().
+
+parquet("/usr/share/warehouse/parquet");
 ```
 
 </TabItem>
@@ -431,7 +439,9 @@ data.write().delta("/usr/share/warehouse/delta")
 <TabItem value="java" label="Java">
 
 ```java
-data.write().delta("/usr/share/warehouse/delta");
+data.write().
+
+delta("/usr/share/warehouse/delta");
 ```
 
 </TabItem>
@@ -477,7 +487,9 @@ data.write().tables("test")
 <TabItem value="java" label="Java">
 
 ```java
-data.write().tables("test");
+data.write().
+
+tables("test");
 ```
 
 </TabItem>
