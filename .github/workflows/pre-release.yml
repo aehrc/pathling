@@ -14,6 +14,11 @@ env:
   # The add-exports and add-opens flags are required for Java 17
   MAVEN_OPTS: --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
 
+permissions:
+  contents: read
+  metadata: read
+  id-token: write
+
 jobs:
   prerelease:
     name: Build, test and pre-release
