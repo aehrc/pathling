@@ -157,25 +157,6 @@
               </artifactItems>
             </configuration>
           </execution>
-          <execution>
-            <id>unpack-library-api-javadoc</id>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>unpack</goal>
-            </goals>
-            <configuration>
-              <artifactItems>
-                <artifactItem>
-                  <groupId>au.csiro.pathling</groupId>
-                  <artifactId>library-api</artifactId>
-                  <version>${project.version}</version>
-                  <classifier>javadoc</classifier>
-                  <type>jar</type>
-                  <outputDirectory>${project.build.directory}/unpacked-javadoc</outputDirectory>
-                </artifactItem>
-              </artifactItems>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -203,9 +184,44 @@
               <classifier>javadoc</classifier>
               <classesDirectory>${project.build.directory}/unpacked-javadoc</classesDirectory>
             </configuration>
-          </execution> 
+          </execution>
         </executions>
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>docs</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>unpack-library-api-javadoc</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>unpack</goal>
+                </goals>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem>
+                      <groupId>au.csiro.pathling</groupId>
+                      <artifactId>library-api</artifactId>
+                      <version>${project.version}</version>
+                      <classifier>javadoc</classifier>
+                      <type>jar</type>
+                      <outputDirectory>${project.build.directory}/unpacked-javadoc</outputDirectory>
+                    </artifactItem>
+                  </artifactItems>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
