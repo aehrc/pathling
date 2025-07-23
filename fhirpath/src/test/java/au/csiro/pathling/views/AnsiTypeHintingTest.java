@@ -70,7 +70,7 @@ import scala.collection.mutable.WrappedArray;
 
 @SpringBootUnitTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class AnsiTypeHintingTest {
+class AnsiTypeHintingTest {
 
   @Autowired
   private FhirEncoders fhirEncoders;
@@ -169,7 +169,7 @@ public class AnsiTypeHintingTest {
     }
 
     @Nonnull
-    static TestView singleValue(@Nonnull String expression) {
+    static TestView singleValue(@Nonnull final String expression) {
       return TestView.builder()
           .expression(expression)
           .collection(false)
@@ -177,7 +177,7 @@ public class AnsiTypeHintingTest {
     }
 
     @Nonnull
-    static TestView collectionValue(@Nonnull String expression) {
+    static TestView collectionValue(@Nonnull final String expression) {
       return TestView.builder()
           .expression(expression)
           .collection(true)
@@ -185,7 +185,7 @@ public class AnsiTypeHintingTest {
     }
   }
 
-  String makeArrayStr(@Nonnull Object... values) {
+  String makeArrayStr(@Nonnull final Object... values) {
     return "[" + Stream.of(values)
         .map(Objects::toString)
         .collect(Collectors.joining(",")) + "]";
@@ -198,8 +198,8 @@ public class AnsiTypeHintingTest {
   }
 
   @Nonnull
-  static String sqlValueToString(@Nonnull Object value) {
-    if (value instanceof WrappedArray<?> array) {
+  static String sqlValueToString(@Nonnull final Object value) {
+    if (value instanceof final WrappedArray<?> array) {
       return "[" + JavaConverters.seqAsJavaList(array).stream()
           .map(AnsiTypeHintingTest::sqlValueToString).collect(
               Collectors.joining(",")) + "]";
@@ -220,8 +220,8 @@ public class AnsiTypeHintingTest {
 
     assertEquals(1, resultDataset.count(), "Expected exactly one row in the result");
     final DataType actualDataType = resultDataset.schema().apply(0).dataType();
-    if (expectedDataType instanceof ArrayType expectedArrayType) {
-      // for array type igrnore the nullability flag
+    if (expectedDataType instanceof final ArrayType expectedArrayType) {
+      // for array type ignore the nullability flag
       assertInstanceOf(ArrayType.class, actualDataType);
       assertEquals(expectedArrayType.elementType(), ((ArrayType) actualDataType).elementType());
     } else {
@@ -274,9 +274,10 @@ public class AnsiTypeHintingTest {
 
   @ParameterizedTest(name = "{0} type maps to {2}")
   @MethodSource("fhirDefaultMappings")
-  void defaultSingleFhirMappings(String ignoreDescription, Type fhirType, DataType expectedDataType,
-      String expectedValue) {
-    Object actualValue = evalToStrValue(TestView.builder().constValue(fhirType).build(),
+  void defaultSingleFhirMappings(final String ignoreDescription, final Type fhirType,
+      final DataType expectedDataType,
+      final String expectedValue) {
+    final Object actualValue = evalToStrValue(TestView.builder().constValue(fhirType).build(),
         expectedDataType);
     assertEquals(expectedValue, actualValue);
   }
@@ -284,10 +285,9 @@ public class AnsiTypeHintingTest {
 
   @ParameterizedTest(name = "collection {0} type maps to {2}")
   @MethodSource("fhirDefaultMappings")
-  void defaultCollectionFhirMappings(String ignoreDescription, Type fhirType,
-      DataType expectedDataType,
-      String expectedValue) {
-    Object actualValue = evalToStrValue(TestView.builder()
+  void defaultCollectionFhirMappings(final String ignoreDescription, final Type fhirType,
+      final DataType expectedDataType, final String expectedValue) {
+    final Object actualValue = evalToStrValue(TestView.builder()
             .constValue(fhirType)
             .collection(true)
             .build(),
@@ -307,20 +307,18 @@ public class AnsiTypeHintingTest {
 
   @ParameterizedTest(name = "{0} type maps to {2}")
   @MethodSource("fhirpathDefaultMappings")
-  void defaultSingleFhirpathMappings(String ignoreDescription, String literalExpr,
-      DataType expectedDataType,
-      String expectedValue) {
-    String actualValue = evalToStrValue(TestView.builder().expression(literalExpr).build(),
+  void defaultSingleFhirpathMappings(final String ignoreDescription, final String literalExpr,
+      final DataType expectedDataType, final String expectedValue) {
+    final String actualValue = evalToStrValue(TestView.builder().expression(literalExpr).build(),
         expectedDataType);
     assertEquals(expectedValue, actualValue);
   }
 
   @ParameterizedTest(name = "collection {0} type maps to {2}")
   @MethodSource("fhirpathDefaultMappings")
-  void defaultCollectionFhirpathMappings(String ignoreDescription, String literalExpr,
-      DataType expectedDataType,
-      String expectedValue) {
-    String actualValue = evalToStrValue(
+  void defaultCollectionFhirpathMappings(final String ignoreDescription, final String literalExpr,
+      final DataType expectedDataType, final String expectedValue) {
+    final String actualValue = evalToStrValue(
         TestView.builder().expression(literalExpr).collection(true).build(),
         DataTypes.createArrayType(expectedDataType));
     assertEquals(makeArrayStr(expectedValue), actualValue);
@@ -359,9 +357,9 @@ public class AnsiTypeHintingTest {
 
   @ParameterizedTest(name = "{0} type maps to {3}")
   @MethodSource("miscDefaultMappings")
-  void defaultMiscMappings(String ignoreDescription, String expression,
-      boolean collection, DataType expectedDataType, Object expectedValue) {
-    Object actualValue = evalToStrValue(
+  void defaultMiscMappings(final String ignoreDescription, final String expression,
+      final boolean collection, final DataType expectedDataType, final Object expectedValue) {
+    final Object actualValue = evalToStrValue(
         TestView.builder().expression(expression).collection(collection).build(),
         expectedDataType);
     assertEquals(expectedValue, actualValue);
@@ -420,10 +418,9 @@ public class AnsiTypeHintingTest {
 
   @ParameterizedTest(name = "{0} type maps to {2}")
   @MethodSource("ansiLegalCasts")
-  void legalSingleAnsiCasts(String ansiType, String stringValue,
-      DataType expectedDataType,
-      String expectedValue) {
-    Object actualValue = evalToStrValue(TestView.builder().
+  void legalSingleAnsiCasts(final String ansiType, final String stringValue,
+      final DataType expectedDataType, final String expectedValue) {
+    final Object actualValue = evalToStrValue(TestView.builder().
             constValue(new StringType(stringValue))
             .ansiType(ansiType)
             .build(),
@@ -434,10 +431,9 @@ public class AnsiTypeHintingTest {
 
   @ParameterizedTest(name = "ARRAY of {0} type maps to {2}")
   @MethodSource("ansiLegalCasts")
-  void legalCollectionAnsiCasts(String ansiType, String stringValue,
-      DataType expectedDataType,
-      String expectedValue) {
-    Object actualValue = evalToStrValue(TestView.builder().
+  void legalCollectionAnsiCasts(final String ansiType, final String stringValue,
+      final DataType expectedDataType, final String expectedValue) {
+    final Object actualValue = evalToStrValue(TestView.builder().
             constValue(new StringType(stringValue))
             .ansiType("ARRAY<" + ansiType + ">")
             .collection(true)
@@ -456,9 +452,9 @@ public class AnsiTypeHintingTest {
 
   @ParameterizedTest(name = "{0} type maps to {2}")
   @MethodSource("ansiLenientCasts")
-  void lenientAnsiCasts(String ansiType, String stringValue,
-      DataType expectedDataType) {
-    Object actualValue = evalToStrValue(TestView.builder().
+  void lenientAnsiCasts(final String ansiType, final String stringValue,
+      final DataType expectedDataType) {
+    final Object actualValue = evalToStrValue(TestView.builder().
             constValue(new StringType(stringValue))
             .ansiType(ansiType)
             .build(),
@@ -480,9 +476,9 @@ public class AnsiTypeHintingTest {
 
   @ParameterizedTest(name = "{0} type maps to {2}")
   @MethodSource("ansiMiscCasts")
-  void miscAnsiCasts(String ansiType, String expression,
-      DataType expectedDataType, String expectedValue) {
-    Object actualValue = evalToStrValue(
+  void miscAnsiCasts(final String ansiType, final String expression,
+      final DataType expectedDataType, final String expectedValue) {
+    final Object actualValue = evalToStrValue(
         TestView.builder().expression(expression).ansiType(ansiType).build(),
         expectedDataType);
     assertEquals(expectedValue, actualValue);
@@ -503,8 +499,8 @@ public class AnsiTypeHintingTest {
 
   @ParameterizedTest(name = "{0} type maps to {2}")
   @MethodSource("ansiFailingCasts")
-  void failingAnsiCasts(String ansiType, Type value, boolean collection,
-      DataType expectedDataType) {
+  void failingAnsiCasts(final String ansiType, final Type value, final boolean collection,
+      final DataType expectedDataType) {
     assertThrows(ExtendedAnalysisException.class,
         () -> evalToStrValue(TestView.builder().
                 constValue(value)

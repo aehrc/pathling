@@ -67,12 +67,11 @@ public class MathOperator implements BinaryOperator {
     checkUserInput(right instanceof Numeric,
         type + " operator does not support right operand: " + right.getDisplayExpression());
 
-    checkUserInput(left instanceof au.csiro.pathling.fhirpath.comparison.Comparable
-            && right instanceof au.csiro.pathling.fhirpath.comparison.Comparable,
+    checkUserInput(left instanceof Comparable && right instanceof Comparable,
         "Left and right operands are not comparable: " + left.getDisplayExpression() + " "
             + type + " " + right.getDisplayExpression());
-    final au.csiro.pathling.fhirpath.comparison.Comparable comparableLeft = (au.csiro.pathling.fhirpath.comparison.Comparable) left;
-    final au.csiro.pathling.fhirpath.comparison.Comparable comparableRight = (Comparable) right;
+    final Comparable comparableLeft = (Comparable) left;
+    final Comparable comparableRight = (Comparable) right;
     checkUserInput(comparableLeft.isComparableTo(comparableRight),
         "Left and right operands are not comparable: " + left.getDisplayExpression() + " "
             + type + " " + right.getDisplayExpression());

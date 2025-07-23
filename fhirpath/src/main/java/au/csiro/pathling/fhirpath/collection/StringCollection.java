@@ -21,15 +21,15 @@ import static au.csiro.pathling.fhirpath.literal.StringLiteral.unescapeFhirPathS
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
+import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.Function;
@@ -311,7 +311,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
     // special case to convert base64String back to Binary
     return getFhirType()
         .filter(FHIRDefinedType.BASE64BINARY::equals)
-        .map(__ -> new DefaultRepresentation(getColumnValue()).transform(functions::unbase64)
+        .map(t -> new DefaultRepresentation(getColumnValue()).transform(functions::unbase64)
             .getValue())
         .orElseGet(Materializable.super::toExternalValue);
   }
