@@ -22,11 +22,9 @@ import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static java.util.Objects.requireNonNull;
 
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -46,14 +44,6 @@ import org.apache.spark.sql.types.StructType;
  */
 @Slf4j
 public class DatasetBuilder {
-
-  public static final StructType SIMPLE_EXTENSION_TYPE = DataTypes
-      .createStructType(new StructField[]{
-          DataTypes.createStructField("id", DataTypes.StringType, false),
-          DataTypes.createStructField("url", DataTypes.StringType, true),
-          DataTypes.createStructField("valueString", DataTypes.StringType, true),
-          DataTypes.createStructField("_fid", DataTypes.IntegerType, false)
-      });
 
   @Nonnull
   private final SparkSession spark;
@@ -101,41 +91,9 @@ public class DatasetBuilder {
   }
 
   @Nonnull
-  public DatasetBuilder withFidColumn() {
-    return withColumn("_fid", DataTypes.IntegerType);
-  }
-
-  @Nonnull
-  public DatasetBuilder withExtensionColumn() {
-    return withColumn("_extension", DataTypes
-        .createMapType(DataTypes.IntegerType, DataTypes.createArrayType(SIMPLE_EXTENSION_TYPE)));
-  }
-
-  @Nonnull
   public DatasetBuilder withRow(@Nonnull final Object... values) {
     final Row row = RowFactory.create(values);
     datasetRows.add(row);
-    return this;
-  }
-
-  @Nonnull
-  public DatasetBuilder withRow(@Nonnull final Row row) {
-    datasetRows.add(row);
-    return this;
-  }
-
-  @Nonnull
-  public DatasetBuilder withIdValueRows(@Nonnull final Iterable<String> ids,
-      @Nonnull final Function<String, Object> valueProducer) {
-    ids.forEach(id -> this.withRow(id, valueProducer.apply(id)));
-    return this;
-  }
-
-  @Nonnull
-  public DatasetBuilder withIdEidValueRows(@Nonnull final Iterable<String> ids,
-      @Nonnull final Function<String, String> eidProducer,
-      @Nonnull final Function<String, Object> valueProducer) {
-    ids.forEach(id -> this.withRow(id, eidProducer.apply(id), valueProducer.apply(id)));
     return this;
   }
 
@@ -160,16 +118,6 @@ public class DatasetBuilder {
   public DatasetBuilder changeValues(@Nonnull final Object value,
       @Nonnull final Iterable<String> ids) {
     ids.forEach(id -> changeValue(id, value));
-    return this;
-  }
-
-  @Nonnull
-  public DatasetBuilder withIdsAndValue(@Nullable final Object value,
-      @Nonnull final Iterable<String> ids) {
-    for (final String id : ids) {
-      final Row row = RowFactory.create(id, value);
-      datasetRows.add(row);
-    }
     return this;
   }
 
@@ -214,17 +162,6 @@ public class DatasetBuilder {
   }
 
   @Nonnull
-  public DatasetBuilder withStructValueColumn() {
-    datasetColumns.add(new StructField(
-        randomAlias(),
-        DataTypes.createStructType(structColumns),
-        true,
-        metadata));
-    structColumns.clear();
-    return this;
-  }
-
-  @Nonnull
   private Dataset<Row> getDataset(@Nonnull final List<StructField> columns) {
     final StructType schema;
     schema = new StructType(columns.toArray(new StructField[]{}));
@@ -237,16 +174,6 @@ public class DatasetBuilder {
         "at most one partition expected in test datasets constructed from rows, but got: "
             + dataFrame.rdd().getNumPartitions());
     return dataFrame;
-  }
-
-  @Nonnull
-  public StructType getStructType() {
-    return new StructType(datasetColumns.toArray(new StructField[]{}));
-  }
-
-  @Nonnull
-  public static List<Integer> makeEid(final Integer... levels) {
-    return Arrays.asList(levels);
   }
 
   @Nonnull

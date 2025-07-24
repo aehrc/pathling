@@ -18,9 +18,7 @@ import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.Value;
-import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.hl7.fhir.r4.model.ListResource;
 
 /**
  * The definition context that encapsulates a {@link FhirContext} and provides access to all FHIR
@@ -31,24 +29,6 @@ public class FhirDefinitionContext implements DefinitionContext {
 
   @Nonnull
   FhirContext fhirContext;
-
-  /**
-   * Returns the {@link ResourceType} for a HAPI resource class.
-   *
-   * @param resourceClass the resource class, extending {@link IBaseResource}
-   * @return a {@link ResourceType} value
-   * @throws IllegalArgumentException if the resource type was not found
-   */
-  @Nonnull
-  public static ResourceType getResourceTypeFromClass(
-      @Nonnull final Class<? extends IBaseResource> resourceClass) {
-    // List is the only resource for which the HAPI resource class name does not match the resource
-    // code.
-    final String resourceName = resourceClass == ListResource.class
-                                ? "List"
-                                : resourceClass.getSimpleName();
-    return ResourceType.fromCode(resourceName);
-  }
 
 
   @Override

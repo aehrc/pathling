@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import au.csiro.pathling.annotations.UsedByReflection;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
@@ -77,6 +78,7 @@ public class DateCollection extends Collection implements StringCoercible, Mater
    * @param value The value to use
    * @return A new instance of {@link DateCollection}
    */
+  @UsedByReflection
   @Nonnull
   public static DateCollection fromValue(@Nonnull final DateType value) {
     return DateCollection.build(DefaultRepresentation.literal(value.getValueAsString()));

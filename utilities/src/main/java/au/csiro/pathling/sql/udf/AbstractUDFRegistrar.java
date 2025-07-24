@@ -47,10 +47,6 @@ public abstract class AbstractUDFRegistrar implements SparkConfigurer {
       return this;
     }
 
-    public UDFRegistrar register(@Nonnull SqlFunction3<?, ?, ?, ?> udf3) {
-      udfRegistration.register(udf3.getName(), udf3, udf3.getReturnType());
-      return this;
-    }
   }
 
   @Override

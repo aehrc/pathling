@@ -7,7 +7,6 @@
 package au.csiro.pathling.utilities;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.errors.UnexpectedResponseException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.NoSuchElementException;
@@ -119,37 +118,6 @@ public abstract class Preconditions {
   public static void checkState(final boolean expression, @Nonnull final String errorMessage) {
     if (!expression) {
       throw new IllegalStateException(errorMessage);
-    }
-  }
-
-  /**
-   * Ensures that an {@link String} value is not blank, throwing a {@link IllegalArgumentException}
-   * if it is.
-   *
-   * @param string the object to check
-   * @param msg the message to use if an error is thrown
-   * @return non blank string
-   */
-  @Nonnull
-  public static String requireNonBlank(@Nullable final String string, @Nonnull final String msg) {
-    if (string == null || string.isBlank()) {
-      throw new IllegalArgumentException(msg);
-    }
-    return string;
-  }
-
-  /**
-   * Ensures the truth of an expression, throwing an {@link UnexpectedResponseException} with the
-   * supplied formatted message if it does not evaluate as true.
-   *
-   * @param expression the expression that should be true
-   * @param messageTemplate the message template in the {@link String#format} format
-   * @param params the parameters to the message template
-   */
-  public static void checkResponse(final boolean expression, @Nonnull final String messageTemplate,
-      final @Nonnull Object... params) {
-    if (!expression) {
-      throw new UnexpectedResponseException(String.format(messageTemplate, params));
     }
   }
 

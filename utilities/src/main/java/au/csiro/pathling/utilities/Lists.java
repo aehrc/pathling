@@ -18,7 +18,6 @@
 package au.csiro.pathling.utilities;
 
 import jakarta.annotation.Nonnull;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,32 +27,6 @@ import java.util.Optional;
  * @author Piotr Szul
  */
 public abstract class Lists {
-
-  /**
-   * Returns an empty list if the input list is empty; otherwise, returns the input list.
-   *
-   * @param list the list to normalize
-   * @param <T> the type of elements in the list
-   * @return an empty list if the input list is empty; otherwise, the input list
-   */
-  @Nonnull
-  public static <T> List<T> normalizeEmpty(@Nonnull final List<T> list) {
-    return list.isEmpty()
-           ? Collections.emptyList()
-           : list;
-  }
-
-
-  /**
-   * Returns an empty list if the input list is not present; otherwise, returns the input list.
-   *
-   * @param maybeList the list to normalize
-   * @return an empty list if the input list is not present; otherwise, the input list
-   */
-  @Nonnull
-  public static List<String> normalizeEmpty(@Nonnull final Optional<List<String>> maybeList) {
-    return maybeList.orElse(Collections.emptyList());
-  }
 
 
   /**

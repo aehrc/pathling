@@ -89,17 +89,6 @@ public class TypeSpecifier {
     return SYSTEM_NAMESPACE.equals(namespace);
   }
 
-  /**
-   * Returns a copy of this type specifier with the new namespace.
-   *
-   * @param namespace the new namespace
-   * @return the type specifier with different namespace
-   */
-  @Nonnull
-  public TypeSpecifier withNamespace(@Nonnull final String namespace) {
-    return new TypeSpecifier(namespace, typeName);
-  }
-
 
   /**
    * Converts this type specifier to a System(Fhirpath) type.

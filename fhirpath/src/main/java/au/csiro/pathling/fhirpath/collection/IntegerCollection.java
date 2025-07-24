@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.collection;
 
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
+import au.csiro.pathling.annotations.UsedByReflection;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
@@ -124,6 +125,7 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
    * @param value The value to use
    * @return A new instance of {@link IntegerCollection}
    */
+  @UsedByReflection
   @Nonnull
   public static IntegerCollection fromValue(@Nonnull final PositiveIntType value) {
     return IntegerCollection.fromValue(value.getValue());
@@ -135,6 +137,7 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
    * @param value The value to use
    * @return A new instance of {@link IntegerCollection}
    */
+  @UsedByReflection
   @Nonnull
   public static IntegerCollection fromValue(@Nonnull final UnsignedIntType value) {
     return IntegerCollection.fromValue(value.getValue());
