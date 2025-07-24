@@ -73,10 +73,6 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Nonnull
   public FhirPath visitParenthesizedTerm(
       @Nullable final ParenthesizedTermContext ctx) {
-    // TODO: maybe we do not need that and just use the subExpression directly?
-    // Parentheses are ignored in the standalone term case.
-    final FhirPath subExpression = new Visitor().visit(
-        requireNonNull(ctx).expression());
-    return subExpression;
+    return new Visitor().visit(requireNonNull(ctx).expression());
   }
 }
