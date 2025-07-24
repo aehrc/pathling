@@ -32,7 +32,7 @@
 
   <name>Pathling Library Runtime</name>
   <description>
-    A Spark package that bundles the Pathling Library API and its runtime dependencies for cluster deployment.
+    A Spark package that bundles the Pathling Library API and its runtime dependencies for use in applications and clusters.
   </description>
 
   <properties>
