@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
-import static scala.collection.JavaConversions.asScalaBuffer;
+import static scala.collection.JavaConverters.asScalaBuffer;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
@@ -126,7 +126,7 @@ abstract class FhirViewTest {
   private final Set<String> includeTags;
 
   @Nonnull
-  private final Set<String> exludedTests;
+  private final Set<String> excludedTests;
 
   @FunctionalInterface
   interface Expectation {
@@ -253,7 +253,7 @@ abstract class FhirViewTest {
       @Nonnull final Set<String> includeTags, @Nonnull final Set<String> excludeTests) {
     this.testLocationGlob = testLocationGlob;
     this.includeTags = includeTags;
-    this.exludedTests = excludeTests;
+    this.excludedTests = excludeTests;
   }
 
   /**
@@ -310,7 +310,7 @@ abstract class FhirViewTest {
   }
 
   boolean includeTest(@Nonnull final TestParameters testParameters) {
-    if (this.exludedTests.contains(testParameters.getTitle())) {
+    if (this.excludedTests.contains(testParameters.getTitle())) {
       log.warn("Excluding test: {}", testParameters);
       return false;
     } else {
