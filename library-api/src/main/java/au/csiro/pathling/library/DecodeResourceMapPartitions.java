@@ -41,15 +41,10 @@ public class DecodeResourceMapPartitions<T extends IBaseResource> implements
   @Nonnull
   protected final String outputMimeType;
 
-  @Nonnull
-  protected final Class<T> resourceClass;
-
   public DecodeResourceMapPartitions(@Nonnull final FhirVersionEnum fhirVersion,
-      @Nonnull final String outputMimeType,
-      @Nonnull final Class<T> resourceClass) {
+      @Nonnull final String outputMimeType) {
     this.fhirVersion = fhirVersion;
     this.outputMimeType = outputMimeType;
-    this.resourceClass = resourceClass;
   }
 
   @Override

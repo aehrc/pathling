@@ -31,11 +31,12 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @SuppressWarnings({"unchecked"})
 public abstract class QueryBuilder<T extends QueryBuilder<?>> {
 
+  @SuppressWarnings("unused")
   @Nonnull
   protected final ResourceType subjectResource;
 
   @Nonnull
-  protected QueryDispatcher dispatcher;
+  protected final QueryDispatcher dispatcher;
   
   protected QueryBuilder(@Nonnull final QueryDispatcher dispatcher,
       @Nonnull final ResourceType subjectResource) {
