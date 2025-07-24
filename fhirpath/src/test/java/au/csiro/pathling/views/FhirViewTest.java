@@ -5,6 +5,7 @@ import static au.csiro.pathling.UnitTestDependencies.jsonParser;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.validation.ValidationUtils.ensureValid;
 import static java.util.Objects.nonNull;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.apache.spark.sql.functions.col;
@@ -523,13 +524,13 @@ abstract class FhirViewTest {
     @Nonnull
     @Override
     public Dataset<Row> read(@Nullable final ResourceType resourceType) {
-      return resourceTypeToDataset.get(resourceType);
+      return requireNonNull(resourceTypeToDataset.get(resourceType));
     }
 
     @Nonnull
     @Override
     public Dataset<Row> read(@Nullable final String resourceCode) {
-      return resourceTypeToDataset.get(ResourceType.fromCode(resourceCode));
+      return requireNonNull(resourceTypeToDataset.get(ResourceType.fromCode(resourceCode)));
     }
 
     @Nonnull

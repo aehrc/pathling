@@ -1,12 +1,13 @@
 package au.csiro.pathling.test.datasource;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.groupingBy;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.source.DataSource;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -20,7 +21,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public class ObjectDataSource implements DataSource {
 
   @Nonnull
-  private final Map<ResourceType, Dataset<Row>> data = new HashMap<>();
+  private final Map<ResourceType, Dataset<Row>> data = new EnumMap<>(ResourceType.class);
 
   public ObjectDataSource(@Nonnull final SparkSession spark, @Nonnull final FhirEncoders encoders,
       @Nonnull final List<IBaseResource> resources) {
@@ -37,13 +38,13 @@ public class ObjectDataSource implements DataSource {
   @Nonnull
   @Override
   public Dataset<Row> read(@Nullable final ResourceType resourceType) {
-    return data.get(resourceType);
+    return requireNonNull(data.get(resourceType));
   }
 
   @Nonnull
   @Override
   public Dataset<Row> read(@Nullable final String resourceCode) {
-    return data.get(ResourceType.fromCode(resourceCode));
+    return requireNonNull(data.get(ResourceType.fromCode(resourceCode)));
   }
 
   @Nonnull
