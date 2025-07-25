@@ -30,7 +30,6 @@ import static org.apache.spark.sql.functions.size;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
-import au.csiro.pathling.sql.SqlFunctions;
 import au.csiro.pathling.sql.misc.ToNull;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -635,16 +634,5 @@ public abstract class ColumnRepresentation {
                 .traverse(ed.getElementName(), ed.getFhirType())
                 .getValue()
         ).toArray(Column[]::new)));
-  }
-
-  /**
-   * Removes all fields starting with '_' (underscore) from struct values. See
-   * {@link SqlFunctions#prune_annotations(Column)}
-   *
-   * @return Returns a new {@link ColumnRepresentation} with recursively pruned annotation fields.
-   */
-  @Nonnull
-  public ColumnRepresentation pruneAnnotations() {
-    return transform(SqlFunctions::prune_annotations);
   }
 }

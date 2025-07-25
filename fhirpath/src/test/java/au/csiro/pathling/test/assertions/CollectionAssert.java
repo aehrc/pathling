@@ -17,45 +17,45 @@
 
 package au.csiro.pathling.test.assertions;
 
-import au.csiro.pathling.fhirpath.annotations.NotImplemented;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.execution.CollectionDataset;
 import jakarta.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 /**
+ * @author Piotr Szul
  * @author John Grimes
  */
-@SuppressWarnings("UnusedReturnValue")
-@NotImplemented
-public class ElementPathAssertion extends BaseFhirPathAssertion<ElementPathAssertion> {
+@SuppressWarnings("unused")
+public class CollectionAssert {
 
-  ElementPathAssertion(@Nonnull final CollectionDataset datasetResult) {
-    super(datasetResult);
+  @Nonnull
+  protected final CollectionDataset datasetResult;
+  protected final Collection result;
+
+  CollectionAssert(@Nonnull final CollectionDataset datasetResult) {
+    this.datasetResult = datasetResult;
+    this.result = datasetResult.getValue();
   }
 
-  // TODO: check
 
-  // @Nonnull
-  // private final PrimitivePath fhirPath;
-  //
-  // ElementPathAssertion(@Nonnull final PrimitivePath fhirPath) {
-  //   super(fhirPath);
-  //   this.fhirPath = fhirPath;
-  // }
-  //
   @Nonnull
-  public ElementPathAssertion hasFhirType(@Nonnull final FHIRDefinedType type) {
+  public DatasetAssert toCanonicalResult() {
+    return DatasetAssert.of(datasetResult.toCanonical().toIdValueDataset());
+  }
+
+  public CollectionAssert hasClass(final Class<? extends Collection> ofType) {
+    assertTrue(ofType.isAssignableFrom(result.getClass()),
+        ofType.getName() + " is not assignable from " + result.getClass().getName());
+    return this;
+  }
+
+  @Nonnull
+  public CollectionAssert hasFhirType(@Nonnull final FHIRDefinedType type) {
     assertEquals(type, result.getFhirType().orElse(null));
     return this;
   }
-  //
-  //
-  // @Nonnull
-  // public ElementPathAssertion hasDefinition(@Nonnull final ElementDefinition elementDefinition) {
-  //   assertTrue(fhirPath.getDefinition().isPresent());
-  //   assertEquals(elementDefinition, fhirPath.getDefinition().get());
-  //   return this;
-  // }
 }

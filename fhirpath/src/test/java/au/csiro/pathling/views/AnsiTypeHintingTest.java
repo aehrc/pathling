@@ -81,8 +81,6 @@ class AnsiTypeHintingTest {
 
   private FhirViewExecutor fhirViewExecutor;
 
-  private ObjectDataSource dataSource;
-
   @BeforeAll
   void setUp() {
     final Resource observation = new Observation()
@@ -110,7 +108,7 @@ class AnsiTypeHintingTest {
             .setData("data".getBytes(StandardCharsets.UTF_8)))
         .setId("Patient/123");
 
-    dataSource = new ObjectDataSource(sparkSession, fhirEncoders,
+    final ObjectDataSource dataSource = new ObjectDataSource(sparkSession, fhirEncoders,
         List.of(observation, patient));
 
     fhirViewExecutor = new FhirViewExecutor(fhirEncoders.getContext(), sparkSession,
@@ -147,9 +145,9 @@ class AnsiTypeHintingTest {
 
       FhirViewBuilder viewBuilder = FhirView.ofResource(
           resourceType);
-      if (constValue != null) {
+      if (getConstValue() != null) {
         viewBuilder = viewBuilder.constant(
-            new ConstantDeclaration("constValue", Objects.requireNonNull(constValue))
+            new ConstantDeclaration("constValue", Objects.requireNonNull(getConstValue()))
         );
       }
 
@@ -158,9 +156,9 @@ class AnsiTypeHintingTest {
           .path(expression)
           .collection(collection);
 
-      if (ansiType != null) {
+      if (getAnsiType() != null) {
         columnBuilder = columnBuilder.tag(
-            List.of(ColumnTag.of("ansi/type", Objects.requireNonNull(ansiType))));
+            List.of(ColumnTag.of("ansi/type", Objects.requireNonNull(getAnsiType()))));
       }
 
       return viewBuilder.select(

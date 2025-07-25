@@ -21,7 +21,6 @@ import static au.csiro.pathling.test.TestResources.getResourceAsUrl;
 
 import au.csiro.pathling.fhirpath.execution.CollectionDataset;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nonnull;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -37,20 +36,9 @@ import org.opentest4j.AssertionFailedError;
 public abstract class Assertions {
 
   @Nonnull
-  public static FhirPathAssertion assertThat(@Nonnull final CollectionDataset datasetResult) {
-    return new FhirPathAssertion(datasetResult);
+  public static CollectionAssert assertThat(@Nonnull final CollectionDataset datasetResult) {
+    return new CollectionAssert(datasetResult);
   }
-
-  // @Nonnull
-  // public static ResourcePathAssertion assertThat(@Nonnull final ResourceCollection fhirPath,
-  //     @Nonnull final EvaluationContext evaluationContext) {
-  //   return new ResourcePathAssertion(fhirPath, evaluationContext);
-  // }
-
-  // @Nonnull
-  // public static ElementPathAssertion assertThat(@Nonnull final PrimitivePath fhirPath) {
-  //   return new ElementPathAssertion(fhirPath);
-  // }
 
   @Nonnull
   public static DatasetAssert assertThat(@Nonnull final Dataset<Row> rowDataset) {
@@ -64,11 +52,6 @@ public abstract class Assertions {
       fail(String.format("'%s' does not match expected regex: `%s`", actualString, expectedRegex),
           actualString, expectedRegex);
     }
-  }
-
-  public static void assertDatasetAgainstTsv(@Nonnull final SparkSession spark,
-      @Nonnull final String expectedCsvPath, @Nonnull final Dataset<Row> actualDataset) {
-    assertDatasetAgainstTsv(spark, expectedCsvPath, actualDataset, false);
   }
 
   public static void assertDatasetAgainstTsv(@Nonnull final SparkSession spark,

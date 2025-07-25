@@ -60,7 +60,7 @@ public class Ucum {
   public static UcumService service() throws UcumException {
     return service;
   }
-
+  
   @Nullable
   public static BigDecimal getCanonicalValue(@Nullable final BigDecimal value,
       @Nullable final String code) {
@@ -96,7 +96,7 @@ public class Ucum {
       return null;
     }
   }
-
+  
   @Nullable
   private static Pair getCanonicalForm(final @Nullable BigDecimal value,
       final @Nullable String code)

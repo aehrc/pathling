@@ -17,6 +17,7 @@
 package au.csiro.pathling.sql.misc;
 
 import au.csiro.pathling.sql.udf.AbstractUDFRegistrar;
+import jakarta.annotation.Nonnull;
 
 /**
  * Registration of miscellaneous UDFs.
@@ -24,7 +25,7 @@ import au.csiro.pathling.sql.udf.AbstractUDFRegistrar;
 public class MiscUDFRegistrar extends AbstractUDFRegistrar {
 
   @Override
-  protected void registerUDFs(final UDFRegistrar udfRegistrar) {
+  protected void registerUDFs(@Nonnull final UDFRegistrar udfRegistrar) {
     udfRegistrar
         .register(new CodingToLiteral())
         .register(new DecimalToLiteral())

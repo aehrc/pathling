@@ -11,22 +11,6 @@ import org.apache.commons.text.translate.UnicodeUnescaper;
 
 public abstract class StringLiteral {
 
-  @Nonnull
-  public static String stringToFhirPath(@Nonnull final String value) {
-    return "'" + escapeFhirPathString(value) + "'";
-  }
-
-  /**
-   * Converts a string value to a FHIRPath string literal.
-   *
-   * @param value the sting value to convert
-   * @return the FHIRPath string literal
-   */
-  @Nonnull
-  public static String toLiteral(@Nonnull final String value) {
-    return "'" + escapeFhirPathString(value) + "'";
-  }
-
   /**
    * On the way back out, we only do the minimal escaping to guarantee syntactical correctness.
    *

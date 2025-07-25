@@ -285,7 +285,7 @@ public class PathlingContext {
     final ExpressionEncoder<T> encoder = fhirEncoders.of(resourceClass);
     final Dataset<T> typedResources = resources.as(encoder);
     final MapPartitionsFunction<T, String> mapper = new DecodeResourceMapPartitions<>(fhirVersion,
-        outputMimeType, resourceClass);
+        outputMimeType);
 
     return typedResources.mapPartitions(mapper, Encoders.STRING());
   }

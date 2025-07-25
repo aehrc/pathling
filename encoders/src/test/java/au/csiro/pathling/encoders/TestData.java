@@ -422,16 +422,6 @@ public class TestData {
     return questionnaire;
   }
 
-  /**
-   * Returns a FHIR Questionnaire resource with nested Item elements for testing purposes.
-   *
-   * @param maxNestingLevel the number of nested levels. Zero indicates the the Item element is
-   * present in the Questionnaire but with no nested items.
-   */
-  public static Questionnaire newNestedQuestionnaire(final int maxNestingLevel) {
-    return newNestedQuestionnaire(maxNestingLevel, 1);
-  }
-
 
   private static QuestionnaireResponseItemAnswerComponent newNestedResponseAnswer(
       final int nestingLevel) {
@@ -450,20 +440,6 @@ public class TestData {
       item.setItem(Collections.singletonList(newNestedResponseItem(nestingLevel - 1)));
     }
     return item;
-  }
-
-  /**
-   * Returns a FHIR Questionnaire resource with nested Item elements for testing purposes.
-   *
-   * @param maxNestingLevel the number of nested levels. Zero indicates the the Item element is
-   * present in the Questionnaire but with no nested items.
-   */
-  public static QuestionnaireResponse newNestedQuestionnaireResponse(final int maxNestingLevel) {
-    final QuestionnaireResponse questionnaireResponse = new QuestionnaireResponse();
-    questionnaireResponse.setId("QuestionnaireResponse/1");
-    questionnaireResponse
-        .setItem(Collections.singletonList(newNestedResponseItem(maxNestingLevel)));
-    return questionnaireResponse;
   }
 
 

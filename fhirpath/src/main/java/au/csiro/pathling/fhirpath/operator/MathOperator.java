@@ -21,7 +21,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
-import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
 import jakarta.annotation.Nonnull;
@@ -34,7 +33,6 @@ import org.apache.commons.lang3.tuple.Pair;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#math">Math</a>
  */
-@NotImplemented
 public class MathOperator implements BinaryOperator {
 
   private static final String NON_SINGULAR_ERROR_FORMAT = "Math operator (%s) requires the %s operand to be singular.";

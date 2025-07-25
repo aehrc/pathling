@@ -12,8 +12,6 @@ import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -23,17 +21,6 @@ import java.util.stream.Stream;
  * @author John Grimes
  */
 public abstract class Strings {
-
-  private static final Pattern ALIAS_PATTERN = Pattern.compile("@[a-z0-9]{1,6}");
-
-  /**
-   * @param value a String value
-   * @return the string surrounded by parentheses
-   */
-  @Nonnull
-  public static String parentheses(@Nonnull final String value) {
-    return "(" + value + ")";
-  }
 
   /**
    * @param value a String surrounded by single quotes
@@ -51,20 +38,6 @@ public abstract class Strings {
   public static String randomAlias() {
     final int randomNumber = Math.abs(new Random().nextInt());
     return "@" + Integer.toString(randomNumber, Character.MAX_RADIX);
-  }
-
-  @Nonnull
-  public static String hashedAlias(@Nonnull final Object input) {
-    return "@" + Integer.toString(input.hashCode(), Character.MAX_RADIX);
-  }
-
-  /**
-   * @param input a column name
-   * @return true if the column name looks like a randomly generated alias
-   */
-  public static boolean looksLikeAlias(@Nonnull final CharSequence input) {
-    final Matcher matcher = ALIAS_PATTERN.matcher(input);
-    return matcher.matches();
   }
 
   /**

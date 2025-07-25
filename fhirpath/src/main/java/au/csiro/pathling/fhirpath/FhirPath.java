@@ -28,16 +28,6 @@ public interface FhirPath {
     return this;
   }
 
-  /**
-   * Get the rest of the path after the first element. If the path has only one element, returns the
-   * null path.
-   *
-   * @return the rest of the path after the first element
-   */
-  default FhirPath tail() {
-    return nullPath();
-  }
-
 
   /**
    * Get the prefix of the path. In most cases it's same as head() but some FhirPaths (e.g. binary
@@ -152,13 +142,6 @@ public interface FhirPath {
     @Override
     public FhirPath head() {
       return elements.get(0);
-    }
-
-    @Override
-    public FhirPath tail() {
-      return elements.size() > 2
-             ? new Composite(elements.subList(1, elements.size()))
-             : elements.get(1);
     }
 
     @Nonnull

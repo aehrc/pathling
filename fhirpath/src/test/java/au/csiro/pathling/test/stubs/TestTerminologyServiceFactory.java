@@ -21,9 +21,11 @@ import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
 import jakarta.annotation.Nonnull;
+import java.io.Serial;
 
 public class TestTerminologyServiceFactory implements TerminologyServiceFactory {
 
+  @Serial
   private static final long serialVersionUID = -8229464411116137820L;
 
   public TestTerminologyServiceFactory() {

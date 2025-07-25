@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.collection;
 
 import static org.apache.spark.sql.functions.date_format;
 
+import au.csiro.pathling.annotations.UsedByReflection;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
@@ -89,6 +90,7 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
    * @param value The value to use
    * @return A new instance of {@link DateTimeCollection}
    */
+  @UsedByReflection
   @Nonnull
   public static DateTimeCollection fromValue(@Nonnull final DateTimeType value) {
     return DateTimeCollection.build(
@@ -101,6 +103,7 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
    * @param value The value to use
    * @return A new instance of {@link DateTimeCollection}
    */
+  @UsedByReflection
   @Nonnull
   public static DateTimeCollection fromValue(@Nonnull final InstantType value) {
     final Timestamp timestamp = new Timestamp(
