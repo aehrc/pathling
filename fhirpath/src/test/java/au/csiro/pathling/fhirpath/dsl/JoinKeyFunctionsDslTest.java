@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Tag;
  * <p>
  * These functions are required by the SQL on FHIR shareable view profile.
  */
-@Tag("UnitTest")
 public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
 
   @FhirPathTest

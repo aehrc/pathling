@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Tag;
  * Tests for FHIRPath filtering and projection functions required by SQL on FHIR sharable view
  * profile: - where() function - ofType() function (for non-resource types)
  */
-@Tag("UnitTest")
 public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase {
 
   @FhirPathTest

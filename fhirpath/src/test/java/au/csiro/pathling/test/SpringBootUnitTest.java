@@ -14,7 +14,6 @@ import org.springframework.test.context.ActiveProfiles;
 @Retention(RetentionPolicy.RUNTIME)
 @SpringBootTest(classes = UnitTestDependencies.class)
 @ActiveProfiles({"unit-test"})
-@Tag("UnitTest")
 public @interface SpringBootUnitTest {
 
 }

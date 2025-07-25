@@ -25,7 +25,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 /**
  * Tests for terminology functions.
  */
-@Tag("UnitTest")
 public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
 
   @Autowired

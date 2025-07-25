@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Tag;
  * Tests for FHIRPath existence functions as defined in supported.md: - exists() - empty() - count()
  * - allTrue() - allFalse() - anyTrue() - anyFalse()
  */
-@Tag("UnitTest")
 public class ExistenceFunctionsDslTest extends FhirPathDslTestBase {
 
   @FhirPathTest

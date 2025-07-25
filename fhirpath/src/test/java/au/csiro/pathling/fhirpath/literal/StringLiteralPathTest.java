@@ -27,7 +27,6 @@ import org.junit.jupiter.api.Test;
 /**
  * @author John Grimes
  */
-@Tag("UnitTest")
 class StringLiteralPathTest {
 
   @Test

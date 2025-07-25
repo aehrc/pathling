@@ -18,7 +18,6 @@ import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 
-@Tag("UnitTest")
 public class FhirFunctionsDslTest extends FhirPathDslTestBase {
 
   @FhirPathTest

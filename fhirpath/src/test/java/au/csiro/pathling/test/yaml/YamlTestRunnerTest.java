@@ -42,7 +42,6 @@ import org.yaml.snakeyaml.Yaml;
 
 
 @SpringBootUnitTest
-@Tag("WorkTest")
 class YamlTestRunnerTest {
 
 

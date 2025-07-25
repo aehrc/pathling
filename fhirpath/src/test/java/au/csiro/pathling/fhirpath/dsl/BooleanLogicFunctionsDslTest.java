@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Tag;
  * Tests for FHIRPath boolean logic functions required by SQL on FHIR sharable view profile: - not()
  * function
  */
-@Tag("UnitTest")
 public class BooleanLogicFunctionsDslTest extends FhirPathDslTestBase {
 
   @FhirPathTest

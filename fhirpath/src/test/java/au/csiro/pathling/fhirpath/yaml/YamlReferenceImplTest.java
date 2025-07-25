@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Tag;
 
 
 @Slf4j
-@Tag("YamlTest")
 @YamlTestConfiguration(
     config = "fhirpath-js/config.yaml",
     resourceBase = "fhirpath-js/resources"

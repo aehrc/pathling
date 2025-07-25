@@ -195,7 +195,6 @@
               <goal>test</goal>
             </goals>
             <configuration>
-              <groups>UnitTest</groups>
               <systemPropertyVariables>
                 <spring.profiles.active>unit-test</spring.profiles.active>
                 <spark.logConf>true</spark.logConf>

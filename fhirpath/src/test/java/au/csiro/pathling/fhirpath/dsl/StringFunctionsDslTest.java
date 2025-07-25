@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Tag;
  * Tests for FHIRPath string functions as defined in supported.md: - join([separator: String]) :
  * String
  */
-@Tag("UnitTest")
 public class StringFunctionsDslTest extends FhirPathDslTestBase {
 
   @FhirPathTest

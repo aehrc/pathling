@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Tag;
 /**
  * Tests for FHIRPath path traversal related operations.
  */
-@Tag("UnitTest")
 public class SystemDslTest extends FhirPathDslTestBase {
 
   @FhirPathTest

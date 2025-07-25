@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Tag;
  * Tests for FHIRPath subsetting functions required by SQL on FHIR sharable view profile:
  * - first() function
  */
-@Tag("UnitTest")
 public class SubsettingFunctionsDslTest extends FhirPathDslTestBase {
 
   @FhirPathTest

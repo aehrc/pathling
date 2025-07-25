@@ -27,7 +27,6 @@ import org.junit.jupiter.api.Test;
 /**
  * @author Piotr Szul
  */
-@Tag("UnitTest")
 class CodingLiteralTest {
 
   static ImmutableCoding parseLiteral(final String s) {
