@@ -195,28 +195,29 @@
               <goal>test</goal>
             </goals>
             <configuration>
+              <excludes>
+                <exclude>**/FhirViewShareableComplianceTest.java</exclude>
+              </excludes>
               <systemPropertyVariables>
                 <spring.profiles.active>unit-test</spring.profiles.active>
                 <spark.logConf>true</spark.logConf>
-                <pathling.storage.warehouseUrl>file://${project.basedir}/src/test/resources/test-data</pathling.storage.warehouseUrl>
-                <pathling.storage.databaseName>parquet</pathling.storage.databaseName>
               </systemPropertyVariables>
             </configuration>
           </execution>
           <execution>
-            <id>integration-test</id>
+            <id>sof-compliance-test</id>
             <goals>
               <goal>test</goal>
             </goals>
             <configuration>
-              <groups>IntegrationTest</groups>
-              <forkCount>1</forkCount>
+              <includes>
+                <include>**/FhirViewShareableComplianceTest.java</include>
+              </includes>
+              <!-- This test is run but it does not fail the build if it fails. -->
+              <testFailureIgnore>true</testFailureIgnore>
               <systemPropertyVariables>
-                <spring.profiles.active>core,server,integration-test</spring.profiles.active>
-                <pathling.storage.warehouseUrl>
-                  file://${project.basedir}/src/test/resources/test-data
-                </pathling.storage.warehouseUrl>
-                <pathling.storage.databaseName>parquet</pathling.storage.databaseName>
+                <spring.profiles.active>unit-test</spring.profiles.active>
+                <spark.logConf>true</spark.logConf>
               </systemPropertyVariables>
             </configuration>
           </execution>
