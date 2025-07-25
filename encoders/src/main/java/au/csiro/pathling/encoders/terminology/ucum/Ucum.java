@@ -23,6 +23,7 @@
 
 package au.csiro.pathling.encoders.terminology.ucum;
 
+import au.csiro.pathling.annotations.UsedByReflection;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.InputStream;
@@ -42,8 +43,6 @@ public class Ucum {
 
   public static final String NO_UNIT_CODE = "1";
 
-  public static final String SYSTEM_URI = "http://unitsofmeasure.org";
-
   private static final UcumService service;
 
   static {
@@ -60,7 +59,8 @@ public class Ucum {
   public static UcumService service() throws UcumException {
     return service;
   }
-
+  
+  @UsedByReflection
   @Nullable
   public static BigDecimal getCanonicalValue(@Nullable final BigDecimal value,
       @Nullable final String code) {
@@ -83,6 +83,7 @@ public class Ucum {
     }
   }
 
+  @UsedByReflection
   @Nullable
   public static String getCanonicalCode(@Nullable final BigDecimal value,
       @Nullable final String code) {
@@ -96,7 +97,7 @@ public class Ucum {
       return null;
     }
   }
-
+  
   @Nullable
   private static Pair getCanonicalForm(final @Nullable BigDecimal value,
       final @Nullable String code)

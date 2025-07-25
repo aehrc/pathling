@@ -67,8 +67,6 @@ class FhirReferenceDefinition extends FhirElementDefinition implements Reference
    */
   @Nonnull
   public ResourceTypeSet getReferenceTypes() {
-    // final List<Class<? extends IBaseResource>> resourceTypes = ((RuntimeChildResourceDefinition) childDefinition).getResourceTypes();
-    // requireNonNull(resourceTypes);
     return ResourceTypeSet.from(resourceTypes.stream()
         .map(clazz -> {
           final String resourceCode;

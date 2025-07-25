@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.collection;
 import static au.csiro.pathling.fhirpath.literal.StringLiteral.unescapeFhirPathString;
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 
+import au.csiro.pathling.annotations.UsedByReflection;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPathType;
@@ -118,6 +119,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * @return A new instance of StringCollection
    */
   @Nonnull
+  @UsedByReflection
   public static StringCollection fromValue(@Nonnull final StringType value) {
     return StringCollection.fromValue(value.getValue());
   }
@@ -151,6 +153,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * @param value The value to use
    * @return A new instance of StringCollection
    */
+  @UsedByReflection
   @Nonnull
   public static StringCollection fromValue(@Nonnull final Base64BinaryType value) {
     // special case for Base64BinaryType, as it needs to be decoded
@@ -165,6 +168,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * @param value The value to use
    * @return A new instance of StringCollection
    */
+  @UsedByReflection
   @Nonnull
   public static StringCollection fromValue(@Nonnull final CodeType value) {
     return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.CODE);
@@ -176,6 +180,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * @param value The value to use
    * @return A new instance of StringCollection
    */
+  @UsedByReflection
   @Nonnull
   public static StringCollection fromValue(@Nonnull final IdType value) {
     return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.ID);
@@ -187,6 +192,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * @param value The value to use
    * @return A new instance of StringCollection
    */
+  @UsedByReflection
   @Nonnull
   public static StringCollection fromValue(@Nonnull final OidType value) {
     return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.OID);
@@ -198,6 +204,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * @param value The value to use
    * @return A new instance of StringCollection
    */
+  @UsedByReflection
   @Nonnull
   public static StringCollection fromValue(@Nonnull final UriType value) {
     return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.URI);
@@ -209,6 +216,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * @param value The value to use
    * @return A new instance of StringCollection
    */
+  @UsedByReflection
   @Nonnull
   public static StringCollection fromValue(@Nonnull final org.hl7.fhir.r4.model.UrlType value) {
     return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.URL);
@@ -220,6 +228,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * @param value The value to use
    * @return A new instance of StringCollection
    */
+  @UsedByReflection
   @Nonnull
   public static StringCollection fromValue(@Nonnull final UuidType value) {
     return StringCollection.fromValue(value.getValueAsString(), FHIRDefinedType.UUID);
@@ -229,8 +238,9 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * Returns a new instance based upon a {@link org.hl7.fhir.r4.model.CanonicalType}.
    *
    * @param value The value to use
-   * @return A new instance of {@link StringCollection}
+   * @return A new instance of StringCollection
    */
+  @UsedByReflection
   @Nonnull
   public static StringCollection fromValue(
       @Nonnull final org.hl7.fhir.r4.model.CanonicalType value) {
@@ -245,6 +255,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * @param value The value to use
    * @return A new instance of {@link StringCollection}
    */
+  @UsedByReflection
   @Nonnull
   public static StringCollection fromValue(
       @Nonnull final org.hl7.fhir.r4.model.MarkdownType value) {

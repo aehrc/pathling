@@ -30,8 +30,6 @@ import static org.apache.spark.sql.functions.size;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
-import au.csiro.pathling.sql.SqlFunctions;
-import au.csiro.pathling.sql.misc.ToNull;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Optional;
@@ -186,18 +184,6 @@ public abstract class ColumnRepresentation {
         UnaryOperator.identity(),
         c -> when(c.isNotNull(), array(c))
     );
-  }
-
-  /**
-   * Combines the current {@link ColumnRepresentation} with another one.
-   *
-   * @param other The other {@link ColumnRepresentation} to combine with
-   * @return A new {@link ColumnRepresentation} that is a combination of the current and the other
-   * one
-   */
-  @Nonnull
-  public ColumnRepresentation combine(@Nonnull final ColumnRepresentation other) {
-    return copyOf(concat(toArray().getValue(), other.toArray().getValue()));
   }
 
   /**
@@ -612,15 +598,6 @@ public abstract class ColumnRepresentation {
   }
 
   /**
-   * Returns a new {@link ColumnRepresentation} that represents a null value. It triggers the
-   * evaluation of the column so that singularity can be enforced.
-   */
-  @Nonnull
-  public ColumnRepresentation asEmpty() {
-    return callUdf(ToNull.FUNCTION_NAME);
-  }
-
-  /**
    * Traverses the current {@link ColumnRepresentation} to a selected elements in a choice and
    * returns a new {@link ColumnRepresentation} that is the result of the traversal.
    *
@@ -635,16 +612,5 @@ public abstract class ColumnRepresentation {
                 .traverse(ed.getElementName(), ed.getFhirType())
                 .getValue()
         ).toArray(Column[]::new)));
-  }
-
-  /**
-   * Removes all fields starting with '_' (underscore) from struct values. See
-   * {@link SqlFunctions#prune_annotations(Column)}
-   *
-   * @return Returns a new {@link ColumnRepresentation} with recursively pruned annotation fields.
-   */
-  @Nonnull
-  public ColumnRepresentation pruneAnnotations() {
-    return transform(SqlFunctions::prune_annotations);
   }
 }

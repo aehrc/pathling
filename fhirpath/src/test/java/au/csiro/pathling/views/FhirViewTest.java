@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
-import static scala.collection.JavaConversions.asScalaBuffer;
+import static scala.collection.JavaConverters.asScalaBuffer;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
@@ -262,7 +262,7 @@ abstract class FhirViewTest {
    */
   protected FhirViewTest(@Nonnull final String testLocationGlob,
       @Nonnull final Set<String> includeTags) {
-    this(testLocationGlob, Collections.emptySet(), Collections.emptySet());
+    this(testLocationGlob, includeTags, Collections.emptySet());
   }
 
   protected FhirViewTest(@Nonnull final String testLocationGlob) {
@@ -273,7 +273,7 @@ abstract class FhirViewTest {
   @BeforeAll
   static void beforeAll() throws IOException {
     tempDir = Files.createTempDirectory("pathling-fhir-view-test");
-    log.debug("Created temporary directory: " + tempDir);
+    log.debug("Created temporary directory: {}", tempDir);
   }
 
   @Nonnull
@@ -452,7 +452,7 @@ abstract class FhirViewTest {
   @MethodSource("requests")
   void test(@Nonnull final TestParameters parameters) {
     assumeFalse(parameters.isDisabled(), "Test is disabled");
-    log.info("Running test: " + parameters.getTitle());
+    log.info("Running test: {}", parameters.getTitle());
 
     parameters.getExpectation().expect(() -> {
       final FhirView view;
@@ -462,7 +462,7 @@ abstract class FhirViewTest {
         ensureValid(view, "View is not valid");
       } catch (final Exception e) {
         // If parsing the view definition fails, log the JSON and rethrow the exception.
-        log.info("Exception occurred while parsing test definition - " + e.getMessage());
+        log.info("Exception occurred while parsing test definition - {}", e.getMessage());
         log.info(parameters.getViewJson());
         throw e;
       }

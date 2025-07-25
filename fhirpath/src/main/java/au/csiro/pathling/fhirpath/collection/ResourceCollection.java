@@ -17,28 +17,20 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.fhir.FhirDefinitionContext;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
-import java.util.EnumSet;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.Getter;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import scala.collection.JavaConverters;
 
 /**
  * Represents any FHIRPath expression which refers to a resource type.
@@ -72,27 +64,6 @@ public class ResourceCollection extends Collection {
     } catch (final FHIRException e) {
       return Optional.empty();
     }
-  }
-
-  /**
-   * Build a new ResourcePath using the supplied {@link FhirContext} and {@link ResourceType}.
-   *
-   * @param fhirContext the {@link FhirContext} to use for sourcing the resource definition
-   * @param resourceType the type of the resource
-   * @return A shiny new ResourcePath
-   */
-  @Nonnull
-  public static ResourceCollection build(@Nonnull final FhirContext fhirContext,
-      @Nonnull final ResourceType resourceType) {
-
-    final ResourceDefinition definition = FhirDefinitionContext.of(fhirContext)
-        .findResourceDefinition(resourceType);
-
-    // We use a literal column as the resource value - the actual value is not important.
-    // But the non-null value indicates that the resource should be included in any result.
-    return new ResourceCollection(new DefaultRepresentation(functions.lit(true)),
-        Optional.empty(),
-        getFhirType(resourceType), Optional.of(definition), definition);
   }
 
 
@@ -132,51 +103,12 @@ public class ResourceCollection extends Collection {
   }
 
 
-  /**
-   * @return The set of resource types currently supported by this implementation.
-   */
-  @Nonnull
-  public static Set<ResourceType> supportedResourceTypes() {
-    final Set<ResourceType> availableResourceTypes = EnumSet.allOf(
-        ResourceType.class);
-    final Set<ResourceType> unsupportedResourceTypes =
-        JavaConverters.setAsJavaSet(EncoderBuilder.UNSUPPORTED_RESOURCES()).stream()
-            .map(ResourceType::fromCode)
-            .collect(Collectors.toSet());
-    availableResourceTypes.removeAll(unsupportedResourceTypes);
-    availableResourceTypes.remove(ResourceType.RESOURCE);
-    availableResourceTypes.remove(ResourceType.DOMAINRESOURCE);
-    availableResourceTypes.remove(ResourceType.NULL);
-    availableResourceTypes.remove(ResourceType.OPERATIONDEFINITION);
-    return availableResourceTypes;
-  }
-
-  /**
-   * @param elementName the name of the element
-   * @return the {@link Column} within the dataset pertaining to this element
-   */
-  @Nonnull
-  public Optional<ColumnRepresentation> getElementColumn(@Nonnull final String elementName) {
-    return Optional.of(functions.col(elementName))
-        .map(DefaultRepresentation::new);
-  }
-
-
   @Nonnull
   @Override
   protected ColumnRepresentation getFid() {
-    // return getElementColumn(ExtensionSupport.FID_FIELD_NAME()).orElseThrow(
-    //     () -> new IllegalStateException("Resource does not have an 'id' column"));
     return getColumn().traverse(ExtensionSupport.FID_FIELD_NAME());
   }
-
-  /**
-   * @return the {@link ResourceType} of this resource collection
-   */
-  public ResourceType getResourceType() {
-    return resourceDefinition.getResourceType();
-  }
-
+  
   @Nonnull
   @Override
   public Collection copyWith(@Nonnull final ColumnRepresentation newValue) {

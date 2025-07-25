@@ -20,7 +20,6 @@ package au.csiro.pathling.test.assertions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.utilities.Datasets;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
@@ -93,11 +92,6 @@ public class DatasetAssert {
   }
 
   @Nonnull
-  public DatasetAssert hasRows(@Nonnull final DatasetBuilder expected) {
-    return hasRows(expected.build());
-  }
-
-  @Nonnull
   public DatasetAssert hasRows(@Nonnull final Row... expected) {
     return hasRows(Arrays.asList(expected));
   }
@@ -107,6 +101,7 @@ public class DatasetAssert {
     return hasRows(expected.collectAsList());
   }
 
+  @SuppressWarnings("unused")
   @Nonnull
   public DatasetAssert hasRows(@Nonnull final SparkSession spark,
       @Nonnull final String expectedCsvPath) {

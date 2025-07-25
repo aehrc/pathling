@@ -25,15 +25,11 @@ import jakarta.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Describes the interface to the terminology functions from a library context.
  */
 public interface TerminologyFunctions {
-
-  Logger log = LoggerFactory.getLogger(TerminologyFunctions.class);
 
   /**
    * Tests whether the codings within the specified column are members of the specified value set.

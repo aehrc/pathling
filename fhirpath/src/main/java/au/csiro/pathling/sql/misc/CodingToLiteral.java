@@ -27,6 +27,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
+import java.io.Serial;
 
 /**
  * Spark UDF to convert a Coding struct to a valid Coding literal string.
@@ -40,6 +41,7 @@ public class CodingToLiteral implements SqlFunction1<Row, String> {
    */
   public static final String FUNCTION_NAME = "coding_to_literal";
 
+  @Serial
   private static final long serialVersionUID = 1L;
 
   @Override

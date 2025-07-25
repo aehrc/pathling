@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
@@ -103,32 +101,6 @@ public class DefResourceResolver implements ResourceResolver {
   @Nonnull
   public ResourceCollection resolveSubjectResource() {
     return createResource(getSubjectResource());
-  }
-
-  /**
-   * {@inheritDoc}
-   * <p>
-   * This implementation does not support resolving joins between resources. Attempting to call this
-   * method will result in an UnsupportedOperationException.
-   */
-  @Override
-  @Nonnull
-  public Collection resolveJoin(@Nonnull final ReferenceCollection referenceCollection) {
-    throw new UnsupportedOperationException("resolveJoin() is not supported");
-  }
-
-  /**
-   * {@inheritDoc}
-   * <p>
-   * This implementation does not support resolving reverse joins between resources. Attempting to
-   * call this method will result in an UnsupportedOperationException.
-   */
-  @Override
-  @Nonnull
-  public ResourceCollection resolveReverseJoin(
-      @Nonnull final ResourceCollection parentResource, @Nonnull final String childResourceCode,
-      @Nonnull final String childReferenceToParentFhirpath) {
-    throw new UnsupportedOperationException("resolveReverseJoin() is not supported");
   }
 
   /**

@@ -225,9 +225,9 @@ public class FileSystemPersistence implements PersistenceScheme {
           .filter(f -> f.endsWith("." + extension))
           .findFirst()
           .orElseThrow(() -> new IOException("Partition file not found"));
-      log.info("Renaming result to: " + departitionedUrl);
+      log.info("Renaming result to: {}", departitionedUrl);
       partitionedLocation.rename(new Path(targetFile), new Path(departitionedUrl));
-      log.info("Cleaning up: " + partitionedUrl);
+      log.info("Cleaning up: {}", partitionedUrl);
       partitionedLocation.delete(partitionedPath, true);
     } catch (final IOException e) {
       throw new RuntimeException("Problem copying partition file", e);

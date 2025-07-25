@@ -16,8 +16,8 @@ import au.csiro.pathling.fhirpath.definition.def.DefCompositeDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefResourceTag;
+import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
-import au.csiro.pathling.test.helpers.SparkHelpers;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
@@ -154,7 +154,7 @@ public class YamlSupport {
       FHIRDefinedType.INTEGER, DataTypes.IntegerType,
       FHIRDefinedType.BOOLEAN, DataTypes.BooleanType,
       FHIRDefinedType.DECIMAL, DecimalCollection.DECIMAL_TYPE,
-      FHIRDefinedType.CODING, SparkHelpers.codingStructType(),
+      FHIRDefinedType.CODING, CodingEncoding.codingStructType(),
       FHIRDefinedType.NULL, DataTypes.NullType
   );
   public static final Yaml YAML = new Yaml(new FhirConstructor(), new FhirRepresenter());
@@ -324,11 +324,11 @@ public class YamlSupport {
 
   static ChildDefinition elementFromValues(@Nonnull final String key,
       @Nonnull final List<?> values) {
-    
+
     final List<?> nonNullValues = values.stream()
         .filter(Objects::nonNull)
         .toList();
-    
+
     // Get the set of unique types from the list of values.
     final Set<Class<?>> types = nonNullValues.stream()
         .map(Object::getClass)
@@ -343,7 +343,7 @@ public class YamlSupport {
       // If the type is a map, we merge all the maps into one. This is useful for when a
       // choice contains a complex type, and the examples are split across multiple lines.
       if (types.contains(Map.class)) {
-        final Map<?,?> mergedValues = nonNullValues.stream()
+        final Map<?, ?> mergedValues = nonNullValues.stream()
             .map(Map.class::cast)
             .reduce(new HashMap<>(), (acc, m) -> {
               //noinspection unchecked
