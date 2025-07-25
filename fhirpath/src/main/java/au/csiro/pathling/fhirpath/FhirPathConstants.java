@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath;
 /**
  * Constants for FHIRPath-related values.
  */
+@SuppressWarnings("unused")
 public interface FhirPathConstants {
 
   /**

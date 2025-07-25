@@ -60,15 +60,6 @@ public class PathlingVersion {
   }
 
   /**
-   * @return the major version component of the POM version
-   * @see <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning 2.0.0</a>
-   */
-  @Nonnull
-  public Optional<String> getMajorVersion() {
-    return getBuildVersion().map(version -> version.split("\\.")[0]);
-  }
-
-  /**
    * @return a descriptive version that includes the POM version and the Git commit SHA at the time
    * of the build
    */

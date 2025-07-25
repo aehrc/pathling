@@ -50,10 +50,4 @@ public final class TerminologyHelpers {
   }
 
 
-  @Nonnull
-  public static Coding mockCoding(@Nonnull final String system, @Nonnull final String code,
-      final int index) {
-    return new Coding(system, code + "-" + index, "Display-" + index);
-  }
-
 }

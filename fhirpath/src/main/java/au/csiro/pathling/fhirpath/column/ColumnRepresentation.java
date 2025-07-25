@@ -30,7 +30,6 @@ import static org.apache.spark.sql.functions.size;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
-import au.csiro.pathling.sql.misc.ToNull;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Optional;
@@ -185,18 +184,6 @@ public abstract class ColumnRepresentation {
         UnaryOperator.identity(),
         c -> when(c.isNotNull(), array(c))
     );
-  }
-
-  /**
-   * Combines the current {@link ColumnRepresentation} with another one.
-   *
-   * @param other The other {@link ColumnRepresentation} to combine with
-   * @return A new {@link ColumnRepresentation} that is a combination of the current and the other
-   * one
-   */
-  @Nonnull
-  public ColumnRepresentation combine(@Nonnull final ColumnRepresentation other) {
-    return copyOf(concat(toArray().getValue(), other.toArray().getValue()));
   }
 
   /**
@@ -608,15 +595,6 @@ public abstract class ColumnRepresentation {
         c -> functions.when(element.getValue().isNotNull(),
             functions.coalesce(comparator.apply(c, element.getValue()), functions.lit(false)))
     );
-  }
-
-  /**
-   * Returns a new {@link ColumnRepresentation} that represents a null value. It triggers the
-   * evaluation of the column so that singularity can be enforced.
-   */
-  @Nonnull
-  public ColumnRepresentation asEmpty() {
-    return callUdf(ToNull.FUNCTION_NAME);
   }
 
   /**

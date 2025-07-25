@@ -98,26 +98,6 @@ public class Collection {
   private final Optional<Column> extensionMapColumn;
 
   /**
-   * Builds a generic {@link Collection} with the specified column, FHIRPath type, FHIR type and
-   * definition.
-   *
-   * @param columnRepresentation a {@link Column} containing the result of the expression
-   * @param fhirPathType the {@link FhirPathType} that this path should be based upon
-   * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
-   * @param definition the {@link ElementDefinition} that this path should be based upon
-   * @return a new {@link Collection}
-   */
-
-  @Nonnull
-  public static Collection build(@Nonnull final ColumnRepresentation columnRepresentation,
-      @Nonnull final Optional<FhirPathType> fhirPathType,
-      @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition) {
-    return new Collection(columnRepresentation, fhirPathType, fhirType, definition,
-        Optional.empty());
-  }
-
-  /**
    * Builds the appropriate subtype of {@link Collection} based upon the supplied
    * {@link ElementDefinition}.
    * <p>

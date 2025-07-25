@@ -55,45 +55,6 @@ public class TerminologyHelpers {
   }
 
   /**
-   * Converts a Column containing codes into a Column that contains a Coding struct. The Coding
-   * struct Column can be used as an input to terminology functions such as
-   * {@link PathlingContext#memberOf} and {@link PathlingContext#translate}. A null value passed in
-   * to the {@code codingColumn} parameter will result in a null value being returned.
-   *
-   * @param codingColumn the Column containing codes
-   * @param system the URI of the system for the codes
-   * @return a Column containing a Coding struct
-   */
-  @Nonnull
-  public static Column toCoding(@Nonnull final Column codingColumn, @Nullable final String system) {
-    return toCoding(codingColumn, system, null);
-  }
-
-  /**
-   * Converts a Column containing SNOMED CT codes into a Column that contains a Coding struct.
-   *
-   * @param codingColumn the Column containing codes
-   * @param version the version of the system for the codes
-   * @return a Column containing a Coding struct
-   */
-  @Nonnull
-  public static Column toSnomedCoding(@Nonnull final Column codingColumn,
-      @Nullable final String version) {
-    return toCoding(codingColumn, SNOMED_URI, version);
-  }
-
-  /**
-   * Converts a Column containing SNOMED CT codes into a Column that contains a Coding struct.
-   *
-   * @param codingColumn the Column containing codes
-   * @return a Column containing a Coding struct
-   */
-  @Nonnull
-  public static Column toSnomedCoding(@Nonnull final Column codingColumn) {
-    return toCoding(codingColumn, SNOMED_URI);
-  }
-
-  /**
    * Converts a SNOMED CT ECL expression into a FHIR ValueSet URI. Can be used with the
    * {@link PathlingContext#memberOf} function.
    *

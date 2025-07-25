@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.fhirpath.context;
 
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
@@ -65,37 +63,6 @@ public interface ResourceResolver {
    */
   @Nonnull
   Optional<ResourceCollection> resolveResource(@Nonnull final String resourceCode);
-
-  /**
-   * Resolves a forward join based on a reference collection.
-   * <p>
-   * This method implements the FHIRPath resolve() function, which follows references from one
-   * resource to another. For example, in Patient.managingOrganization.resolve(), this method
-   * resolves the Organization resources referenced by the managingOrganization field.
-   *
-   * @param referenceCollection The collection of references to resolve
-   * @return A Collection containing the resolved resources
-   */
-  @Nonnull
-  Collection resolveJoin(@Nonnull final ReferenceCollection referenceCollection);
-
-  /**
-   * Resolves a reverse join from a parent resource to child resources that reference it.
-   * <p>
-   * This method implements the FHIRPath reverseResolve() function, which finds resources that
-   * reference the parent resource. For example, in Patient.reverseResolve(Condition.subject), this
-   * method finds all Condition resources that reference the Patient through their subject field.
-   *
-   * @param parentResource The parent resource being referenced
-   * @param childResourceCode The FHIR resource type code of the child resources
-   * @param childReferenceToParentFhirpath The FHIRPath expression in the child resource that
-   * references the parent exluding the child resource name (e.g., "subject")
-   * @return A ResourceCollection containing the child resources that reference the parent
-   */
-  @Nonnull
-  ResourceCollection resolveReverseJoin(@Nonnull final ResourceCollection parentResource,
-      @Nonnull final String childResourceCode,
-      @Nonnull final String childReferenceToParentFhirpath);
 
   /**
    * Creates the underlying dataset view for query execution.

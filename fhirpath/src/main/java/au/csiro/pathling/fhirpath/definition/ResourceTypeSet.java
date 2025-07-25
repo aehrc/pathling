@@ -4,7 +4,6 @@ import jakarta.annotation.Nonnull;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import java.util.Collections;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -19,15 +18,6 @@ public interface ResourceTypeSet {
    * @return true if the resource type is in this set
    */
   boolean contains(@Nonnull final ResourceType resourceType);
-
-  /**
-   * Returns a single resource type if this set contains exactly one resource type.
-   *
-   * @return An optional containing the single resource type, or empty if there are multiple
-   * resource types
-   */
-  @Nonnull
-  Optional<ResourceType> asSingleResourceType();
 
   /**
    * Represents a set of all possible resource types.
@@ -50,11 +40,6 @@ public interface ResourceTypeSet {
     }
 
 
-    @Override
-    @Nonnull
-    public Optional<ResourceType> asSingleResourceType() {
-      return Optional.empty();
-    }
   }
 
   /**
@@ -76,14 +61,6 @@ public interface ResourceTypeSet {
     @Override
     public boolean contains(@Nonnull final ResourceType resourceType) {
       return resourceTypes.contains(resourceType);
-    }
-
-    @Override
-    @Nonnull
-    public Optional<ResourceType> asSingleResourceType() {
-      return resourceTypes.size() == 1
-             ? Optional.of(resourceTypes.iterator().next())
-             : Optional.empty();
     }
 
     @Override

@@ -19,27 +19,6 @@ public interface FhirPath {
 
   Collection apply(@Nonnull final Collection input, @Nonnull final EvaluationContext context);
 
-  /**
-   * Get the first element of the path.
-   *
-   * @return the first element of the path
-   */
-  default FhirPath head() {
-    return this;
-  }
-
-
-  /**
-   * Get the prefix of the path. In most cases it's same as head() but some FhirPaths (e.g. binary
-   * operator) may return a different value. In any case `path.prefix().andThen(path.suffix())
-   * should produce the same result as the original `path`.
-   *
-   * @return the prefix element of the path
-   */
-  default FhirPath prefix() {
-    return head();
-  }
-
 
   default FhirPath andThen(@Nonnull final FhirPath after) {
     return nullPath().equals(after)
@@ -137,11 +116,6 @@ public interface FhirPath {
     @Override
     public Stream<FhirPath> asStream() {
       return elements.stream();
-    }
-
-    @Override
-    public FhirPath head() {
-      return elements.get(0);
     }
 
     @Nonnull

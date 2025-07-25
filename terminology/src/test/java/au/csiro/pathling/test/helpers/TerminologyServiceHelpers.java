@@ -46,14 +46,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Type;
-import org.hl7.fhir.r4.model.ValueSet;
-import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -89,17 +86,6 @@ public class TerminologyServiceHelpers {
       }
       return this;
     }
-
-    @SuppressWarnings("UnusedReturnValue")
-    @Nonnull
-    public ValidateExpectations fromValueSet(@Nonnull final String valueSetUri,
-        @Nonnull final ValueSet valueSet) {
-      final Coding[] codings = valueSet.getExpansion().getContains().stream()
-          .map(contains -> new Coding(contains.getSystem(), contains.getCode(),
-              contains.getDisplay()))
-          .toArray(Coding[]::new);
-      return withValueSet(valueSetUri, codings);
-    }
   }
 
   public static class TranslateExpectations {
@@ -120,18 +106,6 @@ public class TerminologyServiceHelpers {
       return withTranslations(coding, conceptMapUrl, false, translations);
     }
 
-
-    public TranslateExpectations withMockTranslations(@Nonnull final Coding sourceCoding,
-        @Nonnull final String conceptMapUrl, @Nonnull final String toSystem,
-        final int noOfMappings) {
-
-      final Translation[] translations = IntStream.range(0, noOfMappings)
-          .mapToObj(i -> TerminologyHelpers.mockCoding(toSystem, sourceCoding.getCode(), i))
-          .map(coding -> Translation.of(ConceptMapEquivalence.EQUIVALENT, coding))
-          .toArray(Translation[]::new);
-
-      return withTranslations(sourceCoding, conceptMapUrl, false, translations);
-    }
 
     public TranslateExpectations withTranslations(
         @Nonnull final Coding coding,
