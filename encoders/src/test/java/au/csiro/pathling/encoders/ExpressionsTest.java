@@ -25,8 +25,11 @@ package au.csiro.pathling.encoders;
 
 import static au.csiro.pathling.encoders.ValueFunctions.ifArray;
 import static au.csiro.pathling.encoders.ValueFunctions.unnest;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.Arrays;
+import java.util.List;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -49,7 +52,7 @@ public class ExpressionsTest {
    * Set up Spark.
    */
   @BeforeAll
-  public static void setUp() {
+  static void setUp() {
     spark = SparkSession.builder()
         .master("local[*]")
         .appName("testing")
@@ -64,19 +67,19 @@ public class ExpressionsTest {
    * Tear down Spark.
    */
   @AfterAll
-  public static void tearDown() {
+  static void tearDown() {
     spark.stop();
   }
 
-  public static Column size(Column arr) {
+  public static Column size(final Column arr) {
     return ifArray(arr, functions::size,
         x -> functions.when(arr.isNotNull(), functions.lit(1)).otherwise(functions.lit(0)));
   }
 
   @Test
-  public void testIfArray() {
-    Dataset<Row> ds = spark.range(2).toDF();
-    Dataset<Row> resultDs = ds
+  void testIfArray() {
+    final Dataset<Row> ds = spark.range(2).toDF();
+    final Dataset<Row> resultDs = ds
         .withColumn("id_array", functions.array(functions.col("id"), functions.lit(22)))
         .withColumn("test_single",
             ifArray(ds.col("id"), x -> functions.array(functions.lit(20)), x -> functions.lit(10)))
@@ -99,14 +102,31 @@ public class ExpressionsTest {
         .withColumn("test_array_where", ifArray(functions.col("id_array"),
             x -> functions.filter(x, c -> size(c).equalTo(functions.col("id"))),
             x -> functions.lit(0)));
-    resultDs.show();
-    resultDs.collectAsList().forEach(System.out::println);
+
+    final List<Row> results = resultDs.collectAsList();
+    assertEquals(2, results.size());
+
+    final Row firstRow = results.get(0);
+    assertEquals(0L, (Long) firstRow.getAs("id"));
+    assertEquals(10, (Integer) firstRow.getAs("test_single"));
+    assertNotNull(firstRow.getAs("test_array"));
+    assertEquals(10, (Integer) firstRow.getAs("test_lit"));
+    assertNotNull(firstRow.getAs("test_array_lit"));
+    assertEquals(2, (Integer) firstRow.getAs("test_array_size"));
+
+    final Row secondRow = results.get(1);
+    assertEquals(1L, (Long) secondRow.getAs("id"));
+    assertEquals(10, (Integer) secondRow.getAs("test_single"));
+    assertNotNull(secondRow.getAs("test_array"));
+    assertEquals(10, (Integer) secondRow.getAs("test_lit"));
+    assertNotNull(secondRow.getAs("test_array_lit"));
+    assertEquals(2, (Integer) secondRow.getAs("test_array_size"));
   }
 
   @Test
-  public void testFlatten() {
-    Dataset<Row> ds = spark.range(2).toDF();
-    Dataset<Row> resultDs = ds
+  void testFlatten() {
+    final Dataset<Row> ds = spark.range(2).toDF();
+    final Dataset<Row> resultDs = ds
         .withColumn("id_array", functions.array(functions.col("id"), functions.lit(22)))
         .withColumn("id_array_of_arrays",
             functions.array(functions.array(functions.col("id"), functions.lit(22)),
@@ -120,14 +140,30 @@ public class ExpressionsTest {
         .withColumn("test_unnest_array_of_arrays_if_id",
             ifArray(functions.col("id"), x -> unnest(functions.col("id_array_of_arrays")), x -> x));
 
-    resultDs.show();
-    resultDs.collectAsList().forEach(System.out::println);
+    final List<Row> results = resultDs.collectAsList();
+    assertEquals(2, results.size());
+
+    final Row firstRow = results.get(0);
+    assertEquals(0L, (Long) firstRow.getAs("id"));
+    assertEquals(0L, (Long) firstRow.getAs("test_unnest_single"));
+    assertNotNull(firstRow.getAs("test_unnest_array"));
+    assertNotNull(firstRow.getAs("test_unnest_array_of_arrays"));
+    assertNotNull(firstRow.getAs("test_unnest_array_of_arrays_if_array"));
+    assertEquals(0L, (Long) firstRow.getAs("test_unnest_array_of_arrays_if_id"));
+
+    final Row secondRow = results.get(1);
+    assertEquals(1L, (Long) secondRow.getAs("id"));
+    assertEquals(1L, (Long) secondRow.getAs("test_unnest_single"));
+    assertNotNull(secondRow.getAs("test_unnest_array"));
+    assertNotNull(secondRow.getAs("test_unnest_array_of_arrays"));
+    assertNotNull(secondRow.getAs("test_unnest_array_of_arrays_if_array"));
+    assertEquals(1L, (Long) secondRow.getAs("test_unnest_array_of_arrays_if_id"));
   }
 
   @Test
-  public void testArrayCrossProd() {
-    Dataset<Row> ds = spark.range(1).toDF();
-    Dataset<Row> resultDs = ds
+  void testArrayCrossProd() {
+    final Dataset<Row> ds = spark.range(1).toDF();
+    final Dataset<Row> resultDs = ds
         .withColumn("one_array", ColumnFunctions.structProduct(
                 functions.array(functions.struct(
                     functions.lit("xxx").alias("str"),
@@ -189,16 +225,22 @@ public class ExpressionsTest {
                 )
             )
         );
-    resultDs.printSchema();
-    //resultDs.show();
-    resultDs.collectAsList().forEach(System.out::println);
+
+    final List<Row> results = resultDs.collectAsList();
+    assertEquals(1, results.size());
+
+    final Row row = results.get(0);
+    assertEquals(0L, (Long) row.getAs("id"));
+    assertNotNull(row.getAs("one_array"));
+    assertNotNull(row.getAs("two_arrays"));
+    assertNotNull(row.getAs("three_arrays"));
   }
 
 
   @Test
-  public void testArrayCrossProdWithNullsAndEmptys() {
-    Dataset<Row> ds = spark.range(1).toDF();
-    Dataset<Row> resultDs = ds
+  void testArrayCrossProdWithNullsAndEmptys() {
+    final Dataset<Row> ds = spark.range(1).toDF();
+    final Dataset<Row> resultDs = ds
         .withColumn("null", ColumnFunctions.structProduct(
                 functions.lit(null).cast(DataTypes.createArrayType(DataTypes.createStructType(
                     Arrays.asList(
@@ -218,25 +260,30 @@ public class ExpressionsTest {
             )
         )
         .withColumn("nonEmptyWithEmpty", ColumnFunctions.structProduct(
-            functions.array(
-                functions.struct(
-                    functions.lit("zzz").alias("nonEmpty")
+                functions.array(
+                    functions.struct(
+                        functions.lit("zzz").alias("nonEmpty")
+                    ),
+                    functions.struct(
+                        functions.lit("yyy").alias("nonEmpty")
+                    )
                 ),
-                functions.struct(
-                    functions.lit("yyy").alias("nonEmpty")
-                )
-            ),
-            functions.array().cast(DataTypes.createArrayType(DataTypes.createStructType(
-                Arrays.asList(
-                    DataTypes.createStructField("str", DataTypes.StringType, true),
-                    DataTypes.createStructField("int", DataTypes.IntegerType, true)
-                )
-            )))
-        )
-    );
+                functions.array().cast(DataTypes.createArrayType(DataTypes.createStructType(
+                    Arrays.asList(
+                        DataTypes.createStructField("str", DataTypes.StringType, true),
+                        DataTypes.createStructField("int", DataTypes.IntegerType, true)
+                    )
+                )))
+            )
+        );
 
-    resultDs.printSchema();
-    //resultDs.show();
-    resultDs.collectAsList().forEach(System.out::println);
+    final List<Row> results = resultDs.collectAsList();
+    assertEquals(1, results.size());
+
+    final Row row = results.get(0);
+    assertEquals(0L, (Long) row.getAs("id"));
+    assertNotNull(row.getAs("null"));
+    assertNotNull(row.getAs("emptyArray"));
+    assertNotNull(row.getAs("nonEmptyWithEmpty"));
   }
 }
