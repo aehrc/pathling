@@ -447,6 +447,8 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation join(@Nonnull final ColumnRepresentation separator) {
+    // This uses ArrayJoin so that we can pass a column as a separator. The functions.array_join
+    // function requires a literal separator.
     return vectorize(c -> new Column(new ArrayJoin(c.expr(), separator.getValue().expr())),
         UnaryOperator.identity());
   }
