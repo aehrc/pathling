@@ -4,10 +4,6 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,9 +12,6 @@ import java.net.URL;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
-import org.json.JSONException;
-import org.skyscreamer.jsonassert.JSONAssert;
-import org.skyscreamer.jsonassert.JSONCompareMode;
 
 @Slf4j
 public abstract class TestResources {
@@ -55,30 +48,4 @@ public abstract class TestResources {
       throw new RuntimeException("Problem retrieving test resource", e);
     }
   }
-
-  public static void assertJson(@Nonnull final String expectedPath,
-      @Nonnull final String actualJson, @Nonnull final JSONCompareMode compareMode) {
-    final String expectedJson;
-    try {
-      expectedJson = getResourceAsString(expectedPath);
-      try {
-        JSONAssert.assertEquals(expectedJson, actualJson, compareMode);
-      } catch (final AssertionError e) {
-        final Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
-        final JsonElement jsonElement = JsonParser.parseString(actualJson);
-        final String prettyJsonString = gson.toJson(jsonElement);
-        log.info("Expected response: {}", expectedJson);
-        log.info("Actual response: {}", prettyJsonString);
-        throw e;
-      }
-    } catch (final JSONException e) {
-      throw new RuntimeException("Problem checking JSON against test resource", e);
-    }
-  }
-
-  public static void assertJson(@Nonnull final String expectedPath,
-      @Nonnull final String actualJson) {
-    assertJson(expectedPath, actualJson, JSONCompareMode.NON_EXTENSIBLE);
-  }
-
 }

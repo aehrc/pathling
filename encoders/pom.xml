@@ -57,6 +57,12 @@
   </developers>
 
   <dependencies>
+
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>utilities</artifactId>
+    </dependency>
+    
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>

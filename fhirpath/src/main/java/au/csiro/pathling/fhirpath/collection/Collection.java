@@ -434,18 +434,6 @@ public class Collection {
   }
 
   /**
-   * Returns a new collection with the same type and representation with the provided column value.
-   *
-   * @param columnValue The lambda to use for mapping
-   * @return A new collection with new values determined by the specified lambda
-   */
-  @Nonnull
-  public Collection withColumn(
-      @Nonnull final Column columnValue) {
-    return mapColumn(c -> columnValue);
-  }
-
-  /**
    * Returns a new collection with new values determined by the specified lambda.
    *
    * @param mapper The lambda to use for mapping
@@ -569,14 +557,6 @@ public class Collection {
     } else {
       throw new IllegalArgumentException("Cannot cast " + this + " to " + other);
     }
-  }
-
-  /**
-   * @return a new {@link Collection} representing the String representation of this path
-   */
-  @Nonnull
-  public StringCollection asStringPath() {
-    return asSingular().map(ColumnRepresentation::asEmpty, StringCollection::build);
   }
 
   /**
