@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
@@ -122,33 +120,6 @@ public abstract class BaseResourceResolver implements ResourceResolver {
   @Nonnull
   Optional<ResourceCollection> resolveForeignResource(@Nonnull final String resourceCode) {
     return Optional.empty();
-  }
-
-  /**
-   * {@inheritDoc}
-   * <p>
-   * The base implementation throws an UnsupportedOperationException. Subclasses that support
-   * forward joins must override this method.
-   */
-  @Override
-  @Nonnull
-  public Collection resolveJoin(@Nonnull final ReferenceCollection referenceCollection) {
-    throw new UnsupportedOperationException("resolveJoin() is not supported");
-  }
-
-  /**
-   * {@inheritDoc}
-   * <p>
-   * The base implementation throws an UnsupportedOperationException. Subclasses that support
-   * reverse joins must override this method.
-   */
-  @Override
-  @Nonnull
-  public ResourceCollection resolveReverseJoin(
-      @Nonnull final ResourceCollection parentResource,
-      @Nonnull final String childResourceCode,
-      @Nonnull final String childReferenceToParentFhirpath) {
-    throw new UnsupportedOperationException("resolveReverseJoin() is not supported");
   }
 
   /**

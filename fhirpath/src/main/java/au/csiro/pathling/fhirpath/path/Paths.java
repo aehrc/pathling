@@ -130,14 +130,6 @@ public final class Paths {
       }
     }
 
-    @Override
-    @Nonnull
-    public FhirPath prefix() {
-      return leftPath.isNull()
-             ? this
-             : leftPath.head();
-    }
-
   }
 
   @Value

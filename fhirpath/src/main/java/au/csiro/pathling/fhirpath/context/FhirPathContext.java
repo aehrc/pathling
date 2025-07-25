@@ -22,9 +22,7 @@ import static au.csiro.pathling.fhirpath.FhirPathConstants.PredefinedVariables.*
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.variable.EnvironmentVariableResolver;
-import au.csiro.pathling.fhirpath.variable.VariableResolverChain;
 import jakarta.annotation.Nonnull;
-import java.util.Map;
 import lombok.Value;
 
 @Value(staticConstructor = "of")
@@ -50,15 +48,4 @@ public class FhirPathContext {
           .orElseThrow(() -> new IllegalArgumentException("Unknown variable: " + name));
     }
   }
-
-  public static FhirPathContext ofResource(@Nonnull final ResourceCollection resource) {
-    return of(resource, resource, VariableResolverChain.withDefaults(resource, resource));
-  }
-
-  public static FhirPathContext ofResource(@Nonnull final ResourceCollection resource,
-      @Nonnull final Map<String, Collection> additionalVariables) {
-    return of(resource, resource,
-        VariableResolverChain.withDefaults(resource, resource, additionalVariables));
-  }
-
 }

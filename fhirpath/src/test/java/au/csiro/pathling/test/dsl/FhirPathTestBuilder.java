@@ -272,69 +272,6 @@ public class FhirPathTestBuilder {
     }
 
     @Nonnull
-    public ModelBuilder dateTime(@Nonnull final String name, @Nullable final String value) {
-      model.put(name, FhirTypedLiteral.toDateTime(value));
-      return this;
-    }
-
-    @Nonnull
-    public ModelBuilder dateTimeEmpty(@Nonnull final String name) {
-      model.put(name, FhirTypedLiteral.toDateTime(null));
-      return this;
-    }
-
-    @Nonnull
-    public ModelBuilder dateTimeArray(@Nonnull final String name,
-        @Nonnull final String... values) {
-      model.put(name, Stream.of(values)
-          .map(FhirTypedLiteral::toDateTime)
-          .toList());
-      return this;
-    }
-
-    @Nonnull
-    public ModelBuilder date(@Nonnull final String name, @Nullable final String value) {
-      model.put(name, FhirTypedLiteral.toDate(value));
-      return this;
-    }
-
-    @Nonnull
-    public ModelBuilder dateEmpty(@Nonnull final String name) {
-      model.put(name, FhirTypedLiteral.toDate(null));
-      return this;
-    }
-
-    @Nonnull
-    public ModelBuilder dateArray(@Nonnull final String name,
-        @Nonnull final String... values) {
-      model.put(name, Stream.of(values)
-          .map(FhirTypedLiteral::toDate)
-          .toList());
-      return this;
-    }
-
-    @Nonnull
-    public ModelBuilder time(@Nonnull final String name, @Nullable final String value) {
-      model.put(name, FhirTypedLiteral.toTime(value));
-      return this;
-    }
-
-    @Nonnull
-    public ModelBuilder timeEmpty(@Nonnull final String name) {
-      model.put(name, FhirTypedLiteral.toTime(null));
-      return this;
-    }
-
-    @Nonnull
-    public ModelBuilder timeArray(@Nonnull final String name,
-        @Nonnull final String... values) {
-      model.put(name, Stream.of(values)
-          .map(FhirTypedLiteral::toTime)
-          .toList());
-      return this;
-    }
-
-    @Nonnull
     public ModelBuilder coding(@Nonnull final String name, @Nullable final String value) {
       model.put(name, FhirTypedLiteral.toCoding(value));
       return this;
@@ -354,29 +291,7 @@ public class FhirPathTestBuilder {
           .toList());
       return this;
     }
-
-    @Nonnull
-    public ModelBuilder quantity(@Nonnull final String name, @Nullable final String literalValue) {
-      model.put(name, FhirTypedLiteral.toQuantity(literalValue));
-      return this;
-    }
-
-    @Nonnull
-    public ModelBuilder quantityEmpty(@Nonnull final String name) {
-      model.put(name, FhirTypedLiteral.toQuantity(null));
-      return this;
-    }
-
-    @Nonnull
-    public ModelBuilder quantityArray(@Nonnull final String name,
-        @Nonnull final String... literalValues) {
-      model.put(name, Stream.of(literalValues)
-          .map(FhirTypedLiteral::toQuantity)
-          .toList());
-      return this;
-    }
-
-
+    
     public ModelBuilder element(final String name, final Consumer<ModelBuilder> builderConsumer) {
       final ModelBuilder builder = new ModelBuilder();
       builderConsumer.accept(builder);
@@ -390,7 +305,8 @@ public class FhirPathTestBuilder {
     }
 
     @SafeVarargs
-    public final ModelBuilder elementArray(final String name, final Consumer<ModelBuilder>... builders) {
+    public final ModelBuilder elementArray(final String name,
+        final Consumer<ModelBuilder>... builders) {
       final List<Map<String, Object>> list = new ArrayList<>();
       for (final Consumer<ModelBuilder> builderConsumer : builders) {
         final ModelBuilder builder = new ModelBuilder();

@@ -98,26 +98,6 @@ public class Collection {
   private final Optional<Column> extensionMapColumn;
 
   /**
-   * Builds a generic {@link Collection} with the specified column, FHIRPath type, FHIR type and
-   * definition.
-   *
-   * @param columnRepresentation a {@link Column} containing the result of the expression
-   * @param fhirPathType the {@link FhirPathType} that this path should be based upon
-   * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
-   * @param definition the {@link ElementDefinition} that this path should be based upon
-   * @return a new {@link Collection}
-   */
-
-  @Nonnull
-  public static Collection build(@Nonnull final ColumnRepresentation columnRepresentation,
-      @Nonnull final Optional<FhirPathType> fhirPathType,
-      @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition) {
-    return new Collection(columnRepresentation, fhirPathType, fhirType, definition,
-        Optional.empty());
-  }
-
-  /**
    * Builds the appropriate subtype of {@link Collection} based upon the supplied
    * {@link ElementDefinition}.
    * <p>
@@ -434,18 +414,6 @@ public class Collection {
   }
 
   /**
-   * Returns a new collection with the same type and representation with the provided column value.
-   *
-   * @param columnValue The lambda to use for mapping
-   * @return A new collection with new values determined by the specified lambda
-   */
-  @Nonnull
-  public Collection withColumn(
-      @Nonnull final Column columnValue) {
-    return mapColumn(c -> columnValue);
-  }
-
-  /**
    * Returns a new collection with new values determined by the specified lambda.
    *
    * @param mapper The lambda to use for mapping
@@ -569,14 +537,6 @@ public class Collection {
     } else {
       throw new IllegalArgumentException("Cannot cast " + this + " to " + other);
     }
-  }
-
-  /**
-   * @return a new {@link Collection} representing the String representation of this path
-   */
-  @Nonnull
-  public StringCollection asStringPath() {
-    return asSingular().map(ColumnRepresentation::asEmpty, StringCollection::build);
   }
 
   /**

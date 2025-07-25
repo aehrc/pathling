@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import au.csiro.pathling.annotations.UsedByReflection;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
@@ -78,6 +79,7 @@ public class TimeCollection extends Collection implements StringCoercible, Mater
    * @param literal The FHIRPath representation of the literal
    * @return A new instance of {@link TimeCollection}
    */
+  @UsedByReflection
   @Nonnull
   public static TimeCollection fromLiteral(@Nonnull final String literal) {
     final String timeString = literal.replaceFirst("^@T", "");
@@ -90,6 +92,7 @@ public class TimeCollection extends Collection implements StringCoercible, Mater
    * @param value The value to use
    * @return A new instance of {@link TimeCollection}
    */
+  @UsedByReflection
   @Nonnull
   public static TimeCollection fromValue(@Nonnull final TimeType value) {
     return TimeCollection.build(DefaultRepresentation.literal(value.getValueAsString()));

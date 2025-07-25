@@ -21,7 +21,6 @@ import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.fhir.FhirDefinitionContext;
@@ -29,7 +28,6 @@ import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import lombok.Getter;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -66,27 +64,6 @@ public class ResourceCollection extends Collection {
     } catch (final FHIRException e) {
       return Optional.empty();
     }
-  }
-
-  /**
-   * Build a new ResourcePath using the supplied {@link FhirContext} and {@link ResourceType}.
-   *
-   * @param fhirContext the {@link FhirContext} to use for sourcing the resource definition
-   * @param resourceType the type of the resource
-   * @return A shiny new ResourcePath
-   */
-  @Nonnull
-  public static ResourceCollection build(@Nonnull final FhirContext fhirContext,
-      @Nonnull final ResourceType resourceType) {
-
-    final ResourceDefinition definition = FhirDefinitionContext.of(fhirContext)
-        .findResourceDefinition(resourceType);
-
-    // We use a literal column as the resource value - the actual value is not important.
-    // But the non-null value indicates that the resource should be included in any result.
-    return new ResourceCollection(new DefaultRepresentation(functions.lit(true)),
-        Optional.empty(),
-        getFhirType(resourceType), Optional.of(definition), definition);
   }
 
 
