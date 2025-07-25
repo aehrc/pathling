@@ -127,6 +127,8 @@ jobs:
           name: coverage-reports
           path: |
             **/jacoco.xml
+            **/target/site/jacoco
+            **/target/site/jacoco-aggregate
             lib/python/**/coverage.xml
 
       - name: Save built JARs
