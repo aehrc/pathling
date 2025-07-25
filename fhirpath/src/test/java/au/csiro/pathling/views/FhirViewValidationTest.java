@@ -163,7 +163,7 @@ class FhirViewValidationTest {
     final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(fhirView);
     assertEquals(1, validationResult.size());
     final ConstraintViolation<FhirView> violation = validationResult.iterator().next();
-    assertEquals("must be a valid name ([A-Za-z][A-Za-z0-9_]*)", violation.getMessage());
+    assertEquals("must be a valid name ([A-Za-z]\\w*)", violation.getMessage());
     assertEquals("constant[0].name", violation.getPropertyPath().toString());
   }
 
@@ -187,13 +187,13 @@ class FhirViewValidationTest {
         violation.getMessage());
     assertEquals("select[0]", violation.getPropertyPath().toString());
   }
-  
+
   @Test
   public void testDuplicateAnsiTypeTags() {
     // Create a column with duplicate ANSI_TYPE_TAG tags
     ColumnTag tag1 = ColumnTag.of(ColumnTag.ANSI_TYPE_TAG, "VARCHAR");
     ColumnTag tag2 = ColumnTag.of(ColumnTag.ANSI_TYPE_TAG, "INTEGER");
-    
+
     Column columnWithDuplicateTags = Column.builder()
         .name("duplicateTagColumn")
         .path("Patient.id")
@@ -218,7 +218,7 @@ class FhirViewValidationTest {
     final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(view);
     assertEquals(1, validationResult.size());
     final ConstraintViolation<FhirView> violation = validationResult.iterator().next();
-    assertEquals("must be a valid name ([A-Za-z][A-Za-z0-9_]*)", violation.getMessage());
+    assertEquals("must be a valid name ([A-Za-z]\\w*)", violation.getMessage());
     assertEquals(expectedPath, violation.getPropertyPath().toString());
   }
 
