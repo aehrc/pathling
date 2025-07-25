@@ -2,6 +2,9 @@ package au.csiro.pathling.test.yaml;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -35,7 +38,6 @@ import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.yaml.snakeyaml.Yaml;
@@ -188,47 +190,70 @@ class YamlTestRunnerTest {
   void testLoad() {
     final String testSpec = getResourceAsString("fhirpath-js/cases/5.1_existence.yaml");
     final YamlTestDefinition spec = YamlTestDefinition.fromYaml(testSpec);
-    System.out.println(spec);
+    
+    assertNotNull(spec);
+    assertNotNull(spec.cases());
+    assertFalse(spec.cases().isEmpty());
   }
 
   @Test
   void testLoadAndRun() {
     final String testConfigYaml = getResourceAsString("fhirpath-js/config.yaml");
     final YamlTestFormat testFormat = YAML_PARSER.loadAs(testConfigYaml, YamlTestFormat.class);
-    System.out.println(testFormat);
-    testFormat.toPredicates(Set.of()).forEach(System.out::println);
+    
+    assertNotNull(testFormat);
+    
+    final List<?> predicates = testFormat.toPredicates(Set.of()).toList();
+    assertNotNull(predicates);
   }
 
 
   @Test
   void testJsonModel() {
     final String testPatient = getResourceAsString("fhirpath-js/resources/patient-example-2.json");
-    System.out.println(testPatient);
+    assertNotNull(testPatient);
+    assertFalse(testPatient.trim().isEmpty());
 
     final IParser jsonParser = fhirContext.newJsonParser();
     final IBaseResource resource = jsonParser.parseResource(
         testPatient);
-    System.out.println(resource);
-    System.out.println(resource.fhirType());
+    
+    assertNotNull(resource);
+    assertEquals("Patient", resource.fhirType());
+    
     final Dataset<Row> inputDS = spark.createDataset(List.of(resource),
         fhirEncoders.of(resource.fhirType())).toDF();
+    
+    assertNotNull(inputDS);
+    assertEquals(1, inputDS.count());
 
     final DefResourceResolver resolver = DefResourceResolver.of(
         FhirResourceTag.of(ResourceType.fromCode(resource.fhirType())),
         FhirDefinitionContext.of(fhirContext),
         inputDS
     );
+    
+    assertNotNull(resolver);
 
     final FhirpathEvaluator evaluator = new FhirpathEvaluator(
         resolver,
         StaticFunctionRegistry.getInstance(),
         Map.of()
     );
+    
+    assertNotNull(evaluator);
 
     final Dataset<Row> ds = evaluator.createInitialDataset().cache();
+    assertNotNull(ds);
+    
     final Parser parser = new Parser();
+    assertNotNull(parser);
 
     final Collection result = evaluator.evaluate(parser.parse("Patient.name"));
-    ds.select(result.getColumn().asCanonical().getValue().alias("actual")).show();
+    assertNotNull(result);
+    
+    final Dataset<Row> resultDS = ds.select(result.getColumn().asCanonical().getValue().alias("actual"));
+    assertNotNull(resultDS);
+    assertTrue(resultDS.count() >= 0);
   }
 }
