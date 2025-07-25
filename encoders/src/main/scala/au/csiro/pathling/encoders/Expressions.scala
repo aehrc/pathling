@@ -77,44 +77,6 @@ case class StaticField(staticObject: Class[_],
 }
 
 /**
- * Determines if the given value is an instanceof a given class
- *
- * @param value       the value to check
- * @param checkedType the class to check the value against
- */
-case class InstanceOf(value: Expression,
-                      checkedType: Class[_]) extends Expression with NonSQLExpression {
-
-  override def nullable: Boolean = false
-
-  override def children: Seq[Expression] = value :: Nil
-
-  override def dataType: DataType = BooleanType
-
-  override def eval(input: InternalRow): Any =
-    throw new UnsupportedOperationException("Only code-generated evaluation is supported.")
-
-  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
-
-    val obj = value.genCode(ctx)
-
-    val code =
-      code"""
-         ${obj.code}
-         final boolean ${ev.value} = ${obj.value} instanceof ${checkedType.getName};
-       """
-
-    ev.copy(code = code, isNull = FalseLiteral)
-  }
-
-  override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
-    InstanceOf(newChildren.head, checkedType)
-  }
-
-}
-
-
-/**
  * Gets value of an element of a HAPI object. This is could be composed from `If` and `Invoke`
  * expression but having it as a dedicated expression makes the serializer expression more readable 
  * and also avoids the problems with 'If' optimisations.
@@ -187,9 +149,11 @@ case class ObjectCast(value: Expression, resultType: DataType, lenient: Boolean 
 
     val code =
       code"""
-         |${obj.code}
-         |final $javaType ${ev.value} = ($lenient && !(${obj.value} instanceof $javaType))?null:($javaType) ${obj.value};
-         |boolean ${ev.isNull} = (${ev.value} == null);
+            |${obj.code}
+            |final $javaType ${ev.value} = ($lenient && !(${
+        obj.value
+      } instanceof $javaType))?null:($javaType) ${obj.value};
+            |boolean ${ev.isNull} = (${ev.value} == null);
        """.stripMargin
 
     ev.copy(code = code)
