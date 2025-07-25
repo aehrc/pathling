@@ -17,13 +17,17 @@
 
 package au.csiro.pathling.test.assertions;
 
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-import au.csiro.pathling.utilities.Datasets;
+import au.csiro.pathling.utilities.Preconditions;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.Serial;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -36,6 +40,8 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MultiSet;
 import org.apache.commons.collections4.multiset.HashMultiSet;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -239,7 +245,7 @@ public class DatasetAssert {
     } catch (final IOException e) {
       log.info("Existing file not found, skipping delete");
     }
-    Datasets.writeCsv(dataset, path.toUri().toString(), SaveMode.Overwrite);
+    writeCsv(dataset, path.toUri().toString(), SaveMode.Overwrite);
     throw new AssertionError(
         "Rows saved to CSV, check that the file is correct and replace this line with an assertion");
   }
@@ -257,6 +263,68 @@ public class DatasetAssert {
         .collectAsList()
         .forEach(System.out::println);
     return this;
+  }
+
+  /**
+   * Writes a result to the configured result storage area.
+   *
+   * @param result the {@link Dataset} containing the result
+   * @param fileUrl a name to use as the filename
+   * @param saveMode the {@link SaveMode} to use
+   * @return the URL of the result
+   */
+  private static String writeCsv(@Nonnull final Dataset<?> result, @Nonnull final String fileUrl,
+      @Nonnull final SaveMode saveMode) {
+
+    Preconditions.check(fileUrl.endsWith(".csv"), "fileUrl must have .csv extension");
+
+    final SparkSession spark = result.sparkSession();
+
+    // Get a handle for the Hadoop FileSystem representing the result location, and check that it
+    // is accessible.
+    @Nullable final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()
+        .hadoopConfiguration();
+    requireNonNull(hadoopConfiguration);
+    @Nullable final FileSystem warehouseLocation;
+    try {
+      warehouseLocation = FileSystem.get(new URI(fileUrl), hadoopConfiguration);
+    } catch (final IOException e) {
+      throw new RuntimeException("Problem accessing result location: " + fileUrl, e);
+    } catch (final URISyntaxException e) {
+      throw new RuntimeException("Problem parsing result URL: " + fileUrl, e);
+    }
+    requireNonNull(warehouseLocation);
+
+    // Write result dataset to result location.
+    final String resultDatasetUrl = fileUrl + ".tmp";
+    log.info("Writing result: {}", resultDatasetUrl);
+    try {
+      result.coalesce(1)
+          .write()
+          .mode(saveMode)
+          .csv(resultDatasetUrl);
+    } catch (final Exception e) {
+      throw new RuntimeException("Problem writing to file: " + resultDatasetUrl, e);
+    }
+
+    // Find the single file and copy it into the final location.
+    try {
+      final org.apache.hadoop.fs.Path resultPath = new org.apache.hadoop.fs.Path(resultDatasetUrl);
+      final FileStatus[] partitionFiles = warehouseLocation.listStatus(resultPath);
+      final String targetFile = Arrays.stream(partitionFiles)
+          .map(f -> f.getPath().toString())
+          .filter(f -> f.endsWith(".csv"))
+          .findFirst()
+          .orElseThrow(() -> new IOException("Partition file not found"));
+      log.info("Renaming result to: {}", fileUrl);
+      warehouseLocation.rename(new org.apache.hadoop.fs.Path(targetFile),
+          new org.apache.hadoop.fs.Path(fileUrl));
+      log.info("Cleaning up: {}", resultDatasetUrl);
+      warehouseLocation.delete(resultPath, true);
+    } catch (final IOException e) {
+      throw new RuntimeException("Problem copying partition file", e);
+    }
+    return fileUrl;
   }
 
 }
