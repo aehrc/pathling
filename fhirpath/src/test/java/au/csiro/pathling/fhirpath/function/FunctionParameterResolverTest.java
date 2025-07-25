@@ -30,6 +30,10 @@ import org.junit.jupiter.api.Test;
 class FunctionParameterResolverTest {
 
   final EvaluationContext evaluationContext = mock(EvaluationContext.class);
+  {
+    final Collection mockInputContext = mock(Collection.class);
+    when(evaluationContext.getInputContext()).thenReturn(mockInputContext);
+  }
 
   @Nullable
   @SuppressWarnings("unused")
