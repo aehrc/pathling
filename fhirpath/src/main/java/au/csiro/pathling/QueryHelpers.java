@@ -33,6 +33,9 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public abstract class QueryHelpers {
 
+  private QueryHelpers() {
+  }
+
   /**
    * Creates an empty dataset with the schema of the supplied resource type.
    *
