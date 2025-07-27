@@ -75,7 +75,7 @@ public class FhirDefinitionContext implements DefinitionContext {
     if (childDefinition.getValidChildNames().contains(elementName)) {
       final BaseRuntimeElementDefinition<?> elementDefinition = childDefinition.getChildByName(
           elementName);
-      if (childDefinition instanceof RuntimeChildResourceDefinition rctd) {
+      if (childDefinition instanceof final RuntimeChildResourceDefinition rctd) {
         return Optional.of(new FhirReferenceDefinition(rctd));
       } else if (isChildChoiceDefinition(childDefinition) && isReferenceDefinition(
           elementDefinition)) {

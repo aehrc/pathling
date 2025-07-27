@@ -28,6 +28,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -80,12 +81,14 @@ public class FhirEncoders {
   /**
    * Cache of mappings between Spark and FHIR types.
    */
-  private static final Map<FhirVersionEnum, DataTypeMappings> DATA_TYPE_MAPPINGS = new HashMap<>();
+  private static final Map<FhirVersionEnum, DataTypeMappings> DATA_TYPE_MAPPINGS = new EnumMap<>(
+      FhirVersionEnum.class);
 
   /**
    * Cache of FHIR contexts.
    */
-  private static final Map<FhirVersionEnum, FhirContext> FHIR_CONTEXTS = new HashMap<>();
+  private static final Map<FhirVersionEnum, FhirContext> FHIR_CONTEXTS = new EnumMap<>(
+      FhirVersionEnum.class);
 
   /**
    * The FHIR context used by the encoders instance.
@@ -144,19 +147,8 @@ public class FhirEncoders {
    * @return the FhirContext
    */
   public static FhirContext contextFor(final FhirVersionEnum fhirVersion) {
-
     synchronized (FHIR_CONTEXTS) {
-
-      FhirContext context = FHIR_CONTEXTS.get(fhirVersion);
-
-      if (context == null) {
-
-        context = new FhirContext(fhirVersion);
-
-        FHIR_CONTEXTS.put(fhirVersion, context);
-      }
-
-      return context;
+      return FHIR_CONTEXTS.computeIfAbsent(fhirVersion, v -> new FhirContext(fhirVersion));
     }
   }
 

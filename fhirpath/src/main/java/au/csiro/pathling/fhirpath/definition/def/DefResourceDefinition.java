@@ -21,7 +21,7 @@ public class DefResourceDefinition implements ResourceDefinition {
   
   @Override
   @Nonnull
-  public Optional<ChildDefinition> getChildElement(@Nonnull String name) {
+  public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
     return children.stream()
         .filter(child -> child.getName().equals(name))
         .findFirst();
@@ -29,8 +29,8 @@ public class DefResourceDefinition implements ResourceDefinition {
 
   @Nonnull
   public static DefResourceDefinition of(
-      @Nonnull DefResourceTag resourceTag,
-      ChildDefinition... children) {
+      @Nonnull final DefResourceTag resourceTag,
+      final ChildDefinition... children) {
     return DefResourceDefinition.of(resourceTag, List.of(children));
   }
 }

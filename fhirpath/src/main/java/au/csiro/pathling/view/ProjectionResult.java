@@ -74,8 +74,7 @@ public class ProjectionResult {
       return results.get(0);
     } else {
       return of(
-          results.stream().flatMap(r -> r.getResults().stream())
-              .collect(Collectors.toUnmodifiableList()),
+          results.stream().flatMap(r -> r.getResults().stream()).toList(),
           structProduct(outer,
               results.stream().map(ProjectionResult::getResultColumn).toArray(Column[]::new))
       );
