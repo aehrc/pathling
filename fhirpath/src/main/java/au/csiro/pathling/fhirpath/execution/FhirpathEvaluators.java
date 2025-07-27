@@ -19,68 +19,30 @@ package au.csiro.pathling.fhirpath.execution;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
-import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
-import lombok.EqualsAndHashCode;
 import lombok.Value;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * Utility class for creating different types of FhirpathEvaluator instances.
+ * Utility class for creating FhirpathEvaluator instances.
  * <p>
- * This class provides factory methods for creating evaluators with different resource resolution
- * strategies:
- * <ul>
- *   <li>{@link #createNull} - Creates an evaluator that returns empty collections, primarily used
- *       for validating FHIRPath expressions and determining result types without executing queries</li>
- *   <li>{@link #createSingle} - Creates an evaluator for working with a single resource type</li>
- * </ul>
- * <p>
- * The class also provides factory classes for creating evaluators with specific configurations:
- * <ul>
- *   <li>{@link SingleEvaluatorFactory} - Factory for creating single resource evaluators</li>
- * </ul>
+ * This class provides factory methods and factory classes for creating evaluators that work with
+ * single resource types. The {@link #createSingle} method creates an evaluator for working with a
+ * single resource type, whilst the {@link SingleEvaluatorFactory} and
+ * {@link SingleEvaluatorProvider} classes provide reusable factory instances for creating
+ * evaluators with specific configurations.
  */
 @UtilityClass
 @Slf4j
 public class FhirpathEvaluators {
-
-  /**
-   * Creates a null evaluator that returns empty collections.
-   * <p>
-   * The null evaluator is primarily used for:
-   * <ul>
-   *   <li>Validating FHIRPath expressions without executing actual queries</li>
-   *   <li>Determining the result type of a FHIRPath expression</li>
-   *   <li>Testing FHIRPath functionality without requiring actual data</li>
-   * </ul>
-   * <p>
-   * This evaluator is efficient for syntax checking and type analysis since it doesn't
-   * load or process any actual resource data.
-   *
-   * @param subjectResource the subject resource type
-   * @param fhirContext the FHIR context
-   * @return a new FhirpathEvaluator that returns empty collections
-   */
-  @Nonnull
-  public static FhirpathEvaluator createNull(
-      @Nonnull final ResourceType subjectResource,
-      @Nonnull final FhirContext fhirContext) {
-    return new FhirpathEvaluator(
-        new NullResourceResolver(subjectResource, fhirContext),
-        StaticFunctionRegistry.getInstance(),
-        Map.of());
-  }
 
   /**
    * Creates a single resource evaluator.
@@ -114,38 +76,6 @@ public class FhirpathEvaluators {
         functionRegistry,
         variables
     );
-  }
-
-  /**
-   * A resource resolver that returns empty collections for all resource types.
-   * <p>
-   * This resolver is primarily used for:
-   * <ul>
-   *   <li>Validating FHIRPath expressions without executing actual queries</li>
-   *   <li>Determining the result type of a FHIRPath expression</li>
-   *   <li>Testing FHIRPath functionality without requiring actual data</li>
-   * </ul>
-   * <p>
-   * When using this resolver, all resource collections will be empty, but they will
-   * have the correct structure and type information, allowing for type checking and
-   * validation of FHIRPath expressions without the overhead of data processing.
-   */
-  @EqualsAndHashCode(callSuper = true)
-  @Value
-  private static class NullResourceResolver extends BaseResourceResolver {
-
-    @Nonnull
-    ResourceType subjectResource;
-
-    @Nonnull
-    FhirContext fhirContext;
-
-    @Nonnull
-    protected ResourceCollection createResource(@Nonnull final ResourceType resourceType) {
-      return ResourceCollection.build(
-          DefaultRepresentation.empty(),
-          getFhirContext(), resourceType);
-    }
   }
 
   /**
@@ -201,20 +131,11 @@ public class FhirpathEvaluators {
    * resource and dynamically supplied context paths, which guide the evaluation process for
    * FHIRPath expressions.
    */
-  @Value
-  public static class SingleEvaluatorProvider implements FhirpathEvaluator.Provider {
-
-    @Nonnull
-    FhirContext fhirContext;
-
-    @Nonnull
-    FunctionRegistry<?> functionRegistry;
-
-    @Nonnull
-    Map<String, Collection> variables;
-
-    @Nonnull
-    DataSource dataSource;
+  public record SingleEvaluatorProvider(@Nonnull FhirContext fhirContext,
+                                        @Nonnull FunctionRegistry<?> functionRegistry,
+                                        @Nonnull Map<String, Collection> variables,
+                                        @Nonnull DataSource dataSource) implements
+      FhirpathEvaluator.Provider {
 
     @Nonnull
     @Override
