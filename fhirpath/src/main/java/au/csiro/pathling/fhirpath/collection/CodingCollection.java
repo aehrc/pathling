@@ -20,19 +20,19 @@ package au.csiro.pathling.fhirpath.collection;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
-import au.csiro.pathling.fhirpath.Concepts;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.StringCoercible;
+import au.csiro.pathling.fhirpath.TerminologyConcepts;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.CodingComparator;
+import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
+import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefCompositeDefinition;
 import au.csiro.pathling.fhirpath.definition.def.DefPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
-import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
-import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.sql.misc.CodingToLiteral;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -156,8 +156,8 @@ public class CodingCollection extends Collection implements Comparable, StringCo
 
   @Override
   @Nonnull
-  public Optional<Concepts> toConcepts() {
-    return Optional.of(Concepts.set(this.getColumn(), this));
+  public Optional<TerminologyConcepts> toConcepts() {
+    return Optional.of(TerminologyConcepts.set(this.getColumn(), this));
   }
 
   @Nonnull

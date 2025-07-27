@@ -20,8 +20,8 @@ package au.csiro.pathling.fhirpath.function.provider;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.config.TerminologyConfiguration;
-import au.csiro.pathling.fhirpath.Concepts;
-import au.csiro.pathling.fhirpath.Concepts.Set;
+import au.csiro.pathling.fhirpath.TerminologyConcepts;
+import au.csiro.pathling.fhirpath.TerminologyConcepts.Set;
 import au.csiro.pathling.fhirpath.annotations.SofCompatibility;
 import au.csiro.pathling.fhirpath.annotations.SofCompatibility.Profile;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
@@ -188,7 +188,7 @@ public abstract class TerminologyFunctions {
    */
   @FhirPathFunction
   @Nonnull
-  public static BooleanCollection memberOf(@Nonnull final Concepts input,
+  public static BooleanCollection memberOf(@Nonnull final TerminologyConcepts input,
       @Nonnull final StringCollection valueSetURL) {
     return BooleanCollection.build(
         input.apply("member_of", valueSetURL.getColumn().singular())
@@ -209,8 +209,8 @@ public abstract class TerminologyFunctions {
    */
   @FhirPathFunction
   @Nonnull
-  public static BooleanCollection subsumes(@Nonnull final Concepts input,
-      @Nonnull final Concepts codes) {
+  public static BooleanCollection subsumes(@Nonnull final TerminologyConcepts input,
+      @Nonnull final TerminologyConcepts codes) {
 
     return BooleanCollection.build(
         input.apply("subsumes", codes.flatten().getCodings(),
@@ -230,8 +230,8 @@ public abstract class TerminologyFunctions {
    */
   @FhirPathFunction
   @Nonnull
-  public static BooleanCollection subsumedBy(@Nonnull final Concepts input,
-      @Nonnull final Concepts codes) {
+  public static BooleanCollection subsumedBy(@Nonnull final TerminologyConcepts input,
+      @Nonnull final TerminologyConcepts codes) {
     return BooleanCollection.build(
         input.apply("subsumes", codes.flatten().getCodings(),
             DefaultRepresentation.literal(true))
@@ -263,7 +263,7 @@ public abstract class TerminologyFunctions {
    */
   @FhirPathFunction
   @Nonnull
-  public static CodingCollection translate(@Nonnull final Concepts input,
+  public static CodingCollection translate(@Nonnull final TerminologyConcepts input,
       @Nonnull final StringCollection conceptMapUrl,
       @Nullable final BooleanCollection reverse, @Nullable final StringCollection equivalence,
       @Nullable final StringCollection target) {

@@ -23,8 +23,8 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.Concepts;
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.TerminologyConcepts;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
@@ -469,15 +469,15 @@ public class Collection {
   }
 
   /**
-   * Returns an optional {@link Concepts} representation of this collection.
+   * Returns an optional {@link TerminologyConcepts} representation of this collection.
    *
-   * @return An optional {@link Concepts} representation of this collection
+   * @return An optional {@link TerminologyConcepts} representation of this collection
    */
   @Nonnull
-  public Optional<Concepts> toConcepts() {
+  public Optional<TerminologyConcepts> toConcepts() {
     return getFhirType()
         .filter(FHIRDefinedType.CODEABLECONCEPT::equals)
-        .map(t -> Concepts.union(getColumn().getField("coding"),
+        .map(t -> TerminologyConcepts.union(getColumn().getField("coding"),
             (CodingCollection) traverse("coding").orElseThrow()));
   }
 

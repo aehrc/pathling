@@ -3,9 +3,9 @@ package au.csiro.pathling.fhirpath.function.resolver;
 import static java.util.Objects.isNull;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.Concepts;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.TerminologyConcepts;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -109,7 +109,7 @@ public record FunctionParameterResolver(EvaluationContext evaluationContext, Col
    * <p>
    * This method handles different parameter types:
    * <ul>
-   *   <li>Collection and Concepts - evaluates the FHIRPath and converts to the appropriate type</li>
+   *   <li>Collection and TerminologyConcepts - evaluates the FHIRPath and converts to the appropriate type</li>
    *   <li>CollectionTransform - creates a transform that applies the FHIRPath with the current context</li>
    *   <li>TypeSpecifier - extracts the TypeSpecifier value from a TypeSpecifierPath</li>
    * </ul>
@@ -133,7 +133,7 @@ public record FunctionParameterResolver(EvaluationContext evaluationContext, Col
         return context.reportError("Parameter is required but no argument was provided");
       }
     } else if (Collection.class.isAssignableFrom(parameter.getType())
-        || Concepts.class.isAssignableFrom(parameter.getType())) {
+        || TerminologyConcepts.class.isAssignableFrom(parameter.getType())) {
       // evaluate collection types 
       return resolveCollection(
           argument.apply(evaluationContext.getInputContext(), evaluationContext),
@@ -161,7 +161,7 @@ public record FunctionParameterResolver(EvaluationContext evaluationContext, Col
    * This method handles:
    * <ul>
    *   <li>Converting collections to BooleanCollection when the parameter type is BooleanCollection</li>
-   *   <li>Converting collections to Concepts when the parameter type is Concepts</li>
+   *   <li>Converting collections to TerminologyConcepts when the parameter type is TerminologyConcepts</li>
    *   <li>Converting EmptyCollection to specific collection types when needed</li>
    *   <li>Passing collections directly when the parameter type is assignable from the collection type</li>
    * </ul>
@@ -180,12 +180,12 @@ public record FunctionParameterResolver(EvaluationContext evaluationContext, Col
     if (BooleanCollection.class.isAssignableFrom(parameter.getType())) {
       return collection.asBooleanPath();
 
-    } else if (Concepts.class.isAssignableFrom(parameter.getType())) {
-      // Check if the parameter expects a Concepts type. Attempt to convert the collection to 
-      // Concepts, reporting an error if conversion fails.
+    } else if (TerminologyConcepts.class.isAssignableFrom(parameter.getType())) {
+      // Check if the parameter expects a TerminologyConcepts type. Attempt to convert the 
+      // collection to TerminologyConcepts, reporting an error if conversion fails.
       return collection.toConcepts().orElseGet(
           () -> context.reportError("Cannot convert collection of type " +
-              collection.getClass().getSimpleName() + " to Concepts")
+              collection.getClass().getSimpleName() + " to TerminologyConcepts")
       );
 
     } else if (parameter.getType().isAssignableFrom(collection.getClass())) {

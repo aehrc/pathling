@@ -13,7 +13,7 @@ import lombok.Value;
  * Represents a set of concepts, which can be either a single concept or a union of multiple
  * concepts.
  */
-public sealed interface Concepts permits Concepts.Set, Concepts.Union {
+public sealed interface TerminologyConcepts permits TerminologyConcepts.Set, TerminologyConcepts.Union {
 
   /**
    * Apply a user defined function to this set of concepts.
@@ -43,7 +43,7 @@ public sealed interface Concepts permits Concepts.Set, Concepts.Union {
    */
   @Value
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  class Set implements Concepts {
+  class Set implements TerminologyConcepts {
 
     ColumnRepresentation codings;
     CodingCollection codingTemplate;
@@ -72,7 +72,7 @@ public sealed interface Concepts permits Concepts.Set, Concepts.Union {
    */
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
   @Value
-  class Union implements Concepts {
+  class Union implements TerminologyConcepts {
 
     ColumnRepresentation codingUnion;
     CodingCollection codingTemplate;
@@ -113,7 +113,7 @@ public sealed interface Concepts permits Concepts.Set, Concepts.Union {
    * @return a new set of concepts
    */
   @Nonnull
-  static Concepts set(@Nonnull final ColumnRepresentation codingSet,
+  static TerminologyConcepts set(@Nonnull final ColumnRepresentation codingSet,
       @Nonnull final CodingCollection codingTemplate) {
     return new Set(codingSet, codingTemplate);
   }
@@ -126,7 +126,7 @@ public sealed interface Concepts permits Concepts.Set, Concepts.Union {
    * @return a new union of concepts
    */
   @Nonnull
-  static Concepts union(@Nonnull final ColumnRepresentation codingUnion,
+  static TerminologyConcepts union(@Nonnull final ColumnRepresentation codingUnion,
       @Nonnull final CodingCollection codingTemplate) {
     return new Union(codingUnion, codingTemplate);
   }

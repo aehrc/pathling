@@ -6,9 +6,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.Concepts;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.TerminologyConcepts;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
@@ -53,7 +53,7 @@ class FunctionParameterResolverTest {
   @SuppressWarnings("unused")
   static Collection funcAllTypes(@Nonnull final Collection input,
       @Nonnull final Collection collectionArgument,
-      @Nonnull final BooleanCollection booleanArgument, @Nonnull final Concepts concepts,
+      @Nonnull final BooleanCollection booleanArgument, @Nonnull final TerminologyConcepts concepts,
       @Nonnull final TypeSpecifier typeSpecifier) {
     return null;
   }
@@ -68,7 +68,7 @@ class FunctionParameterResolverTest {
 
   @Nullable
   @SuppressWarnings("unused")
-  public static Collection funcConcepts(@Nonnull final Concepts input) {
+  public static Collection funcConcepts(@Nonnull final TerminologyConcepts input) {
     return null;
   }
 
@@ -120,7 +120,7 @@ class FunctionParameterResolverTest {
     final Collection booleanArgument = mock(Collection.class);
     final BooleanCollection booleanRepresentation = mock(BooleanCollection.class);
     final CodingCollection codingArgument = mock(CodingCollection.class);
-    final Concepts concepts = mock(Concepts.Set.class);
+    final TerminologyConcepts concepts = mock(TerminologyConcepts.Set.class);
     final TypeSpecifier typeSpecifier = mock(TypeSpecifier.class);
 
     // mock booleanArgument to return booleanRepresentation when asBooleanPath() is called
@@ -183,7 +183,7 @@ class FunctionParameterResolverTest {
   @Test
   void testConceptsInputType() {
     final CodingCollection codingInput = mock(CodingCollection.class);
-    final Concepts concepts = mock(Concepts.Set.class);
+    final TerminologyConcepts concepts = mock(TerminologyConcepts.Set.class);
     // mock codingInput to return concept when toConcepts() is called
     when(codingInput.toConcepts()).thenReturn(Optional.of(concepts));
 
@@ -297,7 +297,7 @@ class FunctionParameterResolverTest {
         InvalidUserInputError.class, () -> resolver.bind(method));
 
     assertEquals(
-        "Function 'funcConcepts', input: Cannot convert collection of type CodingCollection to Concepts",
+        "Function 'funcConcepts', input: Cannot convert collection of type CodingCollection to TerminologyConcepts",
         ex.getMessage());
   }
 
