@@ -50,6 +50,9 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @SofCompatibility(Profile.TERMINOLOGY)
 public abstract class TerminologyFunctions {
 
+  private TerminologyFunctions() {
+  }
+
   /**
    * When invoked on a {@code Coding}, returns the preferred display term, according to the
    * terminology server.
@@ -129,7 +132,7 @@ public abstract class TerminologyFunctions {
 
     return Collection.build(resultCtx, propertyType,
         input.getDefinition().flatMap(Functions.maybeCast(ElementDefinition.class))
-            .filter(__ -> propertyType == FHIRDefinedType.CODING));
+            .filter(d -> propertyType == FHIRDefinedType.CODING));
   }
 
   /**
