@@ -597,40 +597,101 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
 
   override def eval(input: InternalRow): Any = {
     val inputArrays = children.map(_.eval(input).asInstanceOf[ArrayData])
-    val productSize = if (inputArrays.isEmpty || inputArrays.contains(null)) {
+    val productSize = calculateProductSize(inputArrays)
+
+    if (productSize > 0 || !outer) {
+      val result = buildProductArray(inputArrays, productSize)
+      new GenericArrayData(result)
+    } else {
+      new GenericArrayData(Array[InternalRow](null))
+    }
+  }
+
+  /**
+   * Calculates the total number of product combinations from input arrays.
+   *
+   * @param inputArrays The sequence of input arrays to compute the product size for
+   * @return The product size, or 0 if any array is empty or null
+   */
+  private def calculateProductSize(inputArrays: Seq[ArrayData]): Int = {
+    if (inputArrays.isEmpty || inputArrays.contains(null)) {
       0
     } else {
       inputArrays.map(_.numElements()).product
     }
+  }
 
-    if (productSize > 0 || !outer) {
-      val result = new Array[InternalRow](productSize)
-      val zippedArrays: Seq[(ArrayData, Int)] = inputArrays.zipWithIndex
-      for (i <- 0 until productSize) {
-        val productIndexes: Array[Int] = new Array[Int](children.length)
-        var productBase = i
-        for (childIndex <- children.indices) {
-          val childArity = inputArrays(childIndex).numElements()
-          productIndexes(childIndex) = productBase % childArity
-          productBase = productBase / childArity
-        }
-        val currentRowData = new Array[Any](sizeOfOutput)
-        zippedArrays.foreach { case (arr, index) =>
-          if (!arr.isNullAt(productIndexes(index))) {
-            val structData = arr.get(productIndexes(index), arrayElementTypes(index))
-              .asInstanceOf[InternalRow]
-            for (fi <- 0 until structData.numFields) {
-              if (!structData.isNullAt(fi)) {
-                currentRowData(offsetsScala(index) + fi) = structData.get(fi, null)
-              }
-            }
-          }
-        }
-        result(i) = InternalRow.apply(currentRowData: _*)
+  /**
+   * Builds the array of product combinations from input arrays.
+   *
+   * @param inputArrays The sequence of input arrays containing struct elements
+   * @param productSize The total number of product combinations to generate
+   * @return An array of InternalRow containing all product combinations
+   */
+  private def buildProductArray(inputArrays: Seq[ArrayData], productSize: Int): Array[InternalRow] = {
+    val result = new Array[InternalRow](productSize)
+    val zippedArrays: Seq[(ArrayData, Int)] = inputArrays.zipWithIndex
+    
+    for (i <- 0 until productSize) {
+      val productIndexes = calculateProductIndexes(i, inputArrays)
+      val currentRowData = buildRowData(zippedArrays, productIndexes)
+      result(i) = InternalRow.apply(currentRowData: _*)
+    }
+    result
+  }
+
+  /**
+   * Calculates the array indexes for a specific product combination.
+   *
+   * @param productIndex The index of the product combination to calculate
+   * @param inputArrays The sequence of input arrays to index into
+   * @return An array of indexes, one for each input array
+   */
+  private def calculateProductIndexes(productIndex: Int, inputArrays: Seq[ArrayData]): Array[Int] = {
+    val productIndexes: Array[Int] = new Array[Int](children.length)
+    var productBase = productIndex
+    
+    for (childIndex <- children.indices) {
+      val childArity = inputArrays(childIndex).numElements()
+      productIndexes(childIndex) = productBase % childArity
+      productBase = productBase / childArity
+    }
+    productIndexes
+  }
+
+  /**
+   * Builds the row data for a single product combination by merging struct fields.
+   *
+   * @param zippedArrays The input arrays paired with their indexes
+   * @param productIndexes The array indexes for this product combination
+   * @return An array containing the merged field values for the output row
+   */
+  private def buildRowData(zippedArrays: Seq[(ArrayData, Int)], productIndexes: Array[Int]): Array[Any] = {
+    val currentRowData = new Array[Any](sizeOfOutput)
+    
+    zippedArrays.foreach { case (arr, index) =>
+      if (!arr.isNullAt(productIndexes(index))) {
+        copyStructFields(arr, index, productIndexes(index), currentRowData)
       }
-      new GenericArrayData(result)
-    } else {
-      new GenericArrayData(Array[InternalRow](null))
+    }
+    currentRowData
+  }
+
+  /**
+   * Copies struct fields from an array element to the output row data.
+   *
+   * @param arr The source array containing struct elements
+   * @param arrayIndex The index of the source array in the children sequence
+   * @param elementIndex The index of the element within the source array
+   * @param currentRowData The output row data array to copy fields into
+   */
+  private def copyStructFields(arr: ArrayData, arrayIndex: Int, elementIndex: Int, currentRowData: Array[Any]): Unit = {
+    val structData = arr.get(elementIndex, arrayElementTypes(arrayIndex)).asInstanceOf[InternalRow]
+    
+    for (fi <- 0 until structData.numFields) {
+      if (!structData.isNullAt(fi)) {
+        currentRowData(offsetsScala(arrayIndex) + fi) = structData.get(fi, null)
+      }
     }
   }
 
@@ -661,6 +722,6 @@ object ColumnFunctions {
    * @param e The input columns
    */
   @scala.annotation.varargs
-  def structProduct_outer(e: Column*): Column = new Column(
+  def structProductOuter(e: Column*): Column = new Column(
     StructProduct(e.map(_.expr), outer = true))
 }
