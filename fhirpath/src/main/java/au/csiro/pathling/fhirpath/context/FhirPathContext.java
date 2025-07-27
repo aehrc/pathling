@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.fhirpath.context;
 
-import static au.csiro.pathling.fhirpath.FhirPathConstants.PredefinedVariables.*;
-
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.variable.EnvironmentVariableResolver;
@@ -28,6 +26,10 @@ import lombok.Value;
 @Value(staticConstructor = "of")
 public class FhirPathContext {
 
+  public static final String RESOURCE_VARIABLE_NAME = "resource";
+  public static final String ROOT_RESOURCE_VARIABLE_NAME = "rootResource";
+  public static final String CONTEXT_VARIABLE_NAME = "context";
+  
   @Nonnull
   ResourceCollection resource;
 
@@ -39,9 +41,9 @@ public class FhirPathContext {
 
   @Nonnull
   public Collection resolveVariable(@Nonnull final String name) {
-    if (name.equals(CONTEXT)) {
+    if (name.equals(CONTEXT_VARIABLE_NAME)) {
       return inputContext;
-    } else if (name.equals(RESOURCE) || name.equals(ROOT_RESOURCE)) {
+    } else if (name.equals(RESOURCE_VARIABLE_NAME) || name.equals(ROOT_RESOURCE_VARIABLE_NAME)) {
       return resource;
     } else {
       return variables.get(name)

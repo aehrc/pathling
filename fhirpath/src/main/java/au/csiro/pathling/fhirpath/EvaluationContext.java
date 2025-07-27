@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.fhirpath;
 
-import au.csiro.pathling.fhirpath.FhirPathConstants.PredefinedVariables;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.context.FhirPathContext;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
 import jakarta.annotation.Nonnull;
@@ -79,6 +79,6 @@ public interface EvaluationContext {
    */
   @Nonnull
   default Collection getInputContext() {
-    return resolveVariable(PredefinedVariables.CONTEXT);
+    return resolveVariable(FhirPathContext.CONTEXT_VARIABLE_NAME);
   }
 }
