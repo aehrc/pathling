@@ -85,7 +85,7 @@ public class ProjectionResult {
   @Nonnull
   public static Column structProduct(final boolean outer, @Nonnull final Column... columns) {
     return outer
-           ? ColumnFunctions.structProduct_outer(columns)
+           ? ColumnFunctions.structProductOuter(columns)
            : ColumnFunctions.structProduct(columns);
   }
 

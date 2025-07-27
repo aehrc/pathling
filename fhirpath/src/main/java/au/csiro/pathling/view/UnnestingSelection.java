@@ -18,7 +18,7 @@
 package au.csiro.pathling.view;
 
 import static au.csiro.pathling.encoders.ColumnFunctions.structProduct;
-import static au.csiro.pathling.encoders.ColumnFunctions.structProduct_outer;
+import static au.csiro.pathling.encoders.ColumnFunctions.structProductOuter;
 import static org.apache.spark.sql.functions.flatten;
 import static org.apache.spark.sql.functions.transform;
 
@@ -63,14 +63,14 @@ public class UnnestingSelection implements ProjectionClause {
         transform(unnestingColumn, c -> unnestComponents(c, unnestingCollection, context)));
 
     if (joinOuter) {
-      // If we are doing an outer join, we need to use structProduct_outer to ensure that a row is
+      // If we are doing an outer join, we need to use structProductOuter to ensure that a row is
       // always returned, even if the unnesting collection is empty.
-      columnResult = structProduct_outer(columnResult);
+      columnResult = structProductOuter(columnResult);
     }
 
     // This is a way to evaluate the expression for the purpose of getting the types of the result.
     final ProjectionContext stubContext = context.withInputContext(
-        unnestingCollection.map(__ -> DefaultRepresentation.empty()));
+        unnestingCollection.map(c -> DefaultRepresentation.empty()));
     final List<ProjectionResult> stubResults = components.stream()
         .map(s -> s.evaluate(stubContext))
         .toList();
@@ -87,7 +87,7 @@ public class UnnestingSelection implements ProjectionClause {
       @Nonnull final Collection unnestingCollection, @Nonnull final ProjectionContext context) {
     // Create a new projection context based upon the unnesting collection.
     final ProjectionContext projectionContext = context.withInputContext(
-        unnestingCollection.map(__ -> new DefaultRepresentation(unnestingColumn)));
+        unnestingCollection.map(c -> new DefaultRepresentation(unnestingColumn)));
 
     // Evaluate each of the components of the unnesting selection, and get the result
     // columns.
