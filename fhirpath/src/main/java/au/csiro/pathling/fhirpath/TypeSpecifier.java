@@ -129,6 +129,7 @@ public class TypeSpecifier {
         return Optional.of(ResourceType.fromCode(typeName));
       }
     } catch (FHIRException ignored) {
+      // If the typeName is not a valid ResourceType, we ignore the exception and return empty.
     }
     return Optional.empty();
   }
