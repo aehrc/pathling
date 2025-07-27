@@ -15,7 +15,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @Value(staticConstructor = "of")
 public class DefPrimitiveDefinition implements ElementDefinition {
 
-  public static DefPrimitiveDefinition single(String name, FHIRDefinedType type) {
+  public static DefPrimitiveDefinition single(final String name, final FHIRDefinedType type) {
     return new DefPrimitiveDefinition(name, type, 1);
   }
 
@@ -37,7 +37,7 @@ public class DefPrimitiveDefinition implements ElementDefinition {
 
   @Override
   @Nonnull
-  public Optional<ChildDefinition> getChildElement(@Nonnull String name) {
+  public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
     return Optional.empty();
   }
 
