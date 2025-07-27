@@ -1,5 +1,6 @@
 package au.csiro.pathling.fhirpath.definition.fhir;
 
+import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
@@ -44,8 +45,8 @@ class FhirChoiceDefinition implements ChoiceDefinition {
 
   @Nonnull
   @Override
-  public Optional<ElementDefinition> getChildElement(@Nonnull final String name) {
-    return getChildByElementName(name);
+  public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
+    return getChildByElementName(name).map(e -> e);
   }
 
   @Nonnull

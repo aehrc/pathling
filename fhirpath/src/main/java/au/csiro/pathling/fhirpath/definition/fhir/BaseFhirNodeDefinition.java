@@ -41,16 +41,16 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  * @author Piotr Szul
  */
-abstract class BaseFhirNodeDefinition<ED extends BaseRuntimeElementDefinition<?>> implements
+abstract class BaseFhirNodeDefinition<D extends BaseRuntimeElementDefinition<?>> implements
     NodeDefinition {
 
   @Nonnull
-  protected final ED elementDefinition;
+  protected final D elementDefinition;
 
   @Nonnull
   final Map<String, RuntimeChildChoiceDefinition> nestedChildElementsByName;
 
-  protected BaseFhirNodeDefinition(@Nonnull final ED elementDefinition) {
+  protected BaseFhirNodeDefinition(@Nonnull final D elementDefinition) {
     this.elementDefinition = elementDefinition;
 
     // Create a stream of all the definitions of the children of this element.
@@ -75,7 +75,7 @@ abstract class BaseFhirNodeDefinition<ED extends BaseRuntimeElementDefinition<?>
 
   @Override
   @Nonnull
-  public Optional<? extends ChildDefinition> getChildElement(@Nonnull final String name) {
+  public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
     // If the child is a qualified choice element (e.g. valueString), resolve the correct child 
     // definition using the pre-built map.
     final RuntimeChildChoiceDefinition choiceChild = nestedChildElementsByName.get(name);
@@ -110,6 +110,6 @@ abstract class BaseFhirNodeDefinition<ED extends BaseRuntimeElementDefinition<?>
         .map(FHIRDefinedType::fromCode)
         // special case for backbone elements
         .or(() -> Optional.ofNullable(elementClass.getAnnotation(Block.class))
-            .map(__ -> FHIRDefinedType.BACKBONEELEMENT));
+            .map(t -> FHIRDefinedType.BACKBONEELEMENT));
   }
 }

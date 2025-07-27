@@ -16,6 +16,6 @@ public interface NodeDefinition {
    * @return a new {@link NodeDefinition} describing the child
    */
   @Nonnull
-  Optional<? extends ChildDefinition> getChildElement(@Nonnull String name);
+  Optional<ChildDefinition> getChildElement(@Nonnull String name);
 
 }

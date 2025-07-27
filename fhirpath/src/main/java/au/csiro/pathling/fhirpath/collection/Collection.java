@@ -238,7 +238,7 @@ public class Collection {
   @Nonnull
   public Optional<Collection> traverse(@Nonnull final String elementName) {
     // We use the implementation of getChildElement in the definition to get the child definition.
-    final Optional<? extends ChildDefinition> maybeChildDef = definition.flatMap(
+    final Optional<ChildDefinition> maybeChildDef = definition.flatMap(
         def -> def.getChildElement(elementName));
 
     // There are two paths here:

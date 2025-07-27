@@ -37,7 +37,7 @@ public class DefPrimitiveDefinition implements ElementDefinition {
 
   @Override
   @Nonnull
-  public Optional<? extends ChildDefinition> getChildElement(@Nonnull String name) {
+  public Optional<ChildDefinition> getChildElement(@Nonnull String name) {
     return Optional.empty();
   }
 

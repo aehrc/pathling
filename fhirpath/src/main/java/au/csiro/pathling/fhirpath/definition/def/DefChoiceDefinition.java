@@ -65,7 +65,7 @@ public class DefChoiceDefinition implements ChoiceDefinition {
    */
   @Override
   @Nonnull
-  public Optional<? extends ChildDefinition> getChildElement(@Nonnull final String name) {
+  public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
     return choices.stream()
         .filter(child -> child.getName().equals(name))
         .findFirst();

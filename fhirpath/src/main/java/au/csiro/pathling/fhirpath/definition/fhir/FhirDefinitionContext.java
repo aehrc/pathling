@@ -54,7 +54,7 @@ public class FhirDefinitionContext implements DefinitionContext {
    * @return A shiny new ElementDefinition
    */
   @Nonnull
-  static Optional<? extends ChildDefinition> build(
+  static Optional<ChildDefinition> build(
       @Nonnull final BaseRuntimeChildDefinition childDefinition,
       @Nonnull final String elementName) {
 
@@ -63,7 +63,7 @@ public class FhirDefinitionContext implements DefinitionContext {
       return Optional.of(
           new FhirChoiceDefinition((RuntimeChildChoiceDefinition) childDefinition));
     } else {
-      return buildElement(childDefinition, elementName);
+      return buildElement(childDefinition, elementName).map(e -> e);
     }
   }
 

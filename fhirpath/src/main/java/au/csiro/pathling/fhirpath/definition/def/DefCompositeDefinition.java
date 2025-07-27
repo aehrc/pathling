@@ -34,7 +34,7 @@ public class DefCompositeDefinition implements ElementDefinition {
 
   @Override
   @Nonnull
-  public Optional<? extends ChildDefinition> getChildElement(@Nonnull String name) {
+  public Optional<ChildDefinition> getChildElement(@Nonnull String name) {
     return children.stream()
         .filter(child -> child.getName().equals(name))
         .findFirst();
