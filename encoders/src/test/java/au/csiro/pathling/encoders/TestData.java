@@ -23,12 +23,10 @@
 
 package au.csiro.pathling.encoders;
 
-import com.google.common.collect.ImmutableList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.hl7.fhir.r4.model.Annotation;
 import org.hl7.fhir.r4.model.CodeableConcept;
@@ -290,7 +288,7 @@ public class TestData {
 
     provenance.setId("test-provenance");
 
-    provenance.setTarget(ImmutableList.of(new Reference("test-target")));
+    provenance.setTarget(List.of(new Reference("test-target")));
 
     provenance.getEntityFirstRep()
         .setRole(ProvenanceEntityRole.SOURCE)
@@ -402,9 +400,7 @@ public class TestData {
             item.setItem(newNestedItems(nestingLevel - 1, noChildren, thisItemId + "."));
           }
           return item;
-        })
-        .collect(
-            Collectors.toList());
+        }).toList();
   }
 
   /**

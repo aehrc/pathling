@@ -31,7 +31,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ca.uhn.fhir.parser.IParser;
-import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
@@ -71,7 +70,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Test for FHIR encoders.
  */
-public class FhirEncodersTest {
+class FhirEncodersTest {
 
   private static final int NESTING_LEVEL_3 = 3;
 
@@ -116,7 +115,7 @@ public class FhirEncodersTest {
    * Set up Spark.
    */
   @BeforeAll
-  public static void setUp() {
+  static void setUp() {
     spark = SparkSession.builder()
         .master("local[*]")
         .appName("testing")
@@ -124,37 +123,33 @@ public class FhirEncodersTest {
         .config("spark.driver.host", "localhost")
         .getOrCreate();
 
-    patientDataset = spark.createDataset(ImmutableList.of(patient),
-        ENCODERS_L0.of(Patient.class));
+    patientDataset = spark.createDataset(List.of(patient), ENCODERS_L0.of(Patient.class));
     decodedPatient = patientDataset.head();
 
-    conditionsDataset = spark.createDataset(ImmutableList.of(condition),
-        ENCODERS_L0.of(Condition.class));
+    conditionsDataset = spark.createDataset(List.of(condition), ENCODERS_L0.of(Condition.class));
     decodedCondition = conditionsDataset.head();
 
-    conditionsWithVersionDataset = spark.createDataset(ImmutableList.of(conditionWithVersion),
+    conditionsWithVersionDataset = spark.createDataset(List.of(conditionWithVersion),
         ENCODERS_L0.of(Condition.class));
     decodedConditionWithVersion = conditionsWithVersionDataset.head();
 
-    observationsDataset = spark.createDataset(ImmutableList.of(observation),
+    observationsDataset = spark.createDataset(List.of(observation),
         ENCODERS_L0.of(Observation.class));
     decodedObservation = observationsDataset.head();
 
-    medDataset = spark.createDataset(ImmutableList.of(medRequest),
+    medDataset = spark.createDataset(List.of(medRequest),
         ENCODERS_L0.of(MedicationRequest.class));
     decodedMedRequest = medDataset.head();
 
-    encounterDataset = spark
-        .createDataset(ImmutableList.of(encounter), ENCODERS_L0.of(Encounter.class));
+    encounterDataset = spark.createDataset(List.of(encounter), ENCODERS_L0.of(Encounter.class));
     decodedEncounter = encounterDataset.head();
 
-    questionnaireDataset = spark
-        .createDataset(ImmutableList.of(questionnaire), ENCODERS_L0.of(Questionnaire.class));
+    questionnaireDataset = spark.createDataset(List.of(questionnaire),
+        ENCODERS_L0.of(Questionnaire.class));
     decodedQuestionnaire = questionnaireDataset.head();
 
-    questionnaireResponseDataset = spark
-        .createDataset(ImmutableList.of(questionnaireResponse),
-            ENCODERS_L0.of(QuestionnaireResponse.class));
+    questionnaireResponseDataset = spark.createDataset(List.of(questionnaireResponse),
+        ENCODERS_L0.of(QuestionnaireResponse.class));
     decodedQuestionnaireResponse = questionnaireResponseDataset.head();
   }
 
@@ -162,12 +157,12 @@ public class FhirEncodersTest {
    * Tear down Spark.
    */
   @AfterAll
-  public static void tearDown() {
+  static void tearDown() {
     spark.stop();
   }
 
   @Test
-  public void testResourceId() {
+  void testResourceId() {
     assertEquals(condition.getId(),
         conditionsDataset.select("id").head().get(0));
     assertEquals(condition.getId(),
@@ -175,7 +170,7 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void testResourceWithVersionId() {
+  void testResourceWithVersionId() {
     assertEquals("with-version",
         conditionsWithVersionDataset.select("id").head().get(0));
 
@@ -187,7 +182,7 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void testResourceLanguage() {
+  void testResourceLanguage() {
     assertEquals(condition.getLanguage(),
         conditionsDataset.select("language").head().get(0));
     assertEquals(condition.getLanguage(),
@@ -195,7 +190,7 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void boundCode() {
+  void boundCode() {
 
     final GenericRowWithSchema verificationStatus = (GenericRowWithSchema) conditionsDataset
         .select("verificationStatus")
@@ -206,15 +201,15 @@ public class FhirEncodersTest {
         .getList(verificationStatus.fieldIndex("coding"))
         .get(0);
 
-    assertEquals(condition.getVerificationStatus().getCoding().size(), 1);
-    assertEquals(condition.getVerificationStatus().getCodingFirstRep().getSystem(),
-        coding.getString(coding.fieldIndex("system")));
-    assertEquals(condition.getVerificationStatus().getCodingFirstRep().getCode(),
-        coding.getString(coding.fieldIndex("code")));
+    assertEquals(1, condition.getVerificationStatus().getCoding().size());
+    assertEquals(coding.getString(coding.fieldIndex("system")),
+        condition.getVerificationStatus().getCodingFirstRep().getSystem());
+    assertEquals(coding.getString(coding.fieldIndex("code")),
+        condition.getVerificationStatus().getCodingFirstRep().getCode());
   }
 
   @Test
-  public void choiceValue() {
+  void choiceValue() {
 
     // Our test condition uses the DateTime choice, so use that type and column.
     assertEquals(((DateTimeType) condition.getOnset()).getValueAsString(),
@@ -225,7 +220,7 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void narrative() {
+  void narrative() {
 
     assertEquals(condition.getText().getStatus().toCode(),
         conditionsDataset.select("text.status").head().get(0));
@@ -239,7 +234,7 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void coding() {
+  void coding() {
 
     final Coding expectedCoding = condition.getSeverity().getCodingFirstRep();
     final Coding actualCoding = decodedCondition.getSeverity().getCodingFirstRep();
@@ -274,11 +269,11 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void reference() {
+  void reference() {
     final Condition conditionWithReferences = TestData.conditionWithReferencesWithIdentifiers();
 
-    final Dataset<Condition> conditionL3Dataset = spark
-        .createDataset(ImmutableList.of(conditionWithReferences), ENCODERS_L3.of(Condition.class));
+    final Dataset<Condition> conditionL3Dataset = spark.createDataset(
+        List.of(conditionWithReferences), ENCODERS_L3.of(Condition.class));
 
     final Condition decodedL3Condition = conditionL3Dataset.head();
 
@@ -313,11 +308,11 @@ public class FhirEncodersTest {
 
 
   @Test
-  public void identifier() {
+  void identifier() {
     final Condition conditionWithIdentifiers = TestData.conditionWithIdentifiersWithReferences();
 
-    final Dataset<Condition> conditionL3Dataset = spark
-        .createDataset(ImmutableList.of(conditionWithIdentifiers), ENCODERS_L3.of(Condition.class));
+    final Dataset<Condition> conditionL3Dataset = spark.createDataset(
+        List.of(conditionWithIdentifiers), ENCODERS_L3.of(Condition.class));
 
     final Condition decodedL3Condition = conditionL3Dataset.head();
 
@@ -350,7 +345,7 @@ public class FhirEncodersTest {
 
 
   @Test
-  public void integer() {
+  void integer() {
 
     assertEquals(((IntegerType) patient.getMultipleBirth()).getValue(),
         patientDataset.select("multipleBirthInteger").head().get(0));
@@ -359,7 +354,7 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void bigDecimal() {
+  void bigDecimal() {
 
     final BigDecimal originalDecimal = ((Quantity) observation.getValue()).getValue();
     final BigDecimal queriedDecimal = (BigDecimal) observationsDataset.select("valueQuantity.value")
@@ -388,7 +383,7 @@ public class FhirEncodersTest {
 
 
   @Test
-  public void choiceBigDecimalInQuestionnaire() {
+  void choiceBigDecimalInQuestionnaire() {
 
     final BigDecimal originalDecimal = questionnaire.getItemFirstRep().getEnableWhenFirstRep()
         .getAnswerDecimalType().getValue();
@@ -420,11 +415,11 @@ public class FhirEncodersTest {
             .getValue());
 
     // Nested item should not be present.
-    // assertTrue(decodedQuestionnaire.getItemFirstRep().getItem().isEmpty());
+    assertTrue(decodedQuestionnaire.getItemFirstRep().getItem().isEmpty());
   }
 
   @Test
-  public void choiceBigDecimalInQuestionnaireResponse() {
+  void choiceBigDecimalInQuestionnaireResponse() {
     final BigDecimal originalDecimal = questionnaireResponse.getItemFirstRep().getAnswerFirstRep()
         .getValueDecimalType().getValue();
 
@@ -456,7 +451,7 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void instant() {
+  void instant() {
     final Date originalInstant = TestData.TEST_DATE;
 
     assertEquals(originalInstant,
@@ -468,7 +463,7 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void annotation() throws FHIRException {
+  void annotation() throws FHIRException {
 
     final Annotation original = medRequest.getNoteFirstRep();
     final Annotation decoded = decodedMedRequest.getNoteFirstRep();
@@ -486,7 +481,7 @@ public class FhirEncodersTest {
    * Sanity test with a deep copy to check we didn't break internal state used by copies.
    */
   @Test
-  public void testCopyDecoded() {
+  void testCopyDecoded() {
     assertEquals(condition.getId(), decodedCondition.copy().getId());
     assertEquals(medRequest.getId(), decodedMedRequest.copy().getId());
     assertEquals(observation.getId(), decodedObservation.copy().getId());
@@ -494,7 +489,7 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void testEmptyAttributes() {
+  void testEmptyAttributes() {
     final Map<String, String> attributes = decodedMedRequest.getText().getDiv().getAttributes();
 
     assertNotNull(attributes);
@@ -502,15 +497,14 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void testFromRdd() {
+  void testFromRdd() {
     // This JavaSparkContext is only thin wrapper around the SparkContext, 
     // which will be closed when SparkSession is closed.
     // It cannot be closed here as it will cause SparkSession used by other tests to fail.
 
-    @SuppressWarnings("resource") 
-    final JavaSparkContext context = new JavaSparkContext(
+    @SuppressWarnings("resource") final JavaSparkContext context = new JavaSparkContext(
         spark.sparkContext());
-    final JavaRDD<Condition> conditionRdd = context.parallelize(ImmutableList.of(condition));
+    final JavaRDD<Condition> conditionRdd = context.parallelize(List.of(condition));
 
     final Dataset<Condition> ds = spark.createDataset(conditionRdd.rdd(),
         ENCODERS_L0.of(Condition.class));
@@ -523,7 +517,7 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void testFromParquet() throws IOException {
+  void testFromParquet() throws IOException {
 
     final Path dirPath = Files.createTempDirectory("encoder_test");
 
@@ -542,7 +536,7 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void testEncoderCached() {
+  void testEncoderCached() {
 
     assertSame(ENCODERS_L0.of(Condition.class),
         ENCODERS_L0.of(Condition.class));
@@ -552,51 +546,51 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void testPrimitiveClassDecoding() {
+  void testPrimitiveClassDecoding() {
     assertEquals(encounter.getClass_().getCode(),
         encounterDataset.select("class.code").head().get(0));
     assertEquals(encounter.getClass_().getCode(), decodedEncounter.getClass_().getCode());
   }
 
   @Test
-  public void testNestedQuestionnaire() {
+  void testNestedQuestionnaire() {
 
     // Build a list of questionnaires with increasing nesting levels
     final List<Questionnaire> questionnaires = IntStream.rangeClosed(0, NESTING_LEVEL_3)
         .mapToObj(i -> TestData.newNestedQuestionnaire(i, 4))
         .toList();
 
-    final Questionnaire questionnaire_L0 = questionnaires.get(0);
+    final Questionnaire questionnaireL0 = questionnaires.get(0);
 
     // Encode with level 0
-    final Dataset<Questionnaire> questionnaireDataset_L0 = spark
+    final Dataset<Questionnaire> questionnaireDatasetL0 = spark
         .createDataset(questionnaires,
             ENCODERS_L0.of(Questionnaire.class));
-    final List<Questionnaire> decodedQuestionnaires_L0 = questionnaireDataset_L0.collectAsList();
+    final List<Questionnaire> decodedQuestionnairesL0 = questionnaireDatasetL0.collectAsList();
 
     // all questionnaires should be pruned to be the same as level 0
     for (int i = 0; i <= NESTING_LEVEL_3; i++) {
-      assertTrue(questionnaire_L0.equalsDeep(decodedQuestionnaires_L0.get(i)));
+      assertTrue(questionnaireL0.equalsDeep(decodedQuestionnairesL0.get(i)));
     }
 
     // Encode with level 3
-    final Dataset<Questionnaire> questionnaireDataset_L3 = spark
+    final Dataset<Questionnaire> questionnaireDatasetL3 = spark
         .createDataset(questionnaires,
             ENCODERS_L3.of(Questionnaire.class));
-    final List<Questionnaire> decodedQuestionnaires_L3 = questionnaireDataset_L3.collectAsList();
+    final List<Questionnaire> decodedQuestionnairesL3 = questionnaireDatasetL3.collectAsList();
     // All questionnaires should be fully encoded
     for (int i = 0; i <= NESTING_LEVEL_3; i++) {
-      assertTrue(questionnaires.get(i).equalsDeep(decodedQuestionnaires_L3.get(i)));
+      assertTrue(questionnaires.get(i).equalsDeep(decodedQuestionnairesL3.get(i)));
     }
 
     assertEquals(Stream.of("Item/0", "Item/0", "Item/0", "Item/0").map(RowFactory::create)
             .toList(),
-        questionnaireDataset_L3.select(col("item").getItem(0).getField("linkId"))
+        questionnaireDatasetL3.select(col("item").getItem(0).getField("linkId"))
             .collectAsList());
 
     assertEquals(Stream.of(null, "Item/1.0", "Item/1.0", "Item/1.0").map(RowFactory::create)
             .toList(),
-        questionnaireDataset_L3
+        questionnaireDatasetL3
             .select(col("item")
                 .getItem(1).getField("item")
                 .getItem(0).getField("linkId"))
@@ -604,7 +598,7 @@ public class FhirEncodersTest {
 
     assertEquals(Stream.of(null, null, "Item/2.1.0", "Item/2.1.0").map(RowFactory::create)
             .toList(),
-        questionnaireDataset_L3
+        questionnaireDatasetL3
             .select(col("item")
                 .getItem(2).getField("item")
                 .getItem(1).getField("item")
@@ -613,7 +607,7 @@ public class FhirEncodersTest {
 
     assertEquals(Stream.of(null, null, null, "Item/3.2.1.0").map(RowFactory::create)
             .toList(),
-        questionnaireDataset_L3
+        questionnaireDatasetL3
             .select(col("item")
                 .getItem(3).getField("item")
                 .getItem(2).getField("item")
@@ -623,7 +617,7 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void testQuantityComparator() {
+  void testQuantityComparator() {
     final QuantityComparator originalComparator = observation.getValueQuantity().getComparator();
     final String queriedComparator = observationsDataset.select("valueQuantity.comparator").head()
         .getString(0);
@@ -633,15 +627,14 @@ public class FhirEncodersTest {
 
 
   @Test
-  public void traversalToChoiceFieldsFromJson() {
+  void traversalToChoiceFieldsFromJson() {
     // this tests for the issue reported in: https://github.com/aehrc/pathling/issues/1770
-    final Observation observationWithQuanityValue = (Observation) new Observation()
+    final Observation observationWithQuantityValue = (Observation) new Observation()
         .setValue(new Quantity(139.99))
         .setId("obs1");
-    final Dataset<Observation> observationsDataset = spark.createDataset(
-        ImmutableList.of(observationWithQuanityValue),
-        ENCODERS_L0.of(Observation.class));
-    final Row subjectRow = observationsDataset
+    final Dataset<Observation> encodedObservations = spark.createDataset(
+        List.of(observationWithQuantityValue), ENCODERS_L0.of(Observation.class));
+    final Row subjectRow = encodedObservations
         // map() introduces the issue, as it traverses to the choice field
         .map((MapFunction<Observation, Observation>) x -> x, ENCODERS_L0.of(Observation.class))
         .toDF().select("valueQuantity.value")
@@ -651,17 +644,17 @@ public class FhirEncodersTest {
   }
 
   @Test
-  public void nullEncoding() {
+  void nullEncoding() {
     // empty elements of all types should be encoded as nulls
     final Observation emptyObservation = new Observation();
     assertFalse(emptyObservation.hasSubject());
-    final Dataset<Observation> observationsDataset = spark.createDataset(
-        ImmutableList.of(emptyObservation),
+    final Dataset<Observation> encodedObservations = spark.createDataset(
+        List.of(emptyObservation),
         ENCODERS_L0.of(Observation.class));
     // 'subject' is a struct 
     // 'identifier' is an array of struct
     //  'status' is a primitive type
-    final Row subjectRow = observationsDataset.toDF().select("subject", "identifier", "status")
+    final Row subjectRow = encodedObservations.toDF().select("subject", "identifier", "status")
         .first();
     assertTrue(subjectRow.isNullAt(0));
     assertTrue(subjectRow.isNullAt(1));
@@ -670,18 +663,18 @@ public class FhirEncodersTest {
 
 
   @Test
-  public void nullEncodingFromJson() {
+  void nullEncodingFromJson() {
     final IParser parser = ENCODERS_L0.getContext().newJsonParser();
     final Observation emptyObservationFromJson = parser.parseResource(Observation.class,
         "{ \"resourceType\": \"Observation\"}");
     assertFalse(emptyObservationFromJson.hasSubject());
-    final Dataset<Observation> observationsDataset = spark.createDataset(
-        ImmutableList.of(emptyObservationFromJson),
+    final Dataset<Observation> encodedObservations = spark.createDataset(
+        List.of(emptyObservationFromJson),
         ENCODERS_L0.of(Observation.class));
     // 'subject' is a struct 
     // 'identifier' is an array of struct
     //  'status' is a primitive type
-    final Row subjectRow = observationsDataset.toDF().select("subject", "identifier", "status")
+    final Row subjectRow = encodedObservations.toDF().select("subject", "identifier", "status")
         .first();
     assertTrue(subjectRow.isNullAt(0));
     assertTrue(subjectRow.isNullAt(1));
