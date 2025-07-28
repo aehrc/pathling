@@ -19,9 +19,8 @@ package au.csiro.pathling.config;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import java.io.Serial;
 import java.io.Serializable;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Data;
 
@@ -35,6 +34,7 @@ import lombok.Data;
 @Builder
 public class HttpClientConfiguration implements Serializable {
 
+  @Serial
   private static final long serialVersionUID = -1624276800166930462L;
 
   /**

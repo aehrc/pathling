@@ -29,6 +29,7 @@ import au.csiro.pathling.io.ImportMode;
 import au.csiro.pathling.library.FhirMimeTypes;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.TestHelpers;
+import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.assertions.DatasetAssert;
@@ -66,7 +67,7 @@ class DataSourcesTest {
    * Set up Spark.
    */
   @BeforeAll
-  public static void setupContext() throws IOException {
+  static void setupContext() throws IOException {
     // Create a temporary directory that we can use to write data to.
     temporaryDirectory = Files.createTempDirectory("pathling-datasources-test");
     log.info("Created temporary directory: {}", temporaryDirectory);
@@ -94,7 +95,7 @@ class DataSourcesTest {
    * Tear down Spark.
    */
   @AfterAll
-  public static void tearDownAll() throws IOException {
+  static void tearDownAll() throws IOException {
     spark.stop();
     FileUtils.deleteDirectory(temporaryDirectory.toFile());
   }
@@ -141,7 +142,7 @@ class DataSourcesTest {
 
   @Test
   void ndjsonReadWriteCustom() {
-    final Function<String, Set<String>> readMapper = (baseName) -> Collections.singleton(
+    final Function<String, Set<String>> readMapper = baseName -> Collections.singleton(
         baseName.replaceFirst("Custom", ""));
 
     // Read the test NDJSON data.
@@ -154,7 +155,7 @@ class DataSourcesTest {
 
     // Write the data back out to a temporary location.
     data.write().ndjson(temporaryDirectory.resolve("ndjson-custom").toString(), "error",
-        (baseName) -> baseName.replaceFirst("Custom", ""));
+        baseName -> baseName.replaceFirst("Custom", ""));
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read()
@@ -322,8 +323,9 @@ class DataSourcesTest {
 
   @Test
   void readInvalidUri() {
+    final DataSourceBuilder builder = pathlingContext.read();
     final RuntimeException exception = assertThrows(RuntimeException.class,
-        () -> pathlingContext.read().ndjson("file:\\\\non-existent"));
+        () -> builder.ndjson("file:\\\\non-existent"));
     assertInstanceOf(URISyntaxException.class, exception.getCause());
   }
 
@@ -457,9 +459,9 @@ class DataSourcesTest {
 
   @Test
   void testS3Uri() {
+    final DataSourceBuilder builder = pathlingContext.read();
     final Exception exception = assertThrows(RuntimeException.class,
-        () -> pathlingContext.read()
-            .ndjson("s3://pathling-test-data/ndjson/"));
+        () -> builder.ndjson("s3://pathling-test-data/ndjson/"));
     assertInstanceOf(ClassNotFoundException.class, exception.getCause());
     assertEquals("Class org.apache.hadoop.fs.s3a.S3AFileSystem not found",
         exception.getCause().getMessage());
