@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.fhirpath.column;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import au.csiro.pathling.test.SpringBootUnitTest;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
@@ -29,6 +27,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -36,35 +35,56 @@ import org.springframework.beans.factory.annotation.Autowired;
 @SpringBootUnitTest
 class DefaultRepresentationTest {
 
-  // TODO: improve to check the actual values returned.
   class ColumnAsserts {
 
-    final List<Column> tests = new ArrayList<>();
+    final List<Column> columns = new ArrayList<>();
+    final List<Object> expectedValues = new ArrayList<>();
 
     @Nonnull
     ColumnAsserts assertNull(@Nonnull final ColumnRepresentation column) {
-      tests.add(column.getValue().isNull());
+      columns.add(column.getValue());
+      expectedValues.add(null);
       return this;
     }
 
     @Nonnull
     ColumnAsserts assertEquals(@Nonnull final Object expectedValue,
         @Nonnull final ColumnRepresentation column) {
-      tests.add(column.getValue().equalTo(expectedValue));
+      columns.add(column.getValue());
+      expectedValues.add(expectedValue);
       return this;
     }
 
     @Nonnull
     ColumnAsserts assertEquals(@Nonnull final ColumnRepresentation expectedValue,
         @Nonnull final ColumnRepresentation column) {
-      return assertEquals(expectedValue.getValue(), column);
+      columns.add(column.getValue());
+      columns.add(expectedValue.getValue());
+      expectedValues.add("COMPARE_COLUMNS");
+      expectedValues.add("COMPARE_COLUMNS");
+      return this;
     }
 
     void check() {
-      final Row result = spark.range(1).select(tests.toArray(Column[]::new))
-          .first();
-      for (int i = 0; i < result.size(); i++) {
-        assertTrue(result.getBoolean(i), "Test " + i + " failed: " + tests.get(i));
+      final Row result = spark.range(1).select(columns.toArray(Column[]::new)).first();
+
+      int columnIndex = 0;
+      for (int i = 0; i < expectedValues.size(); i++) {
+        final Object expected = expectedValues.get(i);
+
+        if ("COMPARE_COLUMNS".equals(expected)) {
+          final Object actual1 = result.get(columnIndex++);
+          final Object actual2 = result.get(columnIndex++);
+          Assertions.assertEquals(actual1, actual2, String.format(
+              "Column comparison failed: expected columns to be equal, but got %s and %s",
+              actual1, actual2));
+          i++;
+        } else {
+          final Object actual = result.get(columnIndex++);
+          Assertions.assertEquals(expected, actual,
+              String.format("Assertion %d failed: expected <%s> but was <%s>", i, expected,
+                  actual));
+        }
       }
     }
   }
