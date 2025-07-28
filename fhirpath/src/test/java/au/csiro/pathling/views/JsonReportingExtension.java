@@ -17,11 +17,14 @@
 
 package au.csiro.pathling.views;
 
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.views.FhirViewTest.TestParameters;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.File;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -30,7 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -39,15 +42,12 @@ import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
 import org.junit.jupiter.api.extension.TestWatcher;
 
 
+@Slf4j
 class JsonReportingExtension implements Extension, TestWatcher, AfterAllCallback,
     InvocationInterceptor {
 
-  @Value
-  static class TestResult {
+  record TestResult(String testName, TestParameters parameters, String result) {
 
-    String testName;
-    TestParameters parameters;
-    String result;
   }
 
   @Nonnull
@@ -64,68 +64,70 @@ class JsonReportingExtension implements Extension, TestWatcher, AfterAllCallback
   }
 
   @Override
-  public void interceptTestTemplateMethod(final Invocation<Void> invocation,
-      final ReflectiveInvocationContext<Method> invocationContext,
-      final ExtensionContext extensionContext)
+  public void interceptTestTemplateMethod(@Nullable final Invocation<Void> invocation,
+      @Nullable final ReflectiveInvocationContext<Method> invocationContext,
+      @Nullable final ExtensionContext extensionContext)
       throws Throwable {
 
-    extensionContext.getStore(PARAMS_NAMESPACE)
+    requireNonNull(extensionContext).getStore(PARAMS_NAMESPACE)
         .put(extensionContext.getUniqueId(),
-            invocationContext.getArguments().get(0));
-    invocation.proceed();
+            requireNonNull(invocationContext).getArguments().get(0));
+    requireNonNull(invocation).proceed();
   }
 
-  private void addResult(final ExtensionContext context, final String result) {
-    allResults.add(new TestResult(context.getDisplayName(),
+  private void addResult(@Nullable final ExtensionContext context, @Nullable final String result) {
+    allResults.add(new TestResult(requireNonNull(context).getDisplayName(),
         context.getStore(PARAMS_NAMESPACE)
-            .get(context.getUniqueId(), FhirViewTest.TestParameters.class), result));
+            .get(context.getUniqueId(), FhirViewTest.TestParameters.class),
+        requireNonNull(result)));
   }
 
   @Override
-  public void testDisabled(final ExtensionContext context, final Optional<String> reason) {
+  public void testDisabled(@Nullable final ExtensionContext context,
+      @Nullable final Optional<String> reason) {
     addResult(context, "disabled");
   }
 
   @Override
-  public void testSuccessful(final ExtensionContext context) {
+  public void testSuccessful(@Nullable final ExtensionContext context) {
     addResult(context, "passed");
   }
 
   @Override
-  public void testAborted(final ExtensionContext context, final Throwable cause) {
+  public void testAborted(@Nullable final ExtensionContext context,
+      @Nullable final Throwable cause) {
     addResult(context, "aborted");
   }
 
   @Override
-  public void testFailed(final ExtensionContext context, final Throwable cause) {
+  public void testFailed(@Nullable final ExtensionContext context,
+      @Nullable final Throwable cause) {
     addResult(context, "failed");
   }
 
   @Override
-  public void afterAll(final ExtensionContext context) throws Exception {
+  public void afterAll(@Nullable final ExtensionContext context) throws Exception {
 
     final Map<String, List<TestResult>> resultsBySuite = allResults.stream()
-        .collect(Collectors.groupingBy(tr -> tr.getParameters().getSuiteName(), LinkedHashMap::new,
+        .collect(Collectors.groupingBy(tr -> tr.parameters().getSuiteName(), LinkedHashMap::new,
             Collectors.toList()));
 
     final JsonNodeFactory nodeFactory = JsonNodeFactory.instance;
 
     final ObjectNode testReport = nodeFactory.objectNode();
     resultsBySuite.forEach((key, value) -> {
-      // TODO: I think the reporting application should be changed to use the suite name as the key
-      // not the file name.
       final ObjectNode suiteResults = testReport.putObject(key + ".json");
       suiteResults.putArray("tests").addAll(value.stream()
           .map(tr -> {
             final ObjectNode testResult = nodeFactory.objectNode();
-            testResult.put("name", tr.getParameters().getTestName());
+            testResult.set("name", nodeFactory.textNode(tr.parameters().getTestName()));
             testResult.putObject("result")
-                .put("passed", "passed".equals(tr.getResult()));
+                .set("passed", nodeFactory.booleanNode("passed".equals(tr.result())));
             return testResult;
-          }).collect(Collectors.toList()));
+          }).toList());
 
     });
-    System.out.printf("Writing JSON report to to %s\n", outputFile);
+    log.info("Writing JSON report to {}", outputFile);
     final ObjectMapper mapper = new ObjectMapper();
     mapper.writerWithDefaultPrettyPrinter().writeValue(new File(outputFile), testReport);
   }
