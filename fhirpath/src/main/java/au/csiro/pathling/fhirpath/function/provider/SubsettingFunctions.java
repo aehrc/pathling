@@ -16,6 +16,9 @@ import jakarta.annotation.Nonnull;
  */
 public class SubsettingFunctions {
 
+  private SubsettingFunctions() {
+  }
+
   /**
    * Returns a collection containing only the first item in the input collection. This function is
    * equivalent to {@code item[0]}, so it will return an empty collection if the input collection

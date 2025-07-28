@@ -22,6 +22,9 @@ import jakarta.annotation.Nullable;
 @SuppressWarnings("unused")
 public class ExistenceFunctions {
 
+  private ExistenceFunctions() {
+  }
+
   /**
    * Returns {@code true} if the input collection has any elements (optionally filtered by the
    * criteria), and {@code false} otherwise. This is the opposite of {@code empty()}, and as such is

@@ -21,6 +21,9 @@ public class StringFunctions {
 
   private static final String JOIN_DEFAULT_SEPARATOR = "";
 
+  private StringFunctions() {
+  }
+
   /**
    * The join function takes a collection of strings and joins them into a single string, optionally
    * using the given separator.
@@ -29,7 +32,7 @@ public class StringFunctions {
    * <p>
    * If no separator is specified, the strings are directly concatenated.
    *
-   * @param input The input in 
+   * @param input The input in
    * @param separator The separator to use
    * @return A {@link StringCollection} containing the result
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#joinseparator-string--string">FHIRPath

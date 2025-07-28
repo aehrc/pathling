@@ -17,6 +17,9 @@ import jakarta.annotation.Nonnull;
  */
 public class BooleanLogicFunctions {
 
+  private BooleanLogicFunctions() {
+  }
+
   /**
    * Returns {@code true} if the input collection evaluates to {@code false}, and {@code false} if
    * it evaluates to {@code true}.

@@ -18,6 +18,9 @@ import jakarta.annotation.Nonnull;
  */
 public class FilteringAndProjectionFunctions {
 
+  private FilteringAndProjectionFunctions() {
+  }
+
   /**
    * Returns a collection containing only those elements in the input collection for which the
    * stated criteria expression evaluates to {@code true}. Elements for which the expression
@@ -43,7 +46,7 @@ public class FilteringAndProjectionFunctions {
       @Nonnull final CollectionTransform expression) {
     return input.filter(expression.requireBooleanSingleton().toColumnTransformation(input));
   }
-  
+
   /**
    * Returns a collection that contains all items in the input collection that are of the given type
    * or a subclass thereof. If the input collection is empty, the result is empty. The type argument
