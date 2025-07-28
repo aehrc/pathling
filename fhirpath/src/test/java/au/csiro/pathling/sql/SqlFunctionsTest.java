@@ -33,13 +33,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @SpringBootUnitTest
-public class SqlFunctionsTest {
+class SqlFunctionsTest {
 
   @Autowired
   private SparkSession spark;
 
   @Test
-  public void testPruneAnnotations() {
+  void testPruneAnnotations() {
     // Create a schema with both regular and synthetic fields
     final StructType structSchema = new StructType()
         .add("id", DataTypes.StringType)
@@ -62,7 +62,7 @@ public class SqlFunctionsTest {
   }
 
   @Test
-  public void testPruneAnnotationsSimpleTypes() {
+  void testPruneAnnotationsSimpleTypes() {
     // Test that simple types are not affected by prune_annotations
     final Dataset<Row> dataset = spark.range(1).toDF("id")
         .select(
@@ -100,7 +100,7 @@ public class SqlFunctionsTest {
 
 
   @Test
-  public void testToFhirInstant() {
+  void testToFhirInstant() {
     final Dataset<Row> result = spark.range(1).toDF()
         .select(
             SqlFunctions.to_fhir_instant(
@@ -117,7 +117,7 @@ public class SqlFunctionsTest {
   }
 
   @Test
-  public void testToFhirInstantNull() {
+  void testToFhirInstantNull() {
     // Dataset with null timestamp
     final Dataset<Row> result = spark.range(1).toDF()
         .select(SqlFunctions.to_fhir_instant(functions.lit(null)).as("instant"));
