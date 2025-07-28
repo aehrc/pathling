@@ -33,6 +33,11 @@ import java.util.stream.Stream;
  */
 public record MethodDefinedOperator(Method method) implements BinaryOperator {
 
+  /**
+   * @param operatorInput the input to the operator
+   * @return the result of invoking the method defined by this operator
+   * @throws MethodInvocationError if the method cannot be invoked due to an error
+   */
   @Override
   @Nonnull
   public Collection invoke(@Nonnull final BinaryOperatorInput operatorInput) {

@@ -66,8 +66,14 @@ public class FileSystemPersistence implements PersistenceScheme {
 
   @Override
   public void invalidate(@Nonnull final ResourceType resourceType) {
+    // No-op for file system persistence, as there is no caching mechanism to invalidate.
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * @throws {@link PersistenceError} if there is a problem listing the resources
+   */
   @Nonnull
   @Override
   public Set<ResourceType> list() {
@@ -83,10 +89,15 @@ public class FileSystemPersistence implements PersistenceScheme {
           .map(Optional::get)
           .collect(Collectors.toSet());
     } catch (final IOException e) {
-      throw new RuntimeException("Problem listing resources", e);
+      throw new PersistenceError("Problem listing resources", e);
     }
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * @throws {@link PersistenceError} if there is a problem deleting the resource
+   */
   @Override
   public void delete(@Nonnull final ResourceType resourceType) {
     try {
@@ -101,7 +112,7 @@ public class FileSystemPersistence implements PersistenceScheme {
         log.debug("Table directory does not exist: {}", tableUrl);
       }
     } catch (final IOException e) {
-      throw new RuntimeException(
+      throw new PersistenceError(
           "Failed to delete table for resource type: " + resourceType.toCode(), e);
     }
   }
@@ -158,6 +169,8 @@ public class FileSystemPersistence implements PersistenceScheme {
    * @param spark the Spark session
    * @param location the location URL to be accessed
    * @return the {@link FileSystem} for the given location
+   * @throws PersistenceError if there is a problem accessing the location
+   * @throws IllegalArgumentException if the location URL is malformed
    */
   @Nonnull
   public static FileSystem getFileSystem(@Nonnull final SparkSession spark,
@@ -169,9 +182,9 @@ public class FileSystemPersistence implements PersistenceScheme {
     try {
       warehouseLocation = FileSystem.get(new URI(location), hadoopConfiguration);
     } catch (final IOException e) {
-      throw new RuntimeException("Problem accessing location: " + location, e);
+      throw new PersistenceError("Problem accessing location: " + location, e);
     } catch (final URISyntaxException e) {
-      throw new RuntimeException("Problem parsing URL: " + location, e);
+      throw new IllegalArgumentException("Problem parsing URL: " + location, e);
     }
     requireNonNull(warehouseLocation);
     return warehouseLocation;
@@ -212,6 +225,7 @@ public class FileSystemPersistence implements PersistenceScheme {
    * @param departitionedUrl the desired URL of the resulting file
    * @param extension the file extension used within the partitioned directory
    * @return the location of the resulting file
+   * @throws {@link PersistenceError} if there is a problem copying the partition file
    */
   @Nonnull
   public static String departitionResult(@Nonnull final FileSystem partitionedLocation,
@@ -230,7 +244,7 @@ public class FileSystemPersistence implements PersistenceScheme {
       log.info("Cleaning up: {}", partitionedUrl);
       partitionedLocation.delete(partitionedPath, true);
     } catch (final IOException e) {
-      throw new RuntimeException("Problem copying partition file", e);
+      throw new PersistenceError("Problem copying partition file", e);
     }
     return departitionedUrl;
   }

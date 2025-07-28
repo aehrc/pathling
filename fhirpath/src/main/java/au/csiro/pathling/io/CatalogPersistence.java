@@ -28,9 +28,9 @@ import scala.collection.JavaConverters;
  */
 public class CatalogPersistence implements PersistenceScheme {
 
-  private final Map<String, ResourceType> LOWER_CASE_RESOURCE_NAMES;
+  private static final Map<String, ResourceType> LOWER_CASE_RESOURCE_NAMES;
 
-  {
+  static {
     // Create a map between a case-insensitive representation of the resource type name and the
     // resource type itself.
     final Set<String> unsupported = JavaConverters.setAsJavaSet(
@@ -89,6 +89,11 @@ public class CatalogPersistence implements PersistenceScheme {
     // Do nothing.
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * @throws {@link PersistenceError} if there is a problem listing the resources
+   */
   @Nonnull
   @Override
   public Set<ResourceType> list() {
@@ -115,6 +120,7 @@ public class CatalogPersistence implements PersistenceScheme {
 
   /**
    * @return the list of tables from the catalog, using the specified schema if one is provided
+   * @throws PersistenceError if the specified schema does not exist
    */
   private List<Table> getTables() {
     final Catalog catalog = spark.catalog();
@@ -125,13 +131,18 @@ public class CatalogPersistence implements PersistenceScheme {
           try {
             return catalog.listTables(dbName);
           } catch (final AnalysisException e) {
-            throw new RuntimeException("Specified schema was not found", e);
+            throw new PersistenceError("Specified schema was not found", e);
           }
         })
         .orElseGet(catalog::listTables);
     return tablesDataset.collectAsList();
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * @throws {@link PersistenceError} if there is a problem deleting the resource
+   */
   @Override
   public void delete(@Nonnull final ResourceType resourceType) {
     final String tableName = getTableName(resourceType);
@@ -139,7 +150,7 @@ public class CatalogPersistence implements PersistenceScheme {
       spark.sql("DROP TABLE IF EXISTS " + tableName);
       log.debug("Deleted table: {}", tableName);
     } catch (final Exception e) {
-      throw new RuntimeException("Failed to delete table: " + tableName, e);
+      throw new PersistenceError("Failed to delete table: " + tableName, e);
     }
   }
 

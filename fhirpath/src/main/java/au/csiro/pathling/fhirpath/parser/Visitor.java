@@ -178,6 +178,11 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
         ctx.children.get(1).toString());
   }
 
+  /**
+   * @param ctx The {@link IndexerExpressionContext}
+   * @return A {@link FhirPath} expression
+   * @throws MethodInvocationError if the index operator cannot be invoked
+   */
   @Override
   @Nonnull
   public FhirPath visitIndexerExpression(
