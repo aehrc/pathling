@@ -33,7 +33,6 @@ import au.csiro.pathling.fhirpath.operator.SubsettingOperations;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AdditiveExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AndExpressionContext;
-import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.CombineExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.EqualityExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ImpliesExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.IndexerExpressionContext;
@@ -167,13 +166,6 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
   @Nonnull
   public FhirPath visitAdditiveExpression(
       @Nullable final AdditiveExpressionContext ctx) {
-    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
-        ctx.children.get(1).toString());
-  }
-
-  @Override
-  public FhirPath visitCombineExpression(
-      @Nullable final CombineExpressionContext ctx) {
     return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }

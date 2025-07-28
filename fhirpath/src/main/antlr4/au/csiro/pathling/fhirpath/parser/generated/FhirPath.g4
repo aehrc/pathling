@@ -42,7 +42,6 @@ expression
         | expression 'and' expression                               #andExpression
         | expression ('or' | 'xor') expression                      #orExpression
         | expression 'implies' expression                           #impliesExpression
-        | expression 'combine' expression                           #combineExpression
         //| (IDENTIFIER)? '=>' expression                             #lambdaExpression
         ;
 

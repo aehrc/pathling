@@ -2,8 +2,8 @@ package au.csiro.pathling.fhirpath.operator;
 
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
-import au.csiro.pathling.fhirpath.operator.BooleanOperator.BooleanOperatorType;
 import au.csiro.pathling.fhirpath.comparison.Comparable.ComparisonOperation;
+import au.csiro.pathling.fhirpath.operator.BooleanOperator.BooleanOperatorType;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import jakarta.annotation.Nonnull;
@@ -33,8 +33,7 @@ public enum BinaryOperatorType {
   SUBTRACTION("-", new MathOperator(MathOperation.SUBTRACTION)),
   MULTIPLICATION("*", new MathOperator(MathOperation.MULTIPLICATION)),
   DIVISION("/", new MathOperator(MathOperation.DIVISION)),
-  MODULUS("mod", new MathOperator(MathOperation.MODULUS)),
-  COMBINE("combine", new CombineOperator());
+  MODULUS("mod", new MathOperator(MathOperation.MODULUS));
 
   private final String symbol;
 
@@ -101,7 +100,6 @@ public enum BinaryOperatorType {
           .put("is", 6)
           .put("as", 6)
           .put("|", 7)
-          .put("combine", 7)
           .put(">", 8)
           .put("<", 8)
           .put(">=", 8)
