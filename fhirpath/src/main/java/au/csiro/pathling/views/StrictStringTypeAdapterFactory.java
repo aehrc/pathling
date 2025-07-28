@@ -15,11 +15,11 @@ public class StrictStringTypeAdapterFactory implements TypeAdapterFactory {
 
   @Nullable
   @Override
+  @SuppressWarnings("unchecked")
   public <T> TypeAdapter<T> create(@Nullable final Gson gson, @Nullable final TypeToken<T> type) {
     if (gson == null || type == null || String.class != type.getRawType()) {
       return null;
     }
-    //noinspection unchecked
     return (TypeAdapter<T>) new StrictStringTypeAdapter();
   }
 

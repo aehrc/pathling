@@ -217,8 +217,7 @@ public class TerminologyServiceHelpers {
     public final <T extends Type> LookupExpectations withProperty(@Nonnull final Coding coding,
         @Nonnull final String propertyCode, @Nullable final String displayLanguage,
         final T... value) {
-      return withProperty(coding, propertyCode, displayLanguage,
-          List.of(value));
+      return withProperty(coding, propertyCode, displayLanguage, List.of(value));
     }
 
     public LookupExpectations withDesignation(@Nonnull final Coding coding,

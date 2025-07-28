@@ -323,6 +323,8 @@ public class YamlSupport {
     }
   }
 
+  @Nonnull
+  @SuppressWarnings("unchecked")
   static ChildDefinition elementFromValues(@Nonnull final String key,
       @Nonnull final List<?> values) {
 
@@ -347,7 +349,6 @@ public class YamlSupport {
         final Map<?, ?> mergedValues = nonNullValues.stream()
             .map(Map.class::cast)
             .reduce(new HashMap<>(), (acc, m) -> {
-              //noinspection unchecked
               acc.putAll(m);
               return acc;
             });
@@ -367,8 +368,8 @@ public class YamlSupport {
     }
   }
 
-  @SuppressWarnings("unchecked")
   @Nonnull
+  @SuppressWarnings("unchecked")
   private static ChildDefinition elementFromValue(@Nonnull final String key,
       @Nullable final Object value, final int cardinality) {
     if (isNull(value)) {

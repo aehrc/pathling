@@ -85,6 +85,7 @@ public class ExcludeRule {
   List<String> spel;
 
   @Nonnull
+  @SuppressWarnings("unchecked")
   Stream<Predicate<TestCase>> toPredicates(@Nonnull final String category) {
     if (!disabled) {
       //noinspection RedundantCast
