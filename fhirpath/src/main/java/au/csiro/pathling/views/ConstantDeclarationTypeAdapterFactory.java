@@ -10,11 +10,11 @@ public class ConstantDeclarationTypeAdapterFactory implements TypeAdapterFactory
 
   @Nullable
   @Override
+  @SuppressWarnings("unchecked")
   public <T> TypeAdapter<T> create(@Nullable final Gson gson, @Nullable final TypeToken<T> type) {
     if (type == null || ConstantDeclaration.class != type.getRawType()) {
       return null;
     }
-    //noinspection unchecked
     return (TypeAdapter<T>) new ConstantDeclarationTypeAdapter();
   }
 
