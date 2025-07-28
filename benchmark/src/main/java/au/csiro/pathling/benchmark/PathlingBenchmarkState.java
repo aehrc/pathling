@@ -23,8 +23,10 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DatasetSource;
 import au.csiro.pathling.library.io.source.DeltaSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -113,6 +115,7 @@ public class PathlingBenchmarkState {
    *
    * @param sourceType The type of data source to use ("ndjson" or "delta")
    */
+  @SuppressWarnings("unused")
   public void setSourceType(@Nullable final String sourceType) {
     this.sourceType = sourceType;
   }
@@ -177,12 +180,13 @@ public class PathlingBenchmarkState {
     // Each view definition is loaded from a JSON resource file and cached in memory
     this.viewDefinitions = VIEW_DEFINITIONS.stream()
         .collect(toMap(
-            viewDefName -> viewDefName,
-            viewDefName -> {
-              try (final InputStream in = getResourceAsStream(viewDefName + JSON_EXTENSION)) {
+            viewDefaultName -> viewDefaultName,
+            viewDefaultName -> {
+              try (final InputStream in = getResourceAsStream(viewDefaultName + JSON_EXTENSION)) {
                 return new String(in.readAllBytes(), StandardCharsets.UTF_8);
-              } catch (final Exception e) {
-                throw new RuntimeException("Failed to read view definition: " + viewDefName, e);
+              } catch (final IOException e) {
+                throw new UncheckedIOException("Failed to read view definition: " + viewDefaultName,
+                    e);
               }
             }
         ));
@@ -235,8 +239,8 @@ public class PathlingBenchmarkState {
       tempDir = Files.createTempDirectory("pathling-benchmark-delta-");
       // Ensure cleanup on JVM exit to prevent disk space issues
       tempDir.toFile().deleteOnExit();
-    } catch (final Exception e) {
-      throw new RuntimeException("Failed to create temporary directory for Delta tables", e);
+    } catch (final IOException e) {
+      throw new UncheckedIOException("Failed to create temporary directory for Delta tables", e);
     }
 
     // Write each dataset to a Delta table in the temporary directory.
@@ -302,8 +306,8 @@ public class PathlingBenchmarkState {
         in.transferTo(out);
       }
       return tempFile;
-    } catch (final Exception e) {
-      throw new RuntimeException("Failed to extract resource: " + resourceName, e);
+    } catch (final IOException e) {
+      throw new UncheckedIOException("Failed to extract resource: " + resourceName, e);
     }
   }
 

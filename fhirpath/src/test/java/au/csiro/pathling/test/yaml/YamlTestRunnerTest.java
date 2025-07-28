@@ -2,9 +2,9 @@ package au.csiro.pathling.test.yaml;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -12,12 +12,12 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.DefinitionContext;
-import au.csiro.pathling.fhirpath.definition.def.DefDefinitionContext;
-import au.csiro.pathling.fhirpath.definition.def.DefResourceDefinition;
-import au.csiro.pathling.fhirpath.definition.def.DefResourceTag;
+import au.csiro.pathling.fhirpath.definition.defaults.DefaultDefinitionContext;
+import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceDefinition;
+import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceTag;
 import au.csiro.pathling.fhirpath.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.fhirpath.definition.fhir.FhirResourceTag;
-import au.csiro.pathling.fhirpath.execution.DefResourceResolver;
+import au.csiro.pathling.fhirpath.execution.DefaultResourceResolver;
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
@@ -95,7 +95,7 @@ class YamlTestRunnerTest {
             """;
 
     final Map<Object, Object> subjectYamlModel = YAML_PARSER.load(subjectString);
-    final DefResourceDefinition subjectDefinition = (DefResourceDefinition) YamlSupport.yamlToDefinition(
+    final DefaultResourceDefinition subjectDefinition = (DefaultResourceDefinition) YamlSupport.yamlToDefinition(
         "Test",
         subjectYamlModel);
 
@@ -115,10 +115,10 @@ class YamlTestRunnerTest {
     inputDS.printSchema();
     inputDS.show();
 
-    final DefinitionContext definitionContext = DefDefinitionContext.of(subjectDefinition);
+    final DefinitionContext definitionContext = DefaultDefinitionContext.of(subjectDefinition);
     final FhirpathEvaluator evaluator = new FhirpathEvaluator(
-        DefResourceResolver.of(
-            DefResourceTag.of("Test"),
+        DefaultResourceResolver.of(
+            DefaultResourceTag.of("Test"),
             definitionContext,
             inputDS
         ),
@@ -190,7 +190,7 @@ class YamlTestRunnerTest {
   void testLoad() {
     final String testSpec = getResourceAsString("fhirpath-js/cases/5.1_existence.yaml");
     final YamlTestDefinition spec = YamlTestDefinition.fromYaml(testSpec);
-    
+
     assertNotNull(spec);
     assertNotNull(spec.cases());
     assertFalse(spec.cases().isEmpty());
@@ -200,9 +200,9 @@ class YamlTestRunnerTest {
   void testLoadAndRun() {
     final String testConfigYaml = getResourceAsString("fhirpath-js/config.yaml");
     final YamlTestFormat testFormat = YAML_PARSER.loadAs(testConfigYaml, YamlTestFormat.class);
-    
+
     assertNotNull(testFormat);
-    
+
     final List<?> predicates = testFormat.toPredicates(Set.of()).toList();
     assertNotNull(predicates);
   }
@@ -217,22 +217,22 @@ class YamlTestRunnerTest {
     final IParser jsonParser = fhirContext.newJsonParser();
     final IBaseResource resource = jsonParser.parseResource(
         testPatient);
-    
+
     assertNotNull(resource);
     assertEquals("Patient", resource.fhirType());
-    
+
     final Dataset<Row> inputDS = spark.createDataset(List.of(resource),
         fhirEncoders.of(resource.fhirType())).toDF();
-    
+
     assertNotNull(inputDS);
     assertEquals(1, inputDS.count());
 
-    final DefResourceResolver resolver = DefResourceResolver.of(
+    final DefaultResourceResolver resolver = DefaultResourceResolver.of(
         FhirResourceTag.of(ResourceType.fromCode(resource.fhirType())),
         FhirDefinitionContext.of(fhirContext),
         inputDS
     );
-    
+
     assertNotNull(resolver);
 
     final FhirpathEvaluator evaluator = new FhirpathEvaluator(
@@ -240,19 +240,20 @@ class YamlTestRunnerTest {
         StaticFunctionRegistry.getInstance(),
         Map.of()
     );
-    
+
     assertNotNull(evaluator);
 
     final Dataset<Row> ds = evaluator.createInitialDataset().cache();
     assertNotNull(ds);
-    
+
     final Parser parser = new Parser();
     assertNotNull(parser);
 
     final Collection result = evaluator.evaluate(parser.parse("Patient.name"));
     assertNotNull(result);
-    
-    final Dataset<Row> resultDS = ds.select(result.getColumn().asCanonical().getValue().alias("actual"));
+
+    final Dataset<Row> resultDS = ds.select(
+        result.getColumn().asCanonical().getValue().alias("actual"));
     assertNotNull(resultDS);
     assertTrue(resultDS.count() >= 0);
   }

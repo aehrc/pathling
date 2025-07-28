@@ -1,4 +1,4 @@
-package au.csiro.pathling.fhirpath.definition.def;
+package au.csiro.pathling.fhirpath.definition.defaults;
 
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
@@ -12,13 +12,13 @@ import lombok.Value;
  * children.
  */
 @Value(staticConstructor = "of")
-public class DefResourceDefinition implements ResourceDefinition {
+public class DefaultResourceDefinition implements ResourceDefinition {
 
   @Nonnull
-  DefResourceTag resourceTag;
+  DefaultResourceTag resourceTag;
   @Nonnull
   List<ChildDefinition> children;
-  
+
   @Override
   @Nonnull
   public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
@@ -28,9 +28,9 @@ public class DefResourceDefinition implements ResourceDefinition {
   }
 
   @Nonnull
-  public static DefResourceDefinition of(
-      @Nonnull final DefResourceTag resourceTag,
+  public static DefaultResourceDefinition of(
+      @Nonnull final DefaultResourceTag resourceTag,
       final ChildDefinition... children) {
-    return DefResourceDefinition.of(resourceTag, List.of(children));
+    return DefaultResourceDefinition.of(resourceTag, List.of(children));
   }
 }

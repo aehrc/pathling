@@ -30,8 +30,8 @@ import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import au.csiro.pathling.fhirpath.definition.def.DefCompositeDefinition;
-import au.csiro.pathling.fhirpath.definition.def.DefPrimitiveDefinition;
+import au.csiro.pathling.fhirpath.definition.defaults.DefaultCompositeDefinition;
+import au.csiro.pathling.fhirpath.definition.defaults.DefaultPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
 import au.csiro.pathling.sql.misc.CodingToLiteral;
 import jakarta.annotation.Nonnull;
@@ -60,15 +60,15 @@ public class CodingCollection extends Collection implements Comparable, StringCo
    */
   public static ElementDefinition createDefinition(
       @Nonnull final String name, final int cardinality) {
-    return DefCompositeDefinition.of(
+    return DefaultCompositeDefinition.of(
         name,
         List.of(
-            DefPrimitiveDefinition.single("id", FHIRDefinedType.STRING),
-            DefPrimitiveDefinition.single("system", FHIRDefinedType.URI),
-            DefPrimitiveDefinition.single("version", FHIRDefinedType.STRING),
-            DefPrimitiveDefinition.single("code", FHIRDefinedType.CODE),
-            DefPrimitiveDefinition.single("display", FHIRDefinedType.STRING),
-            DefPrimitiveDefinition.single("userSelected", FHIRDefinedType.BOOLEAN)
+            DefaultPrimitiveDefinition.single("id", FHIRDefinedType.STRING),
+            DefaultPrimitiveDefinition.single("system", FHIRDefinedType.URI),
+            DefaultPrimitiveDefinition.single("version", FHIRDefinedType.STRING),
+            DefaultPrimitiveDefinition.single("code", FHIRDefinedType.CODE),
+            DefaultPrimitiveDefinition.single("display", FHIRDefinedType.STRING),
+            DefaultPrimitiveDefinition.single("userSelected", FHIRDefinedType.BOOLEAN)
         ),
         cardinality,
         FHIRDefinedType.CODING

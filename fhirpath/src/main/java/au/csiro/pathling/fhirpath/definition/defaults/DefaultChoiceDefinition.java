@@ -1,4 +1,4 @@
-package au.csiro.pathling.fhirpath.definition.def;
+package au.csiro.pathling.fhirpath.definition.defaults;
 
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
@@ -15,7 +15,7 @@ import org.apache.commons.lang.WordUtils;
  * can contain one of several possible types (e.g., valueString, valueInteger, etc.).
  */
 @Value(staticConstructor = "of")
-public class DefChoiceDefinition implements ChoiceDefinition {
+public class DefaultChoiceDefinition implements ChoiceDefinition {
 
   /**
    * The base name of this choice element, without any type suffix.

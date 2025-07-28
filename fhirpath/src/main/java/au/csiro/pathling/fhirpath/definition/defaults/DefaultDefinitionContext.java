@@ -1,4 +1,4 @@
-package au.csiro.pathling.fhirpath.definition.def;
+package au.csiro.pathling.fhirpath.definition.defaults;
 
 import au.csiro.pathling.fhirpath.definition.DefinitionContext;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
@@ -19,7 +19,7 @@ import lombok.Value;
  */
 @Value
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class DefDefinitionContext implements DefinitionContext {
+public class DefaultDefinitionContext implements DefinitionContext {
 
   @Nonnull
   Map<String, ResourceDefinition> resourceDefinitions;
@@ -33,8 +33,8 @@ public class DefDefinitionContext implements DefinitionContext {
   }
 
   @Nonnull
-  public static DefDefinitionContext of(ResourceDefinition... resourceDefinitions) {
-    return new DefDefinitionContext(
+  public static DefaultDefinitionContext of(final ResourceDefinition... resourceDefinitions) {
+    return new DefaultDefinitionContext(
         Stream.of(resourceDefinitions)
             .collect(Collectors.toMap(
                 ResourceDefinition::getResourceCode,

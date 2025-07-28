@@ -1,10 +1,10 @@
 package au.csiro.pathling.test.yaml.resolver;
 
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
-import au.csiro.pathling.fhirpath.definition.def.DefDefinitionContext;
-import au.csiro.pathling.fhirpath.definition.def.DefResourceDefinition;
-import au.csiro.pathling.fhirpath.definition.def.DefResourceTag;
-import au.csiro.pathling.fhirpath.execution.DefResourceResolver;
+import au.csiro.pathling.fhirpath.definition.defaults.DefaultDefinitionContext;
+import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceDefinition;
+import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceTag;
+import au.csiro.pathling.fhirpath.execution.DefaultResourceResolver;
 import au.csiro.pathling.test.yaml.YamlSupport;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -37,7 +37,7 @@ public class ArbitraryObjectResolverFactory implements Function<RuntimeContext, 
         .map(String.class::cast)
         .orElse("Test");
 
-    final DefResourceDefinition subjectDefinition = (DefResourceDefinition) YamlSupport
+    final DefaultResourceDefinition subjectDefinition = (DefaultResourceDefinition) YamlSupport
         .yamlToDefinition(subjectResourceCode, subjectOM);
     final StructType subjectSchema = YamlSupport.definitionToStruct(subjectDefinition);
 
@@ -50,9 +50,9 @@ public class ArbitraryObjectResolverFactory implements Function<RuntimeContext, 
     log.trace("Yaml definition: {}", subjectDefinition);
     log.trace("Subject schema: {}", subjectSchema.treeString());
 
-    return DefResourceResolver.of(
-        DefResourceTag.of(subjectResourceCode),
-        DefDefinitionContext.of(subjectDefinition),
+    return DefaultResourceResolver.of(
+        DefaultResourceTag.of(subjectResourceCode),
+        DefaultDefinitionContext.of(subjectDefinition),
         inputDS
     );
   }

@@ -45,7 +45,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * custom resource definitions that may not directly correspond to standard FHIR resources.
  */
 @Value(staticConstructor = "of")
-public class DefResourceResolver implements ResourceResolver {
+public class DefaultResourceResolver implements ResourceResolver {
 
   /**
    * The resource tag identifying the subject resource.

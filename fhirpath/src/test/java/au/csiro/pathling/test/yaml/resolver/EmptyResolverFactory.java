@@ -1,10 +1,10 @@
 package au.csiro.pathling.test.yaml.resolver;
 
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
-import au.csiro.pathling.fhirpath.definition.def.DefDefinitionContext;
-import au.csiro.pathling.fhirpath.definition.def.DefResourceDefinition;
-import au.csiro.pathling.fhirpath.definition.def.DefResourceTag;
-import au.csiro.pathling.fhirpath.execution.DefResourceResolver;
+import au.csiro.pathling.fhirpath.definition.defaults.DefaultDefinitionContext;
+import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceDefinition;
+import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceTag;
+import au.csiro.pathling.fhirpath.execution.DefaultResourceResolver;
 import java.util.function.Function;
 import lombok.AllArgsConstructor;
 import lombok.Value;
@@ -28,10 +28,10 @@ public class EmptyResolverFactory implements Function<RuntimeContext, ResourceRe
   @Override
   public ResourceResolver apply(final RuntimeContext runtimeContext) {
 
-    final DefResourceTag subjectResourceTag = DefResourceTag.of("Empty");
-    return DefResourceResolver.of(
+    final DefaultResourceTag subjectResourceTag = DefaultResourceTag.of("Empty");
+    return DefaultResourceResolver.of(
         subjectResourceTag,
-        DefDefinitionContext.of(DefResourceDefinition.of(subjectResourceTag)),
+        DefaultDefinitionContext.of(DefaultResourceDefinition.of(subjectResourceTag)),
         runtimeContext.getSpark().emptyDataFrame()
     );
   }

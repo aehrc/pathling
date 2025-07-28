@@ -11,11 +11,11 @@ import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
-import au.csiro.pathling.fhirpath.definition.def.DefChoiceDefinition;
-import au.csiro.pathling.fhirpath.definition.def.DefCompositeDefinition;
-import au.csiro.pathling.fhirpath.definition.def.DefPrimitiveDefinition;
-import au.csiro.pathling.fhirpath.definition.def.DefResourceDefinition;
-import au.csiro.pathling.fhirpath.definition.def.DefResourceTag;
+import au.csiro.pathling.fhirpath.definition.defaults.DefaultChoiceDefinition;
+import au.csiro.pathling.fhirpath.definition.defaults.DefaultCompositeDefinition;
+import au.csiro.pathling.fhirpath.definition.defaults.DefaultPrimitiveDefinition;
+import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceDefinition;
+import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceTag;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -289,12 +289,12 @@ public class YamlSupport {
         .map(ChildDefinition::getName)
         .collect(Collectors.toUnmodifiableSet());
 
-    return DefResourceDefinition.of(
-        DefResourceTag.of(resourceCode),
+    return DefaultResourceDefinition.of(
+        DefaultResourceTag.of(resourceCode),
         Stream.concat(
             Stream.of(
-                    DefPrimitiveDefinition.single("id", FHIRDefinedType.STRING),
-                    DefPrimitiveDefinition.single("id_versioned", FHIRDefinedType.STRING)
+                    DefaultPrimitiveDefinition.single("id", FHIRDefinedType.STRING),
+                    DefaultPrimitiveDefinition.single("id_versioned", FHIRDefinedType.STRING)
                 )
                 .filter(field -> !definedFieldNames.contains(field.getName())),
             definedFields.stream()
@@ -310,7 +310,8 @@ public class YamlSupport {
         .map(entry -> elementFromYaml(entry.getKey().toString(), entry.getValue()))
         .toList();
     return Optional.ofNullable(data.get(CHOICE_ANNOTATION))
-        .map(name -> List.<ChildDefinition>of(DefChoiceDefinition.of(name.toString(), children)))
+        .map(
+            name -> List.<ChildDefinition>of(DefaultChoiceDefinition.of(name.toString(), children)))
         .orElse(children);
   }
 
@@ -371,30 +372,30 @@ public class YamlSupport {
   private static ChildDefinition elementFromValue(@Nonnull final String key,
       @Nullable final Object value, final int cardinality) {
     if (isNull(value)) {
-      return DefPrimitiveDefinition.of(key, FHIRDefinedType.NULL, cardinality);
+      return DefaultPrimitiveDefinition.of(key, FHIRDefinedType.NULL, cardinality);
     } else if (value instanceof final FhirTypedLiteral typedLiteral) {
       // Use the FHIRDefinedType directly from the typed literal
       if (typedLiteral.getType() == FHIRDefinedType.CODING) {
         return CodingCollection.createDefinition(key, cardinality);
       } else {
-        return DefPrimitiveDefinition.of(key, typedLiteral.getType(), cardinality);
+        return DefaultPrimitiveDefinition.of(key, typedLiteral.getType(), cardinality);
       }
     } else if (value instanceof String) {
-      return DefPrimitiveDefinition.of(key, FHIRDefinedType.STRING, cardinality);
+      return DefaultPrimitiveDefinition.of(key, FHIRDefinedType.STRING, cardinality);
     } else if (value instanceof Integer) {
-      return DefPrimitiveDefinition.of(key, FHIRDefinedType.INTEGER, cardinality);
+      return DefaultPrimitiveDefinition.of(key, FHIRDefinedType.INTEGER, cardinality);
     } else if (value instanceof Boolean) {
-      return DefPrimitiveDefinition.of(key, FHIRDefinedType.BOOLEAN, cardinality);
+      return DefaultPrimitiveDefinition.of(key, FHIRDefinedType.BOOLEAN, cardinality);
     } else if (value instanceof Double) {
-      return DefPrimitiveDefinition.of(key, FHIRDefinedType.DECIMAL, cardinality);
+      return DefaultPrimitiveDefinition.of(key, FHIRDefinedType.DECIMAL, cardinality);
     } else if (value instanceof final Map<?, ?> map) {
       return Optional.ofNullable(map.get(FHIR_TYPE_ANNOTATION))
           .map(Object::toString)
           .map(FHIRDefinedType::fromCode)
-          .map(fhirType -> DefCompositeDefinition.of(key,
+          .map(fhirType -> DefaultCompositeDefinition.of(key,
               elementsFromYaml((Map<Object, Object>) map),
               cardinality, fhirType))
-          .orElseGet(() -> DefCompositeDefinition.backbone(key,
+          .orElseGet(() -> DefaultCompositeDefinition.backbone(key,
               elementsFromYaml((Map<Object, Object>) map),
               cardinality));
     } else {
@@ -406,7 +407,7 @@ public class YamlSupport {
 
   @Nonnull
   public static StructType definitionToStruct(
-      @Nonnull final DefResourceDefinition resourceDefinition) {
+      @Nonnull final DefaultResourceDefinition resourceDefinition) {
     return childrenToStruct(resourceDefinition.getChildren());
   }
 
@@ -421,7 +422,7 @@ public class YamlSupport {
   }
 
   private static Stream<StructField> elementToStructField(final ChildDefinition childDefinition) {
-    if (childDefinition instanceof final DefPrimitiveDefinition primitiveDefinition) {
+    if (childDefinition instanceof final DefaultPrimitiveDefinition primitiveDefinition) {
       final DataType elementType = requireNonNull(
           FHIR_TO_SQL.get(primitiveDefinition.getType()),
           "No SQL type for " + primitiveDefinition.getFhirType());
@@ -432,7 +433,7 @@ public class YamlSupport {
           : elementType,
           true, Metadata.empty()
       ));
-    } else if (childDefinition instanceof final DefCompositeDefinition compositeDefinition) {
+    } else if (childDefinition instanceof final DefaultCompositeDefinition compositeDefinition) {
 
       final StructType predefinedType = (StructType) FHIR_TO_SQL.get(compositeDefinition.getType());
       final StructType elementType = predefinedType != null
@@ -445,7 +446,7 @@ public class YamlSupport {
           : elementType,
           true, Metadata.empty()
       ));
-    } else if (childDefinition instanceof final DefChoiceDefinition choiceDefinition) {
+    } else if (childDefinition instanceof final DefaultChoiceDefinition choiceDefinition) {
       final StructType elementType = childrenToStruct(
           choiceDefinition.getChoices().stream().filter(c -> !c.getName().startsWith("_"))
               .toList());

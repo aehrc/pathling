@@ -1,4 +1,4 @@
-package au.csiro.pathling.fhirpath.definition.def;
+package au.csiro.pathling.fhirpath.definition.defaults;
 
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
@@ -13,7 +13,7 @@ import java.util.Optional;
  * children and other properties.
  */
 @Value(staticConstructor = "of")
-public class DefCompositeDefinition implements ElementDefinition {
+public class DefaultCompositeDefinition implements ElementDefinition {
 
   String name;
   List<ChildDefinition> children;
@@ -47,9 +47,9 @@ public class DefCompositeDefinition implements ElementDefinition {
   }
 
   @Nonnull
-  public static DefCompositeDefinition backbone(@Nonnull final String name,
+  public static DefaultCompositeDefinition backbone(@Nonnull final String name,
       @Nonnull final List<ChildDefinition> children, final int cardinality) {
-    return new DefCompositeDefinition(name, children, cardinality, FHIRDefinedType.BACKBONEELEMENT);
+    return new DefaultCompositeDefinition(name, children, cardinality, FHIRDefinedType.BACKBONEELEMENT);
   }
 
 }

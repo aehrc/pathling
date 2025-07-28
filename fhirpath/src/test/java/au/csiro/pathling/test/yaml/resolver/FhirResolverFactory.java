@@ -3,7 +3,7 @@ package au.csiro.pathling.test.yaml.resolver;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.fhirpath.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.fhirpath.definition.fhir.FhirResourceTag;
-import au.csiro.pathling.fhirpath.execution.DefResourceResolver;
+import au.csiro.pathling.fhirpath.execution.DefaultResourceResolver;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -35,7 +35,7 @@ public class FhirResolverFactory implements Function<RuntimeContext, ResourceRes
     final Dataset<Row> resourceDS = rt.getSpark().createDataset(List.of(resource),
         rt.getFhirEncoders().of(resource.fhirType())).toDF();
 
-    return DefResourceResolver.of(
+    return DefaultResourceResolver.of(
         FhirResourceTag.of(ResourceType.fromCode(resource.fhirType())),
         FhirDefinitionContext.of(rt.getFhirEncoders().getContext()),
         resourceDS

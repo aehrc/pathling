@@ -1,4 +1,4 @@
-package au.csiro.pathling.fhirpath.definition.def;
+package au.csiro.pathling.fhirpath.definition.defaults;
 
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
@@ -13,10 +13,11 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * properties.
  */
 @Value(staticConstructor = "of")
-public class DefPrimitiveDefinition implements ElementDefinition {
+public class DefaultPrimitiveDefinition implements ElementDefinition {
 
-  public static DefPrimitiveDefinition single(final String name, final FHIRDefinedType type) {
-    return new DefPrimitiveDefinition(name, type, 1);
+  @Nonnull
+  public static DefaultPrimitiveDefinition single(final String name, final FHIRDefinedType type) {
+    return new DefaultPrimitiveDefinition(name, type, 1);
   }
 
   String name;
