@@ -161,7 +161,6 @@ abstract class FhirViewTest {
 
     @Override
     public void expect(@Nonnull final Supplier<Dataset<Row>> result) {
-      // TODO: expect a specialized FHIRView exception
       assertThrows(Exception.class, () -> result.get().collectAsList());
     }
 
