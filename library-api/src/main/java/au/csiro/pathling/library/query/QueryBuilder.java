@@ -25,11 +25,9 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 /**
  * Base class for queries that use filters. Subclasses must implement the {@link #execute} method to
  * perform the actual execution of the query.
- *
- * @param <T> actual type of the query
  */
 @SuppressWarnings({"unchecked"})
-public abstract class QueryBuilder<T extends QueryBuilder<?>> {
+public abstract class QueryBuilder {
 
   @SuppressWarnings("unused")
   @Nonnull
@@ -37,7 +35,7 @@ public abstract class QueryBuilder<T extends QueryBuilder<?>> {
 
   @Nonnull
   protected final QueryDispatcher dispatcher;
-  
+
   protected QueryBuilder(@Nonnull final QueryDispatcher dispatcher,
       @Nonnull final ResourceType subjectResource) {
     this.dispatcher = dispatcher;

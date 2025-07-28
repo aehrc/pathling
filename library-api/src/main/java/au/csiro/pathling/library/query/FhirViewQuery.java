@@ -43,7 +43,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * @see FhirView
  * @see QueryDispatcher
  */
-public class FhirViewQuery extends QueryBuilder<FhirViewQuery> {
+public class FhirViewQuery extends QueryBuilder {
 
   @Nonnull
   private final Gson gson;
