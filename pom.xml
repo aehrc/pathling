@@ -588,13 +588,6 @@
         <artifactId>maven-source-plugin</artifactId>
         <executions>
           <execution>
-            <id>aggregate-sources</id>
-            <phase>package</phase>
-            <goals>
-              <goal>aggregate</goal>
-            </goals>
-          </execution>
-          <execution>
             <id>attach-sources</id>
             <phase>package</phase>
             <goals>
