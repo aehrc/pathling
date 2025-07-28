@@ -510,16 +510,18 @@ class AnsiTypeHintingTest {
 
   @Test
   void singleStructTypesNotSupported() {
+    final TestView view = TestView.singleValue("code.coding.first()");
     final UnsupportedOperationException ex = assertThrows(UnsupportedOperationException.class,
-        () -> evalView(TestView.singleValue("code.coding.first()")));
+        () -> evalView(view));
     assertEquals("Cannot obtain value for non-primitive collection of FHIR type: CODING",
         ex.getMessage());
   }
 
   @Test
   void collectionStructTypesNotSupported() {
+    final TestView view = TestView.collectionValue("code.coding");
     final UnsupportedOperationException ex = assertThrows(UnsupportedOperationException.class,
-        () -> evalView(TestView.collectionValue("code.coding")));
+        () -> evalView(view));
     assertEquals("Cannot obtain value for non-primitive collection of FHIR type: CODING",
         ex.getMessage());
   }
