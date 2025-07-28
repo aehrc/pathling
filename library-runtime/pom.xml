@@ -120,24 +120,6 @@
                 <exclude>**</exclude>
               </excludes>
             </filter>
-            <filter>
-              <artifact>au.csiro.pathling:encoders</artifact>
-              <excludes>
-                <exclude>pathling-version.properties</exclude>
-              </excludes>
-            </filter>
-            <filter>
-              <artifact>au.csiro.pathling:terminology</artifact>
-              <excludes>
-                <exclude>pathling-version.properties</exclude>
-              </excludes>
-            </filter>
-            <filter>
-              <artifact>au.csiro.pathling:utilities</artifact>
-              <excludes>
-                <exclude>pathling-version.properties</exclude>
-              </excludes>
-            </filter>
           </filters>
           <transformers>
             <transformer
