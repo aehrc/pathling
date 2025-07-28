@@ -1,13 +1,13 @@
 package au.csiro.pathling.fhirpath.collection;
 
-import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
+import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.Function;
@@ -42,11 +42,6 @@ public class EmptyCollection extends Collection implements Comparable, Numeric, 
   @Nonnull
   public Collection copyWith(@Nonnull final ColumnRepresentation column) {
     return this;
-  }
-
-  @Override
-  public boolean isComparableTo(@Nonnull final Comparable path) {
-    return true;
   }
 
   @Override
@@ -86,10 +81,8 @@ public class EmptyCollection extends Collection implements Comparable, Numeric, 
   @Override
   public @Nonnull Function<Numeric, Collection> getMathOperation(
       @Nonnull final Numeric.MathOperation operation) {
-    return numeric -> {
-      // For empty collections, all math operations return an empty collection
-      return this;
-    };
+    // For empty collections, all math operations return an empty collection
+    return numeric -> this;
   }
 
   @Override
