@@ -1,5 +1,7 @@
 package au.csiro.pathling.fhirpath;
 
+import static au.csiro.pathling.utilities.Preconditions.checkArgument;
+
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -97,14 +99,11 @@ public interface FhirPath {
     }
   }
 
-  @Value
-  class Composite implements FhirPath {
+  record Composite(@Nonnull List<FhirPath> elements) implements FhirPath {
 
-
-    // TODO: add the precondition - a composite should have at least two elements.
-    // Or otherwise it should not be a composite but either null or a primitive.
-    @Nonnull
-    List<FhirPath> elements;
+    public Composite {
+      checkArgument(elements.size() >= 2, "Composite must have at least two elements");
+    }
 
     @Override
     public Collection apply(@Nonnull final Collection input,
@@ -113,6 +112,7 @@ public interface FhirPath {
           .reduce(input, (acc, element) -> element.apply(acc, context), (a, b) -> b);
     }
 
+    @Nonnull
     @Override
     public Stream<FhirPath> asStream() {
       return elements.stream();
