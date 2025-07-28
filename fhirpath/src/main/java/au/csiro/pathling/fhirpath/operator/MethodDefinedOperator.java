@@ -24,7 +24,6 @@ import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.Value;
 
 /**
  * A {@link BinaryOperator} that is defined using a static method.
@@ -32,10 +31,7 @@ import lombok.Value;
  * @author Piotr Szul
  * @author John Grimes
  */
-@Value
-public class MethodDefinedOperator implements BinaryOperator {
-
-  Method method;
+public record MethodDefinedOperator(Method method) implements BinaryOperator {
 
   @Override
   @Nonnull
@@ -47,7 +43,7 @@ public class MethodDefinedOperator implements BinaryOperator {
       // Invoke the method.
       return (Collection) method.invoke(null, invocationArgs);
     } catch (final IllegalAccessException | InvocationTargetException e) {
-      throw new RuntimeException("Error invoking method-defined operator", e);
+      throw new MethodInvocationError("Error invoking method-defined operator", e);
     }
   }
 
@@ -72,15 +68,19 @@ public class MethodDefinedOperator implements BinaryOperator {
   public static Map<String, BinaryOperator> mapOf(@Nonnull final Class<?> clazz) {
     return Stream.of(clazz.getDeclaredMethods())
         .filter(m -> m.getAnnotation(FhirPathOperator.class) != null)
-        .collect(Collectors.toUnmodifiableMap(Method::getName, MethodDefinedOperator::new));
+        .collect(Collectors.toUnmodifiableMap(
+            m -> m.getAnnotation(FhirPathOperator.class).name(),
+            MethodDefinedOperator::new));
 
   }
 
   @Override
   @Nonnull
   public String getOperatorName() {
-    // TODO: Get it from the annotation
-    return method.getName();
+    final FhirPathOperator annotation = method.getAnnotation(FhirPathOperator.class);
+    return annotation != null
+           ? annotation.name()
+           : method.getName();
   }
 
 }

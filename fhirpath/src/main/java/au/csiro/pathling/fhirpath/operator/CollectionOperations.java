@@ -61,7 +61,7 @@ public class CollectionOperations {
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#in-membership">FHIRPath specification -
    * in (membership)</a>
    */
-  @FhirPathOperator
+  @FhirPathOperator(name = "in")
   @Nonnull
   public static Collection in(@Nonnull final Collection element,
       @Nonnull final Collection collection) {
@@ -80,7 +80,7 @@ public class CollectionOperations {
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#contains-containership">FHIRPath
    * specification - contains (containership)</a>
    */
-  @FhirPathOperator
+  @FhirPathOperator(name = "contains")
   @Nonnull
   public static Collection contains(@Nonnull final Collection collection,
       @Nonnull final Collection element) {

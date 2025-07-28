@@ -7,6 +7,9 @@ import org.apache.spark.sql.functions;
 
 public class SubsettingOperations {
 
+  private SubsettingOperations() {
+  }
+
   /**
    * Returns a singleton collection containing the element at the specified index.
    *
@@ -15,7 +18,7 @@ public class SubsettingOperations {
    * @return A singleton collection containing the element at the specified index
    * @see <a href="https://hl7.org/fhirpath/#index-integer-collection">Indexer operation</a>
    */
-  @FhirPathOperator
+  @FhirPathOperator(name = "[]")
   @Nonnull
   public static Collection index(@Nonnull final Collection subject,
       @Nonnull final IntegerCollection index) {
