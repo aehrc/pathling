@@ -1,4 +1,4 @@
-grammar TypesOfAnsiSql;
+grammar AnsiSqlDataType;
 
 // Define case-insensitive letters
 fragment A: [Aa];

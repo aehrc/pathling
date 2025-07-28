@@ -4,8 +4,9 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.views.ansi.generated.TypesOfAnsiSqlBaseVisitor;
-import au.csiro.pathling.views.ansi.generated.TypesOfAnsiSqlParser;
+import au.csiro.pathling.views.ansi.generated.AnsiSqlDataTypeBaseVisitor;
+import au.csiro.pathling.views.ansi.generated.AnsiSqlDataTypeParser;
+import jakarta.annotation.Nullable;
 import java.util.Objects;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -16,14 +17,14 @@ import org.apache.spark.sql.types.DataType;
 /**
  * Visitor that converts parsed ANSI SQL type syntax into Spark SQL DataTypes.
  */
-public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
+public class AnsiSqlToSparkDataTypeVisitor extends AnsiSqlDataTypeBaseVisitor<DataType> {
 
   private final AnsiSqlDataTypeFactory factory;
 
   /**
    * Constructor.
    */
-  public ToDataTypeVisitor() {
+  public AnsiSqlToSparkDataTypeVisitor() {
     this.factory = new AnsiSqlDataTypeFactory();
   }
 
@@ -33,19 +34,21 @@ public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
    * @param nodes the nodes to check
    * @return true if any node is non-null, false otherwise
    */
-  private static boolean anyOf(@Nonnull TerminalNode... nodes) {
+  private static boolean anyOf(@Nonnull final TerminalNode... nodes) {
     return Stream.of(nodes).anyMatch(Objects::nonNull);
   }
 
   @Override
   @Nonnull
-  public DataType visitSqlType(@Nonnull final TypesOfAnsiSqlParser.SqlTypeContext ctx) {
+  public DataType visitSqlType(@Nullable final AnsiSqlDataTypeParser.SqlTypeContext ctx) {
     return visitChildren(ctx);
   }
 
   @Override
   @Nonnull
-  public DataType visitCharacterType(@Nonnull final TypesOfAnsiSqlParser.CharacterTypeContext ctx) {
+  public DataType visitCharacterType(
+      @Nullable final AnsiSqlDataTypeParser.CharacterTypeContext ctx) {
+    requireNonNull(ctx);
     if (anyOf(ctx.K_VARCHAR(), ctx.K_VARYING())) {
       return nonNull(ctx.length)
              ? factory.createVarchar(Integer.parseInt(ctx.length.getText()))
@@ -60,7 +63,8 @@ public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
 
   @Override
   @Nonnull
-  public DataType visitNumericType(@Nonnull final TypesOfAnsiSqlParser.NumericTypeContext ctx) {
+  public DataType visitNumericType(@Nullable final AnsiSqlDataTypeParser.NumericTypeContext ctx) {
+    requireNonNull(ctx);
     if (anyOf(ctx.K_SMALLINT())) {
       return factory.createSmallInt();
     } else if (anyOf(ctx.K_INTEGER(), ctx.K_INT())) {
@@ -78,9 +82,9 @@ public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
     } else {
       check(anyOf(ctx.K_NUMERIC(), ctx.K_DECIMAL(), ctx.K_DEC()));
       if (ctx.precision != null) {
-        int precision = Integer.parseInt(ctx.precision.getText());
+        final int precision = Integer.parseInt(ctx.precision.getText());
         if (ctx.scale != null) {
-          int scale = Integer.parseInt(ctx.scale.getText());
+          final int scale = Integer.parseInt(ctx.scale.getText());
           return factory.createDecimal(precision, scale);
         }
         return factory.createDecimal(precision);
@@ -91,13 +95,14 @@ public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
 
   @Override
   @Nonnull
-  public DataType visitBooleanType(@Nonnull final TypesOfAnsiSqlParser.BooleanTypeContext ctx) {
+  public DataType visitBooleanType(@Nullable final AnsiSqlDataTypeParser.BooleanTypeContext ctx) {
     return factory.createBoolean();
   }
 
   @Override
   @Nonnull
-  public DataType visitBinaryType(@Nonnull final TypesOfAnsiSqlParser.BinaryTypeContext ctx) {
+  public DataType visitBinaryType(@Nullable final AnsiSqlDataTypeParser.BinaryTypeContext ctx) {
+    requireNonNull(ctx);
     if (anyOf(ctx.K_VARBINARY(), ctx.K_VARYING())) {
       return nonNull(ctx.length)
              ? factory.createVarbinary(Integer.parseInt(ctx.length.getText()))
@@ -112,16 +117,17 @@ public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
 
   @Override
   @Nonnull
-  public DataType visitTemporalType(@Nonnull final TypesOfAnsiSqlParser.TemporalTypeContext ctx) {
+  public DataType visitTemporalType(@Nullable final AnsiSqlDataTypeParser.TemporalTypeContext ctx) {
+    requireNonNull(ctx);
     if (anyOf(ctx.K_DATE())) {
       return factory.createDate();
     } else if (anyOf(ctx.K_INTERVAL())) {
       return factory.createInterval();
     } else {
       check(anyOf(ctx.K_TIMESTAMP()));
-      boolean withTimeZone = nonNull(ctx.timeZone()) && anyOf(ctx.timeZone().K_WITH());
+      final boolean withTimeZone = nonNull(ctx.timeZone()) && anyOf(ctx.timeZone().K_WITH());
       if (ctx.precision != null) {
-        int precision = Integer.parseInt(ctx.precision.getText());
+        final int precision = Integer.parseInt(ctx.precision.getText());
         return withTimeZone
                ? factory.createTimestampWithTimeZone(precision)
                : factory.createTimestamp(precision);
@@ -134,13 +140,14 @@ public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
 
   @Override
   @Nonnull
-  public DataType visitComplexType(@Nonnull final TypesOfAnsiSqlParser.ComplexTypeContext ctx) {
+  public DataType visitComplexType(@Nullable final AnsiSqlDataTypeParser.ComplexTypeContext ctx) {
     return visitChildren(ctx);
   }
 
   @Override
   @Nonnull
-  public DataType visitRowType(@Nonnull final TypesOfAnsiSqlParser.RowTypeContext ctx) {
+  public DataType visitRowType(@Nullable final AnsiSqlDataTypeParser.RowTypeContext ctx) {
+    requireNonNull(ctx);
     return factory.createRow(
         requireNonNull(ctx.fieldDefinition()).stream()
             .map(fieldCtx -> Pair.of(
@@ -152,7 +159,8 @@ public class ToDataTypeVisitor extends TypesOfAnsiSqlBaseVisitor<DataType> {
 
   @Override
   @Nonnull
-  public DataType visitArrayType(@Nonnull final TypesOfAnsiSqlParser.ArrayTypeContext ctx) {
+  public DataType visitArrayType(@Nullable final AnsiSqlDataTypeParser.ArrayTypeContext ctx) {
+    requireNonNull(ctx);
     final DataType elementType = visit(requireNonNull(ctx.sqlType()));
     return factory.createArray(requireNonNull(elementType));
   }
