@@ -74,10 +74,10 @@ public class DefaultRepresentation extends ColumnRepresentation {
    */
   @Nonnull
   public static ColumnRepresentation literal(@Nonnull final Object value) {
-    if (value instanceof BigDecimal bd) {
+    if (value instanceof final BigDecimal bd) {
       // If the literal is a BigDecimal, represent it as a DecimalRepresentation.
       return new DecimalRepresentation(bd);
-    } else if (value instanceof byte[] ba) {
+    } else if (value instanceof final byte[] ba) {
       return fromBinaryColumn(functions.lit(ba));
     } else {
       // Otherwise use the default representation.
@@ -122,8 +122,6 @@ public class DefaultRepresentation extends ColumnRepresentation {
   @Nonnull
   @Override
   public ColumnRepresentation traverse(@Nonnull final String fieldName) {
-    // TODO: consider implementing a custom expression here 
-    //  to simplify query plan representation
     return copyOf(value.getField(fieldName)).removeNulls().flatten();
   }
 
