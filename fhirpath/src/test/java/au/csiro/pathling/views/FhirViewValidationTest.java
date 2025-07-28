@@ -189,12 +189,12 @@ class FhirViewValidationTest {
   }
 
   @Test
-  public void testDuplicateAnsiTypeTags() {
+  void testDuplicateAnsiTypeTags() {
     // Create a column with duplicate ANSI_TYPE_TAG tags
-    ColumnTag tag1 = ColumnTag.of(ColumnTag.ANSI_TYPE_TAG, "VARCHAR");
-    ColumnTag tag2 = ColumnTag.of(ColumnTag.ANSI_TYPE_TAG, "INTEGER");
+    final ColumnTag tag1 = ColumnTag.of(ColumnTag.ANSI_TYPE_TAG, "VARCHAR");
+    final ColumnTag tag2 = ColumnTag.of(ColumnTag.ANSI_TYPE_TAG, "INTEGER");
 
-    Column columnWithDuplicateTags = Column.builder()
+    final Column columnWithDuplicateTags = Column.builder()
         .name("duplicateTagColumn")
         .path("Patient.id")
         .tag(List.of(tag1, tag2))
