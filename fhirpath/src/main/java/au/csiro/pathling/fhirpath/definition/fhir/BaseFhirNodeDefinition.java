@@ -54,11 +54,11 @@ abstract class BaseFhirNodeDefinition<D extends BaseRuntimeElementDefinition<?>>
     this.elementDefinition = elementDefinition;
 
     // Create a stream of all the definitions of the children of this element.
-    //noinspection unchecked
+    @SuppressWarnings("unchecked")
     final Stream<BaseRuntimeChildDefinition> allChildren = Optional.of(elementDefinition)
         // Cast to composite element definition, and if it is one then get its children.
         .flatMap(maybeCast(BaseRuntimeElementCompositeDefinition.class)).stream()
-        .flatMap(compElementDef -> compElementDef.getChildren().stream());
+        .flatMap(compElementDef -> ((java.util.List<BaseRuntimeChildDefinition>) compElementDef.getChildren()).stream());
 
     // Create a map of all the qualified choice children by name. This is used to resolve the 
     // correct child definition when a qualified choice element is traversed.
