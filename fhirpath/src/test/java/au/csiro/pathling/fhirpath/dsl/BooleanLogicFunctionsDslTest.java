@@ -4,7 +4,6 @@ import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.Tag;
 
 /**
  * Tests for FHIRPath boolean logic functions required by SQL on FHIR sharable view profile: - not()
@@ -23,7 +22,7 @@ public class BooleanLogicFunctionsDslTest extends FhirPathDslTestBase {
             // String values
             .string("stringValue", "value")
             .stringEmpty("emptyString")
-            .stringArray("stringArray", "value1", "valu2")
+            .stringArray("stringArray", "value1", "value2")
             // Boolean arrays
             .boolArray("boolArray", true, false, true)
             // Complex types with boolean properties
@@ -46,66 +45,66 @@ public class BooleanLogicFunctionsDslTest extends FhirPathDslTestBase {
         .group("not() function")
         // Basic not() tests
         .testEquals(false, "trueValue.not()",
-            "not() negates true to false")
+            "negates true to false")
         .testEquals(true, "falseValue.not()",
-            "not() negates false to true")
+            "negates false to true")
         // empty collections
         .testEmpty("emptyBoolean.not()",
-            "not() returns empty for empty boolean")
+            "returns empty for empty boolean")
         .testEmpty("{}.not()",
-            "not() returns empty for empty collection")
+            "returns empty for empty collection")
         .testEmpty("undefined.not()",
-            "not() returns empty for empty collection")
+            "returns empty for empty collection")
         .testEmpty("emptyString.not()",
-            "not() returns empty for empty String collection")
+            "returns empty for empty String collection")
         .testEmpty("stringValue.where($this.empty()).not()",
-            "not() returns empty for calculated empty String collection")
+            "returns empty for calculated empty String collection")
         .testEmpty("stringArray.where($this.empty()).not()",
-            "not() returns empty for calculated empty String collection")
+            "returns empty for calculated empty String collection")
         .testEmpty("%resource.ofType(Condition).not()",
-            "not() returns empty for empty Resource collection")
+            "returns empty for empty Resource collection")
         // boolean evaluation of collections
         .testFalse("%resource.not()",
-            "not() false for root resource collection")
+            "false for root resource collection")
         .testFalse("stringValue.not()",
-            "not() false for singular string element")
+            "false for singular string element")
         .testFalse("stringArray.where($this='value1').not()",
-            "not() false for calculated singular  element")
+            "false for calculated singular  element")
         .testFalse("choiceField.value.not()",
-            "not() false for singular choice element")
+            "false for singular choice element")
         .testFalse("choiceField.value.ofType(string).not()",
-            "not() false for singular resolved choice element")
+            "false for singular resolved choice element")
         .testEmpty("choiceField.value.ofType(integer).not()",
-            "not() empty for empty resolved choice element")
+            "empty for empty resolved choice element")
         .testError("stringArray.not()",
-            "not() fails on non-boolean non-singular collection")
-        
+            "fails on non-boolean non-singular collection")
+
         // not() with boolean arrays
-        .testError( "boolArray.not()",
-            "not() fails on non-singular boolean collection")
+        .testError("boolArray.not()",
+            "fails on non-singular boolean collection")
         // not() with complex types
         .testEquals(false, "person.active.not()",
-            "not() negates boolean property of complex type")
+            "negates boolean property of complex type")
         .testError("people.active.not()",
-            "not() fails on non-singlar boolean computed collection")
+            "fails on non-singular boolean computed collection")
 
         // Chained not() tests
         .testEquals(true, "falseValue.not().not().not()",
-            "not() can be chained multiple times")
+            "can be chained multiple times")
         .testTrue("trueValue.not() = false",
-            "not() result can be compared with boolean literal")
+            "result can be compared with boolean literal")
 
         // not() with boolean expressions
         .testEquals(false, "(trueValue and trueValue).not()",
-            "not() negates result of 'and' operation")
+            "negates result of 'and' operation")
         .testEquals(false, "(falseValue or trueValue).not()",
-            "not() negates result of 'or' operation")
+            "negates result of 'or' operation")
         .testEquals(true, "(falseValue and trueValue).not()",
-            "not() negates result of 'and' operation with false")
+            "negates result of 'and' operation with false")
 
         // not() with boolean conditions
         .testTrue("people.where(active.not()).name = 'Bob'",
-            "not() can be used in where() conditions")
+            "can be used in where() conditions")
         .build();
   }
 }

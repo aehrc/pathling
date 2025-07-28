@@ -9,7 +9,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.Tag;
 
 /**
  * Tests for FHIRPath filtering and projection functions required by SQL on FHIR sharable view

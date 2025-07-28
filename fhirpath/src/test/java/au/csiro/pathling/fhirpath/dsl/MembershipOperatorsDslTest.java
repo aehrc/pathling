@@ -5,7 +5,6 @@ import au.csiro.pathling.test.dsl.FhirPathTest;
 import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.Tag;
 
 public class MembershipOperatorsDslTest extends FhirPathDslTestBase {
 

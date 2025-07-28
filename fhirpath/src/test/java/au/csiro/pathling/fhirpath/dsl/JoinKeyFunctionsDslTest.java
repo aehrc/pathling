@@ -7,7 +7,6 @@ import au.csiro.pathling.test.dsl.FhirPathTest;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.Tag;
 
 /**
  * Tests for SQL on FHIR Join Key functions: - getResourceKey() - getReferenceKey()

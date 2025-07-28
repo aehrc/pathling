@@ -19,7 +19,6 @@ import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -36,10 +35,11 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
     SharedMocks.resetAll();
 
     // Create codings for testing
-    Coding loincCoding = new Coding("http://loinc.org", "55915-3",
+    final Coding loincCoding = new Coding("http://loinc.org", "55915-3",
         "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis");
-    Coding snomedCoding = new Coding("http://snomed.info/sct", "63816008", "Left hepatectomy");
-    Coding weightCoding = new Coding("http://loinc.org", "29463-7", "Body weight");
+    final Coding snomedCoding = new Coding("http://snomed.info/sct", "63816008",
+        "Left hepatectomy");
+    final Coding weightCoding = new Coding("http://loinc.org", "29463-7", "Body weight");
 
     // Setup terminology service expectations
     TerminologyServiceHelpers.setupLookup(terminologyService)
@@ -122,9 +122,10 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
     SharedMocks.resetAll();
 
     // Create codings for testing
-    Coding loincCoding = new Coding("http://loinc.org", "55915-3",
+    final Coding loincCoding = new Coding("http://loinc.org", "55915-3",
         "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis");
-    Coding snomedCoding = new Coding("http://snomed.info/sct", "63816008", "Left hepatectomy");
+    final Coding snomedCoding = new Coding("http://snomed.info/sct", "63816008",
+        "Left hepatectomy");
 
     // Setup terminology service expectations for properties
     TerminologyServiceHelpers.setupLookup(terminologyService)
@@ -246,15 +247,16 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
     SharedMocks.resetAll();
 
     // Create codings for testing
-    Coding loincCoding = new Coding("http://loinc.org", "55915-3",
+    final Coding loincCoding = new Coding("http://loinc.org", "55915-3",
         "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis");
-    Coding snomedCoding = new Coding("http://snomed.info/sct", "63816008", "Left hepatectomy");
-    Coding weightCoding = new Coding("http://loinc.org", "29463-7", "Body weight");
+    final Coding snomedCoding = new Coding("http://snomed.info/sct", "63816008",
+        "Left hepatectomy");
+    final Coding weightCoding = new Coding("http://loinc.org", "29463-7", "Body weight");
 
     // Define value set URLs
-    String labTestsValueSet = "http://example.org/fhir/ValueSet/lab-tests";
-    String proceduresValueSet = "http://example.org/fhir/ValueSet/procedures";
-    String vitalSignsValueSet = "http://example.org/fhir/ValueSet/vital-signs";
+    final String labTestsValueSet = "http://example.org/fhir/ValueSet/lab-tests";
+    final String proceduresValueSet = "http://example.org/fhir/ValueSet/procedures";
+    final String vitalSignsValueSet = "http://example.org/fhir/ValueSet/vital-signs";
 
     // Setup terminology service expectations for memberOf
     TerminologyServiceHelpers.setupValidate(terminologyService)
@@ -360,21 +362,22 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
     SharedMocks.resetAll();
 
     // Create source codings for testing
-    Coding loincCoding = new Coding("http://loinc.org", "55915-3",
+    final Coding loincCoding = new Coding("http://loinc.org", "55915-3",
         "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis");
-    Coding snomedCoding = new Coding("http://snomed.info/sct", "63816008", "Left hepatectomy");
+    final Coding snomedCoding = new Coding("http://snomed.info/sct", "63816008",
+        "Left hepatectomy");
 
     // Create target codings for translations
-    Coding translatedLoinc1 = new Coding("http://example.org/alt-loinc", "L55915",
+    final Coding translatedLoinc1 = new Coding("http://example.org/alt-loinc", "L55915",
         "Beta 2 globulin");
-    Coding translatedLoinc2 = new Coding("http://example.org/alt-loinc", "L55915-ALT",
+    final Coding translatedLoinc2 = new Coding("http://example.org/alt-loinc", "L55915-ALT",
         "Beta-2 globulin alt");
-    Coding translatedSnomed = new Coding("http://example.org/alt-snomed", "S63816",
+    final Coding translatedSnomed = new Coding("http://example.org/alt-snomed", "S63816",
         "Left hepatic resection");
 
     // Define concept map URLs
-    String conceptMap1 = "http://example.org/fhir/ConceptMap/loinc-to-alt";
-    String conceptMap2 = "http://example.org/fhir/ConceptMap/snomed-to-alt";
+    final String conceptMap1 = "http://example.org/fhir/ConceptMap/loinc-to-alt";
+    final String conceptMap2 = "http://example.org/fhir/ConceptMap/snomed-to-alt";
 
     // Setup terminology service expectations for translate
     TerminologyServiceHelpers.setupTranslate(terminologyService)
@@ -493,10 +496,14 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
     SharedMocks.resetAll();
 
     // Create codings for testing
-    Coding liverResection = new Coding("http://snomed.info/sct", "107963000", "Liver resection");
-    Coding leftHepatectomy = new Coding("http://snomed.info/sct", "63816008", "Left hepatectomy");
-    Coding viralSinusitis = new Coding("http://snomed.info/sct", "444814009", "Viral sinusitis");
-    Coding chronicSinusitis = new Coding("http://snomed.info/sct", "40055000", "Chronic sinusitis");
+    final Coding liverResection = new Coding("http://snomed.info/sct", "107963000",
+        "Liver resection");
+    final Coding leftHepatectomy = new Coding("http://snomed.info/sct", "63816008",
+        "Left hepatectomy");
+    final Coding viralSinusitis = new Coding("http://snomed.info/sct", "444814009",
+        "Viral sinusitis");
+    final Coding chronicSinusitis = new Coding("http://snomed.info/sct", "40055000",
+        "Chronic sinusitis");
 
     // Setup terminology service expectations for subsumes
     TerminologyServiceHelpers.setupSubsumes(terminologyService)
@@ -610,12 +617,13 @@ public class TerminologyFunctionsDslTest extends FhirPathDslTestBase {
     SharedMocks.resetAll();
 
     // Create codings for testing
-    Coding loincCoding = new Coding("http://loinc.org", "55915-3",
+    final Coding loincCoding = new Coding("http://loinc.org", "55915-3",
         "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis");
-    Coding snomedCoding = new Coding("http://snomed.info/sct", "63816008", "Left hepatectomy");
+    final Coding snomedCoding = new Coding("http://snomed.info/sct", "63816008",
+        "Left hepatectomy");
 
     // Create use coding for filtering designations
-    Coding synonymUse = new Coding("http://snomed.info/sct", "900000000000013009", "Synonym");
+    final Coding synonymUse = new Coding("http://snomed.info/sct", "900000000000013009", "Synonym");
 
     // Setup terminology service expectations for designations
     TerminologyServiceHelpers.setupLookup(terminologyService)

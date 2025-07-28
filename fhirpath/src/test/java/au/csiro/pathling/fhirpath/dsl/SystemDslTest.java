@@ -8,7 +8,6 @@ import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.Tag;
 
 /**
  * Tests for FHIRPath path traversal related operations.
@@ -197,7 +196,7 @@ public class SystemDslTest extends FhirPathDslTestBase {
             "correct traversal to a 'true' boolean property")
         .testFalse("falseValue",
             "correct traversal to a 'false' boolean property")
-        .group("travrersal to complex literal types")
+        .group("traversal to complex literal types")
         .testEquals("urn:system1", "(urn:system1|code1).system",
             "correct traversal to a Coding literal system")
         .testEquals("code2", "(urn:system2|code2).code",

@@ -16,7 +16,6 @@ import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.Tag;
 
 public class FhirFunctionsDslTest extends FhirPathDslTestBase {
 
@@ -31,7 +30,7 @@ public class FhirFunctionsDslTest extends FhirPathDslTestBase {
     patient.addExtension(new Extension("http://example.org/integerExt", new IntegerType(42)));
 
     // Add a complex extension with nested extensions
-    Extension complexExt = new Extension("http://example.org/complexExt");
+    final Extension complexExt = new Extension("http://example.org/complexExt");
     complexExt.addExtension(new Extension("nestedString", new StringType("nested_value")));
     complexExt.addExtension(new Extension("nestedBoolean", new BooleanType(false)));
     patient.addExtension(complexExt);
@@ -66,35 +65,35 @@ public class FhirFunctionsDslTest extends FhirPathDslTestBase {
     final Patient patient = new Patient();
 
     // Add extensions to different complex elements
-    HumanName name = new HumanName()
+    final HumanName name = new HumanName()
         .setFamily("Smith")
         .addGiven("John");
     name.addExtension(
         new Extension("http://example.org/nameExt", new StringType("name_ext_value")));
     patient.addName(name);
 
-    Address address = new Address()
+    final Address address = new Address()
         .setCity("Sydney")
         .setCountry("Australia");
     address.addExtension(
         new Extension("http://example.org/addressExt", new StringType("address_ext_value")));
     patient.addAddress(address);
 
-    ContactPoint telecom = new ContactPoint()
+    final ContactPoint telecom = new ContactPoint()
         .setValue("+61123456789");
     telecom.addExtension(
         new Extension("http://example.org/telecomExt", new StringType("telecom_ext_value")));
     patient.addTelecom(telecom);
 
     // Add extension to a CodeableConcept
-    CodeableConcept maritalStatus = new CodeableConcept()
+    final CodeableConcept maritalStatus = new CodeableConcept()
         .setText("Married");
     maritalStatus.addExtension(
         new Extension("http://example.org/maritalExt", new StringType("marital_ext_value")));
     patient.setMaritalStatus(maritalStatus);
 
     // Add extension to a Reference
-    Reference managingOrg = new Reference("Organization/123");
+    final Reference managingOrg = new Reference("Organization/123");
     managingOrg.addExtension(
         new Extension("http://example.org/refExt", new StringType("ref_ext_value")));
     patient.setManagingOrganization(managingOrg);
@@ -134,7 +133,7 @@ public class FhirFunctionsDslTest extends FhirPathDslTestBase {
     patient.addExtension(new Extension("http://example.org/ext2", new StringType("ext2_value")));
 
     // Add extension with a Coding value
-    Coding coding = new Coding()
+    final Coding coding = new Coding()
         .setSystem("http://example.org/system")
         .setCode("code1")
         .setDisplay("Display Text");

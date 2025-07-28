@@ -4,11 +4,10 @@ import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.Tag;
 
 /**
- * Tests for FHIRPath subsetting functions required by SQL on FHIR sharable view profile:
- * - first() function
+ * Tests for FHIRPath subsetting functions required by SQL on FHIR sharable view profile: - first()
+ * function
  */
 public class SubsettingFunctionsDslTest extends FhirPathDslTestBase {
 
@@ -42,31 +41,31 @@ public class SubsettingFunctionsDslTest extends FhirPathDslTestBase {
         )
         .group("first() function")
         // Basic first() tests
-        .testEquals("test", "singleString.first()", 
+        .testEquals("test", "singleString.first()",
             "first() returns the single string value")
-        .testEquals("one", "stringArray.first()", 
+        .testEquals("one", "stringArray.first()",
             "first() returns the first item in a string array")
-        .testEmpty("emptyString.first()", 
+        .testEmpty("emptyString.first()",
             "first() returns empty for an empty string")
-        .testEquals(42, "singleInteger.first()", 
+        .testEquals(42, "singleInteger.first()",
             "first() returns the single integer value")
-        .testEquals(true, "singleBoolean.first()", 
+        .testEquals(true, "singleBoolean.first()",
             "first() returns the single boolean value")
-        
+
         // Complex type first() tests
-        .testTrue("person.first().name = 'John'", 
+        .testTrue("person.first().name = 'John'",
             "first() returns the single complex type with expected name")
-        .testTrue("people.first().name = 'Alice'", 
+        .testTrue("people.first().name = 'Alice'",
             "first() returns the first item in a complex type array with expected name")
-        .testEmpty("emptyComplex.first()", 
+        .testEmpty("emptyComplex.first()",
             "first() returns empty for an empty complex type")
-        .testEmpty("{}.first()", 
+        .testEmpty("{}.first()",
             "first() returns empty for an empty literal")
-        
+
         // Chained first() tests
-        .testEquals("Alice", "people.first().name", 
+        .testEquals("Alice", "people.first().name",
             "first() can be chained with property access")
-        .testEquals(25, "people.first().age", 
+        .testEquals(25, "people.first().age",
             "first() can be chained with property access for integer")
         .build();
   }
