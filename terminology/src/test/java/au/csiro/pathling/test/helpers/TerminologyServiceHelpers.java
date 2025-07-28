@@ -45,7 +45,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
@@ -57,14 +56,14 @@ import org.mockito.stubbing.Answer;
 
 public class TerminologyServiceHelpers {
 
-  public final static Parameters RESULT_TRUE = new Parameters().setParameter("result", true);
-  public final static Parameters RESULT_FALSE = new Parameters().setParameter("result", false);
+  public static final Parameters RESULT_TRUE = new Parameters().setParameter("result", true);
+  public static final Parameters RESULT_FALSE = new Parameters().setParameter("result", false);
 
-  public final static Parameters OUTCOME_EQUIVALENT = new Parameters().setParameter("outcome",
+  public static final Parameters OUTCOME_EQUIVALENT = new Parameters().setParameter("outcome",
       EQUIVALENT.toCode());
-  public final static Parameters OUTCOME_SUBSUMES = new Parameters().setParameter("outcome",
+  public static final Parameters OUTCOME_SUBSUMES = new Parameters().setParameter("outcome",
       SUBSUMES.toCode());
-  public final static Parameters OUTCOME_SUBSUMED_BY = new Parameters().setParameter("outcome",
+  public static final Parameters OUTCOME_SUBSUMED_BY = new Parameters().setParameter("outcome",
       SUBSUMEDBY.toCode());
 
   public static class ValidateExpectations {
@@ -207,8 +206,8 @@ public class TerminologyServiceHelpers {
         final List<T> values) {
       when(mockService.lookup(deepEq(coding), eq(propertyCode), eq(displayLanguage))).thenReturn(
           values.stream()
-              .map(v -> Property.of(propertyCode, v))
-              .collect(Collectors.toUnmodifiableList())
+              .map(v -> (PropertyOrDesignation) Property.of(propertyCode, v))
+              .toList()
       );
       return this;
     }

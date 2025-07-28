@@ -173,7 +173,7 @@ public final class Paths {
     @Override
     public Collection apply(@Nonnull final Collection input,
         @Nonnull final EvaluationContext context) {
-      final NamedFunction<Collection> function;
+      final NamedFunction function;
       try {
         function = context.resolveFunction(functionIdentifier);
       } catch (final NoSuchFunctionException e) {

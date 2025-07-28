@@ -44,8 +44,8 @@ public interface EvaluationContext {
    * Resolves a resource type code to a collection of resources of that type.
    *
    * @param resourceCode The code of the resource type to resolve
-   * @return An optional containing the resource collection if the resource type exists,
-   *         or an empty optional if it does not
+   * @return An optional containing the resource collection if the resource type exists, or an empty
+   * optional if it does not
    */
   @Nonnull
   Optional<ResourceCollection> resolveResource(@Nonnull final String resourceCode);
@@ -58,7 +58,7 @@ public interface EvaluationContext {
    * @throws NoSuchFunctionException If no function with the given name exists
    */
   @Nonnull
-  NamedFunction<Collection> resolveFunction(@Nonnull final String name)
+  NamedFunction resolveFunction(@Nonnull final String name)
       throws NoSuchFunctionException;
 
   /**

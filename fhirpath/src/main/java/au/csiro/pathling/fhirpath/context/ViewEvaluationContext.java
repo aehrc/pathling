@@ -25,8 +25,6 @@ import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import lombok.AllArgsConstructor;
-import lombok.Value;
 
 /**
  * An implementation of {@link EvaluationContext} used for evaluating FHIRPath expressions within
@@ -39,28 +37,16 @@ import lombok.Value;
  *   <li>A {@link ResourceResolver} that provides access to FHIR resources</li>
  * </ul>
  * <p>
+ *
+ * @param fhirPathContext The FHIRPath context that provides access to variables and the input
+ * context.
+ * @param functionRegistry The function registry that provides access to FHIRPath functions.
+ * @param resourceResolver The resource resolver that provides access to FHIR resources.
  */
-@Value
-@AllArgsConstructor
-public class ViewEvaluationContext implements EvaluationContext {
-
-  /**
-   * The FHIRPath context that provides access to variables and the input context.
-   */
-  @Nonnull
-  FhirPathContext fhirPathContext;
-
-  /**
-   * The function registry that provides access to FHIRPath functions.
-   */
-  @Nonnull
-  FunctionRegistry<?> functionRegistry;
-
-  /**
-   * The resource resolver that provides access to FHIR resources.
-   */
-  @Nonnull
-  ResourceResolver resourceResolver;
+public record ViewEvaluationContext(@Nonnull FhirPathContext fhirPathContext,
+                                    @Nonnull FunctionRegistry functionRegistry,
+                                    @Nonnull ResourceResolver resourceResolver) implements
+    EvaluationContext {
 
   /**
    * {@inheritDoc}
@@ -80,10 +66,9 @@ public class ViewEvaluationContext implements EvaluationContext {
    */
   @Nonnull
   @Override
-  public NamedFunction<Collection> resolveFunction(@Nonnull final String name)
+  public NamedFunction resolveFunction(@Nonnull final String name)
       throws NoSuchFunctionException {
-    //noinspection unchecked
-    return (NamedFunction<Collection>) functionRegistry.getInstance(name);
+    return functionRegistry.getInstance(name);
   }
 
   /**

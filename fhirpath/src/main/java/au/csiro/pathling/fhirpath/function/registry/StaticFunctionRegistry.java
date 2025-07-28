@@ -1,6 +1,5 @@
 package au.csiro.pathling.fhirpath.function.registry;
 
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.MethodDefinedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.provider.BooleanLogicFunctions;
@@ -19,7 +18,7 @@ import com.google.common.collect.ImmutableMap.Builder;
  *
  * @author John Grimes
  */
-public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFunction<Collection>> {
+public class StaticFunctionRegistry extends InMemoryFunctionRegistry {
 
 
   private static final StaticFunctionRegistry INSTANCE = new StaticFunctionRegistry();
@@ -28,7 +27,7 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
    * Constructs a new instance of the registry, populating it with the standard set of functions.
    */
   public StaticFunctionRegistry() {
-    super(new Builder<String, NamedFunction<Collection>>()
+    super(new Builder<String, NamedFunction>()
         .putAll(MethodDefinedFunction.mapOf(BooleanLogicFunctions.class))
         .putAll(MethodDefinedFunction.mapOf(ExistenceFunctions.class))
         .putAll(MethodDefinedFunction.mapOf(FhirFunctions.class))

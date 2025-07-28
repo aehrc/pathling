@@ -34,7 +34,7 @@ import java.util.stream.Stream;
  * @author John Grimes
  */
 public record MethodDefinedFunction(String name, Method method) implements
-    NamedFunction<Collection> {
+    NamedFunction {
 
   @Override
   @Nonnull
@@ -61,7 +61,7 @@ public record MethodDefinedFunction(String name, Method method) implements
    * @return A list of {@link NamedFunction}s
    */
   @Nonnull
-  public static List<NamedFunction<Collection>> build(@Nonnull final Class<?> clazz) {
+  public static List<NamedFunction> build(@Nonnull final Class<?> clazz) {
     return Stream.of(clazz.getDeclaredMethods())
         .filter(m -> m.getAnnotation(FhirPathFunction.class) != null)
         .map(MethodDefinedFunction::build).collect(Collectors.toUnmodifiableList());
@@ -74,7 +74,7 @@ public record MethodDefinedFunction(String name, Method method) implements
    * @return A map of {@link NamedFunction}s
    */
   @Nonnull
-  public static Map<String, NamedFunction<Collection>> mapOf(@Nonnull final Class<?> clazz) {
+  public static Map<String, NamedFunction> mapOf(@Nonnull final Class<?> clazz) {
     return build(clazz).stream().collect(Collectors.toUnmodifiableMap(NamedFunction::name,
         Function.identity()));
   }

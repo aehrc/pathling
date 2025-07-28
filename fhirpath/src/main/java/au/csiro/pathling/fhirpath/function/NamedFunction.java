@@ -26,10 +26,9 @@ import jakarta.annotation.Nonnull;
 /**
  * Represents a function in FHIRPath.
  *
- * @param <T> The type of {@link Collection} that this function returns
  * @author John Grimes
  */
-public interface NamedFunction<T extends Collection> {
+public interface NamedFunction {
 
   /**
    * @return the name of this function
@@ -46,7 +45,7 @@ public interface NamedFunction<T extends Collection> {
    * @return a {@link Collection} object representing the resulting expression
    */
   @Nonnull
-  default T invoke(@Nonnull final FunctionInput input) {
+  default Collection invoke(@Nonnull final FunctionInput input) {
     throw new UnsupportedOperationException("Not implemented: " + name());
   }
 

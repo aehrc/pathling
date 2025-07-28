@@ -80,7 +80,7 @@ public class FhirpathEvaluator {
    */
   @Nonnull
   @Builder.Default
-  FunctionRegistry<?> functionRegistry = StaticFunctionRegistry.getInstance();
+  FunctionRegistry functionRegistry = StaticFunctionRegistry.getInstance();
 
   /**
    * Variables available during FHIRPath evaluation.
@@ -88,7 +88,7 @@ public class FhirpathEvaluator {
   @Nonnull
   @Builder.Default
   Map<String, Collection> variables = Map.of();
-  
+
   /**
    * Creates a builder initialized with the specified resource resolver.
    * <p>
@@ -189,7 +189,7 @@ public class FhirpathEvaluator {
      */
     @Nonnull
     FhirpathEvaluator create(@Nonnull final ResourceType subjectResource,
-        @Nonnull final FunctionRegistry<?> functionRegistry,
+        @Nonnull final FunctionRegistry functionRegistry,
         @Nonnull final Map<String, Collection> variables);
 
     /**

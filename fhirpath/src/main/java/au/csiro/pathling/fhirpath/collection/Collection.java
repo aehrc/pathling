@@ -327,11 +327,15 @@ public class Collection {
    */
   @Nonnull
   public Collection copyWith(@Nonnull final ColumnRepresentation newValue) {
-    definition.ifPresent(def -> check(def instanceof ElementDefinition,
-        "Cannot copy a Collection with a non-ElementDefinition definition"));
-    //noinspection unchecked
-    return getInstance(newValue, getFhirType(), (Optional<ElementDefinition>) definition,
-        extensionMapColumn);
+    if (definition.isPresent()) {
+      final NodeDefinition definitionValue = definition.get();
+      check(definitionValue instanceof ElementDefinition,
+          "Cannot copy a Collection with a non-ElementDefinition definition");
+      final ElementDefinition elementDefinition = (ElementDefinition) definitionValue;
+      return getInstance(newValue, getFhirType(), Optional.of(elementDefinition),
+          extensionMapColumn);
+    }
+    return getInstance(newValue, getFhirType(), Optional.empty(), extensionMapColumn);
   }
 
   /**

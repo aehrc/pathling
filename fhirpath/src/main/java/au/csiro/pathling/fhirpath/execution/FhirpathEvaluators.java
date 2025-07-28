@@ -68,7 +68,7 @@ public class FhirpathEvaluators {
   public static FhirpathEvaluator createSingle(
       @Nonnull final ResourceType subjectResource,
       @Nonnull final FhirContext fhirContext,
-      @Nonnull final FunctionRegistry<?> functionRegistry,
+      @Nonnull final FunctionRegistry functionRegistry,
       @Nonnull final Map<String, Collection> variables,
       @Nonnull final DataSource dataSource) {
     return new FhirpathEvaluator(
@@ -100,7 +100,7 @@ public class FhirpathEvaluators {
     @Override
     @Nonnull
     public FhirpathEvaluator create(@Nonnull final ResourceType subjectResource,
-        @Nonnull final FunctionRegistry<?> functionRegistry,
+        @Nonnull final FunctionRegistry functionRegistry,
         @Nonnull final Map<String, Collection> variables) {
       return FhirpathEvaluators.createSingle(
           subjectResource,
@@ -132,7 +132,7 @@ public class FhirpathEvaluators {
    * FHIRPath expressions.
    */
   public record SingleEvaluatorProvider(@Nonnull FhirContext fhirContext,
-                                        @Nonnull FunctionRegistry<?> functionRegistry,
+                                        @Nonnull FunctionRegistry functionRegistry,
                                         @Nonnull Map<String, Collection> variables,
                                         @Nonnull DataSource dataSource) implements
       FhirpathEvaluator.Provider {

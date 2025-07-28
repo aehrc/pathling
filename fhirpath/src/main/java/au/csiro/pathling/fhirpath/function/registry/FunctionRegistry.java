@@ -1,14 +1,14 @@
 package au.csiro.pathling.fhirpath.function.registry;
 
+import au.csiro.pathling.fhirpath.function.NamedFunction;
 import jakarta.annotation.Nonnull;
 
 /**
  * A registry of FHIRPath functions.
  *
- * @param <T> The type of function to be stored in the registry
  * @author John Grimes
  */
-public interface FunctionRegistry<T> {
+public interface FunctionRegistry {
 
   /**
    * Retrieves an instance of the function with the specified name in the specified context.
@@ -18,6 +18,6 @@ public interface FunctionRegistry<T> {
    * @throws NoSuchFunctionException If the function is not found
    */
   @Nonnull
-  T getInstance(@Nonnull final String name) throws NoSuchFunctionException;
+  NamedFunction getInstance(@Nonnull final String name) throws NoSuchFunctionException;
 
 }
