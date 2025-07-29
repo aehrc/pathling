@@ -20,8 +20,6 @@ package au.csiro.pathling.view;
 import au.csiro.pathling.fhirpath.FhirPath;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import lombok.AllArgsConstructor;
-import lombok.Value;
 import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -30,40 +28,22 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * <p>
  * Includes the parsed {@link FhirPath}, the name of the column and whether the column has been
  * asserted to be a collection.
+ *
+ * @param path The parsed FHIRPath expression that defines the column.
+ * @param name The requested name of the column.
+ * @param collection Whether the column has been asserted to be a collection.
+ * @param type The type that has been asserted for the column.
+ * @param sqlType The SQL type that has been asserted for the column.
  */
-@Value
-@AllArgsConstructor
-public class RequestedColumn {
+public record RequestedColumn(
+    @Nonnull FhirPath path,
+    @Nonnull String name,
+    boolean collection,
+    @Nonnull Optional<FHIRDefinedType> type,
+    @Nonnull Optional<DataType> sqlType
+) {
 
-  /**
-   * The parsed FHIRPath expression that defines the column.
-   */
   @Nonnull
-  FhirPath path;
-
-  /**
-   * The requested name of the column.
-   */
-  @Nonnull
-  String name;
-
-  /**
-   * Whether the column has been asserted to be a collection.
-   */
-  boolean collection;
-
-  /**
-   * The type that has been asserted for the column.
-   */
-  @Nonnull
-  Optional<FHIRDefinedType> type;
-
-  /**
-   * The SQL type that has been asserted for the column.
-   */
-  @Nonnull
-  Optional<DataType> sqlType;
-
   @Override
   public String toString() {
     return "RequestedColumn{" +

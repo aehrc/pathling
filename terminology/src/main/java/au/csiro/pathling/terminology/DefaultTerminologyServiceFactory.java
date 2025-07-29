@@ -29,9 +29,7 @@ import au.csiro.pathling.utilities.ObjectHolder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import jakarta.annotation.Nonnull;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
+import java.io.Serial;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -43,15 +41,18 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
  * Default implementation of {@link TerminologyServiceFactory}, providing the appropriate
  * implementation of {@link TerminologyService} based upon the given configuration.
  *
+ * @param fhirVersion The FHIR version to use for terminology services.
+ * @param configuration The terminology configuration settings.
  * @author John Grimes
  * @author Piotr Szul
  */
 @Slf4j
-@EqualsAndHashCode
-@ToString
-@Getter
-public class DefaultTerminologyServiceFactory implements TerminologyServiceFactory {
+public record DefaultTerminologyServiceFactory(
+    @Nonnull FhirVersionEnum fhirVersion,
+    @Nonnull TerminologyConfiguration configuration
+) implements TerminologyServiceFactory {
 
+  @Serial
   private static final long serialVersionUID = 2837933007972812597L;
 
   @Nonnull
@@ -59,21 +60,8 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
       DefaultTerminologyServiceFactory::createService);
 
   /**
-   * The FHIR version to use for terminology services.
-   */
-  @Nonnull
-  private final FhirVersionEnum fhirVersion;
-
-  /**
-   * The terminology configuration settings.
-   */
-  @Nonnull
-  private final TerminologyConfiguration configuration;
-
-
-  /**
-   * Resets the terminology services, clearing any cached instances.
-   * This is useful for testing or when configuration changes require a fresh instance.
+   * Resets the terminology services, clearing any cached instances. This is useful for testing or
+   * when configuration changes require a fresh instance.
    */
   public static synchronized void reset() {
     log.info("Resetting terminology services");
@@ -87,10 +75,7 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
    * @param fhirVersion the FHIR version to use
    * @param configuration the terminology configuration settings
    */
-  public DefaultTerminologyServiceFactory(@Nonnull final FhirVersionEnum fhirVersion,
-      @Nonnull final TerminologyConfiguration configuration) {
-    this.fhirVersion = fhirVersion;
-    this.configuration = configuration;
+  public DefaultTerminologyServiceFactory {
   }
 
   @Nonnull

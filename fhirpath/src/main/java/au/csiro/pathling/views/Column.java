@@ -232,7 +232,7 @@ public class Column implements SelectionElement {
    */
   @Nonnull
   public Optional<String> getTagValue(@Nonnull final String name) {
-    List<String> values = getTagValues(name);
+    final List<String> values = getTagValues(name);
     if (values.isEmpty()) {
       return Optional.empty();
     } else if (values.size() == 1) {

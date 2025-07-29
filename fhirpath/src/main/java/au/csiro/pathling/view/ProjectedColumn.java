@@ -50,7 +50,7 @@ public class ProjectedColumn {
   @Nonnull
   public Column getValue() {
     // If a type was asserted for the column, check that the collection is of that type.
-    requestedColumn.getType().ifPresent(requestedType ->
+    requestedColumn.type().ifPresent(requestedType ->
         collection.getFhirType().ifPresent(actualType -> {
           if (!requestedType.equals(actualType)) {
             throw new IllegalArgumentException(
@@ -59,13 +59,13 @@ public class ProjectedColumn {
           }
         })
     );
-    final Column rawResult = Materializable.getExternalValue(requestedColumn.isCollection()
+    final Column rawResult = Materializable.getExternalValue(requestedColumn.collection()
                                                        ? collection.asPlural()
                                                        : collection.asSingular());
-    return requestedColumn.getSqlType()
+    return requestedColumn.sqlType()
         .map(rawResult::cast)
         .orElse(rawResult)
-        .alias(requestedColumn.getName());
+        .alias(requestedColumn.name());
 
   }
 }

@@ -74,7 +74,7 @@ public record ColumnSelection(@Nonnull List<RequestedColumn> columns) implements
   private @Nonnull Iterator<Collection> getCollectionIterator(
       final @Nonnull ProjectionContext context) {
     final Stream<Collection> collections = columns.stream()
-        .map(col -> context.evalExpression(col.getPath()));
+        .map(col -> context.evalExpression(col.path()));
     return collections.iterator();
   }
 

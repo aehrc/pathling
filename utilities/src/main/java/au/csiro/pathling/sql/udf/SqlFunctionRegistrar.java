@@ -46,7 +46,7 @@ public class SqlFunctionRegistrar implements SparkConfigurer {
   }
 
   @Override
-  public void configure(@Nonnull SparkSession spark) {
+  public void configure(@Nonnull final SparkSession spark) {
     for (final SqlFunction1<?, ?> function : sqlFunction1) {
       spark.udf().register(function.getName(), function, function.getReturnType());
     }
