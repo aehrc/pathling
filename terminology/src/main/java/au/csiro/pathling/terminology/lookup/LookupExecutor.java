@@ -24,16 +24,15 @@ import static java.util.Objects.requireNonNull;
 import au.csiro.pathling.fhir.ParametersUtils;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
+import au.csiro.pathling.terminology.PropertyOrDesignationList;
 import au.csiro.pathling.terminology.TerminologyOperation;
 import au.csiro.pathling.terminology.TerminologyParameters;
 import au.csiro.pathling.terminology.TerminologyService.Designation;
 import au.csiro.pathling.terminology.TerminologyService.Property;
-import au.csiro.pathling.terminology.TerminologyService.PropertyOrDesignation;
-import au.csiro.pathling.terminology.caching.CacheableListCollector;
+import au.csiro.pathling.terminology.caching.PropertyOrDesignationListCollector;
 import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Optional;
 import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.CodeType;
@@ -49,7 +48,7 @@ import org.hl7.fhir.r4.model.UriType;
  * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
  */
 public class LookupExecutor implements
-    TerminologyOperation<Parameters, ArrayList<PropertyOrDesignation>> {
+    TerminologyOperation<Parameters, PropertyOrDesignationList> {
 
   @Nonnull
   private final TerminologyClient terminologyClient;
@@ -65,12 +64,12 @@ public class LookupExecutor implements
 
   @Override
   @Nonnull
-  public Optional<ArrayList<PropertyOrDesignation>> validate() {
-    final ImmutableCoding coding = parameters.getCoding();
+  public Optional<PropertyOrDesignationList> validate() {
+    final ImmutableCoding coding = parameters.coding();
 
     // If the system or the code of the coding is null, the result is an empty list.
     if (isNull(coding.getSystem()) || isNull(coding.getCode())) {
-      return Optional.of(new ArrayList<>());
+      return Optional.of(new PropertyOrDesignationList());
     } else {
       return Optional.empty();
     }
@@ -79,30 +78,30 @@ public class LookupExecutor implements
   @Override
   @Nonnull
   public IOperationUntypedWithInput<Parameters> buildRequest() {
-    final ImmutableCoding coding = parameters.getCoding();
+    final ImmutableCoding coding = parameters.coding();
     return terminologyClient.buildLookup(
         TerminologyParameters.required(UriType::new, coding.getSystem()),
         TerminologyParameters.optional(StringType::new, coding.getVersion()),
         TerminologyParameters.required(CodeType::new, coding.getCode()),
-        TerminologyParameters.optional(CodeType::new, parameters.getProperty()),
-        TerminologyParameters.optional(StringType::new, parameters.getAcceptLanguage())
+        TerminologyParameters.optional(CodeType::new, parameters.property()),
+        TerminologyParameters.optional(StringType::new, parameters.acceptLanguage())
     );
   }
 
   @Override
   @Nonnull
-  public ArrayList<PropertyOrDesignation> extractResult(@Nonnull final Parameters response) {
-    return toPropertiesAndDesignations(response, parameters.getProperty());
+  public PropertyOrDesignationList extractResult(@Nonnull final Parameters response) {
+    return toPropertiesAndDesignations(response, parameters.property());
   }
 
   @Override
   @Nonnull
-  public ArrayList<PropertyOrDesignation> invalidRequestFallback() {
-    return new ArrayList<>();
+  public PropertyOrDesignationList invalidRequestFallback() {
+    return new PropertyOrDesignationList();
   }
 
   @Nonnull
-  private static ArrayList<PropertyOrDesignation> toPropertiesAndDesignations(
+  private static PropertyOrDesignationList toPropertiesAndDesignations(
       @Nonnull final Parameters parameters,
       @Nullable final String propertyCode) {
 
@@ -112,15 +111,15 @@ public class LookupExecutor implements
   }
 
   @Nonnull
-  private static ArrayList<PropertyOrDesignation> toDesignations(
+  private static PropertyOrDesignationList toDesignations(
       @Nonnull final Parameters parameters) {
     return ParametersUtils.toDesignations(parameters)
         .map(Designation::ofPart)
-        .collect(new CacheableListCollector<>());
+        .collect(new PropertyOrDesignationListCollector());
   }
 
   @Nonnull
-  private static ArrayList<PropertyOrDesignation> toProperties(
+  private static PropertyOrDesignationList toProperties(
       @Nonnull final Parameters parameters, @Nullable final String propertyCode) {
     return ParametersUtils.toProperties(parameters)
         .flatMap(part -> nonNull(part.getSubproperty())
@@ -128,7 +127,7 @@ public class LookupExecutor implements
                          : Stream.of(part))
         .map(part -> Property.of(part.getCode().getValue(), requireNonNull(part.getValue())))
         .filter(property -> isNull(propertyCode) || propertyCode.equals(property.getCode()))
-        .collect(new CacheableListCollector<>());
+        .collect(new PropertyOrDesignationListCollector());
   }
 
 }

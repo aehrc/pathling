@@ -24,9 +24,11 @@ import au.csiro.pathling.config.HttpClientCachingConfiguration;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
 import au.csiro.pathling.terminology.BaseTerminologyService;
+import au.csiro.pathling.terminology.PropertyOrDesignationList;
 import au.csiro.pathling.terminology.TerminologyOperation;
 import au.csiro.pathling.terminology.TerminologyParameters;
 import au.csiro.pathling.terminology.TerminologyResult;
+import au.csiro.pathling.terminology.TranslationList;
 import au.csiro.pathling.terminology.lookup.LookupExecutor;
 import au.csiro.pathling.terminology.lookup.LookupParameters;
 import au.csiro.pathling.terminology.subsumes.SubsumesExecutor;
@@ -44,7 +46,6 @@ import jakarta.annotation.Nullable;
 import java.io.Closeable;
 import java.io.Serializable;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -69,23 +70,29 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
   private static final String IF_NONE_MATCH_HEADER_NAME = "if-none-match";
   private static final String CACHE_CONTROL_HEADER_NAME = "cache-control";
 
+  /** The caching configuration for the HTTP client. */
   @Nonnull
   protected final HttpClientCachingConfiguration configuration;
 
+  /** The embedded cache manager that manages all terminology caches. */
   @Nonnull
   protected final EmbeddedCacheManager cacheManager;
 
+  /** Cache for storing code validation results. */
   @Nonnull
   protected final Cache<Integer, TerminologyResult<Boolean>> validateCodeCache;
 
+  /** Cache for storing concept subsumption results. */
   @Nonnull
   protected final Cache<Integer, TerminologyResult<ConceptSubsumptionOutcome>> subsumesCache;
 
+  /** Cache for storing translation results. */
   @Nonnull
-  protected final Cache<Integer, TerminologyResult<ArrayList<Translation>>> translateCache;
+  protected final Cache<Integer, TerminologyResult<TranslationList>> translateCache;
 
+  /** Cache for storing lookup results including properties and designations. */
   @Nonnull
-  protected final Cache<Integer, TerminologyResult<ArrayList<PropertyOrDesignation>>> lookupCache;
+  protected final Cache<Integer, TerminologyResult<PropertyOrDesignationList>> lookupCache;
 
   /**
    * @param terminologyClient The terminology client to cache results from
@@ -93,21 +100,17 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
    * @param resourcesToClose Any resources that should be closed when this service is closed
    */
   @SuppressWarnings("unchecked")
-  public CachingTerminologyService(@Nonnull final TerminologyClient terminologyClient,
+  protected CachingTerminologyService(@Nonnull final TerminologyClient terminologyClient,
       @Nonnull final HttpClientCachingConfiguration configuration,
       @Nonnull final Closeable... resourcesToClose) {
     super(terminologyClient, resourcesToClose);
     this.configuration = configuration;
     // register manager as a closeable resource
     cacheManager = registerResource(buildCacheManager());
-    validateCodeCache = (Cache<Integer, TerminologyResult<Boolean>>) buildCache(cacheManager,
-        VALIDATE_CODE_CACHE_NAME);
-    subsumesCache = (Cache<Integer, TerminologyResult<ConceptSubsumptionOutcome>>) buildCache(
-        cacheManager, SUBSUMES_CACHE_NAME);
-    translateCache = (Cache<Integer, TerminologyResult<ArrayList<Translation>>>) buildCache(
-        cacheManager, TRANSLATE_CACHE_NAME);
-    lookupCache = (Cache<Integer, TerminologyResult<ArrayList<PropertyOrDesignation>>>) buildCache(
-        cacheManager, LOOKUP_CACHE_NAME);
+    validateCodeCache = buildCache(cacheManager, VALIDATE_CODE_CACHE_NAME, Boolean.class);
+    subsumesCache = buildCache(cacheManager, SUBSUMES_CACHE_NAME, ConceptSubsumptionOutcome.class);
+    translateCache = buildCache(cacheManager, TRANSLATE_CACHE_NAME, TranslationList.class);
+    lookupCache = buildCache(cacheManager, LOOKUP_CACHE_NAME, PropertyOrDesignationList.class);
   }
 
   @Override
@@ -120,7 +123,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
 
   @Nonnull
   @Override
-  public List<Translation> translate(@Nonnull final Coding coding,
+  public TranslationList translate(@Nonnull final Coding coding,
       @Nonnull final String conceptMapUrl,
       final boolean reverse, @Nullable final String target) {
     final TranslateParameters parameters = new TranslateParameters(ImmutableCoding.of(coding),
@@ -141,7 +144,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
 
   @Nonnull
   @Override
-  public List<PropertyOrDesignation> lookup(@Nonnull final Coding coding,
+  public PropertyOrDesignationList lookup(@Nonnull final Coding coding,
       @Nullable final String property, @Nullable final String acceptLanguage) {
     final LookupParameters parameters = new LookupParameters(ImmutableCoding.of(coding), property,
         acceptLanguage);
@@ -157,33 +160,34 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
    * @param parameters The parameters for the operation
    * @param operation A {@link TerminologyOperation} that provides the behavior specific to the type
    * of operation
-   * @param <ParametersType> The type of the parameters that are input to the operation
-   * @param <ResponseType> The type of the response returned by the terminology client
-   * @param <ResultType> The type of the final result that is extracted from the response
+   * @param <P> The type of the parameters that are input to the operation
+   * @param <S> The type of the response returned by the terminology client
+   * @param <R> The type of the final result that is extracted from the response
    * @return The operation result
    */
-  private <ParametersType extends TerminologyParameters, ResponseType, ResultType extends Serializable> ResultType getFromCache(
-      @Nonnull final Cache<Integer, TerminologyResult<ResultType>> cache,
-      @Nonnull final ParametersType parameters,
-      @Nonnull final TerminologyOperation<ResponseType, ResultType> operation
+  private <P extends TerminologyParameters, S, R extends Serializable> R getFromCache(
+      @Nonnull final Cache<Integer, TerminologyResult<R>> cache,
+      @Nonnull final P parameters,
+      @Nonnull final TerminologyOperation<S, R> operation
   ) {
     final int key = parameters.hashCode();
-    final TerminologyResult<ResultType> cached = cache.get(key);
+    final TerminologyResult<R> cached = cache.get(key);
 
     if (cached == null) {
       // Cache miss.
-      final TerminologyResult<ResultType> result = fetch(operation, Optional.empty());
+      final TerminologyResult<R> result = fetch(operation, Optional.empty());
       cache.put(key, result);
-      return result.getData();
+      return requireNonNull(result.getData());
     } else {
       final boolean expired =
           cached.getExpires() != null && System.currentTimeMillis() > cached.getExpires();
-      return requireNonNull(cache.compute(key,
-          (k, v) -> expired
+      final TerminologyResult<R> result = cache.compute(key, (k, v) -> expired
                     // Cache hit, but the entry is expired and needs to be revalidated.
                     ? fetch(operation, Optional.ofNullable(v))
                     // Cache hit, and the entry is still valid.
-                    : v)).getData();
+                    : v);
+      requireNonNull(result);
+      return requireNonNull(result.getData());
     }
   }
 
@@ -193,20 +197,20 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
    * @param operation A {@link TerminologyOperation} that provides the behavior specific to the type
    * of operation
    * @param cached A previously cached value
-   * @param <ResponseType> The type of the response returned by the terminology client
-   * @param <ResultType> The type of the final result that is extracted from the response
+   * @param <S> The type of the response returned by the terminology client
+   * @param <R> The type of the final result that is extracted from the response
    * @return The operation result
    */
-  private <ResponseType, ResultType extends Serializable> TerminologyResult<ResultType> fetch(
-      @Nonnull final TerminologyOperation<ResponseType, ResultType> operation,
-      @Nonnull final Optional<TerminologyResult<ResultType>> cached) {
-    final Optional<ResultType> invalidResult = operation.validate();
+  private <S, R extends Serializable> TerminologyResult<R> fetch(
+      @Nonnull final TerminologyOperation<S, R> operation,
+      @Nonnull final Optional<TerminologyResult<R>> cached) {
+    final Optional<R> invalidResult = operation.validate();
     if (invalidResult.isPresent()) {
       // If the parameters fail validation, cache the invalid result forever.
       return new TerminologyResult<>(invalidResult.get(), null, null, false);
     }
 
-    final IOperationUntypedWithInput<ResponseType> request = operation.buildRequest();
+    final IOperationUntypedWithInput<S> request = operation.buildRequest();
 
     // Add an If-None-Match header if the cached result is accompanied by an ETag.
     cached.flatMap(c -> Optional.ofNullable(c.getETag()))
@@ -223,8 +227,8 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
       final MethodOutcome outcome = request.returnMethodOutcome().execute();
 
       // If the response was 200 OK, use the data from the fresh response.
-      @SuppressWarnings("unchecked") final ResultType result = operation.extractResult(
-          (ResponseType) outcome.getResource());
+      @SuppressWarnings("unchecked") final R result = operation.extractResult(
+          (S) outcome.getResource());
       final Optional<String> newETag = getSingularHeader(outcome, ETAG_HEADER_NAME);
       final Optional<Long> serverExpires = getExpires(outcome);
       return new TerminologyResult<>(
@@ -241,7 +245,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
       // If the response was 304 Not Modified, use the data from the cached response and update 
       // the ETag and expiry.
       final Optional<String> newETag = getSingularHeader(e.getResponseHeaders(), ETAG_HEADER_NAME);
-      final TerminologyResult<ResultType> previous = checkPresent(cached);
+      final TerminologyResult<R> previous = checkPresent(cached);
       final Optional<Long> serverExpires = getExpires(e.getResponseHeaders());
       final Optional<Long> previousExpiry = Optional.ofNullable(previous.getExpires());
       return new TerminologyResult<>(previous.getData(),
@@ -260,7 +264,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
       // configured default expiry.
       final Optional<Long> serverExpires = getExpires(e.getResponseHeaders());
       final long expires = resolveExpires(List.of(serverExpires, defaultExpires));
-      final TerminologyResult<ResultType> fallback = new TerminologyResult<>(
+      final TerminologyResult<R> fallback = new TerminologyResult<>(
           operation.invalidRequestFallback(), null, expires, false);
       return handleError(e, fallback);
     }
@@ -276,8 +280,9 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
    * @param cacheName a name for the cache
    * @return a new {@link Cache} instance appropriate for the specific implementation
    */
-  protected abstract Cache<Integer, ?> buildCache(@Nonnull final EmbeddedCacheManager cacheManager,
-      @Nonnull final String cacheName);
+  protected abstract <T extends Serializable> Cache<Integer, TerminologyResult<T>> buildCache(
+      @Nonnull final EmbeddedCacheManager cacheManager, @Nonnull final String cacheName,
+      @Nonnull final Class<T> valueType);
 
   @SuppressWarnings("SameParameterValue")
   @Nonnull

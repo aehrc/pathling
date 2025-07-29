@@ -60,8 +60,8 @@ public class SubsumesExecutor implements
   @Override
   @Nonnull
   public Optional<ConceptSubsumptionOutcome> validate() {
-    final ImmutableCoding codingA = parameters.getCodingA();
-    final ImmutableCoding codingB = parameters.getCodingB();
+    final ImmutableCoding codingA = parameters.codingA();
+    final ImmutableCoding codingB = parameters.codingB();
 
     // If either of the systems are null, or they don't match, the result is not subsumed.
     if (codingA.getSystem() == null || !codingA.getSystem().equals(codingB.getSystem())) {
@@ -90,8 +90,8 @@ public class SubsumesExecutor implements
   @Override
   @Nonnull
   public IOperationUntypedWithInput<Parameters> buildRequest() {
-    final ImmutableCoding codingA = parameters.getCodingA();
-    final ImmutableCoding codingB = parameters.getCodingB();
+    final ImmutableCoding codingA = parameters.codingA();
+    final ImmutableCoding codingB = parameters.codingB();
     final String resolvedSystem = codingA.getSystem();
     final String resolvedVersion = codingA.getVersion() != null
                                    ? codingA.getVersion()

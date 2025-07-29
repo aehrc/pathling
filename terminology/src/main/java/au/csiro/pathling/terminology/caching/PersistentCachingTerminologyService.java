@@ -21,8 +21,10 @@ import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.config.HttpClientCachingConfiguration;
 import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.terminology.TerminologyResult;
 import jakarta.annotation.Nonnull;
 import java.io.Closeable;
+import java.io.Serializable;
 import java.nio.file.Path;
 import lombok.extern.slf4j.Slf4j;
 import org.infinispan.Cache;
@@ -69,8 +71,9 @@ public class PersistentCachingTerminologyService extends CachingTerminologyServi
   }
 
   @Override
-  protected Cache<Integer, ?> buildCache(@Nonnull final EmbeddedCacheManager cacheManager,
-      @Nonnull final String cacheName) {
+  protected <T extends Serializable> Cache<Integer, TerminologyResult<T>> buildCache(
+      @Nonnull final EmbeddedCacheManager cacheManager, @Nonnull final String cacheName,
+      @Nonnull final Class<T> valueType) {
     final String storagePath = configuration.getStoragePath();
     final String dataLocation = Path.of(requireNonNull(storagePath), DATA_DIRECTORY).toString();
     final String indexLocation = Path.of(storagePath, INDEX_DIRECTORY).toString();

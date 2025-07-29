@@ -19,7 +19,8 @@ package au.csiro.pathling.terminology.translate;
 
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
 import au.csiro.pathling.terminology.TerminologyParameters;
-import lombok.Value;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 
 /**
  * Represents the input parameters to the translate operation.
@@ -28,14 +29,7 @@ import lombok.Value;
  * @see <a
  * href="https://www.hl7.org/fhir/R4/codesystem-operation-translate.html">CodeSystem/$translate</a>
  */
-@Value
-public class TranslateParameters implements TerminologyParameters {
-
-  private static final long serialVersionUID = 3514974005203890618L;
-
-  ImmutableCoding coding;
-  String conceptMapUrl;
-  boolean reverse;
-  String target;
+public record TranslateParameters(@Nonnull ImmutableCoding coding, @Nonnull String conceptMapUrl,
+                                  boolean reverse, @Nullable String target) implements TerminologyParameters {
 
 }

@@ -19,7 +19,7 @@ package au.csiro.pathling.terminology.validatecode;
 
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
 import au.csiro.pathling.terminology.TerminologyParameters;
-import lombok.Value;
+import jakarta.annotation.Nonnull;
 
 /**
  * Represents the input parameters to the validate-code operation.
@@ -28,12 +28,7 @@ import lombok.Value;
  * @see <a
  * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
  */
-@Value
-public class ValidateCodeParameters implements TerminologyParameters {
-
-  private static final long serialVersionUID = -4527968941195449678L;
-
-  String valueSetUrl;
-  ImmutableCoding coding;
+public record ValidateCodeParameters(@Nonnull String valueSetUrl, @Nonnull ImmutableCoding coding) implements
+    TerminologyParameters {
 
 }

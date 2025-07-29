@@ -40,8 +40,7 @@ import org.hl7.fhir.r4.model.UriType;
  * @see <a
  * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
  */
-public class ValidateCodeExecutor implements
-    TerminologyOperation<Parameters, Boolean> {
+public class ValidateCodeExecutor implements TerminologyOperation<Parameters, Boolean> {
 
   @Nonnull
   private final TerminologyClient terminologyClient;
@@ -58,7 +57,7 @@ public class ValidateCodeExecutor implements
   @Override
   @Nonnull
   public Optional<Boolean> validate() {
-    final ImmutableCoding coding = parameters.getCoding();
+    final ImmutableCoding coding = parameters.coding();
     if (isNull(coding.getSystem()) || isNull(coding.getCode())) {
       return Optional.of(false);
     } else {
@@ -69,8 +68,8 @@ public class ValidateCodeExecutor implements
   @Override
   @Nonnull
   public IOperationUntypedWithInput<Parameters> buildRequest() {
-    final String codeSystemUrl = parameters.getValueSetUrl();
-    final ImmutableCoding coding = parameters.getCoding();
+    final String codeSystemUrl = parameters.valueSetUrl();
+    final ImmutableCoding coding = parameters.coding();
     return terminologyClient.buildValidateCode(
         required(UriType::new, codeSystemUrl), required(UriType::new, coding.getSystem()),
         optional(StringType::new, coding.getVersion()),

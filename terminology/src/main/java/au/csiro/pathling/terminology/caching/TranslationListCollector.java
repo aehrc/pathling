@@ -17,7 +17,8 @@
 
 package au.csiro.pathling.terminology.caching;
 
-import java.util.ArrayList;
+import au.csiro.pathling.terminology.TerminologyService.Translation;
+import au.csiro.pathling.terminology.TranslationList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Set;
@@ -28,30 +29,28 @@ import java.util.function.Supplier;
 import java.util.stream.Collector;
 
 /**
- * A collector that collects a stream of items into a list.
+ * A collector that collects a stream of items into a {@link TranslationList}.
  * <p>
  * This is the same as {@link java.util.stream.Collectors#toList()} except that it returns an
- * {@link ArrayList} instead of a generic {@link java.util.List}.
+ * {@link TranslationList} instead of a generic {@link java.util.List}.
  * <p>
  * We need this because the list implementation needs to be constrained to ensure that it is
  * serializable for persistent caching purposes.
- *
- * @param <T> the type of the elements to collect
  */
-public class CacheableListCollector<T> implements Collector<T, ArrayList<T>, ArrayList<T>> {
+public class TranslationListCollector implements Collector<Translation, TranslationList, TranslationList> {
 
   @Override
-  public Supplier<ArrayList<T>> supplier() {
-    return ArrayList::new;
+  public Supplier<TranslationList> supplier() {
+    return TranslationList::new;
   }
 
   @Override
-  public BiConsumer<ArrayList<T>, T> accumulator() {
-    return ArrayList::add;
+  public BiConsumer<TranslationList, Translation> accumulator() {
+    return TranslationList::add;
   }
 
   @Override
-  public BinaryOperator<ArrayList<T>> combiner() {
+  public BinaryOperator<TranslationList> combiner() {
     return (left, right) -> {
       left.addAll(right);
       return left;
@@ -59,7 +58,7 @@ public class CacheableListCollector<T> implements Collector<T, ArrayList<T>, Arr
   }
 
   @Override
-  public Function<ArrayList<T>, ArrayList<T>> finisher() {
+  public Function<TranslationList, TranslationList> finisher() {
     return Function.identity();
   }
 

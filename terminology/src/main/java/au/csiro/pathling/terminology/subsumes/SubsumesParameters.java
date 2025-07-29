@@ -19,7 +19,7 @@ package au.csiro.pathling.terminology.subsumes;
 
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
 import au.csiro.pathling.terminology.TerminologyParameters;
-import lombok.Value;
+import jakarta.annotation.Nonnull;
 
 /**
  * Represents the input parameters to the subsumes operation.
@@ -28,12 +28,7 @@ import lombok.Value;
  * @see <a
  * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
  */
-@Value
-public class SubsumesParameters implements TerminologyParameters {
-
-  private static final long serialVersionUID = 4690140629959363634L;
-
-  ImmutableCoding codingA;
-  ImmutableCoding codingB;
+public record SubsumesParameters(@Nonnull ImmutableCoding codingA, @Nonnull ImmutableCoding codingB) implements
+    TerminologyParameters {
 
 }

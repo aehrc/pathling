@@ -102,6 +102,7 @@ public interface Comparable {
   ColumnRepresentation getColumn();
 
   /**
+   * @param path the path to check compatibility with
    * @return {@code true} if this path can be compared to the specified class
    */
   default boolean isComparableTo(@Nonnull final Comparable path) {

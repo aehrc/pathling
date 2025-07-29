@@ -54,6 +54,7 @@ public record BindingContext(@Nonnull Method method, @Nullable String contextDes
   /**
    * Reports an error in this binding context.
    *
+   * @param <T> the return type (never actually returned as method always throws)
    * @param issue The issue to report
    * @return Never returns, always throws an exception
    * @throws InvalidUserInputError Always thrown with a formatted message

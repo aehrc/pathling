@@ -19,8 +19,10 @@ package au.csiro.pathling.terminology.caching;
 
 import au.csiro.pathling.config.HttpClientCachingConfiguration;
 import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.terminology.TerminologyResult;
 import jakarta.annotation.Nonnull;
 import java.io.Closeable;
+import java.io.Serializable;
 import org.infinispan.Cache;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
@@ -52,8 +54,9 @@ public class InMemoryCachingTerminologyService extends CachingTerminologyService
   }
 
   @Override
-  protected Cache<Integer, ?> buildCache(@Nonnull final EmbeddedCacheManager cacheManager,
-      @Nonnull final String cacheName) {
+  protected <T extends Serializable> Cache<Integer, TerminologyResult<T>> buildCache(
+      @Nonnull final EmbeddedCacheManager cacheManager, @Nonnull final String cacheName,
+      @Nonnull final Class<T> valueType) {
     final Configuration cacheConfig = new ConfigurationBuilder()
         .memory()
         .maxCount(configuration.getMaxEntries())

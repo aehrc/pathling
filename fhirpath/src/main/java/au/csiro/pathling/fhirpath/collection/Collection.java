@@ -124,6 +124,7 @@ public class Collection {
    * Use this builder when the path is the child of another path, and will need to be traversable.
    *
    * @param columnRepresentation a {@link Column} containing the result of the expression
+   * @param extensionMapColumn an optional extension map column
    * @param definition the {@link ElementDefinition} that this path should be based upon
    * @return a new {@link Collection}
    * @throws CollectionConstructionError if there is a problem constructing the collection

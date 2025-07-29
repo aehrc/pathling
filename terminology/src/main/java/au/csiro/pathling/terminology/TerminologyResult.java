@@ -19,6 +19,7 @@ package au.csiro.pathling.terminology;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.Serial;
 import java.io.Serializable;
 import lombok.Value;
 
@@ -26,19 +27,20 @@ import lombok.Value;
  * Represents the result of a terminology operation, along with metadata that can be used for
  * caching.
  *
- * @param <ResultType> The type of the final result that is extracted from the response
+ * @param <T> The type of the final result that is extracted from the response
  * @author John Grimes
  */
 @Value
-public class TerminologyResult<ResultType extends Serializable> implements Serializable {
+public class TerminologyResult<T extends Serializable> implements Serializable {
 
+  @Serial
   private static final long serialVersionUID = -8569345179387329139L;
 
   /**
    * The value of the cache entry.
    */
   @Nullable
-  ResultType data;
+  T data;
 
   /**
    * The ETag returned in the response that generated this value.
