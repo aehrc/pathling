@@ -38,7 +38,7 @@ public class AtMostOneNonNullValidator implements
         if (field.get(value) != null) {
           nonNullCount++;
         }
-      } catch (NoSuchFieldException | IllegalAccessException e) {
+      } catch (final NoSuchFieldException | IllegalAccessException e) {
         // If we can't access the field, we'll assume it's null
         // This shouldn't happen with proper usage of the annotation
       }

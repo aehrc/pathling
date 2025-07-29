@@ -48,13 +48,13 @@ class FhirTraversalTest {
 
   final Set<Base> collection = new HashSet<>();
 
-  void collectObject(Base base) {
+  void collectObject(final Base base) {
     collection.add(base);
   }
 
   @Test
   void testResourceWithNoElements() {
-    Resource patient = new Patient();
+    final Resource patient = new Patient();
     FhirTraversal.processRecursive(patient, this::collectObject);
     assertEquals(Set.of(patient), collection);
   }

@@ -70,7 +70,7 @@ public abstract class Assertions {
         .hasRowsUnordered(expectedDataset);
   }
 
-  public static <T> T fail(String message, Object expected, Object actual) {
+  public static <T> T fail(final String message, final Object expected, final Object actual) {
     throw new AssertionFailedError(message, expected, actual);
   }
 }

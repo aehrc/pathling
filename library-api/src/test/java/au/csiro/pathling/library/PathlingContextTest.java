@@ -57,7 +57,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
@@ -84,13 +83,13 @@ import scala.collection.mutable.WrappedArray;
 public class PathlingContextTest {
 
   private static SparkSession spark;
-  private static final String testDataUrl = "target/encoders-tests/data";
+  private static final String TEST_DATA_URL = "target/encoders-tests/data";
 
   /**
    * Set up Spark.
    */
   @BeforeAll
-  public static void setUpAll() {
+  static void setUpAll() {
     spark = TestHelpers.spark();
   }
 
@@ -98,7 +97,7 @@ public class PathlingContextTest {
    * Tear down Spark.
    */
   @AfterAll
-  public static void tearDownAll() {
+  static void tearDownAll() {
     spark.stop();
   }
 
@@ -119,12 +118,12 @@ public class PathlingContextTest {
 
 
   public static boolean isValidGUID(@Nonnull final String maybeGUID) {
-    Matcher m = GUID_REGEX.matcher(maybeGUID);
+    final Matcher m = GUID_REGEX.matcher(maybeGUID);
     return m.matches();
   }
 
   public static boolean isValidRelativeReference(@Nonnull final String maybeRelativeRef) {
-    Matcher m = RELATIVE_REF_REGEX.matcher(maybeRelativeRef);
+    final Matcher m = RELATIVE_REF_REGEX.matcher(maybeRelativeRef);
     return m.matches();
   }
 
@@ -132,7 +131,7 @@ public class PathlingContextTest {
     final List<String> invalidValues = maybeGuids.stream()
         .filter(not(PathlingContextTest::isValidGUID))
         .limit(7)
-        .collect(Collectors.toUnmodifiableList());
+        .toList();
     assertTrue(invalidValues.isEmpty(),
         "All values should be GUIDs, but some are not: " + invalidValues);
   }
@@ -141,7 +140,7 @@ public class PathlingContextTest {
     final List<String> invalidValues = maybeRelativeRefs.stream()
         .filter(not(PathlingContextTest::isValidRelativeReference))
         .limit(7)
-        .collect(Collectors.toUnmodifiableList());
+        .toList();
     assertTrue(invalidValues.isEmpty(),
         "All values should be relative references, but some are not: " + invalidValues);
   }
@@ -152,13 +151,13 @@ public class PathlingContextTest {
   }
 
   public <T> void assertValidRelativeRefColumns(@Nonnull final Dataset<T> df,
-      Column... refColumns) {
+      final Column... refColumns) {
     Stream.of(refColumns).forEach(c -> assertAllRelativeReferences(
         df.select(c.getField("reference")).as(Encoders.STRING()).collectAsList()));
   }
 
   @BeforeEach
-  public void setUp() {
+  void setUp() {
     // setup terminology mocks
     terminologyServiceFactory = mock(
         TerminologyServiceFactory.class, withSettings().serializable());
@@ -171,10 +170,10 @@ public class PathlingContextTest {
 
 
   @Test
-  public void testEncodeResourcesFromJsonBundle() {
+  void testEncodeResourcesFromJsonBundle() {
 
     final Dataset<String> bundlesDF = spark.read().option("wholetext", true)
-        .textFile(testDataUrl + "/bundles/R4/json");
+        .textFile(TEST_DATA_URL + "/bundles/R4/json");
 
     final PathlingContext pathling = PathlingContext.create(spark);
 
@@ -201,9 +200,9 @@ public class PathlingContextTest {
 
 
   @Test
-  public void testEncodeResourcesFromXmlBundle() {
+  void testEncodeResourcesFromXmlBundle() {
     final Dataset<String> bundlesDF = spark.read().option("wholetext", true)
-        .textFile(testDataUrl + "/bundles/R4/xml");
+        .textFile(TEST_DATA_URL + "/bundles/R4/xml");
 
     final PathlingContext pathling = PathlingContext.create(spark);
     final Dataset<Condition> conditionsDataframe = pathling.encodeBundle(bundlesDF, Condition.class,
@@ -217,9 +216,9 @@ public class PathlingContextTest {
 
 
   @Test
-  public void testEncodeResourcesFromJson() {
+  void testEncodeResourcesFromJson() {
     final Dataset<String> jsonResources = spark.read()
-        .textFile(testDataUrl + "/resources/R4/json");
+        .textFile(TEST_DATA_URL + "/resources/R4/json");
 
     final PathlingContext pathling = PathlingContext.create(spark);
 
@@ -238,9 +237,9 @@ public class PathlingContextTest {
   }
 
   @Test
-  public void testEncoderOptions() {
+  void testEncoderOptions() {
     final Dataset<Row> jsonResourcesDF = spark.read()
-        .text(testDataUrl + "/resources/R4/json");
+        .text(TEST_DATA_URL + "/resources/R4/json");
 
     // Test the defaults
     final Row defaultRow = PathlingContext.create(spark)
@@ -289,13 +288,14 @@ public class PathlingContextTest {
   }
 
   @Test
-  public void testEncodeResourceStream() throws Exception {
+  void testEncodeResourceStream() throws Exception {
     final EncodingConfiguration encodingConfig = EncodingConfiguration.builder()
         .enableExtensions(true)
         .build();
     final PathlingContext pathling = PathlingContext.create(spark, encodingConfig);
 
-    final Dataset<Row> jsonResources = spark.readStream().text(testDataUrl + "/resources/R4/json");
+    final Dataset<Row> jsonResources = spark.readStream()
+        .text(TEST_DATA_URL + "/resources/R4/json");
 
     assertTrue(jsonResources.isStreaming());
 
@@ -430,8 +430,8 @@ public class PathlingContextTest {
 
     final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
     assertEquals(expectedFactory, actualServiceFactory);
-    final TerminologyService terminologyService = actualServiceFactory.build();
-    assertNotNull(terminologyService);
+    final TerminologyService actualService = actualServiceFactory.build();
+    assertNotNull(actualService);
   }
 
   @Test
@@ -452,8 +452,8 @@ public class PathlingContextTest {
 
     final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
     assertEquals(expectedFactory, actualServiceFactory);
-    final TerminologyService terminologyService = actualServiceFactory.build();
-    assertNotNull(terminologyService);
+    final TerminologyService actualService = actualServiceFactory.build();
+    assertNotNull(actualService);
   }
 
   @Test
@@ -507,12 +507,12 @@ public class PathlingContextTest {
 
     final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
     assertEquals(expectedFactory, actualServiceFactory);
-    final TerminologyService terminologyService = actualServiceFactory.build();
-    assertNotNull(terminologyService);
+    final TerminologyService actualService = actualServiceFactory.build();
+    assertNotNull(actualService);
   }
 
   @Test
-  public void failsOnInvalidTerminologyConfiguration() {
+  void failsOnInvalidTerminologyConfiguration() {
 
     final TerminologyConfiguration invalidTerminologyConfig = TerminologyConfiguration.builder()
         .serverUrl("not-a-URL")
@@ -532,7 +532,7 @@ public class PathlingContextTest {
   }
 
   @Test
-  public void failsOnInvalidEncodingConfiguration() {
+  void failsOnInvalidEncodingConfiguration() {
 
     final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
         .build();

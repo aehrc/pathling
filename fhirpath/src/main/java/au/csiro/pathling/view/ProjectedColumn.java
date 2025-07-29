@@ -20,26 +20,18 @@ package au.csiro.pathling.view;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
-import lombok.Value;
 import org.apache.spark.sql.Column;
 
 /**
  * The result of evaluating a {@link RequestedColumn} as part of a {@link ProjectionClause}.
+ *
+ * @param collection The result of evaluating the column.
+ * @param requestedColumn The column that was requested to be included in the projection.
  */
-@Value
-public class ProjectedColumn {
-
-  /**
-   * The result of evaluating the column.
-   */
-  @Nonnull
-  Collection collection;
-
-  /**
-   * The column that was requested to be included in the projection.
-   */
-  @Nonnull
-  RequestedColumn requestedColumn;
+public record ProjectedColumn(
+    @Nonnull Collection collection,
+    @Nonnull RequestedColumn requestedColumn
+) {
 
   /**
    * Gets the column value from the collection and aliases it with the requested name. If a SQL type
@@ -60,8 +52,8 @@ public class ProjectedColumn {
         })
     );
     final Column rawResult = Materializable.getExternalValue(requestedColumn.collection()
-                                                       ? collection.asPlural()
-                                                       : collection.asSingular());
+                                                             ? collection.asPlural()
+                                                             : collection.asSingular());
     return requestedColumn.sqlType()
         .map(rawResult::cast)
         .orElse(rawResult)

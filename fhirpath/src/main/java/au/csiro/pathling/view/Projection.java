@@ -153,7 +153,7 @@ public class Projection {
         .toList();
     // Bind the result collections to the columns in the projection result.
     final List<Collection> boundResults = IntStream.range(0, columnNames.size())
-        .mapToObj(i -> projectionResult.getResults().get(i).getCollection()
+        .mapToObj(i -> projectionResult.getResults().get(i).collection()
             .copyWith(new
                 DefaultRepresentation(inlinedResult.col(columnNames.get(i)))))
         .toList();
@@ -203,12 +203,12 @@ public class Projection {
     return where.flatMap(whereSelection -> {
       final List<ProjectedColumn> whereResult = whereSelection.evaluate(context).getResults();
       final boolean isValidFilter = whereResult.stream()
-          .allMatch(cr -> cr.getCollection() instanceof BooleanCollection);
+          .allMatch(cr -> cr.collection() instanceof BooleanCollection);
       if (!isValidFilter) {
         throw new IllegalArgumentException("Filter must be a boolean expression");
       }
       return whereResult.stream()
-          .map(cr -> cr.getCollection().asSingular().getColumn().getValue())
+          .map(cr -> cr.collection().asSingular().getColumn().getValue())
           .reduce(Column::and);
     });
   }

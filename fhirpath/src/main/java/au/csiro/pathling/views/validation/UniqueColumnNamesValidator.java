@@ -1,16 +1,15 @@
 package au.csiro.pathling.views.validation;
 
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.views.Column;
 import au.csiro.pathling.views.FhirView;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * Validator implementation for the {@link UniqueColumnNames} constraint.
@@ -46,7 +45,7 @@ public class UniqueColumnNamesValidator implements
    * @return {@code true} if all column names are unique, {@code false} otherwise
    */
   @Override
-  public boolean isValid(FhirView view, ConstraintValidatorContext context) {
+  public boolean isValid(final FhirView view, final ConstraintValidatorContext context) {
     if (view == null) {
       return true; // Let @NotNull handle this case
     }
@@ -64,7 +63,7 @@ public class UniqueColumnNamesValidator implements
       // Disable default message
       context.disableDefaultConstraintViolation();
       // Create a custom message with the duplicate names
-      String message = "Duplicate column names found: " + String.join(", ", duplicateNames);
+      final String message = "Duplicate column names found: " + String.join(", ", duplicateNames);
       context.buildConstraintViolationWithTemplate(message)
           .addConstraintViolation();
       return false;

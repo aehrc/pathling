@@ -31,16 +31,18 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
 
 /**
  * Helper application, which converts JSON bundles to XML bundles.
  */
+@Slf4j
 public class GenerateXMLBundlesApp {
 
-  private final static String JSON_BUNDLES_DIR = "encoders/src/test/resources/data/bundles/R4/json";
-  private final static String XML_BUNDLES_DIR = "encoders/src/test/resources/data/bundles/R4/xml";
+  private static final String JSON_BUNDLES_DIR = "encoders/src/test/resources/data/bundles/R4/json";
+  private static final String XML_BUNDLES_DIR = "encoders/src/test/resources/data/bundles/R4/xml";
 
 
   private final FhirContext fhirContext = FhirContext.forR4();
@@ -55,7 +57,7 @@ public class GenerateXMLBundlesApp {
     jsonParser.setOverrideResourceIdWithBundleEntryFullUrl(false);
     final IParser xmlParser = fhirContext.newXmlParser();
     xmlParser.setPrettyPrint(true);
-    try (Stream<Path> stream = Files.list(Path.of(JSON_BUNDLES_DIR))) {
+    try (final Stream<Path> stream = Files.list(Path.of(JSON_BUNDLES_DIR))) {
       stream
           .filter(not(Files::isDirectory))
           .filter(p -> p.getFileName().toString().endsWith(".json"))
@@ -65,8 +67,8 @@ public class GenerateXMLBundlesApp {
               final String xmlFileName = p.getFileName().toString().replace(".json", ".xml");
               Files.writeString(Path.of(XML_BUNDLES_DIR, xmlFileName),
                   xmlParser.encodeResourceToString(resource));
-            } catch (IOException e) {
-              e.printStackTrace();
+            } catch (final IOException e) {
+              log.error("Error processing file: {}", p, e);
             }
           });
     }

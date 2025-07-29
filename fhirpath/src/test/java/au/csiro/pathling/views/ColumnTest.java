@@ -18,7 +18,7 @@ class ColumnTest {
   @Test
   void testGetTagValues() {
     // Create a column with multiple tags
-    Column column = Column.builder()
+    final Column column = Column.builder()
         .name("test_column")
         .path("test.path")
         .tag(Arrays.asList(
@@ -30,35 +30,35 @@ class ColumnTest {
         .build();
 
     // Test getting values for a tag that exists multiple times
-    List<String> ansiTypeValues = column.getTagValues("ansi/type");
+    final List<String> ansiTypeValues = column.getTagValues("ansi/type");
     assertEquals(2, ansiTypeValues.size());
     assertTrue(ansiTypeValues.contains("VARCHAR(255)"));
     assertTrue(ansiTypeValues.contains("TEXT"));
 
     // Test getting values for a tag that exists once
-    List<String> descriptionValues = column.getTagValues("description");
+    final List<String> descriptionValues = column.getTagValues("description");
     assertEquals(1, descriptionValues.size());
     assertEquals("A test column", descriptionValues.get(0));
 
     // Test getting values for a tag that doesn't exist
-    List<String> nonExistentValues = column.getTagValues("non-existent");
+    final List<String> nonExistentValues = column.getTagValues("non-existent");
     assertTrue(nonExistentValues.isEmpty());
 
     // Test with a column that has no tags
-    Column emptyTagsColumn = Column.builder()
+    final Column emptyTagsColumn = Column.builder()
         .name("empty_tags")
         .path("empty.path")
         .tag(Collections.emptyList())
         .build();
 
-    List<String> emptyResult = emptyTagsColumn.getTagValues("any-tag");
+    final List<String> emptyResult = emptyTagsColumn.getTagValues("any-tag");
     assertTrue(emptyResult.isEmpty());
   }
 
   @Test
   void testGetTagValue() {
     // Create a column with multiple tags
-    Column column = Column.builder()
+    final Column column = Column.builder()
         .name("test_column")
         .path("test.path")
         .tag(Arrays.asList(
@@ -70,26 +70,26 @@ class ColumnTest {
         .build();
 
     // Test getting a value for a tag that exists once
-    Optional<String> descriptionValue = column.getTagValue("description");
+    final Optional<String> descriptionValue = column.getTagValue("description");
     assertTrue(descriptionValue.isPresent());
     assertEquals("A test column", descriptionValue.get());
 
     // Test getting a value for a tag that doesn't exist
-    Optional<String> nonExistentValue = column.getTagValue("non-existent");
+    final Optional<String> nonExistentValue = column.getTagValue("non-existent");
     assertTrue(nonExistentValue.isEmpty());
 
     // Test with a column that has no tags
-    Column emptyTagsColumn = Column.builder()
+    final Column emptyTagsColumn = Column.builder()
         .name("empty_tags")
         .path("empty.path")
         .tag(Collections.emptyList())
         .build();
 
-    Optional<String> emptyResult = emptyTagsColumn.getTagValue("any-tag");
+    final Optional<String> emptyResult = emptyTagsColumn.getTagValue("any-tag");
     assertTrue(emptyResult.isEmpty());
 
     // Test exception when multiple values exist
-    Exception exception = org.junit.jupiter.api.Assertions.assertThrows(
+    final Exception exception = org.junit.jupiter.api.Assertions.assertThrows(
         IllegalStateException.class,
         () -> column.getTagValue("ansi/type")
     );
@@ -99,7 +99,7 @@ class ColumnTest {
   @Test
   void testIsCompatibleWith() {
     // Create base column
-    Column column1 = Column.builder()
+    final Column column1 = Column.builder()
         .name("test_column")
         .path("test.path")
         .type("string")
@@ -107,7 +107,7 @@ class ColumnTest {
         .build();
 
     // Create identical column
-    Column column2 = Column.builder()
+    final Column column2 = Column.builder()
         .name("test_column")
         .path("different.path") // Path doesn't affect compatibility
         .type("string")
@@ -115,7 +115,7 @@ class ColumnTest {
         .build();
 
     // Create column with different name
-    Column column3 = Column.builder()
+    final Column column3 = Column.builder()
         .name("different_name")
         .path("test.path")
         .type("string")
@@ -123,7 +123,7 @@ class ColumnTest {
         .build();
 
     // Create column with different type
-    Column column4 = Column.builder()
+    final Column column4 = Column.builder()
         .name("test_column")
         .path("test.path")
         .type("integer")
@@ -131,7 +131,7 @@ class ColumnTest {
         .build();
 
     // Create column with different collection flag
-    Column column5 = Column.builder()
+    final Column column5 = Column.builder()
         .name("test_column")
         .path("test.path")
         .type("string")

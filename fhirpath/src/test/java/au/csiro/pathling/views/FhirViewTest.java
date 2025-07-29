@@ -134,10 +134,7 @@ abstract class FhirViewTest {
     void expect(@Nonnull final Supplier<Dataset<Row>> result);
   }
 
-  @Value
-  static class CompositeExpectation implements Expectation {
-
-    List<Expectation> expectations;
+  record CompositeExpectation(List<Expectation> expectations) implements Expectation {
 
     @Override
     public void expect(@Nonnull final Supplier<Dataset<Row>> result) {
@@ -224,10 +221,7 @@ abstract class FhirViewTest {
 
   }
 
-  @Value
-  static class ExpectCount implements ResultExpectation {
-
-    long count;
+  record ExpectCount(long count) implements ResultExpectation {
 
     @Override
     public void expectResult(@Nonnull final Dataset<Row> rowDataset) {
@@ -235,10 +229,7 @@ abstract class FhirViewTest {
     }
   }
 
-  @Value
-  static class ExpectColumns implements ResultExpectation {
-
-    List<String> columns;
+  record ExpectColumns(List<String> columns) implements ResultExpectation {
 
     @Override
     public void expectResult(@Nonnull final Dataset<Row> rowDataset) {
@@ -388,8 +379,7 @@ abstract class FhirViewTest {
   Expectation getExpectation(@Nonnull final JsonNode testDefinition,
       @Nonnull final Path expectedPath)
       throws IOException {
-    @Nullable
-    JsonNode expectation;
+    @Nullable final JsonNode expectation;
     if (nonNull(testDefinition.get("expectError"))) {
       return new ExpectError();
     } else if (nonNull(expectation = testDefinition.get("expectCount"))) {
@@ -451,54 +441,44 @@ abstract class FhirViewTest {
   @ParameterizedTest
   @MethodSource("requests")
   void test(@Nonnull final TestParameters parameters) {
-    assumeFalse(parameters.isDisabled(), "Test is disabled");
+    assumeFalse(parameters.disabled(), "Test is disabled");
     log.info("Running test: {}", parameters.getTitle());
 
-    parameters.getExpectation().expect(() -> {
+    parameters.expectation().expect(() -> {
       final FhirView view;
       try {
         // Serialize a FhirView object from the view definition in the test.
-        view = gson.fromJson(parameters.getViewJson(), FhirView.class);
+        view = gson.fromJson(parameters.viewJson(), FhirView.class);
         ensureValid(view, "View is not valid");
       } catch (final Exception e) {
         // If parsing the view definition fails, log the JSON and rethrow the exception.
         log.info("Exception occurred while parsing test definition - {}", e.getMessage());
-        log.info(parameters.getViewJson());
+        log.info(parameters.viewJson());
         throw e;
       }
 
       // Create a new executor and build the query.
       final FhirViewExecutor executor = new FhirViewExecutor(fhirContext, spark,
-          parameters.getSourceData());
+          parameters.sourceData());
       return executor.buildQuery(view);
     });
   }
 
-  @Value
-  static class TestParameters {
-
-    @Nonnull
-    String suiteName;
-
-    @Nonnull
-    String testName;
-
-    @Nonnull
-    DataSource sourceData;
-
-    @Nonnull
-    String viewJson;
-
-    @Nonnull
-    Expectation expectation;
-    boolean disabled;
-
+  record TestParameters(
+      @Nonnull String suiteName,
+      @Nonnull String testName,
+      @Nonnull DataSource sourceData,
+      @Nonnull String viewJson,
+      @Nonnull Expectation expectation,
+      boolean disabled
+  ) {
 
     @Nonnull
     public String getTitle() {
       return suiteName + " - " + testName;
     }
 
+    @Nonnull
     @Override
     public String toString() {
       return getTitle();

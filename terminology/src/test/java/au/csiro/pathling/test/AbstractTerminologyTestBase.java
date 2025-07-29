@@ -86,7 +86,7 @@ public abstract class AbstractTerminologyTestBase {
   public static final Coding CODING_E = new Coding(SYSTEM_E, CODE_E, "displayEE");
 
   public static final Coding INVALID_CODING_0 = new Coding(null, null, "");
-  public static final Coding INVALID_CODING_1 = new Coding("uiid:system", null, "");
+  public static final Coding INVALID_CODING_1 = new Coding("uuid:system", null, "");
   public static final Coding INVALID_CODING_2 = new Coding(null, "someCode", "");
 
 
@@ -96,7 +96,7 @@ public abstract class AbstractTerminologyTestBase {
   }
 
   @Nonnull
-  public static WrappedArray<Object> encodeMany(Coding... codings) {
+  public static WrappedArray<Object> encodeMany(final Coding... codings) {
     return WrappedArray.make(Stream.of(codings).map(CodingEncoding::encode).toArray(Row[]::new));
   }
 

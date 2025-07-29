@@ -21,7 +21,7 @@ public class FhirTypedLiteral {
   }
 
   @Nonnull
-  public static String toTag(Enumerations.FHIRDefinedType type) {
+  public static String toTag(final Enumerations.FHIRDefinedType type) {
     return "!fhir." + type.toCode();
   }
 

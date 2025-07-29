@@ -18,13 +18,13 @@ public class UniqueTagsValidator implements ConstraintValidator<UniqueTags, List
   private Set<String> uniqueTagNames;
 
   @Override
-  public void initialize(UniqueTags constraintAnnotation) {
+  public void initialize(final UniqueTags constraintAnnotation) {
     uniqueTagNames = Arrays.stream(constraintAnnotation.value())
         .collect(Collectors.toSet());
   }
 
   @Override
-  public boolean isValid(List<ColumnTag> tags, ConstraintValidatorContext context) {
+  public boolean isValid(final List<ColumnTag> tags, final ConstraintValidatorContext context) {
     if (tags == null || tags.isEmpty()) {
       return true; // Empty or null lists are valid
     }
@@ -33,13 +33,13 @@ public class UniqueTagsValidator implements ConstraintValidator<UniqueTags, List
     context.disableDefaultConstraintViolation();
 
     // Count occurrences of each tag name
-    Map<String, Long> tagNameCounts = tags.stream()
+    final Map<String, Long> tagNameCounts = tags.stream()
         .filter(tag -> uniqueTagNames.contains(tag.getName()))
         .collect(Collectors.groupingBy(ColumnTag::getName, Collectors.counting()));
 
     // Check if any restricted tag name appears more than once
     boolean isValid = true;
-    for (Map.Entry<String, Long> entry : tagNameCounts.entrySet()) {
+    for (final Map.Entry<String, Long> entry : tagNameCounts.entrySet()) {
       if (entry.getValue() > 1) {
         context.buildConstraintViolationWithTemplate(
                 "List must not contain more than one '" + entry.getKey() + "' tag")

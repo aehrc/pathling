@@ -109,7 +109,7 @@ class JsonReportingExtension implements Extension, TestWatcher, AfterAllCallback
   public void afterAll(@Nullable final ExtensionContext context) throws Exception {
 
     final Map<String, List<TestResult>> resultsBySuite = allResults.stream()
-        .collect(Collectors.groupingBy(tr -> tr.parameters().getSuiteName(), LinkedHashMap::new,
+        .collect(Collectors.groupingBy(tr -> tr.parameters().suiteName(), LinkedHashMap::new,
             Collectors.toList()));
 
     final JsonNodeFactory nodeFactory = JsonNodeFactory.instance;
@@ -120,7 +120,7 @@ class JsonReportingExtension implements Extension, TestWatcher, AfterAllCallback
       suiteResults.putArray("tests").addAll(value.stream()
           .map(tr -> {
             final ObjectNode testResult = nodeFactory.objectNode();
-            testResult.set("name", nodeFactory.textNode(tr.parameters().getTestName()));
+            testResult.set("name", nodeFactory.textNode(tr.parameters().testName()));
             testResult.putObject("result")
                 .set("passed", nodeFactory.booleanNode("passed".equals(tr.result())));
             return testResult;

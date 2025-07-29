@@ -49,7 +49,11 @@ import org.apache.spark.sql.types.StructType;
  *
  * @author Piotr Szul
  */
-public class FlexiDecimal {
+@SuppressWarnings("unused")
+public final class FlexiDecimal {
+
+  private FlexiDecimal() {
+  }
 
   /**
    * The maximum precision (the number of significant digits).
@@ -73,7 +77,7 @@ public class FlexiDecimal {
    * The SQL (struct) type for flexible decimal.
    */
   @Nonnull
-  public static DataType DATA_TYPE = createFlexibleDecimalType();
+  public static final DataType DATA_TYPE = createFlexibleDecimalType();
 
   @Nonnull
   private static UserDefinedFunction toBooleanUdf(
@@ -149,6 +153,12 @@ public class FlexiDecimal {
            : toValue(value.negate());
   }
 
+  /**
+   * Normalises a BigDecimal to fit within the maximum precision constraints.
+   *
+   * @param decimal the decimal to normalise
+   * @return the normalised decimal, or null if it cannot be represented
+   */
   @Nullable
   public static BigDecimal normalize(@Nullable final BigDecimal decimal) {
     if (decimal == null) {
@@ -193,51 +203,120 @@ public class FlexiDecimal {
       DATA_TYPE);
 
 
+  /**
+   * Compares two flexible decimal columns for equality.
+   *
+   * @param left the left column
+   * @param right the right column
+   * @return a column containing the comparison result
+   */
   @Nonnull
   public static Column equals(@Nonnull final Column left, @Nonnull final Column right) {
     return EQUALS_UDF.apply(left, right);
   }
 
+  /**
+   * Compares two flexible decimal columns for less than.
+   *
+   * @param left the left column
+   * @param right the right column
+   * @return a column containing the comparison result
+   */
   @Nonnull
   public static Column lt(@Nonnull final Column left, @Nonnull final Column right) {
     return LT_UDF.apply(left, right);
   }
 
+  /**
+   * Compares two flexible decimal columns for less than or equal to.
+   *
+   * @param left the left column
+   * @param right the right column
+   * @return a column containing the comparison result
+   */
   @Nonnull
   public static Column lte(@Nonnull final Column left, @Nonnull final Column right) {
     return LTE_UDF.apply(left, right);
   }
 
+  /**
+   * Compares two flexible decimal columns for greater than.
+   *
+   * @param left the left column
+   * @param right the right column
+   * @return a column containing the comparison result
+   */
   @Nonnull
   public static Column gt(@Nonnull final Column left, @Nonnull final Column right) {
     return GT_UDF.apply(left, right);
   }
 
+  /**
+   * Compares two flexible decimal columns for greater than or equal to.
+   *
+   * @param left the left column
+   * @param right the right column
+   * @return a column containing the comparison result
+   */
   @Nonnull
   public static Column gte(@Nonnull final Column left, @Nonnull final Column right) {
     return GTE_UDF.apply(left, right);
   }
 
+  /**
+   * Adds two flexible decimal columns.
+   *
+   * @param left the left column
+   * @param right the right column
+   * @return a column containing the addition result
+   */
   @Nonnull
   public static Column plus(@Nonnull final Column left, @Nonnull final Column right) {
     return PLUS_UDF.apply(left, right);
   }
 
+  /**
+   * Multiplies two flexible decimal columns.
+   *
+   * @param left the left column
+   * @param right the right column
+   * @return a column containing the multiplication result
+   */
   @Nonnull
   public static Column multiply(@Nonnull final Column left, @Nonnull final Column right) {
     return MULTIPLY_UDF.apply(left, right);
   }
 
+  /**
+   * Subtracts two flexible decimal columns.
+   *
+   * @param left the left column
+   * @param right the right column
+   * @return a column containing the subtraction result
+   */
   @Nonnull
   public static Column minus(@Nonnull final Column left, @Nonnull final Column right) {
     return MINUS_UDF.apply(left, right);
   }
 
+  /**
+   * Divides two flexible decimal columns.
+   *
+   * @param left the left column
+   * @param right the right column
+   * @return a column containing the division result
+   */
   @Nonnull
   public static Column divide(@Nonnull final Column left, @Nonnull final Column right) {
     return DIVIDE_UDF.apply(left, right);
   }
 
+  /**
+   * Converts a flexible decimal column to a standard decimal column.
+   *
+   * @param flexiDecimal the flexible decimal column to convert
+   * @return a column containing the converted decimal values
+   */
   @Nonnull
   public static Column toDecimal(@Nonnull final Column flexiDecimal) {
     return TO_DECIMAL.apply(flexiDecimal);

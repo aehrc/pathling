@@ -3,8 +3,8 @@ package au.csiro.pathling.fhirpath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
-import org.apache.spark.sql.Column;
 import java.util.Objects;
+import org.apache.spark.sql.Column;
 
 /**
  * An interface for collections that can be converted to an external value suitable for Spark SQL
@@ -53,7 +53,7 @@ public interface Materializable {
    */
   @Nonnull
   static Column getExternalValue(@Nonnull final Collection collection) {
-    if (collection instanceof Materializable external) {
+    if (collection instanceof final Materializable external) {
       return external.toExternalValue();
     } else {
       throw new UnsupportedOperationException(

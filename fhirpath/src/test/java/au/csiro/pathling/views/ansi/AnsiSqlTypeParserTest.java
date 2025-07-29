@@ -100,7 +100,7 @@ class AnsiSqlTypeParserTest {
 
   @ParameterizedTest
   @MethodSource("validTypesProvider")
-  void testParseValidTypes(String typeString, DataType expectedType) {
+  void testParseValidTypes(final String typeString, final DataType expectedType) {
     final DataType result = AnsiSqlTypeParser.parseType(typeString);
     assertEquals(expectedType, result, "Type should match expected for: " + typeString);
   }
@@ -116,9 +116,9 @@ class AnsiSqlTypeParserTest {
 
   @Test
   void testCaseInsensitivity() {
-    DataType upperResult = AnsiSqlTypeParser.parseType("INTEGER");
-    DataType lowerResult = AnsiSqlTypeParser.parseType("integer");
-    DataType mixedResult = AnsiSqlTypeParser.parseType("InTeGeR");
+    final DataType upperResult = AnsiSqlTypeParser.parseType("INTEGER");
+    final DataType lowerResult = AnsiSqlTypeParser.parseType("integer");
+    final DataType mixedResult = AnsiSqlTypeParser.parseType("InTeGeR");
 
     assertEquals(DataTypes.IntegerType, upperResult);
     assertEquals(DataTypes.IntegerType, lowerResult);
