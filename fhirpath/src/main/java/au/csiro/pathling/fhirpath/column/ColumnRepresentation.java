@@ -22,7 +22,6 @@ import static java.util.Objects.nonNull;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.coalesce;
-import static org.apache.spark.sql.functions.concat;
 import static org.apache.spark.sql.functions.element_at;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.raise_error;
@@ -246,7 +245,10 @@ public abstract class ColumnRepresentation {
 
 
   /**
+   * Applies a mapping column to this column representation.
    *
+   * @param mapColumn the mapping column to apply
+   * @return a new ColumnRepresentation with the mapping applied
    */
   @Nonnull
   public ColumnRepresentation applyTo(@Nonnull final Column mapColumn) {
@@ -318,6 +320,8 @@ public abstract class ColumnRepresentation {
 
   /**
    * Converts the current {@link ColumnRepresentation} to a canonical form.
+   *
+   * @return a canonical form of this column representation
    */
   @Nonnull
   public ColumnRepresentation asCanonical() {

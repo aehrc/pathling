@@ -61,19 +61,9 @@ public interface Numeric {
   }
 
   /**
-   * Provides a {@link Column} that provides additional context that informs the way that math
-   * operations are carried out. This is used for Quantity math, so that the operation function has
-   * access to the canonicalized units.
-   *
-   * @return a {@link Column} that provides additional context for math operations
-   */
-  @Nonnull
-  default Optional<Column> getNumericContext() {
-    return Optional.empty();
-  }
-
-  /**
    * The type of the result of evaluating this expression, if known.
+   *
+   * @return the FhirPath type of the result, if known
    */
   @Nonnull
   Optional<FhirPathType> getType();

@@ -276,8 +276,10 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
   protected abstract EmbeddedCacheManager buildCacheManager();
 
   /**
+   * @param <T> the type of the cache value
    * @param cacheManager the {@link EmbeddedCacheManager} to use to construct the cache
    * @param cacheName a name for the cache
+   * @param valueType the class of the cache value type
    * @return a new {@link Cache} instance appropriate for the specific implementation
    */
   protected abstract <T extends Serializable> Cache<Integer, TerminologyResult<T>> buildCache(
