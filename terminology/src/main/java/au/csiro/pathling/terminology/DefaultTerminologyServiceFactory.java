@@ -68,16 +68,6 @@ public record DefaultTerminologyServiceFactory(
     terminologyServiceHolder.reset();
   }
 
-  /**
-   * Constructs a new {@link DefaultTerminologyServiceFactory} with the specified FHIR version and
-   * terminology configuration.
-   *
-   * @param fhirVersion the FHIR version to use
-   * @param configuration the terminology configuration settings
-   */
-  public DefaultTerminologyServiceFactory {
-  }
-
   @Nonnull
   @Override
   public TerminologyService build() {

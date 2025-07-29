@@ -21,7 +21,6 @@ import static au.csiro.pathling.fhirpath.literal.StringLiteral.escapeFhirPathStr
 import static au.csiro.pathling.fhirpath.literal.StringLiteral.unescapeFhirPathString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**

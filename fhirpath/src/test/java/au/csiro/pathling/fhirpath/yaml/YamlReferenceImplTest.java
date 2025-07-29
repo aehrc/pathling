@@ -6,7 +6,6 @@ import au.csiro.pathling.test.yaml.annotations.YamlTestConfiguration;
 import au.csiro.pathling.test.yaml.executor.YamlTestExecutor;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.Tag;
 
 
 @Slf4j
