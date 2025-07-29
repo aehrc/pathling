@@ -18,21 +18,36 @@ import lombok.Getter;
 @Getter
 public enum BinaryOperatorType {
 
+  /** Logical AND operator. */
   AND("and", new BooleanOperator(BooleanOperatorType.AND)),
+  /** Logical OR operator. */
   OR("or", new BooleanOperator(BooleanOperatorType.OR)),
+  /** Logical exclusive OR operator. */
   XOR("xor", new BooleanOperator(BooleanOperatorType.XOR)),
+  /** Logical implication operator. */
   IMPLIES("implies", new BooleanOperator(BooleanOperatorType.IMPLIES)),
+  /** Equality comparison operator. */
   EQUALS("=", new ComparisonOperator(ComparisonOperation.EQUALS)),
+  /** Inequality comparison operator. */
   NOT_EQUALS("!=", new ComparisonOperator(ComparisonOperation.NOT_EQUALS)),
+  /** Less than or equal to comparison operator. */
   LESS_THAN_OR_EQUAL_TO("<=", new ComparisonOperator(ComparisonOperation.LESS_THAN_OR_EQUAL_TO)),
+  /** Less than comparison operator. */
   LESS_THAN("<", new ComparisonOperator(ComparisonOperation.LESS_THAN)),
+  /** Greater than or equal to comparison operator. */
   GREATER_THAN_OR_EQUAL_TO(">=",
       new ComparisonOperator(ComparisonOperation.GREATER_THAN_OR_EQUAL_TO)),
+  /** Greater than comparison operator. */
   GREATER_THAN(">", new ComparisonOperator(ComparisonOperation.GREATER_THAN)),
+  /** Arithmetic addition operator. */
   ADDITION("+", new MathOperator(MathOperation.ADDITION)),
+  /** Arithmetic subtraction operator. */
   SUBTRACTION("-", new MathOperator(MathOperation.SUBTRACTION)),
+  /** Arithmetic multiplication operator. */
   MULTIPLICATION("*", new MathOperator(MathOperation.MULTIPLICATION)),
+  /** Arithmetic division operator. */
   DIVISION("/", new MathOperator(MathOperation.DIVISION)),
+  /** Arithmetic modulus operator. */
   MODULUS("mod", new MathOperator(MathOperation.MODULUS));
 
   private final String symbol;

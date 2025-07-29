@@ -23,32 +23,79 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.UDFRegistration;
 
 /**
- * A base spark configurer that registers user defined functions in the sessions.
+ * A base Spark configurer that registers user-defined functions (UDFs) in Spark sessions.
+ * <p>
+ * This abstract class provides a standardised way to register SQL functions with Spark sessions.
+ * Subclasses should implement the {@link #registerUDFs(UDFRegistrar)} method to define which
+ * functions to register.
+ * </p>
+ * <p>
+ * The class implements the {@link SparkConfigurer} interface, allowing it to be used as part of
+ * the Spark session configuration process.
+ * </p>
  *
  * @author Piotr Szul
+ * @author John Grimes
+ * @see SparkConfigurer
+ * @see SqlFunction1
+ * @see SqlFunction2
  */
 public abstract class AbstractUDFRegistrar implements SparkConfigurer {
 
+  /**
+   * A helper class for registering user-defined functions with a Spark session.
+   * <p>
+   * This class provides convenient methods for registering different types of SQL functions
+   * and maintains a fluent interface for chaining multiple registrations.
+   * </p>
+   */
   protected static class UDFRegistrar {
 
     private final UDFRegistration udfRegistration;
 
-    public UDFRegistrar(@Nonnull SparkSession spark) {
+    /**
+     * Creates a new UDF registrar for the given Spark session.
+     *
+     * @param spark the Spark session to register functions with
+     */
+    public UDFRegistrar(@Nonnull final SparkSession spark) {
       this.udfRegistration = spark.udf();
     }
 
-    public UDFRegistrar register(@Nonnull SqlFunction1<?, ?> udf1) {
+    /**
+     * Registers a single-argument SQL function with the Spark session.
+     *
+     * @param udf1 the function to register
+     * @return this registrar for method chaining
+     */
+    public UDFRegistrar register(@Nonnull final SqlFunction1<?, ?> udf1) {
       udfRegistration.register(udf1.getName(), udf1, udf1.getReturnType());
       return this;
     }
 
-    public UDFRegistrar register(@Nonnull SqlFunction2<?, ?, ?> udf2) {
+    /**
+     * Registers a two-argument SQL function with the Spark session.
+     *
+     * @param udf2 the function to register
+     * @return this registrar for method chaining
+     */
+    public UDFRegistrar register(@Nonnull final SqlFunction2<?, ?, ?> udf2) {
       udfRegistration.register(udf2.getName(), udf2, udf2.getReturnType());
       return this;
     }
 
   }
 
+  /**
+   * Configures the Spark session by registering user-defined functions.
+   * <p>
+   * This method is called as part of the Spark session configuration process and delegates
+   * to the abstract {@link #registerUDFs(UDFRegistrar)} method to perform the actual
+   * function registration.
+   * </p>
+   *
+   * @param spark the Spark session to configure
+   */
   @Override
   public void configure(@Nonnull final SparkSession spark) {
     registerUDFs(new UDFRegistrar(spark));
@@ -59,5 +106,5 @@ public abstract class AbstractUDFRegistrar implements SparkConfigurer {
    *
    * @param udfRegistrar the helper to use to register the UDFs.
    */
-  abstract protected void registerUDFs(@Nonnull final UDFRegistrar udfRegistrar);
+  protected abstract void registerUDFs(@Nonnull final UDFRegistrar udfRegistrar);
 }

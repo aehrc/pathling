@@ -736,6 +736,9 @@
               <goals>
                 <goal>javadoc</goal>
               </goals>
+              <configuration>
+                <failOnWarnings>true</failOnWarnings>
+              </configuration>
             </execution>
             <execution>
               <id>javadoc-jar</id>

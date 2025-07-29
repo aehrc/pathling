@@ -38,6 +38,11 @@ public interface BinaryOperator {
   Collection invoke(@Nonnull BinaryOperatorInput input);
 
 
+  /**
+   * Gets the name of this operator, typically the simple class name.
+   *
+   * @return the name of this operator
+   */
   @Nonnull
   default String getOperatorName() {
     return this.getClass().getSimpleName();
