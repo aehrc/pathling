@@ -50,13 +50,22 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 
+/**
+ * A HAPI FHIR interceptor that handles client authentication using OAuth2 client credentials flow.
+ * 
+ * @author John Grimes
+ */
 @Interceptor
 @Slf4j
 public class ClientAuthInterceptor implements Closeable {
 
+  /** Connection timeout for authentication requests in milliseconds. */
   public static final int AUTH_CONNECT_TIMEOUT = 5_000;
+  /** Connection request timeout for authentication requests in milliseconds. */
   public static final int AUTH_CONNECTION_REQUEST_TIMEOUT = 5_000;
+  /** Socket timeout for authentication requests in milliseconds. */
   public static final int AUTH_SOCKET_TIMEOUT = 5_000;
+  /** Number of retry attempts for authentication requests. */
   public static final int AUTH_RETRY_COUNT = 3;
 
   @Nonnull
@@ -79,6 +88,11 @@ public class ClientAuthInterceptor implements Closeable {
   @Nonnull
   private static final Map<AccessScope, AccessContext> accessContexts = new HashMap<>();
 
+  /**
+   * Creates a new ClientAuthInterceptor with the specified configuration.
+   *
+   * @param configuration the authentication configuration
+   */
   public ClientAuthInterceptor(@Nonnull final TerminologyAuthConfiguration configuration) {
     this.httpClient = ClientAuthInterceptor.getHttpClient();
     this.tokenEndpoint = requireNonNull(configuration.getTokenEndpoint());
@@ -94,6 +108,12 @@ public class ClientAuthInterceptor implements Closeable {
     this.httpClient = httpClient;
   }
 
+  /**
+   * Handles outgoing client requests by adding OAuth2 authentication headers.
+   *
+   * @param httpRequest the HTTP request to authenticate
+   * @throws IOException if authentication fails
+   */
   @SuppressWarnings("unused")
   @Hook(Pointcut.CLIENT_REQUEST)
   public void handleClientRequest(@Nullable final IHttpRequest httpRequest) throws IOException {
@@ -220,6 +240,9 @@ public class ClientAuthInterceptor implements Closeable {
     return Instant.now().plusSeconds(response.getExpiresIn());
   }
 
+  /**
+   * Clears all cached access contexts, forcing re-authentication on next request.
+   */
   public static void clearAccessContexts() {
     synchronized (accessContexts) {
       accessContexts.clear();

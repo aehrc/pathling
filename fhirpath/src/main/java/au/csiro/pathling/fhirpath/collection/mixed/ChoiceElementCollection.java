@@ -15,6 +15,9 @@ import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
+/**
+ * A collection representing a choice element in FHIR.
+ */
 @Value
 @EqualsAndHashCode(callSuper = false)
 public class ChoiceElementCollection extends MixedCollection {
@@ -28,6 +31,12 @@ public class ChoiceElementCollection extends MixedCollection {
   @Nonnull
   Collection parent;
 
+  /**
+   * Creates a new ChoiceElementCollection.
+   *
+   * @param choiceDefinition the definition of this choice element
+   * @param parent the parent collection
+   */
   public ChoiceElementCollection(@Nonnull final ChoiceDefinition choiceDefinition,
       @Nonnull final Collection parent) {
     super("choice element '" + choiceDefinition.getName() + "' (do you need to use ofType?)");

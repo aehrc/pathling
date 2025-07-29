@@ -50,6 +50,12 @@ public class CatalogPersistence implements PersistenceScheme {
   @Nonnull
   private final Optional<String> schema;
 
+  /**
+   * Creates a new CatalogPersistence instance.
+   *
+   * @param spark the Spark session
+   * @param schema the optional database schema
+   */
   public CatalogPersistence(@Nonnull final SparkSession spark,
       @Nonnull final Optional<String> schema) {
     this.spark = spark;

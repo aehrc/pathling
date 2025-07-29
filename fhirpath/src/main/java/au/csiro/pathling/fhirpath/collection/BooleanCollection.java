@@ -38,6 +38,15 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class BooleanCollection extends Collection implements Comparable, StringCoercible,
     Materializable {
 
+  /**
+   * Creates a new BooleanCollection.
+   *
+   * @param columnRepresentation the column representation for this collection
+   * @param type the FhirPath type
+   * @param fhirType the FHIR type
+   * @param definition the node definition
+   * @param extensionMapColumn the extension map column
+   */
   protected BooleanCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
