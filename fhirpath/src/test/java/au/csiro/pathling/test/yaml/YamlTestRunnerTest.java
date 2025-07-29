@@ -131,8 +131,8 @@ class YamlTestRunnerTest {
 
     final String testCaseStr = """
         desc: '6.4.2 in'
-        expression: 'il combine icoll'
-        result: [2,1,2,3]
+        expression: 'icoll.where($this >= %resource.il)'
+        result: [2, 3]
         """;
 
     final Map<String, Object> testCase = YAML_PARSER.load(testCaseStr);
