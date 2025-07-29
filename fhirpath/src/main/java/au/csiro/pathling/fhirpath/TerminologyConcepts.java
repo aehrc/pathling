@@ -35,6 +35,11 @@ public sealed interface TerminologyConcepts permits TerminologyConcepts.Set, Ter
   @Nonnull
   Set flatten();
 
+  /**
+   * Gets the coding template for this set of concepts.
+   *
+   * @return the coding template
+   */
   @Nonnull
   CodingCollection getCodingTemplate();
 

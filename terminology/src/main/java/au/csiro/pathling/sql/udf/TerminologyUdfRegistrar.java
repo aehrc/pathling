@@ -29,6 +29,11 @@ import org.apache.spark.sql.SparkSession;
  */
 public class TerminologyUdfRegistrar extends SqlFunctionRegistrar {
 
+  /**
+   * Creates a new TerminologyUdfRegistrar with the specified terminology service factory.
+   *
+   * @param tsf the terminology service factory to use for UDF creation
+   */
   public TerminologyUdfRegistrar(@Nonnull final TerminologyServiceFactory tsf) {
     super(List.of(),
         ImmutableList.<SqlFunction2<?, ?, ?>>builder()

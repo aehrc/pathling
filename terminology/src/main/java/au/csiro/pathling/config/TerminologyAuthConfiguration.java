@@ -25,6 +25,7 @@ import jakarta.validation.ConstraintValidatorContext;
 import jakarta.validation.Payload;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import java.io.Serial;
 import java.io.Serializable;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -46,6 +47,7 @@ import org.hibernate.validator.constraints.URL;
 @ValidTerminologyAuthConfiguration
 public class TerminologyAuthConfiguration implements Serializable {
 
+  @Serial
   private static final long serialVersionUID = 6321330066417583745L;
 
   /**
@@ -90,27 +92,44 @@ public class TerminologyAuthConfiguration implements Serializable {
   @Builder.Default
   private long tokenExpiryTolerance = 120;
 
+  /**
+   * Validation annotation for terminology authentication configuration.
+   */
   @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
   @Retention(RetentionPolicy.RUNTIME)
   @Constraint(validatedBy = TerminologyAuthConfigValidator.class)
   @Documented
   public @interface ValidTerminologyAuthConfiguration {
 
+    /**
+     * The validation error message.
+     *
+     * @return the error message
+     */
     String message() default "If terminology authentication is enabled, token endpoint, "
         + "client ID and client secret must be supplied.";
 
+    /**
+     * The validation groups.
+     *
+     * @return the validation groups
+     */
     Class<?>[] groups() default {};
 
+    /**
+     * The validation payload.
+     *
+     * @return the validation payload
+     */
     Class<? extends Payload>[] payload() default {};
 
   }
 
+  /**
+   * Validator for terminology authentication configuration.
+   */
   public static class TerminologyAuthConfigValidator implements
       ConstraintValidator<ValidTerminologyAuthConfiguration, TerminologyAuthConfiguration> {
-
-    @Override
-    public void initialize(final ValidTerminologyAuthConfiguration constraintAnnotation) {
-    }
 
     @Override
     public boolean isValid(final TerminologyAuthConfiguration value,

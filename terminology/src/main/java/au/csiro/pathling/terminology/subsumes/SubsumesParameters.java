@@ -24,11 +24,16 @@ import jakarta.annotation.Nonnull;
 /**
  * Represents the input parameters to the subsumes operation.
  *
+ * @param codingA the first coding for subsumption testing
+ * @param codingB the second coding for subsumption testing
  * @author John Grimes
  * @see <a
  * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
  */
-public record SubsumesParameters(@Nonnull ImmutableCoding codingA, @Nonnull ImmutableCoding codingB) implements
+public record SubsumesParameters(
+    @Nonnull ImmutableCoding codingA,
+    @Nonnull ImmutableCoding codingB
+) implements
     TerminologyParameters {
 
 }

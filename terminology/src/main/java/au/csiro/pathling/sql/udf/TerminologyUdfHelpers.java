@@ -45,6 +45,15 @@ public final class TerminologyUdfHelpers {
            : null;
   }
 
+  /**
+   * Decodes one or many codings from a row or array object with argument index for error
+   * reporting.
+   *
+   * @param codingRowOrArray the row or array object to decode
+   * @param argumentIndex the argument index for error reporting
+   * @return a stream of decoded codings, or null if input is null
+   * @throws IllegalArgumentException if the input type is unexpected
+   */
   @SuppressWarnings("unchecked")
   @Nullable
   public static Stream<Coding> decodeOneOrMany(final @Nullable Object codingRowOrArray,
@@ -60,11 +69,23 @@ public final class TerminologyUdfHelpers {
     }
   }
 
+  /**
+   * Decodes one or many codings from a row or array object.
+   *
+   * @param codingRowOrArray the row or array object to decode
+   * @return a stream of decoded codings, or null if input is null
+   */
   @Nullable
   public static Stream<Coding> decodeOneOrMany(final @Nullable Object codingRowOrArray) {
     return decodeOneOrMany(codingRowOrArray, 0);
   }
 
+  /**
+   * Decodes a single coding from a row.
+   *
+   * @param codingRow the row containing the coding data
+   * @return a stream containing the decoded coding, or null if input is null
+   */
   @Nullable
   public static Stream<Coding> decodeOne(final @Nullable Row codingRow) {
     return codingRow != null
@@ -72,6 +93,12 @@ public final class TerminologyUdfHelpers {
            : null;
   }
 
+  /**
+   * Decodes multiple codings from an iterable of rows.
+   *
+   * @param codingsRow the iterable containing the coding rows
+   * @return a stream of decoded codings, or null if input is null
+   */
   @Nullable
   public static Stream<Coding> decodeMany(final @Nullable Iterable<Row> codingsRow) {
     return codingsRow != null
@@ -80,10 +107,22 @@ public final class TerminologyUdfHelpers {
            : null;
   }
 
+  /**
+   * Checks if a coding is valid (has non-null system and code).
+   *
+   * @param coding the coding to validate
+   * @return true if the coding is valid, false otherwise
+   */
   public static boolean isValidCoding(@Nullable final Coding coding) {
     return nonNull(coding) && nonNull(coding.getSystem()) && nonNull(coding.getCode());
   }
 
+  /**
+   * Filters a stream of codings to only include valid ones.
+   *
+   * @param codings the stream of codings to filter
+   * @return a stream containing only valid codings
+   */
   @Nonnull
   public static Stream<Coding> validCodings(@Nonnull final Stream<Coding> codings) {
     return codings.filter(TerminologyUdfHelpers::isValidCoding);

@@ -25,11 +25,17 @@ import jakarta.annotation.Nullable;
 /**
  * Represents the input parameters to the lookup operation.
  *
+ * @param coding the coding to look up
+ * @param property the optional property or properties to look up
+ * @param acceptLanguage the optional language to use for the response
  * @author John Grimes
  * @see <a
  * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
  */
-public record LookupParameters(@Nonnull ImmutableCoding coding, @Nullable String property,
-                               @Nullable String acceptLanguage) implements TerminologyParameters {
+public record LookupParameters(
+    @Nonnull ImmutableCoding coding,
+    @Nullable String property,
+    @Nullable String acceptLanguage
+) implements TerminologyParameters {
 
 }

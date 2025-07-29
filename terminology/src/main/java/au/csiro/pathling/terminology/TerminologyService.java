@@ -21,6 +21,7 @@ import au.csiro.pathling.fhir.ParametersUtils.DesignationPart;
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
@@ -45,11 +46,18 @@ public interface TerminologyService {
   @Value(staticConstructor = "of")
   class Translation implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = -7551505530196865478L;
 
+    /**
+     * The equivalence relationship for this translation.
+     */
     @Nonnull
     ConceptMapEquivalence equivalence;
 
+    /**
+     * The translated concept.
+     */
     @Nonnull
     Coding concept;
 
@@ -166,10 +174,14 @@ public interface TerminologyService {
   @Value(staticConstructor = "of")
   class Property implements PropertyOrDesignation {
 
+    @Serial
     private static final long serialVersionUID = 8827691056493768863L;
 
+    /** The property code. */
     @Nonnull
     String code;
+
+    /** The property value. */
     @Nonnull
     Type value;
 
@@ -215,6 +227,7 @@ public interface TerminologyService {
   @Value(staticConstructor = "of")
   class Designation implements PropertyOrDesignation {
 
+    @Serial
     private static final long serialVersionUID = -809107979219801186L;
 
     /**
@@ -222,12 +235,15 @@ public interface TerminologyService {
      */
     public static final String PROPERTY_CODE = "designation";
 
+    /** The use code for this designation. */
     @Nullable
     Coding use;
 
+    /** The language code for this designation. */
     @Nullable
     String language;
 
+    /** The display value of this designation. */
     @Nonnull
     String value;
 
@@ -260,6 +276,12 @@ public interface TerminologyService {
       return value.equals(that.value);
     }
 
+    /**
+     * Creates a Designation from a DesignationPart.
+     *
+     * @param part the designation part to convert
+     * @return a new Designation instance
+     */
     @Nonnull
     public static Designation ofPart(@Nonnull final DesignationPart part) {
       return of(part.getUse(),

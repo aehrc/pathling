@@ -23,22 +23,52 @@ import au.csiro.pathling.fhirpath.variable.EnvironmentVariableResolver;
 import jakarta.annotation.Nonnull;
 import lombok.Value;
 
+/**
+ * Represents the context in which a FHIRPath expression is evaluated. It contains the resources
+ * being processed, the input context, and a resolver for environment variables.
+ */
 @Value(staticConstructor = "of")
 public class FhirPathContext {
 
+  /**
+   * The name of the variable representing the resource being processed.
+   */
   public static final String RESOURCE_VARIABLE_NAME = "resource";
+
+  /**
+   * The name of the variable representing the root resource in the context.
+   */
   public static final String ROOT_RESOURCE_VARIABLE_NAME = "rootResource";
+
+  /**
+   * The name of the variable representing the input context.
+   */
   public static final String CONTEXT_VARIABLE_NAME = "context";
-  
+
+  /**
+   * The collection of resources being processed.
+   */
   @Nonnull
   ResourceCollection resource;
 
+  /**
+   * The input context for the evaluation.
+   */
   @Nonnull
   Collection inputContext;
 
+  /**
+   * A resolver for environment variables.
+   */
   @Nonnull
   EnvironmentVariableResolver variables;
 
+  /**
+   * Resolves a variable by its name.
+   *
+   * @param name the name of the variable to resolve
+   * @return the collection associated with the variable name
+   */
   @Nonnull
   public Collection resolveVariable(@Nonnull final String name) {
     if (name.equals(CONTEXT_VARIABLE_NAME)) {

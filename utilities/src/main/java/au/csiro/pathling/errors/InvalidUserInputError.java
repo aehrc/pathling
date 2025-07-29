@@ -19,14 +19,30 @@ public class InvalidUserInputError extends RuntimeException {
   @Serial
   private static final long serialVersionUID = -5378096951525707512L;
 
+  /**
+   * Creates a new InvalidUserInputError with the specified message.
+   *
+   * @param message the error message describing the invalid input
+   */
   public InvalidUserInputError(final String message) {
     super(message);
   }
 
+  /**
+   * Creates a new InvalidUserInputError with the specified message and cause.
+   *
+   * @param message the error message describing the invalid input
+   * @param cause the underlying cause of the error
+   */
   public InvalidUserInputError(final String message, final Throwable cause) {
     super(message, cause);
   }
 
+  /**
+   * Creates a new InvalidUserInputError with the specified cause.
+   *
+   * @param cause the underlying cause of the error
+   */
   public InvalidUserInputError(final Throwable cause) {
     super(cause);
   }

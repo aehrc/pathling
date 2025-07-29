@@ -48,6 +48,12 @@ import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
  */
 public class DefaultTerminologyService extends BaseTerminologyService {
 
+  /**
+   * Creates a new instance of the DefaultTerminologyService.
+   *
+   * @param terminologyClient the terminology client to use for requests
+   * @param resourcesToClose additional resources to close when this service is closed
+   */
   public DefaultTerminologyService(@Nonnull final TerminologyClient terminologyClient,
       @Nonnull final Closeable... resourcesToClose) {
     super(terminologyClient, resourcesToClose);
@@ -93,21 +99,20 @@ public class DefaultTerminologyService extends BaseTerminologyService {
 
 
   @Nonnull
-  private static <ResponseType, ResultType> ResultType   execute(
-      @Nonnull final TerminologyOperation<ResponseType, ResultType> operation) {
-    final Optional<ResultType> invalidResult = operation.validate();
+  private static <S, R> R execute(@Nonnull final TerminologyOperation<S, R> operation) {
+    final Optional<R> invalidResult = operation.validate();
     if (invalidResult.isPresent()) {
       return invalidResult.get();
     }
 
     try {
-      final IOperationUntypedWithInput<ResponseType> request = operation.buildRequest();
-      final ResponseType response = request.execute();
+      final IOperationUntypedWithInput<S> request = operation.buildRequest();
+      final S response = request.execute();
       return operation.extractResult(response);
 
     } catch (final BaseServerResponseException e) {
       // If the terminology server rejects the request as invalid, use false as the result.
-      final ResultType fallback = operation.invalidRequestFallback();
+      final R fallback = operation.invalidRequestFallback();
       return handleError(e, fallback);
     }
   }

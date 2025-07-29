@@ -32,6 +32,12 @@ public class DefaultDefinitionContext implements DefinitionContext {
             () -> new IllegalArgumentException("Resource type not found: " + resourceType));
   }
 
+  /**
+   * Creates a new DefaultDefinitionContext from the given resource definitions.
+   *
+   * @param resourceDefinitions the resource definitions to include
+   * @return a new DefaultDefinitionContext
+   */
   @Nonnull
   public static DefaultDefinitionContext of(final ResourceDefinition... resourceDefinitions) {
     return new DefaultDefinitionContext(

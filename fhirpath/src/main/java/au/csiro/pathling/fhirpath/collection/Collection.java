@@ -303,6 +303,12 @@ public class Collection {
         childDef);
   }
 
+  /**
+   * Traverses to an extension element within this collection.
+   *
+   * @param extensionDefinition the definition of the extension to traverse to
+   * @return an optional collection representing the extension
+   */
   @Nonnull
   protected Optional<Collection> traverseExtension(
       @Nonnull final ElementDefinition extensionDefinition) {
@@ -314,6 +320,11 @@ public class Collection {
             extensionDefinition));
   }
 
+  /**
+   * Gets the field ID column for this collection.
+   *
+   * @return the column representation containing the field ID
+   */
   @Nonnull
   protected ColumnRepresentation getFid() {
     return column.traverse(ExtensionSupport.FID_FIELD_NAME());

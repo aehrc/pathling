@@ -55,6 +55,9 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 public abstract class ColumnRepresentation {
 
+  /**
+   * Error message used when expecting a singular collection but finding multiple elements.
+   */
   public static final String DEF_NOT_SINGULAR_ERROR = "Expecting a collection with a single element but it has many.";
 
   /**
@@ -101,6 +104,12 @@ public abstract class ColumnRepresentation {
   protected abstract ColumnRepresentation copyOf(@Nonnull final Column newValue);
 
 
+  /**
+   * Maps the current {@link ColumnRepresentation} using a lambda function.
+   *
+   * @param lambda The lambda function to apply to the column
+   * @return A new {@link ColumnRepresentation} containing the result of the function
+   */
   @Nonnull
   public ColumnRepresentation map(@Nonnull final UnaryOperator<Column> lambda) {
     return copyOf(lambda.apply(getValue()));

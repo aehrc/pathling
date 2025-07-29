@@ -22,7 +22,6 @@ import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import java.util.stream.Collectors;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 
@@ -81,6 +80,13 @@ public class ProjectionResult {
     }
   }
 
+  /**
+   * Creates a struct product column from the given columns.
+   *
+   * @param outer whether to use outer join semantics
+   * @param columns the columns to include in the struct product
+   * @return a new struct product column
+   */
   @Nonnull
   public static Column structProduct(final boolean outer, @Nonnull final Column... columns) {
     return outer

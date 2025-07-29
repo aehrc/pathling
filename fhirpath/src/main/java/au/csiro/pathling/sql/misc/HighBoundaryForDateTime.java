@@ -12,11 +12,22 @@ import java.time.format.DateTimeParseException;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 
+/**
+ * UDF that calculates the high boundary for a FHIR date/dateTime string.
+ * <p>
+ * This function handles partial dates and returns the latest possible timestamp for the given
+ * precision level.
+ *
+ * @author John Grimes
+ */
 public class HighBoundaryForDateTime implements SqlFunction1<String, Timestamp> {
 
   @Serial
   private static final long serialVersionUID = 413946955701564309L;
 
+  /**
+   * The name of this UDF as registered in Spark.
+   */
   public static final String FUNCTION_NAME = "high_boundary_for_date";
 
   @Override

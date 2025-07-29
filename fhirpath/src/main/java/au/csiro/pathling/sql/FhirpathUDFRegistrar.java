@@ -24,7 +24,9 @@ import java.util.List;
 import org.apache.spark.sql.SparkSession;
 
 /**
- * Registration of all fhirpath UDFs.
+ * Registration of all FHIRPath UDFs.
+ *
+ * @author Piotr Szul
  */
 public class FhirpathUDFRegistrar implements SparkConfigurer {
 
@@ -37,6 +39,11 @@ public class FhirpathUDFRegistrar implements SparkConfigurer {
     children.forEach(child -> child.configure(spark));
   }
 
+  /**
+   * Registers all FHIRPath UDFs with the given Spark session.
+   *
+   * @param spark the Spark session to register the UDFs with
+   */
   public static void registerUDFs(@Nonnull final SparkSession spark) {
     new FhirpathUDFRegistrar().configure(spark);
   }

@@ -37,8 +37,16 @@ import org.apache.spark.sql.functions;
  */
 public interface Comparable {
 
+  /**
+   * The default column comparator instance.
+   */
   ColumnComparator DEFAULT_COMPARATOR = new DefaultComparator();
 
+  /**
+   * Gets the column comparator for this comparable object.
+   *
+   * @return the column comparator to use for comparisons
+   */
   @Nonnull
   default ColumnComparator getComparator() {
     return DEFAULT_COMPARATOR;

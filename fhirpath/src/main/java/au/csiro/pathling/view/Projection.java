@@ -54,6 +54,9 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public class Projection {
 
 
+  /**
+   * Defines constraints that can be applied to projection results.
+   */
   public enum ProjectionConstraint {
     /**
      * Indicates that the result will be returned in a form that supports the representation of
@@ -98,6 +101,14 @@ public class Projection {
   @Nonnull
   ProjectionConstraint constraint;
 
+  /**
+   * Creates a new unconstrained Projection.
+   *
+   * @param subjectResource the resource type that the projection is based upon
+   * @param constants the constants available to expressions within the projection
+   * @param selection the clause that defines the columns to be included
+   * @param where the clause that defines the rows to be included
+   */
   public Projection(@Nonnull final ResourceType subjectResource,
       @Nonnull final List<ConstantDeclaration> constants,
       @Nonnull final ProjectionClause selection,
@@ -140,14 +151,14 @@ public class Projection {
     final List<String> columnNames = Arrays.stream(structType.fields())
         .map(StructField::name)
         .toList();
-    // Bind the result cllections to the columns in the projection result.
+    // Bind the result collections to the columns in the projection result.
     final List<Collection> boundResults = IntStream.range(0, columnNames.size())
         .mapToObj(i -> projectionResult.getResults().get(i).getCollection()
             .copyWith(new
                 DefaultRepresentation(inlinedResult.col(columnNames.get(i)))))
         .toList();
 
-    Column[] renderedColumns = IntStream.range(0, columnNames.size())
+    final Column[] renderedColumns = IntStream.range(0, columnNames.size())
         .mapToObj(i -> renderColumn(boundResults.get(i), columnNames.get(i)))
         .toArray(Column[]::new);
     // Select the columns from the inlined result.

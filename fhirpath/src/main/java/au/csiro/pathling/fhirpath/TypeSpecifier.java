@@ -35,7 +35,14 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value
 public class TypeSpecifier {
 
+  /**
+   * The namespace identifier for System types.
+   */
   public static final String SYSTEM_NAMESPACE = "System";
+
+  /**
+   * The namespace identifier for FHIR types.
+   */
   public static final String FHIR_NAMESPACE = "FHIR";
   private static final List<String> NAMESPACE_SEARCH_ORDER = List.of(FHIR_NAMESPACE,
       SYSTEM_NAMESPACE);
@@ -128,7 +135,7 @@ public class TypeSpecifier {
       if (isFhirType()) {
         return Optional.of(ResourceType.fromCode(typeName));
       }
-    } catch (FHIRException ignored) {
+    } catch (final FHIRException ignored) {
       // If the typeName is not a valid ResourceType, we ignore the exception and return empty.
     }
     return Optional.empty();

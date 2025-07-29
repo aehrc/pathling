@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.encoding;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Objects;
 import lombok.AllArgsConstructor;
@@ -28,7 +29,9 @@ import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.Coding;
 
 /**
- * Immutable comparable and printable version of fhir Coding
+ * Immutable comparable and printable version of a FHIR Coding.
+ *
+ * @author Piotr Szul
  */
 
 @AllArgsConstructor(staticName = "of")
@@ -36,16 +39,30 @@ import org.hl7.fhir.r4.model.Coding;
 @Getter
 public class ImmutableCoding implements Serializable {
 
+  @Serial
   private static final long serialVersionUID = -2461921559175440312L;
 
+  /**
+   * The coding system URI.
+   */
   @Nullable
   private final String system;
+
+  /**
+   * The version of the coding system.
+   */
   @Nullable
   private final String version;
+
+  /** The code value. */
   @Nullable
   private final String code;
+
+  /** The display text for the code. */
   @Nullable
   private final String display;
+
+  /** Whether the code was user selected. */
   @Nullable
   protected final Boolean userSelected;
 

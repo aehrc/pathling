@@ -51,6 +51,12 @@ public class SubsumesExecutor implements
   @Nonnull
   private final SubsumesParameters parameters;
 
+  /**
+   * Creates a new SubsumesExecutor with the specified terminology client and parameters.
+   *
+   * @param terminologyClient the terminology client to use for subsumption testing
+   * @param parameters the parameters for the subsumption test
+   */
   public SubsumesExecutor(@Nonnull final TerminologyClient terminologyClient,
       @Nonnull final SubsumesParameters parameters) {
     this.terminologyClient = terminologyClient;

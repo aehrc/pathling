@@ -23,8 +23,8 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
+import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
@@ -39,6 +39,15 @@ import org.hl7.fhir.r4.model.TimeType;
 public class TimeCollection extends Collection implements StringCoercible, Materializable,
     Comparable {
 
+  /**
+   * Creates a new TimeCollection with the specified parameters.
+   *
+   * @param columnRepresentation the column representation for this collection
+   * @param type the FHIRPath type of this collection
+   * @param fhirType the FHIR defined type of this collection
+   * @param definition the node definition for this collection
+   * @param extensionMapColumn the extension map column for this collection
+   */
   protected TimeCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,

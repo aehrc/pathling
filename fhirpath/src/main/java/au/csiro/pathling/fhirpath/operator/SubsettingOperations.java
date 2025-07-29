@@ -5,6 +5,9 @@ import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.functions;
 
+/**
+ * Operations for subsetting collections by index.
+ */
 public class SubsettingOperations {
 
   private SubsettingOperations() {

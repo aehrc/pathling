@@ -13,6 +13,11 @@ public class UnsupportedFhirPathFeatureError extends InvalidUserInputError {
   @Serial
   private static final long serialVersionUID = 3463869194525010650L;
 
+  /**
+   * Creates a new UnsupportedFhirPathFeatureError with the specified message.
+   *
+   * @param message the error message describing the unsupported feature
+   */
   public UnsupportedFhirPathFeatureError(final String message) {
     super(message);
   }

@@ -30,6 +30,11 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @UniqueColumnNames
 public class FhirView {
 
+  /**
+   * Creates a new FhirViewBuilder instance.
+   *
+   * @return a new FhirViewBuilder
+   */
   @Nonnull
   public static FhirViewBuilder builder() {
     return new FhirViewBuilder();
@@ -68,21 +73,47 @@ public class FhirView {
     return SelectClause.builder().column(columns).build();
   }
 
+  /**
+   * Creates a new Column with the specified name and path.
+   *
+   * @param name the column name
+   * @param path the FHIRPath expression for the column
+   * @return a new Column instance
+   */
   @Nonnull
   public static Column column(@Nonnull final String name, @Nonnull final String path) {
     return Column.single(name, path);
   }
 
+  /**
+   * Creates a new {@link SelectClause} with the given columns.
+   *
+   * @param columns the columns to include
+   * @return a new {@link SelectClause} instance
+   */
   @Nonnull
   public static SelectClause select(@Nonnull final Column... columns) {
     return SelectClause.builder().column(columns).build();
   }
 
+  /**
+   * Creates a new {@link SelectClause} with the given nested selects.
+   *
+   * @param selects the nested select clauses to include
+   * @return a new {@link SelectClause} instance
+   */
   @Nonnull
   public static SelectClause select(@Nonnull final SelectClause... selects) {
     return SelectClause.builder().select(selects).build();
   }
 
+  /**
+   * Creates a new 'forEach' SelectClause with the specified path and columns.
+   *
+   * @param forEach the path for the forEach clause
+   * @param columns the columns to include
+   * @return a new SelectClause instance
+   */
   @Nonnull
   public static SelectClause forEach(@Nonnull final String forEach,
       @Nonnull final Column... columns) {
@@ -91,6 +122,13 @@ public class FhirView {
         .column(columns).build();
   }
 
+  /**
+   * Creates a new 'forEach' SelectClause with the specified path and nested selects.
+   *
+   * @param forEach the path for the forEach clause
+   * @param selects the nested select clauses to include
+   * @return a new SelectClause instance
+   */
   @Nonnull
   public static SelectClause forEach(@Nonnull final String forEach,
       @Nonnull final SelectClause... selects) {
@@ -114,6 +152,13 @@ public class FhirView {
         .column(columns).build();
   }
 
+  /**
+   * Creates a new 'forEachOrNull' SelectClause with the specified path and nested selects.
+   *
+   * @param path the path for the forEachOrNull clause
+   * @param selects the nested select clauses to include
+   * @return a new SelectClause instance
+   */
   @Nonnull
   public static SelectClause forEachOrNull(@Nonnull final String path,
       @Nonnull final SelectClause... selects) {
@@ -122,6 +167,12 @@ public class FhirView {
         .select(selects).build();
   }
 
+  /**
+   * Creates a new {@link SelectClause} that unions all the given select clauses.
+   *
+   * @param selects the select clauses to union
+   * @return a new {@link SelectClause} instance with unionAll configured
+   */
   @Nonnull
   public static SelectClause unionAll(@Nonnull final SelectClause... selects) {
     return SelectClause.builder().unionAll(selects).build();

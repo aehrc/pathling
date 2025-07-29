@@ -49,6 +49,10 @@ public enum HttpClientCachingStorageType {
     return code;
   }
 
+  /**
+   * @param code the code of the storage type
+   * @return the HttpClientCachingStorageType corresponding to the given code
+   */
   @Nonnull
   public static HttpClientCachingStorageType fromCode(@Nonnull final String code) {
     for (final HttpClientCachingStorageType storageType : values()) {

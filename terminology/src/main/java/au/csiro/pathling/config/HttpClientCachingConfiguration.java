@@ -27,6 +27,7 @@ import jakarta.validation.ConstraintValidatorContext;
 import jakarta.validation.Payload;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import java.io.Serial;
 import java.io.Serializable;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -47,6 +48,7 @@ import lombok.Data;
 @ValidHttpCacheConfiguration
 public class HttpClientCachingConfiguration implements Serializable {
 
+  @Serial
   private static final long serialVersionUID = -3030386957343963899L;
 
   /**
@@ -93,25 +95,47 @@ public class HttpClientCachingConfiguration implements Serializable {
   @Min(0)
   private Integer overrideExpiry;
 
+  /**
+   * Validation annotation for HTTP cache configuration.
+   */
   @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
   @Retention(RetentionPolicy.RUNTIME)
   @Constraint(validatedBy = HttpCacheConfigurationValidator.class)
   @Documented
   public @interface ValidHttpCacheConfiguration {
 
+    /**
+     * The validation error message.
+     *
+     * @return the error message
+     */
     String message() default "If the storage type is disk, then a storage path must be supplied.";
 
+    /**
+     * The validation groups.
+     *
+     * @return the validation groups
+     */
     Class<?>[] groups() default {};
 
+    /**
+     * The validation payload.
+     *
+     * @return the validation payload
+     */
     Class<? extends Payload>[] payload() default {};
 
   }
 
+  /**
+   * Validator for HTTP cache configuration.
+   */
   public static class HttpCacheConfigurationValidator implements
       ConstraintValidator<ValidHttpCacheConfiguration, HttpClientCachingConfiguration> {
 
     @Override
     public void initialize(final ValidHttpCacheConfiguration constraintAnnotation) {
+      // No initialization required for this validator.
     }
 
     @Override

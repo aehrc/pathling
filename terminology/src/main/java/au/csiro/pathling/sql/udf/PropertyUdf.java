@@ -40,9 +40,9 @@ import ca.uhn.fhir.model.api.annotation.DatatypeDef;
 import com.google.common.collect.ImmutableSet;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.Serial;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Row;
@@ -61,17 +61,25 @@ import org.hl7.fhir.r4.model.Type;
 public class PropertyUdf implements SqlFunction,
     SqlFunction3<Row, String, String, Object[]> {
 
+  @Serial
   private static final long serialVersionUID = 7605853352299165569L;
   private static final String FUNCTION_BASE_NAME = "property";
 
+  /**
+   * The set of FHIR types allowed for property values.
+   */
   @Nonnull
   public static final Set<FHIRDefinedType> ALLOWED_FHIR_TYPES = ImmutableSet.of(
       STRING, CODE, INTEGER, BOOLEAN, DECIMAL, DATETIME, CODING
   );
 
+  /**
+   * The FHIR type for the property values.
+   */
   @Nonnull
   private final FHIRDefinedType propertyType;
 
+  /** The terminology service factory used to create terminology services. */
   @Nonnull
   private final TerminologyServiceFactory terminologyServiceFactory;
 
@@ -81,6 +89,13 @@ public class PropertyUdf implements SqlFunction,
   public static final FHIRDefinedType DEFAULT_PROPERTY_TYPE = STRING;
 
 
+  /**
+   * Creates a new PropertyUdf with the specified terminology service factory and property type.
+   *
+   * @param terminologyServiceFactory the terminology service factory to use
+   * @param propertyType the FHIR type for the property values
+   * @throws IllegalArgumentException if the property type is not supported
+   */
   private PropertyUdf(@Nonnull final TerminologyServiceFactory terminologyServiceFactory,
       @Nonnull final FHIRDefinedType propertyType) {
     if (!ALLOWED_FHIR_TYPES.contains(propertyType)) {
@@ -100,22 +115,14 @@ public class PropertyUdf implements SqlFunction,
   @Nonnull
   private DataType geElementType() {
     // code | Coding | string | integer | boolean | dateTime | decimal
-    switch (propertyType) {
-      case STRING:
-      case CODE:
-      case DATETIME:
-        return DataTypes.StringType;
-      case INTEGER:
-        return DataTypes.IntegerType;
-      case BOOLEAN:
-        return DataTypes.BooleanType;
-      case DECIMAL:
-        return DecimalCustomCoder.decimalType();
-      case CODING:
-        return CodingEncoding.codingStructType();
-      default:
-        throw new IllegalArgumentException("Cannot map FhirType: " + propertyType);
-    }
+    return switch (propertyType) {
+      case STRING, CODE, DATETIME -> DataTypes.StringType;
+      case INTEGER -> DataTypes.IntegerType;
+      case BOOLEAN -> DataTypes.BooleanType;
+      case DECIMAL -> DecimalCustomCoder.decimalType();
+      case CODING -> CodingEncoding.codingStructType();
+      default -> throw new IllegalArgumentException("Cannot map FhirType: " + propertyType);
+    };
   }
 
   // TODO: This should somehow be integrated with the encoders
@@ -136,6 +143,14 @@ public class PropertyUdf implements SqlFunction,
     return DataTypes.createArrayType(geElementType());
   }
 
+  /**
+   * Executes the property lookup operation for the given coding and property code.
+   *
+   * @param coding the coding to look up properties for
+   * @param propertyCode the property code to retrieve
+   * @param acceptLanguage the accept language header value for the request
+   * @return an array of property values, or null if lookup fails
+   */
   @Nullable
   protected Object[] doCall(@Nullable final Coding coding, @Nullable final String propertyCode,
       @Nullable final String acceptLanguage) {
@@ -147,7 +162,7 @@ public class PropertyUdf implements SqlFunction,
         requireNonNull(coding), propertyCode, acceptLanguage);
 
     return result.stream()
-        .filter(s -> s instanceof Property)
+        .filter(Property.class::isInstance)
         .map(s -> (Property) s)
         .filter(p -> propertyCode.equals(p.getCode()))
         .map(Property::getValue)
@@ -232,6 +247,6 @@ public class PropertyUdf implements SqlFunction,
   public static List<PropertyUdf> createAll(
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
     return ALLOWED_FHIR_TYPES.stream().map(t -> forType(terminologyServiceFactory, t))
-        .collect(Collectors.toUnmodifiableList());
+        .toList();
   }
 }

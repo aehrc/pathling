@@ -52,6 +52,12 @@ public interface ObjectHolder<C extends Serializable, V> {
    */
   void reset();
 
+  /**
+   * A singleton implementation of ObjectHolder that holds a single instance of something.
+   *
+   * @param <C> the configuration type
+   * @param <V> the value type
+   */
   class SingletonHolder<C extends Serializable, V> implements ObjectHolder<C, V>, Closeable {
 
     @Nonnull
@@ -68,7 +74,7 @@ public interface ObjectHolder<C extends Serializable, V> {
      * See {@link org.apache.spark.util.ShutdownHookManager} for more info on Spark related shutdown
      * hooks.
      */
-    public static int DEFAULT_SHUTDOWN_HOOK_PRIORITY = 30;
+    public static final int DEFAULT_SHUTDOWN_HOOK_PRIORITY = 30;
 
     private SingletonHolder(@Nonnull final Function<C, V> constructor) {
       this.constructor = constructor;
@@ -89,8 +95,8 @@ public interface ObjectHolder<C extends Serializable, V> {
 
     @Override
     public synchronized void reset() {
-      if (instance instanceof Closeable) {
-        closeQuietly((Closeable) instance);
+      if (instance instanceof final Closeable closeable) {
+        closeQuietly(closeable);
         instance = null;
         configuration = null;
       }

@@ -12,6 +12,12 @@ public class FunctionInvocationError extends RuntimeException {
   @Serial
   private static final long serialVersionUID = -3228718152389969726L;
 
+  /**
+   * Creates a new FunctionInvocationError.
+   *
+   * @param message the error message
+   * @param cause the underlying cause
+   */
   public FunctionInvocationError(final String message, final Throwable cause) {
     super(message, cause);
   }

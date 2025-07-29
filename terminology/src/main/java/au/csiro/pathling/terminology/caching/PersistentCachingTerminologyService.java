@@ -50,6 +50,13 @@ public class PersistentCachingTerminologyService extends CachingTerminologyServi
   private static final String DATA_DIRECTORY = "data";
   private static final String INDEX_DIRECTORY = "index";
 
+  /**
+   * Creates a new PersistentCachingTerminologyService with the specified parameters.
+   *
+   * @param terminologyClient the terminology client to use
+   * @param configuration the HTTP client caching configuration
+   * @param resourcesToClose additional resources to close when this service is closed
+   */
   public PersistentCachingTerminologyService(@Nonnull final TerminologyClient terminologyClient,
       @Nonnull final HttpClientCachingConfiguration configuration,
       @Nonnull final Closeable... resourcesToClose) {

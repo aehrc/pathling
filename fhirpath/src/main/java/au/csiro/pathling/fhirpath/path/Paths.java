@@ -33,10 +33,14 @@ import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.Value;
 import lombok.experimental.UtilityClass;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
+/**
+ * Utility class containing factory methods and helper classes for FHIRPath operations.
+ *
+ * @author John Grimes
+ */
 @UtilityClass
 public final class Paths {
 
@@ -58,11 +62,14 @@ public final class Paths {
     return FhirPath.nullPath();
   }
 
-  @Value
-  public static class ExternalConstantPath implements FhirPath {
+  /**
+   * Represents an external constant path in FHIRPath expressions.
+   *
+   * @param name the name of the constant
+   */
+  public record ExternalConstantPath(String name) implements FhirPath {
 
-    String name;
-
+    @Nonnull
     @Override
     public Collection apply(@Nonnull final Collection input,
         @Nonnull final EvaluationContext context) {
@@ -77,18 +84,20 @@ public final class Paths {
     }
   }
 
-  @Value
-  public static class EvalOperator implements FhirPath {
+  /**
+   * Represents a binary operator evaluation in FHIRPath expressions.
+   *
+   * @param leftPath the left operand path
+   * @param rightPath the right operand path
+   * @param operator the binary operator to apply
+   */
+  public record EvalOperator(
+      @Nonnull FhirPath leftPath,
+      @Nonnull FhirPath rightPath,
+      @Nonnull BinaryOperator operator
+  ) implements FhirPath {
 
     @Nonnull
-    FhirPath leftPath;
-
-    @Nonnull
-    FhirPath rightPath;
-
-    @Nonnull
-    BinaryOperator operator;
-
     @Override
     public Collection apply(@Nonnull final Collection input,
         @Nonnull final EvaluationContext context) {
@@ -97,6 +106,7 @@ public final class Paths {
     }
 
 
+    @Nonnull
     @Override
     public Stream<FhirPath> children() {
       return Stream.of(leftPath, rightPath);
@@ -132,15 +142,18 @@ public final class Paths {
 
   }
 
-  @Value
-  public static class EvalUnaryOperator implements FhirPath {
+  /**
+   * Represents a unary operator evaluation in FHIRPath expressions.
+   *
+   * @param path the operand path
+   * @param operator the unary operator to apply
+   */
+  public record EvalUnaryOperator(
+      @Nonnull FhirPath path,
+      @Nonnull UnaryOperator operator
+  ) implements FhirPath {
 
     @Nonnull
-    FhirPath path;
-
-    @Nonnull
-    UnaryOperator operator;
-
     @Override
     public Collection apply(@Nonnull final Collection input,
         @Nonnull final EvaluationContext context) {
@@ -153,6 +166,7 @@ public final class Paths {
       return operator.getOperatorName() + path.toTermExpression();
     }
 
+    @Nonnull
     @Override
     public Stream<FhirPath> children() {
       return Stream.of(path);
@@ -161,14 +175,16 @@ public final class Paths {
   }
 
 
-  @Value
-  public static class EvalFunction implements FhirPath {
-
-    @Nonnull
-    String functionIdentifier;
-
-    @Nonnull
-    List<FhirPath> arguments;
+  /**
+   * Represents a function evaluation in FHIRPath expressions.
+   *
+   * @param functionIdentifier the identifier of the function to evaluate
+   * @param arguments the list of arguments to the function
+   */
+  public record EvalFunction(
+      @Nonnull String functionIdentifier,
+      @Nonnull List<FhirPath> arguments
+  ) implements FhirPath {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
@@ -199,11 +215,12 @@ public final class Paths {
 
   }
 
-  @Value
-  public static class Traversal implements FhirPath {
-
-    @Nonnull
-    String propertyName;
+  /**
+   * Represents a property traversal in FHIRPath expressions.
+   *
+   * @param propertyName the name of the property to traverse
+   */
+  public record Traversal(@Nonnull String propertyName) implements FhirPath {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
@@ -218,12 +235,18 @@ public final class Paths {
     }
   }
 
-  @Value
-  public static class Resource implements FhirPath {
+  /**
+   * Represents a FHIR resource type in FHIRPath expressions.
+   *
+   * @param resourceCode the code of the resource type
+   */
+  public record Resource(@Nonnull String resourceCode) implements FhirPath {
 
-    @Nonnull
-    String resourceCode;
-
+    /**
+     * Gets the resource type for this resource path.
+     *
+     * @return the resource type
+     */
     @Nonnull
     public ResourceType getResourceType() {
       return ResourceType.fromCode(resourceCode);

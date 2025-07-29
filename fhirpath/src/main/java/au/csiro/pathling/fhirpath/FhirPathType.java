@@ -28,14 +28,33 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @Getter
 public enum FhirPathType {
 
+  /**
+   * Boolean FHIRPath type.
+   */
   BOOLEAN("Boolean", DataTypes.BooleanType, BooleanCollection.class, FHIRDefinedType.BOOLEAN),
+
+  /**
+   * String FHIRPath type.
+   */
   STRING("String", DataTypes.StringType, StringCollection.class, FHIRDefinedType.STRING),
+
+  /** Integer FHIRPath type. */
   INTEGER("Integer", DataTypes.IntegerType, IntegerCollection.class, FHIRDefinedType.INTEGER),
+
+  /** Decimal FHIRPath type. */
   DECIMAL("Decimal", DecimalCollection.getDecimalType(), DecimalCollection.class,
       FHIRDefinedType.DECIMAL),
+
+  /** Date FHIRPath type. */
   DATE("Date", DataTypes.StringType, DateCollection.class, FHIRDefinedType.DATE),
+
+  /** DateTime FHIRPath type. */
   DATETIME("DateTime", DataTypes.StringType, DateTimeCollection.class, FHIRDefinedType.DATETIME),
+
+  /** Time FHIRPath type. */
   TIME("Time", DataTypes.StringType, TimeCollection.class, FHIRDefinedType.TIME),
+
+  /** Coding FHIRPath type. */
   CODING("Coding", CodingEncoding.codingStructType(), CodingCollection.class,
       FHIRDefinedType.CODING);
 

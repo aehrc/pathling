@@ -17,6 +17,9 @@
 
 package au.csiro.pathling.views;
 
+/**
+ * Marker interface for elements that can be used in a selection.
+ */
 public interface SelectionElement {
 
 }

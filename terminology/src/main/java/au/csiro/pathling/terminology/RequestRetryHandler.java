@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.terminology;
 
-import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
@@ -31,7 +30,12 @@ import org.apache.http.protocol.HttpContext;
 @Slf4j
 public class RequestRetryHandler extends DefaultHttpRequestRetryHandler {
 
-  public RequestRetryHandler(@Nonnull final int retryCount) {
+  /**
+   * Creates a new RequestRetryHandler with the specified retry count.
+   *
+   * @param retryCount the maximum number of retries to attempt
+   */
+  public RequestRetryHandler(final int retryCount) {
     super(retryCount, true);
   }
 

@@ -24,11 +24,15 @@ import jakarta.annotation.Nonnull;
 /**
  * Represents the input parameters to the validate-code operation.
  *
+ * @param valueSetUrl the URL of the value set to validate against
+ * @param coding the coding to validate
  * @author John Grimes
  * @see <a
  * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
  */
-public record ValidateCodeParameters(@Nonnull String valueSetUrl, @Nonnull ImmutableCoding coding) implements
-    TerminologyParameters {
+public record ValidateCodeParameters(
+    @Nonnull String valueSetUrl,
+    @Nonnull ImmutableCoding coding
+) implements TerminologyParameters {
 
 }

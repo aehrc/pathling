@@ -18,23 +18,23 @@
 package au.csiro.pathling.fhir;
 
 import jakarta.annotation.Nullable;
-import lombok.Value;
 
-@Value
-public class ClientCredentialsResponse {
-
-  @Nullable
-  String accessToken;
-
-  @Nullable
-  String tokenType;
-
-  int expiresIn;
-
-  @Nullable
-  String refreshToken;
-
-  @Nullable
-  String scope;
+/**
+ * Represents an OAuth2 client credentials response.
+ *
+ * @param accessToken the access token returned by the authorization server
+ * @param tokenType the type of token returned
+ * @param expiresIn the lifetime in seconds of the access token
+ * @param refreshToken the refresh token which can be used to obtain new access tokens
+ * @param scope the scope of the access token
+ * @author John Grimes
+ */
+public record ClientCredentialsResponse(
+    @Nullable String accessToken,
+    @Nullable String tokenType,
+    int expiresIn,
+    @Nullable String refreshToken,
+    @Nullable String scope
+) {
 
 }

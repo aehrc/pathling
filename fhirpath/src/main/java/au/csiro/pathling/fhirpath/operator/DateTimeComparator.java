@@ -7,6 +7,12 @@ import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 
+/**
+ * Comparator for DateTime values that handles partial dates by comparing ranges.
+ * <p>
+ * Since FHIR DateTime values can be partial (e.g., just year or year-month), comparisons need to
+ * consider the range of possible values for each DateTime.
+ */
 public class DateTimeComparator implements ColumnComparator {
 
   /**

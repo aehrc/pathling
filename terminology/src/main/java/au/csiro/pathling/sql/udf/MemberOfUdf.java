@@ -24,6 +24,7 @@ import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.Serial;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.types.DataType;
@@ -37,13 +38,25 @@ import org.hl7.fhir.r4.model.Coding;
 public class MemberOfUdf implements SqlFunction,
     SqlFunction2<Object, String, Boolean> {
 
+  @Serial
   private static final long serialVersionUID = 7605853352299165569L;
 
+  /**
+   * The name of the member_of UDF function.
+   */
   public static final String FUNCTION_NAME = "member_of";
 
+  /**
+   * The terminology service factory used to create terminology services.
+   */
   @Nonnull
   private final TerminologyServiceFactory terminologyServiceFactory;
 
+  /**
+   * Creates a new MemberOfUdf with the specified terminology service factory.
+   *
+   * @param terminologyServiceFactory the terminology service factory to use
+   */
   MemberOfUdf(@Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
     this.terminologyServiceFactory = terminologyServiceFactory;
   }
@@ -64,6 +77,13 @@ public class MemberOfUdf implements SqlFunction,
     return doCall(decodeOneOrMany(codingRowOrArray), url);
   }
 
+  /**
+   * Executes the operation for the given codings and value set URL.
+   *
+   * @param codings the codings to test for membership
+   * @param url the URL of the value set to test against
+   * @return true if any coding is a member of the value set, false otherwise, null if inputs are null
+   */
   @Nullable
   protected Boolean doCall(@Nullable final Stream<Coding> codings, @Nullable final String url) {
     if (url == null || codings == null) {

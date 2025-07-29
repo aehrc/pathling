@@ -27,8 +27,8 @@ import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.Serial;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.types.DataType;
@@ -43,16 +43,31 @@ import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 public class SubsumesUdf implements SqlFunction,
     SqlFunction3<Object, Object, Boolean, Boolean> {
 
+  @Serial
   private static final long serialVersionUID = 7605853352299165569L;
 
+  /**
+   * The name of the subsumes UDF function.
+   */
   public static final String FUNCTION_NAME = "subsumes";
 
+  /**
+   * The return type of the subsumes UDF function.
+   */
   public static final DataType RETURN_TYPE = DataTypes.BooleanType;
+
+  /** The default value for the inverted parameter. */
   public static final boolean PARAM_INVERTED_DEFAULT = false;
 
+  /** The terminology service factory used to create terminology services. */
   @Nonnull
   private final TerminologyServiceFactory terminologyServiceFactory;
 
+  /**
+   * Creates a new SubsumesUdf with the specified terminology service factory.
+   *
+   * @param terminologyServiceFactory the terminology service factory to use
+   */
   public SubsumesUdf(@Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
     this.terminologyServiceFactory = terminologyServiceFactory;
   }
@@ -67,10 +82,18 @@ public class SubsumesUdf implements SqlFunction,
     return RETURN_TYPE;
   }
 
+  /**
+   * Executes the subsumes operation for the given codings.
+   *
+   * @param codingsA the first set of codings
+   * @param codingsB the second set of codings
+   * @param inverted whether to invert the subsumption test
+   * @return true if the subsumption relationship holds, false otherwise, null if indeterminate
+   */
   @Nullable
   protected Boolean doCall(@Nullable final Stream<Coding> codingsA,
       @Nullable final Stream<Coding> codingsB,
-      @Nullable Boolean inverted) {
+      @Nullable final Boolean inverted) {
     if (codingsA == null || codingsB == null) {
       return null;
     }
@@ -81,8 +104,7 @@ public class SubsumesUdf implements SqlFunction,
     final TerminologyService terminologyService = terminologyServiceFactory.build();
 
     // does any of the input codings subsume any of the output codings (within the same system)
-    final List<Coding> validCodingsB = validCodings(codingsB)
-        .collect(Collectors.toUnmodifiableList());
+    final List<Coding> validCodingsB = validCodings(codingsB).toList();
 
     return validCodings(codingsA)
         .anyMatch(codingA ->

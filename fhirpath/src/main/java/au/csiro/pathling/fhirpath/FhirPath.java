@@ -17,11 +17,26 @@ import lombok.Value;
 @FunctionalInterface
 public interface FhirPath {
 
+  /**
+   * A special FHIRPath that doesn't do anything.
+   */
   FhirPath NULL = new This();
 
+  /**
+   * Applies this FHIRPath to the given input collection.
+   *
+   * @param input the input collection to transform
+   * @param context the evaluation context
+   * @return the transformed collection
+   */
   Collection apply(@Nonnull final Collection input, @Nonnull final EvaluationContext context);
 
-
+  /**
+   * Chains this FHIRPath with another to create a composite transformation.
+   *
+   * @param after the FHIRPath to apply after this one
+   * @return a composite FHIRPath that applies both transformations
+   */
   default FhirPath andThen(@Nonnull final FhirPath after) {
     return nullPath().equals(after)
            ? this
@@ -30,24 +45,47 @@ public interface FhirPath {
                    .toList());
   }
 
+  /**
+   * Converts this FHIRPath to a stream representation.
+   *
+   * @return a stream containing this FHIRPath element
+   */
   default Stream<FhirPath> asStream() {
     return Stream.of(this);
   }
 
-
+  /**
+   * Returns the child FHIRPath elements of this path.
+   *
+   * @return a stream of child FHIRPath elements
+   */
   default Stream<FhirPath> children() {
     return Stream.empty();
   }
 
+  /**
+   * Returns the null FHIRPath instance.
+   *
+   * @return the null FHIRPath
+   */
   static FhirPath nullPath() {
     return NULL;
   }
 
+  /**
+   * Checks if this FHIRPath is the null path, which does not perform any transformation.
+   *
+   * @return true if this is the null path, false otherwise
+   */
   default boolean isNull() {
     return NULL.equals(this);
   }
 
-
+  /**
+   * Converts this FHIRPath to its expression string representation.
+   *
+   * @return the FHIRPath expression as a string
+   */
   @Nonnull
   default String toExpression() {
     return toString();
@@ -63,6 +101,12 @@ public interface FhirPath {
     return toExpression();
   }
 
+  /**
+   * Creates a composite FHIRPath from a list of FHIRPath elements.
+   *
+   * @param elements the list of FHIRPath elements
+   * @return a FHIRPath representing the composition of the elements
+   */
   @Nonnull
   static FhirPath of(@Nonnull final List<FhirPath> elements) {
     return switch (elements.size()) {
@@ -72,7 +116,9 @@ public interface FhirPath {
     };
   }
 
-
+  /**
+   * Implementation of FHIRPath that represents the identity transformation.
+   */
   @Value
   class This implements FhirPath {
 
@@ -99,8 +145,18 @@ public interface FhirPath {
     }
   }
 
+  /**
+   * Implementation of FHIRPath that represents a composition of multiple FHIRPath elements.
+   *
+   * @param elements the list of FHIRPath elements to compose
+   */
   record Composite(@Nonnull List<FhirPath> elements) implements FhirPath {
 
+    /**
+     * Compact constructor that validates the elements list.
+     *
+     * @param elements the list of FHIRPath elements to compose
+     */
     public Composite {
       checkArgument(elements.size() >= 2, "Composite must have at least two elements");
     }

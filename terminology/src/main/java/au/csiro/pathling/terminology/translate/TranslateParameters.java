@@ -25,11 +25,19 @@ import jakarta.annotation.Nullable;
 /**
  * Represents the input parameters to the translate operation.
  *
+ * @param coding the coding to translate
+ * @param conceptMapUrl the URL of the concept map to use for translation
+ * @param reverse whether to reverse the translation direction
+ * @param target the target system for translation
  * @author John Grimes
  * @see <a
  * href="https://www.hl7.org/fhir/R4/codesystem-operation-translate.html">CodeSystem/$translate</a>
  */
-public record TranslateParameters(@Nonnull ImmutableCoding coding, @Nonnull String conceptMapUrl,
-                                  boolean reverse, @Nullable String target) implements TerminologyParameters {
+public record TranslateParameters(
+    @Nonnull ImmutableCoding coding,
+    @Nonnull String conceptMapUrl,
+    boolean reverse,
+    @Nullable String target
+) implements TerminologyParameters {
 
 }

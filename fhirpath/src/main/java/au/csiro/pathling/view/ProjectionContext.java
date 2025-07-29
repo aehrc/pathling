@@ -27,7 +27,6 @@ import au.csiro.pathling.views.ConstantDeclaration;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
-import lombok.Value;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -35,22 +34,31 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 /**
  * Dependencies and logic relating to the traversal of FHIRPath expressions.
  *
+ * @param executor an evaluator for FHIRPath expressions
+ * @param inputContext the initial context for evaluation
  * @author Piotr Szul
  */
-@Value
-public class ProjectionContext {
+public record ProjectionContext(
+    @Nonnull FhirpathEvaluator executor,
+    @Nonnull Collection inputContext
+) {
 
-  @Nonnull
-  FhirpathEvaluator executor;
-
-  @Nonnull
-  Collection inputContext;
-
+  /**
+   * Gets the initial dataset for this projection context.
+   *
+   * @return the initial dataset
+   */
   @Nonnull
   public Dataset<Row> getDataset() {
     return executor.createInitialDataset();
   }
 
+  /**
+   * Creates a new ProjectionContext with a different input context.
+   *
+   * @param inputContext the new input context
+   * @return a new ProjectionContext with the specified input context
+   */
   @Nonnull
   public ProjectionContext withInputContext(@Nonnull final Collection inputContext) {
     return new ProjectionContext(executor, inputContext);
@@ -67,6 +75,15 @@ public class ProjectionContext {
     return executor.evaluate(path, inputContext);
   }
 
+  /**
+   * Creates a new ProjectionContext from the given execution context, subject resource, and
+   * constants.
+   *
+   * @param context the execution context
+   * @param subjectResource the subject resource type
+   * @param constants the list of constant declarations
+   * @return a new ProjectionContext
+   */
   @Nonnull
   public static ProjectionContext of(@Nonnull final ExecutionContext context,
       @Nonnull final ResourceType subjectResource,

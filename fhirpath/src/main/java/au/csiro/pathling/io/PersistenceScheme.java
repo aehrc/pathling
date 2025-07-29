@@ -33,6 +33,9 @@ import org.slf4j.Logger;
  */
 public interface PersistenceScheme {
 
+  /**
+   * Logger for persistence operations.
+   */
   Logger log = org.slf4j.LoggerFactory.getLogger(PersistenceScheme.class);
 
   /**

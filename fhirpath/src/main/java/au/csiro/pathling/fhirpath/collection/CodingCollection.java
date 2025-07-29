@@ -79,6 +79,15 @@ public class CodingCollection extends Collection implements Comparable, StringCo
       createDefinition("", 1);
 
 
+  /**
+   * Creates a new CodingCollection.
+   *
+   * @param columnRepresentation the column representation for this collection
+   * @param type the FhirPath type
+   * @param fhirType the FHIR type
+   * @param definition the node definition
+   * @param extensionMapColumn the extension map column
+   */
   protected CodingCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,

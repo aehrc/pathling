@@ -21,19 +21,16 @@ import static java.util.stream.Collectors.joining;
 
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import lombok.Value;
 
 /**
  * Groups multiple selections together using a cross join.
  *
+ * @param components the list of projection clauses to be grouped
  * @author John Grimes
  * @author Piotr Szul
  */
-@Value
-public class GroupingSelection implements ProjectionClause {
-
-  @Nonnull
-  List<ProjectionClause> components;
+public record GroupingSelection(@Nonnull List<ProjectionClause> components) implements
+    ProjectionClause {
 
   @Override
   @Nonnull
@@ -44,6 +41,7 @@ public class GroupingSelection implements ProjectionClause {
     return ProjectionResult.combine(subResults);
   }
 
+  @Nonnull
   @Override
   public String toString() {
     return "GroupingSelection{" +
@@ -53,11 +51,16 @@ public class GroupingSelection implements ProjectionClause {
         "]}";
   }
 
+  /**
+   * Returns a string expression representation of this grouping selection.
+   *
+   * @return the string expression "group"
+   */
   @Nonnull
   public String toExpression() {
     return "group";
   }
-  
+
   @Override
   @Nonnull
   public String toTreeString(final int level) {

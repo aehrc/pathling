@@ -121,7 +121,7 @@ public class ClientAuthInterceptor implements Closeable {
       final AccessContext accessContext = ensureAccessContext(clientId, clientSecret, tokenEndpoint,
           scope, tokenExpiryTolerance);
       // Now we should have a valid token, so we can add it to the request.
-      final String accessToken = accessContext.getClientCredentialsResponse().getAccessToken();
+      final String accessToken = accessContext.getClientCredentialsResponse().accessToken();
       requireNonNull(accessToken);
       httpRequest.addHeader("Authorization", "Bearer " + accessToken);
     }
@@ -213,12 +213,12 @@ public class ClientAuthInterceptor implements Closeable {
     final ClientCredentialsResponse grant = gson.fromJson(
         responseString,
         ClientCredentialsResponse.class);
-    if (grant.getAccessToken() == null) {
+    if (grant.accessToken() == null) {
       throw new ClientProtocolException("Client credentials grant does not contain access token");
     }
-    if (grant.getExpiresIn() < tokenExpiryTolerance) {
+    if (grant.expiresIn() < tokenExpiryTolerance) {
       throw new ClientProtocolException(
-          "Client credentials grant expiry is less than the tolerance: " + grant.getExpiresIn());
+          "Client credentials grant expiry is less than the tolerance: " + grant.expiresIn());
     }
     return grant;
   }
@@ -237,7 +237,7 @@ public class ClientAuthInterceptor implements Closeable {
   }
 
   private static Instant getExpiryTime(@Nonnull final ClientCredentialsResponse response) {
-    return Instant.now().plusSeconds(response.getExpiresIn());
+    return Instant.now().plusSeconds(response.expiresIn());
   }
 
   /**

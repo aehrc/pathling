@@ -6,6 +6,11 @@ import com.google.gson.TypeAdapterFactory;
 import com.google.gson.reflect.TypeToken;
 import jakarta.annotation.Nullable;
 
+/**
+ * Type adapter factory for {@link ConstantDeclaration} serialisation with Gson.
+ *
+ * @author John Grimes
+ */
 public class ConstantDeclarationTypeAdapterFactory implements TypeAdapterFactory {
 
   @Nullable

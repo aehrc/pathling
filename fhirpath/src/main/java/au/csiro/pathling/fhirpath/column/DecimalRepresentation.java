@@ -60,6 +60,11 @@ public class DecimalRepresentation extends DefaultRepresentation {
     this.scaleValue = Optional.empty();
   }
 
+  /**
+   * Creates a new DecimalRepresentation from a BigDecimal value.
+   *
+   * @param value the BigDecimal value to represent
+   */
   public DecimalRepresentation(@Nonnull final BigDecimal value) {
     this(functions.lit(value), functions.lit(value.scale()));
   }

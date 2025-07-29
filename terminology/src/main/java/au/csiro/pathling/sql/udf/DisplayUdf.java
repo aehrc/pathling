@@ -1,4 +1,5 @@
 /*
+/*
  * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
@@ -26,6 +27,7 @@ import au.csiro.pathling.terminology.TerminologyService.PropertyOrDesignation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.Serial;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -41,15 +43,31 @@ import org.hl7.fhir.r4.model.Coding;
 public class DisplayUdf implements SqlFunction,
     SqlFunction2<Row, String, String> {
 
+  @Serial
   private static final long serialVersionUID = 7605853352299165569L;
 
+  /**
+   * The property code used to identify display names in the terminology service.
+   */
   public static final String DISPLAY_PROPERTY_CODE = "display";
+
+  /**
+   * The name of the display UDF function.
+   */
   public static final String FUNCTION_NAME = "display";
+
+  /** The return type of the display UDF function, which is a string. */
   public static final DataType RETURN_TYPE = DataTypes.StringType;
 
+  /** The terminology service factory used to create terminology services. */
   @Nonnull
   private final TerminologyServiceFactory terminologyServiceFactory;
 
+  /**
+   * Creates a new DisplayUdf with the specified terminology service factory.
+   *
+   * @param terminologyServiceFactory the terminology service factory to use
+   */
   DisplayUdf(@Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
     this.terminologyServiceFactory = terminologyServiceFactory;
   }
@@ -64,6 +82,13 @@ public class DisplayUdf implements SqlFunction,
     return RETURN_TYPE;
   }
 
+  /**
+   * Performs the lookup for the display name of a given coding.
+   *
+   * @param coding the coding to look up
+   * @param acceptLanguage the language to use for the display name, or null for default
+   * @return the display name if found, or null if not found or if the coding is invalid
+   */
   @Nullable
   protected String doCall(@Nullable final Coding coding, @Nullable final String acceptLanguage) {
     if (coding == null || !isValidCoding(coding)) {
@@ -74,7 +99,7 @@ public class DisplayUdf implements SqlFunction,
         coding, DISPLAY_PROPERTY_CODE, acceptLanguage);
 
     final Optional<Property> maybeDisplayName = result.stream()
-        .filter(s -> s instanceof Property)
+        .filter(Property.class::isInstance)
         .map(s -> (Property) s)
         .filter(p -> DISPLAY_PROPERTY_CODE.equals(p.getCode()))
         .findFirst();

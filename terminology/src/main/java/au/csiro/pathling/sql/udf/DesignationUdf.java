@@ -28,6 +28,7 @@ import au.csiro.pathling.terminology.TerminologyService.Designation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.Serial;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataType;
@@ -41,17 +42,33 @@ import org.hl7.fhir.r4.model.Coding;
 public class DesignationUdf implements SqlFunction,
     SqlFunction3<Row, Row, String, String[]> {
 
+  @Serial
   private static final long serialVersionUID = -4123584679085357391L;
 
+  /**
+   * The name of the designation UDF function.
+   */
   public static final String FUNCTION_NAME = "designation";
+
+  /**
+   * The return type of the designation UDF function, which is an array of strings.
+   */
   public static final DataType RETURN_TYPE = DataTypes.createArrayType(DataTypes.StringType);
+
+  /** The property code used to identify designations in the terminology service. */
   public static final String DESIGNATION_PROPERTY_CODE = Designation.PROPERTY_CODE;
 
   private static final String[] EMPTY_RESULT = new String[0];
 
+  /** The terminology service factory used to create terminology services. */
   @Nonnull
   private final TerminologyServiceFactory terminologyServiceFactory;
 
+  /**
+   * Creates a new DesignationUdf with the specified terminology service factory.
+   *
+   * @param terminologyServiceFactory the terminology service factory to use
+   */
   DesignationUdf(@Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
     this.terminologyServiceFactory = terminologyServiceFactory;
   }
@@ -66,6 +83,14 @@ public class DesignationUdf implements SqlFunction,
     return RETURN_TYPE;
   }
 
+  /**
+   * Looks up designations for the given coding and optional use, filtering by language if provided.
+   *
+   * @param coding the coding to look up designations for
+   * @param use the optional use of the designation
+   * @param language the optional language to filter designations by
+   * @return an array of designation values, or an empty array if no valid designations are found
+   */
   @Nullable
   protected String[] doCall(@Nullable final Coding coding,
       @Nullable final Coding use, @Nullable final String language) {

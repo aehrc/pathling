@@ -46,6 +46,15 @@ public class ResourceCollection extends Collection {
   @Nonnull
   private final ResourceDefinition resourceDefinition;
 
+  /**
+   * Creates a new ResourceCollection.
+   *
+   * @param columnRepresentation the column representation
+   * @param type the FhirPath type
+   * @param fhirType the FHIR type
+   * @param definition the node definition
+   * @param resourceDefinition the resource definition
+   */
   protected ResourceCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
@@ -67,6 +76,13 @@ public class ResourceCollection extends Collection {
   }
 
 
+  /**
+   * Builds a new ResourceCollection from a column representation and resource definition.
+   *
+   * @param columnRepresentation the column representation
+   * @param definition the resource definition
+   * @return a new ResourceCollection
+   */
   @Nonnull
   public static ResourceCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final ResourceDefinition definition) {
@@ -140,7 +156,7 @@ public class ResourceCollection extends Collection {
     return type.asResourceType()
         .map(ResourceType::toCode)
         .filter(getResourceDefinition().getResourceCode()::equals)
-        .map(__ -> (Collection) this)
+        .map(s -> (Collection) this)
         .orElse(EmptyCollection.getInstance());
   }
 

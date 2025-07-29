@@ -24,9 +24,24 @@ public @interface UniqueTags {
    */
   String[] value() default {};
 
+  /**
+   * The validation error message.
+   *
+   * @return the error message
+   */
   String message() default "List must not contain more than one tag with the same name from the restricted list";
 
+  /**
+   * The validation groups.
+   *
+   * @return the validation groups
+   */
   Class<?>[] groups() default {};
 
+  /**
+   * The validation payload.
+   *
+   * @return the validation payload
+   */
   Class<? extends Payload>[] payload() default {};
 }

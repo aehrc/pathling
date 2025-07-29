@@ -54,6 +54,15 @@ import org.hl7.fhir.r4.model.UuidType;
 public class StringCollection extends Collection implements Comparable, Numeric, StringCoercible,
     Materializable {
 
+  /**
+   * Creates a new StringCollection with the specified parameters.
+   *
+   * @param columnRepresentation the column representation for this collection
+   * @param type the FHIRPath type of this collection
+   * @param fhirType the FHIR defined type of this collection
+   * @param definition the node definition for this collection
+   * @param extensionMapColumn the extension map column for this collection
+   */
   protected StringCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
@@ -139,6 +148,7 @@ public class StringCollection extends Collection implements Comparable, Numeric,
    * Returns a new instance based upon a literal value with specified FHIR type.
    *
    * @param value The value to use
+   * @param fhirDefinedType The FHIR defined type for the collection
    * @return A new instance of {@link StringCollection}
    */
   @Nonnull

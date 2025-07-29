@@ -3,10 +3,10 @@ package au.csiro.pathling.fhirpath.definition.defaults;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import jakarta.annotation.Nonnull;
-import lombok.Value;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import java.util.List;
 import java.util.Optional;
+import lombok.Value;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * The default implementation of a composite data type allowing for explicit definition of its
@@ -46,6 +46,14 @@ public class DefaultCompositeDefinition implements ElementDefinition {
     return Optional.of(type);
   }
 
+  /**
+   * Creates a backbone element definition.
+   *
+   * @param name the element name
+   * @param children the child definitions
+   * @param cardinality the cardinality
+   * @return a new DefaultCompositeDefinition for a backbone element
+   */
   @Nonnull
   public static DefaultCompositeDefinition backbone(@Nonnull final String name,
       @Nonnull final List<ChildDefinition> children, final int cardinality) {

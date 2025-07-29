@@ -85,6 +85,11 @@ public interface TerminologyFunctions {
       @Nonnull final Column codingArrayA, @Nonnull final Column codingArrayB,
       @Nonnull final String outputColumnName, final boolean inverted);
 
+  /**
+   * Creates a new instance of TerminologyFunctions.
+   *
+   * @return a new TerminologyFunctions implementation
+   */
   @Nonnull
   static TerminologyFunctions build() {
     return new TerminologyFunctionsImpl();

@@ -28,26 +28,24 @@ import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.stream.Collectors;
-import lombok.Value;
 import org.apache.spark.sql.Column;
 
 /**
  * Represents a selection that unnests a nested data structure, with either inner or outer join
  * semantics.
  *
+ * @param path the FHIRPath expression that identifies the collection to unnest
+ * @param components the list of components to select from the unnesting collection
+ * @param joinOuter whether to use outer join semantics (i.e., return a row even if the
+ * unnesting collection is empty)
  * @author John Grimes
  * @author Piotr Szul
  */
-@Value
-public class UnnestingSelection implements ProjectionClause {
-
-  @Nonnull
-  FhirPath path;
-
-  @Nonnull
-  List<ProjectionClause> components;
-
-  boolean joinOuter;
+public record UnnestingSelection(
+    @Nonnull FhirPath path,
+    @Nonnull List<ProjectionClause> components,
+    boolean joinOuter
+) implements ProjectionClause {
 
   @Nonnull
   @Override
@@ -99,6 +97,7 @@ public class UnnestingSelection implements ProjectionClause {
     return structProduct(subSelectionColumns);
   }
 
+  @Nonnull
   @Override
   public String toString() {
     return "UnnestingSelection{" +
@@ -110,6 +109,11 @@ public class UnnestingSelection implements ProjectionClause {
         '}';
   }
 
+  /**
+   * Returns the FHIRPath expression representation of this unnesting selection.
+   *
+   * @return the expression string containing forEach or forEachOrNull with path
+   */
   @Nonnull
   public String toExpression() {
     return (joinOuter

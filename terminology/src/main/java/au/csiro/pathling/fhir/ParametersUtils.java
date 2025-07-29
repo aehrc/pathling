@@ -43,7 +43,14 @@ import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
  */
 public final class ParametersUtils {
 
+  /**
+   * The parameter name for property parts.
+   */
   public static final String PROPERTY_PART_NAME = "property";
+
+  /**
+   * The parameter name for designation parts.
+   */
   public static final String DESIGNATION_PART_NAME = "designation";
 
   private ParametersUtils() {

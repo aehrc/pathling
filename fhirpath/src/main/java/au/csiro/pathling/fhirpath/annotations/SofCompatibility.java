@@ -29,12 +29,28 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE})
 public @interface SofCompatibility {
 
+  /**
+   * SQL on FHIR compatibility profiles.
+   */
   enum Profile {
+    /**
+     * Required features that must be supported.
+     */
     REQUIRED,
+    /**
+     * Sharable features that can be shared across implementations.
+     */
     SHARABLE,
+    /** Experimental features that are not yet stable. */
     EXPERIMENTAL,
+    /** Terminology-related features. */
     TERMINOLOGY
   }
 
+  /**
+   * The compatibility profile for this element.
+   *
+   * @return the profile
+   */
   Profile value();
 }

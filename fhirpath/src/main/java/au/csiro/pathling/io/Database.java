@@ -19,12 +19,9 @@ package au.csiro.pathling.io;
 
 import static au.csiro.pathling.QueryHelpers.createEmptyDataset;
 import static au.csiro.pathling.fhir.FhirUtils.getResourceType;
-import static au.csiro.pathling.io.FileSystemPersistence.safelyJoinPaths;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.asc;
 
-import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.security.ResourceAccess;
@@ -53,15 +50,23 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Slf4j
 public class Database implements DataSource {
 
+  /**
+   * The Spark session for interacting with Spark.
+   */
   @Nonnull
   protected final SparkSession spark;
 
+  /**
+   * FHIR encoders for creating empty datasets.
+   */
   @Nonnull
   protected final FhirEncoders fhirEncoders;
 
+  /** The persistence scheme for reading and writing data. */
   @Nonnull
   protected final PersistenceScheme persistence;
 
+  /** Whether to cache datasets in memory. */
   protected final boolean cacheDatasets;
 
   /**
@@ -76,21 +81,6 @@ public class Database implements DataSource {
     this.fhirEncoders = fhirEncoders;
     this.persistence = persistence;
     this.cacheDatasets = cacheDatasets;
-  }
-
-  /**
-   * @param spark a {@link SparkSession} for interacting with Spark
-   * @param fhirEncoders {@link FhirEncoders} object for creating empty datasets
-   * @param configuration a {@link StorageConfiguration} object which controls the behaviour of the
-   * database
-   * @return a new {@link Database} object
-   */
-  @Nonnull
-  public static Database forConfiguration(@Nonnull final SparkSession spark,
-      @Nonnull final FhirEncoders fhirEncoders, @Nonnull final StorageConfiguration configuration) {
-    return new Database(spark, fhirEncoders, new FileSystemPersistence(
-        spark, safelyJoinPaths(configuration.getWarehouseUrl(), configuration.getDatabaseName())),
-        configuration.getCacheDatasets());
   }
 
   /**
@@ -211,28 +201,6 @@ public class Database implements DataSource {
         .insertAll();
     persistence.merge(resourceType, merge);
     persistence.invalidate(resourceType);
-  }
-
-  /**
-   * Checks that the resource has an ID that matches the supplied ID.
-   *
-   * @param resource the resource to be checked
-   * @param id the ID supplied by the client
-   * @return the resource
-   */
-  @Nonnull
-  public static IBaseResource prepareResourceForUpdate(@Nonnull final IBaseResource resource,
-      @Nonnull final String id) {
-    // When a `fullUrl` with a UUID is provided within a batch, the ID gets set to a URN. We need to 
-    // convert this back to a naked ID before we use it in the update.
-    final String originalId = resource.getIdElement().getIdPart();
-    final String uuidPrefix = "urn:uuid:";
-    if (originalId.startsWith(uuidPrefix)) {
-      resource.setId(originalId.replaceFirst(uuidPrefix, ""));
-    }
-    checkUserInput(resource.getIdElement().getIdPart().equals(id),
-        "Resource ID missing or does not match supplied ID");
-    return resource;
   }
 
   /**

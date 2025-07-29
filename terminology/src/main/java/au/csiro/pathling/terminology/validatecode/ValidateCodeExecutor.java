@@ -48,6 +48,12 @@ public class ValidateCodeExecutor implements TerminologyOperation<Parameters, Bo
   @Nonnull
   private final ValidateCodeParameters parameters;
 
+  /**
+   * Creates a new ValidateCodeExecutor with the specified terminology client and parameters.
+   *
+   * @param terminologyClient the terminology client to use for code validation
+   * @param parameters the parameters for the validation
+   */
   public ValidateCodeExecutor(@Nonnull final TerminologyClient terminologyClient,
       @Nonnull final ValidateCodeParameters parameters) {
     this.terminologyClient = terminologyClient;

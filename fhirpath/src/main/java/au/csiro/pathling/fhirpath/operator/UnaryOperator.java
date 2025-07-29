@@ -2,7 +2,6 @@ package au.csiro.pathling.fhirpath.operator;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
-import lombok.Value;
 
 /**
  * Represents a unary operator in FHIRPath.
@@ -13,12 +12,11 @@ public interface UnaryOperator {
 
   /**
    * Represents the input to a unary operator.
+   *
+   * @param input A {@link Collection} object representing the input to the operator
    */
-  @Value
-  class UnaryOperatorInput {
+  record UnaryOperatorInput(@Nonnull Collection input) {
 
-    @Nonnull
-    Collection input;
   }
 
   /**
@@ -30,6 +28,11 @@ public interface UnaryOperator {
   @Nonnull
   Collection invoke(UnaryOperatorInput input);
 
+  /**
+   * Gets the name of this operator.
+   *
+   * @return the operator name, defaults to the simple class name
+   */
   default String getOperatorName() {
     return this.getClass().getSimpleName();
   }

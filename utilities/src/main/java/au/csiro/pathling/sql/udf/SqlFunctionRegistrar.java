@@ -22,6 +22,15 @@ public class SqlFunctionRegistrar implements SparkConfigurer {
   @Nonnull
   private final List<SqlFunction5<?, ?, ?, ?, ?, ?>> sqlFunction5;
 
+  /**
+   * Creates a new SqlFunctionRegistrar with the specified SQL functions.
+   *
+   * @param sqlFunction1 list of single-parameter SQL functions
+   * @param sqlFunction2 list of two-parameter SQL functions
+   * @param sqlFunction3 list of three-parameter SQL functions
+   * @param sqlFunction4 list of four-parameter SQL functions
+   * @param sqlFunction5 list of five-parameter SQL functions
+   */
   public SqlFunctionRegistrar(
       @Nonnull final List<SqlFunction1<?, ?>> sqlFunction1,
       @Nonnull final List<SqlFunction2<?, ?, ?>> sqlFunction2,

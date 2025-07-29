@@ -47,9 +47,21 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class DecimalCollection extends Collection implements Comparable, Numeric, StringCoercible,
     Materializable {
 
+  /**
+   * The Spark SQL decimal type used for FHIR decimal values.
+   */
   public static final org.apache.spark.sql.types.DecimalType DECIMAL_TYPE = DataTypes
       .createDecimalType(DecimalCustomCoder.precision(), DecimalCustomCoder.scale());
 
+  /**
+   * Creates a new DecimalCollection.
+   *
+   * @param columnRepresentation the column representation for this collection
+   * @param fhirPathType the FhirPath type
+   * @param fhirType the FHIR type
+   * @param definition the node definition
+   * @param extensionMapColumn the extension map column
+   */
   protected DecimalCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> fhirPathType,
       @Nonnull final Optional<FHIRDefinedType> fhirType,

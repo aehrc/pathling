@@ -15,11 +15,19 @@ import lombok.Getter;
 @Getter
 public abstract class MixedCollection extends Collection {
 
+  /**
+   * Creates a new MixedCollection with an unsupported description.
+   *
+   * @param unsupportedDescription the description for unsupported operations
+   */
   protected MixedCollection(@Nonnull final String unsupportedDescription) {
     super(new UnsupportedRepresentation(unsupportedDescription),
         Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
   }
 
+  /**
+   * Creates a new MixedCollection with a default unsupported description.
+   */
   @SuppressWarnings("unused")
   protected MixedCollection() {
     this("mixed collection (do you need to use ofType?)");

@@ -33,6 +33,14 @@ import java.util.function.Function;
  */
 public interface TerminologyParameters extends Serializable {
 
+  /**
+   * Converts an optional string value using the provided converter.
+   *
+   * @param <T> the type to convert to
+   * @param converter the function to convert the string value
+   * @param value the string value to convert, may be null
+   * @return the converted value, or null if input is null
+   */
   @Nullable
   static <T> T optional(@Nonnull final Function<String, T> converter,
       @Nullable final String value) {
@@ -41,6 +49,15 @@ public interface TerminologyParameters extends Serializable {
            : null;
   }
 
+  /**
+   * Converts a required string value using the provided converter.
+   *
+   * @param <T> the type to convert to
+   * @param converter the function to convert the string value
+   * @param value the string value to convert, must not be null
+   * @return the converted value
+   * @throws NullPointerException if value is null
+   */
   @Nonnull
   static <T> T required(@Nonnull final Function<String, T> converter,
       @Nullable final String value) {

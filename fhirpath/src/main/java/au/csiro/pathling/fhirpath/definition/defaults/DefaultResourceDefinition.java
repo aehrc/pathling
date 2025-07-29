@@ -27,6 +27,13 @@ public class DefaultResourceDefinition implements ResourceDefinition {
         .findFirst();
   }
 
+  /**
+   * Creates a new DefaultResourceDefinition with the given resource tag and children.
+   *
+   * @param resourceTag the resource tag
+   * @param children the child definitions
+   * @return a new DefaultResourceDefinition
+   */
   @Nonnull
   public static DefaultResourceDefinition of(
       @Nonnull final DefaultResourceTag resourceTag,

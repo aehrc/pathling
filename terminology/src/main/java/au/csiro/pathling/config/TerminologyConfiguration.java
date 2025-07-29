@@ -21,6 +21,7 @@ import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.io.Serial;
 import java.io.Serializable;
 import lombok.Builder;
 import lombok.Data;
@@ -35,6 +36,7 @@ import org.hibernate.validator.constraints.URL;
 @Builder
 public class TerminologyConfiguration implements Serializable {
 
+  @Serial
   private static final long serialVersionUID = -5990849769947958140L;
 
   /**
@@ -70,12 +72,17 @@ public class TerminologyConfiguration implements Serializable {
    * If not provided, the header is not sent. The server can use the header to return the result in
    * the preferred language if it is able. The actual behaviour may depend on the server
    * implementation and the code systems used.
+   *
+   * @return the accept language header value
    */
   @Nullable
   public String getAcceptLanguage() {
     return acceptLanguage;
   }
 
+  /**
+   * The accept language header value for terminology requests.
+   */
   @Nullable
   @Builder.Default
   private String acceptLanguage = null;

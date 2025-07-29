@@ -56,6 +56,12 @@ public class LookupExecutor implements
   @Nonnull
   private final LookupParameters parameters;
 
+  /**
+   * Creates a new LookupExecutor with the specified terminology client and parameters.
+   *
+   * @param terminologyClient the terminology client to use for lookup operations
+   * @param parameters the parameters for the lookup operation
+   */
   public LookupExecutor(@Nonnull final TerminologyClient terminologyClient,
       @Nonnull final LookupParameters parameters) {
     this.terminologyClient = terminologyClient;

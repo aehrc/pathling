@@ -33,6 +33,12 @@ public interface ProjectionClause {
   @Nonnull
   ProjectionResult evaluate(@Nonnull final ProjectionContext context);
 
+  /**
+   * Returns a tree-like string representation of this clause for debugging purposes.
+   *
+   * @param level the indentation level for the tree structure
+   * @return a formatted tree string representation
+   */
   @Nonnull
   String toTreeString(final int level);
   

@@ -12,23 +12,51 @@ import java.time.format.DateTimeParseException;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 
+/**
+ * UDF that calculates the low boundary for a FHIR date/dateTime string.
+ * <p>
+ * This function handles partial dates and returns the earliest possible timestamp for the given
+ * precision level.
+ *
+ * @author John Grimes
+ */
 public class LowBoundaryForDateTime implements SqlFunction1<String, Timestamp> {
   
   @Serial
   private static final long serialVersionUID = -2161361690351000200L;
 
+  /**
+   * The name of this UDF as registered in Spark.
+   */
   public static final String FUNCTION_NAME = "low_boundary_for_date";
 
+  /**
+   * Returns the name of this UDF.
+   *
+   * @return the function name
+   */
   @Override
   public String getName() {
     return FUNCTION_NAME;
   }
 
+  /**
+   * Returns the return type of this UDF.
+   *
+   * @return the Spark DataType for timestamp
+   */
   @Override
   public DataType getReturnType() {
     return DataTypes.TimestampType;
   }
 
+  /**
+   * Calculates the low boundary timestamp for a FHIR date/dateTime string.
+   *
+   * @param s the date/dateTime string to process
+   * @return the low boundary timestamp, or null if input is null
+   * @throws IllegalArgumentException if the date format is invalid
+   */
   @Nullable
   @Override
   public Timestamp call(@Nullable final String s) throws Exception {

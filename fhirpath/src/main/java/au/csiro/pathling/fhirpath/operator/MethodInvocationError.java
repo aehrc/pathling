@@ -12,6 +12,12 @@ public class MethodInvocationError extends RuntimeException {
   @Serial
   private static final long serialVersionUID = -1161837506294342552L;
 
+  /**
+   * Creates a new MethodInvocationError.
+   *
+   * @param message the error message
+   * @param cause the underlying cause
+   */
   public MethodInvocationError(final String message, final Throwable cause) {
     super(message, cause);
   }

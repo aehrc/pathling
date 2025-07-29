@@ -40,6 +40,12 @@ public class FhirDefinitionContext implements DefinitionContext {
     return new FhirResourceDefinition(resourceType, requireNonNull(hapiDefinition));
   }
 
+  /**
+   * Finds the resource definition for the given {@link ResourceType}.
+   *
+   * @param resourceType the FHIR resource type to find the definition for
+   * @return the corresponding {@link ResourceDefinition} for the resource type
+   */
   @Nonnull
   public ResourceDefinition findResourceDefinition(@Nonnull final ResourceType resourceType) {
     final String resourceCode = resourceType.toCode();

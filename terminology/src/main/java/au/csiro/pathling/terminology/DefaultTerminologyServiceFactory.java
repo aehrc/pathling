@@ -58,18 +58,35 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
   private static final ObjectHolder<DefaultTerminologyServiceFactory, TerminologyService> terminologyServiceHolder = ObjectHolder.singleton(
       DefaultTerminologyServiceFactory::createService);
 
+  /**
+   * The FHIR version to use for terminology services.
+   */
   @Nonnull
   private final FhirVersionEnum fhirVersion;
 
+  /**
+   * The terminology configuration settings.
+   */
   @Nonnull
   private final TerminologyConfiguration configuration;
 
 
+  /**
+   * Resets the terminology services, clearing any cached instances.
+   * This is useful for testing or when configuration changes require a fresh instance.
+   */
   public static synchronized void reset() {
     log.info("Resetting terminology services");
     terminologyServiceHolder.reset();
   }
 
+  /**
+   * Constructs a new {@link DefaultTerminologyServiceFactory} with the specified FHIR version and
+   * terminology configuration.
+   *
+   * @param fhirVersion the FHIR version to use
+   * @param configuration the terminology configuration settings
+   */
   public DefaultTerminologyServiceFactory(@Nonnull final FhirVersionEnum fhirVersion,
       @Nonnull final TerminologyConfiguration configuration) {
     this.fhirVersion = fhirVersion;

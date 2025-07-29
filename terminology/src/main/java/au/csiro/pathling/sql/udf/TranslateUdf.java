@@ -32,6 +32,7 @@ import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import com.google.common.collect.ImmutableSet;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.Serial;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -52,8 +53,12 @@ import scala.reflect.ClassTag;
 public class TranslateUdf implements SqlFunction,
     SqlFunction5<Object, String, Boolean, WrappedArray<String>, String, Row[]> {
 
+  @Serial
   private static final long serialVersionUID = 7605853352299165569L;
 
+  /**
+   * Set of valid equivalence codes for translation.
+   */
   public static final Set<String> VALID_EQUIVALENCE_CODES = Stream.of(
           ConceptMapEquivalence.values())
       .map(ConceptMapEquivalence::toCode)
@@ -61,16 +66,30 @@ public class TranslateUdf implements SqlFunction,
       .collect(Collectors.toUnmodifiableSet());
 
 
+  /**
+   * Default set of equivalences used for translation.
+   */
   public static final Set<String> DEFAULT_EQUIVALENCES = ImmutableSet.of(
       ConceptMapEquivalence.EQUIVALENT.toCode());
 
+  /** The name of the translate UDF function. */
   public static final String FUNCTION_NAME = "translate_coding";
+
+  /** The return type of the translate UDF function. */
   public static final DataType RETURN_TYPE = DataTypes.createArrayType(CodingEncoding.DATA_TYPE);
+
+  /** The default value for the reverse parameter. */
   public static final boolean PARAM_REVERSE_DEFAULT = false;
 
+  /** The terminology service factory used to create terminology services. */
   @Nonnull
   private final TerminologyServiceFactory terminologyServiceFactory;
 
+  /**
+   * Creates a new TranslateUdf with the specified terminology service factory.
+   *
+   * @param terminologyServiceFactory the terminology service factory to use
+   */
   TranslateUdf(@Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
     this.terminologyServiceFactory = terminologyServiceFactory;
   }
@@ -86,6 +105,13 @@ public class TranslateUdf implements SqlFunction,
   }
 
 
+  /**
+   * Validates that the given equivalence code is valid.
+   *
+   * @param code the equivalence code to validate
+   * @return the validated code
+   * @throws InvalidUserInputError if the code is not valid
+   */
   @Nonnull
   public static String checkValidEquivalenceCode(@Nonnull final String code) {
     if (!VALID_EQUIVALENCE_CODES.contains(code)) {
@@ -96,9 +122,19 @@ public class TranslateUdf implements SqlFunction,
     }
   }
 
+  /**
+   * Executes the translation operation for the given codings.
+   *
+   * @param codings the codings to translate
+   * @param conceptMapUri the URI of the concept map to use for translation
+   * @param reverse whether to reverse the translation direction
+   * @param equivalences the equivalence codes to include in the translation
+   * @param target the target system for translation
+   * @return a stream of translated codings, or null if no translation is possible
+   */
   @Nullable
   protected Stream<Coding> doCall(@Nullable final Stream<Coding> codings,
-      @Nullable final String conceptMapUri, @Nullable Boolean reverse,
+      @Nullable final String conceptMapUri, @Nullable final Boolean reverse,
       @Nullable final String[] equivalences,
       @Nullable final String target) {
     if (codings == null || conceptMapUri == null) {
@@ -144,7 +180,7 @@ public class TranslateUdf implements SqlFunction,
   }
 
   @Nonnull
-  private Set<String> toValidSetOfEquivalenceCodes(@Nonnull String[] equivalences) {
+  private Set<String> toValidSetOfEquivalenceCodes(@Nonnull final String[] equivalences) {
     return Stream.of(equivalences)
         .filter(Objects::nonNull)
         .filter(not(String::isEmpty))

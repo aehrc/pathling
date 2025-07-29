@@ -51,6 +51,15 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
   private static final ColumnComparator DATE_TIME_COMPARATOR = new DateTimeComparator();
   private static final ColumnComparator INSTANT_COMPARATOR = new DefaultComparator();
 
+  /**
+   * Creates a new DateTimeCollection.
+   *
+   * @param columnRepresentation the column representation for this collection
+   * @param type the FhirPath type
+   * @param fhirType the FHIR type
+   * @param definition the node definition
+   * @param extensionMapColumn the extension map column
+   */
   protected DateTimeCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,

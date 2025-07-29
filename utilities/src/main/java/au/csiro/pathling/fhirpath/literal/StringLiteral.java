@@ -9,7 +9,15 @@ import org.apache.commons.text.translate.CharSequenceTranslator;
 import org.apache.commons.text.translate.LookupTranslator;
 import org.apache.commons.text.translate.UnicodeUnescaper;
 
+/**
+ * Utility class for handling FHIRPath string literal escaping and unescaping.
+ *
+ * @author John Grimes
+ */
 public abstract class StringLiteral {
+
+  private StringLiteral() {
+  }
 
   /**
    * On the way back out, we only do the minimal escaping to guarantee syntactical correctness.
@@ -54,7 +62,7 @@ public abstract class StringLiteral {
    * @see <a href="https://hl7.org/fhirpath/index.html#string">String</a>
    */
   @Nonnull
-  public static String unescapeFhirPathString(@Nonnull String value) {
+  public static String unescapeFhirPathString(@Nonnull final String value) {
     return UNESCAPE_FHIR.translate(value);
   }
 

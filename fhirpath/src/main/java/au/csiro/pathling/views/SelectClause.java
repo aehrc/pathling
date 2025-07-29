@@ -28,6 +28,11 @@ import lombok.NoArgsConstructor;
 @AtMostOneNonNull({"forEach", "forEachOrNull"})
 public class SelectClause implements SelectionElement {
 
+  /**
+   * Creates a new SelectClauseBuilder.
+   *
+   * @return a new builder instance
+   */
   @Nonnull
   public static SelectClauseBuilder builder() {
     return new SelectClauseBuilder();

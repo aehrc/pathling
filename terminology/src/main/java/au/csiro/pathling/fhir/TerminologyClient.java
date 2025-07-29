@@ -52,6 +52,9 @@ import org.slf4j.LoggerFactory;
  */
 public interface TerminologyClient extends Closeable {
 
+  /**
+   * Logger for this class.
+   */
   Logger log = LoggerFactory.getLogger(TerminologyClient.class);
 
   /**

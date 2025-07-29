@@ -26,7 +26,6 @@ import static org.apache.spark.sql.functions.when;
 
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 import org.jetbrains.annotations.NotNull;
@@ -34,14 +33,12 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Groups multiple selections together using a union.
  *
+ * @param components The list of projection clauses to be combined in the union
  * @author John Grimes
  * @author Piotr Szul
  */
-@Value
-public class UnionSelection implements ProjectionClause {
-
-  @Nonnull
-  List<ProjectionClause> components;
+public record UnionSelection(@Nonnull List<ProjectionClause> components) implements
+    ProjectionClause {
 
   @Nonnull
   @Override
@@ -70,6 +67,11 @@ public class UnionSelection implements ProjectionClause {
     return ProjectionResult.of(results.get(0).getResults(), combinedResult);
   }
 
+  /**
+   * Returns the FHIRPath expression representation of this union selection.
+   *
+   * @return the expression string "union"
+   */
   @Nonnull
   public String toExpression() {
     return "union";

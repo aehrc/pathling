@@ -7,6 +7,11 @@ import jakarta.annotation.Nonnull;
  */
 public interface ResourceTag {
 
+  /**
+   * Returns the string code representation of this resource tag.
+   *
+   * @return the resource code as a string
+   */
   @Nonnull
   String toCode();
 

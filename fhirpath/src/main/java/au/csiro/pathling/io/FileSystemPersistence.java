@@ -30,12 +30,24 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public class FileSystemPersistence implements PersistenceScheme {
 
+  /**
+   * The Spark session used for data operations.
+   */
   @Nonnull
   protected final SparkSession spark;
 
+  /**
+   * The file system path where Delta tables are stored.
+   */
   @Nonnull
   protected final String path;
 
+  /**
+   * Creates a new FileSystemPersistence instance.
+   *
+   * @param spark the Spark session to use for data operations
+   * @param path the file system path where Delta tables should be stored
+   */
   public FileSystemPersistence(@Nonnull final SparkSession spark, @Nonnull final String path) {
     this.spark = spark;
     this.path = convertS3ToS3aUrl(path);

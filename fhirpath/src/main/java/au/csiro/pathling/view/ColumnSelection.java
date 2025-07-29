@@ -27,7 +27,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.Value;
 import org.apache.spark.sql.Column;
 
 /**
@@ -36,11 +35,7 @@ import org.apache.spark.sql.Column;
  * @author John Grimes
  * @author Piotr Szul
  */
-@Value
-public class ColumnSelection implements ProjectionClause {
-
-  @Nonnull
-  List<RequestedColumn> columns;
+public record ColumnSelection(@Nonnull List<RequestedColumn> columns) implements ProjectionClause {
 
   @Override
   @Nonnull
@@ -83,6 +78,7 @@ public class ColumnSelection implements ProjectionClause {
     return collections.iterator();
   }
 
+  @Nonnull
   @Override
   public String toString() {
     return "ColumnSelection{" +
@@ -92,6 +88,11 @@ public class ColumnSelection implements ProjectionClause {
         "]}";
   }
 
+  /**
+   * Returns a string expression representation of this column selection.
+   *
+   * @return the string expression "columns"
+   */
   @Nonnull
   public String toExpression() {
     return "columns";

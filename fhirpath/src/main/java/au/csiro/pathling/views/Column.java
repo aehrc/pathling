@@ -28,6 +28,9 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = false)
 public class Column implements SelectionElement {
 
+  /**
+   * Builder class for creating Column instances.
+   */
   @SuppressWarnings("unused")
   public static class ColumnBuilder {
     // for javadocs

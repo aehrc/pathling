@@ -15,6 +15,13 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @Value(staticConstructor = "of")
 public class DefaultPrimitiveDefinition implements ElementDefinition {
 
+  /**
+   * Creates a single primitive definition with cardinality 1.
+   *
+   * @param name the element name
+   * @param type the FHIR type
+   * @return a new DefaultPrimitiveDefinition with cardinality 1
+   */
   @Nonnull
   public static DefaultPrimitiveDefinition single(final String name, final FHIRDefinedType type) {
     return new DefaultPrimitiveDefinition(name, type, 1);

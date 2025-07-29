@@ -75,6 +75,11 @@ public class RequestedColumn {
         '}';
   }
 
+  /**
+   * Returns a string expression representation of this requested column.
+   *
+   * @return the string expression representation
+   */
   @Nonnull
   public String toExpression() {
     return (collection

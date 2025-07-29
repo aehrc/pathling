@@ -53,6 +53,12 @@ public class TranslateExecutor implements TerminologyOperation<Parameters, Trans
   @Nonnull
   private final TranslateParameters parameters;
 
+  /**
+   * Creates a new TranslateExecutor with the specified terminology client and parameters.
+   *
+   * @param terminologyClient the terminology client to use for translation
+   * @param parameters the parameters for the translation
+   */
   public TranslateExecutor(@Nonnull final TerminologyClient terminologyClient,
       @Nonnull final TranslateParameters parameters) {
     this.terminologyClient = terminologyClient;
