@@ -41,20 +41,35 @@ import org.hl7.fhir.r4.model.Coding;
  */
 public interface CodingEncoding {
 
+  /** Field name for the id property. */
+  String ID_FIELD = "id";
+  /** Field name for the system property. */
+  String SYSTEM_FIELD = "system";
+  /** Field name for the version property. */
+  String VERSION_FIELD = "version";
+  /** Field name for the code property. */
+  String CODE_FIELD = "code";
+  /** Field name for the display property. */
+  String DISPLAY_FIELD = "display";
+  /** Field name for the userSelected property. */
+  String USER_SELECTED_FIELD = "userSelected";
+  /** Field name for the fid property. */
+  String FID_FIELD = "_fid";
+
   /**
    * @return a {@link StructType} that can house a Coding
    */
   @Nonnull
   static StructType codingStructType() {
     final Metadata metadata = new MetadataBuilder().build();
-    final StructField id = new StructField("id", DataTypes.StringType, true, metadata);
-    final StructField system = new StructField("system", DataTypes.StringType, true, metadata);
-    final StructField version = new StructField("version", DataTypes.StringType, true, metadata);
-    final StructField code = new StructField("code", DataTypes.StringType, true, metadata);
-    final StructField display = new StructField("display", DataTypes.StringType, true, metadata);
-    final StructField userSelected = new StructField("userSelected", DataTypes.BooleanType, true,
+    final StructField id = new StructField(ID_FIELD, DataTypes.StringType, true, metadata);
+    final StructField system = new StructField(SYSTEM_FIELD, DataTypes.StringType, true, metadata);
+    final StructField version = new StructField(VERSION_FIELD, DataTypes.StringType, true, metadata);
+    final StructField code = new StructField(CODE_FIELD, DataTypes.StringType, true, metadata);
+    final StructField display = new StructField(DISPLAY_FIELD, DataTypes.StringType, true, metadata);
+    final StructField userSelected = new StructField(USER_SELECTED_FIELD, DataTypes.BooleanType, true,
         metadata);
-    final StructField fid = new StructField("_fid", DataTypes.IntegerType, true,
+    final StructField fid = new StructField(FID_FIELD, DataTypes.IntegerType, true,
         metadata);
     return new StructType(new StructField[]{id, system, version, code, display, userSelected, fid});
   }
@@ -64,11 +79,16 @@ public interface CodingEncoding {
    */
   StructType DATA_TYPE = codingStructType();
 
-  int SYSTEM_INDEX = DATA_TYPE.fieldIndex("system");
-  int VERSION_INDEX = DATA_TYPE.fieldIndex("version");
-  int CODE_INDEX = DATA_TYPE.fieldIndex("code");
-  int DISPLAY_INDEX = DATA_TYPE.fieldIndex("display");
-  int USER_SELECTED_INDEX = DATA_TYPE.fieldIndex("userSelected");
+  /** Index of the system field in the Coding struct. */
+  int SYSTEM_INDEX = DATA_TYPE.fieldIndex(SYSTEM_FIELD);
+  /** Index of the version field in the Coding struct. */
+  int VERSION_INDEX = DATA_TYPE.fieldIndex(VERSION_FIELD);
+  /** Index of the code field in the Coding struct. */
+  int CODE_INDEX = DATA_TYPE.fieldIndex(CODE_FIELD);
+  /** Index of the display field in the Coding struct. */
+  int DISPLAY_INDEX = DATA_TYPE.fieldIndex(DISPLAY_FIELD);
+  /** Index of the userSelected field in the Coding struct. */
+  int USER_SELECTED_INDEX = DATA_TYPE.fieldIndex(USER_SELECTED_FIELD);
 
 
   /**
@@ -139,18 +159,29 @@ public interface CodingEncoding {
            : encoded.toArray(new Row[0]);
   }
 
+  /**
+   * Creates a Coding struct column from individual field columns.
+   *
+   * @param id the id column
+   * @param system the system column
+   * @param version the version column
+   * @param code the code column
+   * @param display the display column
+   * @param userSelected the userSelected column
+   * @return a struct column representing a Coding
+   */
   @Nonnull
   static Column toStruct(@Nonnull final Column id, @Nonnull final Column system,
       @Nonnull final Column version, @Nonnull final Column code, @Nonnull final Column display,
       @Nonnull final Column userSelected) {
     return functions.struct(
-        id.as("id"),
-        system.as("system"),
-        version.as("version"),
-        code.as("code"),
-        display.as("display"),
-        userSelected.as("userSelected"),
-        lit(null).as("_fid")
+        id.as(ID_FIELD),
+        system.as(SYSTEM_FIELD),
+        version.as(VERSION_FIELD),
+        code.as(CODE_FIELD),
+        display.as(DISPLAY_FIELD),
+        userSelected.as(USER_SELECTED_FIELD),
+        lit(null).as(FID_FIELD)
     );
   }
 
