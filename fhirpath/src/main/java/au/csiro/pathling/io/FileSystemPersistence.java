@@ -72,7 +72,7 @@ public class FileSystemPersistence implements PersistenceScheme {
   /**
    * {@inheritDoc}
    *
-   * @throws {@link PersistenceError} if there is a problem listing the resources
+   * @throws PersistenceError if there is a problem listing the resources
    */
   @Nonnull
   @Override
@@ -96,7 +96,7 @@ public class FileSystemPersistence implements PersistenceScheme {
   /**
    * {@inheritDoc}
    *
-   * @throws {@link PersistenceError} if there is a problem deleting the resource
+   * @throws PersistenceError if there is a problem deleting the resource
    */
   @Override
   public void delete(@Nonnull final ResourceType resourceType) {
@@ -225,7 +225,7 @@ public class FileSystemPersistence implements PersistenceScheme {
    * @param departitionedUrl the desired URL of the resulting file
    * @param extension the file extension used within the partitioned directory
    * @return the location of the resulting file
-   * @throws {@link PersistenceError} if there is a problem copying the partition file
+   * @throws PersistenceError if there is a problem copying the partition file
    */
   @Nonnull
   public static String departitionResult(@Nonnull final FileSystem partitionedLocation,

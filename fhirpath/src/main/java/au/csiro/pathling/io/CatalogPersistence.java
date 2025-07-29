@@ -92,7 +92,7 @@ public class CatalogPersistence implements PersistenceScheme {
   /**
    * {@inheritDoc}
    *
-   * @throws {@link PersistenceError} if there is a problem listing the resources
+   * @throws PersistenceError if there is a problem listing the resources
    */
   @Nonnull
   @Override
@@ -141,7 +141,7 @@ public class CatalogPersistence implements PersistenceScheme {
   /**
    * {@inheritDoc}
    *
-   * @throws {@link PersistenceError} if there is a problem deleting the resource
+   * @throws PersistenceError if there is a problem deleting the resource
    */
   @Override
   public void delete(@Nonnull final ResourceType resourceType) {

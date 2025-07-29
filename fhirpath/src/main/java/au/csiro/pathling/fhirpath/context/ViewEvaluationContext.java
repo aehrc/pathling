@@ -27,16 +27,18 @@ import jakarta.annotation.Nonnull;
 import java.util.Optional;
 
 /**
+ * <p>
  * An implementation of {@link EvaluationContext} used for evaluating FHIRPath expressions within
  * FHIR views.
+ * </p>
  * <p>
  * This class combines three key components needed for FHIRPath evaluation:
+ * </p>
  * <ul>
  *   <li>A {@link FhirPathContext} that provides access to variables and the input context</li>
  *   <li>A {@link FunctionRegistry} that provides access to FHIRPath functions</li>
  *   <li>A {@link ResourceResolver} that provides access to FHIR resources</li>
  * </ul>
- * <p>
  *
  * @param fhirPathContext The FHIRPath context that provides access to variables and the input
  * context.
