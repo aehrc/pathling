@@ -89,7 +89,7 @@
         <!-- This is the javadoc JAR that is built by the library-runtime module. -->
         <dependency>
           <groupId>au.csiro.pathling</groupId>
-          <artifactId>library-runtime</artifactId>
+          <artifactId>library-api</artifactId>
           <classifier>javadoc</classifier>
         </dependency>
         <!-- This is the docs JAR that is built by the Python API module. -->
@@ -119,7 +119,7 @@
                 </goals>
                 <configuration>
                   <includeGroupIds>au.csiro.pathling</includeGroupIds>
-                  <includeArtifactIds>library-runtime</includeArtifactIds>
+                  <includeArtifactIds>library-api</includeArtifactIds>
                   <includeClassifiers>javadoc</includeClassifiers>
                   <excludeTransitive>true</excludeTransitive>
                   <outputDirectory>${project.build.directory}/site/docs/java</outputDirectory>

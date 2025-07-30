@@ -181,14 +181,14 @@
       </dependency>
       <dependency>
         <groupId>au.csiro.pathling</groupId>
-        <artifactId>library-runtime</artifactId>
+        <artifactId>library-api</artifactId>
         <version>${project.version}</version>
+        <classifier>javadoc</classifier>
       </dependency>
       <dependency>
         <groupId>au.csiro.pathling</groupId>
         <artifactId>library-runtime</artifactId>
         <version>${project.version}</version>
-        <classifier>javadoc</classifier>
       </dependency>
       <dependency>
         <groupId>au.csiro.pathling</groupId>
