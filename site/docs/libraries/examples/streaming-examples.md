@@ -1,6 +1,7 @@
 ---
-sidebar_position: 7
-description: Pathling supports Kafka as a streaming data source, and all the operations available within the library are able to execute continuously across a stream of data.
+sidebar_position: 4
+title: Streaming
+description: Examples of running streaming queries over FHIR data using the Pathling libraries.
 ---
 
 # Kafka integration
@@ -9,7 +10,7 @@ Pathling supports [Kafka](https://kafka.apache.org/) as a streaming data source,
 and all the operations available within the library are able to execute
 continuously across a stream of data.
 
-Here is an example of streaming a source of FHIR data, encoding it and then 
+Here is an example of streaming a source of FHIR data, encoding it and then
 performing a terminology operation upon it:
 
 ```python

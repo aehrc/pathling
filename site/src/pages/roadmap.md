@@ -1,5 +1,6 @@
 ---
 description: We are continually adding new features to the various different components of Pathling.
+wrapperClassName: content-page
 ---
 
 # Roadmap
@@ -12,24 +13,24 @@ understand your use case.
 
 ## Server
 
-We have temporarily removed the server feature from Pathling while we redesign 
+We have temporarily removed the server feature from Pathling while we redesign
 it. The new Pathling server will focus on the following features.
 
 ### Bulk Data Access Export API
 
 We are working on an implementation of the Export operation within the FHIR
-Bulk Data Access implementation guide. This will allow you to use Pathling as a 
-way of providing bulk export functionality over your FHIR data. When used with 
-our existing bulk client and Kafka features, you will be able to synchronise the 
-Pathling server with another FHIR server and use it to provide bulk export 
+Bulk Data Access implementation guide. This will allow you to use Pathling as a
+way of providing bulk export functionality over your FHIR data. When used with
+our existing bulk client and Kafka features, you will be able to synchronise the
+Pathling server with another FHIR server and use it to provide bulk export
 services.
 
 ### SQL on FHIR API
 
-We are working on implementing the draft API within the SQL on FHIR 
-implementation guide. This will allow for the execution of view definitions 
-through the server API, and the use of views to construct bespoke exports. It 
-will also allow for the discovery and management of view definitions through the 
+We are working on implementing the draft API within the SQL on FHIR
+implementation guide. This will allow for the execution of view definitions
+through the server API, and the use of views to construct bespoke exports. It
+will also allow for the discovery and management of view definitions through the
 FHIR REST API.
 
 ## Parquet on FHIR
