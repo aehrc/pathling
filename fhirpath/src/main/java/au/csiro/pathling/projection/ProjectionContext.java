@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.view;
+package au.csiro.pathling.projection;
 
 import static java.util.stream.Collectors.toMap;
 

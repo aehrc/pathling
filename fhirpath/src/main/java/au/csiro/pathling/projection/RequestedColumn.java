@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.view;
+package au.csiro.pathling.projection;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import jakarta.annotation.Nonnull;

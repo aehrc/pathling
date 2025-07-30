@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.view;
+package au.csiro.pathling.projection;
 
 import static au.csiro.pathling.encoders.ColumnFunctions.structProduct;
 import static au.csiro.pathling.encoders.ColumnFunctions.structProductOuter;
@@ -36,8 +36,8 @@ import org.apache.spark.sql.Column;
  *
  * @param path the FHIRPath expression that identifies the collection to unnest
  * @param components the list of components to select from the unnesting collection
- * @param joinOuter whether to use outer join semantics (i.e., return a row even if the
- * unnesting collection is empty)
+ * @param joinOuter whether to use outer join semantics (i.e., return a row even if the unnesting
+ * collection is empty)
  * @author John Grimes
  * @author Piotr Szul
  */

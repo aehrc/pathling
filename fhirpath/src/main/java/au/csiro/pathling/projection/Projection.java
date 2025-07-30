@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.view;
+package au.csiro.pathling.projection;
 
+import static au.csiro.pathling.projection.Projection.ProjectionConstraint.FLAT;
 import static au.csiro.pathling.utilities.Functions.maybeCast;
-import static au.csiro.pathling.view.Projection.ProjectionConstraint.FLAT;
 import static org.apache.spark.sql.functions.inline;
 
 import au.csiro.pathling.errors.InvalidUserInputError;

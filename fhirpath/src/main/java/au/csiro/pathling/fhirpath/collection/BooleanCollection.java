@@ -17,13 +17,13 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
+import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
@@ -95,7 +95,7 @@ public class BooleanCollection extends Collection implements Comparable, StringC
    * Returns a new instance based upon a literal represented by a {@link BooleanType}.
    * <p>
    * This is required for the reflection-based instantiation of collections used in
-   * {@link au.csiro.pathling.view.ProjectionContext#of}.
+   * {@link au.csiro.pathling.projection.ProjectionContext#of}.
    *
    * @param value The value to use
    * @return A new instance of {@link BooleanCollection}

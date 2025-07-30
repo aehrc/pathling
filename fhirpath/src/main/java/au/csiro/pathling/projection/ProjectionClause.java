@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.view;
+package au.csiro.pathling.projection;
 
 import jakarta.annotation.Nonnull;
 
@@ -41,5 +41,5 @@ public interface ProjectionClause {
    */
   @Nonnull
   String toTreeString(final int level);
-  
+
 }

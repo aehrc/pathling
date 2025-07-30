@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.view;
+package au.csiro.pathling.projection;
 
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.struct;
