@@ -188,21 +188,38 @@
             </manifest>
           </archive>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>add-source</id>
-            <phase>generate-sources</phase>
+            <id>attach-sources</id>
+            <phase>package</phase>
             <goals>
-              <goal>add-source</goal>
+              <goal>jar</goal>
             </goals>
             <configuration>
-              <sources>
-                <source>${project.build.directory}/dependency-sources</source>
-              </sources>
+              <includes>
+                <include>**/*.java</include>
+              </includes>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>add-dependency-sources-to-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <jar destfile="${project.build.directory}/${project.build.finalName}-sources.jar" 
+                     update="true">
+                  <fileset dir="${project.build.directory}/dependency-sources" includes="**/*.java"/>
+                </jar>
+              </target>
             </configuration>
           </execution>
         </executions>
