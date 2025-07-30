@@ -26,8 +26,9 @@ package au.csiro.pathling.support;
 import au.csiro.pathling.support.r4.R4FhirConversionSupport;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import jakarta.annotation.Nonnull;
+import java.io.Serial;
 import java.io.Serializable;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import org.hl7.fhir.instance.model.api.IBase;
@@ -40,6 +41,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
  */
 public abstract class FhirConversionSupport implements Serializable {
 
+  @Serial
   private static final long serialVersionUID = -108611742759595166L;
 
   /**
@@ -81,7 +83,8 @@ public abstract class FhirConversionSupport implements Serializable {
    * Cache of FHIR contexts.
    */
   @Nonnull
-  private static final Map<FhirVersionEnum, FhirConversionSupport> FHIR_SUPPORT = new HashMap<>();
+  private static final Map<FhirVersionEnum, FhirConversionSupport> FHIR_SUPPORT =
+      new EnumMap<>(FhirVersionEnum.class);
 
   @Nonnull
   private static FhirConversionSupport newInstance(@Nonnull final FhirVersionEnum fhirVersion) {

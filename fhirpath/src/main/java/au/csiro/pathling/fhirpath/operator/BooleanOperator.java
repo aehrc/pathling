@@ -23,7 +23,6 @@ import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
-import org.apache.spark.sql.Column;
 
 /**
  * Provides the functionality of the family of boolean operators within FHIRPath, i.e. and, or, xor
@@ -47,32 +46,24 @@ public class BooleanOperator implements BinaryOperator {
   @Nonnull
   @Override
   public Collection invoke(@Nonnull final BinaryOperatorInput input) {
-    final BooleanCollection left = input.getLeft().asBooleanSingleton();
-    final BooleanCollection right = input.getRight().asBooleanSingleton();
-    
+    final BooleanCollection left = input.left().asBooleanSingleton();
+    final BooleanCollection right = input.right().asBooleanSingleton();
+
     final ColumnRepresentation resultCtx = ColumnRepresentation.binaryOperator(left.getColumn(),
         right.getColumn(),
-        (leftValue, rightValue) -> {
-          // Based on the type of operator, create the correct column expression.
-          final Column valueColumn;
-          switch (type) {
-            case AND:
-              valueColumn = leftValue.and(rightValue);
-              break;
-            case OR:
-              valueColumn = leftValue.or(rightValue);
-              break;
-            case XOR:
-              valueColumn = when(
+        (leftValue, rightValue) ->
+            // Based on the type of operator, create the correct column expression.
+            switch (type) {
+              case AND -> leftValue.and(rightValue);
+              case OR -> leftValue.or(rightValue);
+              case XOR -> when(
                   leftValue.isNull().or(rightValue.isNull()), null
               ).when(
                   leftValue.equalTo(true).and(rightValue.equalTo(false)).or(
                       leftValue.equalTo(false).and(rightValue.equalTo(true))
                   ), true
               ).otherwise(false);
-              break;
-            case IMPLIES:
-              valueColumn = when(
+              case IMPLIES -> when(
                   leftValue.equalTo(true), rightValue
               ).when(
                   leftValue.equalTo(false), true
@@ -80,12 +71,8 @@ public class BooleanOperator implements BinaryOperator {
                   when(rightValue.equalTo(true), true)
                       .otherwise(null)
               );
-              break;
-            default:
-              throw new AssertionError("Unsupported boolean operator encountered: " + type);
-          }
-          return valueColumn;
-        });
+            }
+    );
     return BooleanCollection.build(resultCtx);
   }
 

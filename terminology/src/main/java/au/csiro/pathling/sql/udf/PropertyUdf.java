@@ -79,7 +79,9 @@ public class PropertyUdf implements SqlFunction,
   @Nonnull
   private final FHIRDefinedType propertyType;
 
-  /** The terminology service factory used to create terminology services. */
+  /**
+   * The terminology service factory used to create terminology services.
+   */
   @Nonnull
   private final TerminologyServiceFactory terminologyServiceFactory;
 
@@ -217,8 +219,9 @@ public class PropertyUdf implements SqlFunction,
   public static PropertyUdf forClass(
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
       @Nonnull final Class<? extends Type> propertyClass) {
-    final FHIRDefinedType propertyType = FHIRDefinedType.fromCode(
-        propertyClass.getAnnotation(DatatypeDef.class).name());
+    final DatatypeDef annotation = propertyClass.getAnnotation(DatatypeDef.class);
+    requireNonNull(annotation);
+    final FHIRDefinedType propertyType = FHIRDefinedType.fromCode(annotation.name());
     return forType(terminologyServiceFactory, propertyType);
   }
 

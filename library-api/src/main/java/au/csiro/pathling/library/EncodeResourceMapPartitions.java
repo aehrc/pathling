@@ -19,12 +19,14 @@ package au.csiro.pathling.library;
 
 import ca.uhn.fhir.context.FhirVersionEnum;
 import jakarta.annotation.Nonnull;
+import java.io.Serial;
 import java.util.stream.Stream;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
 class EncodeResourceMapPartitions<T extends IBaseResource> extends
     EncodeMapPartitions<T> {
 
+  @Serial
   private static final long serialVersionUID = 6405663463302424287L;
 
   EncodeResourceMapPartitions(final FhirVersionEnum fhirVersion, final String inputMimeType,

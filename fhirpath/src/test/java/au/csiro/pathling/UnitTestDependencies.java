@@ -34,7 +34,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
-import org.fhir.ucum.UcumException;
 import org.fhir.ucum.UcumService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -67,11 +66,10 @@ public class UnitTestDependencies {
   @ConditionalOnMissingBean
   @Nonnull
   static SparkSession sparkSession(
-      @Nonnull final Environment environment,
-      @Nonnull final TerminologyServiceFactory terminologyServiceFactory
-      /*@Nonnull final Optional<SparkListener> sparkListener*/) {
+      @SuppressWarnings("unused") @Nonnull final Environment environment,
+      @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
 
-    // TODO: See it this properies can be set from Environment (extract common code from Spark class)
+    // TODO: See if these properties can be set from environment (extract common code from Spark class)
     final SparkSession spark = SparkSession.builder()
         .master("local[1]")
         .appName("pathling-unittest")
@@ -133,7 +131,7 @@ public class UnitTestDependencies {
   @Bean
   @ConditionalOnMissingBean
   @Nonnull
-  static UcumService ucumService() throws UcumException {
+  static UcumService ucumService() {
     return Ucum.service();
   }
 

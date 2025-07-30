@@ -25,8 +25,8 @@ import static org.apache.spark.sql.functions.when;
 import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
+import au.csiro.pathling.encoders.FhirEncoderBuilder;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.encoders.FhirEncoders.Builder;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.sql.FhirpathUDFRegistrar;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
@@ -212,7 +212,7 @@ public class PathlingContext {
     ValidationUtils.ensureValid(terminologyConfiguration, "Invalid terminology configuration");
     ValidationUtils.ensureValid(encodingConfiguration, "Invalid encoding configuration");
 
-    final Builder encoderBuilder = getEncoderBuilder(encodingConfiguration);
+    final FhirEncoderBuilder encoderBuilder = getEncoderBuilder(encodingConfiguration);
     final TerminologyServiceFactory terminologyServiceFactory = getTerminologyServiceFactory(
         terminologyConfiguration);
     return create(sparkSession, encoderBuilder.getOrCreate(), terminologyServiceFactory);
@@ -494,7 +494,7 @@ public class PathlingContext {
   }
 
   @Nonnull
-  private static Builder getEncoderBuilder(@Nonnull final EncodingConfiguration config) {
+  private static FhirEncoderBuilder getEncoderBuilder(@Nonnull final EncodingConfiguration config) {
     return FhirEncoders.forR4()
         .withMaxNestingLevel(config.getMaxNestingLevel())
         .withExtensionsEnabled(config.isEnableExtensions())

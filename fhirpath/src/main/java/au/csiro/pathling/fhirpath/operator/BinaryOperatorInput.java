@@ -20,32 +20,19 @@ package au.csiro.pathling.fhirpath.operator;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
-import lombok.Value;
 
 /**
  * Represents the inputs to a binary operator in FHIRPath.
  *
+ * @param context Context and dependencies for use in evaluating the function.
+ * @param left An expression representing the left operand.
+ * @param right An expression representing the right operand.
  * @author John Grimes
  */
-@Value
-public class BinaryOperatorInput {
-
-  /**
-   * Context and dependencies for use in evaluating the function.
-   */
-  @Nonnull
-  EvaluationContext context;
-
-  /**
-   * An expression representing the left operand.
-   */
-  @Nonnull
-  Collection left;
-
-  /**
-   * An expression representing the right operand.
-   */
-  @Nonnull
-  Collection right;
+public record BinaryOperatorInput(
+    @Nonnull EvaluationContext context,
+    @Nonnull Collection left,
+    @Nonnull Collection right
+) {
 
 }

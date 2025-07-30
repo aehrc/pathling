@@ -52,20 +52,28 @@ import org.apache.http.util.EntityUtils;
 
 /**
  * A HAPI FHIR interceptor that handles client authentication using OAuth2 client credentials flow.
- * 
+ *
  * @author John Grimes
  */
 @Interceptor
 @Slf4j
 public class ClientAuthInterceptor implements Closeable {
 
-  /** Connection timeout for authentication requests in milliseconds. */
+  /**
+   * Connection timeout for authentication requests in milliseconds.
+   */
   public static final int AUTH_CONNECT_TIMEOUT = 5_000;
-  /** Connection request timeout for authentication requests in milliseconds. */
+  /**
+   * Connection request timeout for authentication requests in milliseconds.
+   */
   public static final int AUTH_CONNECTION_REQUEST_TIMEOUT = 5_000;
-  /** Socket timeout for authentication requests in milliseconds. */
+  /**
+   * Socket timeout for authentication requests in milliseconds.
+   */
   public static final int AUTH_SOCKET_TIMEOUT = 5_000;
-  /** Number of retry attempts for authentication requests. */
+  /**
+   * Number of retry attempts for authentication requests.
+   */
   public static final int AUTH_RETRY_COUNT = 3;
 
   @Nonnull
@@ -121,7 +129,7 @@ public class ClientAuthInterceptor implements Closeable {
       final AccessContext accessContext = ensureAccessContext(clientId, clientSecret, tokenEndpoint,
           scope, tokenExpiryTolerance);
       // Now we should have a valid token, so we can add it to the request.
-      final String accessToken = accessContext.getClientCredentialsResponse().accessToken();
+      final String accessToken = accessContext.clientCredentialsResponse().accessToken();
       requireNonNull(accessToken);
       httpRequest.addHeader("Authorization", "Bearer " + accessToken);
     }
@@ -135,7 +143,7 @@ public class ClientAuthInterceptor implements Closeable {
     synchronized (accessContexts) {
       final AccessScope accessScope = new AccessScope(tokenEndpoint, clientId, scope);
       AccessContext accessContext = accessContexts.get(accessScope);
-      if (accessContext == null || accessContext.getExpiryTime()
+      if (accessContext == null || accessContext.expiryTime()
           .isBefore(Instant.now().plusSeconds(tokenExpiryTolerance))) {
         // We need to get a new token if:
         // (1) We don't have a token yet;

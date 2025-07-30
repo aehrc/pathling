@@ -48,7 +48,6 @@ import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.Coding;
@@ -89,34 +88,21 @@ class CachingTerminologyServiceTest {
 
   TerminologyService terminologyService;
 
-  @Value
-  static class TestParameters {
+  /**
+   * @param name A display name for the test.
+   * @param supplier A function to execute the terminology service operation.
+   * @param expectedResult The expected result of the operation.
+   * @param badRequest Whether the request was intended to be invalid.
+   */
+  record TestParameters(
+      @Nonnull String name,
+      @Nonnull Supplier<Object> supplier,
+      @Nonnull Object expectedResult,
+      boolean badRequest,
+      boolean invalidParameters
+  ) {
 
-    /**
-     * A display name for the test.
-     */
     @Nonnull
-    String name;
-
-    /**
-     * A function to execute the terminology service operation.
-     */
-    @Nonnull
-    Supplier<Object> supplier;
-
-    /**
-     * The expected result of the operation.
-     */
-    @Nonnull
-    Object expectedResult;
-
-    /**
-     * Whether the request was intended to be invalid.
-     */
-    boolean badRequest;
-
-    boolean invalidParameters;
-
     @Override
     public String toString() {
       return name;
@@ -206,13 +192,13 @@ class CachingTerminologyServiceTest {
     // Execute the request 2 times.
     for (int i = 0; i < 2; i++) {
       // Execute the request.
-      final Object result = requireNonNull(parameters.getSupplier().get());
+      final Object result = requireNonNull(parameters.supplier().get());
       // Assert that the result equals the expected result.
-      assertEquals(parameters.getExpectedResult(), result);
+      assertEquals(parameters.expectedResult(), result);
     }
 
     // Verify that the request was only made once.
-    verify(parameters.isInvalidParameters()
+    verify(parameters.invalidParameters()
            // If the request was invalid, then the request should not have been made.
            ? 0
            : 1, anyRequestedFor(anyUrl()));
@@ -230,20 +216,20 @@ class CachingTerminologyServiceTest {
     // Execute the request 2 times.
     for (int i = 0; i < 2; i++) {
       // Execute the request.
-      final Object result = requireNonNull(parameters.getSupplier().get());
+      final Object result = requireNonNull(parameters.supplier().get());
       // Assert that the result equals the expected result.
-      assertEquals(parameters.getExpectedResult(), result);
+      assertEquals(parameters.expectedResult(), result);
 
-      if (!parameters.isBadRequest()) {
+      if (!parameters.badRequest()) {
         // Wait until the 1-second max age has passed.
         Thread.sleep(2_000);
       }
     }
 
-    if (parameters.isInvalidParameters()) {
+    if (parameters.invalidParameters()) {
       // If the parameters were invalid, no request should have been made.
       verify(0, anyRequestedFor(anyUrl()));
-    } else if (parameters.isBadRequest()) {
+    } else if (parameters.badRequest()) {
       // If the request was invalid, verify that the request was only made once (i.e. it was 
       // cached as a bad request, which has an expiry longer than 1 second).
       verify(1, anyRequestedFor(anyUrl()));

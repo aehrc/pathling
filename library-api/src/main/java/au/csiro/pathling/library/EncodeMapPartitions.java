@@ -17,9 +17,14 @@
 
 package au.csiro.pathling.library;
 
+import static java.util.Objects.requireNonNull;
+
 import ca.uhn.fhir.context.FhirVersionEnum;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+import java.io.Serial;
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
@@ -28,6 +33,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 abstract class EncodeMapPartitions<T extends IBaseResource> implements
     MapPartitionsFunction<String, T> {
 
+  @Serial
   private static final long serialVersionUID = -189338116652852324L;
 
   @Nonnull
@@ -60,7 +66,8 @@ abstract class EncodeMapPartitions<T extends IBaseResource> implements
   @SuppressWarnings("unchecked")
   @Override
   @Nonnull
-  public Iterator<T> call(@Nonnull final Iterator<String> iterator) {
+  public Iterator<T> call(@Nullable final Iterator<String> iterator) {
+    requireNonNull(iterator);
     final ResourceParser parser = ResourceParser.build(fhirVersion, inputMimeType);
 
     final Iterable<String> iterable = () -> iterator;

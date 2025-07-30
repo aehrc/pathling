@@ -14,15 +14,14 @@ public class UnsupportedVariableResolver implements EnvironmentVariableResolver 
 
   @Override
   public Optional<Collection> get(@Nonnull final String name) {
-    if ("factory".equals(name)) {
-      throw new UnsupportedFhirPathFeatureError("Type factory is not supported");
-    } else if ("terminologies".equals(name)) {
-      throw new UnsupportedOperationException("Terminology service is not supported");
-    } else if ("server".equals(name)) {
-      throw new UnsupportedFhirPathFeatureError("General Service API is not supported");
-    }
-    return Optional.empty();
-
+    return switch (name) {
+      case "factory" -> throw new UnsupportedFhirPathFeatureError("Type factory is not supported");
+      case "terminologies" ->
+          throw new UnsupportedOperationException("Terminology service is not supported");
+      case "server" ->
+          throw new UnsupportedFhirPathFeatureError("General Service API is not supported");
+      default -> Optional.empty();
+    };
   }
 
 }

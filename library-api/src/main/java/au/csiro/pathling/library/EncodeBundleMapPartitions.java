@@ -20,6 +20,7 @@ package au.csiro.pathling.library;
 import au.csiro.pathling.support.FhirConversionSupport;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import jakarta.annotation.Nonnull;
+import java.io.Serial;
 import java.util.stream.Stream;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -27,6 +28,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 class EncodeBundleMapPartitions<T extends IBaseResource> extends
     EncodeMapPartitions<T> {
 
+  @Serial
   private static final long serialVersionUID = -4264073360143318480L;
 
   EncodeBundleMapPartitions(final FhirVersionEnum fhirVersion, final String inputMimeType,

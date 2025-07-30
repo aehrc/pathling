@@ -94,7 +94,7 @@ public record ProjectionContext(
             ProjectionContext::getCollectionForConstantValue));
 
     // Create a new FhirPathExecutor.
-    final FhirpathEvaluator executor = context.getFhirpathEvaluatorFactory()
+    final FhirpathEvaluator executor = context.fhirpathEvaluatorFactory()
         .create(subjectResource, StaticFunctionRegistry.getInstance(), variables);
 
     // Return a new ProjectionContext with the executor and the default input context.

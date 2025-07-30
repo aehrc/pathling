@@ -55,11 +55,14 @@ public class Ucum {
     }
   }
 
+  private Ucum() {
+  }
+
   @Nonnull
-  public static UcumService service() throws UcumException {
+  public static UcumService service() {
     return service;
   }
-  
+
   @UsedByReflection
   @Nullable
   public static BigDecimal getCanonicalValue(@Nullable final BigDecimal value,
@@ -97,7 +100,7 @@ public class Ucum {
       return null;
     }
   }
-  
+
   @Nullable
   private static Pair getCanonicalForm(final @Nullable BigDecimal value,
       final @Nullable String code)

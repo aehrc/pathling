@@ -19,14 +19,16 @@ package au.csiro.pathling.fhir;
 
 import jakarta.annotation.Nonnull;
 import java.time.Instant;
-import lombok.Value;
 
-@Value
-class AccessContext {
+/**
+ * Represents an authorisation grant for communicating with a protected server.
+ *
+ * @param clientCredentialsResponse the response from the client credentials endpoint
+ * @param expiryTime the time at which the access token expires
+ */
+record AccessContext(
+    @Nonnull ClientCredentialsResponse clientCredentialsResponse,
+    @Nonnull Instant expiryTime
+) {
 
-  @Nonnull
-  ClientCredentialsResponse clientCredentialsResponse;
-
-  @Nonnull
-  Instant expiryTime;
 }

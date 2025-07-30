@@ -39,12 +39,6 @@ public class DefaultPrimitiveDefinition implements ElementDefinition {
 
   @Override
   @Nonnull
-  public Optional<Integer> getMaxCardinality() {
-    return Optional.of(cardinality);
-  }
-
-  @Override
-  @Nonnull
   public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
     return Optional.empty();
   }

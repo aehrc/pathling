@@ -53,7 +53,7 @@ public class MathOperator implements BinaryOperator {
   public Collection invoke(@Nonnull final BinaryOperatorInput input) {
 
     final Pair<Collection, Collection> reconciledArguments = BinaryOperator.reconcileTypes(
-        input.getLeft(), input.getRight());
+        input.left(), input.right());
 
     final Collection left = reconciledArguments.getLeft()
         .asSingular(NON_SINGULAR_ERROR_FORMAT.formatted(type.toString(), "left"));

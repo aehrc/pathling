@@ -85,9 +85,9 @@ public class SchemaConverterTest {
   private static final FhirContext FHIR_CONTEXT = FhirContext.forR4();
   private static final DataTypeMappings DATA_TYPE_MAPPINGS = new R4DataTypeMappings();
 
-  private SchemaConverter converter_L0;
-  private SchemaConverter converter_L1;
-  private SchemaConverter converter_L2;
+  private SchemaConverter converterL0;
+  private SchemaConverter converterL1;
+  private SchemaConverter converterL2;
 
   private StructType conditionSchema;
   private StructType observationSchema;
@@ -95,7 +95,7 @@ public class SchemaConverterTest {
   private StructType questionnaireSchema;
   private StructType questionnaireResponseSchema;
   private StructType deviceSchema;
-  private StructType observationSchema_L2;
+  private StructType observationSchemaL2;
 
   /**
    * Traverses a DataType recursively passing all encountered StructTypes to the provided consumer.
@@ -104,8 +104,7 @@ public class SchemaConverterTest {
    * @param consumer the consumer that receives all StructTypes.
    */
   private void traverseSchema(final DataType type, final Consumer<StructType> consumer) {
-    if (type instanceof StructType) {
-      final StructType structType = (StructType) type;
+    if (type instanceof final StructType structType) {
       consumer.accept(structType);
       Arrays.stream(structType.fields())
           .filter(f -> !f.name().startsWith("_")) // filter out synthetic fields
@@ -162,32 +161,32 @@ public class SchemaConverterTest {
   }
 
   @BeforeEach
-  public void setUp() {
-    converter_L0 = createSchemaConverter(0);
-    converter_L1 = createSchemaConverter(1);
-    converter_L2 = createSchemaConverter(2);
+  void setUp() {
+    converterL0 = createSchemaConverter(0);
+    converterL1 = createSchemaConverter(1);
+    converterL2 = createSchemaConverter(2);
 
-    conditionSchema = converter_L0.resourceSchema(Condition.class);
-    observationSchema = converter_L0.resourceSchema(Observation.class);
-    medRequestSchema = converter_L0.resourceSchema(MedicationRequest.class);
-    questionnaireSchema = converter_L0.resourceSchema(Questionnaire.class);
-    questionnaireResponseSchema = converter_L0.resourceSchema(QuestionnaireResponse.class);
-    deviceSchema = converter_L0.resourceSchema(Device.class);
-    observationSchema_L2 = converter_L2.resourceSchema(Observation.class);
+    conditionSchema = converterL0.resourceSchema(Condition.class);
+    observationSchema = converterL0.resourceSchema(Observation.class);
+    medRequestSchema = converterL0.resourceSchema(MedicationRequest.class);
+    questionnaireSchema = converterL0.resourceSchema(Questionnaire.class);
+    questionnaireResponseSchema = converterL0.resourceSchema(QuestionnaireResponse.class);
+    deviceSchema = converterL0.resourceSchema(Device.class);
+    observationSchemaL2 = converterL2.resourceSchema(Observation.class);
   }
 
   @Test
-  public void resourceHasId() {
+  void resourceHasId() {
     assertInstanceOf(StringType.class, getField(conditionSchema, true, "id"));
   }
 
   @Test
-  public void boundCodeToStruct() {
+  void boundCodeToStruct() {
     assertInstanceOf(StructType.class, getField(conditionSchema, true, "verificationStatus"));
   }
 
   @Test
-  public void codingToStruct() {
+  void codingToStruct() {
 
     final DataType codingType = getField(conditionSchema, true, "severity", "coding");
 
@@ -199,7 +198,7 @@ public class SchemaConverterTest {
   }
 
   @Test
-  public void codeableConceptToStruct() {
+  void codeableConceptToStruct() {
 
     final DataType codeableType = getField(conditionSchema, true, "severity");
 
@@ -209,19 +208,19 @@ public class SchemaConverterTest {
   }
 
   @Test
-  public void idToString() {
+  void idToString() {
     assertInstanceOf(StringType.class, getField(conditionSchema, true, "id"));
   }
 
   @Test
-  public void narrativeToStruct() {
+  void narrativeToStruct() {
 
     assertInstanceOf(StringType.class, getField(conditionSchema, true, "text", "status"));
     assertInstanceOf(StringType.class, getField(conditionSchema, true, "text", "div"));
   }
 
   @Test
-  public void expandChoiceFields() {
+  void expandChoiceFields() {
     assertInstanceOf(StructType.class, getField(conditionSchema, true, "onsetPeriod"));
     assertInstanceOf(StructType.class, getField(conditionSchema, true, "onsetRange"));
     assertInstanceOf(StringType.class, getField(conditionSchema, true, "onsetDateTime"));
@@ -230,7 +229,7 @@ public class SchemaConverterTest {
   }
 
   @Test
-  public void orderChoiceFields() {
+  void orderChoiceFields() {
     final List<String> expectedFields = Arrays
         .asList("valueBoolean", "valueCodeableConcept", "valueDateTime",
             "valueInteger", "valuePeriod", "valueQuantity", "valueRange",
@@ -238,13 +237,13 @@ public class SchemaConverterTest {
 
     final List<String> actualFields = Stream.of(observationSchema.fieldNames())
         .filter(fn -> fn.startsWith("value"))
-        .collect(Collectors.toList());
+        .toList();
 
     assertEquals(expectedFields, actualFields);
   }
 
   @Test
-  public void decimalWithinChoiceField() {
+  void decimalWithinChoiceField() {
     assertInstanceOf(DecimalType.class, getField(questionnaireSchema, true, "item", "enableWhen",
         "answerDecimal"));
     assertInstanceOf(IntegerType.class, getField(questionnaireSchema, true, "item", "enableWhen",
@@ -258,23 +257,23 @@ public class SchemaConverterTest {
   }
 
   @Test
-  public void instantToTimestamp() {
+  void instantToTimestamp() {
     assertInstanceOf(TimestampType.class, getField(observationSchema, true, "issued"));
   }
 
   @Test
-  public void timeToString() {
+  void timeToString() {
     assertTrue((getField(observationSchema, true, "valueTime") instanceof StringType));
   }
 
   @Test
-  public void bigDecimalToDecimal() {
+  void bigDecimalToDecimal() {
     assertInstanceOf(DecimalType.class,
         getField(observationSchema, true, "valueQuantity", "value"));
   }
 
   @Test
-  public void reference() {
+  void reference() {
     assertInstanceOf(StringType.class, getField(observationSchema, true, "subject", "id"));
     assertInstanceOf(StringType.class, getField(observationSchema, true, "subject", "reference"));
     assertInstanceOf(StringType.class, getField(observationSchema, true, "subject", "display"));
@@ -286,7 +285,7 @@ public class SchemaConverterTest {
   }
 
   @Test
-  public void identifier() {
+  void identifier() {
     assertInstanceOf(StringType.class,
         unArray(getField(observationSchema, true, "identifier", "value")));
     // `assigner` field should be present in the root level `Identifier` schema.
@@ -298,14 +297,14 @@ public class SchemaConverterTest {
   }
 
   @Test
-  public void identifierInReference() {
+  void identifierInReference() {
     // 
     // Identifier (assigner) in root Reference
     // 
     assertFieldNotPresent("assigner", getField(observationSchema, true, "subject", "identifier"));
     // The `assigner` field should not be present in Identifier schema of the Reference `identifier` field.
     assertFieldNotPresent("assigner",
-        getField(observationSchema_L2, true, "subject", "identifier"));
+        getField(observationSchemaL2, true, "subject", "identifier"));
 
     // 
     //  Identifier (assigner) in a Reference nested in an Identifier
@@ -315,15 +314,15 @@ public class SchemaConverterTest {
         unArray(getField(observationSchema, true, "identifier", "assigner")));
     // the `identifier` field should be present because for normal nesting rules for 2-level nesting
     assertInstanceOf(StructType.class,
-        unArray(getField(observationSchema_L2, true, "identifier", "assigner", "identifier")));
+        unArray(getField(observationSchemaL2, true, "identifier", "assigner", "identifier")));
     // but it should not have the assigner field
     assertFieldNotPresent("assigner",
-        unArray(getField(observationSchema_L2, true, "identifier", "assigner", "identifier")));
+        unArray(getField(observationSchemaL2, true, "identifier", "assigner", "identifier")));
   }
 
 
   @Test
-  public void preferredNameOnly() {
+  void preferredNameOnly() {
 
     // Only the primary name that includes the
     // choice type should be included.
@@ -338,77 +337,77 @@ public class SchemaConverterTest {
   }
 
   @Test
-  public void testDirectlyNestedType() {
+  void testDirectlyNestedType() {
     // level 0  - only the backbone element from the resource
     // Questionnaire/item
-    assertNotNull(converter_L0);
+    assertNotNull(converterL0);
     assertNotNull(Questionnaire.class);
-    final StructType questionnaireSchema_L0 = converter_L0
+    final StructType questionnaireSchemaL0 = converterL0
         .resourceSchema(Questionnaire.class);
 
-    assertFieldNotPresent("item", unArray(getField(questionnaireSchema_L0, true, "item")));
+    assertFieldNotPresent("item", unArray(getField(questionnaireSchemaL0, true, "item")));
 
     // level 1
     // Questionnaire/item/item
-    final StructType questionnaireSchema_L1 = converter_L1
+    final StructType questionnaireSchemaL1 = converterL1
         .resourceSchema(Questionnaire.class);
 
     assertEquals(DataTypes.StringType,
-        getField(questionnaireSchema_L1, true, "item", "item", "linkId"));
-    assertFieldNotPresent("item", unArray(getField(questionnaireSchema_L1, true, "item", "item")));
+        getField(questionnaireSchemaL1, true, "item", "item", "linkId"));
+    assertFieldNotPresent("item", unArray(getField(questionnaireSchemaL1, true, "item", "item")));
 
     // level 2
     // Questionnaire/item/item/item
-    final StructType questionnaireSchema_L2 = converter_L2
+    final StructType questionnaireSchemaL2 = converterL2
         .resourceSchema(Questionnaire.class);
 
     assertEquals(DataTypes.StringType,
-        getField(questionnaireSchema_L2, true, "item", "item", "item", "linkId"));
+        getField(questionnaireSchemaL2, true, "item", "item", "item", "linkId"));
     assertFieldNotPresent("item",
-        unArray(getField(questionnaireSchema_L2, true, "item", "item", "item")));
+        unArray(getField(questionnaireSchemaL2, true, "item", "item", "item")));
   }
 
 
   @Test
-  public void testIndirectlyNestedType() {
+  void testIndirectlyNestedType() {
     // level 0  - only the backbone element from the resource
     // QuestionnaireResponse/item/answer
-    final StructType questionnaireResponseSchema_L0 = converter_L0
+    final StructType questionnaireResponseSchemaL0 = converterL0
         .resourceSchema(QuestionnaireResponse.class);
     assertEquals(DataTypes.StringType,
-        getField(questionnaireResponseSchema_L0, true, "item", "answer", "id"));
+        getField(questionnaireResponseSchemaL0, true, "item", "answer", "id"));
     assertFieldNotPresent("item",
-        unArray(getField(questionnaireResponseSchema_L0, true, "item", "answer")));
+        unArray(getField(questionnaireResponseSchemaL0, true, "item", "answer")));
     // level 1
     // QuestionnaireResponse/item/answer/item/answer
-    final StructType questionnaireResponseSchema_L1 = converter_L1
+    final StructType questionnaireResponseSchemaL1 = converterL1
         .resourceSchema(QuestionnaireResponse.class);
 
     assertEquals(DataTypes.StringType,
-        getField(questionnaireResponseSchema_L1, true, "item", "answer", "item", "linkId"));
+        getField(questionnaireResponseSchemaL1, true, "item", "answer", "item", "linkId"));
     assertEquals(DataTypes.StringType,
-        getField(questionnaireResponseSchema_L1, true, "item", "answer", "item", "answer", "id"));
+        getField(questionnaireResponseSchemaL1, true, "item", "answer", "item", "answer", "id"));
     assertFieldNotPresent("item", unArray(
-        getField(questionnaireResponseSchema_L1, true, "item", "answer", "item", "answer")));
+        getField(questionnaireResponseSchemaL1, true, "item", "answer", "item", "answer")));
 
     // level 2
     // QuestionnaireResponse/item/answer/item/answer/item/answer/item/answer
-    final StructType questionnaireResponseSchema_L2 = converter_L2
+    final StructType questionnaireResponseSchemaL2 = converterL2
         .resourceSchema(QuestionnaireResponse.class);
 
     assertEquals(DataTypes.StringType,
-        getField(questionnaireResponseSchema_L2, true,
+        getField(questionnaireResponseSchemaL2, true,
             "item", "answer", "item", "answer", "item", "linkId"));
     assertEquals(DataTypes.StringType,
-        getField(questionnaireResponseSchema_L2, true,
+        getField(questionnaireResponseSchemaL2, true,
             "item", "answer", "item", "answer", "item", "answer", "id"));
-    assertFieldNotPresent("item", unArray(getField(questionnaireResponseSchema_L2, true,
+    assertFieldNotPresent("item", unArray(getField(questionnaireResponseSchemaL2, true,
         "item", "answer", "item", "answer", "item", "answer")));
   }
 
   @Test
-  public void testExtensions() {
-    final StructType extensionSchema = converter_L2
+  void testExtensions() {
+    final StructType extensionSchema = converterL2
         .resourceSchema(Condition.class);
 
     // We need to test that:
@@ -428,7 +427,7 @@ public class SchemaConverterTest {
   }
 
   @Test
-  public void testRestrictsOpenTypesCorrectly() {
+  void testRestrictsOpenTypesCorrectly() {
 
     final Set<String> limitedOpenTypes = Set.of(
         "boolean",
@@ -440,8 +439,8 @@ public class SchemaConverterTest {
     final SchemaConverter schemaConverter = new SchemaConverter(FHIR_CONTEXT, DATA_TYPE_MAPPINGS,
         EncoderConfig.apply(0, JavaConverters.asScalaSet(limitedOpenTypes).toSet(), true));
 
-    final StructType conditionSchema = schemaConverter.resourceSchema(Condition.class);
-    final MapType extensionsContainerType = (MapType) getField(conditionSchema, true,
+    final StructType extensionParent = schemaConverter.resourceSchema(Condition.class);
+    final MapType extensionsContainerType = (MapType) getField(extensionParent, true,
         "_extension");
     final StructType extensionStruct = (StructType) ((ArrayType) extensionsContainerType.valueType())
         .elementType();
@@ -451,19 +450,19 @@ public class SchemaConverterTest {
   }
 
   @Test
-  public void testQuantity() {
+  void testQuantity() {
     final DataType quantityType = getField(observationSchema, true, "valueQuantity");
     assertQuantityType(quantityType);
   }
 
   @Test
-  public void testSimpleQuantity() {
+  void testSimpleQuantity() {
     final DataType quantityType = getField(medRequestSchema, true, "dispenseRequest", "quantity");
     assertQuantityType(quantityType);
   }
 
   @Test
-  public void testQuantityArray() {
+  void testQuantityArray() {
     final DataType quantityType = getField(deviceSchema, true, "property", "valueQuantity");
     assertQuantityType(quantityType);
   }

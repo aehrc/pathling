@@ -42,7 +42,7 @@ public record MethodDefinedOperator(Method method) implements BinaryOperator {
   @Nonnull
   public Collection invoke(@Nonnull final BinaryOperatorInput operatorInput) {
     // Create an array of arguments to pass to the method.
-    final Object[] invocationArgs = Stream.of(operatorInput.getLeft(), operatorInput.getRight())
+    final Object[] invocationArgs = Stream.of(operatorInput.left(), operatorInput.right())
         .toArray(Object[]::new);
     try {
       // Invoke the method.

@@ -21,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -55,13 +54,14 @@ class ClientAuthInterceptorTest {
   public static final String CLIENT_SECRET = "somesecret";
   public static final String SCOPE = "openid";
   public static final int TOKEN_EXPIRY_TOLERANCE = 0;
-  public static final StringEntity VALID_RESPONSE_BODY = new StringEntity("{\n"
-      + "  \"access_token\": \"foo\",\n"
-      + "  \"token_type\": \"access_token\",\n"
-      + "  \"expires_in\": 1,\n"
-      + "  \"refresh_token\": \"bar\",\n"
-      + "  \"scope\": \"openid\"\n"
-      + "}", StandardCharsets.UTF_8);
+  public static final StringEntity VALID_RESPONSE_BODY = new StringEntity("""
+      {
+        "access_token": "foo",
+        "token_type": "access_token",
+        "expires_in": 1,
+        "refresh_token": "bar",
+        "scope": "openid"
+      }""", StandardCharsets.UTF_8);
 
   ClientAuthInterceptor interceptor;
   CloseableHttpClient httpClient;
@@ -87,7 +87,7 @@ class ClientAuthInterceptorTest {
   void authorization() throws IOException, InterruptedException {
     final Header contentTypeHeader = mock(Header.class);
     when(contentTypeHeader.getValue()).thenReturn("application/json");
-    when(response.getFirstHeader(eq("Content-Type"))).thenReturn(contentTypeHeader);
+    when(response.getFirstHeader("Content-Type")).thenReturn(contentTypeHeader);
 
     when(response.getEntity()).thenReturn(VALID_RESPONSE_BODY);
     when(httpClient.execute(argThat(matchesRequest())))
@@ -105,7 +105,7 @@ class ClientAuthInterceptorTest {
 
   @Test
   void missingContentType() throws IOException {
-    when(response.getFirstHeader(eq("Content-Type"))).thenReturn(null);
+    when(response.getFirstHeader("Content-Type")).thenReturn(null);
     when(response.getEntity()).thenReturn(VALID_RESPONSE_BODY);
     when(httpClient.execute(argThat(matchesRequest())))
         .thenReturn(response);
@@ -119,7 +119,7 @@ class ClientAuthInterceptorTest {
   void incorrectContentType() throws IOException {
     final Header contentTypeHeader = mock(Header.class);
     when(contentTypeHeader.getValue()).thenReturn("audio/x-midi");
-    when(response.getFirstHeader(eq("Content-Type"))).thenReturn(contentTypeHeader);
+    when(response.getFirstHeader("Content-Type")).thenReturn(contentTypeHeader);
 
     when(response.getEntity()).thenReturn(VALID_RESPONSE_BODY);
     when(httpClient.execute(argThat(matchesRequest())))
@@ -135,14 +135,15 @@ class ClientAuthInterceptorTest {
   void missingAccessToken() throws IOException {
     final Header contentTypeHeader = mock(Header.class);
     when(contentTypeHeader.getValue()).thenReturn("application/json");
-    when(response.getFirstHeader(eq("Content-Type"))).thenReturn(contentTypeHeader);
+    when(response.getFirstHeader("Content-Type")).thenReturn(contentTypeHeader);
 
-    final StringEntity bodyWithMissingToken = new StringEntity("{\n"
-        + "  \"token_type\": \"access_token\",\n"
-        + "  \"expires_in\": 1,\n"
-        + "  \"refresh_token\": \"bar\",\n"
-        + "  \"scope\": \"openid\"\n"
-        + "}", StandardCharsets.UTF_8);
+    final StringEntity bodyWithMissingToken = new StringEntity("""
+        {
+          "token_type": "access_token",
+          "expires_in": 1,
+          "refresh_token": "bar",
+          "scope": "openid"
+        }""", StandardCharsets.UTF_8);
     when(response.getEntity()).thenReturn(bodyWithMissingToken);
     when(httpClient.execute(argThat(matchesRequest())))
         .thenReturn(response);
@@ -167,7 +168,7 @@ class ClientAuthInterceptorTest {
 
     final Header contentTypeHeader = mock(Header.class);
     when(contentTypeHeader.getValue()).thenReturn("application/json");
-    when(response.getFirstHeader(eq("Content-Type"))).thenReturn(contentTypeHeader);
+    when(response.getFirstHeader("Content-Type")).thenReturn(contentTypeHeader);
 
     when(response.getEntity()).thenReturn(VALID_RESPONSE_BODY);
     when(httpClient.execute(argThat(matchesRequest())))
@@ -186,15 +187,14 @@ class ClientAuthInterceptorTest {
   }
 
   private static ArgumentMatcher<HttpUriRequest> matchesRequest() {
-    return (request) -> {
-      if (!(request instanceof HttpPost)) {
+    return request -> {
+      if (!(request instanceof final HttpPost post)) {
         return false;
       }
       final boolean headerMatches = request.getURI().toString().equals(TOKEN_URL)
           && request.getFirstHeader("Content-Type").getValue()
           .equals("application/x-www-form-urlencoded")
           && request.getFirstHeader("Accept").getValue().equals("application/json");
-      final HttpPost post = (HttpPost) request;
       final HttpEntity entity = post.getEntity();
       final boolean entityMatches;
       try {

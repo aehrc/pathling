@@ -37,7 +37,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("ConstantConditions")
-public class MemberOfUdfTest extends AbstractTerminologyTestBase {
+class MemberOfUdfTest extends AbstractTerminologyTestBase {
 
   private static final String VALUE_SET_URL_A = "uuid:vsA";
   private static final String VALUE_SET_URL_AB = "uuid:vsAB";
@@ -60,7 +60,7 @@ public class MemberOfUdfTest extends AbstractTerminologyTestBase {
 
   @Test
   void testNullCodings() {
-    assertNull(memberUdf.call(null, "uiid:url"));
+    assertNull(memberUdf.call(null, "uuid:url"));
   }
 
   @Test
@@ -99,7 +99,7 @@ public class MemberOfUdfTest extends AbstractTerminologyTestBase {
     assertTrue(memberUdf.call(encodeMany(CODING_C, CODING_A), VALUE_SET_URL_A));
     assertTrue(memberUdf.call(encodeMany(null, INVALID_CODING_0, CODING_B), VALUE_SET_URL_AB));
     assertTrue(memberUdf.call(encodeMany(CODING_A, CODING_B), VALUE_SET_URL_AB));
-    // negative casses
+    // negative cases
     assertFalse(memberUdf.call(encodeMany(), VALUE_SET_URL_A));
     assertFalse(memberUdf.call(encodeMany(CODING_C, CODING_B), VALUE_SET_URL_A));
     assertFalse(memberUdf.call(encodeMany(null, INVALID_CODING_1, CODING_C), VALUE_SET_URL_AB));

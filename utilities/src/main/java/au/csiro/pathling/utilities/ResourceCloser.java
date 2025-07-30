@@ -69,7 +69,7 @@ public class ResourceCloser implements Closeable {
       for (final Closeable closeable : resourcesToClose) {
         log.debug("Closing resource: {} in: {}", closeable, this);
         closeQuietly(closeable,
-            ex -> log.warn("Ignoring an error while closing resource: " + closeable, ex));
+            ex -> log.warn("Ignoring an error while closing resource: {}", closeable, ex));
       }
     }
   }

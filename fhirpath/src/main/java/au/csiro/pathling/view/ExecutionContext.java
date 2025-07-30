@@ -18,23 +18,18 @@
 package au.csiro.pathling.view;
 
 import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
-import lombok.Value;
 import org.apache.spark.sql.SparkSession;
 
 /**
  * Dependencies for the execution of a FHIR view.
+ *
+ * @param spark The {@link SparkSession} for building and executing Spark queries.
+ * @param fhirpathEvaluatorFactory The {@link FhirpathEvaluator.Factory} for producing FHIRPath
+ * evaluators.
  */
-@Value
-public class ExecutionContext {
+public record ExecutionContext(
+    SparkSession spark,
+    FhirpathEvaluator.Factory fhirpathEvaluatorFactory
+) {
 
-  /**
-   * The {@link SparkSession} for building and executing Spark queries.
-   */
-  SparkSession spark;
-
-
-  /**
-   * The {@link FhirpathEvaluator.Factory} for producint FHIRPath evaluators.
-   */
-  FhirpathEvaluator.Factory fhirpathEvaluatorFactory;
 }

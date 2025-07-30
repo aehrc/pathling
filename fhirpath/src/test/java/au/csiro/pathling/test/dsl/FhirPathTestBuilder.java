@@ -50,7 +50,7 @@ public class FhirPathTestBuilder {
   }
 
   public FhirPathTestBuilder withSubject(
-      final Function<FhirPathModelBuilder, FhirPathModelBuilder> builderFunction) {
+      @Nonnull final Function<FhirPathModelBuilder, FhirPathModelBuilder> builderFunction) {
     return withSubject(builderFunction.apply(new FhirPathModelBuilder()).getModel());
   }
 
@@ -60,7 +60,7 @@ public class FhirPathTestBuilder {
   }
 
   public FhirPathTestBuilder test(final String description,
-      final Function<FhirPathTestCaseBuilder, FhirPathTestCaseBuilder> builderFunction) {
+      @Nonnull final Function<FhirPathTestCaseBuilder, FhirPathTestCaseBuilder> builderFunction) {
     final String fullDescription = createTestDescription(description);
     final FhirPathTestCaseBuilder builder = new FhirPathTestCaseBuilder(this, fullDescription);
     testCases.add(builderFunction.apply(builder));

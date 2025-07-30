@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.jetbrains.annotations.Contract;
 
 @RequiredArgsConstructor
 public class FhirPathModelBuilder {
@@ -58,7 +59,8 @@ public class FhirPathModelBuilder {
     return this;
   }
 
-  public FhirPathModelBuilder integerArray(@Nonnull final String name, final int... values) {
+  public FhirPathModelBuilder integerArray(@Nonnull final String name,
+      @Nonnull final int... values) {
     final List<Integer> list = new ArrayList<>();
     for (final int value : values) {
       list.add(value);
@@ -77,7 +79,8 @@ public class FhirPathModelBuilder {
     return this;
   }
 
-  public FhirPathModelBuilder decimalArray(@Nonnull final String name, final double... values) {
+  public FhirPathModelBuilder decimalArray(@Nonnull final String name,
+      @Nonnull final double... values) {
     final List<Double> list = new ArrayList<>();
     for (final double value : values) {
       list.add(value);
@@ -96,7 +99,7 @@ public class FhirPathModelBuilder {
     return this;
   }
 
-  public FhirPathModelBuilder boolArray(final String name, final boolean... values) {
+  public FhirPathModelBuilder boolArray(final String name, @Nonnull final boolean... values) {
     final List<Boolean> list = new ArrayList<>();
     for (final boolean value : values) {
       list.add(value);
@@ -127,7 +130,7 @@ public class FhirPathModelBuilder {
   }
 
   public FhirPathModelBuilder element(final String name,
-      final Consumer<FhirPathModelBuilder> builderConsumer) {
+      @Nonnull final Consumer<FhirPathModelBuilder> builderConsumer) {
     final FhirPathModelBuilder builder = new FhirPathModelBuilder();
     builderConsumer.accept(builder);
     model.put(name, builder.model);
@@ -139,9 +142,10 @@ public class FhirPathModelBuilder {
     return this;
   }
 
+  @Contract("_, _ -> this")
   @SafeVarargs
   public final FhirPathModelBuilder elementArray(final String name,
-      final Consumer<FhirPathModelBuilder>... builders) {
+      @Nonnull final Consumer<FhirPathModelBuilder>... builders) {
     final List<Map<String, Object>> list = new ArrayList<>();
     for (final Consumer<FhirPathModelBuilder> builderConsumer : builders) {
       final FhirPathModelBuilder builder = new FhirPathModelBuilder();

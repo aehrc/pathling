@@ -25,6 +25,7 @@ package au.csiro.pathling.support.r4;
 
 import au.csiro.pathling.support.FhirConversionSupport;
 import jakarta.annotation.Nonnull;
+import java.io.Serial;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.hl7.fhir.instance.model.api.IBase;
@@ -41,6 +42,7 @@ import org.hl7.fhir.r4.model.Resource;
  */
 public class R4FhirConversionSupport extends FhirConversionSupport {
 
+  @Serial
   private static final long serialVersionUID = -367070946615790595L;
 
   @Override
@@ -70,8 +72,7 @@ public class R4FhirConversionSupport extends FhirConversionSupport {
   }
 
   static void resolveURNReference(@Nonnull final Base base) {
-    if (base instanceof Reference) {
-      final Reference reference = (Reference) base;
+    if (base instanceof final Reference reference) {
       final Resource resource = (Resource) reference.getResource();
       if (isURNReference(reference) && resource != null && resource.hasIdElement()) {
         reference.setReference(resource.getIdElement().getValue());

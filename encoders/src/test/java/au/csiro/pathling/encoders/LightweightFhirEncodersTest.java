@@ -126,7 +126,7 @@ public class LightweightFhirEncodersTest implements JsonMethods {
   }
 
   @Test
-  public void testDecimalCollection() {
+  void testDecimalCollection() {
     final ExpressionEncoder<MolecularSequence> encoder = fhirEncoders
         .of(MolecularSequence.class);
 
@@ -141,7 +141,7 @@ public class LightweightFhirEncodersTest implements JsonMethods {
   }
 
   @Test
-  public void testIdCollection() {
+  void testIdCollection() {
     final ExpressionEncoder<PlanDefinition> encoder = fhirEncoders
         .of(PlanDefinition.class);
 
@@ -157,7 +157,7 @@ public class LightweightFhirEncodersTest implements JsonMethods {
   }
 
   @Test
-  public void testHtmlNarrative() {
+  void testHtmlNarrative() {
     final ExpressionEncoder<Condition> encoder = fhirEncoders
         .of(Condition.class);
     final Condition conditionWithNarrative = new Condition();
@@ -168,13 +168,13 @@ public class LightweightFhirEncodersTest implements JsonMethods {
   }
 
   @Test
-  public void testReference() {
+  void testReference() {
     final ExpressionEncoder<Condition> encoder = fhirEncoders
         .of(Condition.class);
     final Condition conditionWithFullReference = new Condition();
     final Identifier identifier = new Identifier()
         .setSystem("urn:id-system")
-        .setValue("id-valule")
+        .setValue("id-value")
         .setUse(IdentifierUse.OFFICIAL)
         .setType(new CodeableConcept().addCoding(new Coding().setCode("code").setSystem("system"))
             .setText("text"));
@@ -189,7 +189,7 @@ public class LightweightFhirEncodersTest implements JsonMethods {
   }
 
   @Test
-  public void testIdentifier() {
+  void testIdentifier() {
     final ExpressionEncoder<Condition> encoder = fhirEncoders
         .of(Condition.class);
     final Condition conditionWithIdentifierWithAssigner = new Condition();
@@ -200,7 +200,7 @@ public class LightweightFhirEncodersTest implements JsonMethods {
 
     final Identifier identifier = new Identifier()
         .setSystem("urn:id-system")
-        .setValue("id-valule")
+        .setValue("id-value")
         .setUse(IdentifierUse.OFFICIAL)
         .setAssigner(assignerReference)
         .setType(new CodeableConcept().addCoding(new Coding().setCode("code").setSystem("system"))
@@ -210,7 +210,7 @@ public class LightweightFhirEncodersTest implements JsonMethods {
   }
 
   @Test
-  public void testExpression() {
+  void testExpression() {
 
     // Expression contains 'reference' field 
     // We are checking that it is encoded in generic way not and not the subject to special case for Reference 'reference' field.
@@ -227,14 +227,14 @@ public class LightweightFhirEncodersTest implements JsonMethods {
   }
 
   @Test
-  public void testThrowsExceptionWhenUnsupportedResource() {
+  void testThrowsExceptionWhenUnsupportedResource() {
     for (final String resourceName : EXCLUDED_RESOURCES) {
       assertThrows(UnsupportedResourceError.class, () -> fhirEncoders.of(resourceName));
     }
   }
 
   @Test
-  public void testEncodeDecodeExtensionOnResourceAndComposite() {
+  void testEncodeDecodeExtensionOnResourceAndComposite() {
 
     final ExpressionEncoder<Condition> encoder = fhirEncoders
         .of(Condition.class);
@@ -243,7 +243,7 @@ public class LightweightFhirEncodersTest implements JsonMethods {
   }
 
   @Test
-  public void testEncodesExtensions() {
+  void testEncodesExtensions() {
     final ExpressionEncoder<Condition> encoder = fhirEncoders
         .of(Condition.class);
     final Condition conditionWithExtension = TestData.newConditionWithExtensions();
@@ -296,7 +296,7 @@ public class LightweightFhirEncodersTest implements JsonMethods {
   }
 
   @Test
-  public void testQuantityCanonicalization() {
+  void testQuantityCanonicalization() {
     final ExpressionEncoder<Observation> encoder = fhirEncoders.of(Observation.class);
     final Observation observation = TestData.newUcumObservation();
 
@@ -313,7 +313,7 @@ public class LightweightFhirEncodersTest implements JsonMethods {
   }
 
   @Test
-  public void testQuantityArrayCanonicalization() {
+  void testQuantityArrayCanonicalization() {
     final ExpressionEncoder<Device> encoder = fhirEncoders.of(Device.class);
     final Device device = TestData.newDevice();
 

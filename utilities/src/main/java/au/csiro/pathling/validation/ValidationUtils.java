@@ -83,8 +83,8 @@ public final class ValidationUtils {
   /**
    * Formats a set of {@link ConstraintViolation} to a human-readable string.
    *
-   * @param constraintViolations the violations to include.
-   * @return the  human-readable representaion of the violations.
+   * @param constraintViolations the violations to include
+   * @return the human-readable representation of the violations
    */
   @Nonnull
   public static String formatViolations(

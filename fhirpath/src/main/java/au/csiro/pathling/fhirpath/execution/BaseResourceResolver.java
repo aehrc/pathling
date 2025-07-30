@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
+import static au.csiro.pathling.utilities.Preconditions.checkArgument;
+
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
@@ -80,17 +82,15 @@ public abstract class BaseResourceResolver implements ResourceResolver {
    * {@inheritDoc}
    * <p>
    * This implementation first checks if the requested resource code matches the subject resource.
-   * If it does, it returns the subject resource. Otherwise, it delegates to
-   * {@link #resolveForeignResource(String)} to handle non-subject resources.
+   * If it does, it returns the subject resource. We don't support resolving resources other than
+   * the subject resource in this implementation.
    */
   @Override
   public @Nonnull Optional<ResourceCollection> resolveResource(
       @Nonnull final String resourceCode) {
-    if (resourceCode.equals(getSubjectResource().toCode())) {
-      return Optional.of(resolveSubjectResource());
-    } else {
-      return resolveForeignResource(resourceCode);
-    }
+    checkArgument(resourceCode.equals(getSubjectResource().toCode()),
+        "Resource code must match the subject resource code: " + getSubjectResource().toCode());
+    return Optional.of(resolveSubjectResource());
   }
 
   /**
@@ -102,24 +102,6 @@ public abstract class BaseResourceResolver implements ResourceResolver {
   @Nonnull
   public ResourceCollection resolveSubjectResource() {
     return createResource(getSubjectResource());
-  }
-
-  /**
-   * Resolves a resource by its type code when it's not the subject resource.
-   * <p>
-   * This method is called by {@link #resolveResource(String)} when the requested resource is not
-   * the subject resource. The default implementation returns an empty Optional, indicating that
-   * foreign resources are not supported.
-   * <p>
-   * Subclasses should override this method to provide access to non-subject resources.
-   *
-   * @param resourceCode The FHIR resource type code (e.g., "Patient", "Observation")
-   * @return An Optional containing the ResourceCollection if the resource type exists, or empty if
-   * it doesn't
-   */
-  @Nonnull
-  Optional<ResourceCollection> resolveForeignResource(@Nonnull final String resourceCode) {
-    return Optional.empty();
   }
 
   /**

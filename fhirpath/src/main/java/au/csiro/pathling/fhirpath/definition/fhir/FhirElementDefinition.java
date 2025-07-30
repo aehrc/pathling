@@ -23,7 +23,6 @@ import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * Encapsulates the FHIR definitions for a child resolved to specific element.
@@ -70,12 +69,6 @@ class FhirElementDefinition extends
   @Override
   public String getName() {
     return childDefinition.getElementName();
-  }
-
-  @Nonnull
-  @Override
-  public Optional<Integer> getMaxCardinality() {
-    return Optional.of(childDefinition.getMax());
   }
 
   @Override

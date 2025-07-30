@@ -12,16 +12,18 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.function.Function;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class FhirPathTestCaseBuilder {
 
+  @Getter
   private final FhirPathTestBuilder parent;
   private final String description;
   private String expression;
   private Object result;
- 
+
   @Nullable
   private String expectError = null;
 
@@ -47,7 +49,7 @@ public class FhirPathTestCaseBuilder {
   }
 
   public FhirPathTestCaseBuilder apply(
-      final Function<FhirPathTestCaseBuilder, FhirPathTestCaseBuilder> function) {
+      @Nonnull final Function<FhirPathTestCaseBuilder, FhirPathTestCaseBuilder> function) {
     return function.apply(this);
   }
 

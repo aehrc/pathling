@@ -13,6 +13,7 @@
 
 package au.csiro.pathling.test;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.spark.sql.types.DataType;
@@ -22,14 +23,14 @@ public interface SchemaAsserts {
 
   static void assertFieldNotPresent(final String fieldName,
       final DataType maybeStructType) {
-    assertTrue(maybeStructType instanceof StructType, "Must be struct type.");
+    assertInstanceOf(StructType.class, maybeStructType, "Must be struct type.");
     assertTrue(((StructType) maybeStructType).getFieldIndex(fieldName).isEmpty(),
         "Field: '" + fieldName + "' not present in struct type.");
   }
 
   static void assertFieldPresent(final String fieldName,
       final DataType maybeStructType) {
-    assertTrue(maybeStructType instanceof StructType, "Must be struct type.");
+    assertInstanceOf(StructType.class, maybeStructType, "Must be struct type.");
     assertTrue(((StructType) maybeStructType).getFieldIndex(fieldName).isDefined(),
         "Field: '" + fieldName + "' not present in struct type.");
   }

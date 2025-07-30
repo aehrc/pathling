@@ -31,7 +31,7 @@ import org.hl7.fhir.r4.model.Reference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class ResourceParserTest {
+class ResourceParserTest {
 
   private static final String PATIENT_REF = "Patient/704c9750-f6e6-473b-ee83-fbd48e07fe3f";
   private static final String CONDITION_REF = "Condition/2383c155-6345-e842-b7d7-3f6748ca634b";
@@ -65,14 +65,14 @@ public class ResourceParserTest {
   }
 
   @Test
-  public void testKeepsProvidedResourceIds() {
+  void testKeepsProvidedResourceIds() {
     assertEquals(PATIENT_REF, patient.getId());
     assertEquals(CONDITION_REF, condition.getId());
     assertEquals(CLAIM_REF, claim.getId());
   }
 
   @Test
-  public void testResolvesKnownURNReferences() {
+  void testResolvesKnownURNReferences() {
     // resource level reference
     assertEquals(PATIENT_REF, condition.getSubject().getReference());
     // element lever reference
@@ -85,12 +85,12 @@ public class ResourceParserTest {
   }
 
   @Test
-  public void testKeepsUnresolvedURNReferences() {
+  void testKeepsUnresolvedURNReferences() {
     assertEquals(ENCOUNTER_URN, condition.getEncounter().getReference());
   }
 
   @Test
-  public void testPreservesNonURNRefernces() {
+  void testPreservesNonURNReferences() {
     assertEquals(REFERENCE_RELATIVE, condition1.getSubject().getReference());
     assertEquals(REFERENCE_ABSOLUTE, condition1.getEncounter().getReference());
     assertEquals(REFERENCE_CONDITIONAL, claim.getProvider().getReference());

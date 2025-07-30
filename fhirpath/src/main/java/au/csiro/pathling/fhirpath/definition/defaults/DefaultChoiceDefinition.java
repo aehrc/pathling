@@ -10,9 +10,9 @@ import lombok.Value;
 import org.apache.commons.lang.WordUtils;
 
 /**
- * The default implementation of a choice data type allowing for explicit definition of its
- * possible choices and other properties. This class represents FHIR choice elements, which
- * can contain one of several possible types (e.g., valueString, valueInteger, etc.).
+ * The default implementation of a choice data type allowing for explicit definition of its possible
+ * choices and other properties. This class represents FHIR choice elements, which can contain one
+ * of several possible types (e.g., valueString, valueInteger, etc.).
  */
 @Value(staticConstructor = "of")
 public class DefaultChoiceDefinition implements ChoiceDefinition {
@@ -22,17 +22,17 @@ public class DefaultChoiceDefinition implements ChoiceDefinition {
    */
   @Nonnull
   String name;
-  
+
   /**
-   * The list of possible child definitions that this choice element can contain.
-   * Each child represents a different possible type for this choice element.
+   * The list of possible child definitions that this choice element can contain. Each child
+   * represents a different possible type for this choice element.
    */
   List<ChildDefinition> choices;
 
   /**
-   * Returns the child element definition for the given type, if it exists.
-   * For example, if the choice element is named "value" and the type is "string",
-   * this method will look for a child named "valueString".
+   * Returns the child element definition for the given type, if it exists. For example, if the
+   * choice element is named "value" and the type is "string", this method will look for a child
+   * named "valueString".
    *
    * @param type the type of the child element (e.g., "string", "integer")
    * @return the child element definition, if it exists
@@ -45,20 +45,8 @@ public class DefaultChoiceDefinition implements ChoiceDefinition {
   }
 
   /**
-   * Returns the maximum cardinality for this choice element.
-   * Choice elements always have a maximum cardinality of 1.
-   *
-   * @return the maximum cardinality, which is always 1 for choice elements
-   */
-  @Override
-  @Nonnull
-  public Optional<Integer> getMaxCardinality() {
-    return Optional.of(1);
-  }
-
-  /**
-   * Returns the child element with the specified name, if it exists in the list of choices.
-   * This method is used to find a specific type option within this choice element.
+   * Returns the child element with the specified name, if it exists in the list of choices. This
+   * method is used to find a specific type option within this choice element.
    *
    * @param name the name of the child element to find
    * @return the child element, if it exists

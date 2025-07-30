@@ -1,7 +1,6 @@
 package au.csiro.pathling.fhirpath.definition;
 
 import jakarta.annotation.Nonnull;
-import java.util.Optional;
 
 
 /**
@@ -16,11 +15,5 @@ public interface ChildDefinition extends NodeDefinition {
    */
   @Nonnull
   String getName();
-
-  /**
-   * @return The maximum cardinality for this child
-   */
-  @Nonnull
-  Optional<Integer> getMaxCardinality();
 
 }

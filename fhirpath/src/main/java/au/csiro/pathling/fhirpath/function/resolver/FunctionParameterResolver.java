@@ -33,8 +33,11 @@ import java.util.stream.Stream;
  * @author Piotr Szul
  * @author John Grimes
  */
-public record FunctionParameterResolver(EvaluationContext evaluationContext, Collection input,
-                                        List<FhirPath> actualArguments) {
+public record FunctionParameterResolver(
+    EvaluationContext evaluationContext,
+    Collection input,
+    List<FhirPath> actualArguments
+) {
 
   /**
    * Creates a FunctionParameterResolver from a FunctionInput object.
@@ -46,9 +49,9 @@ public record FunctionParameterResolver(EvaluationContext evaluationContext, Col
   public static FunctionParameterResolver fromFunctionInput(
       @Nonnull final FunctionInput functionInput) {
     return new FunctionParameterResolver(
-        functionInput.getContext(),
-        functionInput.getInput(),
-        functionInput.getArguments());
+        functionInput.context(),
+        functionInput.input(),
+        functionInput.arguments());
   }
 
   /**

@@ -4,24 +4,21 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import lombok.Value;
 
 /**
  * A resolver that provides access to the input context and resource.
  *
+ * @param resource the resource collection representing the root resource
+ * @param inputContext the collection representing the input context
  * @author John Grimes
  * @see <a href="https://hl7.org/fhirpath/#environment-variables">FHIRPath environment variables</a>
  * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#variables">FHIR-specific environment
  * variables</a>
  */
-@Value
-public class ContextVariableResolver implements EnvironmentVariableResolver {
-
-  @Nonnull
-  ResourceCollection resource;
-
-  @Nonnull
-  Collection inputContext;
+public record ContextVariableResolver(
+    @Nonnull ResourceCollection resource,
+    @Nonnull Collection inputContext
+) implements EnvironmentVariableResolver {
 
   @Override
   public Optional<Collection> get(@Nonnull final String name) {

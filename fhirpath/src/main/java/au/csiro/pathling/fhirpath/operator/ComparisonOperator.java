@@ -53,8 +53,8 @@ public class ComparisonOperator implements BinaryOperator {
   @Nonnull
   @Override
   public Collection invoke(@Nonnull final BinaryOperatorInput input) {
-    final Collection left = input.getLeft();
-    final Collection right = input.getRight();
+    final Collection left = input.left();
+    final Collection right = input.right();
 
     // If either operand is an EmptyCollection, return an EmptyCollection.
     if (left instanceof EmptyCollection || right instanceof EmptyCollection) {

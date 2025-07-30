@@ -28,12 +28,6 @@ public class DefaultCompositeDefinition implements ElementDefinition {
 
   @Override
   @Nonnull
-  public Optional<Integer> getMaxCardinality() {
-    return Optional.of(cardinality);
-  }
-
-  @Override
-  @Nonnull
   public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
     return children.stream()
         .filter(child -> child.getName().equals(name))
@@ -57,7 +51,8 @@ public class DefaultCompositeDefinition implements ElementDefinition {
   @Nonnull
   public static DefaultCompositeDefinition backbone(@Nonnull final String name,
       @Nonnull final List<ChildDefinition> children, final int cardinality) {
-    return new DefaultCompositeDefinition(name, children, cardinality, FHIRDefinedType.BACKBONEELEMENT);
+    return new DefaultCompositeDefinition(name, children, cardinality,
+        FHIRDefinedType.BACKBONEELEMENT);
   }
 
 }

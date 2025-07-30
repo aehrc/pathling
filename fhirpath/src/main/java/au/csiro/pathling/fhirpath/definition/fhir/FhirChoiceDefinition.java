@@ -49,12 +49,6 @@ class FhirChoiceDefinition implements ChoiceDefinition {
     return getChildByElementName(name).map(e -> e);
   }
 
-  @Nonnull
-  @Override
-  public Optional<Integer> getMaxCardinality() {
-    return Optional.of(childDefinition.getMax());
-  }
-
 
   /**
    * Returns the child element definition for the given type, if it exists.

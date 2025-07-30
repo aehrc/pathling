@@ -34,8 +34,8 @@ import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 public interface TerminologySupport {
 
   /**
-   * Parses a string with the coma seprated list of concept map equivalence codes to the collection
-   * of unique {@link ConceptMapEquivalence} enum values. Throws
+   * Parses a string with the comma separated list of concept map equivalence codes to the
+   * collection of unique {@link ConceptMapEquivalence} enum values. Throws
    * {@link au.csiro.pathling.errors.InvalidUserInputError} if any of the codes cannot be
    * converted.
    *

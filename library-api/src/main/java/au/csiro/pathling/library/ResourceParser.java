@@ -62,8 +62,8 @@ class ResourceParser {
   @Nonnull
   public IBaseResource parse(@Nonnull final String resourceString) {
     final IBaseResource resource = parser.parseResource(resourceString);
-    return (resource instanceof IBaseBundle)
-           ? conversionSupport.resolveReferences((IBaseBundle) resource)
+    return (resource instanceof final IBaseBundle bundle)
+           ? conversionSupport.resolveReferences(bundle)
            : resource;
   }
 
@@ -85,17 +85,16 @@ class ResourceParser {
    * @param mimeType the mime type
    * @return a new FHIR parser
    */
+  @Nonnull
   public static ResourceParser build(@Nonnull final FhirVersionEnum fhirVersion,
       @Nonnull final String mimeType) {
     final FhirContext fhirContext = FhirEncoders.contextFor(fhirVersion);
     final FhirConversionSupport conversionSupport = FhirConversionSupport.supportFor(fhirVersion);
-    switch (mimeType) {
-      case FHIR_JSON:
-        return new ResourceParser(fhirContext.newJsonParser(), conversionSupport);
-      case FHIR_XML:
-        return new ResourceParser(fhirContext.newXmlParser(), conversionSupport);
-      default:
-        throw new IllegalArgumentException("Cannot create FHIR parser for mime type: " + mimeType);
-    }
+    return switch (mimeType) {
+      case FHIR_JSON -> new ResourceParser(fhirContext.newJsonParser(), conversionSupport);
+      case FHIR_XML -> new ResourceParser(fhirContext.newXmlParser(), conversionSupport);
+      default -> throw new IllegalArgumentException(
+          "Cannot create FHIR parser for mime type: " + mimeType);
+    };
   }
 }

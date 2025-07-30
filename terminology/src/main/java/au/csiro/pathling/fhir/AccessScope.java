@@ -19,17 +19,18 @@ package au.csiro.pathling.fhir;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import lombok.Value;
 
-@Value
-class AccessScope {
+/**
+ * Represents the scope requested for an access token when communicating with a protected server.
+ *
+ * @param tokenEndpoint the token endpoint to which the request is sent
+ * @param clientId the client ID used to authenticate the request
+ * @param scope the scope of access requested, or null if no specific scope is requested
+ */
+record AccessScope(
+    @Nonnull String tokenEndpoint,
+    @Nonnull String clientId,
+    @Nullable String scope
+) {
 
-  @Nonnull
-  String tokenEndpoint;
-
-  @Nonnull
-  String clientId;
-
-  @Nullable
-  String scope;
 }

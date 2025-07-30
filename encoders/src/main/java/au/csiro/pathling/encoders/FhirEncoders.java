@@ -27,12 +27,11 @@ import au.csiro.pathling.encoders.datatypes.DataTypeMappings;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.HashMap;
+import jakarta.annotation.Nonnull;
 import java.util.Map;
 import java.util.Set;
-import lombok.Value;
+import java.util.concurrent.ConcurrentHashMap;
+import lombok.Getter;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import scala.collection.JavaConverters;
@@ -76,23 +75,22 @@ public class FhirEncoders {
   /**
    * Cache of Encoders instances.
    */
-  private static final Map<EncodersKey, FhirEncoders> ENCODERS = new HashMap<>();
+  private static final Map<FhirEncodersKey, FhirEncoders> ENCODERS = new ConcurrentHashMap<>();
 
   /**
    * Cache of mappings between Spark and FHIR types.
    */
-  private static final Map<FhirVersionEnum, DataTypeMappings> DATA_TYPE_MAPPINGS = new EnumMap<>(
-      FhirVersionEnum.class);
+  private static final Map<FhirVersionEnum, DataTypeMappings> DATA_TYPE_MAPPINGS = new ConcurrentHashMap<>();
 
   /**
    * Cache of FHIR contexts.
    */
-  private static final Map<FhirVersionEnum, FhirContext> FHIR_CONTEXTS = new EnumMap<>(
-      FhirVersionEnum.class);
+  private static final Map<FhirVersionEnum, FhirContext> FHIR_CONTEXTS = new ConcurrentHashMap<>();
 
   /**
-   * The FHIR context used by the encoders instance.
+   * @return the FHIR context used by encoders produced by this instance.
    */
+  @Getter
   private final FhirContext context;
 
   /**
@@ -101,9 +99,9 @@ public class FhirEncoders {
   private final DataTypeMappings mappings;
 
   /**
-   * Cached encoders to avoid having to re-create them.
+   * Cached encoders to avoid having to re-create them. Thread-safe using ConcurrentHashMap.
    */
-  private final Map<Integer, ExpressionEncoder<?>> encoderCache = new HashMap<>();
+  private final Map<Integer, ExpressionEncoder<?>> encoderCache = new ConcurrentHashMap<>();
 
   /**
    * The maximum nesting level for expansion of recursive data types.
@@ -139,6 +137,19 @@ public class FhirEncoders {
     this.enableExtensions = enableExtensions;
   }
 
+  public static FhirEncoders getOrCreate(@Nonnull final FhirVersionEnum fhirVersion,
+      final int maxNestingLevel,
+      @Nonnull final Set<String> openTypes, final boolean enableExtensions) {
+    final FhirEncodersKey key = new FhirEncodersKey(fhirVersion, maxNestingLevel, openTypes,
+        enableExtensions);
+    return ENCODERS.computeIfAbsent(key, k -> {
+      final FhirContext context = contextFor(k.getFhirVersion());
+      final DataTypeMappings mappings = mappingsFor(k.getFhirVersion());
+      return new FhirEncoders(context, mappings, k.getMaxNestingLevel(), k.getOpenTypes(),
+          k.isEnableExtensions());
+    });
+  }
+
   /**
    * Returns the FHIR context for the given version. This is effectively a cache so consuming code
    * does not need to recreate the context repeatedly.
@@ -147,9 +158,7 @@ public class FhirEncoders {
    * @return the FhirContext
    */
   public static FhirContext contextFor(final FhirVersionEnum fhirVersion) {
-    synchronized (FHIR_CONTEXTS) {
-      return FHIR_CONTEXTS.computeIfAbsent(fhirVersion, v -> new FhirContext(fhirVersion));
-    }
+    return FHIR_CONTEXTS.computeIfAbsent(fhirVersion, v -> new FhirContext(fhirVersion));
   }
 
   /**
@@ -159,41 +168,28 @@ public class FhirEncoders {
    * @return a DataTypeMappings instance.
    */
   static DataTypeMappings mappingsFor(final FhirVersionEnum fhirVersion) {
+    return DATA_TYPE_MAPPINGS.computeIfAbsent(fhirVersion, version -> {
+      final String dataTypesClassName;
 
-    synchronized (DATA_TYPE_MAPPINGS) {
-
-      DataTypeMappings mappings = DATA_TYPE_MAPPINGS.get(fhirVersion);
-
-      if (mappings == null) {
-        final String dataTypesClassName;
-
-        if (fhirVersion == FhirVersionEnum.R4) {
-          dataTypesClassName = "au.csiro.pathling.encoders.datatypes.R4DataTypeMappings";
-        } else {
-          throw new IllegalArgumentException("Unsupported FHIR version: " + fhirVersion);
-        }
-
-        try {
-
-          mappings = (DataTypeMappings) Class.forName(dataTypesClassName).getDeclaredConstructor()
-              .newInstance();
-
-          DATA_TYPE_MAPPINGS.put(fhirVersion, mappings);
-
-        } catch (final Exception createClassException) {
-
-          throw new IllegalStateException("Unable to create the data mappings "
-              + dataTypesClassName
-              + ". This is typically because the HAPI FHIR dependencies for "
-              + "the underlying data model are note present. Make sure the "
-              + " hapi-fhir-structures-* and hapi-fhir-validation-resources-* "
-              + " jars for the desired FHIR version are available on the class path.",
-              createClassException);
-        }
+      if (version == FhirVersionEnum.R4) {
+        dataTypesClassName = "au.csiro.pathling.encoders.datatypes.R4DataTypeMappings";
+      } else {
+        throw new IllegalArgumentException("Unsupported FHIR version: " + version);
       }
 
-      return mappings;
-    }
+      try {
+        return (DataTypeMappings) Class.forName(dataTypesClassName).getDeclaredConstructor()
+            .newInstance();
+      } catch (final Exception createClassException) {
+        throw new IllegalStateException("Unable to create the data mappings "
+            + dataTypesClassName
+            + ". This is typically because the HAPI FHIR dependencies for "
+            + "the underlying data model are note present. Make sure the "
+            + " hapi-fhir-structures-* and hapi-fhir-validation-resources-* "
+            + " jars for the desired FHIR version are available on the class path.",
+            createClassException);
+      }
+    });
   }
 
   /**
@@ -201,8 +197,8 @@ public class FhirEncoders {
    *
    * @return a builder for encoders.
    */
-  public static Builder forR4() {
-
+  @Nonnull
+  public static FhirEncoderBuilder forR4() {
     return forVersion(FhirVersionEnum.R4);
   }
 
@@ -212,8 +208,9 @@ public class FhirEncoders {
    * @param fhirVersion the version of FHIR to use.
    * @return a builder for encoders.
    */
-  public static Builder forVersion(final FhirVersionEnum fhirVersion) {
-    return new Builder(fhirVersion);
+  @Nonnull
+  public static FhirEncoderBuilder forVersion(final FhirVersionEnum fhirVersion) {
+    return new FhirEncoderBuilder(fhirVersion);
   }
 
   /**
@@ -225,7 +222,6 @@ public class FhirEncoders {
    */
   @SuppressWarnings("unchecked")
   public final <T extends IBaseResource> ExpressionEncoder<T> of(final String resourceName) {
-
     final RuntimeResourceDefinition definition = context.getResourceDefinition(resourceName);
     return of((Class<T>) definition.getImplementingClass());
   }
@@ -239,21 +235,18 @@ public class FhirEncoders {
    */
   @SuppressWarnings("unchecked")
   public final <T extends IBaseResource> ExpressionEncoder<T> of(final Class<T> type) {
-
     final RuntimeResourceDefinition definition =
         context.getResourceDefinition(type);
 
     final int key = type.getName().hashCode();
 
-    synchronized (encoderCache) {
-      return (ExpressionEncoder<T>) encoderCache.computeIfAbsent(key, k ->
-          EncoderBuilder.of(definition,
-              context,
-              mappings,
-              maxNestingLevel,
-              JavaConverters.asScalaSet(openTypes).toSet(),
-              enableExtensions));
-    }
+    return (ExpressionEncoder<T>) encoderCache.computeIfAbsent(key, k ->
+        EncoderBuilder.of(definition,
+            context,
+            mappings,
+            maxNestingLevel,
+            JavaConverters.asScalaSet(openTypes).toSet(),
+            enableExtensions));
   }
 
   /**
@@ -262,130 +255,7 @@ public class FhirEncoders {
    * @return the version of FHIR used by encoders produced by this instance.
    */
   public FhirVersionEnum getFhirVersion() {
-
     return context.getVersion().getVersion();
   }
 
-  /**
-   * Returns the FHIR context used by encoders produced by this instance.
-   *
-   * @return the FHIR context used by encoders produced by this instance.
-   */
-  public FhirContext getContext() {
-    return context;
-  }
-
-  /**
-   * Immutable key to look up a matching encoders instance by configuration.
-   */
-  @Value
-  private static class EncodersKey {
-
-    FhirVersionEnum fhirVersion;
-    int maxNestingLevel;
-    Set<String> openTypes;
-    boolean enableExtensions;
-  }
-
-  /**
-   * Encoder builder. Specifies FHIR version and other parameters affecting encoder functionality,
-   * such as max nesting level for recursive types with the fluent API.
-   */
-  public static class Builder {
-
-    private static final boolean DEFAULT_ENABLE_EXTENSIONS = false;
-    private static final int DEFAULT_MAX_NESTING_LEVEL = 0;
-
-    private final FhirVersionEnum fhirVersion;
-    private int maxNestingLevel;
-    private Set<String> openTypes;
-    private boolean enableExtensions;
-
-    Builder(final FhirVersionEnum fhirVersion) {
-      this.fhirVersion = fhirVersion;
-      this.maxNestingLevel = DEFAULT_MAX_NESTING_LEVEL;
-      this.openTypes = Collections.emptySet();
-      this.enableExtensions = DEFAULT_ENABLE_EXTENSIONS;
-    }
-
-    /**
-     * Set the maximum nesting level for recursive data types. Zero (0) indicates that all direct or
-     * indirect fields of type T in element of type T should be skipped.
-     *
-     * @param maxNestingLevel the maximum nesting level
-     * @return this builder
-     */
-    public Builder withMaxNestingLevel(final int maxNestingLevel) {
-      this.maxNestingLevel = maxNestingLevel;
-      return this;
-    }
-
-    /**
-     * Sets the list of types that are encoded within open types, such as extensions.
-     *
-     * @param openTypes the list of types
-     * @return this builder
-     */
-    public Builder withOpenTypes(final Set<String> openTypes) {
-      this.openTypes = openTypes;
-      return this;
-    }
-
-    /**
-     * Sets the reasonable default list of types to be encoded for open types, such as extensions.
-     *
-     * @return this builder
-     */
-    public Builder withStandardOpenTypes() {
-      return withOpenTypes(STANDARD_OPEN_TYPES);
-    }
-
-    /**
-     * Sets the list of all types to be encoded for open types, such as extensions.
-     *
-     * @return this builder
-     */
-    public Builder withAllOpenTypes() {
-      return withOpenTypes(ALL_OPEN_TYPES);
-    }
-
-    /**
-     * Switches on/off the support for extensions in encoders.
-     *
-     * @param enable if extensions should be enabled.
-     * @return this builder
-     */
-    public Builder withExtensionsEnabled(final boolean enable) {
-      this.enableExtensions = enable;
-      return this;
-    }
-
-    /**
-     * Get or create an {@link FhirEncoders} instance that matches the builder's configuration.
-     *
-     * @return an Encoders instance.
-     */
-    public FhirEncoders getOrCreate() {
-
-      final EncodersKey key = new EncodersKey(fhirVersion, maxNestingLevel,
-          openTypes, enableExtensions);
-
-      synchronized (ENCODERS) {
-
-        FhirEncoders encoders = ENCODERS.get(key);
-
-        // No instance with the given configuration found,
-        // so create one.
-        if (encoders == null) {
-
-          final FhirContext context = contextFor(fhirVersion);
-          final DataTypeMappings mappings = mappingsFor(fhirVersion);
-          encoders = new FhirEncoders(context, mappings, maxNestingLevel, openTypes,
-              enableExtensions);
-          ENCODERS.put(key, encoders);
-        }
-        return encoders;
-      }
-    }
-  }
 }

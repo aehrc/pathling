@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.utilities;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -21,7 +22,7 @@ class ResourceCloserTest {
 
   @Test
   void testEmptyListOfResourceIsNoop() {
-    new ResourceCloser().close();
+    assertDoesNotThrow(() -> new ResourceCloser().close());
   }
 
   @Test

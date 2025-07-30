@@ -19,6 +19,7 @@ package au.csiro.pathling.library;
 
 import ca.uhn.fhir.context.FhirVersionEnum;
 import jakarta.annotation.Nonnull;
+import java.io.Serial;
 import java.util.Iterator;
 import java.util.stream.StreamSupport;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
@@ -33,6 +34,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 public class DecodeResourceMapPartitions<T extends IBaseResource> implements
     MapPartitionsFunction<T, String> {
 
+  @Serial
   private static final long serialVersionUID = -13742787546282853L;
 
   @Nonnull

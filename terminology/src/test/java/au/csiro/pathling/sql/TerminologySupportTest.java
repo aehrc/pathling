@@ -73,8 +73,9 @@ class TerminologySupportTest {
 
   @Test
   void throwInvalidUserInputWhenConvertingInvalidCode() {
+    final List<String> invalid = List.of("invalid");
     final InvalidUserInputError ex = assertThrows(InvalidUserInputError.class,
-        () -> TerminologySupport.equivalenceCodesToEnum(List.of("invalid")));
+        () -> TerminologySupport.equivalenceCodesToEnum(invalid));
 
     assertEquals("Unknown ConceptMapEquivalence code 'invalid'", ex.getMessage());
   }

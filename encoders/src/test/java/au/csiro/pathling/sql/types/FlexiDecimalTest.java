@@ -24,12 +24,13 @@
 package au.csiro.pathling.sql.types;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 
-public class FlexiDecimalTest {
+class FlexiDecimalTest {
   
   @Test
   void testNormalize() {
@@ -41,12 +42,11 @@ public class FlexiDecimalTest {
     assertNull(FlexiDecimal.normalize(new BigDecimal("1.0E+38")));
 
     // normalize decimals to reduced precision
-    assertEquals(new BigDecimal("0.010000000000000000000000000000000000000"),
-        FlexiDecimal.normalize(new BigDecimal("0.010000000000000000000000000000000000000000000")));
-
-    assertEquals(FlexiDecimal.MAX_PRECISION,
-        FlexiDecimal.normalize(new BigDecimal("0.010000000000000000000000000000000000000000000"))
-            .precision());
+    final BigDecimal normalized = FlexiDecimal.normalize(
+        new BigDecimal("0.010000000000000000000000000000000000000000000"));
+    assertNotNull(normalized);
+    assertEquals(new BigDecimal("0.010000000000000000000000000000000000000"), normalized);
+    assertEquals(FlexiDecimal.MAX_PRECISION, normalized.precision());
 
     assertEquals(new BigDecimal("0.015555555555555555555555555555555555556"),
         FlexiDecimal.normalize(new BigDecimal(

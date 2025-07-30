@@ -7,18 +7,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.Value;
 
 /**
  * A chain of variable resolvers that can be queried in sequence.
  *
  * @author John Grimes
  */
-@Value
-public class VariableResolverChain implements EnvironmentVariableResolver {
-
-  @Nonnull
-  List<EnvironmentVariableResolver> resolvers;
+public record VariableResolverChain(@Nonnull List<EnvironmentVariableResolver> resolvers) implements
+    EnvironmentVariableResolver {
 
   @Override
   public Optional<Collection> get(@Nonnull final String name) {
@@ -62,7 +58,7 @@ public class VariableResolverChain implements EnvironmentVariableResolver {
       @Nonnull final Collection inputContext,
       @Nonnull final Map<String, Collection> additionalVariables) {
     final VariableResolverChain chain = withDefaults(resource, inputContext);
-    chain.getResolvers().add(new SuppliedVariableResolver(additionalVariables));
+    chain.resolvers().add(new SuppliedVariableResolver(additionalVariables));
     return chain;
   }
 

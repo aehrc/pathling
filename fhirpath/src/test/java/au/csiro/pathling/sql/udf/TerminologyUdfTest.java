@@ -43,14 +43,12 @@ import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers.LookupExpectations;
-import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -78,26 +76,23 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   @Autowired
   TerminologyService terminologyService;
 
-  @Autowired
-  IParser jsonParser;
-
   @BeforeEach
   void setUp() {
     SharedMocks.resetAll();
   }
 
-  private final static Coding CODING_1 = new Coding(LOINC_URL, "10337-4",
+  private static final Coding CODING_1 = new Coding(LOINC_URL, "10337-4",
       "Procollagen type I [Mass/volume] in Serum");
-  private final static Coding CODING_2 = new Coding(LOINC_URL, "10428-1",
+  private static final Coding CODING_2 = new Coding(LOINC_URL, "10428-1",
       "Varicella zoster virus immune globulin given [Volume]");
-  private final static Coding CODING_3 = new Coding(LOINC_URL, "10555-1", null);
-  private final static Coding CODING_4 = new Coding(LOINC_URL, "10665-8",
+  private static final Coding CODING_3 = new Coding(LOINC_URL, "10555-1", null);
+  private static final Coding CODING_4 = new Coding(LOINC_URL, "10665-8",
       "Fungus colony count [#/volume] in Unspecified specimen by Environmental culture");
-  private final static Coding CODING_5 = new Coding(SNOMED_URL, "416399002",
+  private static final Coding CODING_5 = new Coding(SNOMED_URL, "416399002",
       "Procollagen type I amino-terminal propeptide level");
 
-  private final static String CODING_1_VALUE_SET_URI = "uiid:ValueSet_coding1";
-  private final static String CODING_2_VALUE_SET_URI = "uiid:ValueSet_coding2";
+  private static final String CODING_1_VALUE_SET_URI = "uuid:ValueSet_coding1";
+  private static final String CODING_2_VALUE_SET_URI = "uuid:ValueSet_coding2";
 
   private static final Coding USE_A = new Coding("uuid:use", "useA", "Use A");
   private static final Coding USE_B = new Coding("uuid:use", "useB", "Use B");
@@ -366,7 +361,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
 
   @Nonnull
   private static List<Row> toArray(@Nonnull final Coding... codings) {
-    return Stream.of(codings).map(CodingEncoding::encode).collect(Collectors.toList());
+    return Stream.of(codings).map(CodingEncoding::encode).toList();
   }
 
   @Test
@@ -633,22 +628,23 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
 
   @Test
   void testInputErrorForPropertyOfUnknownType() {
+    final Column nullColumn = lit(null);
     assertEquals(
         "Type: 'instant' is not supported for 'property' udf",
         assertThrows(InvalidUserInputError.class,
-            () -> Terminology.property_of(lit(null), "display",
+            () -> Terminology.property_of(nullColumn, "display",
                 FHIRDefinedType.INSTANT)).getMessage()
     );
     assertEquals(
         "Type: 'Quantity' is not supported for 'property' udf",
         assertThrows(InvalidUserInputError.class,
-            () -> Terminology.property_of(lit(null), "display", "Quantity")).getMessage()
+            () -> Terminology.property_of(nullColumn, "display", "Quantity")).getMessage()
     );
 
     assertEquals(
         "Unknown FHIRDefinedType code 'NotAFhirType'",
         assertThrows(InvalidUserInputError.class,
-            () -> Terminology.property_of(lit(null), "display", "NotAFhirType")).getMessage()
+            () -> Terminology.property_of(nullColumn, "display", "NotAFhirType")).getMessage()
     );
   }
 
@@ -732,8 +728,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   public void testDesignationWithNoUse() {
 
     //noinspection Convert2MethodRef
-    final Dataset<Row> resultA = callWithDesignationTestData(
-        coding -> designation(coding));
+    final Dataset<Row> resultA = callWithDesignationTestData(Terminology::designation);
 
     final Dataset<Row> expectedResultA = DatasetBuilder.of(spark).withIdColumn("id")
         .withColumn("result", DataTypes.createArrayType(DataTypes.StringType))

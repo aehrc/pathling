@@ -21,6 +21,7 @@ import static au.csiro.pathling.fhirpath.CodingHelpers.codingEquals;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.Serial;
 import java.io.Serializable;
 import org.hl7.fhir.r4.model.Base;
 import org.hl7.fhir.r4.model.Coding;
@@ -34,7 +35,9 @@ public final class FhirMatchers {
 
   static class FhirDeepMatcher<T extends Base> implements ArgumentMatcher<T>, Serializable {
 
+    @Serial
     private static final long serialVersionUID = -7388475686640982425L;
+    
     @Nonnull
     private final T expected;
 
@@ -48,15 +51,8 @@ public final class FhirMatchers {
     }
   }
 
-  private static class CodingMatcher implements ArgumentMatcher<Coding>, Serializable {
-
-    private static final long serialVersionUID = -4669154939085510783L;
-    @Nonnull
-    private final Coding expected;
-
-    private CodingMatcher(@Nonnull final Coding expected) {
-      this.expected = expected;
-    }
+  private record CodingMatcher(@Nonnull Coding expected) implements ArgumentMatcher<Coding>,
+      Serializable {
 
     @Override
     public boolean matches(@Nullable final Coding actual) {
