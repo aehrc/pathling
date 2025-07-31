@@ -100,6 +100,15 @@ jobs:
               "password": "${{ secrets.OSSRH_PASSWORD }}"
             }]
 
+      - name: Run security scan
+        uses: aquasecurity/trivy-action@0.32.0
+        with:
+          scan-type: repo
+          scan-ref: .
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-results.sarif
+          skip-files: examples/**/*,**/target/**/*,sql-on-fhir/sof-js/package-lock.json,licenses/**/*,site/package-lock.json
       - name: Run deploy goal (pre-release)
         env:
           PYSPARK_PYTHON: ${{ steps.python-install.outputs.python-path }}
@@ -112,6 +121,7 @@ jobs:
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
           -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
           -Dsonar.host.url=https://sonarcloud.io \
+          -Dsonar.sarifReportPaths=trivy-results.sarif \
           -pl '!benchmark' -Pdocs,mavenPreRelease
         timeout-minutes: 60
 

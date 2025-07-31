@@ -1,0 +1,17 @@
+# Netty is a provided dependency, we do not bundle it into our distribution.
+GHSA-xpw8-rcwv-8f8p
+CVE-2024-29025
+CVE-2024-47535
+CVE-2025-25193
+CVE-2025-24970
+
+# The vulnerable version of protobuf-java is a transitive provided dependency, we do not bundle it into our distribution.
+CVE-2024-7254
+
+# Ivy is a provided dependency, we do not bundle it into our distribution.
+CVE-2022-46751
+
+# Zookeeper is a provided dependency, we do not bundle it into our distribution.
+CVE-2023-44981
+CVE-2024-23944
+
