@@ -71,8 +71,12 @@ jobs:
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
-      - name: Install texlive and libcurl
-        run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra libcurl4-openssl-dev
+      - name: Install TinyTeX and libcurl
+        # These are required for building the R package documentation.
+        run: |
+          wget -qO- "https://yihui.org/tinytex/install-bin-unix.sh" | sh
+          echo "$HOME/bin" >> $GITHUB_PATH
+          sudo apt-get install -y libcurl4-openssl-dev
 
       - name: Run install goal
         if: (!(startsWith(steps.extract-info.outputs.branch_name , 'release/') && endsWith(steps.extract-info.outputs.maven_version, '-SNAPSHOT')))
