@@ -34,16 +34,16 @@ from pyspark.sql import SparkSession
 
 spark = (
     SparkSession.builder.config(
-            "spark.jars.packages",
-            "au.csiro.pathling:library-runtime:7.1.0,"
-            "io.delta:delta-spark_2.12:3.1.0,"
+        "spark.jars.packages",
+        "au.csiro.pathling:library-runtime:8.0.0,"
+        "io.delta:delta-spark_2.12:3.3.2,"
     )
     .config(
-            "spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension"
+        "spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension"
     )
     .config(
-            "spark.sql.catalog.spark_catalog",
-            "org.apache.spark.sql.delta.catalog.DeltaCatalog",
+        "spark.sql.catalog.spark_catalog",
+        "org.apache.spark.sql.delta.catalog.DeltaCatalog",
     ).getOrCreate()
 )
 
@@ -58,12 +58,12 @@ library(sparklyr)
 library(pathling)
 
 sc <- spark_connect(master = "local",
-                    packages = c(paste("au.csiro.pathling:library-runtime:", pathling_version()), 
+                    packages = c(paste("au.csiro.pathling:library-runtime:", pathling_version()),
                                  "io.delta:delta-spark_2.12:3.1.0"),
                     config = list("sparklyr.shell.conf" = c(
-                      "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
-                      "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
-                    )), version = "3.4.0")
+                            "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
+                            "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
+                    )), version = "3.5.6")
 
 pc <- pathling_connect(sc)
 ```
@@ -75,12 +75,12 @@ pc <- pathling_connect(sc)
 import au.csiro.pathling.library.PathlingContext
 
 val spark = SparkSession.builder
-  .config("spark.jars.packages", "au.csiro.pathling:library-runtime:7.1.0," +
-      "io.delta:delta-spark_2.12:3.1.0")
-  .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-  .config("spark.sql.catalog.spark_catalog",
-    "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-  .getOrCreate()
+        .config("spark.jars.packages", "au.csiro.pathling:library-runtime:8.0.0," +
+                "io.delta:delta-spark_2.12:3.1.0")
+        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+        .config("spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+        .getOrCreate()
 
 val pc = PathlingContext.create(spark)
 ```
@@ -96,14 +96,14 @@ class MyApp {
 
     public static void main(String[] args) {
         SparkSession spark = SparkSession.builder()
-            .config("spark.jars.packages", 
-                    "au.csiro.pathling:library-runtime:7.1.0," +
-                    "io.delta:delta-spark_2.12:3.1.0")
-            .config("spark.sql.extensions", 
-                    "io.delta.sql.DeltaSparkSessionExtension")
-            .config("spark.sql.catalog.spark_catalog",
-                    "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-            .getOrCreate();
+                .config("spark.jars.packages",
+                        "au.csiro.pathling:library-runtime:8.0.0," +
+                                "io.delta:delta-spark_2.12:3.1.0")
+                .config("spark.sql.extensions",
+                        "io.delta.sql.DeltaSparkSessionExtension")
+                .config("spark.sql.catalog.spark_catalog",
+                        "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+                .getOrCreate();
         PathlingContext pc = PathlingContext.create(spark);
     }
 }
