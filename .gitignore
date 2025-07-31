@@ -39,3 +39,4 @@ spark-warehouse
 /lib/R/pathlyr/.Rhistory
 *.Rcheck
 .aider*
+dependency-reduced-pom.xml
