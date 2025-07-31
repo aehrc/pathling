@@ -82,8 +82,12 @@ jobs:
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
-      - name: Install texlive and libcurl
-        run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra libcurl4-openssl-dev
+      - name: Install TinyTeX and libcurl
+        # These are required for building the R package documentation.
+        run: |
+          wget -qO- "https://yihui.org/tinytex/install-bin-unix.sh" | sh
+          echo "$HOME/bin" >> $GITHUB_PATH
+          sudo apt-get install -y libcurl4-openssl-dev
 
       - name: Install GPG key
         run: |
@@ -173,12 +177,6 @@ jobs:
         with:
           name: site
           path: site/target/site/
-
-      - name: Save SARIF report
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-results
-          path: trivy-results.sarif
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
