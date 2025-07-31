@@ -38,23 +38,35 @@ public enum FhirPathType {
    */
   STRING("String", DataTypes.StringType, StringCollection.class, FHIRDefinedType.STRING),
 
-  /** Integer FHIRPath type. */
+  /**
+   * Integer FHIRPath type.
+   */
   INTEGER("Integer", DataTypes.IntegerType, IntegerCollection.class, FHIRDefinedType.INTEGER),
 
-  /** Decimal FHIRPath type. */
+  /**
+   * Decimal FHIRPath type.
+   */
   DECIMAL("Decimal", DecimalCollection.getDecimalType(), DecimalCollection.class,
       FHIRDefinedType.DECIMAL),
 
-  /** Date FHIRPath type. */
+  /**
+   * Date FHIRPath type.
+   */
   DATE("Date", DataTypes.StringType, DateCollection.class, FHIRDefinedType.DATE),
 
-  /** DateTime FHIRPath type. */
+  /**
+   * DateTime FHIRPath type.
+   */
   DATETIME("DateTime", DataTypes.StringType, DateTimeCollection.class, FHIRDefinedType.DATETIME),
 
-  /** Time FHIRPath type. */
+  /**
+   * Time FHIRPath type.
+   */
   TIME("Time", DataTypes.StringType, TimeCollection.class, FHIRDefinedType.TIME),
 
-  /** Coding FHIRPath type. */
+  /**
+   * Coding FHIRPath type.
+   */
   CODING("Coding", CodingEncoding.codingStructType(), CodingCollection.class,
       FHIRDefinedType.CODING);
 
@@ -128,6 +140,9 @@ public enum FhirPathType {
     return Optional.ofNullable(FHIR_TYPE_TO_FHIR_PATH_TYPE.get(fhirType));
   }
 
+  /**
+   * @return a list of FHIR types that correspond to this FhirPathType
+   */
   @Nonnull
   public List<FHIRDefinedType> getFhirTypes() {
     // This method is currently returning an empty list
