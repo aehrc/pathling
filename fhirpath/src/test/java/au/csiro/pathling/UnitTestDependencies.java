@@ -69,7 +69,6 @@ public class UnitTestDependencies {
       @SuppressWarnings("unused") @Nonnull final Environment environment,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
 
-    // TODO: See if these properties can be set from environment (extract common code from Spark class)
     final SparkSession spark = SparkSession.builder()
         .master("local[1]")
         .appName("pathling-unittest")
