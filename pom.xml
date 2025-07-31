@@ -227,7 +227,7 @@
       <dependency>
         <groupId>au.csiro.fhir</groupId>
         <artifactId>bulk-export</artifactId>
-        <version>1.0.3-SNAPSHOT</version>
+        <version>1.0.3</version>
       </dependency>
       <!-- Ensure that consistent and correct versions of Jackson and Jersey are used. -->
       <dependency>
