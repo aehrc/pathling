@@ -24,7 +24,6 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.Serial;
 import java.util.Iterator;
-import java.util.Objects;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
