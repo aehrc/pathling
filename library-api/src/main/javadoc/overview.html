@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Pathling Library API</title>
+</head>
+<body>
+<h1>Pathling Library API</h1>
+
+<p>The Pathling Library API provides a comprehensive interface for performing analytics on FHIR 
+healthcare data using Apache Spark. This library enables users to efficiently query, transform, 
+and analyze FHIR resources at scale.</p>
+
+<h2>Features</h2>
+
+<ul>
+    <li><strong>Data sources</strong> - Read FHIR data from various formats including NDJSON, 
+    Parquet, Delta Lake, databases, and FHIR bulk export</li>
+    <li><strong>Data sinks</strong> - Write processed data to multiple formats and destinations</li>
+    <li><strong>SQL on FHIR</strong> - Create tabular views from FHIR data</li>
+    <li><strong>Terminology functions</strong> - Integrate with FHIR terminology servers for 
+    code validation and expansion</li>
+</ul>
+
+<h2>Getting Started</h2>
+
+<p>The primary entry point for the library is the {@link au.csiro.pathling.library.PathlingContext} 
+class, which provides access to all major functionality:</p>
+
+<pre><code>
+// Create a PathlingContext
+PathlingContext pc = PathlingContext.create(spark);
+
+// Read FHIR data
+NdjsonSource patients = pc.read().ndjson("path/to/Patient.ndjson");
+
+// Execute queries
+FhirView view = FhirView.ofResource(ResourceType.OBSERVATION)
+        .select(
+                columns(
+                        column("patient_id", "getResourceKey()")
+                ),
+                forEach("code.coding",
+                        column("code_system", "system"),
+                        column("code_code", "code"),
+                        column("code_display", "display")
+                )
+        ).build();
+
+Dataset&lt;Row&gt; result = data.view(view).execute();
+</code></pre>
+
+<h2>Key Packages</h2>
+
+<ul>
+    <li><code>au.csiro.pathling.library</code> - Core API classes including PathlingContext</li>
+    <li><code>au.csiro.pathling.library.io.source</code> - Data source implementations</li>
+    <li><code>au.csiro.pathling.library.io.sink</code> - Data sink implementations</li>
+    <li><code>au.csiro.pathling.library.query</code> - Query builder</li>
+</ul>
+
+<h2>Documentation</h2>
+
+<p>For comprehensive documentation, examples, and deployment guides, visit the 
+<a href="https://pathling.csiro.au/docs">Pathling documentation site</a>.</p>
+
+</body>
+</html>

@@ -286,6 +286,9 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+              <overview>src/main/javadoc/overview.html</overview>
+            </configuration>
           </plugin>
         </plugins>
       </build>
