@@ -25,10 +25,10 @@ public class InMemoryFunctionRegistry implements FunctionRegistry {
   @Nonnull
   @Override
   public NamedFunction getInstance(@Nonnull final String name)
-      throws NoSuchFunctionException {
+      throws NoSuchFunctionError {
     final NamedFunction function = functions.get(name);
     if (function == null) {
-      throw new NoSuchFunctionException("Unsupported function: " + name);
+      throw new NoSuchFunctionError("Unsupported function: " + name);
     }
     return function;
   }

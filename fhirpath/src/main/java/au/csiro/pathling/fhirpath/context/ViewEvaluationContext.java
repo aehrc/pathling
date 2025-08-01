@@ -22,7 +22,7 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
-import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
+import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionError;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 
@@ -45,9 +45,11 @@ import java.util.Optional;
  * @param functionRegistry The function registry that provides access to FHIRPath functions.
  * @param resourceResolver The resource resolver that provides access to FHIR resources.
  */
-public record ViewEvaluationContext(@Nonnull FhirPathContext fhirPathContext,
-                                    @Nonnull FunctionRegistry functionRegistry,
-                                    @Nonnull ResourceResolver resourceResolver) implements
+public record ViewEvaluationContext(
+    @Nonnull FhirPathContext fhirPathContext,
+    @Nonnull FunctionRegistry functionRegistry,
+    @Nonnull ResourceResolver resourceResolver
+) implements
     EvaluationContext {
 
   /**
@@ -69,7 +71,7 @@ public record ViewEvaluationContext(@Nonnull FhirPathContext fhirPathContext,
   @Nonnull
   @Override
   public NamedFunction resolveFunction(@Nonnull final String name)
-      throws NoSuchFunctionException {
+      throws NoSuchFunctionError {
     return functionRegistry.getInstance(name);
   }
 

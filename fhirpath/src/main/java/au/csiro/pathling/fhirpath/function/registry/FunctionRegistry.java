@@ -15,9 +15,9 @@ public interface FunctionRegistry {
    *
    * @param name The name of the function
    * @return An instance of a T
-   * @throws NoSuchFunctionException If the function is not found
+   * @throws NoSuchFunctionError If the function is not found
    */
   @Nonnull
-  NamedFunction getInstance(@Nonnull final String name) throws NoSuchFunctionException;
+  NamedFunction getInstance(@Nonnull final String name) throws NoSuchFunctionError;
 
 }

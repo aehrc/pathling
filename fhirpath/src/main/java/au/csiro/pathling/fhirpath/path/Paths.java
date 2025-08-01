@@ -24,7 +24,7 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.function.FunctionInput;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
+import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionError;
 import au.csiro.pathling.fhirpath.operator.BinaryOperator;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorInput;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
@@ -192,7 +192,7 @@ public final class Paths {
       final NamedFunction function;
       try {
         function = context.resolveFunction(functionIdentifier);
-      } catch (final NoSuchFunctionException e) {
+      } catch (final NoSuchFunctionError e) {
         throw new UnsupportedFhirPathFeatureError(e.getMessage());
       }
       final FunctionInput functionInput = new FunctionInput(context, input, arguments);
