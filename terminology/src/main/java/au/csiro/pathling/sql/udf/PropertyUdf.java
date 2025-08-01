@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.sql.udf;
 
-import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.decode;
+import static au.csiro.pathling.fhirpath.encoding.CodingSchema.decode;
 import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.isValidCoding;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
@@ -31,7 +31,7 @@ import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.STRING;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
+import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Property;
 import au.csiro.pathling.terminology.TerminologyService.PropertyOrDesignation;
@@ -122,7 +122,7 @@ public class PropertyUdf implements SqlFunction,
       case INTEGER -> DataTypes.IntegerType;
       case BOOLEAN -> DataTypes.BooleanType;
       case DECIMAL -> DecimalCustomCoder.decimalType();
-      case CODING -> CodingEncoding.codingStructType();
+      case CODING -> CodingSchema.codingStructType();
       default -> throw new IllegalArgumentException("Cannot map FhirType: " + propertyType);
     };
   }
@@ -178,7 +178,7 @@ public class PropertyUdf implements SqlFunction,
     if (nonNull(objectRows) && CODING.equals(propertyType)) {
       return Stream.of(objectRows)
           .map(Coding.class::cast)
-          .map(CodingEncoding::encode)
+          .map(CodingSchema::encode)
           .toArray(Row[]::new);
     } else {
       return objectRows;

@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.sql.udf;
 
-import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.encode;
+import static au.csiro.pathling.fhirpath.encoding.CodingSchema.encode;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
@@ -58,9 +58,9 @@ public class DisplayUdfTest extends AbstractTerminologyTestBase {
 
   @Test
   void testInvalidCodings() {
-    assertNull(displayUdf.call(encode(INVALID_CODING_0),null));
-    assertNull(displayUdf.call(encode(INVALID_CODING_1),null));
-    assertNull(displayUdf.call(encode(INVALID_CODING_2),null));
+    assertNull(displayUdf.call(encode(INVALID_CODING_0), null));
+    assertNull(displayUdf.call(encode(INVALID_CODING_1), null));
+    assertNull(displayUdf.call(encode(INVALID_CODING_2), null));
     verifyNoMoreInteractions(terminologyService);
   }
 
@@ -71,10 +71,10 @@ public class DisplayUdfTest extends AbstractTerminologyTestBase {
         .withDisplay(CODING_A, DISPLAY_NAME_A, null)
         .withDisplay(CODING_BB_VERSION1, DISPLAY_NAME_B, "xx-XX");
 
-    assertEquals(DISPLAY_NAME_A, displayUdf.call(encode(CODING_A),null));
-    assertEquals(DISPLAY_NAME_B, displayUdf.call(encode(CODING_BB_VERSION1),"xx-XX"));
+    assertEquals(DISPLAY_NAME_A, displayUdf.call(encode(CODING_A), null));
+    assertEquals(DISPLAY_NAME_B, displayUdf.call(encode(CODING_BB_VERSION1), "xx-XX"));
 
     // null when display property it not present
-    assertNull(displayUdf.call(encode(CODING_C),null));
+    assertNull(displayUdf.call(encode(CODING_C), null));
   }
 }

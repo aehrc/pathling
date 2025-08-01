@@ -37,23 +37,43 @@ import org.hl7.fhir.r4.model.Coding;
 
 
 /**
- * Object decoders/encoders for {@link Coding} and collections of it.
+ * A scheme for representing {@link Coding} objects within Spark SQL.
  */
-public interface CodingEncoding {
+public interface CodingSchema {
 
-  /** Field name for the id property. */
+  /**
+   * Field name for the id property.
+   */
   String ID_FIELD = "id";
-  /** Field name for the system property. */
+
+  /**
+   * Field name for the system property.
+   */
+
   String SYSTEM_FIELD = "system";
-  /** Field name for the version property. */
+  /**
+   * Field name for the version property.
+   */
   String VERSION_FIELD = "version";
-  /** Field name for the code property. */
+
+  /**
+   * Field name for the code property.
+   */
   String CODE_FIELD = "code";
-  /** Field name for the display property. */
+
+  /**
+   * Field name for the display property.
+   */
   String DISPLAY_FIELD = "display";
-  /** Field name for the userSelected property. */
+
+  /**
+   * Field name for the userSelected property.
+   */
   String USER_SELECTED_FIELD = "userSelected";
-  /** Field name for the fid property. */
+
+  /**
+   * Field name for the fid property.
+   */
   String FID_FIELD = "_fid";
 
   /**
@@ -64,10 +84,13 @@ public interface CodingEncoding {
     final Metadata metadata = new MetadataBuilder().build();
     final StructField id = new StructField(ID_FIELD, DataTypes.StringType, true, metadata);
     final StructField system = new StructField(SYSTEM_FIELD, DataTypes.StringType, true, metadata);
-    final StructField version = new StructField(VERSION_FIELD, DataTypes.StringType, true, metadata);
+    final StructField version = new StructField(VERSION_FIELD, DataTypes.StringType, true,
+        metadata);
     final StructField code = new StructField(CODE_FIELD, DataTypes.StringType, true, metadata);
-    final StructField display = new StructField(DISPLAY_FIELD, DataTypes.StringType, true, metadata);
-    final StructField userSelected = new StructField(USER_SELECTED_FIELD, DataTypes.BooleanType, true,
+    final StructField display = new StructField(DISPLAY_FIELD, DataTypes.StringType, true,
+        metadata);
+    final StructField userSelected = new StructField(USER_SELECTED_FIELD, DataTypes.BooleanType,
+        true,
         metadata);
     final StructField fid = new StructField(FID_FIELD, DataTypes.IntegerType, true,
         metadata);
@@ -79,15 +102,29 @@ public interface CodingEncoding {
    */
   StructType DATA_TYPE = codingStructType();
 
-  /** Index of the system field in the Coding struct. */
+  /**
+   * Index of the system field in the Coding struct.
+   */
   int SYSTEM_INDEX = DATA_TYPE.fieldIndex(SYSTEM_FIELD);
-  /** Index of the version field in the Coding struct. */
+
+  /**
+   * Index of the version field in the Coding struct.
+   */
   int VERSION_INDEX = DATA_TYPE.fieldIndex(VERSION_FIELD);
-  /** Index of the code field in the Coding struct. */
+
+  /**
+   * Index of the code field in the Coding struct.
+   */
   int CODE_INDEX = DATA_TYPE.fieldIndex(CODE_FIELD);
-  /** Index of the display field in the Coding struct. */
+
+  /**
+   * Index of the display field in the Coding struct.
+   */
   int DISPLAY_INDEX = DATA_TYPE.fieldIndex(DISPLAY_FIELD);
-  /** Index of the userSelected field in the Coding struct. */
+
+  /**
+   * Index of the userSelected field in the Coding struct.
+   */
   int USER_SELECTED_INDEX = DATA_TYPE.fieldIndex(USER_SELECTED_FIELD);
 
 
@@ -142,7 +179,7 @@ public interface CodingEncoding {
   static List<Row> encodeList(@Nullable final List<Coding> codings) {
     return codings == null
            ? null
-           : codings.stream().map(CodingEncoding::encode).toList();
+           : codings.stream().map(CodingSchema::encode).toList();
   }
 
   /**

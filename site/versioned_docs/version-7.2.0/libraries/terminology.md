@@ -29,7 +29,8 @@ process", and a causative agent of "Virus".
 <TabItem value="python" label="Python">
 
 ```python
-from pathling import PathlingContext, to_snomed_coding, to_ecl_value_set, member_of
+from pathling import PathlingContext, to_snomed_coding, to_ecl_value_set,
+    member_of
 
 pc = PathlingContext.create()
 csv = pc.spark.read.csv("conditions.csv")
@@ -42,12 +43,12 @@ VIRAL_INFECTION_ECL = """
 """
 
 csv.select(
-        "CODE",
-        "DESCRIPTION",
-        member_of(
-                to_snomed_coding(csv.CODE),
-                to_ecl_value_set(VIRAL_INFECTION_ECL)
-        ).alias("VIRAL_INFECTION"),
+    "CODE",
+    "DESCRIPTION",
+    member_of(
+        to_snomed_coding(csv.CODE),
+        to_ecl_value_set(VIRAL_INFECTION_ECL)
+    ).alias("VIRAL_INFECTION"),
 ).show()
 ```
 
@@ -178,15 +179,15 @@ pc = PathlingContext.create()
 csv = pc.spark.read.csv("conditions.csv")
 
 translate_result = csv.withColumn(
-        "READ_CODES",
-        translate(
-                to_snomed_coding(csv.CODE),
-                concept_map_uri="http://snomed.info/sct/900000000000207008?"
-                                "fhir_cm=900000000000497000",
-        ).code,
+    "READ_CODES",
+    translate(
+        to_snomed_coding(csv.CODE),
+        concept_map_uri="http://snomed.info/sct/900000000000207008?"
+                        "fhir_cm=900000000000497000",
+    ).code,
 )
 translate_result.select(
-        "CODE", "DESCRIPTION", explode_outer("READ_CODES").alias("READ_CODE")
+    "CODE", "DESCRIPTION", explode_outer("READ_CODES").alias("READ_CODE")
 ).show()
 ```
 
@@ -204,7 +205,7 @@ csv <- pathling_spark(pc) %>%
 translate_result <- csv %>%
         mutate(
                 READ_CODES = !!tx_translate(!!tx_to_snomed_coding(CODE),
-                                             concept_map_uri = "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000")
+                                            concept_map_uri = "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000")
         ) %>%
         mutate(
                 READ_CODES = explode_outer(READ_CODES[['code']])
@@ -318,8 +319,8 @@ left_coding = Coding('http://snomed.info/sct', '232208008')
 right_coding_column = to_snomed_coding(csv.CODE)
 
 csv.select(
-        'CODE', 'DESCRIPTION',
-        subsumes(left_coding, right_coding_column).alias('SUBSUMES')
+    'CODE', 'DESCRIPTION',
+    subsumes(left_coding, right_coding_column).alias('SUBSUMES')
 ).show()
 ```
 
@@ -437,23 +438,24 @@ display term for each code.
 <TabItem value="python" label="Python">
 
 ```python
-from pathling import PathlingContext, to_snomed_coding, property_of, display, PropertyType
+from pathling import PathlingContext, to_snomed_coding, property_of, display,
+    PropertyType
 
 pc = PathlingContext.create()
 csv = pc.spark.read.csv("conditions.csv")
 
 # Get the parent codes for each code in the dataset.
 parents = csv.withColumn(
-        "PARENTS",
-        property_of(to_snomed_coding(csv.CODE), "parent", PropertyType.CODE),
+    "PARENTS",
+    property_of(to_snomed_coding(csv.CODE), "parent", PropertyType.CODE),
 )
 # Split each parent code into a separate row.
 exploded_parents = parents.selectExpr(
-        "CODE", "DESCRIPTION", "explode_outer(PARENTS) AS PARENT"
+    "CODE", "DESCRIPTION", "explode_outer(PARENTS) AS PARENT"
 )
 # Retrieve the preferred term for each parent code.
 with_displays = exploded_parents.withColumn(
-        "PARENT_DISPLAY", display(to_snomed_coding(exploded_parents.PARENT))
+    "PARENT_DISPLAY", display(to_snomed_coding(exploded_parents.PARENT))
 )
 with_displays.show()
 ```
@@ -492,7 +494,7 @@ import au.csiro.pathling.library.PathlingContext
 import au.csiro.pathling.sql.Terminology
 import au.csiro.pathling.sql.Terminology._
 import au.csiro.pathling.library.TerminologyHelpers._
-import au.csiro.pathling.fhirpath.encoding.CodingEncoding
+import au.csiro.pathling.fhirpath.encoding.CodingSchema
 
 val pc = PathlingContext.create()
 val csv = spark.read.csv("conditions.csv")
@@ -586,13 +588,13 @@ csv = pc.spark.read.csv("conditions.csv")
 
 # Get the synonyms for each code in the dataset.
 synonyms = csv.withColumn(
-        "SYNONYMS",
-        designation(to_snomed_coding(csv.CODE),
-                    Coding.of_snomed("900000000000013009")),
+    "SYNONYMS",
+    designation(to_snomed_coding(csv.CODE),
+                Coding.of_snomed("900000000000013009")),
 )
 # Split each synonyms into a separate row.
 exploded_synonyms = synonyms.selectExpr(
-        "CODE", "DESCRIPTION", "explode_outer(SYNONYMS) AS SYNONYM"
+    "CODE", "DESCRIPTION", "explode_outer(SYNONYMS) AS SYNONYM"
 )
 exploded_synonyms.show()
 ```
@@ -612,7 +614,7 @@ synonyms <- csv %>%
         # Get the synonyms for each code in the dataset.
         mutate(
                 SYNONYMS = !!tx_designation(!!tx_to_snomed_coding(CODE),
-                                             !!tx_to_snomed_coding("900000000000013009"))
+                                            !!tx_to_snomed_coding("900000000000013009"))
         ) %>%
         # Split each synonym into a separate row.
         mutate(SYNONYM = explode_outer(SYNONYMS)) %>%
@@ -728,14 +730,14 @@ csv = pc.spark.read.csv("observations.csv")
 
 # Get the display names with default language preferences (in French).
 def_display = csv.withColumn(
-        "DISPLAY", display(to_loinc_coding(csv.CODE))
+    "DISPLAY", display(to_loinc_coding(csv.CODE))
 )
 
 # Get the `display` property values with German as the preferred language.
 def_and_german_display = def_display.withColumn(
-        "DISPLAY_DE",
-        property_of(to_loinc_coding(csv.CODE), "display",
-                    accept_language="de-DE"),
+    "DISPLAY_DE",
+    property_of(to_loinc_coding(csv.CODE), "display",
+                accept_language="de-DE"),
 )
 def_and_german_display.show()
 ```
@@ -862,10 +864,10 @@ the [NHS terminology server](https://ontology.nhs.uk/):
 from pathling import PathlingContext
 
 pc = PathlingContext.create(
-        terminology_server_url='https://ontology.nhs.uk/production1/fhir',
-        token_endpoint='https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token',
-        client_id='[client ID]',
-        client_secret='[client secret]'
+    terminology_server_url='https://ontology.nhs.uk/production1/fhir',
+    token_endpoint='https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token',
+    client_id='[client ID]',
+    client_secret='[client secret]'
 )
 ```
 

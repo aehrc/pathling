@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.sql.udf;
 
-import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.encode;
+import static au.csiro.pathling.fhirpath.encoding.CodingSchema.encode;
 import static au.csiro.pathling.sql.udf.PropertyUdfTest.Values.ofPrimitive;
 import static au.csiro.pathling.test.helpers.FhirMatchers.deepEq;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupLookup;

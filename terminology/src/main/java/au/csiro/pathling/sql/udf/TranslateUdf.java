@@ -24,7 +24,7 @@ import static java.util.Objects.nonNull;
 import static java.util.function.Predicate.not;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
+import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Translation;
@@ -72,16 +72,24 @@ public class TranslateUdf implements SqlFunction,
   public static final Set<String> DEFAULT_EQUIVALENCES = ImmutableSet.of(
       ConceptMapEquivalence.EQUIVALENT.toCode());
 
-  /** The name of the translate UDF function. */
+  /**
+   * The name of the translate UDF function.
+   */
   public static final String FUNCTION_NAME = "translate_coding";
 
-  /** The return type of the translate UDF function. */
-  public static final DataType RETURN_TYPE = DataTypes.createArrayType(CodingEncoding.DATA_TYPE);
+  /**
+   * The return type of the translate UDF function.
+   */
+  public static final DataType RETURN_TYPE = DataTypes.createArrayType(CodingSchema.DATA_TYPE);
 
-  /** The default value for the reverse parameter. */
+  /**
+   * The default value for the reverse parameter.
+   */
   public static final boolean PARAM_REVERSE_DEFAULT = false;
 
-  /** The terminology service factory used to create terminology services. */
+  /**
+   * The terminology service factory used to create terminology services.
+   */
   @Nonnull
   private final TerminologyServiceFactory terminologyServiceFactory;
 

@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.sql.udf;
 
-import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.decode;
+import static au.csiro.pathling.fhirpath.encoding.CodingSchema.decode;
 import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.isValidCoding;
 
 import au.csiro.pathling.terminology.TerminologyService;
@@ -55,10 +55,14 @@ public class DisplayUdf implements SqlFunction,
    */
   public static final String FUNCTION_NAME = "display";
 
-  /** The return type of the display UDF function, which is a string. */
+  /**
+   * The return type of the display UDF function, which is a string.
+   */
   public static final DataType RETURN_TYPE = DataTypes.StringType;
 
-  /** The terminology service factory used to create terminology services. */
+  /**
+   * The terminology service factory used to create terminology services.
+   */
   @Nonnull
   private final TerminologyServiceFactory terminologyServiceFactory;
 

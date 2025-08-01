@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.sql.udf;
 
-import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.encode;
+import static au.csiro.pathling.fhirpath.encoding.CodingSchema.encode;
 import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.EQUIVALENT;
 import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.NARROWER;
 import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.RELATEDTO;

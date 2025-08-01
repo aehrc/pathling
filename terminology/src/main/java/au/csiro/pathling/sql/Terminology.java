@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.sql;
 
-import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.toLiteralColumn;
+import static au.csiro.pathling.fhirpath.encoding.CodingSchema.toLiteralColumn;
 import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
 import static java.util.Objects.nonNull;
 import static org.apache.spark.sql.functions.array;

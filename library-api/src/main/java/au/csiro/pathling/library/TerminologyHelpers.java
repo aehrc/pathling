@@ -19,7 +19,7 @@ package au.csiro.pathling.library;
 
 import static org.apache.spark.sql.functions.lit;
 
-import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
+import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.net.URLEncoder;
@@ -44,7 +44,7 @@ public class TerminologyHelpers {
   @Nonnull
   public static Column toCoding(@Nonnull final Column codingColumn, @Nullable final String system,
       @Nullable final String version) {
-    return CodingEncoding.toStruct(
+    return CodingSchema.toStruct(
         lit(null),
         lit(system),
         lit(version),

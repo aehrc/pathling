@@ -16,7 +16,7 @@ import au.csiro.pathling.fhirpath.definition.defaults.DefaultCompositeDefinition
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceTag;
-import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
+import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -154,7 +154,7 @@ public class YamlSupport {
       FHIRDefinedType.INTEGER, DataTypes.IntegerType,
       FHIRDefinedType.BOOLEAN, DataTypes.BooleanType,
       FHIRDefinedType.DECIMAL, DecimalCollection.DECIMAL_TYPE,
-      FHIRDefinedType.CODING, CodingEncoding.codingStructType(),
+      FHIRDefinedType.CODING, CodingSchema.codingStructType(),
       FHIRDefinedType.NULL, DataTypes.NullType
   );
   public static final Yaml YAML = new Yaml(new FhirConstructor(), new FhirRepresenter());

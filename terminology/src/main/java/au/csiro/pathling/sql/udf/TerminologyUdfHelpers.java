@@ -19,7 +19,7 @@ package au.csiro.pathling.sql.udf;
 
 import static java.util.Objects.nonNull;
 
-import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
+import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Objects;
@@ -41,7 +41,7 @@ public final class TerminologyUdfHelpers {
   @Nullable
   static Row[] encodeMany(@Nullable final Stream<Coding> codings) {
     return codings != null
-           ? codings.map(CodingEncoding::encode).toArray(Row[]::new)
+           ? codings.map(CodingSchema::encode).toArray(Row[]::new)
            : null;
   }
 
@@ -89,7 +89,7 @@ public final class TerminologyUdfHelpers {
   @Nullable
   public static Stream<Coding> decodeOne(final @Nullable Row codingRow) {
     return codingRow != null
-           ? Stream.of(CodingEncoding.decode(codingRow))
+           ? Stream.of(CodingSchema.decode(codingRow))
            : null;
   }
 
@@ -103,7 +103,7 @@ public final class TerminologyUdfHelpers {
   public static Stream<Coding> decodeMany(final @Nullable Iterable<Row> codingsRow) {
     return codingsRow != null
            ? JavaConverters.asJavaCollection(codingsRow).stream().filter(Objects::nonNull)
-               .map(CodingEncoding::decode)
+               .map(CodingSchema::decode)
            : null;
   }
 

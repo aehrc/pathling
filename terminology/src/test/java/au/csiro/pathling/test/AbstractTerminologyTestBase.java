@@ -20,7 +20,7 @@ package au.csiro.pathling.test;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
-import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
+import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.List;
@@ -92,12 +92,12 @@ public abstract class AbstractTerminologyTestBase {
 
   @Nonnull
   public static Row[] asArray(@Nonnull final Coding... codings) {
-    return Stream.of(codings).map(CodingEncoding::encode).toArray(Row[]::new);
+    return Stream.of(codings).map(CodingSchema::encode).toArray(Row[]::new);
   }
 
   @Nonnull
   public static WrappedArray<Object> encodeMany(final Coding... codings) {
-    return WrappedArray.make(Stream.of(codings).map(CodingEncoding::encode).toArray(Row[]::new));
+    return WrappedArray.make(Stream.of(codings).map(CodingSchema::encode).toArray(Row[]::new));
   }
 
   @Nonnull
@@ -139,11 +139,11 @@ public abstract class AbstractTerminologyTestBase {
             List.of("1999-01-01"),
             List.of("2222-02-02", "3333-03-03")
         ),
-        arguments("Coding", CodingEncoding.DATA_TYPE,
+        arguments("Coding", CodingSchema.DATA_TYPE,
             List.of(CODING_C),
             List.of(CODING_D, CODING_E),
-            CodingEncoding.encodeList(List.of(CODING_C)),
-            CodingEncoding.encodeList(List.of(CODING_D, CODING_E))
+            CodingSchema.encodeList(List.of(CODING_C)),
+            CodingSchema.encodeList(List.of(CODING_D, CODING_E))
         )
     );
   }

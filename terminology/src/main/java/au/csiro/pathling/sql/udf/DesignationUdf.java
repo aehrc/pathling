@@ -18,7 +18,7 @@
 package au.csiro.pathling.sql.udf;
 
 import static au.csiro.pathling.fhirpath.CodingHelpers.codingEquals;
-import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.decode;
+import static au.csiro.pathling.fhirpath.encoding.CodingSchema.decode;
 import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.isValidCoding;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -55,12 +55,16 @@ public class DesignationUdf implements SqlFunction,
    */
   public static final DataType RETURN_TYPE = DataTypes.createArrayType(DataTypes.StringType);
 
-  /** The property code used to identify designations in the terminology service. */
+  /**
+   * The property code used to identify designations in the terminology service.
+   */
   public static final String DESIGNATION_PROPERTY_CODE = Designation.PROPERTY_CODE;
 
   private static final String[] EMPTY_RESULT = new String[0];
 
-  /** The terminology service factory used to create terminology services. */
+  /**
+   * The terminology service factory used to create terminology services.
+   */
   @Nonnull
   private final TerminologyServiceFactory terminologyServiceFactory;
 
@@ -84,7 +88,8 @@ public class DesignationUdf implements SqlFunction,
   }
 
   /**
-   * Looks up designations for the given coding and optional use, filtering by language if provided.
+   * Looks up designations for the given coding and optional use, filtering by language if
+   * provided.
    *
    * @param coding the coding to look up designations for
    * @param use the optional use of the designation

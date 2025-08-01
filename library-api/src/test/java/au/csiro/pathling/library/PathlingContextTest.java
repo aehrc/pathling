@@ -40,7 +40,7 @@ import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
+import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Translation;
@@ -340,12 +340,12 @@ public class PathlingContextTest {
     final PathlingContext pathlingContext = PathlingContext.create(spark,
         FhirEncoders.forR4().getOrCreate(), terminologyServiceFactory);
 
-    final Row row1 = RowFactory.create("foo", CodingEncoding.encode(coding1));
-    final Row row2 = RowFactory.create("bar", CodingEncoding.encode(coding2));
+    final Row row1 = RowFactory.create("foo", CodingSchema.encode(coding1));
+    final Row row2 = RowFactory.create("bar", CodingSchema.encode(coding2));
     final List<Row> datasetRows = List.of(row1, row2);
     final StructType schema = DataTypes.createStructType(
         new StructField[]{DataTypes.createStructField("id", DataTypes.StringType, true),
-            DataTypes.createStructField("coding", CodingEncoding.codingStructType(), true)});
+            DataTypes.createStructField("coding", CodingSchema.codingStructType(), true)});
     final Dataset<Row> codingDataFrame = spark.createDataFrame(datasetRows, schema);
     final Column codingColumn = col("coding");
     final Dataset<Row> result = pathlingContext.memberOf(codingDataFrame, codingColumn,
@@ -368,12 +368,12 @@ public class PathlingContextTest {
     final PathlingContext pathlingContext = PathlingContext.create(spark,
         FhirEncoders.forR4().getOrCreate(), terminologyServiceFactory);
 
-    final Row row1 = RowFactory.create("foo", CodingEncoding.encode(coding1));
-    final Row row2 = RowFactory.create("bar", CodingEncoding.encode(coding2));
+    final Row row1 = RowFactory.create("foo", CodingSchema.encode(coding1));
+    final Row row2 = RowFactory.create("bar", CodingSchema.encode(coding2));
     final List<Row> datasetRows = List.of(row1, row2);
     final StructType schema = DataTypes.createStructType(
         new StructField[]{DataTypes.createStructField("id", DataTypes.StringType, true),
-            DataTypes.createStructField("coding", CodingEncoding.codingStructType(), true)});
+            DataTypes.createStructField("coding", CodingSchema.codingStructType(), true)});
     final Dataset<Row> codingDataFrame = spark.createDataFrame(datasetRows, schema);
     final Column codingColumn = col("coding");
     final Dataset<Row> result = pathlingContext.translate(codingDataFrame, codingColumn,
@@ -381,7 +381,7 @@ public class PathlingContextTest {
 
     final List<Row> rows = result.select("id", "result").collectAsList();
     assertEquals(
-        RowFactory.create("foo", WrappedArray.make(new Row[]{CodingEncoding.encode(coding2)})),
+        RowFactory.create("foo", WrappedArray.make(new Row[]{CodingSchema.encode(coding2)})),
         rows.get(0));
   }
 
@@ -396,15 +396,15 @@ public class PathlingContextTest {
     final PathlingContext pathlingContext = PathlingContext.create(spark,
         FhirEncoders.forR4().getOrCreate(), terminologyServiceFactory);
 
-    final Row row1 = RowFactory.create("foo", CodingEncoding.encode(coding1),
-        CodingEncoding.encode(coding2));
-    final Row row2 = RowFactory.create("bar", CodingEncoding.encode(coding1),
-        CodingEncoding.encode(coding3));
+    final Row row1 = RowFactory.create("foo", CodingSchema.encode(coding1),
+        CodingSchema.encode(coding2));
+    final Row row2 = RowFactory.create("bar", CodingSchema.encode(coding1),
+        CodingSchema.encode(coding3));
     final List<Row> datasetRows = List.of(row1, row2);
     final StructType schema = DataTypes.createStructType(
         new StructField[]{DataTypes.createStructField("id", DataTypes.StringType, true),
-            DataTypes.createStructField("leftCoding", CodingEncoding.codingStructType(), true),
-            DataTypes.createStructField("rightCoding", CodingEncoding.codingStructType(), true)});
+            DataTypes.createStructField("leftCoding", CodingSchema.codingStructType(), true),
+            DataTypes.createStructField("rightCoding", CodingSchema.codingStructType(), true)});
     final Dataset<Row> codingDataFrame = spark.createDataFrame(datasetRows, schema);
     final Column leftCoding = col("leftCoding");
     final Column rightCoding = col("rightCoding");

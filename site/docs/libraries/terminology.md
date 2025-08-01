@@ -354,7 +354,7 @@ pc %>% pathling_disconnect()
 import au.csiro.pathling.library.PathlingContext
 import au.csiro.pathling.sql.Terminology._
 import au.csiro.pathling.library.TerminologyHelpers._
-import au.csiro.pathling.fhirpath.encoding.CodingEncoding
+import au.csiro.pathling.fhirpath.encoding.CodingSchema
 
 val pc = PathlingContext.create()
 val csv = spark.read.csv("conditions.csv")
@@ -363,7 +363,7 @@ csv.select(
     csv.col("CODE"),
     // 232208008 |Ear, nose and throat disorder|
     subsumes(
-        CodingEncoding.toStruct(
+        CodingSchema.toStruct(
             lit(null),
             lit(SNOMED_URI),
             lit(null),
@@ -492,7 +492,7 @@ import au.csiro.pathling.library.PathlingContext
 import au.csiro.pathling.sql.Terminology
 import au.csiro.pathling.sql.Terminology._
 import au.csiro.pathling.library.TerminologyHelpers._
-import au.csiro.pathling.fhirpath.encoding.CodingEncoding
+import au.csiro.pathling.fhirpath.encoding.CodingSchema
 
 val pc = PathlingContext.create()
 val csv = spark.read.csv("conditions.csv")

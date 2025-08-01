@@ -9,7 +9,7 @@ import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.collection.TimeCollection;
-import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
+import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -67,7 +67,7 @@ public enum FhirPathType {
   /**
    * Coding FHIRPath type.
    */
-  CODING("Coding", CodingEncoding.codingStructType(), CodingCollection.class,
+  CODING("Coding", CodingSchema.codingStructType(), CodingCollection.class,
       FHIRDefinedType.CODING);
 
   @Nonnull
