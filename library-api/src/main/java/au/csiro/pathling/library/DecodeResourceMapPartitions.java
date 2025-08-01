@@ -31,7 +31,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
  * @param <T> the type of resource to encode
  * @author John Grimes
  */
-public class DecodeResourceMapPartitions<T extends IBaseResource> implements
+class DecodeResourceMapPartitions<T extends IBaseResource> implements
     MapPartitionsFunction<T, String> {
 
   @Serial
