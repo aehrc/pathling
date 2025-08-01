@@ -720,13 +720,6 @@
           </executions>
           <configuration>
             <skip>true</skip>
-            <includeDependencySources>true</includeDependencySources>
-            <dependencySourceIncludes>
-              <include>au.csiro.pathling:*</include>
-            </dependencySourceIncludes>
-            <dependencySourceExcludes>
-              <exclude>au.csiro.pathling:encoders</exclude>
-            </dependencySourceExcludes>
             <source>17</source>
             <links>
               <link>https://spark.apache.org/docs/latest/api/java/</link>
