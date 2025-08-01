@@ -26,9 +26,26 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import org.apache.spark.sql.Column;
 
+/**
+ * Utility class for working with FHIR terminology concepts.
+ *
+ * @author John Grimes
+ * @author Piotr Szul
+ */
 public class TerminologyHelpers {
 
+  /**
+   * The URI for the SNOMED CT code system.
+   */
   public static final String SNOMED_URI = "http://snomed.info/sct";
+
+  /**
+   * The URI for the LOINC code system.
+   */
+  public static final String LOINC_URI = "http://loinc.org";
+
+  private TerminologyHelpers() {
+  }
 
   /**
    * Converts a Column containing codes into a Column that contains a Coding struct. The Coding
