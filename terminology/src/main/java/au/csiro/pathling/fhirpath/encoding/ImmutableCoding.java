@@ -29,7 +29,7 @@ import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.Coding;
 
 /**
- * Immutable comparable and printable version of a FHIR Coding.
+ * An immutable and serializable version of a FHIR Coding.
  *
  * @author Piotr Szul
  */
@@ -54,15 +54,21 @@ public class ImmutableCoding implements Serializable {
   @Nullable
   private final String version;
 
-  /** The code value. */
+  /**
+   * The code value.
+   */
   @Nullable
   private final String code;
 
-  /** The display text for the code. */
+  /**
+   * The display text for the code.
+   */
   @Nullable
   private final String display;
 
-  /** Whether the code was user selected. */
+  /**
+   * Whether the code was user selected.
+   */
   @Nullable
   protected final Boolean userSelected;
 
