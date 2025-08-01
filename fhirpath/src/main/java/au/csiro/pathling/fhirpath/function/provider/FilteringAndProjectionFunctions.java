@@ -1,8 +1,8 @@
 package au.csiro.pathling.fhirpath.function.provider;
 
 import au.csiro.pathling.fhirpath.TypeSpecifier;
-import au.csiro.pathling.fhirpath.annotations.SofCompatibility;
-import au.csiro.pathling.fhirpath.annotations.SofCompatibility.Profile;
+import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
+import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
@@ -40,7 +40,7 @@ public class FilteringAndProjectionFunctions {
    * href="https://build.fhir.org/ig/HL7/FHIRPath/#wherecriteria--expression--collection">where</a>
    */
   @FhirPathFunction
-  @SofCompatibility(Profile.SHARABLE)
+  @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static Collection where(@Nonnull final Collection input,
       @Nonnull final CollectionTransform expression) {
@@ -60,7 +60,7 @@ public class FilteringAndProjectionFunctions {
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#oftype">ofType</a>
    */
   @FhirPathFunction
-  @SofCompatibility(Profile.SHARABLE)
+  @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static Collection ofType(@Nonnull final Collection input,
       @Nonnull final TypeSpecifier typeSpecifier) {

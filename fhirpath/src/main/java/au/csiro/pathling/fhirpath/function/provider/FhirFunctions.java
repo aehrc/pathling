@@ -2,8 +2,8 @@ package au.csiro.pathling.fhirpath.function.provider;
 
 import static au.csiro.pathling.fhirpath.comparison.Comparable.ComparisonOperation.EQUALS;
 
-import au.csiro.pathling.fhirpath.annotations.SofCompatibility;
-import au.csiro.pathling.fhirpath.annotations.SofCompatibility.Profile;
+import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
+import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
@@ -37,7 +37,7 @@ public class FhirFunctions {
    * @return A collection containing only those elements for which the criteria expression evaluates
    */
   @FhirPathFunction
-  @SofCompatibility(Profile.SHARABLE)
+  @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static Collection extension(@Nonnull final Collection input,
       @Nonnull final StringCollection url) {

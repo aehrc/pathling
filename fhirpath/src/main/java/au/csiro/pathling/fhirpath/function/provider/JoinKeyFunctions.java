@@ -18,8 +18,8 @@
 package au.csiro.pathling.fhirpath.function.provider;
 
 import au.csiro.pathling.fhirpath.TypeSpecifier;
-import au.csiro.pathling.fhirpath.annotations.SofCompatibility;
-import au.csiro.pathling.fhirpath.annotations.SofCompatibility.Profile;
+import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
+import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ReferenceCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
@@ -52,7 +52,7 @@ public class JoinKeyFunctions {
    * on FHIR specification - getResourceKey</a>
    */
   @FhirPathFunction
-  @SofCompatibility(Profile.REQUIRED)
+  @SqlOnFhirConformance(Profile.REQUIRED)
   @Nonnull
   public static Collection getResourceKey(@Nonnull final ResourceCollection input) {
     return input.getKeyCollection();
@@ -69,7 +69,7 @@ public class JoinKeyFunctions {
    * on FHIR specification - getReferenceKey</a>
    */
   @FhirPathFunction
-  @SofCompatibility(Profile.REQUIRED)
+  @SqlOnFhirConformance(Profile.REQUIRED)
   @Nonnull
   public static Collection getReferenceKey(@Nonnull final ReferenceCollection input,
       @Nullable final TypeSpecifier typeSpecifier) {

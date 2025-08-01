@@ -23,14 +23,15 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * The SQL on FHIR compatibility level.
+ * The SQL on FHIR conformance level. This allows us to map a feature within Pathling to a grouping
+ * of features within the specification.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD, ElementType.TYPE})
-public @interface SofCompatibility {
+public @interface SqlOnFhirConformance {
 
   /**
-   * SQL on FHIR compatibility profiles.
+   * SQL on FHIR conformance profiles.
    */
   enum Profile {
     /**
@@ -38,17 +39,25 @@ public @interface SofCompatibility {
      */
     REQUIRED,
     /**
-     * Sharable features that can be shared across implementations.
+     * Features that are required to be supported as part of the Shareable View Definition profile.
+     *
+     * @see <a
+     * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ShareableViewDefinition.html">Shareable
+     * View Definition</a>
      */
     SHARABLE,
-    /** Experimental features that are not yet stable. */
+    /**
+     * Experimental features that are not yet stable.
+     */
     EXPERIMENTAL,
-    /** Terminology-related features. */
+    /**
+     * Terminology-related features.
+     */
     TERMINOLOGY
   }
 
   /**
-   * The compatibility profile for this element.
+   * The compatibility profile associated with this feature.
    *
    * @return the profile
    */

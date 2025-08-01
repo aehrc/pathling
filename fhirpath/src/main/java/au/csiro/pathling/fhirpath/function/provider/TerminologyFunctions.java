@@ -22,8 +22,8 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.fhirpath.TerminologyConcepts;
 import au.csiro.pathling.fhirpath.TerminologyConcepts.Set;
-import au.csiro.pathling.fhirpath.annotations.SofCompatibility;
-import au.csiro.pathling.fhirpath.annotations.SofCompatibility.Profile;
+import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
+import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -47,7 +47,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 @SuppressWarnings("unused")
-@SofCompatibility(Profile.TERMINOLOGY)
+@SqlOnFhirConformance(Profile.TERMINOLOGY)
 public abstract class TerminologyFunctions {
 
   private TerminologyFunctions() {

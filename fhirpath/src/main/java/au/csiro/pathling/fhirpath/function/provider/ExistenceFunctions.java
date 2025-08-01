@@ -2,8 +2,8 @@ package au.csiro.pathling.fhirpath.function.provider;
 
 import static java.util.Objects.nonNull;
 
-import au.csiro.pathling.fhirpath.annotations.SofCompatibility;
-import au.csiro.pathling.fhirpath.annotations.SofCompatibility.Profile;
+import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
+import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
@@ -42,7 +42,7 @@ public class ExistenceFunctions {
    * Specification - exists</a>
    */
   @FhirPathFunction
-  @SofCompatibility(Profile.SHARABLE)
+  @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static BooleanCollection exists(@Nonnull final Collection input,
       @Nullable final CollectionTransform criteria) {
@@ -61,7 +61,7 @@ public class ExistenceFunctions {
    * empty</a>
    */
   @FhirPathFunction
-  @SofCompatibility(Profile.SHARABLE)
+  @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static BooleanCollection empty(@Nonnull final Collection input) {
     return BooleanCollection.build(input.getColumn().isEmpty());

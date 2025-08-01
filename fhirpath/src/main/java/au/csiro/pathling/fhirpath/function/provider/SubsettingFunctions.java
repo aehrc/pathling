@@ -1,7 +1,7 @@
 package au.csiro.pathling.fhirpath.function.provider;
 
-import au.csiro.pathling.fhirpath.annotations.SofCompatibility;
-import au.csiro.pathling.fhirpath.annotations.SofCompatibility.Profile;
+import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
+import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
@@ -30,7 +30,7 @@ public class SubsettingFunctions {
    * - first</a>
    */
   @FhirPathFunction
-  @SofCompatibility(Profile.SHARABLE)
+  @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static Collection first(@Nonnull final Collection input) {
     return input.copyWith(input.getColumn().first());

@@ -2,8 +2,8 @@ package au.csiro.pathling.fhirpath.function.provider;
 
 import static java.util.Objects.nonNull;
 
-import au.csiro.pathling.fhirpath.annotations.SofCompatibility;
-import au.csiro.pathling.fhirpath.annotations.SofCompatibility.Profile;
+import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
+import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
@@ -39,7 +39,7 @@ public class StringFunctions {
    * Specification - join</a>
    */
   @FhirPathFunction
-  @SofCompatibility(Profile.EXPERIMENTAL)
+  @SqlOnFhirConformance(Profile.EXPERIMENTAL)
   @Nonnull
   public static StringCollection join(@Nonnull final StringCollection input,
       @Nullable final StringCollection separator) {
