@@ -21,7 +21,7 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.context.FhirPathContext;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionException;
+import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionError;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 
@@ -55,11 +55,11 @@ public interface EvaluationContext {
    *
    * @param name The name of the function to resolve
    * @return The function implementation
-   * @throws NoSuchFunctionException If no function with the given name exists
+   * @throws NoSuchFunctionError If no function with the given name exists
    */
   @Nonnull
   NamedFunction resolveFunction(@Nonnull final String name)
-      throws NoSuchFunctionException;
+      throws NoSuchFunctionError;
 
   /**
    * Resolves a variable name to its value.

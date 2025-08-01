@@ -27,8 +27,7 @@ import org.apache.spark.sql.SaveMode;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * Represents a data sink that knows how to read data from a {@link DataSource} and write it to a
- * set of Parquet files.
+ * A data sink that writes data to Parquet tables on a filesystem.
  *
  * @author John Grimes
  */
