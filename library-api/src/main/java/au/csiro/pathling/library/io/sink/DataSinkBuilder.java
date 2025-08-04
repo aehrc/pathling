@@ -22,7 +22,7 @@ import static java.util.Objects.requireNonNull;
 import au.csiro.pathling.io.ImportMode;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Map;
@@ -33,29 +33,23 @@ import org.apache.spark.sql.SaveMode;
  * This class knows how to take an @link{EnumerableDataSource} and write it to a variety of
  * different targets.
  *
+ * @param context the Pathling context to use for writing data
+ * @param source the data source containing the data to write
  * @author John Grimes
  */
-public class DataSinkBuilder {
+public record DataSinkBuilder(
+    @Nonnull PathlingContext context,
+    @Nonnull DataSource source
+) {
 
   @Nonnull
-  private static final Map<String, SaveMode> SAVE_MODES = new ImmutableMap.Builder<String, SaveMode>()
+  private static final Map<String, SaveMode> SAVE_MODES = new Builder<String, SaveMode>()
       .put("error", SaveMode.ErrorIfExists)
       .put("errorifexists", SaveMode.ErrorIfExists)
       .put("overwrite", SaveMode.Overwrite)
       .put("append", SaveMode.Append)
       .put("ignore", SaveMode.Ignore)
       .build();
-
-  @Nonnull
-  private final PathlingContext context;
-
-  @Nonnull
-  private final DataSource source;
-
-  public DataSinkBuilder(@Nonnull final PathlingContext context, @Nonnull final DataSource source) {
-    this.context = context;
-    this.source = source;
-  }
 
   /**
    * Writes the data in the data source to NDJSON files, one per resource type and named using the
