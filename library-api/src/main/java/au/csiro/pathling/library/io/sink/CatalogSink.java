@@ -56,6 +56,18 @@ public class CatalogSink implements DataSink {
   }
 
   /**
+   * Constructs a CatalogSink with the specified PathlingContext and import mode.
+   *
+   * @param context the PathlingContext to use
+   * @param importMode the ImportMode to use when writing data
+   */
+  public CatalogSink(@Nonnull final PathlingContext context, @Nonnull final ImportMode importMode) {
+    this.pathlingContext = context;
+    this.importMode = importMode;
+    this.schema = Optional.empty(); // Schema not specified
+  }
+
+  /**
    * Constructs a CatalogSink with the specified PathlingContext, import mode, and schema.
    *
    * @param context the PathlingContext to use
