@@ -21,7 +21,6 @@ import static au.csiro.pathling.library.io.FileSystemPersistence.departitionResu
 import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
 
 import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.library.FhirMimeTypes;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import java.util.function.UnaryOperator;
@@ -59,7 +58,7 @@ public record NdjsonSink(
     for (final String resourceType : source.getResourceTypes()) {
       // Convert the dataset of structured FHIR data to a dataset of JSON strings.
       final Dataset<String> jsonStrings = context.decode(source.read(resourceType),
-          resourceType, FhirMimeTypes.FHIR_JSON);
+          resourceType, PathlingContext.FHIR_JSON);
 
       // Write the JSON strings to the file system, using a single partition.
       final String fileName = String.join(".", fileNameMapper.apply(resourceType),

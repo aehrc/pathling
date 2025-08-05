@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.library.io.source;
 
-import au.csiro.pathling.library.FhirMimeTypes;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import java.util.Collections;
@@ -85,7 +84,7 @@ public class NdjsonSource extends FileSource {
         context.getSpark().read().format("text"),
         // Encode each line of input as a JSON FHIR resource.
         (sourceData, resourceType) -> context.encode(sourceData, resourceType,
-            FhirMimeTypes.FHIR_JSON));
+            PathlingContext.FHIR_JSON));
   }
 
   /**

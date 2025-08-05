@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.library.io.source;
 
-import au.csiro.pathling.library.FhirMimeTypes;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import java.util.HashMap;
@@ -36,8 +35,8 @@ public class BundlesSource extends FileSource {
 
   static {
     MIME_TYPE_TO_EXTENSION = new HashMap<>();
-    MIME_TYPE_TO_EXTENSION.put(FhirMimeTypes.FHIR_JSON, "json");
-    MIME_TYPE_TO_EXTENSION.put(FhirMimeTypes.FHIR_XML, "xml");
+    MIME_TYPE_TO_EXTENSION.put(PathlingContext.FHIR_JSON, "json");
+    MIME_TYPE_TO_EXTENSION.put(PathlingContext.FHIR_XML, "xml");
   }
 
   /**

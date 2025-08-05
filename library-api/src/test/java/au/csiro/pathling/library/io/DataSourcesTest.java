@@ -25,7 +25,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.withSettings;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.library.FhirMimeTypes;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.TestHelpers;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
@@ -180,7 +179,7 @@ class DataSourcesTest {
     // Read the test bundles.
     final QueryableDataSource data = pathlingContext.read()
         .bundles(TEST_DATA_PATH.resolve("bundles").toString(),
-            Set.of("Patient", "Condition"), FhirMimeTypes.FHIR_JSON);
+            Set.of("Patient", "Condition"), PathlingContext.FHIR_JSON);
 
     // Query the data.
     queryBundlesData(data);

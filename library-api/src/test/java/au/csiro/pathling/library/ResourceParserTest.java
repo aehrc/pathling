@@ -55,7 +55,7 @@ class ResourceParserTest {
         Resources.getResource("test-data/references/test-bundle.json"), Charsets.UTF_8);
 
     final Bundle bundle = (Bundle) ResourceParser.build(
-        FhirVersionEnum.R4, FhirMimeTypes.FHIR_JSON).parse(testBundleJson);
+        FhirVersionEnum.R4, PathlingContext.FHIR_JSON).parse(testBundleJson);
 
     patient = (Patient) bundle.getEntry().get(0).getResource();
     condition = (Condition) bundle.getEntry().get(1).getResource();

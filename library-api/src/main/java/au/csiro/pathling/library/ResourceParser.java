@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.library;
 
-import static au.csiro.pathling.library.FhirMimeTypes.FHIR_JSON;
-import static au.csiro.pathling.library.FhirMimeTypes.FHIR_XML;
+import static au.csiro.pathling.library.PathlingContext.FHIR_JSON;
+import static au.csiro.pathling.library.PathlingContext.FHIR_XML;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.support.FhirConversionSupport;

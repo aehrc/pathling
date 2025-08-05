@@ -65,6 +65,20 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 @Slf4j
 public class PathlingContext {
 
+  /**
+   * The MIME type for FHIR JSON resources.
+   *
+   * @see <a href="https://www.hl7.org/fhir/json.html">FHIR JSON</a>
+   */
+  public static final String FHIR_JSON = "application/fhir+json";
+
+  /**
+   * The MIME type for FHIR XML resources.
+   *
+   * @see <a href="https://www.hl7.org/fhir/xml.html">FHIR XML</a>
+   */
+  public static final String FHIR_XML = "application/fhir+xml";
+
   private static final String COL_INPUT_CODINGS = "inputCodings";
   private static final String COL_ARG_CODINGS = "argCodings";
 
@@ -319,7 +333,7 @@ public class PathlingContext {
   @Nonnull
   public Dataset<Row> encode(@Nonnull final Dataset<Row> stringResourcesDF,
       @Nonnull final String resourceName) {
-    return encode(stringResourcesDF, resourceName, FhirMimeTypes.FHIR_JSON);
+    return encode(stringResourcesDF, resourceName, FHIR_JSON);
   }
 
 
@@ -396,7 +410,7 @@ public class PathlingContext {
   @Nonnull
   public Dataset<Row> encodeBundle(@Nonnull final Dataset<Row> stringBundlesDF,
       @Nonnull final String resourceName) {
-    return encodeBundle(stringBundlesDF, resourceName, FhirMimeTypes.FHIR_JSON);
+    return encodeBundle(stringBundlesDF, resourceName, FHIR_JSON);
   }
 
   /**

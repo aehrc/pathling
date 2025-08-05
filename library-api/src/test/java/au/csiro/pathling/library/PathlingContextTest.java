@@ -178,7 +178,7 @@ public class PathlingContextTest {
     final PathlingContext pathling = PathlingContext.create(spark);
 
     final Dataset<Row> patientsDataframe = pathling.encodeBundle(bundlesDF.toDF(),
-        "Patient", FhirMimeTypes.FHIR_JSON);
+        "Patient", PathlingContext.FHIR_JSON);
     assertEquals(5, patientsDataframe.count());
 
     assertValidIdColumns(patientsDataframe);
@@ -190,7 +190,7 @@ public class PathlingContextTest {
     assertValidIdColumns(patientsDataframe2);
 
     final Dataset<Condition> conditionsDataframe = pathling.encodeBundle(bundlesDF, Condition.class,
-        FhirMimeTypes.FHIR_JSON);
+        PathlingContext.FHIR_JSON);
     assertEquals(107, conditionsDataframe.count());
 
     assertValidIdColumns(conditionsDataframe);
@@ -206,7 +206,7 @@ public class PathlingContextTest {
 
     final PathlingContext pathling = PathlingContext.create(spark);
     final Dataset<Condition> conditionsDataframe = pathling.encodeBundle(bundlesDF, Condition.class,
-        FhirMimeTypes.FHIR_XML);
+        PathlingContext.FHIR_XML);
     assertEquals(107, conditionsDataframe.count());
 
     assertValidIdColumns(conditionsDataframe);
@@ -223,12 +223,12 @@ public class PathlingContextTest {
     final PathlingContext pathling = PathlingContext.create(spark);
 
     final Dataset<Row> patientsDataframe = pathling.encode(jsonResources.toDF(), "Patient",
-        FhirMimeTypes.FHIR_JSON);
+        PathlingContext.FHIR_JSON);
     assertEquals(9, patientsDataframe.count());
     assertValidIdColumns(patientsDataframe);
 
     final Dataset<Condition> conditionsDataframe = pathling.encode(jsonResources, Condition.class,
-        FhirMimeTypes.FHIR_JSON);
+        PathlingContext.FHIR_JSON);
     assertEquals(71, conditionsDataframe.count());
 
     assertValidIdColumns(conditionsDataframe);
@@ -300,7 +300,7 @@ public class PathlingContextTest {
     assertTrue(jsonResources.isStreaming());
 
     final Dataset<Row> patientsStream = pathling.encode(jsonResources, "Patient",
-        FhirMimeTypes.FHIR_JSON);
+        PathlingContext.FHIR_JSON);
 
     assertTrue(patientsStream.isStreaming());
 
@@ -315,7 +315,7 @@ public class PathlingContextTest {
     assertEquals(9, patientsCount);
 
     final StreamingQuery conditionQuery = pathling.encode(jsonResources, "Condition",
-            FhirMimeTypes.FHIR_JSON)
+            PathlingContext.FHIR_JSON)
         .groupBy()
         .count()
         .writeStream()
