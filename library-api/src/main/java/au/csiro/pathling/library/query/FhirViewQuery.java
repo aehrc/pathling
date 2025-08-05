@@ -25,7 +25,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+
 
 /**
  * Represents a FHIR view query that can be configured and executed to extract structured data from
@@ -59,7 +59,7 @@ public class FhirViewQuery extends QueryBuilder {
    * @param gson the Gson instance used for JSON serialization/deserialization
    */
   public FhirViewQuery(@Nonnull final QueryDispatcher dispatcher,
-      @Nonnull final ResourceType subjectResource, @Nonnull final Gson gson) {
+      @Nonnull final String subjectResource, @Nonnull final Gson gson) {
     super(dispatcher, subjectResource);
     this.gson = gson;
   }

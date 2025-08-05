@@ -20,7 +20,6 @@ package au.csiro.pathling.library.query;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Base class for queries that use filters. Subclasses must implement the {@link #execute} method to
@@ -29,15 +28,14 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @SuppressWarnings({"unchecked"})
 public abstract class QueryBuilder {
 
-  @SuppressWarnings("unused")
   @Nonnull
-  protected final ResourceType subjectResource;
+  protected final String subjectResource;
 
   @Nonnull
   protected final QueryDispatcher dispatcher;
 
   protected QueryBuilder(@Nonnull final QueryDispatcher dispatcher,
-      @Nonnull final ResourceType subjectResource) {
+      @Nonnull final String subjectResource) {
     this.dispatcher = dispatcher;
     this.subjectResource = subjectResource;
   }

@@ -28,7 +28,6 @@ import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Provides common functionality for all queryable data sources.
@@ -68,16 +67,14 @@ public abstract class AbstractSource implements QueryableDataSource {
   @Nonnull
   @Override
   public FhirViewQuery view(@Nullable final String subjectResource) {
-    return new FhirViewQuery(dispatcher, requireNonNull(ResourceType.fromCode(subjectResource)),
-        context.getGson());
+    requireNonNull(subjectResource);
+    return new FhirViewQuery(dispatcher, subjectResource, context.getGson());
   }
 
   @Nonnull
   @Override
   public FhirViewQuery view(@Nullable final FhirView view) {
     requireNonNull(view);
-    return new FhirViewQuery(dispatcher, ResourceType.fromCode(view.getResource()),
-        context.getGson())
-        .view(view);
+    return new FhirViewQuery(dispatcher, view.getResource(), context.getGson()).view(view);
   }
 }
