@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
+import au.csiro.pathling.library.query.DefaultQueryDispatcher;
 import au.csiro.pathling.library.query.FhirViewQuery;
 import au.csiro.pathling.library.query.QueryDispatcher;
 import au.csiro.pathling.views.FhirView;
@@ -55,7 +56,7 @@ public abstract class AbstractSource implements QueryableDataSource {
     );
 
     // Build the dispatcher using the executors.
-    return new QueryDispatcher(viewExecutor);
+    return new DefaultQueryDispatcher(viewExecutor);
   }
 
   @Nonnull
