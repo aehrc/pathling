@@ -67,15 +67,17 @@ public abstract class AbstractSource implements QueryableDataSource {
 
   @Nonnull
   @Override
-  public FhirViewQuery view(@Nullable final ResourceType subjectResource) {
-    return new FhirViewQuery(dispatcher, requireNonNull(subjectResource), context.getGson());
+  public FhirViewQuery view(@Nullable final String subjectResource) {
+    return new FhirViewQuery(dispatcher, requireNonNull(ResourceType.fromCode(subjectResource)),
+        context.getGson());
   }
 
   @Nonnull
   @Override
   public FhirViewQuery view(@Nullable final FhirView view) {
     requireNonNull(view);
-    return new FhirViewQuery(dispatcher, ResourceType.fromCode(view.getResource()), context.getGson())
+    return new FhirViewQuery(dispatcher, ResourceType.fromCode(view.getResource()),
+        context.getGson())
         .view(view);
   }
 }

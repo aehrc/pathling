@@ -377,14 +377,14 @@ class DataSourcesTest {
     assertTrue(data.getResourceTypes().contains(ResourceType.PATIENT));
     assertTrue(data.getResourceTypes().contains(ResourceType.CONDITION));
 
-    final Dataset<Row> patientCount = data.view(ResourceType.PATIENT)
+    final Dataset<Row> patientCount = data.view("Patient")
         .json(PATIENT_VIEW_JSON)
         .execute()
         .agg(functions.count("id"));
 
     DatasetAssert.of(patientCount).hasRows(RowFactory.create(5));
 
-    final Dataset<Row> conditionCount = data.view(ResourceType.CONDITION)
+    final Dataset<Row> conditionCount = data.view("Condition")
         .json(CONDITION_VIEW_JSON)
         .execute()
         .agg(functions.count("id"));
@@ -396,14 +396,14 @@ class DataSourcesTest {
     assertTrue(data.getResourceTypes().contains(ResourceType.PATIENT));
     assertTrue(data.getResourceTypes().contains(ResourceType.CONDITION));
 
-    final Dataset<Row> patientCount = data.view(ResourceType.PATIENT)
+    final Dataset<Row> patientCount = data.view("Patient")
         .json(PATIENT_VIEW_JSON)
         .execute()
         .agg(functions.count("id"));
 
     DatasetAssert.of(patientCount).hasRows(RowFactory.create(4));
 
-    final Dataset<Row> conditionCount = data.view(ResourceType.CONDITION)
+    final Dataset<Row> conditionCount = data.view("Condition")
         .json(CONDITION_VIEW_JSON)
         .execute()
         .agg(functions.count("id"));
@@ -449,7 +449,7 @@ class DataSourcesTest {
       """;
 
   private static void extractNdjsonData(@Nonnull final QueryableDataSource dataSource) {
-    final Dataset<Row> patient = dataSource.view(ResourceType.PATIENT)
+    final Dataset<Row> patient = dataSource.view("Patient")
         .json(EXTRACT_VIEW_JSON)
         .execute()
         .limit(1);

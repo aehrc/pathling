@@ -16,15 +16,12 @@
  */
 package au.csiro.pathling.library.io.source;
 
-import static au.csiro.pathling.fhir.FhirUtils.getResourceType;
-
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.query.FhirViewQuery;
 import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A FHIR data source that can be queried, and can also be written out to a data sink.
@@ -41,20 +38,11 @@ public interface QueryableDataSource extends DataSource {
   DataSinkBuilder write();
 
   /**
-   * @param subjectResource the subject resource type
-   * @return an executable {@link FhirViewQuery}
-   */
-  @Nonnull
-  FhirViewQuery view(@Nullable ResourceType subjectResource);
-
-  /**
    * @param subjectResource the subject resource code
    * @return an executable {@link FhirViewQuery}
    */
   @Nonnull
-  default FhirViewQuery view(@Nullable final String subjectResource) {
-    return view(getResourceType(subjectResource));
-  }
+  FhirViewQuery view(@Nullable final String subjectResource);
 
   /**
    * @param view a {@link FhirView} to be executed

@@ -22,7 +22,6 @@ import au.csiro.pathling.library.io.source.QueryableDataSource;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 public class ViewFromDatabaseApp {
 
@@ -81,7 +80,7 @@ public class ViewFromDatabaseApp {
       """;
 
   public static void main(final String[] args) {
-    
+
     final SparkSession spark = SparkSession.builder()
         .appName(ViewFromDatabaseApp.class.getName())
         .master("local[*]")
@@ -95,7 +94,7 @@ public class ViewFromDatabaseApp {
     final QueryableDataSource data = ptc.read()
         .delta("fhirpath/src/test/resources/test-data/parquet");
 
-    final Dataset<Row> viewResults = data.view(ResourceType.PATIENT)
+    final Dataset<Row> viewResults = data.view("Patient")
         .json(VIEW_JSON)
         .execute()
         .limit(5);
