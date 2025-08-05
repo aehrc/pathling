@@ -18,7 +18,6 @@
 package au.csiro.pathling.library.io.source;
 
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toSet;
 
 import au.csiro.fhir.export.BulkExportClient;
 import au.csiro.pathling.library.PathlingContext;
@@ -26,23 +25,15 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Set;
 import java.util.function.Function;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A factory for creating various different data sources capable of preparing FHIR data for query.
  *
+ * @param context the {@link PathlingContext} to use for creating the data sources
  * @author Piotr Szul
  * @author John Grimes
  */
-public class DataSourceBuilder {
-
-  @Nonnull
-  private final PathlingContext context;
-
-  public DataSourceBuilder(@Nonnull final PathlingContext context) {
-    this.context = context;
-
-  }
+public record DataSourceBuilder(@Nonnull PathlingContext context) {
 
   /**
    * Creates a new data source from a directory containing NDJSON encoded FHIR resource data, with
@@ -120,11 +111,8 @@ public class DataSourceBuilder {
   @Nonnull
   public BundlesSource bundles(@Nullable final String path,
       @Nullable final Set<String> resourceTypes, @Nullable final String mimeType) {
-    final Set<ResourceType> resourceTypeEnums = requireNonNull(resourceTypes).stream()
-        .map(ResourceType::fromCode)
-        .collect(toSet());
     return new BundlesSource(context, requireNonNull(path), requireNonNull(mimeType),
-        resourceTypeEnums);
+        requireNonNull(resourceTypes));
   }
 
   /**
@@ -189,7 +177,8 @@ public class DataSourceBuilder {
   /**
    * Creates a new data source from a FHIR Bulk Data endpoint.
    *
-   * @param client the configured {@link BulkExportClient} that specifies the endpoint and export parameters
+   * @param client the configured {@link BulkExportClient} that specifies the endpoint and export
+   * parameters
    * @return the new data source
    */
   @Nonnull

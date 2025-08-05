@@ -17,16 +17,13 @@
 
 package au.csiro.pathling.library.io.source;
 
-import static java.util.stream.Collectors.toSet;
-
 import au.csiro.pathling.library.FhirMimeTypes;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A class for making data within a set of FHIR Bundles available for query.
@@ -43,11 +40,20 @@ public class BundlesSource extends FileSource {
     MIME_TYPE_TO_EXTENSION.put(FhirMimeTypes.FHIR_XML, "xml");
   }
 
+  /**
+   * Constructs a BundlesSource with the specified PathlingContext, path, MIME type, and resource
+   * types.
+   *
+   * @param context the PathlingContext to use
+   * @param path the path to the files containing FHIR Bundles
+   * @param mimeType the MIME type of the FHIR data (e.g., "application/fhir+json")
+   * @param resourceTypes the set of FHIR resource types that are expected in the bundles
+   */
   public BundlesSource(@Nonnull final PathlingContext context, @Nonnull final String path,
-      @Nonnull final String mimeType, @Nonnull final Set<ResourceType> resourceTypes) {
+      @Nonnull final String mimeType, @Nonnull final Set<String> resourceTypes) {
     super(context, path,
         // Map to the fixed set of resource types for all files.
-        fixedResourceSetMapper(resourceTypes),
+        p -> new HashSet<>(resourceTypes),
         // Use the file extension that matches the FHIR MIME type.
         MIME_TYPE_TO_EXTENSION.get(mimeType),
         // Treat the whole file as a record, rather than individual lines.
@@ -56,18 +62,6 @@ public class BundlesSource extends FileSource {
         // type.
         (sourceData, resourceType) ->
             context.encodeBundle(sourceData, resourceType.toCode(), mimeType));
-  }
-
-  /**
-   * Creates a mapper that maps a file path to a fixed set of resource types.
-   *
-   * @param resourceTypes the set of resource types to map to
-   * @return a mapper that maps a file path to a fixed set of resource types
-   */
-  @Nonnull
-  private static Function<String, Set<String>> fixedResourceSetMapper(
-      @Nonnull final Set<ResourceType> resourceTypes) {
-    return path -> resourceTypes.stream().map(ResourceType::toCode).collect(toSet());
   }
 
 }

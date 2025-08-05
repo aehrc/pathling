@@ -27,7 +27,6 @@ import jakarta.annotation.Nonnull;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SaveMode;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A data sink that writes data to NDJSON files on a filesystem.
@@ -74,13 +73,13 @@ public class NdjsonSink implements DataSink {
 
   @Override
   public void write(@Nonnull final DataSource source) {
-    for (final ResourceType resourceType : source.getResourceTypes()) {
+    for (final String resourceType : source.getResourceTypes()) {
       // Convert the dataset of structured FHIR data to a dataset of JSON strings.
       final Dataset<String> jsonStrings = context.decode(source.read(resourceType),
-          resourceType.toCode(), FhirMimeTypes.FHIR_JSON);
+          resourceType, FhirMimeTypes.FHIR_JSON);
 
       // Write the JSON strings to the file system, using a single partition.
-      final String fileName = String.join(".", fileNameMapper.apply(resourceType.toCode()),
+      final String fileName = String.join(".", fileNameMapper.apply(resourceType),
           "ndjson");
       final String resultUrl = safelyJoinPaths(path, fileName);
       final String resultUrlPartitioned = resultUrl + ".partitioned";

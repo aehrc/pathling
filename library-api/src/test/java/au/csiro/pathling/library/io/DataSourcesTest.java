@@ -318,7 +318,7 @@ class DataSourcesTest {
   @Test
   void readNonExistentResource() {
     final QueryableDataSource data = pathlingContext.read().datasets();
-    assertThrows(IllegalArgumentException.class, () -> data.read(ResourceType.PATIENT));
+    assertThrows(IllegalArgumentException.class, () -> data.read("Patient"));
   }
 
   @Test

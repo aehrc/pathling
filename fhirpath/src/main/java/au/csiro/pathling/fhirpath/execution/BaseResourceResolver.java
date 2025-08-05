@@ -152,7 +152,7 @@ public abstract class BaseResourceResolver implements ResourceResolver {
   @Nonnull
   protected static Dataset<Row> getResourceDataset(@Nonnull final DataSource dataSource,
       @Nonnull final ResourceType resourceType) {
-    final Dataset<Row> dataset = dataSource.read(resourceType);
+    final Dataset<Row> dataset = dataSource.read(resourceType.toCode());
     return toResourceRepresentation(resourceType.toCode(), dataset);
   }
 

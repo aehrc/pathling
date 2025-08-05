@@ -24,7 +24,6 @@ import jakarta.annotation.Nullable;
 import java.util.Set;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 public class DatabaseSource extends AbstractSource {
 
@@ -38,19 +37,12 @@ public class DatabaseSource extends AbstractSource {
 
   @Nonnull
   @Override
-  public Dataset<Row> read(@Nullable final ResourceType resourceType) {
-    return database.read(resourceType);
-  }
-
-  @Nonnull
-  @Override
   public Dataset<Row> read(@Nullable final String resourceCode) {
     return database.read(resourceCode);
   }
 
-  @Nonnull
   @Override
-  public Set<ResourceType> getResourceTypes() {
+  public @Nonnull Set<String> getResourceTypes() {
     return database.getResourceTypes();
   }
 

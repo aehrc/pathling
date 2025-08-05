@@ -23,7 +23,6 @@ import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A data sink that writes data to a Delta Lake table on a filesystem.
@@ -68,7 +67,7 @@ public class DeltaSink implements DataSink {
 
   @Override
   public void write(@Nonnull final DataSource source) {
-    for (final ResourceType resourceType : source.getResourceTypes()) {
+    for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       dataset.write()
           .format("delta")

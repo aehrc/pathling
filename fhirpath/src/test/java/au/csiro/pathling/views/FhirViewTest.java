@@ -44,7 +44,7 @@ import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -69,7 +69,6 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.DecimalType;
 import org.apache.spark.sql.types.StringType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -327,7 +326,7 @@ abstract class FhirViewTest {
           final Dataset<Row> resourceDataset = dataset.map(
               (MapFunction<String, IBaseResource>) json -> jsonParser(fhirContext())
                   .parseResource(json), encoder).toDF().cache();
-          result.put(ResourceType.fromCode(resourceType), resourceDataset);
+          result.put(resourceType, resourceDataset);
         });
     return result;
   }
@@ -493,28 +492,20 @@ abstract class FhirViewTest {
   @Slf4j
   public static class TestDataSource implements DataSource {
 
-    private static final Map<ResourceType, Dataset<Row>> resourceTypeToDataset = new EnumMap<>(
-        ResourceType.class);
+    private static final Map<String, Dataset<Row>> resourceTypeToDataset = new HashMap<>();
 
-    public void put(@Nonnull final ResourceType resourceType, @Nonnull final Dataset<Row> dataset) {
+    public void put(@Nonnull final String resourceType, @Nonnull final Dataset<Row> dataset) {
       resourceTypeToDataset.put(resourceType, dataset);
     }
 
     @Nonnull
     @Override
-    public Dataset<Row> read(@Nullable final ResourceType resourceType) {
-      return requireNonNull(resourceTypeToDataset.get(resourceType));
-    }
-
-    @Nonnull
-    @Override
     public Dataset<Row> read(@Nullable final String resourceCode) {
-      return requireNonNull(resourceTypeToDataset.get(ResourceType.fromCode(resourceCode)));
+      return requireNonNull(resourceTypeToDataset.get(resourceCode));
     }
 
-    @Nonnull
     @Override
-    public Set<ResourceType> getResourceTypes() {
+    public @Nonnull Set<String> getResourceTypes() {
       return resourceTypeToDataset.keySet();
     }
   }

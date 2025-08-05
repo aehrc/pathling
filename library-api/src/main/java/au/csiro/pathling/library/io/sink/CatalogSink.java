@@ -25,7 +25,6 @@ import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A data sink that writes data to a managed table within the Spark catalog.
@@ -83,7 +82,7 @@ public class CatalogSink implements DataSink {
 
   @Override
   public void write(@Nonnull final DataSource source) {
-    for (final ResourceType resourceType : source.getResourceTypes()) {
+    for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       final String tableName = getTableName(resourceType);
       dataset.orderBy(functions.asc("id"))
@@ -99,9 +98,9 @@ public class CatalogSink implements DataSink {
    * one is provided
    */
   @Nonnull
-  private String getTableName(@Nonnull final ResourceType resourceType) {
-    return schema.map(s -> String.join(".", s, resourceType.toCode()))
-        .orElseGet(resourceType::toCode);
+  private String getTableName(@Nonnull final String resourceType) {
+    return schema.map(s -> String.join(".", s, resourceType))
+        .orElse(resourceType);
   }
 
 }

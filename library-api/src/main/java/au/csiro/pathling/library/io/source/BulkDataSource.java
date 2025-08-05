@@ -27,7 +27,6 @@ import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A data source that reads data from a FHIR Bulk Data endpoint. This source uses the FHIR Bulk Data
@@ -62,20 +61,13 @@ public class BulkDataSource implements DataSource {
 
   @Nonnull
   @Override
-  public Dataset<Row> read(@Nullable final ResourceType resourceType) {
-    return ndjsonSource.read(resourceType);
-  }
-
-  @Nonnull
-  @Override
   public Dataset<Row> read(@Nullable final String resourceCode) {
     return ndjsonSource.read(resourceCode);
   }
 
 
-  @Nonnull
   @Override
-  public Set<ResourceType> getResourceTypes() {
+  public @Nonnull Set<String> getResourceTypes() {
     return ndjsonSource.getResourceTypes();
   }
 }

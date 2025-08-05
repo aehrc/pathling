@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -74,22 +75,17 @@ public class DatasetSource extends AbstractSource {
 
   @Nonnull
   @Override
-  public Dataset<Row> read(@Nullable final ResourceType resourceType) {
+  public Dataset<Row> read(@Nullable final String resourceCode) {
+    final ResourceType resourceType = requireNonNull(ResourceType.fromCode(resourceCode));
     return Optional.ofNullable(resourceMap.get(requireNonNull(resourceType)))
         .orElseThrow(() -> new IllegalArgumentException(
             "No data found for resource type: " + resourceType));
   }
 
-  @Nonnull
   @Override
-  public Dataset<Row> read(@Nullable final String resourceCode) {
-    return read(getResourceType(resourceCode));
-  }
-
-  @Nonnull
-  @Override
-  public Set<ResourceType> getResourceTypes() {
-    return resourceMap.keySet();
+  public @Nonnull Set<String> getResourceTypes() {
+    return resourceMap.keySet().stream().map(ResourceType::toCode)
+        .collect(Collectors.toSet());
   }
 
 }

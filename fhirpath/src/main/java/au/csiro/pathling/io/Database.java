@@ -18,7 +18,6 @@
 package au.csiro.pathling.io;
 
 import static au.csiro.pathling.QueryHelpers.createEmptyDataset;
-import static au.csiro.pathling.fhir.FhirUtils.getResourceType;
 import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.asc;
 
@@ -32,6 +31,7 @@ import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
@@ -62,11 +62,15 @@ public class Database implements DataSource {
   @Nonnull
   protected final FhirEncoders fhirEncoders;
 
-  /** The persistence scheme for reading and writing data. */
+  /**
+   * The persistence scheme for reading and writing data.
+   */
   @Nonnull
   protected final PersistenceScheme persistence;
 
-  /** Whether to cache datasets in memory. */
+  /**
+   * Whether to cache datasets in memory.
+   */
   protected final boolean cacheDatasets;
 
   /**
@@ -112,32 +116,19 @@ public class Database implements DataSource {
         cacheDatasets);
   }
 
-  /**
-   * Reads a data for the given resource type.
-   *
-   * @param resourceType the desired {@link ResourceType}
-   * @return a {@link Dataset} containing the raw resource, i.e. NOT wrapped in a value column
-   */
-  @ResourceAccess(ResourceAccess.AccessType.READ)
-  @Override
   @Nonnull
-  public Dataset<Row> read(@Nullable final ResourceType resourceType) {
-    return getMaybeNonExistentDeltaTable(requireNonNull(resourceType))
+  @Override
+  public Dataset<Row> read(@Nullable final String resourceCode) {
+    final ResourceType resourceType = requireNonNull(ResourceType.fromCode(resourceCode));
+    return getMaybeNonExistentDeltaTable(resourceType)
         .map(DeltaTable::toDF)
         // If there is no existing table, we return an empty table with the right shape.
         .orElseGet(() -> createEmptyDataset(spark, fhirEncoders, resourceType));
   }
 
-  @Nonnull
   @Override
-  public Dataset<Row> read(@Nullable final String resourceCode) {
-    return read(getResourceType(resourceCode));
-  }
-
-  @Nonnull
-  @Override
-  public Set<ResourceType> getResourceTypes() {
-    return persistence.list();
+  public @Nonnull Set<String> getResourceTypes() {
+    return persistence.list().stream().map(ResourceType::toCode).collect(Collectors.toSet());
   }
 
   /**
