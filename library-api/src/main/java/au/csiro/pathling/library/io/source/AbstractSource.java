@@ -37,12 +37,23 @@ import jakarta.annotation.Nullable;
  */
 public abstract class AbstractSource implements QueryableDataSource {
 
+  /**
+   * The Pathling context that provides access to dependencies such as the Spark session.
+   */
   @Nonnull
   protected final PathlingContext context;
 
+  /**
+   * The dispatcher used to execute queries against the data source.
+   */
   @Nonnull
   protected final QueryDispatcher dispatcher;
 
+  /**
+   * Constructs an AbstractSource with the specified PathlingContext.
+   *
+   * @param context the PathlingContext to use
+   */
   protected AbstractSource(@Nonnull final PathlingContext context) {
     this.context = context;
     dispatcher = buildDispatcher(context, this);

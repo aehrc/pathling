@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.library.io.sink;
 
-import static au.csiro.pathling.io.FileSystemPersistence.departitionResult;
-import static au.csiro.pathling.io.FileSystemPersistence.safelyJoinPaths;
+import static au.csiro.pathling.library.io.FileSystemPersistence.departitionResult;
+import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
 
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.FhirMimeTypes;
@@ -31,21 +31,18 @@ import org.apache.spark.sql.SaveMode;
 /**
  * A data sink that writes data to NDJSON files on a filesystem.
  *
+ * @param context the {@link PathlingContext} to use
+ * @param path the path to write the NDJSON files to
+ * @param saveMode the {@link SaveMode} to use
+ * @param fileNameMapper a function that maps resource type to file name
  * @author John Grimes
  */
-public class NdjsonSink implements DataSink {
-
-  @Nonnull
-  private final PathlingContext context;
-
-  @Nonnull
-  private final String path;
-
-  @Nonnull
-  private final SaveMode saveMode;
-
-  @Nonnull
-  private final UnaryOperator<String> fileNameMapper;
+public record NdjsonSink(
+    @Nonnull PathlingContext context,
+    @Nonnull String path,
+    @Nonnull SaveMode saveMode,
+    @Nonnull UnaryOperator<String> fileNameMapper
+) implements DataSink {
 
   /**
    * @param context the {@link PathlingContext} to use
@@ -55,20 +52,6 @@ public class NdjsonSink implements DataSink {
   public NdjsonSink(@Nonnull final PathlingContext context, @Nonnull final String path,
       @Nonnull final SaveMode saveMode) {
     this(context, path, saveMode, UnaryOperator.identity());
-  }
-
-  /**
-   * @param context the {@link PathlingContext} to use
-   * @param path the path to write the NDJSON files to
-   * @param saveMode the {@link SaveMode} to use
-   * @param fileNameMapper a function that maps resource type to file name
-   */
-  public NdjsonSink(@Nonnull final PathlingContext context, @Nonnull final String path,
-      @Nonnull final SaveMode saveMode, @Nonnull final UnaryOperator<String> fileNameMapper) {
-    this.context = context;
-    this.path = path;
-    this.saveMode = saveMode;
-    this.fileNameMapper = fileNameMapper;
   }
 
   @Override

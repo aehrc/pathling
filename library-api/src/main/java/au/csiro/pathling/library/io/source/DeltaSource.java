@@ -17,26 +17,68 @@
 
 package au.csiro.pathling.library.io.source;
 
-import au.csiro.pathling.io.Database;
+import static au.csiro.pathling.library.io.FileSystemPersistence.getFileSystem;
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.FileSystemPersistence;
+import au.csiro.pathling.library.io.PersistenceError;
+import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+import java.io.IOException;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
 /**
- * A class for making FHIR data in a Delta database available for query.
+ * A class for making FHIR data in Delta tables on the filesystem available for query.
  *
  * @author John Grimes
  * @author Piotr Szul
  */
-public class DeltaSource extends DatabaseSource {
+public class DeltaSource extends AbstractSource {
 
+  @Nonnull
+  private final String path;
+
+  /**
+   * Constructs a DeltaSource with the specified PathlingContext and path.
+   *
+   * @param context the PathlingContext to use
+   * @param path the path to the Delta table
+   */
   public DeltaSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
-    super(context, buildDatabase(context, path));
+    super(context);
+    this.path = path;
   }
 
   @Nonnull
-  private static Database buildDatabase(final @Nonnull PathlingContext context,
-      final @Nonnull String path) {
-    return Database.forFileSystem(context.getSpark(), context.getFhirEncoders(), path, false);
+  @Override
+  public Dataset<Row> read(@Nullable final String resourceCode) {
+    requireNonNull(resourceCode);
+    return DeltaTable.forPath(context.getSpark(),
+        FileSystemPersistence.getTableUrl(path, resourceCode)).df();
+  }
+
+  @Nonnull
+  @Override
+  public Set<String> getResourceTypes() {
+    try {
+      final Stream<FileStatus> files = Stream.of(
+          getFileSystem(context.getSpark(), path).listStatus(new Path(path)));
+      return files
+          .map(FileStatus::getPath)
+          .map(Path::getName)
+          .map(fileName -> fileName.replace(".parquet", ""))
+          .collect(Collectors.toSet());
+    } catch (final IOException e) {
+      throw new PersistenceError("Problem listing resources", e);
+    }
   }
 
 }

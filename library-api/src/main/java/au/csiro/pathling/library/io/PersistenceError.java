@@ -1,4 +1,4 @@
-package au.csiro.pathling.io;
+package au.csiro.pathling.library.io;
 
 import java.io.Serial;
 

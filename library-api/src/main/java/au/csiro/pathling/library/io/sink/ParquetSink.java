@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.library.io.sink;
 
-import static au.csiro.pathling.io.FileSystemPersistence.safelyJoinPaths;
+import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
 
 import au.csiro.pathling.io.source.DataSource;
 import jakarta.annotation.Nonnull;
@@ -36,13 +36,6 @@ public record ParquetSink(
     @Nonnull String path,
     @Nonnull SaveMode saveMode
 ) implements DataSink {
-
-  /**
-   * @param path the path to write the Parquet files to
-   * @param saveMode the {@link SaveMode} to use
-   */
-  public ParquetSink {
-  }
 
   @Override
   public void write(@Nonnull final DataSource source) {

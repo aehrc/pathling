@@ -60,8 +60,7 @@ public class BundlesSource extends FileSource {
         context.getSpark().read().option("wholetext", true).format("text"),
         // Extract the nominated resource types from each file and encode using the specified MIME
         // type.
-        (sourceData, resourceType) ->
-            context.encodeBundle(sourceData, resourceType.toCode(), mimeType));
+        (sourceData, resourceType) -> context.encodeBundle(sourceData, resourceType, mimeType));
   }
 
 }

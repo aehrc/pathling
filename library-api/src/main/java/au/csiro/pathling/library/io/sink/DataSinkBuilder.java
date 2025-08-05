@@ -19,9 +19,9 @@ package au.csiro.pathling.library.io.sink;
 
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.io.ImportMode;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.ImportMode;
 import com.google.common.collect.ImmutableMap.Builder;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -112,7 +112,7 @@ public record DataSinkBuilder(
    * @param path the directory to write the files to
    */
   public void delta(@Nullable final String path) {
-    new DeltaSink(context, requireNonNull(path)).write(source);
+    new DeltaSink(requireNonNull(path)).write(source);
   }
 
   /**
@@ -124,7 +124,7 @@ public record DataSinkBuilder(
    * will merge the new data with the existing data based on resource ID
    */
   public void delta(@Nullable final String path, @Nullable final String importMode) {
-    new DeltaSink(context, requireNonNull(path), ImportMode.fromCode(importMode)).write(source);
+    new DeltaSink(requireNonNull(path), ImportMode.fromCode(importMode)).write(source);
   }
 
   /**
@@ -134,7 +134,7 @@ public record DataSinkBuilder(
    * Any existing data in the tables will be overwritten.
    */
   public void tables() {
-    new CatalogSink(context).write(source);
+    new CatalogSink().write(source);
   }
 
   /**
@@ -146,7 +146,7 @@ public record DataSinkBuilder(
    * will merge the new data with the existing data based on resource ID
    */
   public void tables(@Nullable final String importMode) {
-    new CatalogSink(context, ImportMode.fromCode(importMode)).write(source);
+    new CatalogSink(ImportMode.fromCode(importMode)).write(source);
   }
 
   /**
@@ -159,7 +159,7 @@ public record DataSinkBuilder(
    * @param schema the schema name to write the tables to
    */
   public void tables(@Nullable final String importMode, @Nullable final String schema) {
-    new CatalogSink(context, ImportMode.fromCode(importMode), requireNonNull(schema)).write(source);
+    new CatalogSink(ImportMode.fromCode(importMode), requireNonNull(schema)).write(source);
   }
 
   @Nonnull

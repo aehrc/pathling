@@ -30,6 +30,12 @@ import java.util.Collections;
  */
 public class ParquetSource extends FileSource {
 
+  /**
+   * Constructs a ParquetSource with the specified PathlingContext and path.
+   *
+   * @param context the PathlingContext to use
+   * @param path the path to the Parquet file or directory
+   */
   public ParquetSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
     super(context, path,
         // Assume the file name will be the resource type.

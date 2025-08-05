@@ -20,10 +20,8 @@ package au.csiro.pathling.library.io.source;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.encoders.EncoderBuilder;
-import au.csiro.pathling.io.FileSystemPersistence;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +39,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import scala.collection.JavaConverters;
 
@@ -53,23 +50,45 @@ import scala.collection.JavaConverters;
 @Slf4j
 public abstract class FileSource extends DatasetSource {
 
-  @Nonnull
+  /**
+   * A function that maps a resource type code to a set of file names that contain data for that
+   * resource type.
+   */
   protected final Function<String, Set<String>> fileNameMapper;
 
+  /**
+   * The file extension that this source expects for its source files.
+   */
   @Nonnull
   protected final String extension;
 
+  /**
+   * A {@link DataFrameReader} that can be used to read the source files.
+   */
   @Nonnull
   protected final DataFrameReader reader;
 
+  /**
+   * A function that transforms a {@link Dataset<Row>} containing raw source data of a specified
+   * resource type into a {@link Dataset<Row>} containing the imported data.
+   */
   @Nonnull
-  protected final BiFunction<Dataset<Row>, ResourceType, Dataset<Row>> transformer;
+  protected final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer;
 
+  /**
+   * @param context the Pathling context
+   * @param path the path to the source files, which may be a directory or a glob pattern
+   * @param fileNameMapper a function that maps a file name to a set of resource types
+   * @param extension the file extension that this source expects for its source files
+   * @param reader a {@link DataFrameReader} that can be used to read the source files
+   * @param transformer a function that transforms a {@link Dataset<Row>} containing raw source data
+   * of a specified resource type into a {@link Dataset<Row>} containing the imported data
+   */
   protected FileSource(@Nonnull final PathlingContext context,
       @Nonnull final String path,
       @Nonnull final Function<String, Set<String>> fileNameMapper, @Nonnull final String extension,
       @Nonnull final DataFrameReader reader,
-      @Nonnull final BiFunction<Dataset<Row>, ResourceType, Dataset<Row>> transformer) {
+      @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer) {
     super(context);
     this.fileNameMapper = fileNameMapper;
     this.extension = extension;
@@ -80,7 +99,7 @@ public abstract class FileSource extends DatasetSource {
         context.getSpark().sparkContext().hadoopConfiguration());
     try {
       // If the URL is an S3 URL, convert it to S3A.
-      final Path convertedPath = new Path(FileSystemPersistence.convertS3ToS3aUrl(path));
+      final Path convertedPath = new Path(path);
       final FileSystem fileSystem = convertedPath.getFileSystem(hadoopConfiguration);
       resourceMap = buildResourceMap(convertedPath, fileSystem);
     } catch (final IOException e) {
@@ -97,10 +116,10 @@ public abstract class FileSource extends DatasetSource {
    * @throws IOException if an error occurs while listing the files
    */
   @Nonnull
-  private Map<ResourceType, Dataset<Row>> buildResourceMap(final @Nonnull Path path,
-      final FileSystem fileSystem) throws IOException {
+  private Map<String, Dataset<Row>> buildResourceMap(final @Nonnull Path path,
+      @Nonnull final FileSystem fileSystem) throws IOException {
     final FileStatus[] fileStatuses = fileSystem.globStatus(new Path(path, "*"));
-    final Map<ResourceType, List<String>> fileNamesByResourceType = Stream.of(fileStatuses)
+    final Map<String, List<String>> fileNamesByResourceType = Stream.of(fileStatuses)
         .map(FileStatus::getPath)
         .map(Object::toString)
         // Filter out any paths that do not have the expected extension.
@@ -109,10 +128,6 @@ public abstract class FileSource extends DatasetSource {
         .flatMap(this::resourceCodeAndPath)
         // Filter out any resource codes that are not supported.
         .filter(this::checkResourceSupported)
-        // Parse the resource code.
-        .map(this::resourceTypeAndPath)
-        // Filter out any resource types that were not valid.
-        .filter(pair -> pair.getKey() != null)
         // Group the pairs by resource type, and collect the associated paths into a list.
         .collect(Collectors.groupingBy(Pair::getKey,
             Collectors.mapping(Pair::getValue, Collectors.toList())));
@@ -158,24 +173,6 @@ public abstract class FileSource extends DatasetSource {
           resourceCodeAndPath.getKey());
     }
     return !result;
-  }
-
-  /**
-   * Converts a pair of resource code and path to a pair of {@link ResourceType} and path.
-   *
-   * @param resourceCodeAndPath the pair of resource code and path to convert
-   * @return a pair of {@link ResourceType} and path
-   */
-  @Nonnull
-  private Pair<ResourceType, String> resourceTypeAndPath(
-      @Nonnull final Pair<String, String> resourceCodeAndPath) {
-    @Nullable ResourceType resourceType;
-    try {
-      resourceType = ResourceType.fromCode(resourceCodeAndPath.getKey());
-    } catch (final FHIRException e) {
-      resourceType = null;
-    }
-    return Pair.of(resourceType, resourceCodeAndPath.getValue());
   }
 
 }

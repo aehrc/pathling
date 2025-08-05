@@ -33,7 +33,8 @@ import org.apache.spark.sql.Row;
  * Export API to download resources as NDJSON files, which are then read using
  * {@link NdjsonSource}.
  *
- * @see <a href="https://hl7.org/fhir/uv/bulkdata/">FHIR Bulk Data Access</a>
+ * @see <a href="https://github.com/aehrc/fhir-bulk-java">FHIR Bulk Client for Java</a>
+ * @see <a href="https://hl7.org/fhir/uv/bulkdata/">FHIR Bulk Data Access Implementation Guide</a>
  */
 @Slf4j
 public class BulkDataSource implements DataSource {
@@ -65,9 +66,9 @@ public class BulkDataSource implements DataSource {
     return ndjsonSource.read(resourceCode);
   }
 
-
   @Override
   public @Nonnull Set<String> getResourceTypes() {
     return ndjsonSource.getResourceTypes();
   }
+
 }

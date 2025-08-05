@@ -25,7 +25,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.withSettings;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.io.ImportMode;
 import au.csiro.pathling.library.FhirMimeTypes;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.TestHelpers;
@@ -197,8 +196,8 @@ class DataSourcesTest {
 
     // Create a dataset source from the datasets.
     final QueryableDataSource data = pathlingContext.read().datasets()
-        .dataset(ResourceType.CONDITION, condition)
-        .dataset(ResourceType.PATIENT, patient);
+        .dataset("Condition", condition)
+        .dataset("Patient", patient);
 
     // Query the data.
     queryDeltaData(data);

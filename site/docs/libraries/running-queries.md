@@ -60,7 +60,6 @@ import au.csiro.pathling.library.io.source.NdjsonSource;
 import au.csiro.pathling.views.FhirView;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 class MyApp {
 
@@ -69,7 +68,7 @@ class MyApp {
         NdjsonSource data = pc.read()
                 .ndjson("/some/file/location");
 
-        FhirView view = FhirView.ofResource(ResourceType.OBSERVATION)
+        FhirView view = FhirView.ofResource("Observation")
                 .select(
                         columns(
                                 column("patient_id", "getResourceKey()")
@@ -97,13 +96,12 @@ import au.csiro.pathling.library.io.source.NdjsonSource
 import au.csiro.pathling.views.FhirView
 import au.csiro.pathling.views.FhirView._
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
-import org.hl7.fhir.r4.model.Enumerations.ResourceType
 
 val pc = PathlingContext.create()
 val data: NdjsonSource = pc.read()
         .ndjson("/some/file/location")
 
-val view: FhirView = FhirView.ofResource(ResourceType.OBSERVATION)
+val view: FhirView = FhirView.ofResource("Observation")
         .select(
             columns(
                 column("patient_id", "getResourceKey()")

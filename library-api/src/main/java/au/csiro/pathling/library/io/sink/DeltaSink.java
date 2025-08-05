@@ -17,9 +17,8 @@
 
 package au.csiro.pathling.library.io.sink;
 
-import au.csiro.pathling.io.ImportMode;
 import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.ImportMode;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -31,10 +30,6 @@ import org.apache.spark.sql.Row;
  */
 public class DeltaSink implements DataSink {
 
-  // TODO: Review whether we need to pass in the PathlingContext.
-  @Nonnull
-  private final PathlingContext pathlingContext;
-
   @Nonnull
   private final ImportMode importMode;
 
@@ -42,25 +37,20 @@ public class DeltaSink implements DataSink {
   private final String path;
 
   /**
-   * @param context the {@link PathlingContext} to use
    * @param path the path to write the Delta database to
    */
-  public DeltaSink(@Nonnull final PathlingContext context, @Nonnull final String path) {
-    this.pathlingContext = context;
+  public DeltaSink(@Nonnull final String path) {
     this.importMode = ImportMode.OVERWRITE; // Default import mode
     this.path = path;
   }
 
   /**
-   * @param context the {@link PathlingContext} to use
    * @param path the path to write the Delta database to
    * @param importMode the {@link ImportMode} to use, {@link ImportMode#OVERWRITE} will overwrite
    * any existing data, {@link ImportMode#MERGE} will merge the new data with the existing data
    * based on resource ID
    */
-  public DeltaSink(@Nonnull final PathlingContext context, @Nonnull final String path,
-      @Nonnull final ImportMode importMode) {
-    this.pathlingContext = context;
+  public DeltaSink(@Nonnull final String path, @Nonnull final ImportMode importMode) {
     this.importMode = importMode;
     this.path = path;
   }

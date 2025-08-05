@@ -17,9 +17,8 @@
 
 package au.csiro.pathling.library.io.sink;
 
-import au.csiro.pathling.io.ImportMode;
 import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.ImportMode;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.apache.spark.sql.Dataset;
@@ -33,10 +32,6 @@ import org.apache.spark.sql.functions;
  */
 public class CatalogSink implements DataSink {
 
-  // TODO: Review whether we need to pass in the PathlingContext.
-  @Nonnull
-  private final PathlingContext pathlingContext;
-
   @Nonnull
   private final ImportMode importMode;
 
@@ -46,10 +41,8 @@ public class CatalogSink implements DataSink {
   /**
    * Constructs a CatalogSink with the specified PathlingContext and default import mode.
    *
-   * @param context the PathlingContext to use
    */
-  public CatalogSink(@Nonnull final PathlingContext context) {
-    this.pathlingContext = context;
+  public CatalogSink() {
     this.importMode = ImportMode.OVERWRITE; // Default import mode
     this.schema = Optional.empty(); // Schema not specified
   }
@@ -57,11 +50,9 @@ public class CatalogSink implements DataSink {
   /**
    * Constructs a CatalogSink with the specified PathlingContext and import mode.
    *
-   * @param context the PathlingContext to use
    * @param importMode the ImportMode to use when writing data
    */
-  public CatalogSink(@Nonnull final PathlingContext context, @Nonnull final ImportMode importMode) {
-    this.pathlingContext = context;
+  public CatalogSink(@Nonnull final ImportMode importMode) {
     this.importMode = importMode;
     this.schema = Optional.empty(); // Schema not specified
   }
@@ -69,13 +60,10 @@ public class CatalogSink implements DataSink {
   /**
    * Constructs a CatalogSink with the specified PathlingContext, import mode, and schema.
    *
-   * @param context the PathlingContext to use
    * @param importMode the ImportMode to use when writing data
    * @param schema the schema to qualify the table names, if any
    */
-  public CatalogSink(@Nonnull final PathlingContext context, @Nonnull final ImportMode importMode,
-      @Nonnull final String schema) {
-    this.pathlingContext = context;
+  public CatalogSink(@Nonnull final ImportMode importMode, @Nonnull final String schema) {
     this.importMode = importMode;
     this.schema = Optional.of(schema);
   }

@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.library.io.source;
 
-import static au.csiro.pathling.fhir.FhirUtils.getResourceType;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.library.PathlingContext;
@@ -27,10 +26,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A class for making FHIR data with Spark datasets available for query.
@@ -40,9 +37,18 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public class DatasetSource extends AbstractSource {
 
+  /**
+   * A map of resource codes to their corresponding datasets. The key is the resource code, and the
+   * value is the dataset containing the resource data.
+   */
   @Nonnull
-  protected Map<ResourceType, Dataset<Row>> resourceMap = new HashMap<>();
+  protected Map<String, Dataset<Row>> resourceMap = new HashMap<>();
 
+  /**
+   * Constructs a DatasetSource with the specified PathlingContext.
+   *
+   * @param context the PathlingContext to use
+   */
   public DatasetSource(@Nonnull final PathlingContext context) {
     super(context);
   }
@@ -50,42 +56,29 @@ public class DatasetSource extends AbstractSource {
   /**
    * Add a dataset to this source.
    *
-   * @param resourceType the resource type
+   * @param resourceType the resource code
    * @param dataset the dataset
    * @return this data source, for chaining
    */
-  public DatasetSource dataset(@Nullable final ResourceType resourceType,
+  public DatasetSource dataset(@Nullable final String resourceType,
       @Nullable final Dataset<Row> dataset) {
-    resourceMap.put(requireNonNull(resourceType), requireNonNull(dataset));
-    return this;
-  }
-
-  /**
-   * Add a dataset to this source.
-   *
-   * @param resourceCode the resource code
-   * @param dataset the dataset
-   * @return this data source, for chaining
-   */
-  public DatasetSource dataset(@Nullable final String resourceCode,
-      @Nullable final Dataset<Row> dataset) {
-    resourceMap.put(getResourceType(resourceCode), requireNonNull(dataset));
+    requireNonNull(resourceType);
+    requireNonNull(dataset);
+    resourceMap.put(resourceType, dataset);
     return this;
   }
 
   @Nonnull
   @Override
   public Dataset<Row> read(@Nullable final String resourceCode) {
-    final ResourceType resourceType = requireNonNull(ResourceType.fromCode(resourceCode));
-    return Optional.ofNullable(resourceMap.get(requireNonNull(resourceType)))
+    return Optional.ofNullable(resourceMap.get(resourceCode))
         .orElseThrow(() -> new IllegalArgumentException(
-            "No data found for resource type: " + resourceType));
+            "No data found for resource type: " + resourceCode));
   }
 
   @Override
   public @Nonnull Set<String> getResourceTypes() {
-    return resourceMap.keySet().stream().map(ResourceType::toCode)
-        .collect(Collectors.toSet());
+    return resourceMap.keySet();
   }
 
 }

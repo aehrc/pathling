@@ -39,14 +39,27 @@ public class NdjsonSource extends FileSource {
   // Matches a base name that consists of a resource type, optionally followed by a period and a
   // qualifier string. The first group will contain the resource type, and the second group will
   // contain the qualifier string (if present).
-  public static final Pattern BASE_NAME_WITH_QUALIFIER = Pattern.compile(
+  private static final Pattern BASE_NAME_WITH_QUALIFIER = Pattern.compile(
       "^([A-Za-z]+)(\\.[^.]+)?$");
 
+  /**
+   * Constructs an NdjsonSource with the specified PathlingContext and path.
+   *
+   * @param context the PathlingContext to use
+   * @param path the path to the NDJSON file or directory
+   */
   public NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
     // Recognize files with the extension ".ndjson" as NDJSON files, by default.
     this(context, path, "ndjson");
   }
 
+  /**
+   * Constructs an NdjsonSource with the specified PathlingContext, path, and extension.
+   *
+   * @param context the PathlingContext to use
+   * @param path the path to the NDJSON file or directory
+   * @param extension the file extension to recognize as NDJSON files
+   */
   public NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final String path,
       @Nonnull final String extension) {
     this(context, path, extension,
@@ -55,6 +68,15 @@ public class NdjsonSource extends FileSource {
         NdjsonSource::resourceNameWithQualifierMapper);
   }
 
+  /**
+   * Constructs an NdjsonSource with the specified PathlingContext, path, extension, and file name
+   * mapper.
+   *
+   * @param context the PathlingContext to use
+   * @param path the path to the NDJSON file or directory
+   * @param extension the file extension to recognize as NDJSON files
+   * @param fileNameMapper a function that maps a file name to a set of resource types
+   */
   public NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final String path,
       @Nonnull final String extension,
       @Nonnull final Function<String, Set<String>> fileNameMapper) {
@@ -62,7 +84,7 @@ public class NdjsonSource extends FileSource {
         // Read each line of input separately.
         context.getSpark().read().format("text"),
         // Encode each line of input as a JSON FHIR resource.
-        (sourceData, resourceType) -> context.encode(sourceData, resourceType.toCode(),
+        (sourceData, resourceType) -> context.encode(sourceData, resourceType,
             FhirMimeTypes.FHIR_JSON));
   }
 
