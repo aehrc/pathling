@@ -51,6 +51,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Value;
@@ -508,6 +509,13 @@ abstract class FhirViewTest {
     public @Nonnull Set<String> getResourceTypes() {
       return resourceTypeToDataset.keySet();
     }
+
+    @Nonnull
+    @Override
+    public DataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
+      throw new UnsupportedOperationException("Mapping is not supported in TestDataSource");
+    }
+    
   }
 
   @Nullable

@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
@@ -51,6 +52,12 @@ public class DatasetSource extends AbstractSource {
    */
   public DatasetSource(@Nonnull final PathlingContext context) {
     super(context);
+  }
+
+  private DatasetSource(@Nonnull final PathlingContext context,
+      @Nonnull final Map<String, Dataset<Row>> resourceMap) {
+    super(context);
+    this.resourceMap = resourceMap;
   }
 
   /**
@@ -79,6 +86,18 @@ public class DatasetSource extends AbstractSource {
   @Override
   public @Nonnull Set<String> getResourceTypes() {
     return resourceMap.keySet();
+  }
+
+  @Nonnull
+  @Override
+  public DatasetSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
+    final Map<String, Dataset<Row>> transformedMap = new HashMap<>();
+    for (final Map.Entry<String, Dataset<Row>> entry : resourceMap.entrySet()) {
+      final String resourceType = entry.getKey();
+      final Dataset<Row> dataset = entry.getValue();
+      transformedMap.put(resourceType, operator.apply(dataset));
+    }
+    return new DatasetSource(context, transformedMap);
   }
 
 }

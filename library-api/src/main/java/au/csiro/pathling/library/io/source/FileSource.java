@@ -127,7 +127,7 @@ public abstract class FileSource extends DatasetSource {
         // Extract the resource code from each path using the file name mapper.
         .flatMap(this::resourceCodeAndPath)
         // Filter out any resource codes that are not supported.
-        .filter(this::checkResourceSupported)
+        .filter(p -> context.isResourceTypeSupported(p.getKey()))
         // Group the pairs by resource type, and collect the associated paths into a list.
         .collect(Collectors.groupingBy(Pair::getKey,
             Collectors.mapping(Pair::getValue, Collectors.toList())));

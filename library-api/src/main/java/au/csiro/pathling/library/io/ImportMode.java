@@ -11,10 +11,22 @@ import lombok.Getter;
  */
 public enum ImportMode {
   /**
+   * If the resource type already exists, an error is raised. If it does not exist, the resources in
+   * the source file are added.
+   */
+  ERROR_IF_EXISTS("error"),
+ 
+  /**
    * Results in all existing resources of the specified type to be deleted and replaced with the
    * contents of the source file.
    */
   OVERWRITE("overwrite"),
+
+  /**
+   * Appends the resources in the source file to the existing resources of the specified type,
+   * without modifying any existing resources.
+   */
+  APPEND("append"),
 
   /**
    * Matches existing resources with updated resources in the source file based on their ID, and

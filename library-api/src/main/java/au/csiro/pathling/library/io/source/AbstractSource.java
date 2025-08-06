@@ -89,4 +89,5 @@ public abstract class AbstractSource implements QueryableDataSource {
     requireNonNull(view);
     return new FhirViewQuery(dispatcher, view.getResource(), context.getGson()).view(view);
   }
+
 }

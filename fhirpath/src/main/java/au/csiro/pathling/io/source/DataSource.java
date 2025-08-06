@@ -19,6 +19,7 @@ package au.csiro.pathling.io.source;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
@@ -45,5 +46,14 @@ public interface DataSource {
    */
   @Nonnull
   Set<String> getResourceTypes();
+
+  /**
+   * Applies a transformation to each dataset within this data source.
+   *
+   * @param operator the transformation to apply
+   * @return a new DataSource containing the transformed datasets
+   */
+  @Nonnull
+  DataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator);
 
 }

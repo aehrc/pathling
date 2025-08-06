@@ -20,6 +20,9 @@ package au.csiro.pathling.library.io.source;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import java.util.Collections;
+import java.util.function.UnaryOperator;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
 /**
  * A class for making FHIR data in Parquet format available for query. It is assumed that the schema
@@ -46,6 +49,12 @@ public class ParquetSource extends FileSource {
         // Apply no transformations on the data - we assume it has already been processed using the 
         // Pathling FHIR encoders.
         (sourceData, resourceType) -> sourceData);
+  }
+
+  @Nonnull
+  @Override
+  public ParquetSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
+    return (ParquetSource) super.map(operator);
   }
 
 }

@@ -20,6 +20,7 @@ package au.csiro.pathling.library.io.sink;
 import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
 
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.io.ImportMode;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -29,21 +30,33 @@ import org.apache.spark.sql.SaveMode;
  * A data sink that writes data to Parquet tables on a filesystem.
  *
  * @param path the path to write the Parquet files to
- * @param saveMode the {@link SaveMode} to use
+ * @param importMode the {@link SaveMode} to use
  * @author John Grimes
  */
 public record ParquetSink(
     @Nonnull String path,
-    @Nonnull SaveMode saveMode
+    @Nonnull ImportMode importMode
 ) implements DataSink {
 
   @Override
   public void write(@Nonnull final DataSource source) {
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
-      final String resultUrl = safelyJoinPaths(path, resourceType + ".parquet");
-      dataset.write().mode(saveMode).parquet(resultUrl);
+      final String tablePath = safelyJoinPaths(path, resourceType + ".parquet");
+
+      switch (importMode) {
+        case ERROR_IF_EXISTS -> writeDataset(dataset, tablePath, SaveMode.ErrorIfExists);
+        case OVERWRITE -> writeDataset(dataset, tablePath, SaveMode.Overwrite);
+        case APPEND -> writeDataset(dataset, tablePath, SaveMode.Append);
+        case MERGE -> throw new UnsupportedOperationException(
+            "Merge operation is not supported for Parquet - use Delta if merging is required");
+      }
     }
+  }
+
+  private static void writeDataset(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final String tablePath, final SaveMode saveMode) {
+    dataset.write().mode(saveMode).parquet(tablePath);
   }
 
 }

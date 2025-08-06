@@ -17,13 +17,17 @@
 
 package au.csiro.pathling.library.io.sink;
 
+import static au.csiro.pathling.library.io.sink.DeltaSink.merge;
+
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.ImportMode;
+import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
+import org.apache.spark.sql.SaveMode;
 
 /**
  * A data sink that writes data to a managed table within the Spark catalog.
@@ -31,6 +35,11 @@ import org.apache.spark.sql.functions;
  * @author John Grimes
  */
 public class CatalogSink implements DataSink {
+
+  private static final String OPTION_RESOURCE_TYPE = "fhir.resourceType";
+
+  @Nonnull
+  private final PathlingContext context;
 
   @Nonnull
   private final ImportMode importMode;
@@ -41,18 +50,22 @@ public class CatalogSink implements DataSink {
   /**
    * Constructs a CatalogSink with the specified PathlingContext and default import mode.
    *
+   * @param context the PathlingContext to use
    */
-  public CatalogSink() {
-    this.importMode = ImportMode.OVERWRITE; // Default import mode
+  public CatalogSink(@Nonnull final PathlingContext context) {
+    this.context = context;
+    this.importMode = ImportMode.ERROR_IF_EXISTS; // Default import mode
     this.schema = Optional.empty(); // Schema not specified
   }
 
   /**
    * Constructs a CatalogSink with the specified PathlingContext and import mode.
    *
+   * @param context the PathlingContext to use
    * @param importMode the ImportMode to use when writing data
    */
-  public CatalogSink(@Nonnull final ImportMode importMode) {
+  public CatalogSink(@Nonnull final PathlingContext context, @Nonnull final ImportMode importMode) {
+    this.context = context;
     this.importMode = importMode;
     this.schema = Optional.empty(); // Schema not specified
   }
@@ -60,10 +73,13 @@ public class CatalogSink implements DataSink {
   /**
    * Constructs a CatalogSink with the specified PathlingContext, import mode, and schema.
    *
+   * @param context the PathlingContext to use
    * @param importMode the ImportMode to use when writing data
    * @param schema the schema to qualify the table names, if any
    */
-  public CatalogSink(@Nonnull final ImportMode importMode, @Nonnull final String schema) {
+  public CatalogSink(@Nonnull final PathlingContext context, @Nonnull final ImportMode importMode,
+      @Nonnull final String schema) {
+    this.context = context;
     this.importMode = importMode;
     this.schema = Optional.of(schema);
   }
@@ -73,11 +89,43 @@ public class CatalogSink implements DataSink {
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       final String tableName = getTableName(resourceType);
-      dataset.orderBy(functions.asc("id"))
-          .write()
-          .mode(importMode.getCode())
-          .saveAsTable(tableName);
+
+      switch (importMode) {
+        case ERROR_IF_EXISTS -> {
+          writeDataset(resourceType, dataset, tableName, SaveMode.ErrorIfExists);
+          context.getSpark().sql(
+              "ALTER TABLE " + tableName + " SET TBLPROPERTIES ('" + OPTION_RESOURCE_TYPE
+                  + "' = '" + resourceType + "')");
+        }
+        case OVERWRITE -> {
+          // This is to work around a bug relating to Delta tables not reporting that they are
+          // able to be overwritten.
+          context.getSpark().sql("DROP TABLE IF EXISTS " + tableName);
+          writeDataset(resourceType, dataset, tableName, SaveMode.Overwrite);
+        }
+        case APPEND -> writeDataset(resourceType, dataset, tableName, SaveMode.Append);
+        case MERGE -> {
+          if (DeltaTable.isDeltaTable(tableName)) {
+            // If the table already exists, merge the data in.
+            final DeltaTable table = DeltaTable.forName(tableName);
+            merge(table, dataset);
+          } else {
+            // If the table does not exist, create it.
+            writeDataset(resourceType, dataset, tableName, SaveMode.ErrorIfExists);
+          }
+        }
+      }
     }
+  }
+
+  private static void writeDataset(@Nonnull final String resourceType,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final String tableName,
+      @Nonnull final SaveMode saveMode) {
+    dataset.write()
+        .format("delta")
+        .mode(saveMode)
+        .option(OPTION_RESOURCE_TYPE, resourceType)
+        .saveAsTable(tableName);
   }
 
   /**

@@ -27,7 +27,9 @@ import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.fs.FileStatus;
@@ -46,6 +48,9 @@ public class DeltaSource extends AbstractSource {
   @Nonnull
   private final String path;
 
+  @Nonnull
+  private final Optional<UnaryOperator<Dataset<Row>>> transformation;
+
   /**
    * Constructs a DeltaSource with the specified PathlingContext and path.
    *
@@ -55,14 +60,26 @@ public class DeltaSource extends AbstractSource {
   public DeltaSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
     super(context);
     this.path = path;
+    this.transformation = Optional.empty(); // No transformation by default
+  }
+
+  private DeltaSource(@Nonnull final PathlingContext context, @Nonnull final String path,
+      @Nonnull final Optional<UnaryOperator<Dataset<Row>>> transformation) {
+    super(context);
+    this.path = path;
+    this.transformation = transformation;
   }
 
   @Nonnull
   @Override
   public Dataset<Row> read(@Nullable final String resourceCode) {
     requireNonNull(resourceCode);
-    return DeltaTable.forPath(context.getSpark(),
+    final Dataset<Row> dataset = DeltaTable.forPath(context.getSpark(),
         FileSystemPersistence.getTableUrl(path, resourceCode)).df();
+    // If a transformation is provided, apply it to the dataset. 
+    // Otherwise, return the dataset as is.
+    return transformation.map(t -> t.apply(dataset))
+        .orElse(dataset);
   }
 
   @Nonnull
@@ -79,6 +96,12 @@ public class DeltaSource extends AbstractSource {
     } catch (final IOException e) {
       throw new PersistenceError("Problem listing resources", e);
     }
+  }
+
+  @Nonnull
+  @Override
+  public DeltaSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
+    return new DeltaSource(context, path, Optional.of(operator));
   }
 
 }

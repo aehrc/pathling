@@ -25,6 +25,7 @@ import static org.apache.spark.sql.functions.when;
 import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
+import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.FhirEncoderBuilder;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
@@ -53,7 +54,9 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.functions;
+import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A class designed to provide access to selected Pathling functionality from a language library
@@ -505,6 +508,24 @@ public class PathlingContext {
   @Nonnull
   public String getVersion() {
     return new PathlingVersion().getDescriptiveVersion().orElse("UNKNOWN");
+  }
+
+  /**
+   * Checks if the given resource type is supported by the Pathling context.
+   *
+   * @param resourceType the resource type to check
+   * @return true if the resource type is supported, false otherwise
+   */
+  public boolean isResourceTypeSupported(@Nonnull final String resourceType) {
+    if (EncoderBuilder.UNSUPPORTED_RESOURCES().contains(resourceType)) {
+      return false;
+    }
+    try {
+      final ResourceType match = ResourceType.fromCode(resourceType);
+      return match != null;
+    } catch (final FHIRException e) {
+      return false;
+    }
   }
 
   @Nonnull

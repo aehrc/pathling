@@ -18,7 +18,9 @@
 package au.csiro.pathling.library.io.source;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toSet;
 
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.PersistenceError;
 import jakarta.annotation.Nonnull;
@@ -27,7 +29,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.function.UnaryOperator;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -42,8 +44,13 @@ import org.apache.spark.sql.catalog.Table;
  */
 public class CatalogSource extends AbstractSource {
 
+  private static final String TBLPROPERTY_RESOURCE_TYPE = "option.fhir.resourceType";
+
   @Nonnull
   private final Optional<String> schema;
+
+  @Nonnull
+  private final Optional<UnaryOperator<Dataset<Row>>> transformation;
 
   /**
    * Constructs a CatalogSource with the specified PathlingContext and an empty schema.
@@ -53,6 +60,7 @@ public class CatalogSource extends AbstractSource {
   public CatalogSource(@Nonnull final PathlingContext context) {
     super(context);
     this.schema = Optional.empty(); // Default schema is empty
+    this.transformation = Optional.empty(); // No transformation by default
   }
 
   /**
@@ -64,22 +72,43 @@ public class CatalogSource extends AbstractSource {
   public CatalogSource(@Nonnull final PathlingContext context, @Nonnull final String schema) {
     super(context);
     this.schema = Optional.of(schema);
+    this.transformation = Optional.empty(); // No transformation by default
+  }
+
+  private CatalogSource(@Nonnull final PathlingContext context,
+      @Nonnull final Optional<String> schema,
+      @Nonnull final Optional<UnaryOperator<Dataset<Row>>> transformation) {
+    super(context);
+    this.schema = schema;
+    this.transformation = transformation;
   }
 
   @Nonnull
   @Override
   public Dataset<Row> read(@Nullable final String resourceCode) {
     requireNonNull(resourceCode);
-    return context.getSpark().table(getTableName(resourceCode));
+    final Dataset<Row> table = context.getSpark().table(getTableName(resourceCode));
+    // If a transformation is provided, apply it to the table. 
+    // Otherwise, return the table as is.
+    return transformation.map(t -> t.apply(table))
+        .orElse(table);
   }
 
   @Nonnull
   @Override
   public Set<String> getResourceTypes() {
     return getTables().stream()
-        .map(Table::name)
+        .map(t ->
+            context.getSpark()
+                .sql("SHOW TBLPROPERTIES " + t.name() + " ('" + TBLPROPERTY_RESOURCE_TYPE + "')")
+                .collectAsList()
+                .stream()
+                .findFirst()
+                .map(row -> row.getString(1))
+                .orElse(null)
+        )
         .filter(Objects::nonNull)
-        .collect(Collectors.toSet());
+        .collect(toSet());
   }
 
   /**
@@ -111,6 +140,12 @@ public class CatalogSource extends AbstractSource {
         })
         .orElseGet(catalog::listTables);
     return tablesDataset.collectAsList();
+  }
+
+  @Nonnull
+  @Override
+  public DataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
+    return new CatalogSource(context, schema, Optional.of(operator));
   }
 
 }

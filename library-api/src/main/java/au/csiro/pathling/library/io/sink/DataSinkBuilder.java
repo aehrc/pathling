@@ -65,7 +65,7 @@ public record DataSinkBuilder(
    * </ul>
    */
   public void ndjson(@Nullable final String path, @Nullable final String saveMode) {
-    new NdjsonSink(context, requireNonNull(path), resolveSaveMode(saveMode)).write(source);
+    new NdjsonSink(context, requireNonNull(path), resolveImportMode(saveMode)).write(source);
   }
 
   /**
@@ -73,7 +73,7 @@ public record DataSinkBuilder(
    * custom file name mapper.
    *
    * @param path the directory to write the files to
-   * @param saveMode the save mode to use:
+   * @param importMode the import mode to use:
    * <ul>
    *   <li>"error" - throw an error if the files already exist</li>
    *   <li>"overwrite" - overwrite any existing files</li>
@@ -82,9 +82,9 @@ public record DataSinkBuilder(
    * </ul>
    * @param fileNameMapper a function that maps a resource type to a file name
    */
-  public void ndjson(@Nullable final String path, @Nullable final String saveMode,
+  public void ndjson(@Nullable final String path, @Nullable final String importMode,
       @Nullable final UnaryOperator<String> fileNameMapper) {
-    new NdjsonSink(context, requireNonNull(path), resolveSaveMode(saveMode),
+    new NdjsonSink(context, requireNonNull(path), resolveImportMode(importMode),
         requireNonNull(fileNameMapper)).write(source);
   }
 
@@ -93,7 +93,7 @@ public record DataSinkBuilder(
    * "parquet" extension.
    *
    * @param path the directory to write the files to
-   * @param saveMode the save mode to use:
+   * @param importMode the import mode to use:
    * <ul>
    *   <li>"error" - throw an error if the files already exist</li>
    *   <li>"overwrite" - overwrite any existing files</li>
@@ -101,8 +101,8 @@ public record DataSinkBuilder(
    *   <li>"ignore" - do nothing if the files already exist</li>
    * </ul>
    */
-  public void parquet(@Nullable final String path, @Nullable final String saveMode) {
-    new ParquetSink(requireNonNull(path), resolveSaveMode(saveMode)).write(source);
+  public void parquet(@Nullable final String path, @Nullable final String importMode) {
+    new ParquetSink(requireNonNull(path), resolveImportMode(importMode)).write(source);
   }
 
   /**
@@ -134,7 +134,7 @@ public record DataSinkBuilder(
    * Any existing data in the tables will be overwritten.
    */
   public void tables() {
-    new CatalogSink().write(source);
+    new CatalogSink(context).write(source);
   }
 
   /**
@@ -146,7 +146,7 @@ public record DataSinkBuilder(
    * will merge the new data with the existing data based on resource ID
    */
   public void tables(@Nullable final String importMode) {
-    new CatalogSink(ImportMode.fromCode(importMode)).write(source);
+    new CatalogSink(context, ImportMode.fromCode(importMode)).write(source);
   }
 
   /**
@@ -159,14 +159,14 @@ public record DataSinkBuilder(
    * @param schema the schema name to write the tables to
    */
   public void tables(@Nullable final String importMode, @Nullable final String schema) {
-    new CatalogSink(ImportMode.fromCode(importMode), requireNonNull(schema)).write(source);
+    new CatalogSink(context, ImportMode.fromCode(importMode), requireNonNull(schema)).write(source);
   }
 
   @Nonnull
-  private static SaveMode resolveSaveMode(final @Nullable String saveMode) {
-    return saveMode == null
-           ? SaveMode.ErrorIfExists
-           : SAVE_MODES.get(saveMode);
+  private static ImportMode resolveImportMode(final @Nullable String importMode) {
+    return importMode == null
+           ? ImportMode.ERROR_IF_EXISTS
+           : ImportMode.fromCode(importMode);
   }
 
 }

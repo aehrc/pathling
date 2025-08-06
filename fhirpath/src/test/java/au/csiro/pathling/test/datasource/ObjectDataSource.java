@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -21,7 +22,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 public class ObjectDataSource implements DataSource {
 
   @Nonnull
-  private final Map<String, Dataset<Row>> data = new HashMap<>();
+  private Map<String, Dataset<Row>> data = new HashMap<>();
 
   public ObjectDataSource(@Nonnull final SparkSession spark, @Nonnull final FhirEncoders encoders,
       @Nonnull final List<IBaseResource> resources) {
@@ -34,6 +35,10 @@ public class ObjectDataSource implements DataSource {
     });
   }
 
+  private ObjectDataSource(@Nonnull final Map<String, Dataset<Row>> data) {
+    this.data = data;
+  }
+
   @Nonnull
   @Override
   public Dataset<Row> read(@Nullable final String resourceCode) {
@@ -43,6 +48,18 @@ public class ObjectDataSource implements DataSource {
   @Override
   public @Nonnull Set<String> getResourceTypes() {
     return data.keySet();
+  }
+
+  @Nonnull
+  @Override
+  public ObjectDataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
+    final Map<String, Dataset<Row>> transformedData = new HashMap<>();
+    for (final Map.Entry<String, Dataset<Row>> entry : data.entrySet()) {
+      final String resourceType = entry.getKey();
+      final Dataset<Row> dataset = entry.getValue();
+      transformedData.put(resourceType, operator.apply(dataset));
+    }
+    return new ObjectDataSource(transformedData);
   }
 
 }

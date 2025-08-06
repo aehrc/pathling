@@ -23,6 +23,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.UnaryOperator;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
 /**
  * A class for making data within a set of FHIR Bundles available for query.
@@ -60,6 +63,12 @@ public class BundlesSource extends FileSource {
         // Extract the nominated resource types from each file and encode using the specified MIME
         // type.
         (sourceData, resourceType) -> context.encodeBundle(sourceData, resourceType, mimeType));
+  }
+
+  @Nonnull
+  @Override
+  public BundlesSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
+    return (BundlesSource) super.map(operator);
   }
 
 }

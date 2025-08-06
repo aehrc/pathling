@@ -24,6 +24,7 @@ import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -60,6 +61,10 @@ public class BulkDataSource implements DataSource {
     this.ndjsonSource = new NdjsonSource(context, client.getOutputDir());
   }
 
+  private BulkDataSource(@Nonnull final NdjsonSource ndjsonSource) {
+    this.ndjsonSource = ndjsonSource;
+  }
+
   @Nonnull
   @Override
   public Dataset<Row> read(@Nullable final String resourceCode) {
@@ -71,4 +76,10 @@ public class BulkDataSource implements DataSource {
     return ndjsonSource.getResourceTypes();
   }
 
+  @Nonnull
+  @Override
+  public BulkDataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
+    return new BulkDataSource(ndjsonSource.map(operator));
+  }
+  
 }

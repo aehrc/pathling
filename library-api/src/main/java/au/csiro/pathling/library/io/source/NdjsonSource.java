@@ -22,9 +22,12 @@ import jakarta.annotation.Nonnull;
 import java.util.Collections;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
 /**
  * A class for making FHIR data within a set of NDJSON files available for query.
@@ -114,6 +117,12 @@ public class NdjsonSource extends FileSource {
     final String qualifierRemoved = new StringBuilder(baseName).replace(matcher.start(2),
         matcher.end(2), "").toString();
     return Collections.singleton(qualifierRemoved);
+  }
+
+  @Nonnull
+  @Override
+  public NdjsonSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
+    return (NdjsonSource) super.map(operator);
   }
 
 }

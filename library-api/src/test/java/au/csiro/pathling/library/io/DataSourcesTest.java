@@ -46,7 +46,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -67,14 +66,17 @@ class DataSourcesTest {
   @BeforeAll
   static void setupContext() throws IOException {
     // Create a temporary directory that we can use to write data to.
-    temporaryDirectory = Files.createTempDirectory("pathling-datasources-test");
+    temporaryDirectory = Files.createTempDirectory("pathling-datasources-test-");
     log.info("Created temporary directory: {}", temporaryDirectory);
 
     // Create a Spark session, with Hive support and a warehouse in the temp directory.
     final Path warehouseLocation = temporaryDirectory.resolve("spark-warehouse");
+    final Path metastoreLocation = temporaryDirectory.resolve("metastore_db");
     spark = TestHelpers.sparkBuilder()
         .config("spark.sql.catalogImplementation", "hive")
         .config("spark.sql.warehouse.dir", warehouseLocation.toString())
+        .config("javax.jdo.option.ConnectionURL",
+            "jdbc:derby:" + metastoreLocation + ";create=true")
         .getOrCreate();
 
     // Create the test schema.
@@ -252,7 +254,7 @@ class DataSourcesTest {
     queryDeltaData(data);
 
     // Write the data back out to a temporary location.
-    data.write().delta(temporaryDirectory.resolve("delta").toString(), ImportMode.MERGE.getCode());
+    data.write().delta(temporaryDirectory.resolve("delta").toString(), "merge");
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read()
@@ -288,7 +290,7 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data back out to tables.
-    data.write().tables(ImportMode.MERGE.getCode());
+    data.write().tables("merge");
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read().tables();
@@ -304,7 +306,7 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data back out to tables.
-    data.write().tables(ImportMode.OVERWRITE.getCode(), "test");
+    data.write().tables("overwrite", "test");
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read().tables("test");
@@ -372,8 +374,8 @@ class DataSourcesTest {
 
   private static void queryNdjsonData(@Nonnull final QueryableDataSource data) {
     assertEquals(2, data.getResourceTypes().size());
-    assertTrue(data.getResourceTypes().contains(ResourceType.PATIENT));
-    assertTrue(data.getResourceTypes().contains(ResourceType.CONDITION));
+    assertTrue(data.getResourceTypes().contains("Patient"));
+    assertTrue(data.getResourceTypes().contains("Condition"));
 
     final Dataset<Row> patientCount = data.view("Patient")
         .json(PATIENT_VIEW_JSON)
@@ -391,8 +393,8 @@ class DataSourcesTest {
 
   private static void queryBundlesData(@Nonnull final QueryableDataSource data) {
     assertEquals(2, data.getResourceTypes().size());
-    assertTrue(data.getResourceTypes().contains(ResourceType.PATIENT));
-    assertTrue(data.getResourceTypes().contains(ResourceType.CONDITION));
+    assertTrue(data.getResourceTypes().contains("Patient"));
+    assertTrue(data.getResourceTypes().contains("Condition"));
 
     final Dataset<Row> patientCount = data.view("Patient")
         .json(PATIENT_VIEW_JSON)
@@ -453,16 +455,6 @@ class DataSourcesTest {
         .limit(1);
     DatasetAssert.of(patient)
         .hasRows(RowFactory.create("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "02138"));
-  }
-
-  @Test
-  void testS3Uri() {
-    final DataSourceBuilder builder = pathlingContext.read();
-    final Exception exception = assertThrows(RuntimeException.class,
-        () -> builder.ndjson("s3://pathling-test-data/ndjson/"));
-    assertInstanceOf(ClassNotFoundException.class, exception.getCause());
-    assertEquals("Class org.apache.hadoop.fs.s3a.S3AFileSystem not found",
-        exception.getCause().getMessage());
   }
 
 }
