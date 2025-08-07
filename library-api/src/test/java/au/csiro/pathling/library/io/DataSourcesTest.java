@@ -296,6 +296,30 @@ class DataSourcesTest {
     queryNdjsonData(newData);
   }
 
+  @Test
+  void parquetReadWriteCustom() {
+    final Function<String, Set<String>> readMapper = baseName -> Collections.singleton(
+        baseName.replaceFirst("Custom", ""));
+
+    // Read the test Parquet data with custom filename mapping.
+    final QueryableDataSource data = pathlingContext.read()
+        .parquet(TEST_DATA_PATH.resolve("parquet-custom").toString(), readMapper);
+
+    // Query the data.
+    queryParquetData(data);
+
+    // Write the data back out to a temporary location.
+    data.write().parquet(temporaryDirectory.resolve("parquet-custom").toString(), "error",
+        baseName -> baseName.replaceFirst("Custom", ""));
+
+    // Read the data back in.
+    final QueryableDataSource newData = pathlingContext.read()
+        .parquet(temporaryDirectory.resolve("parquet-custom").toString(), readMapper);
+
+    // Query the data.
+    queryParquetData(newData);
+  }
+
   // Delta Tests
   @Test
   void deltaReadWrite() {

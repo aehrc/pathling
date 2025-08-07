@@ -148,6 +148,22 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
   }
 
   /**
+   * Creates a new data source from a directory containing Parquet-encoded FHIR resource data, with
+   * filenames determined by the provided function.
+   *
+   * @param path the URI of the directory containing the Parquet files/directories
+   * @param fileNameMapper a function that maps a filename to a set of resource types
+   * @return the new data source
+   */
+  @Nonnull
+  public ParquetSource parquet(@Nullable final String path,
+      @Nullable final Function<String, Set<String>> fileNameMapper) {
+    checkArgumentNotNull(path);
+    checkArgumentNotNull(fileNameMapper);
+    return new ParquetSource(context, path, fileNameMapper);
+  }
+
+  /**
    * Creates a new data source from a Delta warehouse.
    *
    * @param path the location of the Delta warehouse

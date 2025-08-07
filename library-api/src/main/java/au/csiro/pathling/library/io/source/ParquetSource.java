@@ -19,7 +19,9 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
+import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -46,6 +48,23 @@ public class ParquetSource extends FileSource {
         FileSource::resourceNameWithQualifierMapper,
         // Assume the "parquet" file extension.
         "parquet",
+        context.getSpark().read().format("parquet"),
+        // Apply no transformations on the data - we assume it has already been processed using the 
+        // Pathling FHIR encoders.
+        (sourceData, resourceType) -> sourceData);
+  }
+
+  /**
+   * Constructs a ParquetSource with the specified PathlingContext, path, and custom file name
+   * mapper.
+   *
+   * @param context the PathlingContext to use
+   * @param path the path to the Parquet file or directory
+   * @param fileNameMapper a function that maps a file name to a set of resource types
+   */
+  public ParquetSource(@Nonnull final PathlingContext context, @Nonnull final String path,
+      @Nonnull final Function<String, Set<String>> fileNameMapper) {
+    super(context, path, fileNameMapper, "parquet",
         context.getSpark().read().format("parquet"),
         // Apply no transformations on the data - we assume it has already been processed using the 
         // Pathling FHIR encoders.
