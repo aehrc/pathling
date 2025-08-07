@@ -361,22 +361,54 @@ class DataSourcesTest {
 
   @Test
   void deltaReadWriteWithMerge() {
+    final String sourcePath = TEST_DATA_PATH.resolve("delta").toString();
+    final String destinationPath = temporaryDirectory.resolve("delta-rw-merge").toString();
+
     // Read the test Delta data.
-    final QueryableDataSource data = pathlingContext.read()
-        .delta(TEST_DATA_PATH.resolve("delta").toString());
+    final QueryableDataSource data = pathlingContext.read().delta(sourcePath);
 
     // Query the data.
     queryDeltaData(data);
 
     // Write the data back out to a temporary location.
-    data.write().delta(temporaryDirectory.resolve("delta").toString(), "merge");
+    data.write().delta(destinationPath, "merge");
 
     // Read the data back in.
-    final QueryableDataSource newData = pathlingContext.read()
-        .delta(temporaryDirectory.resolve("delta").toString());
+    final QueryableDataSource newData = pathlingContext.read().delta(destinationPath);
 
     // Query the data.
     queryDeltaData(newData);
+
+    // Merge the data back into the Delta table.
+    data.write().delta(destinationPath, "merge");
+
+    // Query the data.
+    queryDeltaData(newData);
+  }
+
+  @Test
+  void deltaWriteOverwriteExisting() {
+    // Read the test NDJSON data.
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+
+    // Write the data to Delta initially.
+    final String deltaPath = temporaryDirectory.resolve("delta-overwrite-test").toString();
+    data.write().delta(deltaPath, "overwrite");
+
+    // Read the data back to verify it was written.
+    final QueryableDataSource initialData = pathlingContext.read().delta(deltaPath);
+    queryNdjsonData(initialData);
+
+    // Write the same data again using overwrite mode - this should succeed.
+    // This tests the deltaTableExists method and the delete() workaround in DeltaSink.
+    data.write().delta(deltaPath, "overwrite");
+
+    // Read the overwritten data back.
+    final QueryableDataSource overwrittenData = pathlingContext.read().delta(deltaPath);
+
+    // Query the data to ensure it's still correct after overwrite.
+    queryNdjsonData(overwrittenData);
   }
 
   // Tables (CatalogSink) Tests

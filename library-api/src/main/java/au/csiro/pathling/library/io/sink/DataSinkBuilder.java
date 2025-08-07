@@ -125,7 +125,7 @@ public record DataSinkBuilder(
    */
   public void delta(@Nullable final String path) {
     checkArgumentNotNull(path);
-    new DeltaSink(path).write(source);
+    new DeltaSink(context, path).write(source);
   }
 
   /**
@@ -139,7 +139,7 @@ public record DataSinkBuilder(
       @Nullable final UnaryOperator<String> fileNameMapper) {
     checkArgumentNotNull(path);
     checkArgumentNotNull(fileNameMapper);
-    new DeltaSink(path, SaveMode.ERROR_IF_EXISTS, fileNameMapper).write(source);
+    new DeltaSink(context, path, SaveMode.ERROR_IF_EXISTS, fileNameMapper).write(source);
   }
 
   /**
@@ -159,7 +159,7 @@ public record DataSinkBuilder(
   public void delta(@Nullable final String path, @Nullable final String saveMode) {
     checkArgumentNotNull(path);
     checkArgumentNotNull(saveMode);
-    new DeltaSink(path, SaveMode.fromCode(saveMode)).write(source);
+    new DeltaSink(context, path, SaveMode.fromCode(saveMode)).write(source);
   }
 
   /**
@@ -183,7 +183,7 @@ public record DataSinkBuilder(
     checkArgumentNotNull(path);
     checkArgumentNotNull(saveMode);
     checkArgumentNotNull(fileNameMapper);
-    new DeltaSink(path, SaveMode.fromCode(saveMode), fileNameMapper).write(source);
+    new DeltaSink(context, path, SaveMode.fromCode(saveMode), fileNameMapper).write(source);
   }
 
   /**
