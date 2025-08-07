@@ -53,7 +53,7 @@ public record DataSinkBuilder(
    * </ul>
    */
   public void ndjson(@Nullable final String path, @Nullable final String saveMode) {
-    new NdjsonSink(context, requireNonNull(path), resolvesaveMode(saveMode)).write(source);
+    new NdjsonSink(context, requireNonNull(path), resolveSaveMode(saveMode)).write(source);
   }
 
   /**
@@ -72,7 +72,7 @@ public record DataSinkBuilder(
    */
   public void ndjson(@Nullable final String path, @Nullable final String saveMode,
       @Nullable final UnaryOperator<String> fileNameMapper) {
-    new NdjsonSink(context, requireNonNull(path), resolvesaveMode(saveMode),
+    new NdjsonSink(context, requireNonNull(path), resolveSaveMode(saveMode),
         requireNonNull(fileNameMapper)).write(source);
   }
 
@@ -90,7 +90,7 @@ public record DataSinkBuilder(
    * </ul>
    */
   public void parquet(@Nullable final String path, @Nullable final String saveMode) {
-    new ParquetSink(requireNonNull(path), resolvesaveMode(saveMode)).write(source);
+    new ParquetSink(requireNonNull(path), resolveSaveMode(saveMode)).write(source);
   }
 
   /**
@@ -109,7 +109,7 @@ public record DataSinkBuilder(
    */
   public void parquet(@Nullable final String path, @Nullable final String saveMode,
       @Nullable final UnaryOperator<String> fileNameMapper) {
-    new ParquetSink(requireNonNull(path), resolvesaveMode(saveMode),
+    new ParquetSink(requireNonNull(path), resolveSaveMode(saveMode),
         requireNonNull(fileNameMapper)).write(source);
   }
 
@@ -130,7 +130,8 @@ public record DataSinkBuilder(
    * @param path the directory to write the files to
    * @param fileNameMapper a function that maps a resource type to a file name
    */
-  public void delta(@Nullable final String path, @Nullable final UnaryOperator<String> fileNameMapper) {
+  public void delta(@Nullable final String path,
+      @Nullable final UnaryOperator<String> fileNameMapper) {
     new DeltaSink(requireNonNull(path), SaveMode.ERROR_IF_EXISTS,
         requireNonNull(fileNameMapper)).write(source);
   }
@@ -155,7 +156,8 @@ public record DataSinkBuilder(
 
   /**
    * Writes the data in the data source to a Delta database, named using a custom file name mapper.
-   * Existing data in the Delta files will be dealt with according to the specified {@link SaveMode}.
+   * Existing data in the Delta files will be dealt with according to the specified
+   * {@link SaveMode}.
    *
    * @param path the directory to write the files to
    * @param saveMode the save mode to use:
@@ -183,6 +185,7 @@ public record DataSinkBuilder(
   public void tables() {
     new CatalogSink(context).write(source);
   }
+
 
   /**
    * Writes the data in the data source to tables within the Spark catalog, named according to the
@@ -223,8 +226,31 @@ public record DataSinkBuilder(
     new CatalogSink(context, SaveMode.fromCode(saveMode), requireNonNull(schema)).write(source);
   }
 
+  /**
+   * Writes the data in the data source to tables within the Spark catalog, named according to the
+   * resource type, using the specified format. Existing data in the tables will be dealt with
+   * according to the specified {@link SaveMode}.
+   *
+   * @param saveMode the save mode to use:
+   * <ul>
+   *   <li>"error" - throw an error if the files already exist</li>
+   *   <li>"overwrite" - overwrite any existing files</li>
+   *   <li>"append" - append to any existing files</li>
+   *   <li>"ignore" - do nothing if the files already exist</li>
+   *   <li>"merge" - merge the new data with the existing data based on resource ID (this is only
+   *   supported where the managed table format is Delta)</li>
+   * </ul>
+   * @param schema the schema name to write the tables to
+   * @param format the table format to use (e.g., "delta", "parquet")
+   */
+  public void tables(@Nullable final String saveMode, @Nullable final String schema,
+      @Nullable final String format) {
+    new CatalogSink(context, SaveMode.fromCode(saveMode), requireNonNull(schema),
+        requireNonNull(format)).write(source);
+  }
+
   @Nonnull
-  private static SaveMode resolvesaveMode(final @Nullable String saveMode) {
+  private static SaveMode resolveSaveMode(final @Nullable String saveMode) {
     return saveMode == null
            ? SaveMode.ERROR_IF_EXISTS
            : SaveMode.fromCode(saveMode);
