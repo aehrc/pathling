@@ -335,6 +335,22 @@ class DataSourcesTest {
   }
 
   @Test
+  void tablesReadWriteWithDeltaFormatAndOverwrite() {
+    // Read the test NDJSON data.
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+
+    // Write the data back out to tables using delta format and overwrite mode.
+    data.write().tables("overwrite", "test", "delta");
+
+    // Read the data back in.
+    final QueryableDataSource newData = pathlingContext.read().tables("test");
+
+    // Query the data.
+    queryNdjsonData(newData);
+  }
+
+  @Test
   void readNonExistentResource() {
     final QueryableDataSource data = pathlingContext.read().datasets();
     assertThrows(IllegalArgumentException.class, () -> data.read("Patient"));
