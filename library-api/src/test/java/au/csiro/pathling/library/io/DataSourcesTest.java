@@ -53,6 +53,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+/**
+ * Tests for reading from and writing to various data sources and sinks.
+ * <p>
+ * This test suite validates the functionality of the Pathling library's data I/O operations,
+ * including reading from and writing to NDJSON, Parquet, Delta, bundles, datasets, and catalog
+ * tables. Tests cover various save modes (overwrite, append, ignore, merge, error) and format
+ * options to ensure data integrity and proper error handling across all supported data sources.
+ *
+ * @author John Grimes
+ * @author Piotr Szul
+ */
 @Slf4j
 class DataSourcesTest {
 
@@ -145,13 +156,18 @@ class DataSourcesTest {
   @ParameterizedTest
   @ValueSource(strings = {"overwrite", "append", "ignore"})
   void ndjsonWriteWithSaveModes(final String saveMode) {
+    // Read the test NDJSON data.
     final QueryableDataSource data = pathlingContext.read()
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
-    
+
+    // Write the data back out to a temporary location with the specified save mode.
     data.write().ndjson(temporaryDirectory.resolve("ndjson-" + saveMode).toString(), saveMode);
-    
+
+    // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read()
         .ndjson(temporaryDirectory.resolve("ndjson-" + saveMode).toString());
+
+    // Query the data.
     queryNdjsonData(newData);
   }
 
@@ -265,13 +281,18 @@ class DataSourcesTest {
   @ParameterizedTest
   @ValueSource(strings = {"overwrite", "append", "ignore"})
   void parquetWriteWithSaveModes(final String saveMode) {
+    // Read the test NDJSON data.
     final QueryableDataSource data = pathlingContext.read()
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
-    
+
+    // Write the data to Parquet with the specified save mode.
     data.write().parquet(temporaryDirectory.resolve("parquet-" + saveMode).toString(), saveMode);
-    
+
+    // Read the Parquet data back in.
     final QueryableDataSource newData = pathlingContext.read()
         .parquet(temporaryDirectory.resolve("parquet-" + saveMode).toString());
+
+    // Query the data.
     queryNdjsonData(newData);
   }
 
@@ -299,13 +320,18 @@ class DataSourcesTest {
   @ParameterizedTest
   @ValueSource(strings = {"overwrite", "append", "ignore"})
   void deltaWriteWithSaveModes(final String saveMode) {
+    // Read the test NDJSON data.
     final QueryableDataSource data = pathlingContext.read()
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
-    
+
+    // Write the data to Delta with the specified save mode.
     data.write().delta(temporaryDirectory.resolve("delta-" + saveMode).toString(), saveMode);
-    
+
+    // Read the Delta data back in.
     final QueryableDataSource newData = pathlingContext.read()
         .delta(temporaryDirectory.resolve("delta-" + saveMode).toString());
+
+    // Query the data.
     queryNdjsonData(newData);
   }
 
@@ -368,12 +394,17 @@ class DataSourcesTest {
   @ParameterizedTest
   @ValueSource(strings = {"append", "ignore"})
   void tablesWriteWithSaveModes(final String saveMode) {
+    // Read the test NDJSON data.
     final QueryableDataSource data = pathlingContext.read()
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
-    
+
+    // Write the data to catalog tables with the specified save mode.
     data.write().tables(saveMode);
-    
+
+    // Read the data back from catalog tables.
     final QueryableDataSource newData = pathlingContext.read().tables();
+
+    // Query the data.
     queryNdjsonData(newData);
   }
 
@@ -395,12 +426,17 @@ class DataSourcesTest {
 
   @Test
   void tablesWriteWithParquetFormat() {
+    // Read the test NDJSON data.
     final QueryableDataSource data = pathlingContext.read()
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
-    
+
+    // Write the data to catalog tables using Parquet format.
     data.write().tables("overwrite", "test", "parquet");
-    
+
+    // Read the data back from the test schema.
     final QueryableDataSource newData = pathlingContext.read().tables("test");
+
+    // Query the data.
     queryNdjsonData(newData);
   }
 
@@ -423,18 +459,25 @@ class DataSourcesTest {
   // Error Condition Tests
   @Test
   void readNonExistentResource() {
+    // Create a dataset source with no datasets.
     final QueryableDataSource data = pathlingContext.read().datasets();
+
+    // Attempting to read a non-existent resource should throw an exception.
     assertThrows(IllegalArgumentException.class, () -> data.read("Patient"));
   }
 
   @Test
   void readInvalidUri() {
+    // Create a data source builder.
     final DataSourceBuilder builder = pathlingContext.read();
+
+    // Attempting to read from an invalid URI should throw a RuntimeException.
     final RuntimeException exception = assertThrows(RuntimeException.class,
         () -> builder.ndjson("file:\\\\non-existent"));
+
+    // The cause should be a URISyntaxException.
     assertInstanceOf(URISyntaxException.class, exception.getCause());
   }
-
 
 
   private static final String PATIENT_VIEW_JSON = """
