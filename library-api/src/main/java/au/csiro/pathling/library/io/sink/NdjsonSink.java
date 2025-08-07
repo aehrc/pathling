@@ -68,12 +68,8 @@ public record NdjsonSink(
       final String resultUrlPartitioned = resultUrl + ".partitioned";
 
       switch (saveMode) {
-        case ERROR_IF_EXISTS -> writeJsonStrings(jsonStrings, resultUrlPartitioned,
-            org.apache.spark.sql.SaveMode.ErrorIfExists);
-        case OVERWRITE -> writeJsonStrings(jsonStrings, resultUrlPartitioned,
-            org.apache.spark.sql.SaveMode.Overwrite);
-        case APPEND -> writeJsonStrings(jsonStrings, resultUrlPartitioned,
-            org.apache.spark.sql.SaveMode.Append);
+        case ERROR_IF_EXISTS, OVERWRITE, APPEND, IGNORE ->
+            writeJsonStrings(jsonStrings, resultUrlPartitioned, saveMode);
         case MERGE -> throw new UnsupportedOperationException(
             "Merge operation is not supported for NDJSON");
       }
@@ -85,11 +81,14 @@ public record NdjsonSink(
 
   private static void writeJsonStrings(@Nonnull final Dataset<String> jsonStrings,
       @Nonnull final String resultUrlPartitioned,
-      @Nonnull final org.apache.spark.sql.SaveMode saveMode) {
-    jsonStrings.coalesce(1)
-        .write()
-        .mode(saveMode)
-        .text(resultUrlPartitioned);
+      @Nonnull final SaveMode saveMode) {
+    final var writer = jsonStrings.coalesce(1)
+        .write();
+    
+    // Apply save mode if it has a Spark equivalent
+    saveMode.getSparkSaveMode().ifPresent(writer::mode);
+    
+    writer.text(resultUrlPartitioned);
   }
 
 }

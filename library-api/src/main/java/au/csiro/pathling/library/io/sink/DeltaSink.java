@@ -67,10 +67,18 @@ public record DeltaSink(
       final String tablePath = safelyJoinPaths(path, fileName);
 
       switch (saveMode) {
-        case ERROR_IF_EXISTS ->
-            writeDataset(dataset, tablePath, org.apache.spark.sql.SaveMode.ErrorIfExists);
-        case OVERWRITE -> writeDataset(dataset, tablePath, org.apache.spark.sql.SaveMode.Overwrite);
-        case APPEND -> writeDataset(dataset, tablePath, org.apache.spark.sql.SaveMode.Append);
+        case ERROR_IF_EXISTS, APPEND, IGNORE ->
+            writeDataset(dataset, tablePath, saveMode);
+        case OVERWRITE -> {
+          // This is to work around a bug relating to Delta tables not being able to be overwritten,
+          // due to their inability to handle the truncate operation that Spark performs when
+          // overwriting a table.
+          if (DeltaTable.isDeltaTable(tablePath)) {
+            final DeltaTable table = DeltaTable.forPath(tablePath);
+            table.delete();
+          }
+          writeDataset(dataset, tablePath, SaveMode.ERROR_IF_EXISTS);
+        }
         case MERGE -> {
           if (DeltaTable.isDeltaTable(tablePath)) {
             // If the table already exists, merge the data in.
@@ -79,7 +87,7 @@ public record DeltaSink(
           } else {
             // If the table does not exist, create it. If an error occurs here, there must be a
             // pre-existing file at the path that is not a Delta table.
-            writeDataset(dataset, tablePath, org.apache.spark.sql.SaveMode.ErrorIfExists);
+            writeDataset(dataset, tablePath, SaveMode.ERROR_IF_EXISTS);
           }
         }
       }
@@ -89,15 +97,19 @@ public record DeltaSink(
   /**
    * Writes the data to a Delta table at the specified path with the specified save mode.
    *
-   * @param saveMode the save mode to use for writing
    * @param dataset the dataset to write to the Delta table
+   * @param tablePath the path to write the Delta table to
+   * @param saveMode the save mode to use for writing
    */
   private static void writeDataset(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final String tablePath, final org.apache.spark.sql.SaveMode saveMode) {
-    dataset.write()
-        .format("delta")
-        .mode(saveMode)
-        .save(tablePath);
+      @Nonnull final String tablePath, @Nonnull final SaveMode saveMode) {
+    final var writer = dataset.write()
+        .format("delta");
+    
+    // Apply save mode if it has a Spark equivalent
+    saveMode.getSparkSaveMode().ifPresent(writer::mode);
+    
+    writer.save(tablePath);
   }
 
   /**

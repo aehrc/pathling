@@ -111,21 +111,19 @@ public class CatalogSink implements DataSink {
       final String tableName = getTableName(resourceType);
 
       switch (saveMode) {
-        case ERROR_IF_EXISTS ->
-            writeDataset(dataset, tableName, org.apache.spark.sql.SaveMode.ErrorIfExists);
+        case ERROR_IF_EXISTS, APPEND, IGNORE -> writeDataset(dataset, tableName, saveMode);
         case OVERWRITE -> {
           if (format.isPresent() && "delta".equals(format.get())) {
             // This is to work around a bug relating to Delta tables not being able to be overwritten,
             // due to their inability to handle the truncate operation that Spark performs when
             // overwriting a table.
             context.getSpark().sql("DROP TABLE IF EXISTS " + tableName);
-            writeDataset(dataset, tableName, org.apache.spark.sql.SaveMode.ErrorIfExists);
+            writeDataset(dataset, tableName, SaveMode.ERROR_IF_EXISTS);
           } else {
             // Use standard overwrite for non-Delta formats.
-            writeDataset(dataset, tableName, org.apache.spark.sql.SaveMode.Overwrite);
+            writeDataset(dataset, tableName, saveMode);
           }
         }
-        case APPEND -> writeDataset(dataset, tableName, org.apache.spark.sql.SaveMode.Append);
         case MERGE -> {
           if (DeltaTable.isDeltaTable(tableName)) {
             // If the table already exists, merge the data in.
@@ -133,7 +131,7 @@ public class CatalogSink implements DataSink {
             merge(table, dataset);
           } else {
             // If the table does not exist, create it.
-            writeDataset(dataset, tableName, org.apache.spark.sql.SaveMode.ErrorIfExists);
+            writeDataset(dataset, tableName, SaveMode.ERROR_IF_EXISTS);
           }
         }
       }
@@ -141,13 +139,15 @@ public class CatalogSink implements DataSink {
   }
 
   private void writeDataset(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final String tableName, @Nonnull final org.apache.spark.sql.SaveMode saveMode) {
-    final DataFrameWriter<Row> writer = dataset.write()
-        .mode(saveMode);
-    
-    // Apply format if specified
+      @Nonnull final String tableName, @Nonnull final SaveMode saveMode) {
+    final DataFrameWriter<Row> writer = dataset.write();
+   
+    // Apply save mode if it has a Spark equivalent.
+    saveMode.getSparkSaveMode().ifPresent(writer::mode);
+
+    // Apply format if specified.
     format.ifPresent(writer::format);
-    
+
     writer.saveAsTable(tableName);
   }
 

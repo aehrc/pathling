@@ -1,7 +1,7 @@
 package au.csiro.pathling.library.io;
 
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
+import java.util.Optional;
 import lombok.Getter;
 
 /**
@@ -14,38 +14,43 @@ public enum SaveMode {
    * If the resource type already exists, an error is raised. If it does not exist, the resources in
    * the source file are added.
    */
-  ERROR_IF_EXISTS("error"),
+  ERROR_IF_EXISTS("error", Optional.of(org.apache.spark.sql.SaveMode.ErrorIfExists)),
 
   /**
    * Results in all existing resources of the specified type to be deleted and replaced with the
    * contents of the source file.
    */
-  OVERWRITE("overwrite"),
+  OVERWRITE("overwrite", Optional.of(org.apache.spark.sql.SaveMode.Overwrite)),
 
   /**
    * Appends the resources in the source file to the existing resources of the specified type,
    * without modifying any existing resources.
    */
-  APPEND("append"),
+  APPEND("append", Optional.of(org.apache.spark.sql.SaveMode.Append)),
 
   /**
    * Ignores the resources in the source file if the resource type already exists, otherwise adds
    * the resources in the source file.
    */
-  IGNORE("ignore"),
+  IGNORE("ignore", Optional.of(org.apache.spark.sql.SaveMode.Ignore)),
 
   /**
    * Matches existing resources with updated resources in the source file based on their ID, and
    * either update the existing resources or add new resources as appropriate.
    */
-  MERGE("merge");
+  MERGE("merge", Optional.empty());
 
   @Nonnull
   @Getter
   private final String code;
 
-  SaveMode(@Nonnull final String code) {
+  @Nonnull
+  @Getter
+  private final Optional<org.apache.spark.sql.SaveMode> sparkSaveMode;
+
+  SaveMode(@Nonnull final String code, @Nonnull final Optional<org.apache.spark.sql.SaveMode> sparkSaveMode) {
     this.code = code;
+    this.sparkSaveMode = sparkSaveMode;
   }
 
   /**
@@ -56,7 +61,7 @@ public enum SaveMode {
    * @throws IllegalArgumentException if the code is not recognised
    */
   @Nonnull
-  public static SaveMode fromCode(@Nullable final String code) {
+  public static SaveMode fromCode(final String code) {
     for (final SaveMode mode : values()) {
       if (mode.code.equals(code)) {
         return mode;

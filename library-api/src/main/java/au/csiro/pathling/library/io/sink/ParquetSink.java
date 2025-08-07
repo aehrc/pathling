@@ -58,10 +58,8 @@ public record ParquetSink(
       final String tablePath = safelyJoinPaths(path, fileName);
 
       switch (saveMode) {
-        case ERROR_IF_EXISTS ->
-            writeDataset(dataset, tablePath, org.apache.spark.sql.SaveMode.ErrorIfExists);
-        case OVERWRITE -> writeDataset(dataset, tablePath, org.apache.spark.sql.SaveMode.Overwrite);
-        case APPEND -> writeDataset(dataset, tablePath, org.apache.spark.sql.SaveMode.Append);
+        case ERROR_IF_EXISTS, OVERWRITE, APPEND, IGNORE ->
+            writeDataset(dataset, tablePath, saveMode);
         case MERGE -> throw new UnsupportedOperationException(
             "Merge operation is not supported for Parquet - use Delta if merging is required");
       }
@@ -69,8 +67,13 @@ public record ParquetSink(
   }
 
   private static void writeDataset(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final String tablePath, final org.apache.spark.sql.SaveMode saveMode) {
-    dataset.write().mode(saveMode).parquet(tablePath);
+      @Nonnull final String tablePath, @Nonnull final SaveMode saveMode) {
+    final var writer = dataset.write();
+    
+    // Apply save mode if it has a Spark equivalent
+    saveMode.getSparkSaveMode().ifPresent(writer::mode);
+    
+    writer.parquet(tablePath);
   }
 
 }
