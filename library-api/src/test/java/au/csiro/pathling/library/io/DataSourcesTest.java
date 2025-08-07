@@ -27,6 +27,7 @@ import static org.mockito.Mockito.withSettings;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.TestHelpers;
+import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -542,6 +543,40 @@ class DataSourcesTest {
 
     // The cause should be a URISyntaxException.
     assertInstanceOf(URISyntaxException.class, exception.getCause());
+  }
+
+  @Test
+  void ndjsonWriteWithMergeShouldFail() {
+    // Read the test NDJSON data.
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final DataSinkBuilder dataSinkBuilder = data.write();
+    final String destinationPath = temporaryDirectory.resolve("ndjson-merge-fail").toString();
+
+    // Attempting to write NDJSON data using merge mode should throw UnsupportedOperationException.
+    final UnsupportedOperationException exception = assertThrows(
+        UnsupportedOperationException.class,
+        () -> dataSinkBuilder.ndjson(destinationPath, "merge"));
+
+    // Verify the error message.
+    assertEquals("Merge operation is not supported for NDJSON", exception.getMessage());
+  }
+
+  @Test
+  void parquetWriteWithMergeShouldFail() {
+    // Read the test NDJSON data.
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final DataSinkBuilder dataSinkBuilder = data.write();
+    final String destinationPath = temporaryDirectory.resolve("parquet-merge-fail").toString();
+
+    // Attempting to write Parquet data using merge mode should throw UnsupportedOperationException.
+    final UnsupportedOperationException exception = assertThrows(
+        UnsupportedOperationException.class,
+        () -> dataSinkBuilder.parquet(destinationPath, "merge"));
+
+    // Verify the error message.
+    assertEquals("Merge operation is not supported for Parquet - use Delta if merging is required", exception.getMessage());
   }
 
 
