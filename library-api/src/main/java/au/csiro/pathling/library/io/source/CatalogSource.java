@@ -23,6 +23,7 @@ import static java.util.stream.Collectors.toSet;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.PersistenceError;
+import au.csiro.pathling.library.io.sink.CatalogSink;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
@@ -43,8 +44,6 @@ import org.apache.spark.sql.catalog.Table;
  * @author Piotr Szul
  */
 public class CatalogSource extends AbstractSource {
-
-  private static final String TBLPROPERTY_RESOURCE_TYPE = "option.fhir.resourceType";
 
   @Nonnull
   private final Optional<String> schema;
@@ -100,7 +99,8 @@ public class CatalogSource extends AbstractSource {
     return getTables().stream()
         .map(t ->
             context.getSpark()
-                .sql("SHOW TBLPROPERTIES " + t.name() + " ('" + TBLPROPERTY_RESOURCE_TYPE + "')")
+                .sql("SHOW TBLPROPERTIES " + t.name() +
+                    " ('" + CatalogSink.TBLPROPERTY_RESOURCE_TYPE + "')")
                 .collectAsList()
                 .stream()
                 .findFirst()

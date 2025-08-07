@@ -36,7 +36,10 @@ import org.apache.spark.sql.SaveMode;
  */
 public class CatalogSink implements DataSink {
 
-  private static final String OPTION_RESOURCE_TYPE = "fhir.resourceType";
+  /**
+   * The name of the table property used to store FHIR resource type.
+   */
+  public static final String TBLPROPERTY_RESOURCE_TYPE = "fhir.resourceType";
 
   @Nonnull
   private final PathlingContext context;
@@ -94,7 +97,7 @@ public class CatalogSink implements DataSink {
         case ERROR_IF_EXISTS -> {
           writeDataset(resourceType, dataset, tableName, SaveMode.ErrorIfExists);
           context.getSpark().sql(
-              "ALTER TABLE " + tableName + " SET TBLPROPERTIES ('" + OPTION_RESOURCE_TYPE
+              "ALTER TABLE " + tableName + " SET TBLPROPERTIES ('" + TBLPROPERTY_RESOURCE_TYPE
                   + "' = '" + resourceType + "')");
         }
         case OVERWRITE -> {
@@ -124,7 +127,7 @@ public class CatalogSink implements DataSink {
     dataset.write()
         .format("delta")
         .mode(saveMode)
-        .option(OPTION_RESOURCE_TYPE, resourceType)
+        .option(TBLPROPERTY_RESOURCE_TYPE, resourceType)
         .saveAsTable(tableName);
   }
 
