@@ -17,91 +17,64 @@
 
 package au.csiro.pathling.library.io.source;
 
-import static au.csiro.pathling.library.io.FileSystemPersistence.getFileSystem;
-import static java.util.Objects.requireNonNull;
-
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.FileSystemPersistence;
-import au.csiro.pathling.library.io.PersistenceError;
-import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
-import java.io.IOException;
-import java.util.Optional;
-import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
 /**
- * A class for making FHIR data in Delta tables on the filesystem available for query.
+ * A class for making FHIR data in Delta tables on the filesystem available for query. It is
+ * assumed that the schema of the Delta tables aligns with that of the Pathling FHIR encoders.
+ * Delta tables store data in Parquet format internally, so this source uses the parquet extension
+ * for file detection.
  *
  * @author John Grimes
  * @author Piotr Szul
  */
-public class DeltaSource extends AbstractSource {
-
-  @Nonnull
-  private final String path;
-
-  @Nonnull
-  private final Optional<UnaryOperator<Dataset<Row>>> transformation;
+public class DeltaSource extends FileSource {
 
   /**
    * Constructs a DeltaSource with the specified PathlingContext and path.
    *
    * @param context the PathlingContext to use
-   * @param path the path to the Delta table
+   * @param path the path to the Delta table directory
    */
   public DeltaSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
-    super(context);
-    this.path = path;
-    this.transformation = Optional.empty(); // No transformation by default
+    super(context, path,
+        // Use the "resource name with qualifier" mapper by default, which takes the resource name
+        // from the file name and is tolerant of an optional qualifier string.
+        FileSource::resourceNameWithQualifierMapper,
+        // Delta tables store data in parquet format internally, so we use the parquet extension.
+        "parquet",
+        context.getSpark().read().format("delta"),
+        // Apply no transformations on the data - we assume it has already been processed using the 
+        // Pathling FHIR encoders.
+        (sourceData, resourceType) -> sourceData);
   }
 
-  private DeltaSource(@Nonnull final PathlingContext context, @Nonnull final String path,
-      @Nonnull final Optional<UnaryOperator<Dataset<Row>>> transformation) {
-    super(context);
-    this.path = path;
-    this.transformation = transformation;
-  }
-
-  @Nonnull
-  @Override
-  public Dataset<Row> read(@Nullable final String resourceCode) {
-    requireNonNull(resourceCode);
-    final Dataset<Row> dataset = DeltaTable.forPath(context.getSpark(),
-        FileSystemPersistence.getTableUrl(path, resourceCode)).df();
-    // If a transformation is provided, apply it to the dataset. 
-    // Otherwise, return the dataset as is.
-    return transformation.map(t -> t.apply(dataset))
-        .orElse(dataset);
-  }
-
-  @Nonnull
-  @Override
-  public Set<String> getResourceTypes() {
-    try {
-      final Stream<FileStatus> files = Stream.of(
-          getFileSystem(context.getSpark(), path).listStatus(new Path(path)));
-      return files
-          .map(FileStatus::getPath)
-          .map(Path::getName)
-          .map(fileName -> fileName.replace(".parquet", ""))
-          .collect(Collectors.toSet());
-    } catch (final IOException e) {
-      throw new PersistenceError("Problem listing resources", e);
-    }
+  /**
+   * Constructs a DeltaSource with the specified PathlingContext, path, and transformation.
+   *
+   * @param context the PathlingContext to use
+   * @param path the path to the Delta table directory
+   * @param transformer a function that transforms a dataset containing raw source data of a
+   * specified resource type into a dataset containing the imported data
+   */
+  public DeltaSource(@Nonnull final PathlingContext context, @Nonnull final String path,
+      @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer) {
+    super(context, path,
+        FileSource::resourceNameWithQualifierMapper,
+        "parquet",
+        context.getSpark().read().format("delta"),
+        transformer);
   }
 
   @Nonnull
   @Override
   public DeltaSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
-    return new DeltaSource(context, path, Optional.of(operator));
+    return (DeltaSource) super.map(operator);
   }
 
 }

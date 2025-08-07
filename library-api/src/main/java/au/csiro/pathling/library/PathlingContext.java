@@ -44,6 +44,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.Optional;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
@@ -526,6 +527,40 @@ public class PathlingContext {
     } catch (final FHIRException e) {
       return false;
     }
+  }
+
+  /**
+   * Matches the given string against supported resource types in a case-insensitive fashion.
+   *
+   * @param resourceTypeString the string to match against resource types
+   * @return an Optional containing the resource type code if the string matches a supported
+   * resource type, empty otherwise
+   */
+  @Nonnull
+  public Optional<String> matchSupportedResourceType(@Nonnull final String resourceTypeString) {
+    if (EncoderBuilder.UNSUPPORTED_RESOURCES().contains(resourceTypeString)) {
+      return Optional.empty();
+    }
+
+    try {
+      // Try exact match first.
+      final ResourceType exactMatch = ResourceType.fromCode(resourceTypeString);
+      if (exactMatch != null) {
+        return Optional.of(exactMatch.toCode());
+      }
+    } catch (final FHIRException ignored) {
+      // Continue to case-insensitive search
+    }
+
+    // Try case-insensitive match.
+    for (final ResourceType resourceType : ResourceType.values()) {
+      if (resourceType.toCode().equalsIgnoreCase(resourceTypeString) &&
+          !EncoderBuilder.UNSUPPORTED_RESOURCES().contains(resourceType.toCode())) {
+        return Optional.of(resourceType.toCode());
+      }
+    }
+
+    return Optional.empty();
   }
 
   @Nonnull

@@ -19,15 +19,18 @@ package au.csiro.pathling.library.io.source;
 
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.PersistenceError;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +43,6 @@ import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import scala.collection.JavaConverters;
 
 /**
  * Common functionality for file-based sources.
@@ -50,6 +52,11 @@ import scala.collection.JavaConverters;
 @Slf4j
 public abstract class FileSource extends DatasetSource {
 
+  // Matches a base name that consists of a resource type, optionally followed by a period and a
+  // qualifier string. The first group will contain the resource type, and the second group will
+  // contain the qualifier string (if present).
+  static final Pattern BASE_NAME_WITH_QUALIFIER = Pattern.compile(
+      "^([A-Za-z]+)(\\.[^.]+)?$");
   /**
    * A function that maps a resource type code to a set of file names that contain data for that
    * resource type.
@@ -98,13 +105,41 @@ public abstract class FileSource extends DatasetSource {
     final org.apache.hadoop.conf.Configuration hadoopConfiguration = requireNonNull(
         context.getSpark().sparkContext().hadoopConfiguration());
     try {
-      // If the URL is an S3 URL, convert it to S3A.
       final Path convertedPath = new Path(path);
       final FileSystem fileSystem = convertedPath.getFileSystem(hadoopConfiguration);
       resourceMap = buildResourceMap(convertedPath, fileSystem);
     } catch (final IOException e) {
-      throw new RuntimeException(e);
+      throw new PersistenceError("Problem reading source files from file system", e);
     }
+  }
+
+  /**
+   * Extracts the resource type from the provided base name. Allows for an optional qualifier
+   * string, which is separated from the resource name by a period. For example, "Procedure.ICU"
+   * will return ["Procedure"].
+   * <p>
+   * This method does not validate that the resource type is a valid FHIR resource type.
+   *
+   * @param baseName the base name of the file
+   * @return a single-element set containing the resource type, or an empty set if the base name
+   * does not match the expected format
+   */
+  @Nonnull
+  static Set<String> resourceNameWithQualifierMapper(@Nonnull final String baseName) {
+    final Matcher matcher = BASE_NAME_WITH_QUALIFIER.matcher(baseName);
+    // If the base name does not match the expected format, return an empty set.
+    if (!matcher.matches()) {
+      return Collections.emptySet();
+    }
+    // If the base name does not contain a qualifier, return the base name as-is.
+    if (matcher.group(2) == null) {
+      return Collections.singleton(baseName);
+    }
+    // If the base name contains a qualifier, remove it and return the base name without the
+    // qualifier.
+    final String qualifierRemoved = new StringBuilder(baseName).replace(matcher.start(2),
+        matcher.end(2), "").toString();
+    return Collections.singleton(qualifierRemoved);
   }
 
   /**
@@ -162,17 +197,6 @@ public abstract class FileSource extends DatasetSource {
     final String fileName = FilenameUtils.getBaseName(path);
     return fileNameMapper.apply(fileName).stream()
         .map(resourceType -> Pair.of(resourceType, path));
-  }
-
-  private boolean checkResourceSupported(@Nonnull final Pair<String, String> resourceCodeAndPath) {
-    final Set<String> unsupported = JavaConverters.setAsJavaSet(
-        EncoderBuilder.UNSUPPORTED_RESOURCES());
-    final boolean result = unsupported.contains(resourceCodeAndPath.getKey());
-    if (result) {
-      FileSource.log.warn("Skipping unsupported resource type: {}",
-          resourceCodeAndPath.getKey());
-    }
-    return !result;
   }
 
 }

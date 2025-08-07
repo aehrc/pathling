@@ -19,12 +19,9 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
-import java.util.Collections;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -37,12 +34,6 @@ import org.apache.spark.sql.Row;
  */
 @Slf4j
 public class NdjsonSource extends FileSource {
-
-  // Matches a base name that consists of a resource type, optionally followed by a period and a
-  // qualifier string. The first group will contain the resource type, and the second group will
-  // contain the qualifier string (if present).
-  private static final Pattern BASE_NAME_WITH_QUALIFIER = Pattern.compile(
-      "^([A-Za-z]+)(\\.[^.]+)?$");
 
   /**
    * Constructs an NdjsonSource with the specified PathlingContext and path.
@@ -67,7 +58,7 @@ public class NdjsonSource extends FileSource {
     this(context, path, extension,
         // Use the "resource name with qualifier" mapper by default, which takes the resource name
         // from the file name and is tolerant of an optional qualifier string.
-        NdjsonSource::resourceNameWithQualifierMapper);
+        FileSource::resourceNameWithQualifierMapper);
   }
 
   /**
@@ -88,35 +79,6 @@ public class NdjsonSource extends FileSource {
         // Encode each line of input as a JSON FHIR resource.
         (sourceData, resourceType) -> context.encode(sourceData, resourceType,
             PathlingContext.FHIR_JSON));
-  }
-
-  /**
-   * Extracts the resource type from the provided base name. Allows for an optional qualifier
-   * string, which is separated from the resource name by a period. For example, "Procedure.ICU"
-   * will return ["Procedure"].
-   * <p>
-   * This method does not validate that the resource type is a valid FHIR resource type.
-   *
-   * @param baseName the base name of the file
-   * @return a single-element set containing the resource type, or an empty set if the base name
-   * does not match the expected format
-   */
-  @Nonnull
-  public static Set<String> resourceNameWithQualifierMapper(@Nonnull final String baseName) {
-    final Matcher matcher = BASE_NAME_WITH_QUALIFIER.matcher(baseName);
-    // If the base name does not match the expected format, return an empty set.
-    if (!matcher.matches()) {
-      return Collections.emptySet();
-    }
-    // If the base name does not contain a qualifier, return the base name as-is.
-    if (matcher.group(2) == null) {
-      return Collections.singleton(baseName);
-    }
-    // If the base name contains a qualifier, remove it and return the base name without the
-    // qualifier.
-    final String qualifierRemoved = new StringBuilder(baseName).replace(matcher.start(2),
-        matcher.end(2), "").toString();
-    return Collections.singleton(qualifierRemoved);
   }
 
   @Nonnull

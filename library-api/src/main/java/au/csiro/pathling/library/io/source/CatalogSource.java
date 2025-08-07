@@ -23,7 +23,6 @@ import static java.util.stream.Collectors.toSet;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.PersistenceError;
-import au.csiro.pathling.library.io.sink.CatalogSink;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
@@ -97,17 +96,15 @@ public class CatalogSource extends AbstractSource {
   @Override
   public Set<String> getResourceTypes() {
     return getTables().stream()
-        .map(t ->
-            context.getSpark()
-                .sql("SHOW TBLPROPERTIES " + t.name() +
-                    " ('" + CatalogSink.TBLPROPERTY_RESOURCE_TYPE + "')")
-                .collectAsList()
-                .stream()
-                .findFirst()
-                .map(row -> row.getString(1))
-                .orElse(null)
-        )
+        // Get all the names of the tables in the target schema.
+        .map(Table::name)
         .filter(Objects::nonNull)
+        // Match the name of each table to a supported resource type.
+        .map(context::matchSupportedResourceType)
+        // Filter out any tables that don't match a supported resource type.
+        .filter(Optional::isPresent)
+        // Swap the table names for the canonical resource code (upper camel case).
+        .map(Optional::get)
         .collect(toSet());
   }
 
