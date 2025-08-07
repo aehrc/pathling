@@ -50,6 +50,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @Slf4j
 class DataSourcesTest {
@@ -140,39 +142,16 @@ class DataSourcesTest {
     queryNdjsonData(newData);
   }
 
-  @Test
-  void ndjsonWriteWithOverwrite() {
+  @ParameterizedTest
+  @ValueSource(strings = {"overwrite", "append", "ignore"})
+  void ndjsonWriteWithSaveModes(final String saveMode) {
     final QueryableDataSource data = pathlingContext.read()
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     
-    data.write().ndjson(temporaryDirectory.resolve("ndjson-overwrite").toString(), "overwrite");
+    data.write().ndjson(temporaryDirectory.resolve("ndjson-" + saveMode).toString(), saveMode);
     
     final QueryableDataSource newData = pathlingContext.read()
-        .ndjson(temporaryDirectory.resolve("ndjson-overwrite").toString());
-    queryNdjsonData(newData);
-  }
-
-  @Test
-  void ndjsonWriteWithAppend() {
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
-    
-    data.write().ndjson(temporaryDirectory.resolve("ndjson-append").toString(), "append");
-    
-    final QueryableDataSource newData = pathlingContext.read()
-        .ndjson(temporaryDirectory.resolve("ndjson-append").toString());
-    queryNdjsonData(newData);
-  }
-
-  @Test
-  void ndjsonWriteWithIgnore() {
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
-    
-    data.write().ndjson(temporaryDirectory.resolve("ndjson-ignore").toString(), "ignore");
-    
-    final QueryableDataSource newData = pathlingContext.read()
-        .ndjson(temporaryDirectory.resolve("ndjson-ignore").toString());
+        .ndjson(temporaryDirectory.resolve("ndjson-" + saveMode).toString());
     queryNdjsonData(newData);
   }
 
@@ -283,39 +262,16 @@ class DataSourcesTest {
     queryParquetData(newData);
   }
 
-  @Test
-  void parquetWriteWithOverwrite() {
+  @ParameterizedTest
+  @ValueSource(strings = {"overwrite", "append", "ignore"})
+  void parquetWriteWithSaveModes(final String saveMode) {
     final QueryableDataSource data = pathlingContext.read()
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     
-    data.write().parquet(temporaryDirectory.resolve("parquet-overwrite").toString(), "overwrite");
+    data.write().parquet(temporaryDirectory.resolve("parquet-" + saveMode).toString(), saveMode);
     
     final QueryableDataSource newData = pathlingContext.read()
-        .parquet(temporaryDirectory.resolve("parquet-overwrite").toString());
-    queryNdjsonData(newData);
-  }
-
-  @Test
-  void parquetWriteWithAppend() {
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
-    
-    data.write().parquet(temporaryDirectory.resolve("parquet-append").toString(), "append");
-    
-    final QueryableDataSource newData = pathlingContext.read()
-        .parquet(temporaryDirectory.resolve("parquet-append").toString());
-    queryNdjsonData(newData);
-  }
-
-  @Test
-  void parquetWriteWithIgnore() {
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
-    
-    data.write().parquet(temporaryDirectory.resolve("parquet-ignore").toString(), "ignore");
-    
-    final QueryableDataSource newData = pathlingContext.read()
-        .parquet(temporaryDirectory.resolve("parquet-ignore").toString());
+        .parquet(temporaryDirectory.resolve("parquet-" + saveMode).toString());
     queryNdjsonData(newData);
   }
 
@@ -340,39 +296,16 @@ class DataSourcesTest {
     queryDeltaData(newData);
   }
 
-  @Test
-  void deltaWriteWithOverwrite() {
+  @ParameterizedTest
+  @ValueSource(strings = {"overwrite", "append", "ignore"})
+  void deltaWriteWithSaveModes(final String saveMode) {
     final QueryableDataSource data = pathlingContext.read()
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     
-    data.write().delta(temporaryDirectory.resolve("delta-overwrite").toString(), "overwrite");
+    data.write().delta(temporaryDirectory.resolve("delta-" + saveMode).toString(), saveMode);
     
     final QueryableDataSource newData = pathlingContext.read()
-        .delta(temporaryDirectory.resolve("delta-overwrite").toString());
-    queryNdjsonData(newData);
-  }
-
-  @Test
-  void deltaWriteWithAppend() {
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
-    
-    data.write().delta(temporaryDirectory.resolve("delta-append").toString(), "append");
-    
-    final QueryableDataSource newData = pathlingContext.read()
-        .delta(temporaryDirectory.resolve("delta-append").toString());
-    queryNdjsonData(newData);
-  }
-
-  @Test
-  void deltaWriteWithIgnore() {
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
-    
-    data.write().delta(temporaryDirectory.resolve("delta-ignore").toString(), "ignore");
-    
-    final QueryableDataSource newData = pathlingContext.read()
-        .delta(temporaryDirectory.resolve("delta-ignore").toString());
+        .delta(temporaryDirectory.resolve("delta-" + saveMode).toString());
     queryNdjsonData(newData);
   }
 
@@ -432,23 +365,13 @@ class DataSourcesTest {
     queryNdjsonData(newData);
   }
 
-  @Test
-  void tablesWriteWithAppend() {
+  @ParameterizedTest
+  @ValueSource(strings = {"append", "ignore"})
+  void tablesWriteWithSaveModes(final String saveMode) {
     final QueryableDataSource data = pathlingContext.read()
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     
-    data.write().tables("append");
-    
-    final QueryableDataSource newData = pathlingContext.read().tables();
-    queryNdjsonData(newData);
-  }
-
-  @Test
-  void tablesWriteWithIgnore() {
-    final QueryableDataSource data = pathlingContext.read()
-        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
-    
-    data.write().tables("ignore");
+    data.write().tables(saveMode);
     
     final QueryableDataSource newData = pathlingContext.read().tables();
     queryNdjsonData(newData);
