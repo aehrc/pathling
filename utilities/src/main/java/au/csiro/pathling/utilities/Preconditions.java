@@ -21,6 +21,9 @@ import org.hl7.fhir.exceptions.FHIRException;
  */
 public abstract class Preconditions {
 
+  private Preconditions() {
+  }
+
   /**
    * Ensures the truth of an expression, throwing an {@link AssertionError} with the supplied
    * message if it does not evaluate as true.
@@ -62,7 +65,8 @@ public abstract class Preconditions {
   }
 
   /**
-   * Ensures that an object is not null, throwing an {@link IllegalArgumentException} if it is null.
+   * Ensures that an object is not null, throwing an {@link IllegalArgumentException} if it is
+   * null.
    *
    * @param object the object to check
    * @param <T> the type of the object
