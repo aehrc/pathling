@@ -22,36 +22,36 @@ import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths
 
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.ImportMode;
+import au.csiro.pathling.library.io.SaveMode;
 import jakarta.annotation.Nonnull;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.SaveMode;
 
 /**
  * A data sink that writes data to NDJSON files on a filesystem.
  *
  * @param context the {@link PathlingContext} to use
  * @param path the path to write the NDJSON files to
- * @param importMode the {@link ImportMode} to use
+ * @param saveMode the {@link SaveMode} to use
  * @param fileNameMapper a function that maps resource type to file name
  * @author John Grimes
  */
 public record NdjsonSink(
     @Nonnull PathlingContext context,
     @Nonnull String path,
-    @Nonnull ImportMode importMode,
+    @Nonnull SaveMode saveMode,
     @Nonnull UnaryOperator<String> fileNameMapper
 ) implements DataSink {
 
   /**
    * @param context the {@link PathlingContext} to use
    * @param path the path to write the NDJSON files to
-   * @param importMode the {@link ImportMode} to use
+   * @param saveMode the {@link SaveMode} to use
    */
   public NdjsonSink(@Nonnull final PathlingContext context, @Nonnull final String path,
-      @Nonnull final ImportMode importMode) {
-    this(context, path, importMode, UnaryOperator.identity());
+      @Nonnull final SaveMode saveMode) {
+    // By default, name the files using the resource type alone.
+    this(context, path, saveMode, UnaryOperator.identity());
   }
 
   @Override
@@ -67,11 +67,13 @@ public record NdjsonSink(
       final String resultUrl = safelyJoinPaths(path, fileName);
       final String resultUrlPartitioned = resultUrl + ".partitioned";
 
-      switch (importMode) {
-        case ERROR_IF_EXISTS ->
-            writeJsonStrings(jsonStrings, resultUrlPartitioned, SaveMode.ErrorIfExists);
-        case OVERWRITE -> writeJsonStrings(jsonStrings, resultUrlPartitioned, SaveMode.Overwrite);
-        case APPEND -> writeJsonStrings(jsonStrings, resultUrlPartitioned, SaveMode.Append);
+      switch (saveMode) {
+        case ERROR_IF_EXISTS -> writeJsonStrings(jsonStrings, resultUrlPartitioned,
+            org.apache.spark.sql.SaveMode.ErrorIfExists);
+        case OVERWRITE -> writeJsonStrings(jsonStrings, resultUrlPartitioned,
+            org.apache.spark.sql.SaveMode.Overwrite);
+        case APPEND -> writeJsonStrings(jsonStrings, resultUrlPartitioned,
+            org.apache.spark.sql.SaveMode.Append);
         case MERGE -> throw new UnsupportedOperationException(
             "Merge operation is not supported for NDJSON");
       }
@@ -82,7 +84,8 @@ public record NdjsonSink(
   }
 
   private static void writeJsonStrings(@Nonnull final Dataset<String> jsonStrings,
-      @Nonnull final String resultUrlPartitioned, @Nonnull final SaveMode saveMode) {
+      @Nonnull final String resultUrlPartitioned,
+      @Nonnull final org.apache.spark.sql.SaveMode saveMode) {
     jsonStrings.coalesce(1)
         .write()
         .mode(saveMode)

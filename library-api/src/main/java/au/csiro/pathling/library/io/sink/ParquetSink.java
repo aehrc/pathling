@@ -20,34 +20,48 @@ package au.csiro.pathling.library.io.sink;
 import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
 
 import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.library.io.ImportMode;
+import au.csiro.pathling.library.io.SaveMode;
 import jakarta.annotation.Nonnull;
+import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SaveMode;
 
 /**
  * A data sink that writes data to Parquet tables on a filesystem.
  *
  * @param path the path to write the Parquet files to
- * @param importMode the {@link SaveMode} to use
+ * @param saveMode the {@link SaveMode} to use
+ * @param fileNameMapper a function that maps resource type to file name
  * @author John Grimes
  */
 public record ParquetSink(
     @Nonnull String path,
-    @Nonnull ImportMode importMode
+    @Nonnull SaveMode saveMode,
+    @Nonnull UnaryOperator<String> fileNameMapper
 ) implements DataSink {
+
+  /**
+   * @param path the path to write the Parquet files to
+   * @param saveMode the {@link SaveMode} to use
+   */
+  public ParquetSink(@Nonnull final String path, @Nonnull final SaveMode saveMode) {
+    // By default, name the files using the resource type alone.
+    this(path, saveMode, UnaryOperator.identity());
+  }
 
   @Override
   public void write(@Nonnull final DataSource source) {
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
-      final String tablePath = safelyJoinPaths(path, resourceType + ".parquet");
+      final String fileName = String.join(".", fileNameMapper.apply(resourceType),
+          "parquet");
+      final String tablePath = safelyJoinPaths(path, fileName);
 
-      switch (importMode) {
-        case ERROR_IF_EXISTS -> writeDataset(dataset, tablePath, SaveMode.ErrorIfExists);
-        case OVERWRITE -> writeDataset(dataset, tablePath, SaveMode.Overwrite);
-        case APPEND -> writeDataset(dataset, tablePath, SaveMode.Append);
+      switch (saveMode) {
+        case ERROR_IF_EXISTS ->
+            writeDataset(dataset, tablePath, org.apache.spark.sql.SaveMode.ErrorIfExists);
+        case OVERWRITE -> writeDataset(dataset, tablePath, org.apache.spark.sql.SaveMode.Overwrite);
+        case APPEND -> writeDataset(dataset, tablePath, org.apache.spark.sql.SaveMode.Append);
         case MERGE -> throw new UnsupportedOperationException(
             "Merge operation is not supported for Parquet - use Delta if merging is required");
       }
@@ -55,7 +69,7 @@ public record ParquetSink(
   }
 
   private static void writeDataset(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final String tablePath, final SaveMode saveMode) {
+      @Nonnull final String tablePath, final org.apache.spark.sql.SaveMode saveMode) {
     dataset.write().mode(saveMode).parquet(tablePath);
   }
 

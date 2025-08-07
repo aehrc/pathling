@@ -20,53 +20,57 @@ package au.csiro.pathling.library.io.sink;
 import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
 
 import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.library.io.ImportMode;
+import au.csiro.pathling.library.io.SaveMode;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
+import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SaveMode;
 
 /**
  * A data sink that writes data to a Delta Lake table on a filesystem.
  *
+ * @param path the path to write the Delta database to
+ * @param saveMode the {@link SaveMode} to use
+ * @param fileNameMapper a function that maps resource type to file name
  * @author John Grimes
  */
-public class DeltaSink implements DataSink {
-
-  @Nonnull
-  private final ImportMode importMode;
-
-  @Nonnull
-  private final String path;
+public record DeltaSink(
+    @Nonnull String path,
+    @Nonnull SaveMode saveMode,
+    @Nonnull UnaryOperator<String> fileNameMapper
+) implements DataSink {
 
   /**
    * @param path the path to write the Delta database to
    */
   public DeltaSink(@Nonnull final String path) {
-    this.importMode = ImportMode.ERROR_IF_EXISTS; // Default import mode
-    this.path = path;
+    // By default, name the files using the resource type alone.
+    this(path, SaveMode.ERROR_IF_EXISTS, UnaryOperator.identity());
   }
 
   /**
    * @param path the path to write the Delta database to
-   * @param importMode the {@link ImportMode} to use
+   * @param saveMode the {@link SaveMode} to use
    */
-  public DeltaSink(@Nonnull final String path, @Nonnull final ImportMode importMode) {
-    this.importMode = importMode;
-    this.path = path;
+  public DeltaSink(@Nonnull final String path, @Nonnull final SaveMode saveMode) {
+    // By default, name the files using the resource type alone.
+    this(path, saveMode, UnaryOperator.identity());
   }
 
   @Override
   public void write(@Nonnull final DataSource source) {
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
-      final String tablePath = safelyJoinPaths(path, resourceType + ".parquet");
+      final String fileName = String.join(".", fileNameMapper.apply(resourceType),
+          "parquet");
+      final String tablePath = safelyJoinPaths(path, fileName);
 
-      switch (importMode) {
-        case ERROR_IF_EXISTS -> writeDataset(dataset, tablePath, SaveMode.ErrorIfExists);
-        case OVERWRITE -> writeDataset(dataset, tablePath, SaveMode.Overwrite);
-        case APPEND -> writeDataset(dataset, tablePath, SaveMode.Append);
+      switch (saveMode) {
+        case ERROR_IF_EXISTS ->
+            writeDataset(dataset, tablePath, org.apache.spark.sql.SaveMode.ErrorIfExists);
+        case OVERWRITE -> writeDataset(dataset, tablePath, org.apache.spark.sql.SaveMode.Overwrite);
+        case APPEND -> writeDataset(dataset, tablePath, org.apache.spark.sql.SaveMode.Append);
         case MERGE -> {
           if (DeltaTable.isDeltaTable(tablePath)) {
             // If the table already exists, merge the data in.
@@ -75,7 +79,7 @@ public class DeltaSink implements DataSink {
           } else {
             // If the table does not exist, create it. If an error occurs here, there must be a
             // pre-existing file at the path that is not a Delta table.
-            writeDataset(dataset, tablePath, SaveMode.ErrorIfExists);
+            writeDataset(dataset, tablePath, org.apache.spark.sql.SaveMode.ErrorIfExists);
           }
         }
       }
@@ -89,7 +93,7 @@ public class DeltaSink implements DataSink {
    * @param dataset the dataset to write to the Delta table
    */
   private static void writeDataset(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final String tablePath, final SaveMode saveMode) {
+      @Nonnull final String tablePath, final org.apache.spark.sql.SaveMode saveMode) {
     dataset.write()
         .format("delta")
         .mode(saveMode)
@@ -103,6 +107,7 @@ public class DeltaSink implements DataSink {
    * @param dataset the dataset containing updates to be merged
    */
   static void merge(@Nonnull final DeltaTable table, @Nonnull final Dataset<Row> dataset) {
+    // Perform a merge operation where we match on the 'id' column.
     table.as("original")
         .merge(dataset.as("updates"), "original.id = updates.id")
         .whenMatched()
