@@ -62,6 +62,21 @@ public abstract class Preconditions {
   }
 
   /**
+   * Ensures that an object is not null, throwing an {@link IllegalArgumentException} if it is null.
+   *
+   * @param object the object to check
+   * @param <T> the type of the object
+   * @return the object if it is not null
+   */
+  @Nonnull
+  public static <T> T checkArgumentNotNull(@Nullable final T object) {
+    if (object == null) {
+      throw new IllegalArgumentException("Argument must not be null");
+    }
+    return object;
+  }
+
+  /**
    * Ensures that an {@link Optional} value is present, throwing a {@link AssertionError} if it is
    * not.
    *

@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.library.io.source;
 
-import static java.util.Objects.requireNonNull;
+import static au.csiro.pathling.utilities.Preconditions.checkArgumentNotNull;
 
 import au.csiro.fhir.export.BulkExportClient;
 import au.csiro.pathling.library.PathlingContext;
@@ -49,7 +49,8 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    */
   @Nonnull
   public NdjsonSource ndjson(@Nullable final String ndjsonDir) {
-    return new NdjsonSource(context, requireNonNull(ndjsonDir));
+    checkArgumentNotNull(ndjsonDir);
+    return new NdjsonSource(context, ndjsonDir);
   }
 
   /**
@@ -70,7 +71,9 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    */
   @Nonnull
   public NdjsonSource ndjson(@Nullable final String path, @Nullable final String extension) {
-    return new NdjsonSource(context, requireNonNull(path), requireNonNull(extension));
+    checkArgumentNotNull(path);
+    checkArgumentNotNull(extension);
+    return new NdjsonSource(context, path, extension);
   }
 
   /**
@@ -89,8 +92,10 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
   public NdjsonSource ndjson(@Nullable final String path,
       @Nullable final String extension,
       @Nullable final Function<String, Set<String>> fileNameMapper) {
-    return new NdjsonSource(context, requireNonNull(path), requireNonNull(extension),
-        requireNonNull(fileNameMapper));
+    checkArgumentNotNull(path);
+    checkArgumentNotNull(extension);
+    checkArgumentNotNull(fileNameMapper);
+    return new NdjsonSource(context, path, extension, fileNameMapper);
   }
 
   /**
@@ -111,8 +116,10 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
   @Nonnull
   public BundlesSource bundles(@Nullable final String path,
       @Nullable final Set<String> resourceTypes, @Nullable final String mimeType) {
-    return new BundlesSource(context, requireNonNull(path), requireNonNull(mimeType),
-        requireNonNull(resourceTypes));
+    checkArgumentNotNull(path);
+    checkArgumentNotNull(mimeType);
+    checkArgumentNotNull(resourceTypes);
+    return new BundlesSource(context, path, mimeType, resourceTypes);
   }
 
   /**
@@ -136,7 +143,8 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    */
   @Nonnull
   public ParquetSource parquet(@Nullable final String path) {
-    return new ParquetSource(context, requireNonNull(path));
+    checkArgumentNotNull(path);
+    return new ParquetSource(context, path);
   }
 
   /**
@@ -147,7 +155,8 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    */
   @Nonnull
   public DeltaSource delta(@Nullable final String path) {
-    return new DeltaSource(context, requireNonNull(path));
+    checkArgumentNotNull(path);
+    return new DeltaSource(context, path);
   }
 
   /**
@@ -171,7 +180,8 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    */
   @Nonnull
   public CatalogSource tables(@Nullable final String schema) {
-    return new CatalogSource(context, requireNonNull(schema));
+    checkArgumentNotNull(schema);
+    return new CatalogSource(context, schema);
   }
 
   /**
@@ -183,7 +193,8 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    */
   @Nonnull
   public BulkDataSource bulk(@Nonnull final BulkExportClient client) {
-    return new BulkDataSource(context, requireNonNull(client));
+    checkArgumentNotNull(client);
+    return new BulkDataSource(context, client);
   }
 
 }

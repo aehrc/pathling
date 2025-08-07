@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.library.io.sink;
 
-import static java.util.Objects.requireNonNull;
+import static au.csiro.pathling.utilities.Preconditions.checkArgumentNotNull;
 
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
@@ -53,7 +53,8 @@ public record DataSinkBuilder(
    * </ul>
    */
   public void ndjson(@Nullable final String path, @Nullable final String saveMode) {
-    new NdjsonSink(context, requireNonNull(path), resolveSaveMode(saveMode)).write(source);
+    checkArgumentNotNull(path);
+    new NdjsonSink(context, path, resolveSaveMode(saveMode)).write(source);
   }
 
   /**
@@ -72,8 +73,9 @@ public record DataSinkBuilder(
    */
   public void ndjson(@Nullable final String path, @Nullable final String saveMode,
       @Nullable final UnaryOperator<String> fileNameMapper) {
-    new NdjsonSink(context, requireNonNull(path), resolveSaveMode(saveMode),
-        requireNonNull(fileNameMapper)).write(source);
+    checkArgumentNotNull(path);
+    checkArgumentNotNull(fileNameMapper);
+    new NdjsonSink(context, path, resolveSaveMode(saveMode), fileNameMapper).write(source);
   }
 
   /**
@@ -90,7 +92,8 @@ public record DataSinkBuilder(
    * </ul>
    */
   public void parquet(@Nullable final String path, @Nullable final String saveMode) {
-    new ParquetSink(requireNonNull(path), resolveSaveMode(saveMode)).write(source);
+    checkArgumentNotNull(path);
+    new ParquetSink(path, resolveSaveMode(saveMode)).write(source);
   }
 
   /**
@@ -109,8 +112,9 @@ public record DataSinkBuilder(
    */
   public void parquet(@Nullable final String path, @Nullable final String saveMode,
       @Nullable final UnaryOperator<String> fileNameMapper) {
-    new ParquetSink(requireNonNull(path), resolveSaveMode(saveMode),
-        requireNonNull(fileNameMapper)).write(source);
+    checkArgumentNotNull(path);
+    checkArgumentNotNull(fileNameMapper);
+    new ParquetSink(path, resolveSaveMode(saveMode), fileNameMapper).write(source);
   }
 
   /**
@@ -120,7 +124,8 @@ public record DataSinkBuilder(
    * @param path the directory to write the files to
    */
   public void delta(@Nullable final String path) {
-    new DeltaSink(requireNonNull(path)).write(source);
+    checkArgumentNotNull(path);
+    new DeltaSink(path).write(source);
   }
 
   /**
@@ -132,8 +137,9 @@ public record DataSinkBuilder(
    */
   public void delta(@Nullable final String path,
       @Nullable final UnaryOperator<String> fileNameMapper) {
-    new DeltaSink(requireNonNull(path), SaveMode.ERROR_IF_EXISTS,
-        requireNonNull(fileNameMapper)).write(source);
+    checkArgumentNotNull(path);
+    checkArgumentNotNull(fileNameMapper);
+    new DeltaSink(path, SaveMode.ERROR_IF_EXISTS, fileNameMapper).write(source);
   }
 
   /**
@@ -151,7 +157,9 @@ public record DataSinkBuilder(
    * </ul>
    */
   public void delta(@Nullable final String path, @Nullable final String saveMode) {
-    new DeltaSink(requireNonNull(path), SaveMode.fromCode(saveMode)).write(source);
+    checkArgumentNotNull(path);
+    checkArgumentNotNull(saveMode);
+    new DeltaSink(path, SaveMode.fromCode(saveMode)).write(source);
   }
 
   /**
@@ -172,8 +180,10 @@ public record DataSinkBuilder(
    */
   public void delta(@Nullable final String path, @Nullable final String saveMode,
       @Nullable final UnaryOperator<String> fileNameMapper) {
-    new DeltaSink(requireNonNull(path), SaveMode.fromCode(saveMode),
-        requireNonNull(fileNameMapper)).write(source);
+    checkArgumentNotNull(path);
+    checkArgumentNotNull(saveMode);
+    checkArgumentNotNull(fileNameMapper);
+    new DeltaSink(path, SaveMode.fromCode(saveMode), fileNameMapper).write(source);
   }
 
   /**
@@ -203,6 +213,7 @@ public record DataSinkBuilder(
    * </ul>
    */
   public void tables(@Nullable final String saveMode) {
+    checkArgumentNotNull(saveMode);
     new CatalogSink(context, SaveMode.fromCode(saveMode)).write(source);
   }
 
@@ -223,7 +234,9 @@ public record DataSinkBuilder(
    * @param schema the schema name to write the tables to
    */
   public void tables(@Nullable final String saveMode, @Nullable final String schema) {
-    new CatalogSink(context, SaveMode.fromCode(saveMode), requireNonNull(schema)).write(source);
+    checkArgumentNotNull(saveMode);
+    checkArgumentNotNull(schema);
+    new CatalogSink(context, SaveMode.fromCode(saveMode), schema).write(source);
   }
 
   /**
@@ -245,8 +258,10 @@ public record DataSinkBuilder(
    */
   public void tables(@Nullable final String saveMode, @Nullable final String schema,
       @Nullable final String format) {
-    new CatalogSink(context, SaveMode.fromCode(saveMode), requireNonNull(schema),
-        requireNonNull(format)).write(source);
+    checkArgumentNotNull(saveMode);
+    checkArgumentNotNull(schema);
+    checkArgumentNotNull(format);
+    new CatalogSink(context, SaveMode.fromCode(saveMode), schema, format).write(source);
   }
 
   @Nonnull
