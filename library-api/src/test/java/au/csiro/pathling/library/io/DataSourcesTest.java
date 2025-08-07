@@ -47,6 +47,7 @@ import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -89,6 +90,24 @@ class DataSourcesTest {
     // Create the Pathling context.
     pathlingContext = PathlingContext.create(spark, FhirEncoders.forR4().getOrCreate(),
         terminologyServiceFactory);
+  }
+
+  /**
+   * Clean up catalog after each test.
+   */
+  @AfterEach
+  void cleanupCatalog() {
+    // Drop all tables in the default schema.
+    spark.sql("SHOW TABLES").collectAsList().forEach(row -> {
+      final String tableName = row.getAs("tableName");
+      spark.sql("DROP TABLE IF EXISTS " + tableName);
+    });
+
+    // Drop all tables in the test schema.
+    spark.sql("SHOW TABLES IN test").collectAsList().forEach(row -> {
+      final String tableName = row.getAs("tableName");
+      spark.sql("DROP TABLE IF EXISTS test." + tableName);
+    });
   }
 
   /**

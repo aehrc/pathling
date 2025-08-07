@@ -25,6 +25,8 @@ import au.csiro.pathling.library.io.SaveMode;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
+import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
@@ -89,14 +91,18 @@ public class CatalogSink implements DataSink {
 
       switch (saveMode) {
         case ERROR_IF_EXISTS ->
-            writeDataset(dataset, tableName, org.apache.spark.sql.SaveMode.ErrorIfExists);
+            writeDataset(dataset, tableName, org.apache.spark.sql.SaveMode.ErrorIfExists,
+                UnaryOperator.identity());
         case OVERWRITE -> {
-          // This is to work around a bug relating to Delta tables not reporting that they are
-          // able to be overwritten.
+          // This is to work around a bug relating to Delta tables not being able to be overwritten,
+          // due to their inability to handle the truncate operation that Spark performs when
+          // overwriting a table.
           context.getSpark().sql("DROP TABLE IF EXISTS " + tableName);
-          writeDataset(dataset, tableName, org.apache.spark.sql.SaveMode.Overwrite);
+          writeDataset(dataset, tableName, org.apache.spark.sql.SaveMode.ErrorIfExists,
+              w -> w.option("overwriteSchema", "true"));
         }
-        case APPEND -> writeDataset(dataset, tableName, org.apache.spark.sql.SaveMode.Append);
+        case APPEND -> writeDataset(dataset, tableName, org.apache.spark.sql.SaveMode.Append,
+            UnaryOperator.identity());
         case MERGE -> {
           if (DeltaTable.isDeltaTable(tableName)) {
             // If the table already exists, merge the data in.
@@ -104,7 +110,8 @@ public class CatalogSink implements DataSink {
             merge(table, dataset);
           } else {
             // If the table does not exist, create it.
-            writeDataset(dataset, tableName, org.apache.spark.sql.SaveMode.ErrorIfExists);
+            writeDataset(dataset, tableName, org.apache.spark.sql.SaveMode.ErrorIfExists,
+                UnaryOperator.identity());
           }
         }
       }
@@ -112,11 +119,12 @@ public class CatalogSink implements DataSink {
   }
 
   private static void writeDataset(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final String tableName, @Nonnull final org.apache.spark.sql.SaveMode saveMode) {
-    dataset.write()
-        .format("delta")
-        .mode(saveMode)
-        .saveAsTable(tableName);
+      @Nonnull final String tableName, @Nonnull final org.apache.spark.sql.SaveMode saveMode,
+      @Nonnull final UnaryOperator<DataFrameWriter<Row>> writerModifier) {
+    final DataFrameWriter<Row> writer = dataset.write()
+        .mode(saveMode);
+    writerModifier.apply(writer);
+    writer.saveAsTable(tableName);
   }
 
   /**
