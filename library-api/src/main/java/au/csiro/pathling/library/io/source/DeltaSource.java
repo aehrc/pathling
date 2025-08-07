@@ -19,16 +19,15 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
-import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
 /**
- * A class for making FHIR data in Delta tables on the filesystem available for query. It is
- * assumed that the schema of the Delta tables aligns with that of the Pathling FHIR encoders.
- * Delta tables store data in Parquet format internally, so this source uses the parquet extension
- * for file detection.
+ * A class for making FHIR data in Delta tables on the filesystem available for query. It is assumed
+ * that the schema of the Delta tables aligns with that of the Pathling FHIR encoders. Delta tables
+ * store data in Parquet format internally, so this source uses the parquet extension for file
+ * detection.
  *
  * @author John Grimes
  * @author Piotr Szul
@@ -54,27 +53,15 @@ public class DeltaSource extends FileSource {
         (sourceData, resourceType) -> sourceData);
   }
 
-  /**
-   * Constructs a DeltaSource with the specified PathlingContext, path, and transformation.
-   *
-   * @param context the PathlingContext to use
-   * @param path the path to the Delta table directory
-   * @param transformer a function that transforms a dataset containing raw source data of a
-   * specified resource type into a dataset containing the imported data
-   */
-  public DeltaSource(@Nonnull final PathlingContext context, @Nonnull final String path,
-      @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer) {
-    super(context, path,
-        FileSource::resourceNameWithQualifierMapper,
-        "parquet",
-        context.getSpark().read().format("delta"),
-        transformer);
-  }
-
   @Nonnull
   @Override
   public DeltaSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
     return (DeltaSource) super.map(operator);
+  }
+
+  @Override
+  public DeltaSource cache() {
+    return map(Dataset::cache);
   }
 
 }

@@ -56,4 +56,11 @@ public interface DataSource {
   @Nonnull
   DataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator);
 
+  /**
+   * Caches the datasets in this data source to improve performance for subsequent queries.
+   *
+   * @return a new DataSource with cached datasets
+   */
+  DataSource cache();
+
 }

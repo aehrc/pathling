@@ -87,4 +87,9 @@ public class NdjsonSource extends FileSource {
     return (NdjsonSource) super.map(operator);
   }
 
+  @Override
+  public NdjsonSource cache() {
+    return map(Dataset::cache);
+  }
+
 }

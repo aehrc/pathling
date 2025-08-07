@@ -100,4 +100,9 @@ public class DatasetSource extends AbstractSource {
     return new DatasetSource(context, transformedMap);
   }
 
+  @Override
+  public DatasetSource cache() {
+    return map(Dataset::cache);
+  }
+
 }

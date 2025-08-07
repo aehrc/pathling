@@ -94,4 +94,9 @@ public class ParquetSource extends FileSource {
     return (ParquetSource) super.map(operator);
   }
 
+  @Override
+  public ParquetSource cache() {
+    return map(Dataset::cache);
+  }
+  
 }

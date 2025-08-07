@@ -20,7 +20,6 @@ package au.csiro.pathling.library.io.source;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 
-import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.PersistenceError;
 import jakarta.annotation.Nonnull;
@@ -141,8 +140,13 @@ public class CatalogSource extends AbstractSource {
 
   @Nonnull
   @Override
-  public DataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
+  public CatalogSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
     return new CatalogSource(context, schema, Optional.of(operator));
+  }
+
+  @Override
+  public CatalogSource cache() {
+    return map(Dataset::cache);
   }
 
 }

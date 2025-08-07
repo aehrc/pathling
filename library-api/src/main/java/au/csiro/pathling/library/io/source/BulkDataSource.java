@@ -81,5 +81,10 @@ public class BulkDataSource implements DataSource {
   public BulkDataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
     return new BulkDataSource(ndjsonSource.map(operator));
   }
-  
+
+  @Override
+  public BulkDataSource cache() {
+    return map(Dataset::cache);
+  }
+
 }

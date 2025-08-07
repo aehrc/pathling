@@ -71,4 +71,9 @@ public class BundlesSource extends FileSource {
     return (BundlesSource) super.map(operator);
   }
 
+  @Override
+  public BundlesSource cache() {
+    return map(Dataset::cache);
+  }
+ 
 }
