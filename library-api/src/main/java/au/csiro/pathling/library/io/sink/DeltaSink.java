@@ -73,14 +73,14 @@ public record DeltaSink(
           // This is to work around a bug relating to Delta tables not being able to be overwritten,
           // due to their inability to handle the truncate operation that Spark performs when
           // overwriting a table.
-          if (DeltaTable.isDeltaTable(tablePath)) {
+          if (deltaTableExists(tablePath)) {
             final DeltaTable table = DeltaTable.forPath(tablePath);
             table.delete();
           }
           writeDataset(dataset, tablePath, SaveMode.ERROR_IF_EXISTS);
         }
         case MERGE -> {
-          if (DeltaTable.isDeltaTable(tablePath)) {
+          if (deltaTableExists(tablePath)) {
             // If the table already exists, merge the data in.
             final DeltaTable table = DeltaTable.forPath(tablePath);
             merge(table, dataset);
@@ -127,6 +127,24 @@ public record DeltaSink(
         .whenNotMatched()
         .insertAll()
         .execute();
+  }
+
+  /**
+   * Checks if a Delta table exists at the specified path by attempting to access it via
+   * DeltaTable.forPath. This method catches any exceptions that occur during table access
+   * to determine existence.
+   *
+   * @param tablePath the path to the table to check
+   * @return true if the Delta table exists, false otherwise
+   */
+  private static boolean deltaTableExists(@Nonnull final String tablePath) {
+    try {
+      DeltaTable.forPath(tablePath);
+      return true;
+    } catch (final Exception e) {
+      // Table does not exist or is not a Delta table.
+      return false;
+    }
   }
 
 }

@@ -125,7 +125,7 @@ public class CatalogSink implements DataSink {
           }
         }
         case MERGE -> {
-          if (DeltaTable.isDeltaTable(tableName)) {
+          if (deltaTableExists(tableName)) {
             // If the table already exists, merge the data in.
             final DeltaTable table = DeltaTable.forName(tableName);
             merge(table, dataset);
@@ -141,7 +141,7 @@ public class CatalogSink implements DataSink {
   private void writeDataset(@Nonnull final Dataset<Row> dataset,
       @Nonnull final String tableName, @Nonnull final SaveMode saveMode) {
     final DataFrameWriter<Row> writer = dataset.write();
-   
+
     // Apply save mode if it has a Spark equivalent.
     saveMode.getSparkSaveMode().ifPresent(writer::mode);
 
@@ -160,6 +160,23 @@ public class CatalogSink implements DataSink {
   private String getTableName(@Nonnull final String resourceType) {
     return schema.map(s -> String.join(".", s, resourceType))
         .orElse(resourceType);
+  }
+
+  /**
+   * Checks if a Delta table exists by attempting to access it via DeltaTable.forName. This method
+   * catches any exceptions that occur during table access to determine existence.
+   *
+   * @param tableName the name of the table to check
+   * @return true if the Delta table exists, false otherwise
+   */
+  private boolean deltaTableExists(@Nonnull final String tableName) {
+    try {
+      DeltaTable.forName(tableName);
+      return true;
+    } catch (final Exception e) {
+      // Table does not exist or is not a Delta table.
+      return false;
+    }
   }
 
 }

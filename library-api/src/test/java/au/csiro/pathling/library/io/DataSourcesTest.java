@@ -438,14 +438,23 @@ class DataSourcesTest {
     final QueryableDataSource data = pathlingContext.read()
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
-    // Write the data back out to tables.
-    data.write().tables("merge");
+    // Write the data back out to tables using merge (creates new tables since none exist).
+    data.write().tables("merge", "test", "delta");
 
     // Read the data back in.
-    final QueryableDataSource newData = pathlingContext.read().tables();
+    final QueryableDataSource newData = pathlingContext.read().tables("test");
 
     // Query the data.
     queryNdjsonData(newData);
+
+    // Now test merging again into the existing Delta table.
+    data.write().tables("merge", "test", "delta");
+
+    // Read the merged data back in.
+    final QueryableDataSource mergedData = pathlingContext.read().tables("test");
+
+    // Query the merged data.
+    queryNdjsonData(mergedData);
   }
 
   @Test
