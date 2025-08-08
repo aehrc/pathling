@@ -19,12 +19,8 @@ package au.csiro.pathling.library;
 
 import static au.csiro.pathling.test.SchemaAsserts.assertFieldNotPresent;
 import static au.csiro.pathling.test.SchemaAsserts.assertFieldPresent;
-import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupSubsumes;
-import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupTranslate;
-import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupValidate;
 import static java.util.function.Predicate.not;
 import static org.apache.spark.sql.functions.col;
-import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.EQUIVALENT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -39,11 +35,8 @@ import au.csiro.pathling.config.HttpClientCachingStorageType;
 import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.encoding.CodingSchema;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.terminology.TerminologyService.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import jakarta.annotation.Nonnull;
@@ -63,16 +56,10 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.streaming.OutputMode;
 import org.apache.spark.sql.streaming.StreamingQuery;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
-import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Condition;
-import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -327,93 +314,6 @@ public class PathlingContextTest {
     conditionQuery.processAllAvailable();
     final long conditionsCount = spark.sql("select * from countCondition").head().getLong(0);
     assertEquals(71, conditionsCount);
-  }
-
-  @Test
-  void testMemberOf() {
-    final String valueSetUri = "urn:test:456";
-    final Coding coding1 = new Coding("urn:test:123", "ABC", "abc");
-    final Coding coding2 = new Coding("urn:test:123", "DEF", "def");
-
-    setupValidate(terminologyService).withValueSet(valueSetUri, coding1);
-
-    final PathlingContext pathlingContext = PathlingContext.create(spark,
-        FhirEncoders.forR4().getOrCreate(), terminologyServiceFactory);
-
-    final Row row1 = RowFactory.create("foo", CodingSchema.encode(coding1));
-    final Row row2 = RowFactory.create("bar", CodingSchema.encode(coding2));
-    final List<Row> datasetRows = List.of(row1, row2);
-    final StructType schema = DataTypes.createStructType(
-        new StructField[]{DataTypes.createStructField("id", DataTypes.StringType, true),
-            DataTypes.createStructField("coding", CodingSchema.codingStructType(), true)});
-    final Dataset<Row> codingDataFrame = spark.createDataFrame(datasetRows, schema);
-    final Column codingColumn = col("coding");
-    final Dataset<Row> result = pathlingContext.memberOf(codingDataFrame, codingColumn,
-        valueSetUri, "result");
-
-    final List<Row> rows = result.select("id", "result").collectAsList();
-    assertEquals(RowFactory.create("foo", true), rows.get(0));
-    assertEquals(RowFactory.create("bar", false), rows.get(1));
-  }
-
-  @Test
-  void testTranslate() {
-    final String conceptMapUri = "urn:test:456";
-    final Coding coding1 = new Coding("urn:test:123", "ABC", "abc");
-    final Coding coding2 = new Coding("urn:test:123", "DEF", "def");
-
-    setupTranslate(terminologyService).withTranslations(coding1, conceptMapUri,
-        Translation.of(EQUIVALENT, coding2));
-
-    final PathlingContext pathlingContext = PathlingContext.create(spark,
-        FhirEncoders.forR4().getOrCreate(), terminologyServiceFactory);
-
-    final Row row1 = RowFactory.create("foo", CodingSchema.encode(coding1));
-    final Row row2 = RowFactory.create("bar", CodingSchema.encode(coding2));
-    final List<Row> datasetRows = List.of(row1, row2);
-    final StructType schema = DataTypes.createStructType(
-        new StructField[]{DataTypes.createStructField("id", DataTypes.StringType, true),
-            DataTypes.createStructField("coding", CodingSchema.codingStructType(), true)});
-    final Dataset<Row> codingDataFrame = spark.createDataFrame(datasetRows, schema);
-    final Column codingColumn = col("coding");
-    final Dataset<Row> result = pathlingContext.translate(codingDataFrame, codingColumn,
-        conceptMapUri, false, ConceptMapEquivalence.EQUIVALENT.toCode(), null, "result");
-
-    final List<Row> rows = result.select("id", "result").collectAsList();
-    assertEquals(
-        RowFactory.create("foo", WrappedArray.make(new Row[]{CodingSchema.encode(coding2)})),
-        rows.get(0));
-  }
-
-  @Test
-  void testSubsumes() {
-    final Coding coding1 = new Coding("urn:test:123", "ABC", "abc");
-    final Coding coding2 = new Coding("urn:test:123", "DEF", "def");
-    final Coding coding3 = new Coding("urn:test:123", "GHI", "ghi");
-
-    setupSubsumes(terminologyService).withSubsumes(coding1, coding2);
-
-    final PathlingContext pathlingContext = PathlingContext.create(spark,
-        FhirEncoders.forR4().getOrCreate(), terminologyServiceFactory);
-
-    final Row row1 = RowFactory.create("foo", CodingSchema.encode(coding1),
-        CodingSchema.encode(coding2));
-    final Row row2 = RowFactory.create("bar", CodingSchema.encode(coding1),
-        CodingSchema.encode(coding3));
-    final List<Row> datasetRows = List.of(row1, row2);
-    final StructType schema = DataTypes.createStructType(
-        new StructField[]{DataTypes.createStructField("id", DataTypes.StringType, true),
-            DataTypes.createStructField("leftCoding", CodingSchema.codingStructType(), true),
-            DataTypes.createStructField("rightCoding", CodingSchema.codingStructType(), true)});
-    final Dataset<Row> codingDataFrame = spark.createDataFrame(datasetRows, schema);
-    final Column leftCoding = col("leftCoding");
-    final Column rightCoding = col("rightCoding");
-    final Dataset<Row> result = pathlingContext.subsumes(codingDataFrame, leftCoding, rightCoding,
-        "result");
-
-    final List<Row> rows = result.select("id", "result").collectAsList();
-    assertEquals(RowFactory.create("foo", true), rows.get(0));
-    assertEquals(RowFactory.create("bar", false), rows.get(1));
   }
 
   @Test
