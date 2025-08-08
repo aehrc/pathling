@@ -251,10 +251,14 @@ data_sinks <- function(ds) {
 }
 
  #'@importFrom sparklyr invoke
-invoke_datasink <- function(ds, name, ...) {
-  ds %>%
-      data_sinks() %>%
-      invoke(name, ...)
+invoke_datasink <- function(ds, name, save_mode = NULL, ...) {
+  sink_builder <- ds %>% data_sinks()
+  
+  if (!is.null(save_mode)) {
+    sink_builder <- sink_builder %>% invoke("saveMode", save_mode)
+  }
+  
+  sink_builder %>% invoke(name, ...)
   return(invisible(NULL))
 }
 
@@ -287,7 +291,7 @@ invoke_datasink <- function(ds, name, ...) {
 ds_write_ndjson <- function(ds, path, save_mode = SaveMode$ERROR, file_name_mapper = NULL) {
   #See: issue #1601 (Implement file_name_mappers in R sparkly API)
   stopifnot(file_name_mapper == NULL)
-  invoke_datasink(ds, "ndjson", path, save_mode)
+  invoke_datasink(ds, "ndjson", save_mode, path)
 }
 
 #' Write FHIR data to Parquet files
@@ -315,7 +319,7 @@ ds_write_ndjson <- function(ds, path, save_mode = SaveMode$ERROR, file_name_mapp
 #' 
 #' @export
 ds_write_parquet <- function(ds, path, save_mode = SaveMode$ERROR) {
-  invoke_datasink(ds, "parquet", path, save_mode)
+  invoke_datasink(ds, "parquet", save_mode, path)
 }
 
 #' Write FHIR data to Delta files
@@ -346,7 +350,7 @@ ds_write_parquet <- function(ds, path, save_mode = SaveMode$ERROR) {
 #' 
 #' @export
 ds_write_delta <- function(ds, path, import_mode = ImportMode$OVERWRITE) {
-  invoke_datasink(ds, "delta", path, import_mode)
+  invoke_datasink(ds, "delta", import_mode, path)
 }
 
 #' Write FHIR data to managed tables
