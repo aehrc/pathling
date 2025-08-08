@@ -82,9 +82,9 @@ class DataSinks(SparkConversionsMixin):
             wrapped_mapper = StringMapper(
                 self.spark._jvm._gateway_client, file_name_mapper
             )
-            self._datasinks.ndjson(path, save_mode, wrapped_mapper)
+            self._datasinks.saveMode(save_mode).ndjson(path, wrapped_mapper)
         else:
-            self._datasinks.ndjson(path, save_mode)
+            self._datasinks.saveMode(save_mode).ndjson(path)
 
     def parquet(self, path: str, save_mode: Optional[str] = SaveMode.ERROR) -> None:
         """
@@ -97,7 +97,7 @@ class DataSinks(SparkConversionsMixin):
             - "ignore" will only save the data if the file does not already exist.
             - "error" will raise an error if the file already exists.
         """
-        self._datasinks.parquet(path, save_mode)
+        self._datasinks.saveMode(save_mode).parquet(path)
 
     def delta(
         self, path: str, import_mode: Optional[str] = ImportMode.OVERWRITE
@@ -110,7 +110,7 @@ class DataSinks(SparkConversionsMixin):
         overwrite any existing data, "merge" will merge the new data with the existing data based
         on resource ID.
         """
-        self._datasinks.delta(path, import_mode)
+        self._datasinks.saveMode(import_mode).delta(path)
 
     def tables(
         self,
@@ -126,6 +126,6 @@ class DataSinks(SparkConversionsMixin):
         on resource ID.
         """
         if schema:
-            self._datasinks.tables(import_mode, schema)
+            self._datasinks.saveMode(import_mode).tables(schema)
         else:
-            self._datasinks.tables(import_mode)
+            self._datasinks.saveMode(import_mode).tables()
