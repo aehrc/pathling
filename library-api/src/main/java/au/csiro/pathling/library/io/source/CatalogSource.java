@@ -41,7 +41,7 @@ import org.apache.spark.sql.catalog.Table;
  * @author John Grimes
  * @author Piotr Szul
  */
-public class CatalogSource extends AbstractSource {
+class CatalogSource extends AbstractSource {
 
   @Nonnull
   private final Optional<String> schema;
@@ -54,7 +54,7 @@ public class CatalogSource extends AbstractSource {
    *
    * @param context the PathlingContext to use
    */
-  public CatalogSource(@Nonnull final PathlingContext context) {
+  CatalogSource(@Nonnull final PathlingContext context) {
     super(context);
     this.schema = Optional.empty(); // Default schema is empty
     this.transformation = Optional.empty(); // No transformation by default
@@ -66,7 +66,7 @@ public class CatalogSource extends AbstractSource {
    * @param context the PathlingContext to use
    * @param schema the schema to use for the catalog tables
    */
-  public CatalogSource(@Nonnull final PathlingContext context, @Nonnull final String schema) {
+  CatalogSource(@Nonnull final PathlingContext context, @Nonnull final String schema) {
     super(context);
     this.schema = Optional.of(schema);
     this.transformation = Optional.empty(); // No transformation by default

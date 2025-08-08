@@ -47,20 +47,4 @@ public interface DataSource {
   @Nonnull
   Set<String> getResourceTypes();
 
-  /**
-   * Applies a transformation to each dataset within this data source.
-   *
-   * @param operator the transformation to apply
-   * @return a new DataSource containing the transformed datasets
-   */
-  @Nonnull
-  DataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator);
-
-  /**
-   * Caches the datasets in this data source to improve performance for subsequent queries.
-   *
-   * @return a new DataSource with cached datasets
-   */
-  DataSource cache();
-
 }

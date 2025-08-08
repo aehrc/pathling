@@ -21,10 +21,7 @@ import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.function.UnaryOperator;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 
 /**
  * A class for making FHIR data within a set of NDJSON files available for query.
@@ -33,7 +30,7 @@ import org.apache.spark.sql.Row;
  * @author Piotr Szul
  */
 @Slf4j
-public class NdjsonSource extends FileSource {
+class NdjsonSource extends FileSource {
 
   /**
    * Constructs an NdjsonSource with the specified PathlingContext and path.
@@ -41,7 +38,7 @@ public class NdjsonSource extends FileSource {
    * @param context the PathlingContext to use
    * @param path the path to the NDJSON file or directory
    */
-  public NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
+  NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
     // Recognize files with the extension ".ndjson" as NDJSON files, by default.
     this(context, path, "ndjson");
   }
@@ -53,7 +50,7 @@ public class NdjsonSource extends FileSource {
    * @param path the path to the NDJSON file or directory
    * @param extension the file extension to recognize as NDJSON files
    */
-  public NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final String path,
+  NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final String path,
       @Nonnull final String extension) {
     this(context, path, extension,
         // Use the "resource name with qualifier" mapper by default, which takes the resource name
@@ -70,7 +67,7 @@ public class NdjsonSource extends FileSource {
    * @param extension the file extension to recognize as NDJSON files
    * @param fileNameMapper a function that maps a file name to a set of resource types
    */
-  public NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final String path,
+  NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final String path,
       @Nonnull final String extension,
       @Nonnull final Function<String, Set<String>> fileNameMapper) {
     super(context, path, fileNameMapper, extension,
@@ -79,17 +76,6 @@ public class NdjsonSource extends FileSource {
         // Encode each line of input as a JSON FHIR resource.
         (sourceData, resourceType) -> context.encode(sourceData, resourceType,
             PathlingContext.FHIR_JSON));
-  }
-
-  @Nonnull
-  @Override
-  public NdjsonSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
-    return (NdjsonSource) super.map(operator);
-  }
-
-  @Override
-  public NdjsonSource cache() {
-    return map(Dataset::cache);
   }
 
 }

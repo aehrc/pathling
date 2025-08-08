@@ -22,6 +22,9 @@ import au.csiro.pathling.library.query.FhirViewQuery;
 import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.function.UnaryOperator;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
 /**
  * A FHIR data source that can be queried, and can also be written out to a data sink.
@@ -50,5 +53,21 @@ public interface QueryableDataSource extends DataSource {
    */
   @Nonnull
   FhirViewQuery view(@Nullable FhirView view);
+
+  /**
+   * Applies a transformation to each dataset within this data source.
+   *
+   * @param operator the transformation to apply
+   * @return a new DataSource containing the transformed datasets
+   */
+  @Nonnull
+  DataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator);
+
+  /**
+   * Caches the datasets in this data source to improve performance for subsequent queries.
+   *
+   * @return a new DataSource with cached datasets
+   */
+  DataSource cache();
 
 }

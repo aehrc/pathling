@@ -35,7 +35,7 @@ import jakarta.annotation.Nullable;
  *
  * @author John Grimes
  */
-public abstract class AbstractSource implements QueryableDataSource {
+abstract class AbstractSource implements QueryableDataSource {
 
   /**
    * The Pathling context that provides access to dependencies such as the Spark session.

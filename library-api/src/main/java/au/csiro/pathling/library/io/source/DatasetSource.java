@@ -50,7 +50,7 @@ public class DatasetSource extends AbstractSource {
    *
    * @param context the PathlingContext to use
    */
-  public DatasetSource(@Nonnull final PathlingContext context) {
+  DatasetSource(@Nonnull final PathlingContext context) {
     super(context);
   }
 
@@ -90,7 +90,7 @@ public class DatasetSource extends AbstractSource {
 
   @Nonnull
   @Override
-  public DatasetSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
+  public QueryableDataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
     final Map<String, Dataset<Row>> transformedMap = new HashMap<>();
     for (final Map.Entry<String, Dataset<Row>> entry : resourceMap.entrySet()) {
       final String resourceType = entry.getKey();
@@ -101,7 +101,7 @@ public class DatasetSource extends AbstractSource {
   }
 
   @Override
-  public DatasetSource cache() {
+  public QueryableDataSource cache() {
     return map(Dataset::cache);
   }
 

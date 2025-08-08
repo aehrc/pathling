@@ -19,7 +19,6 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.fhir.export.BulkExportClient;
 import au.csiro.fhir.export.BulkExportResult;
-import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -38,7 +37,7 @@ import org.apache.spark.sql.Row;
  * @see <a href="https://hl7.org/fhir/uv/bulkdata/">FHIR Bulk Data Access Implementation Guide</a>
  */
 @Slf4j
-public class BulkDataSource implements DataSource {
+class BulkDataSource extends AbstractSource {
 
   @Nonnull
   private final NdjsonSource ndjsonSource;
@@ -51,8 +50,10 @@ public class BulkDataSource implements DataSource {
    * parameters
    * @throws RuntimeException if the export fails or the source cannot be initialized
    */
-  public BulkDataSource(@Nonnull final PathlingContext context,
+  BulkDataSource(@Nonnull final PathlingContext context,
       @Nonnull final BulkExportClient client) {
+    super(context);
+
     // Execute the export to the specified output directory
     final BulkExportResult result = client.export();
     log.debug("Bulk export completed: {}", result);
@@ -61,7 +62,9 @@ public class BulkDataSource implements DataSource {
     this.ndjsonSource = new NdjsonSource(context, client.getOutputDir());
   }
 
-  private BulkDataSource(@Nonnull final NdjsonSource ndjsonSource) {
+  private BulkDataSource(@Nonnull final PathlingContext context,
+      @Nonnull final NdjsonSource ndjsonSource) {
+    super(context);
     this.ndjsonSource = ndjsonSource;
   }
 
@@ -71,19 +74,20 @@ public class BulkDataSource implements DataSource {
     return ndjsonSource.read(resourceCode);
   }
 
+  @Nonnull
   @Override
-  public @Nonnull Set<String> getResourceTypes() {
+  public Set<String> getResourceTypes() {
     return ndjsonSource.getResourceTypes();
   }
 
   @Nonnull
   @Override
-  public BulkDataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
-    return new BulkDataSource(ndjsonSource.map(operator));
+  public QueryableDataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
+    return new BulkDataSource(context, (NdjsonSource) ndjsonSource.map(operator));
   }
 
   @Override
-  public BulkDataSource cache() {
+  public QueryableDataSource cache() {
     return map(Dataset::cache);
   }
 

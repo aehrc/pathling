@@ -19,9 +19,6 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
-import java.util.function.UnaryOperator;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 
 /**
  * A class for making FHIR data in Delta tables on the filesystem available for query. It is assumed
@@ -32,7 +29,7 @@ import org.apache.spark.sql.Row;
  * @author John Grimes
  * @author Piotr Szul
  */
-public class DeltaSource extends FileSource {
+class DeltaSource extends FileSource {
 
   /**
    * Constructs a DeltaSource with the specified PathlingContext and path.
@@ -40,7 +37,7 @@ public class DeltaSource extends FileSource {
    * @param context the PathlingContext to use
    * @param path the path to the Delta table directory
    */
-  public DeltaSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
+  DeltaSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
     super(context, path,
         // Use the "resource name with qualifier" mapper by default, which takes the resource name
         // from the file name and is tolerant of an optional qualifier string.
@@ -51,17 +48,6 @@ public class DeltaSource extends FileSource {
         // Apply no transformations on the data - we assume it has already been processed using the 
         // Pathling FHIR encoders.
         (sourceData, resourceType) -> sourceData);
-  }
-
-  @Nonnull
-  @Override
-  public DeltaSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
-    return (DeltaSource) super.map(operator);
-  }
-
-  @Override
-  public DeltaSource cache() {
-    return map(Dataset::cache);
   }
 
 }

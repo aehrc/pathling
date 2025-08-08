@@ -48,7 +48,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * @return the new data source
    */
   @Nonnull
-  public NdjsonSource ndjson(@Nullable final String ndjsonDir) {
+  public QueryableDataSource ndjson(@Nullable final String ndjsonDir) {
     checkArgumentNotNull(ndjsonDir);
     return new NdjsonSource(context, ndjsonDir);
   }
@@ -70,7 +70,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * @return the new data source
    */
   @Nonnull
-  public NdjsonSource ndjson(@Nullable final String path, @Nullable final String extension) {
+  public QueryableDataSource ndjson(@Nullable final String path, @Nullable final String extension) {
     checkArgumentNotNull(path);
     checkArgumentNotNull(extension);
     return new NdjsonSource(context, path, extension);
@@ -89,7 +89,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * @return the new data source
    */
   @Nonnull
-  public NdjsonSource ndjson(@Nullable final String path,
+  public QueryableDataSource ndjson(@Nullable final String path,
       @Nullable final String extension,
       @Nullable final Function<String, Set<String>> fileNameMapper) {
     checkArgumentNotNull(path);
@@ -114,7 +114,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * @return the new data source
    */
   @Nonnull
-  public BundlesSource bundles(@Nullable final String path,
+  public QueryableDataSource bundles(@Nullable final String path,
       @Nullable final Set<String> resourceTypes, @Nullable final String mimeType) {
     checkArgumentNotNull(path);
     checkArgumentNotNull(mimeType);
@@ -142,7 +142,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * @return the new data source
    */
   @Nonnull
-  public ParquetSource parquet(@Nullable final String path) {
+  public QueryableDataSource parquet(@Nullable final String path) {
     checkArgumentNotNull(path);
     return new ParquetSource(context, path);
   }
@@ -156,7 +156,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * @return the new data source
    */
   @Nonnull
-  public ParquetSource parquet(@Nullable final String path,
+  public QueryableDataSource parquet(@Nullable final String path,
       @Nullable final Function<String, Set<String>> fileNameMapper) {
     checkArgumentNotNull(path);
     checkArgumentNotNull(fileNameMapper);
@@ -170,7 +170,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * @return the new data source
    */
   @Nonnull
-  public DeltaSource delta(@Nullable final String path) {
+  public QueryableDataSource delta(@Nullable final String path) {
     checkArgumentNotNull(path);
     return new DeltaSource(context, path);
   }
@@ -182,7 +182,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * @return the new data source
    */
   @Nonnull
-  public CatalogSource tables() {
+  public QueryableDataSource tables() {
     return new CatalogSource(context);
   }
 
@@ -195,7 +195,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * @return the new data source
    */
   @Nonnull
-  public CatalogSource tables(@Nullable final String schema) {
+  public QueryableDataSource tables(@Nullable final String schema) {
     checkArgumentNotNull(schema);
     return new CatalogSource(context, schema);
   }
@@ -208,7 +208,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * @return the new data source
    */
   @Nonnull
-  public BulkDataSource bulk(@Nonnull final BulkExportClient client) {
+  public QueryableDataSource bulk(@Nonnull final BulkExportClient client) {
     checkArgumentNotNull(client);
     return new BulkDataSource(context, client);
   }

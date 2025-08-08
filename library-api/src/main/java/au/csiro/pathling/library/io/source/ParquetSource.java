@@ -20,11 +20,7 @@ package au.csiro.pathling.library.io.source;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import java.util.Set;
-import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.UnaryOperator;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 
 /**
  * A class for making FHIR data in Parquet format available for query. It is assumed that the schema
@@ -33,7 +29,7 @@ import org.apache.spark.sql.Row;
  * @author John Grimes
  * @author Piotr Szul
  */
-public class ParquetSource extends FileSource {
+class ParquetSource extends FileSource {
 
   /**
    * Constructs a ParquetSource with the specified PathlingContext and path.
@@ -41,7 +37,7 @@ public class ParquetSource extends FileSource {
    * @param context the PathlingContext to use
    * @param path the path to the Parquet file or directory
    */
-  public ParquetSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
+  ParquetSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
     super(context, path,
         // Use the "resource name with qualifier" mapper by default, which takes the resource name
         // from the file name and is tolerant of an optional qualifier string.
@@ -62,7 +58,7 @@ public class ParquetSource extends FileSource {
    * @param path the path to the Parquet file or directory
    * @param fileNameMapper a function that maps a file name to a set of resource types
    */
-  public ParquetSource(@Nonnull final PathlingContext context, @Nonnull final String path,
+  ParquetSource(@Nonnull final PathlingContext context, @Nonnull final String path,
       @Nonnull final Function<String, Set<String>> fileNameMapper) {
     super(context, path, fileNameMapper, "parquet",
         context.getSpark().read().format("parquet"),
@@ -71,32 +67,4 @@ public class ParquetSource extends FileSource {
         (sourceData, resourceType) -> sourceData);
   }
 
-  /**
-   * Constructs a ParquetSource with the specified PathlingContext, path, and transformation.
-   *
-   * @param context the PathlingContext to use
-   * @param path the path to the Parquet file or directory
-   * @param transformer a function that transforms a dataset containing raw source data of a
-   * specified resource type into a dataset containing the imported data
-   */
-  public ParquetSource(@Nonnull final PathlingContext context, @Nonnull final String path,
-      @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer) {
-    super(context, path,
-        FileSource::resourceNameWithQualifierMapper,
-        "parquet",
-        context.getSpark().read().format("parquet"),
-        transformer);
-  }
-
-  @Nonnull
-  @Override
-  public ParquetSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
-    return (ParquetSource) super.map(operator);
-  }
-
-  @Override
-  public ParquetSource cache() {
-    return map(Dataset::cache);
-  }
-  
 }
