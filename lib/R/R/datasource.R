@@ -33,20 +33,6 @@ to_java_list <- function(sc, elements) {
   list
 }
 
-#' ImportMode
-#' 
-#' The following import modes are supported:
-#' \itemize{
-#'   \item{\code{OVERWRITE}: Overwrite any existing data.}
-#'   \item{\code{MERGE}: Merge the new data with the existing data based on resource ID.}
-#' }
-#'
-#' @export
-ImportMode <- list(
-    OVERWRITE = "overwrite",
-    MERGE = "merge"
-)
-
 #' SaveMode
 #'
 #' The following save modes are supported:
@@ -55,12 +41,16 @@ ImportMode <- list(
 #'   \item{\code{APPEND}: Append the new data to the existing data.}
 #'   \item{\code{IGNORE}: Only save the data if the file does not already exist.}
 #'   \item{\code{ERROR}: Raise an error if the file already exists.}
+#'   \item{\code{MERGE}: Merge the new data with the existing data based on resource ID.}
 #' }
+#'
+#' @export
 SaveMode <- list(
     OVERWRITE = "overwrite",
     APPEND = "append",
     IGNORE = "ignore",
-    ERROR = "error"
+    ERROR = "error",
+    MERGE = "merge"
 )
 
 #' Create a data source from NDJSON
@@ -328,29 +318,29 @@ ds_write_parquet <- function(ds, path, save_mode = SaveMode$ERROR) {
 #'
 #' @param ds The DataSource object.
 #' @param path The URI of the directory to write the files to.
-#' @param import_mode The import mode to use when writing the data - "overwrite" will overwrite any 
+#' @param save_mode The save mode to use when writing the data - "overwrite" will overwrite any 
 #'      existing data, "merge" will merge the new data with the existing data based on resource ID.
 #'
 #' @return No return value, called for side effects only.
 #' 
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#delta-lake-1}{Pathling documentation - Writing Delta}
 #' 
-#' @seealso \code{\link{ImportMode}}
+#' @seealso \code{\link{SaveMode}}
 #' 
 #' @examplesIf pathling_is_spark_installed()
 #' pc <- pathling_connect()
 #' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
 #' 
 #' # Write the data to a directory of Delta files.
-#' data_source %>% ds_write_delta(file.path(tempdir(), 'delta'), import_mode = ImportMode$OVERWRITE)
+#' data_source %>% ds_write_delta(file.path(tempdir(), 'delta'), save_mode = SaveMode$OVERWRITE)
 #' 
 #' pathling_disconnect(pc)
 #' 
 #' @family data sink functions
 #' 
 #' @export
-ds_write_delta <- function(ds, path, import_mode = ImportMode$OVERWRITE) {
-  invoke_datasink(ds, "delta", import_mode, path)
+ds_write_delta <- function(ds, path, save_mode = SaveMode$OVERWRITE) {
+  invoke_datasink(ds, "delta", save_mode, path)
 }
 
 #' Write FHIR data to managed tables
@@ -359,14 +349,14 @@ ds_write_delta <- function(ds, path, import_mode = ImportMode$OVERWRITE) {
 #'
 #' @param ds The DataSource object.
 #' @param schema The name of the schema to write the tables to.
-#' @param import_mode The import mode to use when writing the data - "overwrite" will overwrite any 
+#' @param save_mode The save mode to use when writing the data - "overwrite" will overwrite any 
 #'      existing data, "merge" will merge the new data with the existing data based on resource ID.
 #' 
 #' @return No return value, called for side effects only.
 #' 
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#managed-tables-1}{Pathling documentation - Writing managed tables}
 #' 
-#' @seealso \code{\link{ImportMode}}
+#' @seealso \code{\link{SaveMode}}
 #'
 #' @examplesIf pathling_is_spark_installed()
 #' # Create a temporary warehouse location, which will be used when we call ds_write_tables().
@@ -384,7 +374,7 @@ ds_write_delta <- function(ds, path, import_mode = ImportMode$OVERWRITE) {
 #' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
 #' 
 #' # Write the data to a set of Spark tables in the 'default' database.
-#' data_source %>% ds_write_tables("default", import_mode = ImportMode$MERGE)
+#' data_source %>% ds_write_tables("default", save_mode = SaveMode$MERGE)
 #' 
 #' pathling_disconnect(pc)
 #' unlink(temp_dir_path, recursive = TRUE)
@@ -392,11 +382,11 @@ ds_write_delta <- function(ds, path, import_mode = ImportMode$OVERWRITE) {
 #' @family data sink functions
 #' 
 #' @export
-ds_write_tables <- function(ds, schema = NULL, import_mode = ImportMode$OVERWRITE) {
+ds_write_tables <- function(ds, schema = NULL, save_mode = SaveMode$OVERWRITE) {
   if (!is.null(schema)) {
-    invoke_datasink(ds, "tables", import_mode, schema)
+    invoke_datasink(ds, "tables", save_mode, schema)
   } else {
-    invoke_datasink(ds, "tables", import_mode)
+    invoke_datasink(ds, "tables", save_mode)
   }
 }
 

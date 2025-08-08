@@ -197,7 +197,7 @@ def test_datasource_delta(delta_test_data_dir, temp_delta_dir, pathling_ctx):
 
 def test_datasource_delta_merge(delta_test_data_dir, temp_delta_dir, pathling_ctx):
     pathling_ctx.read.delta(delta_test_data_dir).write.delta(
-        temp_delta_dir, import_mode="merge"
+        temp_delta_dir, save_mode="merge"
     )
     data_source = pathling_ctx.read.delta(temp_delta_dir)
 

@@ -21,15 +21,6 @@ if TYPE_CHECKING:
     from pathling.datasource import DataSource
 
 
-class ImportMode:
-    """
-    Constants that represent the different import modes.
-    """
-
-    OVERWRITE: str = "overwrite"
-    MERGE: str = "merge"
-
-
 class SaveMode:
     """
     Constants that represent the different save modes.
@@ -38,12 +29,14 @@ class SaveMode:
     APPEND: Append the new data to the existing data.
     IGNORE: Only save the data if the file does not already exist.
     ERROR: Raise an error if the file already exists.
+    MERGE: Merge the new data with the existing data based on resource ID.
     """
 
     OVERWRITE: str = "overwrite"
     APPEND: str = "append"
     IGNORE: str = "ignore"
     ERROR: str = "error"
+    MERGE: str = "merge"
 
 
 class DataSinks(SparkConversionsMixin):
@@ -100,32 +93,32 @@ class DataSinks(SparkConversionsMixin):
         self._datasinks.saveMode(save_mode).parquet(path)
 
     def delta(
-        self, path: str, import_mode: Optional[str] = ImportMode.OVERWRITE
+        self, path: str, save_mode: Optional[str] = SaveMode.OVERWRITE
     ) -> None:
         """
         Writes the data to a directory of Delta files.
 
         :param path: The URI of the directory to write the files to.
-        :param import_mode: The import mode to use when writing the data - "overwrite" will
+        :param save_mode: The save mode to use when writing the data - "overwrite" will
         overwrite any existing data, "merge" will merge the new data with the existing data based
         on resource ID.
         """
-        self._datasinks.saveMode(import_mode).delta(path)
+        self._datasinks.saveMode(save_mode).delta(path)
 
     def tables(
         self,
         schema: Optional[str] = None,
-        import_mode: Optional[str] = ImportMode.OVERWRITE,
+        save_mode: Optional[str] = SaveMode.OVERWRITE,
     ) -> None:
         """
         Writes the data to a set of tables in the Spark catalog.
 
         :param schema: The name of the schema to write the tables to.
-        :param import_mode: The import mode to use when writing the data - "overwrite" will
+        :param save_mode: The save mode to use when writing the data - "overwrite" will
         overwrite any existing data, "merge" will merge the new data with the existing data based
         on resource ID.
         """
         if schema:
-            self._datasinks.saveMode(import_mode).tables(schema)
+            self._datasinks.saveMode(save_mode).tables(schema)
         else:
-            self._datasinks.saveMode(import_mode).tables()
+            self._datasinks.saveMode(save_mode).tables()

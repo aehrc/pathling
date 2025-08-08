@@ -151,8 +151,8 @@ test_that("datasource delta merge", {
 
   ds <- pc %>% pathling_read_delta(delta_test_data_dir())
 
-  ds %>% ds_write_delta(temp_delta_dir(), import_mode = ImportMode$OVERWRITE)
-  ds %>% ds_write_delta(temp_delta_dir(), import_mode = ImportMode$MERGE)
+  ds %>% ds_write_delta(temp_delta_dir(), save_mode = SaveMode$OVERWRITE)
+  ds %>% ds_write_delta(temp_delta_dir(), save_mode = SaveMode$MERGE)
 
   data_source <- pc %>% pathling_read_delta(delta_test_data_dir())
 
