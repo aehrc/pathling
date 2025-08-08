@@ -29,7 +29,7 @@ import jakarta.annotation.Nonnull;
  * @author John Grimes
  * @author Piotr Szul
  */
-class DeltaSource extends FileSource {
+public class DeltaSource extends FileSource {
 
   /**
    * Constructs a DeltaSource with the specified PathlingContext and path.

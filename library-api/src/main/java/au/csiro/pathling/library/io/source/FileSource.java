@@ -50,7 +50,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * @author John Grimes
  */
 @Slf4j
-abstract class FileSource extends DatasetSource {
+public abstract class FileSource extends DatasetSource {
 
   // Matches a base name that consists of a resource type, optionally followed by a period and a
   // qualifier string. The first group will contain the resource type, and the second group will

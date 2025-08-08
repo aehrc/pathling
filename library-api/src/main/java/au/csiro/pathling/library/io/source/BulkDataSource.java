@@ -37,7 +37,7 @@ import org.apache.spark.sql.Row;
  * @see <a href="https://hl7.org/fhir/uv/bulkdata/">FHIR Bulk Data Access Implementation Guide</a>
  */
 @Slf4j
-class BulkDataSource extends AbstractSource {
+public class BulkDataSource extends AbstractSource {
 
   @Nonnull
   private final NdjsonSource ndjsonSource;

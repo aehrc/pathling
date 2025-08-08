@@ -41,7 +41,7 @@ import org.apache.spark.sql.catalog.Table;
  * @author John Grimes
  * @author Piotr Szul
  */
-class CatalogSource extends AbstractSource {
+public class CatalogSource extends AbstractSource {
 
   @Nonnull
   private final Optional<String> schema;

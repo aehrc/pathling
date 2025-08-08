@@ -29,7 +29,7 @@ import java.util.function.Function;
  * @author John Grimes
  * @author Piotr Szul
  */
-class ParquetSource extends FileSource {
+public class ParquetSource extends FileSource {
 
   /**
    * Constructs a ParquetSource with the specified PathlingContext and path.

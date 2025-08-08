@@ -29,7 +29,7 @@ import java.util.Set;
  *
  * @author John Grimes
  */
-class BundlesSource extends FileSource {
+public class BundlesSource extends FileSource {
 
   private static final Map<String, String> MIME_TYPE_TO_EXTENSION;
 

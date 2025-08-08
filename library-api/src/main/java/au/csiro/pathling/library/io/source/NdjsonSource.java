@@ -30,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
  * @author Piotr Szul
  */
 @Slf4j
-class NdjsonSource extends FileSource {
+public class NdjsonSource extends FileSource {
 
   /**
    * Constructs an NdjsonSource with the specified PathlingContext and path.
