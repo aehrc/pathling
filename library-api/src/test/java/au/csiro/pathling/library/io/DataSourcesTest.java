@@ -144,7 +144,7 @@ class DataSourcesTest {
     queryNdjsonData(data);
 
     // Write the data back out to a temporary location.
-    data.write().ndjson(temporaryDirectory.resolve("ndjson").toString(), "error");
+    data.write().saveMode("error").ndjson(temporaryDirectory.resolve("ndjson").toString());
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read()
@@ -162,7 +162,7 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data back out to a temporary location with the specified save mode.
-    data.write().ndjson(temporaryDirectory.resolve("ndjson-" + saveMode).toString(), saveMode);
+    data.write().saveMode(saveMode).ndjson(temporaryDirectory.resolve("ndjson-" + saveMode).toString());
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read()
@@ -206,7 +206,7 @@ class DataSourcesTest {
     queryNdjsonData(data);
 
     // Write the data back out to a temporary location.
-    data.write().ndjson(temporaryDirectory.resolve("ndjson-custom").toString(), "error",
+    data.write().saveMode("error").ndjson(temporaryDirectory.resolve("ndjson-custom").toString(),
         baseName -> baseName.replaceFirst("Custom", ""));
 
     // Read the data back in.
@@ -269,7 +269,7 @@ class DataSourcesTest {
     queryParquetData(data);
 
     // Write the data back out to a temporary location.
-    data.write().parquet(temporaryDirectory.resolve("parquet").toString(), "error");
+    data.write().saveMode("error").parquet(temporaryDirectory.resolve("parquet").toString());
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read()
@@ -287,7 +287,7 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data to Parquet with the specified save mode.
-    data.write().parquet(temporaryDirectory.resolve("parquet-" + saveMode).toString(), saveMode);
+    data.write().saveMode(saveMode).parquet(temporaryDirectory.resolve("parquet-" + saveMode).toString());
 
     // Read the Parquet data back in.
     final QueryableDataSource newData = pathlingContext.read()
@@ -310,7 +310,7 @@ class DataSourcesTest {
     queryParquetData(data);
 
     // Write the data back out to a temporary location.
-    data.write().parquet(temporaryDirectory.resolve("parquet-custom").toString(), "error",
+    data.write().saveMode("error").parquet(temporaryDirectory.resolve("parquet-custom").toString(),
         baseName -> baseName.replaceFirst("Custom", ""));
 
     // Read the data back in.
@@ -350,7 +350,7 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data to Delta with the specified save mode.
-    data.write().delta(temporaryDirectory.resolve("delta-" + saveMode).toString(), saveMode);
+    data.write().saveMode(saveMode).delta(temporaryDirectory.resolve("delta-" + saveMode).toString());
 
     // Read the Delta data back in.
     final QueryableDataSource newData = pathlingContext.read()
@@ -372,7 +372,7 @@ class DataSourcesTest {
     queryDeltaData(data);
 
     // Write the data back out to a temporary location.
-    data.write().delta(destinationPath, "merge");
+    data.write().saveMode("merge").delta(destinationPath);
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read().delta(destinationPath);
@@ -381,7 +381,7 @@ class DataSourcesTest {
     queryDeltaData(newData);
 
     // Merge the data back into the Delta table.
-    data.write().delta(destinationPath, "merge");
+    data.write().saveMode("merge").delta(destinationPath);
 
     // Query the data.
     queryDeltaData(newData);
@@ -395,7 +395,7 @@ class DataSourcesTest {
 
     // Write the data to Delta initially.
     final String deltaPath = temporaryDirectory.resolve("delta-overwrite-test").toString();
-    data.write().delta(deltaPath, "overwrite");
+    data.write().saveMode("overwrite").delta(deltaPath);
 
     // Read the data back to verify it was written.
     final QueryableDataSource initialData = pathlingContext.read().delta(deltaPath);
@@ -403,7 +403,7 @@ class DataSourcesTest {
 
     // Write the same data again using overwrite mode - this should succeed.
     // This tests the deltaTableExists method and the delete() workaround in DeltaSink.
-    data.write().delta(deltaPath, "overwrite");
+    data.write().saveMode("overwrite").delta(deltaPath);
 
     // Read the overwritten data back.
     final QueryableDataSource overwrittenData = pathlingContext.read().delta(deltaPath);
@@ -439,7 +439,7 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data back out to tables.
-    data.write().tables("overwrite", "test");
+    data.write().saveMode("overwrite").tables("test");
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read().tables("test");
@@ -456,7 +456,7 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data to catalog tables with the specified save mode.
-    data.write().tables(saveMode);
+    data.write().saveMode(saveMode).tables();
 
     // Read the data back from catalog tables.
     final QueryableDataSource newData = pathlingContext.read().tables();
@@ -472,7 +472,7 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data back out to tables using merge (creates new tables since none exist).
-    data.write().tables("merge", "test", "delta");
+    data.write().saveMode("merge").tables("test", "delta");
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read().tables("test");
@@ -481,7 +481,7 @@ class DataSourcesTest {
     queryNdjsonData(newData);
 
     // Now test merging again into the existing Delta table.
-    data.write().tables("merge", "test", "delta");
+    data.write().saveMode("merge").tables("test", "delta");
 
     // Read the merged data back in.
     final QueryableDataSource mergedData = pathlingContext.read().tables("test");
@@ -497,7 +497,7 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data to catalog tables using Parquet format.
-    data.write().tables("overwrite", "test", "parquet");
+    data.write().saveMode("overwrite").tables("test", "parquet");
 
     // Read the data back from the test schema.
     final QueryableDataSource newData = pathlingContext.read().tables("test");
@@ -513,7 +513,7 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data back out to tables using delta format and overwrite mode.
-    data.write().tables("overwrite", "test", "delta");
+    data.write().saveMode("overwrite").tables("test", "delta");
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read().tables("test");
@@ -556,7 +556,7 @@ class DataSourcesTest {
     // Attempting to write NDJSON data using merge mode should throw UnsupportedOperationException.
     final UnsupportedOperationException exception = assertThrows(
         UnsupportedOperationException.class,
-        () -> dataSinkBuilder.ndjson(destinationPath, "merge"));
+        () -> dataSinkBuilder.saveMode("merge").ndjson(destinationPath));
 
     // Verify the error message.
     assertEquals("Merge operation is not supported for NDJSON", exception.getMessage());
@@ -573,7 +573,7 @@ class DataSourcesTest {
     // Attempting to write Parquet data using merge mode should throw UnsupportedOperationException.
     final UnsupportedOperationException exception = assertThrows(
         UnsupportedOperationException.class,
-        () -> dataSinkBuilder.parquet(destinationPath, "merge"));
+        () -> dataSinkBuilder.saveMode("merge").parquet(destinationPath));
 
     // Verify the error message.
     assertEquals("Merge operation is not supported for Parquet - use Delta if merging is required", exception.getMessage());

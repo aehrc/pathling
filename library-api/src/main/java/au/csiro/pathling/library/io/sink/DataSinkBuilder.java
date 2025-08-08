@@ -30,31 +30,58 @@ import java.util.function.UnaryOperator;
  * This class knows how to take an @link{EnumerableDataSource} and write it to a variety of
  * different targets.
  *
- * @param context the Pathling context to use for writing data
- * @param source the data source containing the data to write
  * @author John Grimes
  */
-public record DataSinkBuilder(
-    @Nonnull PathlingContext context,
-    @Nonnull DataSource source
-) {
+public class DataSinkBuilder {
+
+  /**
+   * The Pathling context to use for writing data.
+   */
+  @Nonnull
+  private final PathlingContext context;
+
+  /**
+   * The data source containing the data to write.
+   */
+  @Nonnull
+  private final DataSource source;
+
+  /**
+   * The save mode to use when writing data.
+   */
+  @Nonnull
+  private SaveMode saveMode = SaveMode.ERROR_IF_EXISTS;
+
+  /**
+   * @param context the Pathling context to use for writing data
+   * @param source the data source containing the data to write
+   */
+  public DataSinkBuilder(@Nonnull final PathlingContext context, @Nonnull final DataSource source) {
+    this.context = context;
+    this.source = source;
+  }
+
+  /**
+   * Sets the save mode to use when writing data.
+   *
+   * @param saveMode the save mode to use
+   * @return this builder for method chaining
+   */
+  @Nonnull
+  public DataSinkBuilder saveMode(@Nonnull final String saveMode) {
+    this.saveMode = SaveMode.fromCode(saveMode);
+    return this;
+  }
 
   /**
    * Writes the data in the data source to NDJSON files, one per resource type and named using the
    * "ndjson" extension.
    *
    * @param path the directory to write the files to
-   * @param saveMode the save mode to use:
-   * <ul>
-   *   <li>"error" - throw an error if the files already exist</li>
-   *   <li>"overwrite" - overwrite any existing files</li>
-   *   <li>"append" - append to any existing files</li>
-   *   <li>"ignore" - do nothing if the files already exist</li>
-   * </ul>
    */
-  public void ndjson(@Nullable final String path, @Nullable final String saveMode) {
+  public void ndjson(@Nullable final String path) {
     checkArgumentNotNull(path);
-    new NdjsonSink(context, path, resolveSaveMode(saveMode)).write(source);
+    new NdjsonSink(context, path, saveMode).write(source);
   }
 
   /**
@@ -62,20 +89,13 @@ public record DataSinkBuilder(
    * custom file name mapper.
    *
    * @param path the directory to write the files to
-   * @param saveMode the save mode to use:
-   * <ul>
-   *   <li>"error" - throw an error if the files already exist</li>
-   *   <li>"overwrite" - overwrite any existing files</li>
-   *   <li>"append" - append to any existing files</li>
-   *   <li>"ignore" - do nothing if the files already exist</li>
-   * </ul>
    * @param fileNameMapper a function that maps a resource type to a file name
    */
-  public void ndjson(@Nullable final String path, @Nullable final String saveMode,
+  public void ndjson(@Nullable final String path,
       @Nullable final UnaryOperator<String> fileNameMapper) {
     checkArgumentNotNull(path);
     checkArgumentNotNull(fileNameMapper);
-    new NdjsonSink(context, path, resolveSaveMode(saveMode), fileNameMapper).write(source);
+    new NdjsonSink(context, path, saveMode, fileNameMapper).write(source);
   }
 
   /**
@@ -83,17 +103,10 @@ public record DataSinkBuilder(
    * "parquet" extension.
    *
    * @param path the directory to write the files to
-   * @param saveMode the save mode to use:
-   * <ul>
-   *   <li>"error" - throw an error if the files already exist</li>
-   *   <li>"overwrite" - overwrite any existing files</li>
-   *   <li>"append" - append to any existing files</li>
-   *   <li>"ignore" - do nothing if the files already exist</li>
-   * </ul>
    */
-  public void parquet(@Nullable final String path, @Nullable final String saveMode) {
+  public void parquet(@Nullable final String path) {
     checkArgumentNotNull(path);
-    new ParquetSink(path, resolveSaveMode(saveMode)).write(source);
+    new ParquetSink(path, saveMode).write(source);
   }
 
   /**
@@ -101,36 +114,27 @@ public record DataSinkBuilder(
    * custom file name mapper.
    *
    * @param path the directory to write the files to
-   * @param saveMode the save mode to use:
-   * <ul>
-   *   <li>"error" - throw an error if the files already exist</li>
-   *   <li>"overwrite" - overwrite any existing files</li>
-   *   <li>"append" - append to any existing files</li>
-   *   <li>"ignore" - do nothing if the files already exist</li>
-   * </ul>
    * @param fileNameMapper a function that maps a resource type to a file name
    */
-  public void parquet(@Nullable final String path, @Nullable final String saveMode,
+  public void parquet(@Nullable final String path,
       @Nullable final UnaryOperator<String> fileNameMapper) {
     checkArgumentNotNull(path);
     checkArgumentNotNull(fileNameMapper);
-    new ParquetSink(path, resolveSaveMode(saveMode), fileNameMapper).write(source);
+    new ParquetSink(path, saveMode, fileNameMapper).write(source);
   }
 
   /**
-   * Writes the data in the data source to a Delta database. If any of the Delta files already
-   * exist, an error will be raised.
+   * Writes the data in the data source to a Delta database.
    *
    * @param path the directory to write the files to
    */
   public void delta(@Nullable final String path) {
     checkArgumentNotNull(path);
-    new DeltaSink(context, path).write(source);
+    new DeltaSink(context, path, saveMode).write(source);
   }
 
   /**
    * Writes the data in the data source to a Delta database, named using a custom file name mapper.
-   * If any of the Delta files already exist, an error will be raised.
    *
    * @param path the directory to write the files to
    * @param fileNameMapper a function that maps a resource type to a file name
@@ -139,136 +143,42 @@ public record DataSinkBuilder(
       @Nullable final UnaryOperator<String> fileNameMapper) {
     checkArgumentNotNull(path);
     checkArgumentNotNull(fileNameMapper);
-    new DeltaSink(context, path, SaveMode.ERROR_IF_EXISTS, fileNameMapper).write(source);
+    new DeltaSink(context, path, saveMode, fileNameMapper).write(source);
   }
 
-  /**
-   * Writes the data in the data source to a Delta database. Existing data in the Delta files will
-   * be dealt with according to the specified {@link SaveMode}.
-   *
-   * @param path the directory to write the files to
-   * @param saveMode the save mode to use:
-   * <ul>
-   *   <li>"error" - throw an error if the files already exist</li>
-   *   <li>"overwrite" - overwrite any existing files</li>
-   *   <li>"append" - append to any existing files</li>
-   *   <li>"ignore" - do nothing if the files already exist</li>
-   *   <li>"merge" - merge the new data with the existing data based on resource ID</li>
-   * </ul>
-   */
-  public void delta(@Nullable final String path, @Nullable final String saveMode) {
-    checkArgumentNotNull(path);
-    checkArgumentNotNull(saveMode);
-    new DeltaSink(context, path, SaveMode.fromCode(saveMode)).write(source);
-  }
-
-  /**
-   * Writes the data in the data source to a Delta database, named using a custom file name mapper.
-   * Existing data in the Delta files will be dealt with according to the specified
-   * {@link SaveMode}.
-   *
-   * @param path the directory to write the files to
-   * @param saveMode the save mode to use:
-   * <ul>
-   *   <li>"error" - throw an error if the files already exist</li>
-   *   <li>"overwrite" - overwrite any existing files</li>
-   *   <li>"append" - append to any existing files</li>
-   *   <li>"ignore" - do nothing if the files already exist</li>
-   *   <li>"merge" - merge the new data with the existing data based on resource ID</li>
-   * </ul>
-   * @param fileNameMapper a function that maps a resource type to a file name
-   */
-  public void delta(@Nullable final String path, @Nullable final String saveMode,
-      @Nullable final UnaryOperator<String> fileNameMapper) {
-    checkArgumentNotNull(path);
-    checkArgumentNotNull(saveMode);
-    checkArgumentNotNull(fileNameMapper);
-    new DeltaSink(context, path, SaveMode.fromCode(saveMode), fileNameMapper).write(source);
-  }
 
   /**
    * Writes the data in the data source to tables within the Spark catalog, named according to the
    * resource type.
-   * <p>
-   * If any of the tables already exist, an error will be raised.
    */
   public void tables() {
-    new CatalogSink(context).write(source);
+    new CatalogSink(context, saveMode).write(source);
   }
 
 
   /**
    * Writes the data in the data source to tables within the Spark catalog, named according to the
-   * resource type. Existing data in the tables will be dealt with according to the specified
-   * {@link SaveMode}.
+   * resource type and prefixed with the provided schema name.
    *
-   * @param saveMode the save mode to use:
-   * <ul>
-   *   <li>"error" - throw an error if the files already exist</li>
-   *   <li>"overwrite" - overwrite any existing files</li>
-   *   <li>"append" - append to any existing files</li>
-   *   <li>"ignore" - do nothing if the files already exist</li>
-   *   <li>"merge" - merge the new data with the existing data based on resource ID (this is only
-   *   supported where the managed table format is Delta)</li>
-   * </ul>
-   */
-  public void tables(@Nullable final String saveMode) {
-    checkArgumentNotNull(saveMode);
-    new CatalogSink(context, SaveMode.fromCode(saveMode)).write(source);
-  }
-
-  /**
-   * Writes the data in the data source to tables within the Spark catalog, named according to the
-   * resource type and prefixed with the provided schema name. Existing data in the tables will be
-   * dealt with according to the specified {@link SaveMode}.
-   *
-   * @param saveMode the save mode to use:
-   * <ul>
-   *   <li>"error" - throw an error if the files already exist</li>
-   *   <li>"overwrite" - overwrite any existing files</li>
-   *   <li>"append" - append to any existing files</li>
-   *   <li>"ignore" - do nothing if the files already exist</li>
-   *   <li>"merge" - merge the new data with the existing data based on resource ID (this is only
-   *   supported where the managed table format is Delta)</li>
-   * </ul>
    * @param schema the schema name to write the tables to
    */
-  public void tables(@Nullable final String saveMode, @Nullable final String schema) {
-    checkArgumentNotNull(saveMode);
+  public void tables(@Nullable final String schema) {
     checkArgumentNotNull(schema);
-    new CatalogSink(context, SaveMode.fromCode(saveMode), schema).write(source);
+    new CatalogSink(context, saveMode, schema).write(source);
   }
 
   /**
    * Writes the data in the data source to tables within the Spark catalog, named according to the
-   * resource type, using the specified format. Existing data in the tables will be dealt with
-   * according to the specified {@link SaveMode}.
+   * resource type, using the specified format.
    *
-   * @param saveMode the save mode to use:
-   * <ul>
-   *   <li>"error" - throw an error if the files already exist</li>
-   *   <li>"overwrite" - overwrite any existing files</li>
-   *   <li>"append" - append to any existing files</li>
-   *   <li>"ignore" - do nothing if the files already exist</li>
-   *   <li>"merge" - merge the new data with the existing data based on resource ID (this is only
-   *   supported where the managed table format is Delta)</li>
-   * </ul>
    * @param schema the schema name to write the tables to
    * @param format the table format to use (e.g., "delta", "parquet")
    */
-  public void tables(@Nullable final String saveMode, @Nullable final String schema,
-      @Nullable final String format) {
-    checkArgumentNotNull(saveMode);
+  public void tables(@Nullable final String schema, @Nullable final String format) {
     checkArgumentNotNull(schema);
     checkArgumentNotNull(format);
-    new CatalogSink(context, SaveMode.fromCode(saveMode), schema, format).write(source);
+    new CatalogSink(context, saveMode, schema, format).write(source);
   }
 
-  @Nonnull
-  private static SaveMode resolveSaveMode(final @Nullable String saveMode) {
-    return saveMode == null
-           ? SaveMode.ERROR_IF_EXISTS
-           : SaveMode.fromCode(saveMode);
-  }
 
 }
