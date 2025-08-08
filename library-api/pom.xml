@@ -45,6 +45,11 @@
     </dependency>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
+      <artifactId>terminology</artifactId>
+      <classifier>sources</classifier>
+    </dependency>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
       <artifactId>fhirpath</artifactId>
     </dependency>
     <dependency>
@@ -308,7 +313,7 @@
                   <includeArtifactIds>bulk-export</includeArtifactIds>
                   <includeClassifiers>sources</includeClassifiers>
                   <excludeTransitive>true</excludeTransitive>
-                  <outputDirectory>${project.build.directory}/bulk-export-sources</outputDirectory>
+                  <outputDirectory>${project.build.directory}/unpacked-sources/bulk-export</outputDirectory>
                 </configuration>
               </execution>
               <execution>
@@ -322,7 +327,21 @@
                   <includeArtifactIds>fhirpath</includeArtifactIds>
                   <includeClassifiers>sources</includeClassifiers>
                   <excludeTransitive>true</excludeTransitive>
-                  <outputDirectory>${project.build.directory}/fhirpath-sources</outputDirectory>
+                  <outputDirectory>${project.build.directory}/unpacked-sources/fhirpath</outputDirectory>
+                </configuration>
+              </execution>
+              <execution>
+                <id>unpack-terminology-sources</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>unpack-dependencies</goal>
+                </goals>
+                <configuration>
+                  <includeGroupIds>au.csiro.pathling</includeGroupIds>
+                  <includeArtifactIds>terminology</includeArtifactIds>
+                  <includeClassifiers>sources</includeClassifiers>
+                  <excludeTransitive>true</excludeTransitive>
+                  <outputDirectory>${project.build.directory}/unpacked-sources/terminology</outputDirectory>
                 </configuration>
               </execution>
             </executions>
@@ -332,7 +351,7 @@
             <artifactId>maven-javadoc-plugin</artifactId>
             <configuration>
               <overview>src/main/javadoc/overview.html</overview>
-              <sourcepath>src/main/java:${project.build.directory}/bulk-export-sources:${project.build.directory}/fhirpath-sources</sourcepath>
+              <sourcepath>src/main/java:${project.build.directory}/unpacked-sources/bulk-export:${project.build.directory}/unpacked-sources/fhirpath:${project.build.directory}/unpacked-sources/terminology</sourcepath>
               <subpackages>au.csiro.pathling:au.csiro.fhir.export</subpackages>
               <groups>
                 <group>
@@ -342,6 +361,10 @@
                 <group>
                   <title>Pathling Core Interfaces</title>
                   <packages>au.csiro.pathling.io*</packages>
+                </group>
+                <group>
+                  <title>Pathling Terminology Functions</title>
+                  <packages>au.csiro.pathling.sql*</packages>
                 </group>
                 <group>
                   <title>FHIR Bulk Export Client</title>
