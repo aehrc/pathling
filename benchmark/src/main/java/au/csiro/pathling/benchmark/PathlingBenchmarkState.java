@@ -21,7 +21,6 @@ import static java.util.stream.Collectors.toMap;
 
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DatasetSource;
-import au.csiro.pathling.library.io.source.DeltaSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import java.io.IOException;
 import java.io.InputStream;
@@ -229,7 +228,7 @@ public class PathlingBenchmarkState {
    * @throws RuntimeException if temporary directory creation or Delta writing fails
    */
   @Nonnull
-  private DeltaSource initialiseDeltaSource(@Nonnull final Iterable<String> resourceTypes) {
+  private QueryableDataSource initialiseDeltaSource(@Nonnull final Iterable<String> resourceTypes) {
     // First, create datasets from NDJSON files using the standard process
     final DatasetSource datasetSource = initialiseNdjsonSource(resourceTypes);
 
