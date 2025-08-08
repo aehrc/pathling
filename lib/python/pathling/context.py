@@ -15,9 +15,8 @@
 
 # noinspection PyPackageRequirements
 
-from deprecated import deprecated
 from py4j.java_gateway import JavaObject
-from pyspark.sql import DataFrame, SparkSession, Column
+from pyspark.sql import DataFrame, SparkSession
 from typing import Optional, Sequence, TYPE_CHECKING
 
 from pathling._version import (
@@ -26,15 +25,12 @@ from pathling._version import (
     __delta_version__,
     __hadoop_version__,
 )
-from pathling.coding import Coding
 from pathling.fhir import MimeType
 
 if TYPE_CHECKING:
     from .datasource import DataSources
 
 __all__ = ["PathlingContext"]
-
-EQ_EQUIVALENT = "equivalent"
 
 
 class StorageType:
@@ -356,110 +352,6 @@ class PathlingContext:
             )
         )
 
-    @deprecated(reason="You should use the 'udfs.member_of' UDF instead")
-    def member_of(
-        self,
-        df: DataFrame,
-        coding_column: Column,
-        value_set_uri: str,
-        output_column_name: str,
-    ):
-        """
-        Takes a dataframe with a Coding column as input. A new column is created which contains a
-        Boolean value, indicating whether the input Coding is a member of the specified FHIR
-        ValueSet.
-
-        :param df: a DataFrame containing the input data
-        :param coding_column: a Column containing a struct representation of a Coding
-        :param value_set_uri: an identifier for a FHIR ValueSet
-        :param output_column_name: the name of the result column
-        :return: A new dataframe with an additional column containing the result of the operation
-        """
-        return self._wrap_df(
-            self._jpc.memberOf(
-                df._jdf, coding_column._jc, value_set_uri, output_column_name
-            )
-        )
-
-    @deprecated(reason="You should use the 'udfs.translate' UDF instead")
-    def translate(
-        self,
-        df: DataFrame,
-        coding_column: Column,
-        concept_map_uri: str,
-        reverse: Optional[bool] = False,
-        equivalence: Optional[str] = EQ_EQUIVALENT,
-        target: Optional[str] = None,
-        output_column_name: Optional[str] = "result",
-    ):
-        """
-        Takes a dataframe with a Coding column as input. A new column is created which contains
-        the array of Codings value with translation targets from the specified FHIR ConceptMap.
-        There may be more than one target concept for each input concept.
-
-        :param df: a DataFrame containing the input data
-        :param coding_column: a Column containing a struct representation of a Coding
-        :param concept_map_uri: an identifier for a FHIR ConceptMap
-        :param reverse: the direction to traverse the map - false results in "source to target"
-               mappings, while true results in "target to source"
-        :param equivalence: a comma-delimited set of values from the ConceptMapEquivalence ValueSet
-        :param target: identifies the value set in which a translation is sought.  If there is no
-               target specified, the server should return all known translations.
-        :param output_column_name: the name of the result column
-        :return: A new dataframe with an additional column containing the result of the operation.
-        """
-        return self._wrap_df(
-            self._jpc.translate(
-                df._jdf,
-                coding_column._jc,
-                concept_map_uri,
-                reverse,
-                equivalence,
-                target,
-                output_column_name,
-            )
-        )
-
-    @deprecated(reason="You should use the 'udfs.subsumes' UDF instead")
-    def subsumes(
-        self,
-        df: DataFrame,
-        output_column_name: str,
-        left_coding_column: Optional[Column] = None,
-        right_coding_column: Optional[Column] = None,
-        left_coding: Optional[Coding] = None,
-        right_coding: Optional[Coding] = None,
-    ):
-        """
-        Takes a dataframe with two Coding columns. A new column is created which contains a
-        Boolean value, indicating whether the left Coding subsumes the right Coding.
-
-        :param df: a DataFrame containing the input data
-        :param left_coding_column: a Column containing a struct representation of a Coding,
-               for the left-hand side of the subsumption test
-        :param right_coding_column: a Column containing a struct representation of a Coding,
-               for the right-hand side of the subsumption test
-        :param left_coding: a Coding object for the left-hand side of the subsumption test
-        :param right_coding: a Coding object for the right-hand side of the subsumption test
-        :param output_column_name: the name of the result column
-        :return: A new dataframe with an additional column containing the result of the operation.
-        """
-        if (left_coding_column is None and left_coding is None) or (
-            right_coding_column is None and right_coding is None
-        ):
-            raise ValueError(
-                "Must provide either left_coding_column or left_coding, and either "
-                "right_coding_column or right_coding"
-            )
-        left_column = left_coding.to_literal() if left_coding else left_coding_column
-        right_column = (
-            right_coding.to_literal() if right_coding else right_coding_column
-        )
-        return self._wrap_df(
-            self._jpc.subsumes(
-                df._jdf, left_column._jc, right_column._jc, output_column_name
-            )
-        )
 
     @property
     def read(self) -> "DataSources":

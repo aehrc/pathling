@@ -18,9 +18,6 @@
 package au.csiro.pathling.library;
 
 import static java.util.Objects.nonNull;
-import static org.apache.spark.sql.functions.array;
-import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.config.EncodingConfiguration;
@@ -32,7 +29,6 @@ import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.sql.FhirpathUDFRegistrar;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
-import au.csiro.pathling.terminology.TerminologyFunctions;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.validation.ValidationUtils;
 import au.csiro.pathling.views.ConstantDeclarationTypeAdapterFactory;
@@ -48,13 +44,11 @@ import java.util.Optional;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -83,8 +77,6 @@ public class PathlingContext {
    */
   public static final String FHIR_XML = "application/fhir+xml";
 
-  private static final String COL_INPUT_CODINGS = "inputCodings";
-  private static final String COL_ARG_CODINGS = "argCodings";
 
   @Nonnull
   @Getter
@@ -101,8 +93,6 @@ public class PathlingContext {
   @Getter
   private final TerminologyServiceFactory terminologyServiceFactory;
 
-  @Nonnull
-  private final TerminologyFunctions terminologyFunctions;
 
   @Nonnull
   @Getter
@@ -115,7 +105,6 @@ public class PathlingContext {
     this.fhirVersion = fhirEncoders.getFhirVersion();
     this.fhirEncoders = fhirEncoders;
     this.terminologyServiceFactory = terminologyServiceFactory;
-    this.terminologyFunctions = TerminologyFunctions.build();
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
     FhirpathUDFRegistrar.registerUDFs(spark);
     gson = buildGson();
@@ -417,82 +406,6 @@ public class PathlingContext {
     return encodeBundle(stringBundlesDF, resourceName, FHIR_JSON);
   }
 
-  /**
-   * Tests whether the codings within the specified column are members of the specified value set.
-   * Creates a new column containing the result.
-   *
-   * @param dataset the dataset containing the codings
-   * @param coding the column containing the codings to test
-   * @param valueSetUri the URI of the value set to test against
-   * @param outputColumnName the name of the output column
-   * @return a new dataset with a new column containing the result
-   * @see <a href="https://www.hl7.org/fhir/valueset-operation-validate-code.html">Operation
-   * $validate-code on ValueSet</a>
-   */
-  @Nonnull
-  public Dataset<Row> memberOf(@Nonnull final Dataset<Row> dataset, @Nonnull final Column coding,
-      @Nonnull final String valueSetUri, @Nonnull final String outputColumnName) {
-
-    final Column codingArrayCol = when(coding.isNotNull(), array(coding)).otherwise(lit(null));
-
-    return terminologyFunctions.memberOf(codingArrayCol, valueSetUri, dataset, outputColumnName);
-  }
-
-  /**
-   * Translates the codings within the specified column using a concept map known to the terminology
-   * service.
-   *
-   * @param dataset the dataset containing the codings
-   * @param coding the column containing the codings to translate
-   * @param conceptMapUri the URI of the concept map to use for translation
-   * @param reverse if true, the translation will be reversed
-   * @param equivalence the CSV representation of the equivalences to use for translation
-   * @param target the target value set to translate to
-   * @param outputColumnName the name of the output column
-   * @return a new dataset with a new column containing the result
-   * @see <a href="https://www.hl7.org/fhir/conceptmap-operation-translate.html">Operation
-   * $translate on ConceptMap</a>
-   */
-  @Nonnull
-  public Dataset<Row> translate(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column coding, @Nonnull final String conceptMapUri,
-      final boolean reverse, @Nonnull final String equivalence, @Nullable final String target,
-      @Nonnull final String outputColumnName) {
-
-    final Column codingArrayCol = when(coding.isNotNull(), array(coding)).otherwise(lit(null));
-
-    final Dataset<Row> translatedDataset = terminologyFunctions.translate(codingArrayCol,
-        conceptMapUri, reverse, equivalence, target, dataset, outputColumnName);
-
-    return translatedDataset.withColumn(outputColumnName, functions.col(outputColumnName));
-  }
-
-  /**
-   * Tests whether one coding subsumes another coding.
-   *
-   * @param dataset the dataset containing the codings
-   * @param leftCoding the column containing the first coding to test
-   * @param rightCoding the column containing the second coding to test
-   * @param outputColumnName the name of the output column
-   * @return a new dataset with a new column containing the result
-   * @see <a href="https://www.hl7.org/fhir/codesystem-operation-subsumes.html">Operation $subsumes
-   * on CodeSystem</a>
-   */
-  @Nonnull
-  public Dataset<Row> subsumes(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column leftCoding, @Nonnull final Column rightCoding,
-      @Nonnull final String outputColumnName) {
-
-    final Column fromArray = array(leftCoding);
-    final Column toArray = array(rightCoding);
-    final Column fromCodings = when(leftCoding.isNotNull(), fromArray).otherwise(null);
-    final Column toCodings = when(rightCoding.isNotNull(), toArray).otherwise(null);
-
-    final Dataset<Row> idAndCodingSet = dataset.withColumn(COL_INPUT_CODINGS, fromCodings)
-        .withColumn(COL_ARG_CODINGS, toCodings);
-    return terminologyFunctions.subsumes(idAndCodingSet, idAndCodingSet.col(COL_INPUT_CODINGS),
-        idAndCodingSet.col(COL_ARG_CODINGS), outputColumnName, false);
-  }
 
   /**
    * @return a new {@link DataSourceBuilder} that can be used to read from a variety of different
