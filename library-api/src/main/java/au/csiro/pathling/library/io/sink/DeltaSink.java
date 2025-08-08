@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.function.UnaryOperator;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
@@ -39,24 +40,58 @@ import org.apache.spark.sql.Row;
 /**
  * A data sink that writes data to a Delta Lake table on a filesystem.
  *
- * @param context the PathlingContext to use
- * @param path the path to write the Delta database to
- * @param saveMode the {@link SaveMode} to use
- * @param fileNameMapper a function that maps resource type to file name
  * @author John Grimes
  */
-public record DeltaSink(
-    PathlingContext context,
-    @Nonnull String path,
-    @Nonnull SaveMode saveMode,
-    @Nonnull UnaryOperator<String> fileNameMapper
-) implements DataSink {
+final class DeltaSink implements DataSink {
+
+  /**
+   * The Pathling context to use.
+   */
+  @Nonnull
+  private final PathlingContext context;
+
+  /**
+   * The path to write the Delta database to.
+   */
+  @Nonnull
+  private final String path;
+
+  /**
+   * The save mode to use when writing data.
+   */
+  @Nonnull
+  private final SaveMode saveMode;
+
+  /**
+   * A function that maps resource type to file name.
+   */
+  @Nonnull
+  private final UnaryOperator<String> fileNameMapper;
+
+  /**
+   * @param context the PathlingContext to use
+   * @param path the path to write the Delta database to
+   * @param saveMode the {@link SaveMode} to use
+   * @param fileNameMapper a function that maps resource type to file name
+   *
+   */
+  DeltaSink(
+      @Nonnull final PathlingContext context,
+      @Nonnull final String path,
+      @Nonnull final SaveMode saveMode,
+      @Nonnull final UnaryOperator<String> fileNameMapper
+  ) {
+    this.context = context;
+    this.path = path;
+    this.saveMode = saveMode;
+    this.fileNameMapper = fileNameMapper;
+  }
 
   /**
    * @param context the PathlingContext to use
    * @param path the path to write the Delta database to
    */
-  public DeltaSink(@Nonnull final PathlingContext context, @Nonnull final String path) {
+  DeltaSink(@Nonnull final PathlingContext context, @Nonnull final String path) {
     // By default, name the files using the resource type alone.
     this(context, path, SaveMode.ERROR_IF_EXISTS, UnaryOperator.identity());
   }
@@ -66,7 +101,7 @@ public record DeltaSink(
    * @param path the path to write the Delta database to
    * @param saveMode the {@link SaveMode} to use
    */
-  public DeltaSink(@Nonnull final PathlingContext context, @Nonnull final String path,
+  DeltaSink(@Nonnull final PathlingContext context, @Nonnull final String path,
       @Nonnull final SaveMode saveMode) {
     // By default, name the files using the resource type alone.
     this(context, path, saveMode, UnaryOperator.identity());
@@ -184,7 +219,7 @@ public record DeltaSink(
    */
   @Nonnull
   private FileSystem getFileSystem(@Nonnull final String location) {
-    @Nullable final org.apache.hadoop.conf.Configuration hadoopConfiguration = context.getSpark()
+    @Nullable final Configuration hadoopConfiguration = context.getSpark()
         .sparkContext().hadoopConfiguration();
     requireNonNull(hadoopConfiguration);
     @Nullable final FileSystem warehouseLocation;

@@ -29,22 +29,48 @@ import org.apache.spark.sql.Row;
 /**
  * A data sink that writes data to Parquet tables on a filesystem.
  *
- * @param path the path to write the Parquet files to
- * @param saveMode the {@link SaveMode} to use
- * @param fileNameMapper a function that maps resource type to file name
  * @author John Grimes
  */
-public record ParquetSink(
-    @Nonnull String path,
-    @Nonnull SaveMode saveMode,
-    @Nonnull UnaryOperator<String> fileNameMapper
-) implements DataSink {
+final class ParquetSink implements DataSink {
+
+  /**
+   * The path to write the Parquet files to.
+   */
+  @Nonnull
+  private final String path;
+
+  /**
+   * The save mode to use when writing data.
+   */
+  @Nonnull
+  private final SaveMode saveMode;
+
+  /**
+   * A function that maps resource type to file name.
+   */
+  @Nonnull
+  private final UnaryOperator<String> fileNameMapper;
+
+  /**
+   * @param path the path to write the Parquet files to
+   * @param saveMode the {@link SaveMode} to use
+   * @param fileNameMapper a function that maps resource type to file name
+   */
+  ParquetSink(
+      @Nonnull final String path,
+      @Nonnull final SaveMode saveMode,
+      @Nonnull final UnaryOperator<String> fileNameMapper
+  ) {
+    this.path = path;
+    this.saveMode = saveMode;
+    this.fileNameMapper = fileNameMapper;
+  }
 
   /**
    * @param path the path to write the Parquet files to
    * @param saveMode the {@link SaveMode} to use
    */
-  public ParquetSink(@Nonnull final String path, @Nonnull final SaveMode saveMode) {
+  ParquetSink(@Nonnull final String path, @Nonnull final SaveMode saveMode) {
     // By default, name the files using the resource type alone.
     this(path, saveMode, UnaryOperator.identity());
   }
@@ -66,7 +92,7 @@ public record ParquetSink(
     }
   }
 
-  private static void writeDataset(@Nonnull final Dataset<Row> dataset,
+  void writeDataset(@Nonnull final Dataset<Row> dataset,
       @Nonnull final String tablePath, @Nonnull final SaveMode saveMode) {
     final var writer = dataset.write();
     

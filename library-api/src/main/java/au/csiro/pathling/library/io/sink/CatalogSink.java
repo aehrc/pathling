@@ -34,7 +34,7 @@ import org.apache.spark.sql.Row;
  *
  * @author John Grimes
  */
-public class CatalogSink implements DataSink {
+class CatalogSink implements DataSink {
 
   @Nonnull
   private final PathlingContext context;
@@ -53,7 +53,7 @@ public class CatalogSink implements DataSink {
    *
    * @param context the PathlingContext to use
    */
-  public CatalogSink(@Nonnull final PathlingContext context) {
+  CatalogSink(@Nonnull final PathlingContext context) {
     this.context = context;
     this.saveMode = SaveMode.ERROR_IF_EXISTS; // Default import mode
     this.schema = Optional.empty(); // Schema not specified
@@ -66,7 +66,7 @@ public class CatalogSink implements DataSink {
    * @param context the PathlingContext to use
    * @param saveMode the SaveMode to use when writing data
    */
-  public CatalogSink(@Nonnull final PathlingContext context, @Nonnull final SaveMode saveMode) {
+  CatalogSink(@Nonnull final PathlingContext context, @Nonnull final SaveMode saveMode) {
     this.context = context;
     this.saveMode = saveMode;
     this.schema = Optional.empty(); // Schema not specified
@@ -80,7 +80,7 @@ public class CatalogSink implements DataSink {
    * @param saveMode the SaveMode to use when writing data
    * @param schema the schema to qualify the table names, if any
    */
-  public CatalogSink(@Nonnull final PathlingContext context, @Nonnull final SaveMode saveMode,
+  CatalogSink(@Nonnull final PathlingContext context, @Nonnull final SaveMode saveMode,
       @Nonnull final String schema) {
     this.context = context;
     this.saveMode = saveMode;
@@ -96,7 +96,7 @@ public class CatalogSink implements DataSink {
    * @param schema the schema to qualify the table names, if any
    * @param format the format to use when writing data
    */
-  public CatalogSink(@Nonnull final PathlingContext context, @Nonnull final SaveMode saveMode,
+  CatalogSink(@Nonnull final PathlingContext context, @Nonnull final SaveMode saveMode,
       @Nonnull final String schema, @Nonnull final String format) {
     this.context = context;
     this.saveMode = saveMode;

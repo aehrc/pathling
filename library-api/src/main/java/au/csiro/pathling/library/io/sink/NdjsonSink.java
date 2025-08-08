@@ -30,25 +30,58 @@ import org.apache.spark.sql.Dataset;
 /**
  * A data sink that writes data to NDJSON files on a filesystem.
  *
- * @param context the {@link PathlingContext} to use
- * @param path the path to write the NDJSON files to
- * @param saveMode the {@link SaveMode} to use
- * @param fileNameMapper a function that maps resource type to file name
  * @author John Grimes
  */
-public record NdjsonSink(
-    @Nonnull PathlingContext context,
-    @Nonnull String path,
-    @Nonnull SaveMode saveMode,
-    @Nonnull UnaryOperator<String> fileNameMapper
-) implements DataSink {
+final class NdjsonSink implements DataSink {
+
+  /**
+   * The Pathling context to use.
+   */
+  @Nonnull
+  private final PathlingContext context;
+
+  /**
+   * The path to write the NDJSON files to.
+   */
+  @Nonnull
+  private final String path;
+
+  /**
+   * The save mode to use when writing data.
+   */
+  @Nonnull
+  private final SaveMode saveMode;
+
+  /**
+   * A function that maps resource type to file name.
+   */
+  @Nonnull
+  private final UnaryOperator<String> fileNameMapper;
+
+  /**
+   * @param context the {@link PathlingContext} to use
+   * @param path the path to write the NDJSON files to
+   * @param saveMode the {@link SaveMode} to use
+   * @param fileNameMapper a function that maps resource type to file name
+   */
+  NdjsonSink(
+      @Nonnull final PathlingContext context,
+      @Nonnull final String path,
+      @Nonnull final SaveMode saveMode,
+      @Nonnull final UnaryOperator<String> fileNameMapper
+  ) {
+    this.context = context;
+    this.path = path;
+    this.saveMode = saveMode;
+    this.fileNameMapper = fileNameMapper;
+  }
 
   /**
    * @param context the {@link PathlingContext} to use
    * @param path the path to write the NDJSON files to
    * @param saveMode the {@link SaveMode} to use
    */
-  public NdjsonSink(@Nonnull final PathlingContext context, @Nonnull final String path,
+  NdjsonSink(@Nonnull final PathlingContext context, @Nonnull final String path,
       @Nonnull final SaveMode saveMode) {
     // By default, name the files using the resource type alone.
     this(context, path, saveMode, UnaryOperator.identity());
@@ -79,7 +112,7 @@ public record NdjsonSink(
     }
   }
 
-  private static void writeJsonStrings(@Nonnull final Dataset<String> jsonStrings,
+  void writeJsonStrings(@Nonnull final Dataset<String> jsonStrings,
       @Nonnull final String resultUrlPartitioned,
       @Nonnull final SaveMode saveMode) {
     final var writer = jsonStrings.coalesce(1)
