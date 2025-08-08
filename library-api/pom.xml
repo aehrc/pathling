@@ -49,6 +49,11 @@
     </dependency>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
+      <artifactId>fhirpath</artifactId>
+      <classifier>sources</classifier>
+    </dependency>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
       <artifactId>utilities</artifactId>
     </dependency>
     <dependency>
@@ -306,6 +311,20 @@
                   <outputDirectory>${project.build.directory}/bulk-export-sources</outputDirectory>
                 </configuration>
               </execution>
+              <execution>
+                <id>unpack-fhirpath-sources</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>unpack-dependencies</goal>
+                </goals>
+                <configuration>
+                  <includeGroupIds>au.csiro.pathling</includeGroupIds>
+                  <includeArtifactIds>fhirpath</includeArtifactIds>
+                  <includeClassifiers>sources</includeClassifiers>
+                  <excludeTransitive>true</excludeTransitive>
+                  <outputDirectory>${project.build.directory}/fhirpath-sources</outputDirectory>
+                </configuration>
+              </execution>
             </executions>
           </plugin>
           <plugin>
@@ -313,12 +332,16 @@
             <artifactId>maven-javadoc-plugin</artifactId>
             <configuration>
               <overview>src/main/javadoc/overview.html</overview>
-              <sourcepath>src/main/java:${project.build.directory}/bulk-export-sources</sourcepath>
+              <sourcepath>src/main/java:${project.build.directory}/bulk-export-sources:${project.build.directory}/fhirpath-sources</sourcepath>
               <subpackages>au.csiro.pathling:au.csiro.fhir.export</subpackages>
               <groups>
                 <group>
                   <title>Pathling Library API</title>
                   <packages>au.csiro.pathling.library*</packages>
+                </group>
+                <group>
+                  <title>Pathling Core Interfaces</title>
+                  <packages>au.csiro.pathling.io*</packages>
                 </group>
                 <group>
                   <title>FHIR Bulk Export Client</title>
