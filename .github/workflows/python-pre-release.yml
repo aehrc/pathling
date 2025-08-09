@@ -19,6 +19,7 @@ env:
 jobs:
   deploy-python-pre-release:
     name: Python pre-release
+    environment: pypi
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
