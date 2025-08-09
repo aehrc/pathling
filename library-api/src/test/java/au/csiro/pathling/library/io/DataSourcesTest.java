@@ -162,7 +162,8 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data back out to a temporary location with the specified save mode.
-    data.write().saveMode(saveMode).ndjson(temporaryDirectory.resolve("ndjson-" + saveMode).toString());
+    data.write().saveMode(saveMode)
+        .ndjson(temporaryDirectory.resolve("ndjson-" + saveMode).toString());
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read()
@@ -287,7 +288,8 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data to Parquet with the specified save mode.
-    data.write().saveMode(saveMode).parquet(temporaryDirectory.resolve("parquet-" + saveMode).toString());
+    data.write().saveMode(saveMode)
+        .parquet(temporaryDirectory.resolve("parquet-" + saveMode).toString());
 
     // Read the Parquet data back in.
     final QueryableDataSource newData = pathlingContext.read()
@@ -350,7 +352,8 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data to Delta with the specified save mode.
-    data.write().saveMode(saveMode).delta(temporaryDirectory.resolve("delta-" + saveMode).toString());
+    data.write().saveMode(saveMode)
+        .delta(temporaryDirectory.resolve("delta-" + saveMode).toString());
 
     // Read the Delta data back in.
     final QueryableDataSource newData = pathlingContext.read()
@@ -576,7 +579,8 @@ class DataSourcesTest {
         () -> dataSinkBuilder.saveMode("merge").parquet(destinationPath));
 
     // Verify the error message.
-    assertEquals("Merge operation is not supported for Parquet - use Delta if merging is required", exception.getMessage());
+    assertEquals("Merge operation is not supported for Parquet - use Delta if merging is required",
+        exception.getMessage());
   }
 
   // Data Source Caching and Transformation Tests
@@ -764,6 +768,184 @@ class DataSourcesTest {
         .limit(1);
     DatasetAssert.of(patient)
         .hasRows(RowFactory.create("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "02138"));
+  }
+
+  // Null Parameter Validation Tests for DataSourceBuilder
+  @Test
+  void ndjsonWithNullPathShouldThrowIllegalArgumentException() {
+    final DataSourceBuilder builder = pathlingContext.read();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.ndjson(null));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  @Test
+  void ndjsonWithNullExtensionShouldThrowIllegalArgumentException() {
+    final DataSourceBuilder builder = pathlingContext.read();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.ndjson("path", null));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  @Test
+  void ndjsonWithNullPathAndExtensionShouldThrowIllegalArgumentException() {
+    final DataSourceBuilder builder = pathlingContext.read();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.ndjson(null, "extension"));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  @Test
+  void ndjsonWithNullFileNameMapperShouldThrowIllegalArgumentException() {
+    final DataSourceBuilder builder = pathlingContext.read();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.ndjson("path", "extension", null));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  @Test
+  void bundlesWithNullPathShouldThrowIllegalArgumentException() {
+    final DataSourceBuilder builder = pathlingContext.read();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.bundles(null, Set.of("Patient"), "application/fhir+json"));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  @Test
+  void bundlesWithNullResourceTypesShouldThrowIllegalArgumentException() {
+    final DataSourceBuilder builder = pathlingContext.read();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.bundles("path", null, "application/fhir+json"));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  @Test
+  void bundlesWithNullMimeTypeShouldThrowIllegalArgumentException() {
+    final DataSourceBuilder builder = pathlingContext.read();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.bundles("path", Set.of("Patient"), null));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  @Test
+  void parquetWithNullPathShouldThrowIllegalArgumentException() {
+    final DataSourceBuilder builder = pathlingContext.read();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.parquet(null));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  @Test
+  void parquetWithNullFileNameMapperShouldThrowIllegalArgumentException() {
+    final DataSourceBuilder builder = pathlingContext.read();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.parquet("path", null));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  @Test
+  void deltaWithNullPathShouldThrowIllegalArgumentException() {
+    final DataSourceBuilder builder = pathlingContext.read();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.delta(null));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  @Test
+  void tablesWithNullSchemaShouldThrowIllegalArgumentException() {
+    final DataSourceBuilder builder = pathlingContext.read();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.tables(null));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  @Test
+  void bulkWithNullClientShouldThrowIllegalArgumentException() {
+    final DataSourceBuilder builder = pathlingContext.read();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.bulk(null));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  // Null Parameter Validation Tests for DataSinkBuilder
+  @Test
+  void sinkNdjsonWithNullPathShouldThrowIllegalArgumentException() {
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final DataSinkBuilder builder = data.write();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.ndjson(null));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  @Test
+  void sinkNdjsonWithNullFileNameMapperShouldThrowIllegalArgumentException() {
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final DataSinkBuilder builder = data.write();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.ndjson("path", null));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  @Test
+  void sinkParquetWithNullPathShouldThrowIllegalArgumentException() {
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final DataSinkBuilder builder = data.write();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.parquet(null));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  @Test
+  void sinkParquetWithNullFileNameMapperShouldThrowIllegalArgumentException() {
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final DataSinkBuilder builder = data.write();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.parquet("path", null));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  @Test
+  void sinkDeltaWithNullPathShouldThrowIllegalArgumentException() {
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final DataSinkBuilder builder = data.write();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.delta(null));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  @Test
+  void sinkDeltaWithNullFileNameMapperShouldThrowIllegalArgumentException() {
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final DataSinkBuilder builder = data.write();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.delta("path", null));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  @Test
+  void sinkTablesWithNullSchemaShouldThrowIllegalArgumentException() {
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final DataSinkBuilder builder = data.write();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.tables(null));
+    assertEquals("Argument must not be null", exception.getMessage());
+  }
+
+  @Test
+  void sinkTablesWithNullFormatShouldThrowIllegalArgumentException() {
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    final DataSinkBuilder builder = data.write();
+    final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> builder.tables("schema", null));
+    assertEquals("Argument must not be null", exception.getMessage());
   }
 
 }
