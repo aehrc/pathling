@@ -13,6 +13,7 @@ env:
 
 permissions:
   id-token: write
+  contents: write  # Required to upload release assets
 
 jobs:
   release-maven:
@@ -184,6 +185,15 @@ jobs:
 
       - name: Upload SQL on FHIR test report to S3
         run: aws s3 cp fhirpath/target/fhir-view-compliance-test.json s3://pathling-benchmark/test-reports/${{ github.ref }}/sof-test-results.json
+
+      - name: Upload release assets
+        run: |
+          gh release upload ${{ github.ref_name }} \
+            library-runtime/target/library-runtime-*.jar \
+            lib/python/target/py-dist/pathling-*.whl \
+            lib/R/target/pathling_*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release-pypi:
     name: Release to PyPI
