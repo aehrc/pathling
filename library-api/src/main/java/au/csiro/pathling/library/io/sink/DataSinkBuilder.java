@@ -80,8 +80,7 @@ public class DataSinkBuilder {
    * @param path the directory to write the files to
    */
   public void ndjson(@Nullable final String path) {
-    checkArgumentNotNull(path);
-    new NdjsonSink(context, path, saveMode).write(source);
+    new NdjsonSink(context, checkArgumentNotNull(path), saveMode).write(source);
   }
 
   /**
@@ -93,9 +92,8 @@ public class DataSinkBuilder {
    */
   public void ndjson(@Nullable final String path,
       @Nullable final UnaryOperator<String> fileNameMapper) {
-    checkArgumentNotNull(path);
-    checkArgumentNotNull(fileNameMapper);
-    new NdjsonSink(context, path, saveMode, fileNameMapper).write(source);
+    new NdjsonSink(context, checkArgumentNotNull(path), saveMode,
+        checkArgumentNotNull(fileNameMapper)).write(source);
   }
 
   /**
@@ -105,8 +103,7 @@ public class DataSinkBuilder {
    * @param path the directory to write the files to
    */
   public void parquet(@Nullable final String path) {
-    checkArgumentNotNull(path);
-    new ParquetSink(path, saveMode).write(source);
+    new ParquetSink(checkArgumentNotNull(path), saveMode).write(source);
   }
 
   /**
@@ -118,9 +115,8 @@ public class DataSinkBuilder {
    */
   public void parquet(@Nullable final String path,
       @Nullable final UnaryOperator<String> fileNameMapper) {
-    checkArgumentNotNull(path);
-    checkArgumentNotNull(fileNameMapper);
-    new ParquetSink(path, saveMode, fileNameMapper).write(source);
+    new ParquetSink(checkArgumentNotNull(path), saveMode,
+        checkArgumentNotNull(fileNameMapper)).write(source);
   }
 
   /**
@@ -129,8 +125,7 @@ public class DataSinkBuilder {
    * @param path the directory to write the files to
    */
   public void delta(@Nullable final String path) {
-    checkArgumentNotNull(path);
-    new DeltaSink(context, path, saveMode).write(source);
+    new DeltaSink(context, checkArgumentNotNull(path), saveMode).write(source);
   }
 
   /**
@@ -141,9 +136,8 @@ public class DataSinkBuilder {
    */
   public void delta(@Nullable final String path,
       @Nullable final UnaryOperator<String> fileNameMapper) {
-    checkArgumentNotNull(path);
-    checkArgumentNotNull(fileNameMapper);
-    new DeltaSink(context, path, saveMode, fileNameMapper).write(source);
+    new DeltaSink(context, checkArgumentNotNull(path), saveMode,
+        checkArgumentNotNull(fileNameMapper)).write(source);
   }
 
 
@@ -163,8 +157,7 @@ public class DataSinkBuilder {
    * @param schema the schema name to write the tables to
    */
   public void tables(@Nullable final String schema) {
-    checkArgumentNotNull(schema);
-    new CatalogSink(context, saveMode, schema).write(source);
+    new CatalogSink(context, saveMode, checkArgumentNotNull(schema)).write(source);
   }
 
   /**
@@ -175,9 +168,8 @@ public class DataSinkBuilder {
    * @param format the table format to use (e.g., "delta", "parquet")
    */
   public void tables(@Nullable final String schema, @Nullable final String format) {
-    checkArgumentNotNull(schema);
-    checkArgumentNotNull(format);
-    new CatalogSink(context, saveMode, schema, format).write(source);
+    new CatalogSink(context, saveMode, checkArgumentNotNull(schema),
+        checkArgumentNotNull(format)).write(source);
   }
 
 
