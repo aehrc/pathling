@@ -20,6 +20,7 @@ permissions:
 jobs:
   prerelease:
     name: Build, test and pre-release
+    environment: maven-central
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
