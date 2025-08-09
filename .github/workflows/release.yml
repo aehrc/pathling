@@ -15,8 +15,9 @@ permissions:
   id-token: write
 
 jobs:
-  release:
-    name: Build, test and release
+  release-maven:
+    name: Release to Maven Central
+    environment: maven-central
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -46,11 +47,6 @@ jobs:
       - name: Set up Pandoc
         uses: r-lib/actions/setup-pandoc@v2
 
-      - name: Set up Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: 3.13.2
-
       - name: Cache local Maven repository
         uses: actions/cache@v4
         with:
@@ -79,8 +75,12 @@ jobs:
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
-      - name: Install texlive and libcurl
-        run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra libcurl4-openssl-dev
+      - name: Install TinyTeX and libcurl
+        # These are required for building the R package documentation.
+        run: |
+          wget -qO- "https://yihui.org/tinytex/install-bin-unix.sh" | sh
+          echo "$HOME/bin" >> $GITHUB_PATH
+          sudo apt-get install -y libcurl4-openssl-dev
 
       - name: Install GPG key
         run: |
@@ -97,6 +97,21 @@ jobs:
               "password": "${{ secrets.OSSRH_PASSWORD }}"
             }]
 
+      # Release won't be possible if there are outstanding vulnerabilities of medium severity or
+      # higher as reported by Trivy.
+      - name: Run security scan
+        uses: aquasecurity/trivy-action@0.32.0
+        with:
+          scan-type: repo
+          severity: "MEDIUM,HIGH,CRITICAL"
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+          skip-files: examples/**/*,**/target/**/*,sql-on-fhir/sof-js/package-lock.json,licenses/**/*,site/package-lock.json
+          # Upon release, the databases will be updated and scanned to make sure nothing has crept
+          # in since the last daily update.
+          cache: false
+
       - name: Run deploy goal
         env:
           PYSPARK_PYTHON: ${{ steps.python-install.outputs.python-path }}
@@ -111,7 +126,7 @@ jobs:
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
           -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
           -Dsonar.host.url=https://sonarcloud.io \
-          -pl '!benchmark' -Pdocs,mavenRelease,pythonRelease
+          -pl '!benchmark' -Pdocs,mavenRelease
         timeout-minutes: 60
 
       - name: Save test reports
@@ -169,3 +184,82 @@ jobs:
 
       - name: Upload SQL on FHIR test report to S3
         run: aws s3 cp fhirpath/target/fhir-view-compliance-test.json s3://pathling-benchmark/test-reports/${{ github.ref }}/sof-test-results.json
+
+  release-pypi:
+    name: Release to PyPI
+    environment: pypi
+    runs-on: ubuntu-latest
+    needs: release-maven
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: "zulu"
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v4
+        id: python-install
+        with:
+          python-version: 3.8
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.1.3"
+          use-public-rspm: true
+
+      - name: Set up Pandoc
+        uses: r-lib/actions/setup-pandoc@v2
+
+      - name: Cache local Maven repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |-
+            ${{ runner.os }}-maven-
+
+      - name: Cache Python packages
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('lib/python/requirements/dev.txt', 'lib/python/requirements/package.txt') }}
+
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/Library
+          key: r-packages-${{ runner.os }}-${{ hashFiles('lib/R/DESCRIPTION.src') }}
+          restore-keys: r-packages-${{ runner.os }}-
+
+      - name: Install TinyTeX and libcurl
+        # These are required for building the R package documentation.
+        run: |
+          wget -qO- "https://yihui.org/tinytex/install-bin-unix.sh" | sh
+          echo "$HOME/bin" >> $GITHUB_PATH
+          sudo apt-get install -y libcurl4-openssl-dev
+
+      - name: Run deploy goal
+        env:
+          PYSPARK_PYTHON: ${{ steps.python-install.outputs.python-path }}
+          PYSPARK_DRIVER_PYTHON: ${{ steps.python-install.outputs.python-path }}
+          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+          R_KEEP_PKG_SOURCE: yes
+        run: |
+          mvn --batch-mode deploy \
+          -pl '!benchmark' -Pdocs,pythonRelease
+        timeout-minutes: 60
+
+      - name: Save Python wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-wheel
+          path: lib/python/target/py-dist/pathling-*.whl

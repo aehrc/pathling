@@ -18,8 +18,8 @@ permissions:
   id-token: write
 
 jobs:
-  prerelease:
-    name: Build, test and pre-release
+  pre-release:
+    name: Pre-release to Maven Central
     environment: maven-central
     runs-on: ubuntu-latest
     steps:
@@ -49,11 +49,6 @@ jobs:
 
       - name: Set up Pandoc
         uses: r-lib/actions/setup-pandoc@v2
-
-      - name: Set up Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: 3.13.2
 
       - name: Cache local Maven repository
         uses: actions/cache@v4
@@ -107,6 +102,10 @@ jobs:
 
       - name: Run security scan
         uses: aquasecurity/trivy-action@0.32.0
+        env:
+          # We update the database separately within the `update-trivy` workflow.
+          TRIVY_SKIP_DB_UPDATE: true
+          TRIVY_SKIP_JAVA_DB_UPDATE: true
         with:
           scan-type: repo
           scan-ref: .
@@ -114,6 +113,7 @@ jobs:
           format: sarif
           output: trivy-results.sarif
           skip-files: examples/**/*,**/target/**/*,sql-on-fhir/sof-js/package-lock.json,licenses/**/*,site/package-lock.json
+
       - name: Run deploy goal (pre-release)
         env:
           PYSPARK_PYTHON: ${{ steps.python-install.outputs.python-path }}
