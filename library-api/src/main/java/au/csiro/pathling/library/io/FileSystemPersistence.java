@@ -33,6 +33,7 @@ public class FileSystemPersistence {
    * @param second the second path
    * @return the joined path
    */
+  @Nonnull
   public static String safelyJoinPaths(@Nonnull final String first, @Nonnull final String second) {
     try {
       final URI uri = URI.create(first);
@@ -117,17 +118,6 @@ public class FileSystemPersistence {
       throw new PersistenceError("Problem copying partition file", e);
     }
     return departitionedUrl;
-  }
-
-  /**
-   * @param path the URL of the warehouse location
-   * @param resourceType the resource type to be read or written to
-   * @return the URL of the resource within the warehouse
-   */
-  @Nonnull
-  public static String getTableUrl(@Nonnull final String path,
-      @Nonnull final String resourceType) {
-    return safelyJoinPaths(path, resourceType + ".parquet");
   }
 
 }

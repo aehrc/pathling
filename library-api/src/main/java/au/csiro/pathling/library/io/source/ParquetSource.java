@@ -31,6 +31,9 @@ import java.util.function.Function;
  */
 public class ParquetSource extends FileSource {
 
+  private static final String PARQUET_FILE_EXTENSION = "parquet";
+  private static final String PARQUET_READ_FORMAT = "parquet";
+
   /**
    * Constructs a ParquetSource with the specified PathlingContext and path.
    *
@@ -43,8 +46,8 @@ public class ParquetSource extends FileSource {
         // from the file name and is tolerant of an optional qualifier string.
         FileSource::resourceNameWithQualifierMapper,
         // Assume the "parquet" file extension.
-        "parquet",
-        context.getSpark().read().format("parquet"),
+        PARQUET_FILE_EXTENSION,
+        context.getSpark().read().format(PARQUET_READ_FORMAT),
         // Apply no transformations on the data - we assume it has already been processed using the 
         // Pathling FHIR encoders.
         (sourceData, resourceType) -> sourceData);
@@ -60,8 +63,8 @@ public class ParquetSource extends FileSource {
    */
   ParquetSource(@Nonnull final PathlingContext context, @Nonnull final String path,
       @Nonnull final Function<String, Set<String>> fileNameMapper) {
-    super(context, path, fileNameMapper, "parquet",
-        context.getSpark().read().format("parquet"),
+    super(context, path, fileNameMapper, PARQUET_FILE_EXTENSION,
+        context.getSpark().read().format(PARQUET_READ_FORMAT),
         // Apply no transformations on the data - we assume it has already been processed using the 
         // Pathling FHIR encoders.
         (sourceData, resourceType) -> sourceData);

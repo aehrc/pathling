@@ -49,8 +49,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    */
   @Nonnull
   public QueryableDataSource ndjson(@Nullable final String ndjsonDir) {
-    checkArgumentNotNull(ndjsonDir);
-    return new NdjsonSource(context, ndjsonDir);
+    return new NdjsonSource(context, checkArgumentNotNull(ndjsonDir));
   }
 
   /**
@@ -71,9 +70,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    */
   @Nonnull
   public QueryableDataSource ndjson(@Nullable final String path, @Nullable final String extension) {
-    checkArgumentNotNull(path);
-    checkArgumentNotNull(extension);
-    return new NdjsonSource(context, path, extension);
+    return new NdjsonSource(context, checkArgumentNotNull(path), checkArgumentNotNull(extension));
   }
 
   /**
@@ -92,10 +89,8 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
   public QueryableDataSource ndjson(@Nullable final String path,
       @Nullable final String extension,
       @Nullable final Function<String, Set<String>> fileNameMapper) {
-    checkArgumentNotNull(path);
-    checkArgumentNotNull(extension);
-    checkArgumentNotNull(fileNameMapper);
-    return new NdjsonSource(context, path, extension, fileNameMapper);
+    return new NdjsonSource(context, checkArgumentNotNull(path), checkArgumentNotNull(extension),
+        checkArgumentNotNull(fileNameMapper));
   }
 
   /**
@@ -116,10 +111,8 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
   @Nonnull
   public QueryableDataSource bundles(@Nullable final String path,
       @Nullable final Set<String> resourceTypes, @Nullable final String mimeType) {
-    checkArgumentNotNull(path);
-    checkArgumentNotNull(mimeType);
-    checkArgumentNotNull(resourceTypes);
-    return new BundlesSource(context, path, mimeType, resourceTypes);
+    return new BundlesSource(context, checkArgumentNotNull(path), checkArgumentNotNull(mimeType),
+        checkArgumentNotNull(resourceTypes));
   }
 
   /**
@@ -143,8 +136,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    */
   @Nonnull
   public QueryableDataSource parquet(@Nullable final String path) {
-    checkArgumentNotNull(path);
-    return new ParquetSource(context, path);
+    return new ParquetSource(context, checkArgumentNotNull(path));
   }
 
   /**
@@ -158,9 +150,8 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
   @Nonnull
   public QueryableDataSource parquet(@Nullable final String path,
       @Nullable final Function<String, Set<String>> fileNameMapper) {
-    checkArgumentNotNull(path);
-    checkArgumentNotNull(fileNameMapper);
-    return new ParquetSource(context, path, fileNameMapper);
+    return new ParquetSource(context, checkArgumentNotNull(path),
+        checkArgumentNotNull(fileNameMapper));
   }
 
   /**
@@ -171,8 +162,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    */
   @Nonnull
   public QueryableDataSource delta(@Nullable final String path) {
-    checkArgumentNotNull(path);
-    return new DeltaSource(context, path);
+    return new DeltaSource(context, checkArgumentNotNull(path));
   }
 
   /**
@@ -196,8 +186,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    */
   @Nonnull
   public QueryableDataSource tables(@Nullable final String schema) {
-    checkArgumentNotNull(schema);
-    return new CatalogSource(context, schema);
+    return new CatalogSource(context, checkArgumentNotNull(schema));
   }
 
   /**
@@ -208,9 +197,8 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * @return the new data source
    */
   @Nonnull
-  public QueryableDataSource bulk(@Nonnull final BulkExportClient client) {
-    checkArgumentNotNull(client);
-    return new BulkDataSource(context, client);
+  public QueryableDataSource bulk(@Nullable final BulkExportClient client) {
+    return new BulkDataSource(context, checkArgumentNotNull(client));
   }
 
 }

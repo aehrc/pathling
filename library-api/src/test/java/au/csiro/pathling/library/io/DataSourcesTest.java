@@ -555,11 +555,11 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     final DataSinkBuilder dataSinkBuilder = data.write();
     final String destinationPath = temporaryDirectory.resolve("ndjson-merge-fail").toString();
+    final DataSinkBuilder builder = dataSinkBuilder.saveMode("merge");
 
     // Attempting to write NDJSON data using merge mode should throw UnsupportedOperationException.
     final UnsupportedOperationException exception = assertThrows(
-        UnsupportedOperationException.class,
-        () -> dataSinkBuilder.saveMode("merge").ndjson(destinationPath));
+        UnsupportedOperationException.class, () -> builder.ndjson(destinationPath));
 
     // Verify the error message.
     assertEquals("Merge operation is not supported for NDJSON", exception.getMessage());
@@ -572,11 +572,11 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     final DataSinkBuilder dataSinkBuilder = data.write();
     final String destinationPath = temporaryDirectory.resolve("parquet-merge-fail").toString();
+    final DataSinkBuilder builder = dataSinkBuilder.saveMode("merge");
 
     // Attempting to write Parquet data using merge mode should throw UnsupportedOperationException.
     final UnsupportedOperationException exception = assertThrows(
-        UnsupportedOperationException.class,
-        () -> dataSinkBuilder.saveMode("merge").parquet(destinationPath));
+        UnsupportedOperationException.class, () -> builder.parquet(destinationPath));
 
     // Verify the error message.
     assertEquals("Merge operation is not supported for Parquet - use Delta if merging is required",
@@ -806,8 +806,9 @@ class DataSourcesTest {
   @Test
   void bundlesWithNullPathShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
+    final Set<String> resources = Set.of("Patient");
     final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.bundles(null, Set.of("Patient"), "application/fhir+json"));
+        () -> builder.bundles(null, resources, "application/fhir+json"));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
@@ -822,8 +823,9 @@ class DataSourcesTest {
   @Test
   void bundlesWithNullMimeTypeShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
+    final Set<String> resources = Set.of("Patient");
     final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.bundles("path", Set.of("Patient"), null));
+        () -> builder.bundles("path", resources, null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
