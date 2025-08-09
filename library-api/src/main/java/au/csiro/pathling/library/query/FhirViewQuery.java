@@ -36,7 +36,6 @@ import org.apache.spark.sql.Row;
  *   <li>Using a JSON string representation of the view via {@link #json(String)}</li>
  *   <li>Using a {@link FhirView} object directly via {@link #view(FhirView)}</li>
  * </ul>
- * <p>
  *
  * @author John Grimes
  * @see QueryBuilder

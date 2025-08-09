@@ -20,6 +20,7 @@ package au.csiro.pathling.library;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.encoding.CodingSchema;
+import au.csiro.pathling.sql.Terminology;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.net.URLEncoder;
@@ -50,8 +51,8 @@ public class TerminologyHelpers {
   /**
    * Converts a Column containing codes into a Column that contains a Coding struct. The Coding
    * struct Column can be used as an input to terminology functions such as
-   * {@link PathlingContext#memberOf} and {@link PathlingContext#translate}. A null value passed in
-   * to the {@code codingColumn} parameter will result in a null value being returned.
+   * {@link Terminology#member_of} and {@link Terminology#translate}. A null value passed in to the
+   * {@code codingColumn} parameter will result in a null value being returned.
    *
    * @param codingColumn the Column containing codes
    * @param system the URI of the system for the codes
@@ -73,7 +74,7 @@ public class TerminologyHelpers {
 
   /**
    * Converts a SNOMED CT ECL expression into a FHIR ValueSet URI. Can be used with the
-   * {@link PathlingContext#memberOf} function.
+   * {@link Terminology#member_of} function.
    *
    * @param ecl the ECL expression
    * @return a FHIR ValueSet URI
