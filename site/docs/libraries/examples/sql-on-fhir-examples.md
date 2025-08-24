@@ -21,7 +21,7 @@ suitable for analytics, reporting, and data warehousing. A **ViewDefinition**
 specifies how to extract, transform, and organise data from FHIR resources into
 rows and columns.
 
-### Key Concepts
+### Key concepts
 
 - **Resource**: The FHIR resource type that the view is based on (e.g.,
   `Patient`, `Observation`)
@@ -30,7 +30,7 @@ rows and columns.
 - **Constants**: Reusable values that can be referenced in expressions
 - **forEach/forEachOrNull**: Iteration constructs for handling collections
 
-## Basic Structure
+## Basic structure
 
 Here's the simplest possible view definition:
 
@@ -59,7 +59,7 @@ Here's the simplest possible view definition:
 
 This example extracts basic patient information into a flat table.
 
-**View Definition (JSON):**
+**View definition (JSON):**
 
 ```json
 {
@@ -137,7 +137,7 @@ result = data_source.view(
 </TabItem>
 </Tabs>
 
-**Sample Input:**
+**Sample input:**
 
 ```json
 {
@@ -149,10 +149,11 @@ result = data_source.view(
 }
 ```
 
-**Expected Output:**
+**Expected output:**
+
 | patient_id | gender | birth_date | active |
-|------------|--------|------------|---------|
-| patient-1 | female | 1990-05-15 | true |
+|------------|--------|------------|--------|
+| patient-1  | female | 1990-05-15 | true   |
 
 **Explanation:**
 This example demonstrates the most basic form of a SQL on FHIR view. Each column
@@ -168,7 +169,7 @@ expressions. The `type` attribute ensures proper data type handling.
 This example shows how to work with complex data types and use FHIRPath string
 functions.
 
-**View Definition (JSON):**
+**View definition (JSON):**
 
 ```json
 {
@@ -257,7 +258,7 @@ result = data_source.view(
 </TabItem>
 </Tabs>
 
-**Sample Input:**
+**Sample input:**
 
 ```json
 {
@@ -284,12 +285,13 @@ result = data_source.view(
 }
 ```
 
-**Expected Output:**
-| id | full_name | family_name | given_names |
-|-----------|----------------|-------------|-------------|
-| patient-1 | Jane M. Johnson| Johnson | Jane M. |
+**Expected output:**
 
-**Key Features:**
+| id        | full_name       | family_name | given_names |
+|-----------|-----------------|-------------|-------------|
+| patient-1 | Jane M. Johnson | Johnson     | Jane M.     |
+
+**Key features:**
 
 - Uses `getResourceKey()` function for consistent ID generation
 - Demonstrates filtering with `where()` clause
@@ -305,7 +307,7 @@ result = data_source.view(
 This example shows how to use where clauses to filter which resources are
 included in the view.
 
-**View Definition (JSON):**
+**View definition (JSON):**
 
 ```json
 {
@@ -393,12 +395,47 @@ result = data_source.view(
 </TabItem>
 </Tabs>
 
+**Sample input:**
+
+```json
+[
+    {
+        "resourceType": "Patient",
+        "id": "patient-1",
+        "active": true,
+        "gender": "female",
+        "birthDate": "1985-03-15"
+    },
+    {
+        "resourceType": "Patient",
+        "id": "patient-2",
+        "active": false,
+        "gender": "male",
+        "birthDate": "1990-07-22"
+    },
+    {
+        "resourceType": "Patient",
+        "id": "patient-3",
+        "active": true,
+        "gender": "male",
+        "birthDate": "2010-01-10"
+    }
+]
+```
+
+**Expected output:**
+
+| patient_id | age_years | gender |
+|------------|-----------|--------|
+| patient-1  | 39.4      | female |
+
 **Explanation:**
 
 - The `where` clauses filter to include only active patients who are 18 or older
 - Multiple where conditions are combined with AND logic
 - Demonstrates date arithmetic with `today()` and time duration calculations
 - Shows how to calculate derived values (age) in the select clause
+- Only patient-1 meets both criteria (active=true and over 18)
 
 ---
 
@@ -409,7 +446,7 @@ result = data_source.view(
 This example demonstrates how to handle one-to-many relationships using`forEach`
 to create multiple rows per patient.
 
-**View Definition (JSON):**
+**View definition (JSON):**
 
 ```json
 {
@@ -529,7 +566,7 @@ result = data_source.view(
 </TabItem>
 </Tabs>
 
-**Sample Input:**
+**Sample input:**
 
 ```json
 {
@@ -563,13 +600,14 @@ result = data_source.view(
 }
 ```
 
-**Expected Output:**
-| patient_id | use | type | street | city | state | postal_code | country |
-|------------|------|------|------------------|--------|-------|-------------|---------|
-| patient-1 | home | both | 123 Main St\nApt 4B | Boston | MA | 02101 | US |
-| patient-1 | work | both | 456 Work Ave | Boston | MA | 02102 | US |
+**Expected output:**
 
-**Key Features:**
+| patient_id | use  | type | street              | city   | state | postal_code | country |
+|------------|------|------|---------------------|--------|-------|-------------|---------|
+| patient-1  | home | both | 123 Main St\nApt 4B | Boston | MA    | 02101       | US      |
+| patient-1  | work | both | 456 Work Ave        | Boston | MA    | 02102       | US      |
+
+**Key features:**
 
 - `forEach` creates multiple rows (one per address) for each patient
 - The first select provides patient-level columns that appear in every row
@@ -585,7 +623,7 @@ result = data_source.view(
 This example shows how to use constants to make view definitions more
 maintainable and readable.
 
-**View Definition (JSON):**
+**View definition (JSON):**
 
 ```json
 {
@@ -697,7 +735,7 @@ result = data_source.view(
 </TabItem>
 </Tabs>
 
-**Sample Input:**
+**Sample input:**
 
 ```json
 {
@@ -723,12 +761,13 @@ result = data_source.view(
 }
 ```
 
-**Expected Output:**
-| patient_id | home_phone | home_email | any_phone |
-|------------|------------------|--------------------|------------------|
-| patient-1 | +1-617-555-1234 | john.doe@email.com | +1-617-555-1234 |
+**Expected output:**
 
-**Key Features:**
+| patient_id | home_phone      | home_email         | any_phone       |
+|------------|-----------------|--------------------|-----------------|
+| patient-1  | +1-617-555-1234 | john.doe@email.com | +1-617-555-1234 |
+
+**Key features:**
 
 - Constants (prefixed with `%`) make expressions more readable and maintainable
 - Constants can be reused across multiple columns
@@ -744,7 +783,7 @@ result = data_source.view(
 This example demonstrates the `unionAll` feature to combine data from different
 sources into a single view.
 
-**View Definition (JSON):**
+**View definition (JSON):**
 
 ```json
 {
@@ -935,7 +974,7 @@ result = data_source.view(
 </TabItem>
 </Tabs>
 
-**Sample Input:**
+**Sample input:**
 
 ```json
 {
@@ -977,15 +1016,14 @@ result = data_source.view(
 }
 ```
 
-**Expected Output:**
-| patient_id | address_type | use | street | city | postal_code |
-contact_relationship |
-|------------|--------------|------|-----------------|-----------|-------------|---------------------|
-| patient-1 | patient | home | 123 Patient St | Boston | 02101 | |
-| patient-1 | contact | home | 456 Contact Ave | Cambridge | 02139 | Emergency
-Contact |
+**Expected output:**
 
-**Key Features:**
+| patient_id | address_type | use  | street          | city      | postal_code | contact_relationship |
+|------------|--------------|------|-----------------|-----------|-------------|----------------------|
+| patient-1  | patient      | home | 123 Patient St  | Boston    | 02101       |                      |
+| patient-1  | contact      | home | 456 Contact Ave | Cambridge | 02139       | Emergency Contact    |
+
+**Key features:**
 
 - `unionAll` combines rows from different data sources with the same schema
 - Uses literal strings (like `'patient'`) to tag the source of each row
@@ -999,7 +1037,7 @@ Contact |
 This example shows how to flatten complex observations with components,
 specifically blood pressure readings.
 
-**View Definition (JSON):**
+**View definition (JSON):**
 
 ```json
 {
@@ -1225,13 +1263,76 @@ result = data_source.view(
 </TabItem>
 </Tabs>
 
-**Expected Output:**
-| observation_id | patient_id | effective_datetime | systolic_value |
-systolic_unit | diastolic_value | diastolic_unit |
-|---------------|------------|---------------------|----------------|---------------|-----------------|----------------|
-| obs-bp-1 | patient-1 | 2023-10-15T10:30:00 | 120 | mmHg | 80 | mmHg |
+**Sample input:**
 
-**Key Features:**
+```json
+{
+    "resourceType": "Observation",
+    "id": "obs-bp-1",
+    "status": "final",
+    "code": {
+        "coding": [
+            {
+                "system": "http://loinc.org",
+                "code": "85354-9",
+                "display": "Blood pressure panel"
+            }
+        ]
+    },
+    "subject": {
+        "reference": "Patient/patient-1"
+    },
+    "encounter": {
+        "reference": "Encounter/enc-1"
+    },
+    "effectiveDateTime": "2023-10-15T10:30:00Z",
+    "issued": "2023-10-15T10:35:00Z",
+    "component": [
+        {
+            "code": {
+                "coding": [
+                    {
+                        "system": "http://loinc.org",
+                        "code": "8480-6",
+                        "display": "Systolic blood pressure"
+                    }
+                ]
+            },
+            "valueQuantity": {
+                "value": 120,
+                "unit": "mmHg",
+                "system": "http://unitsofmeasure.org",
+                "code": "mm[Hg]"
+            }
+        },
+        {
+            "code": {
+                "coding": [
+                    {
+                        "system": "http://loinc.org",
+                        "code": "8462-4",
+                        "display": "Diastolic blood pressure"
+                    }
+                ]
+            },
+            "valueQuantity": {
+                "value": 80,
+                "unit": "mmHg",
+                "system": "http://unitsofmeasure.org",
+                "code": "mm[Hg]"
+            }
+        }
+    ]
+}
+```
+
+**Expected output:**
+
+| observation_id | patient_id | effective_datetime  | systolic_value | systolic_unit | diastolic_value | diastolic_unit |
+|----------------|------------|---------------------|----------------|---------------|-----------------|----------------|
+| obs-bp-1       | patient-1  | 2023-10-15T10:30:00 | 120            | mmHg          | 80              | mmHg           |
+
+**Key features:**
 
 - Filters observations to only include blood pressure panels using specific
   LOINC codes
@@ -1248,7 +1349,7 @@ systolic_unit | diastolic_value | diastolic_unit |
 This example shows how to flatten condition resources with their various coding
 systems.
 
-**View Definition (JSON):**
+**View definition (JSON):**
 
 ```json
 {
@@ -1471,7 +1572,66 @@ result = data_source.view(
 </TabItem>
 </Tabs>
 
-**Key Features:**
+**Sample input:**
+
+```json
+{
+    "resourceType": "Condition",
+    "id": "condition-1",
+    "clinicalStatus": {
+        "coding": [
+            {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+                "code": "active"
+            }
+        ]
+    },
+    "verificationStatus": {
+        "coding": [
+            {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+                "code": "confirmed"
+            }
+        ]
+    },
+    "category": [
+        {
+            "coding": [
+                {
+                    "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                    "code": "problem-list-item",
+                    "display": "Problem List Item"
+                }
+            ]
+        }
+    ],
+    "code": {
+        "coding": [
+            {
+                "system": "http://snomed.info/sct",
+                "code": "73211009",
+                "display": "Diabetes mellitus"
+            }
+        ]
+    },
+    "subject": {
+        "reference": "Patient/patient-1"
+    },
+    "encounter": {
+        "reference": "Encounter/enc-1"
+    },
+    "onsetDateTime": "2023-01-15T09:00:00Z",
+    "recordedDate": "2023-01-15T10:00:00Z"
+}
+```
+
+**Expected output:**
+
+| condition_id | patient_id | encounter_id | onset_datetime       | code_system            | code     | display           | category_code     | clinical_status | verification_status |
+|--------------|------------|--------------|----------------------|------------------------|----------|-------------------|-------------------|-----------------|---------------------|
+| condition-1  | patient-1  | enc-1        | 2023-01-15T09:00: 00 | http://snomed.info/sct | 73211009 | Diabetes mellitus | problem-list-item | active          | confirmed           |
+
+**Key features:**
 
 - Uses `forEachOrNull` to ensure rows are created even when coding arrays are
   empty
@@ -1489,7 +1649,7 @@ result = data_source.view(
 This example demonstrates extracting data from FHIR extensions, specifically US
 Core patient extensions.
 
-**View Definition (JSON):**
+**View definition (JSON):**
 
 ```json
 {
@@ -1657,7 +1817,64 @@ result = data_source.view(
 </TabItem>
 </Tabs>
 
-**Key Features:**
+**Sample input:**
+
+```json
+{
+    "resourceType": "Patient",
+    "id": "patient-1",
+    "gender": "female",
+    "birthDate": "1990-05-15",
+    "extension": [
+        {
+            "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+            "valueCode": "F"
+        },
+        {
+            "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+            "extension": [
+                {
+                    "url": "ombCategory",
+                    "valueCoding": {
+                        "system": "urn:oid:2.16.840.1.113883.6.238",
+                        "code": "2106-3",
+                        "display": "White"
+                    }
+                },
+                {
+                    "url": "text",
+                    "valueString": "Mixed"
+                }
+            ]
+        },
+        {
+            "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+            "extension": [
+                {
+                    "url": "ombCategory",
+                    "valueCoding": {
+                        "system": "urn:oid:2.16.840.1.113883.6.238",
+                        "code": "2135-2",
+                        "display": "Hispanic or Latino"
+                    }
+                },
+                {
+                    "url": "text",
+                    "valueString": "Hispanic"
+                }
+            ]
+        }
+    ]
+}
+```
+
+**Expected output:**
+
+| patient_id | gender | birth_date | birth_sex | race_omb_category | race_text | ethnicity_omb_category | ethnicity_text |
+|------------|--------|------------|-----------|-------------------|-----------|------------------------|----------------|
+| patient-1  | female | 1990-05-15 | F         | 2106-3            | Mixed     | 2135-2                 | Hispanic       |
+
+**Key features:**
 
 - Shows how to extract values from simple extensions (birth sex)
 - Demonstrates navigation of complex nested extensions (race, ethnicity)
@@ -1674,7 +1891,7 @@ result = data_source.view(
 This example shows how to create a view that can be easily joined with other
 views using reference keys.
 
-**View Definition (JSON):**
+**View definition (JSON):**
 
 ```json
 {
@@ -1884,7 +2101,70 @@ result = data_source.view(
 </TabItem>
 </Tabs>
 
-**Key Features:**
+**Sample input:**
+
+```json
+{
+    "resourceType": "Encounter",
+    "id": "enc-1",
+    "status": "finished",
+    "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+    },
+    "type": [
+        {
+            "coding": [
+                {
+                    "system": "http://snomed.info/sct",
+                    "code": "185349003",
+                    "display": "Encounter for check up"
+                }
+            ]
+        }
+    ],
+    "subject": {
+        "reference": "Patient/patient-1"
+    },
+    "period": {
+        "start": "2023-10-15T09:00:00Z",
+        "end": "2023-10-15T10:30:00Z"
+    },
+    "length": {
+        "value": 90,
+        "unit": "min"
+    },
+    "serviceProvider": {
+        "reference": "Organization/org-1"
+    },
+    "diagnosis": [
+        {
+            "condition": {
+                "reference": "Condition/condition-1"
+            },
+            "use": {
+                "coding": [
+                    {
+                        "system": "http://terminology.hl7.org/CodeSystem/diagnosis-role",
+                        "code": "AD",
+                        "display": "Admission diagnosis"
+                    }
+                ]
+            },
+            "rank": 1
+        }
+    ]
+}
+```
+
+**Expected output:**
+
+| encounter_id | patient_id | encounter_class_code | encounter_status | period_start        | period_end           | length_minutes | type_code | diagnosis_condition_id | diagnosis_rank |
+|--------------|------------|----------------------|------------------|---------------------|----------------------|----------------|-----------|------------------------|----------------|
+| enc-1        | patient-1  | AMB                  | finished         | 2023-10-15T09:00:00 | 2023-10-15T10:30: 00 | 90             | 185349003 | condition-1            | 1              |
+
+**Key features:**
 
 - Uses `getReferenceKey()` to extract IDs that can be used for joins
 - Shows how to handle encounter class (Coding datatype)
@@ -1900,7 +2180,7 @@ result = data_source.view(
 
 This example shows advanced FHIRPath expressions with conditional logic.
 
-**View Definition (JSON):**
+**View definition (JSON):**
 
 ```json
 {
@@ -2024,7 +2304,49 @@ result = data_source.view(
 </TabItem>
 </Tabs>
 
-**Key Features:**
+**Sample input:**
+
+```json
+{
+    "resourceType": "Patient",
+    "id": "patient-1",
+    "birthDate": "1975-08-20",
+    "telecom": [
+        {
+            "system": "phone",
+            "value": "+1-617-555-1234",
+            "use": "home"
+        },
+        {
+            "system": "email",
+            "value": "patient@email.com",
+            "use": "home"
+        }
+    ],
+    "communication": [
+        {
+            "language": {
+                "coding": [
+                    {
+                        "system": "urn:ietf:bcp:47",
+                        "code": "en-US",
+                        "display": "English (United States)"
+                    }
+                ]
+            },
+            "preferred": true
+        }
+    ]
+}
+```
+
+**Expected output:**
+
+| patient_id | age_years | age_category | has_phone | has_email | contact_score | primary_language | deceased_flag |
+|------------|-----------|--------------|-----------|-----------|---------------|------------------|---------------|
+| patient-1  | 49.0      | adult        | true      | true      | 2             | en-US            | false         |
+
+**Key features:**
 
 - Uses `iif()` (immediate if) for conditional logic
 - Demonstrates date arithmetic for age calculation
@@ -2034,37 +2356,23 @@ result = data_source.view(
 
 ---
 
-## Best Practices and Tips
-
-### Performance Considerations
+## Best practices and tips
 
 - Use `where` clauses to filter early and reduce processing
 - Consider using `forEachOrNull` instead of `forEach` when you need consistent
   row counts
 - Use constants for frequently referenced values like code systems
-
-### Maintainability
-
-- Use descriptive column names and include descriptions for complex expressions
-- Group related constants together
-- Comment complex FHIRPath expressions in your documentation
-
-### Data Quality
-
+- Use descriptive column names and include descriptions for each expression
 - Handle missing data explicitly with null checks
 - Use `ofType()` when dealing with polymorphic fields
 - Consider using `first()` or other collection functions to handle unexpected
   multiples
-
-### Common Patterns
-
 - `getResourceKey()` for consistent resource identification
 - `getReferenceKey(ResourceType)` for extracting reference IDs
 - `.coding.where(system = 'url').code` for extracting specific codes
 - `.join(' ')` for combining arrays into strings
-- `.exists()` for boolean flags
 
-## Error Handling
+## Error handling
 
 If your view definition contains errors, Pathling will provide detailed error
 messages. Common issues include:
@@ -2072,12 +2380,8 @@ messages. Common issues include:
 1. **Invalid FHIRPath expressions**: Check syntax and function usage
 2. **Type mismatches**: Ensure column types match the data being extracted
 3. **Missing constants**: Ensure all referenced constants are defined
-4. **Invalid resource types**: Check that the resource type exists in your FHIR
-   version
 
-## Further Reading
+## Further reading
 
 - [SQL on FHIR Specification](https://sql-on-fhir.org/)
 - [FHIRPath Specification](http://hl7.org/fhirpath/)
-- [Pathling Documentation](https://pathling.csiro.au/docs)
-- [US Core Implementation Guide](http://hl7.org/fhir/us/core/)
