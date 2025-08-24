@@ -467,9 +467,9 @@ public class PathlingContext {
 
     // Try case-insensitive match.
     for (final ResourceType resourceType : ResourceType.values()) {
-      if (resourceType.toCode().equalsIgnoreCase(resourceTypeString) &&
+      if (resourceTypeString.equalsIgnoreCase(resourceType.toCode()) &&
           !EncoderBuilder.UNSUPPORTED_RESOURCES().contains(resourceType.toCode())) {
-        return Optional.of(resourceType.toCode());
+        return Optional.ofNullable(resourceType.toCode());
       }
     }
 
