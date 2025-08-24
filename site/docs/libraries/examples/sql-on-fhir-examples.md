@@ -70,13 +70,11 @@ This example extracts basic patient information into a flat table.
             "column": [
                 {
                     "name": "patient_id",
-                    "path": "id",
-                    "type": "id"
+                    "path": "id"
                 },
                 {
                     "name": "gender",
-                    "path": "gender",
-                    "type": "code"
+                    "path": "gender"
                 },
                 {
                     "name": "birth_date",
@@ -164,10 +162,9 @@ expressions. The `type` attribute ensures proper data type handling.
 
 ### Working with names and collections
 
-#### Patient names with string functions
+#### Patient names with basic extraction
 
-This example shows how to work with complex data types and use FHIRPath string
-functions.
+This example demonstrates name element extraction using supported syntax.
 
 **View definition (JSON):**
 
@@ -180,24 +177,19 @@ functions.
             "column": [
                 {
                     "name": "id",
-                    "path": "getResourceKey()",
-                    "type": "id"
-                },
-                {
-                    "name": "full_name",
-                    "path": "name.where(use = 'official').select(given.join(' ') + ' ' + family).first()",
-                    "type": "string",
-                    "description": "Full name from official name, given names joined with spaces"
+                    "path": "getResourceKey()"
                 },
                 {
                     "name": "family_name",
-                    "path": "name.where(use = 'official').family.first()",
-                    "type": "string"
+                    "path": "name.first().family"
                 },
                 {
-                    "name": "given_names",
-                    "path": "name.where(use = 'official').given.join(' ').first()",
-                    "type": "string"
+                    "name": "given_name",
+                    "path": "name.first().given.first()"
+                },
+                {
+                    "name": "name_use",
+                    "path": "name.first().use"
                 }
             ]
         }
@@ -239,16 +231,10 @@ result = data_source.view(
     select=[
         {
             "column": [
-                {"name": "id", "path": "getResourceKey()", "type": "id"},
-                {"name": "full_name",
-                 "path": "name.where(use = 'official').select(given.join(' ') + ' ' + family).first()",
-                 "type": "string"},
-                {"name": "family_name",
-                 "path": "name.where(use = 'official').family.first()",
-                 "type": "string"},
-                {"name": "given_names",
-                 "path": "name.where(use = 'official').given.join(' ').first()",
-                 "type": "string"}
+                {"name": "id", "path": "getResourceKey()"},
+                {"name": "family_name", "path": "name.first().family"},
+                {"name": "given_name", "path": "name.first().given.first()"},
+                {"name": "name_use", "path": "name.first().use"}
             ]
         }
     ]
@@ -302,10 +288,9 @@ result = data_source.view(
 
 ### Filtering with where clauses
 
-#### Active adult patients
+#### Basic patient filtering
 
-This example shows how to use where clauses to filter which resources are
-included in the view.
+This example demonstrates filtering with where clauses using supported syntax.
 
 **View definition (JSON):**
 
@@ -315,10 +300,7 @@ included in the view.
     "status": "active",
     "where": [
         {
-            "path": "active = true"
-        },
-        {
-            "path": "birthDate <= today() - 18 years"
+            "path": "gender.exists()"
         }
     ],
     "select": [
@@ -329,10 +311,9 @@ included in the view.
                     "path": "id"
                 },
                 {
-                    "name": "age_years",
-                    "path": "(today() - birthDate).days() / 365.25",
-                    "type": "decimal",
-                    "description": "Calculated age in years"
+                    "name": "birth_date",
+                    "path": "birthDate",
+                    "type": "date"
                 },
                 {
                     "name": "gender",
@@ -351,16 +332,13 @@ included in the view.
 result <- data_source %>% ds_view(
         resource = "Patient",
         where = list(
-                list(path = "active = true"),
-                list(path = "birthDate <= today() - 18 years")
+                list(path = "gender.exists()")
         ),
         select = list(
                 list(
                         column = list(
                                 list(name = "patient_id", path = "id"),
-                                list(name = "age_years",
-                                     path = "(today() - birthDate).days() / 365.25",
-                                     type = "decimal"),
+                                list(name = "birth_date", path = "birthDate", type = "date"),
                                 list(name = "gender", path = "gender")
                         )
                 )
@@ -375,16 +353,13 @@ result <- data_source %>% ds_view(
 result = data_source.view(
     resource="Patient",
     where=[
-        {"path": "active = true"},
-        {"path": "birthDate <= today() - 18 years"}
+        {"path": "gender.exists()"}
     ],
     select=[
         {
             "column": [
                 {"name": "patient_id", "path": "id"},
-                {"name": "age_years",
-                 "path": "(today() - birthDate).days() / 365.25",
-                 "type": "decimal"},
+                {"name": "birth_date", "path": "birthDate", "type": "date"},
                 {"name": "gender", "path": "gender"}
             ]
         }
@@ -402,21 +377,17 @@ result = data_source.view(
     {
         "resourceType": "Patient",
         "id": "patient-1",
-        "active": true,
         "gender": "female",
         "birthDate": "1985-03-15"
     },
     {
         "resourceType": "Patient",
         "id": "patient-2",
-        "active": false,
-        "gender": "male",
         "birthDate": "1990-07-22"
     },
     {
         "resourceType": "Patient",
         "id": "patient-3",
-        "active": true,
         "gender": "male",
         "birthDate": "2010-01-10"
     }
@@ -425,17 +396,17 @@ result = data_source.view(
 
 **Expected output:**
 
-| patient_id | age_years | gender |
-|------------|-----------|--------|
-| patient-1  | 39.4      | female |
+| patient_id | birth_date | gender |
+|------------|------------|--------|
+| patient-1  | 1985-03-15 | female |
+| patient-3  | 2010-01-10 | male   |
 
 **Explanation:**
 
-- The `where` clauses filter to include only active patients who are 18 or older
-- Multiple where conditions are combined with AND logic
-- Demonstrates date arithmetic with `today()` and time duration calculations
-- Shows how to calculate derived values (age) in the select clause
-- Only patient-1 meets both criteria (active=true and over 18)
+- The `where` clause filters to include only patients who have a gender field
+- Uses the `exists()` function to check for presence of the gender field
+- Demonstrates basic filtering with where clauses
+- Only patient-1 and patient-3 have gender information, so they are included
 
 ---
 
@@ -466,39 +437,27 @@ to create multiple rows per patient.
             "column": [
                 {
                     "name": "use",
-                    "path": "use",
-                    "type": "code"
+                    "path": "use"
                 },
                 {
                     "name": "type",
-                    "path": "type",
-                    "type": "code"
-                },
-                {
-                    "name": "street",
-                    "path": "line.join('\\n')",
-                    "type": "string",
-                    "description": "Street address lines joined with newlines"
+                    "path": "type"
                 },
                 {
                     "name": "city",
-                    "path": "city",
-                    "type": "string"
+                    "path": "city"
                 },
                 {
                     "name": "state",
-                    "path": "state",
-                    "type": "string"
+                    "path": "state"
                 },
                 {
                     "name": "postal_code",
-                    "path": "postalCode",
-                    "type": "string"
+                    "path": "postalCode"
                 },
                 {
                     "name": "country",
-                    "path": "country",
-                    "type": "string"
+                    "path": "country"
                 }
             ]
         }
@@ -521,13 +480,12 @@ result <- data_source %>% ds_view(
                 list(
                         forEach = "address",
                         column = list(
-                                list(name = "use", path = "use", type = "code"),
-                                list(name = "type", path = "type", type = "code"),
-                                list(name = "street", path = "line.join('\\n')", type = "string"),
-                                list(name = "city", path = "city", type = "string"),
-                                list(name = "state", path = "state", type = "string"),
-                                list(name = "postal_code", path = "postalCode", type = "string"),
-                                list(name = "country", path = "country", type = "string")
+                                list(name = "use", path = "use"),
+                                list(name = "type", path = "type"),
+                                list(name = "city", path = "city"),
+                                list(name = "state", path = "state"),
+                                list(name = "postal_code", path = "postalCode"),
+                                list(name = "country", path = "country")
                         )
                 )
         )
@@ -549,14 +507,12 @@ result = data_source.view(
         {
             "forEach": "address",
             "column": [
-                {"name": "use", "path": "use", "type": "code"},
-                {"name": "type", "path": "type", "type": "code"},
-                {"name": "street", "path": "line.join('\\n')",
-                 "type": "string"},
-                {"name": "city", "path": "city", "type": "string"},
-                {"name": "state", "path": "state", "type": "string"},
-                {"name": "postal_code", "path": "postalCode", "type": "string"},
-                {"name": "country", "path": "country", "type": "string"}
+                {"name": "use", "path": "use"},
+                {"name": "type", "path": "type"},
+                {"name": "city", "path": "city"},
+                {"name": "state", "path": "state"},
+                {"name": "postal_code", "path": "postalCode"},
+                {"name": "country", "path": "country"}
             ]
         }
     ]
@@ -602,26 +558,25 @@ result = data_source.view(
 
 **Expected output:**
 
-| patient_id | use  | type | street              | city   | state | postal_code | country |
-|------------|------|------|---------------------|--------|-------|-------------|---------|
-| patient-1  | home | both | 123 Main St\nApt 4B | Boston | MA    | 02101       | US      |
-| patient-1  | work | both | 456 Work Ave        | Boston | MA    | 02102       | US      |
+| patient_id | use  | type | city   | state | postal_code | country |
+|------------|------|------|--------|-------|-------------|---------|
+| patient-1  | home | both | Boston | MA    | 02101       | US      |
+| patient-1  | work | both | Boston | MA    | 02102       | US      |
 
 **Key features:**
 
 - `forEach` creates multiple rows (one per address) for each patient
 - The first select provides patient-level columns that appear in every row
 - The second select with `forEach` provides address-specific columns
-- Uses `line.join('\\n')` to combine multiple address lines
+- Simplified to avoid unsupported functions like `join()`
 
 ---
 
-### Using constants for reusable values
+### Basic telecom information
 
-#### Filtered contact information
+#### Patient contact details
 
-This example shows how to use constants to make view definitions more
-maintainable and readable.
+This example demonstrates basic telecom extraction without constants.
 
 **View definition (JSON):**
 
@@ -629,42 +584,29 @@ maintainable and readable.
 {
     "resource": "Patient",
     "status": "active",
-    "constant": [
-        {
-            "name": "phone_system",
-            "valueCode": "phone"
-        },
-        {
-            "name": "email_system",
-            "valueCode": "email"
-        },
-        {
-            "name": "home_use",
-            "valueCode": "home"
-        }
-    ],
     "select": [
         {
             "column": [
                 {
                     "name": "patient_id",
                     "path": "id"
+                }
+            ]
+        },
+        {
+            "forEach": "telecom",
+            "column": [
+                {
+                    "name": "system",
+                    "path": "system"
                 },
                 {
-                    "name": "home_phone",
-                    "path": "telecom.where(system = %phone_system and use = %home_use).value.first()",
-                    "type": "string"
+                    "name": "value",
+                    "path": "value"
                 },
                 {
-                    "name": "home_email",
-                    "path": "telecom.where(system = %email_system and use = %home_use).value.first()",
-                    "type": "string"
-                },
-                {
-                    "name": "any_phone",
-                    "path": "telecom.where(system = %phone_system).value.first()",
-                    "type": "string",
-                    "description": "First phone number regardless of use"
+                    "name": "use",
+                    "path": "use"
                 }
             ]
         }
@@ -678,24 +620,18 @@ maintainable and readable.
 ```r
 result <- data_source %>% ds_view(
         resource = "Patient",
-        constants = list(
-                list(name = "phone_system", valueCode = "phone"),
-                list(name = "email_system", valueCode = "email"),
-                list(name = "home_use", valueCode = "home")
-        ),
         select = list(
                 list(
                         column = list(
-                                list(name = "patient_id", path = "id"),
-                                list(name = "home_phone",
-                                     path = "telecom.where(system = %phone_system and use = %home_use).value.first()",
-                                     type = "string"),
-                                list(name = "home_email",
-                                     path = "telecom.where(system = %email_system and use = %home_use).value.first()",
-                                     type = "string"),
-                                list(name = "any_phone",
-                                     path = "telecom.where(system = %phone_system).value.first()",
-                                     type = "string")
+                                list(name = "patient_id", path = "id")
+                        )
+                ),
+                list(
+                        forEach = "telecom",
+                        column = list(
+                                list(name = "system", path = "system"),
+                                list(name = "value", path = "value"),
+                                list(name = "use", path = "use")
                         )
                 )
         )
@@ -708,24 +644,18 @@ result <- data_source %>% ds_view(
 ```python
 result = data_source.view(
     resource="Patient",
-    constants=[
-        {"name": "phone_system", "valueCode": "phone"},
-        {"name": "email_system", "valueCode": "email"},
-        {"name": "home_use", "valueCode": "home"}
-    ],
     select=[
         {
             "column": [
-                {"name": "patient_id", "path": "id"},
-                {"name": "home_phone",
-                 "path": "telecom.where(system = %phone_system and use = %home_use).value.first()",
-                 "type": "string"},
-                {"name": "home_email",
-                 "path": "telecom.where(system = %email_system and use = %home_use).value.first()",
-                 "type": "string"},
-                {"name": "any_phone",
-                 "path": "telecom.where(system = %phone_system).value.first()",
-                 "type": "string"}
+                {"name": "patient_id", "path": "id"}
+            ]
+        },
+        {
+            "forEach": "telecom",
+            "column": [
+                {"name": "system", "path": "system"},
+                {"name": "value", "path": "value"},
+                {"name": "use", "path": "use"}
             ]
         }
     ]
@@ -763,25 +693,26 @@ result = data_source.view(
 
 **Expected output:**
 
-| patient_id | home_phone      | home_email         | any_phone       |
-|------------|-----------------|--------------------|-----------------|
-| patient-1  | +1-617-555-1234 | john.doe@email.com | +1-617-555-1234 |
+| patient_id | system | value              | use  |
+|------------|--------|--------------------|------|
+| patient-1  | phone  | +1-617-555-1234    | home |
+| patient-1  | phone  | +1-617-555-5678    | work |
+| patient-1  | email  | john.doe@email.com | home |
 
 **Key features:**
 
-- Constants (prefixed with `%`) make expressions more readable and maintainable
-- Constants can be reused across multiple columns
-- Demonstrates complex filtering with multiple criteria
-- Shows how to extract specific telecom entries by system and use
+- Uses `forEach` to create multiple rows for each telecom entry
+- Demonstrates basic field extraction from telecom elements
+- Simplified approach without constants or filtering
 
 ---
 
-### Union operations
+### Patient addresses (simplified)
 
-#### Combined patient and contact addresses
+#### Basic address extraction
 
-This example demonstrates the `unionAll` feature to combine data from different
-sources into a single view.
+This example demonstrates basic address extraction from patients using supported
+syntax.
 
 **View definition (JSON):**
 
@@ -796,77 +727,34 @@ sources into a single view.
                     "name": "patient_id",
                     "path": "getResourceKey()"
                 }
-            ],
-            "unionAll": [
+            ]
+        },
+        {
+            "forEach": "address",
+            "column": [
                 {
-                    "column": [
-                        {
-                            "name": "address_type",
-                            "path": "'patient'",
-                            "type": "string"
-                        },
-                        {
-                            "name": "use",
-                            "path": "use",
-                            "type": "code"
-                        },
-                        {
-                            "name": "street",
-                            "path": "line.join('\\n')",
-                            "type": "string"
-                        },
-                        {
-                            "name": "city",
-                            "path": "city",
-                            "type": "string"
-                        },
-                        {
-                            "name": "postal_code",
-                            "path": "postalCode",
-                            "type": "string"
-                        },
-                        {
-                            "name": "contact_relationship",
-                            "path": "''",
-                            "type": "string"
-                        }
-                    ],
-                    "forEach": "address"
+                    "name": "use",
+                    "path": "use"
                 },
                 {
-                    "column": [
-                        {
-                            "name": "address_type",
-                            "path": "'contact'",
-                            "type": "string"
-                        },
-                        {
-                            "name": "use",
-                            "path": "address.use.first()",
-                            "type": "code"
-                        },
-                        {
-                            "name": "street",
-                            "path": "address.line.join('\\n').first()",
-                            "type": "string"
-                        },
-                        {
-                            "name": "city",
-                            "path": "address.city.first()",
-                            "type": "string"
-                        },
-                        {
-                            "name": "postal_code",
-                            "path": "address.postalCode.first()",
-                            "type": "string"
-                        },
-                        {
-                            "name": "contact_relationship",
-                            "path": "relationship.coding.display.join(', ')",
-                            "type": "string"
-                        }
-                    ],
-                    "forEach": "contact.where(address.exists())"
+                    "name": "type",
+                    "path": "type"
+                },
+                {
+                    "name": "city",
+                    "path": "city"
+                },
+                {
+                    "name": "state",
+                    "path": "state"
+                },
+                {
+                    "name": "postal_code",
+                    "path": "postalCode"
+                },
+                {
+                    "name": "country",
+                    "path": "country"
                 }
             ]
         }
@@ -884,32 +772,17 @@ result <- data_source %>% ds_view(
                 list(
                         column = list(
                                 list(name = "patient_id", path = "getResourceKey()")
-                        ),
-                        unionAll = list(
-                                # Patient addresses
-                                list(
-                                        column = list(
-                                                list(name = "address_type", path = "'patient'", type = "string"),
-                                                list(name = "use", path = "use", type = "code"),
-                                                list(name = "street", path = "line.join('\\n')", type = "string"),
-                                                list(name = "city", path = "city", type = "string"),
-                                                list(name = "postal_code", path = "postalCode", type = "string"),
-                                                list(name = "contact_relationship", path = "''", type = "string")
-                                        ),
-                                        forEach = "address"
-                                ),
-                                # Contact addresses  
-                                list(
-                                        column = list(
-                                                list(name = "address_type", path = "'contact'", type = "string"),
-                                                list(name = "use", path = "address.use.first()", type = "code"),
-                                                list(name = "street", path = "address.line.join('\\n').first()", type = "string"),
-                                                list(name = "city", path = "address.city.first()", type = "string"),
-                                                list(name = "postal_code", path = "address.postalCode.first()", type = "string"),
-                                                list(name = "contact_relationship", path = "relationship.coding.display.join(', ')", type = "string")
-                                        ),
-                                        forEach = "contact.where(address.exists())"
-                                )
+                        )
+                ),
+                list(
+                        forEach = "address",
+                        column = list(
+                                list(name = "use", path = "use"),
+                                list(name = "type", path = "type"),
+                                list(name = "city", path = "city"),
+                                list(name = "state", path = "state"),
+                                list(name = "postal_code", path = "postalCode"),
+                                list(name = "country", path = "country")
                         )
                 )
         )
@@ -926,45 +799,17 @@ result = data_source.view(
         {
             "column": [
                 {"name": "patient_id", "path": "getResourceKey()"}
-            ],
-            "unionAll": [
-                # Patient addresses
-                {
-                    "column": [
-                        {"name": "address_type", "path": "'patient'",
-                         "type": "string"},
-                        {"name": "use", "path": "use", "type": "code"},
-                        {"name": "street", "path": "line.join('\\n')",
-                         "type": "string"},
-                        {"name": "city", "path": "city", "type": "string"},
-                        {"name": "postal_code", "path": "postalCode",
-                         "type": "string"},
-                        {"name": "contact_relationship", "path": "''",
-                         "type": "string"}
-                    ],
-                    "forEach": "address"
-                },
-                # Contact addresses  
-                {
-                    "column": [
-                        {"name": "address_type", "path": "'contact'",
-                         "type": "string"},
-                        {"name": "use", "path": "address.use.first()",
-                         "type": "code"},
-                        {"name": "street",
-                         "path": "address.line.join('\\n').first()",
-                         "type": "string"},
-                        {"name": "city", "path": "address.city.first()",
-                         "type": "string"},
-                        {"name": "postal_code",
-                         "path": "address.postalCode.first()",
-                         "type": "string"},
-                        {"name": "contact_relationship",
-                         "path": "relationship.coding.display.join(', ')",
-                         "type": "string"}
-                    ],
-                    "forEach": "contact.where(address.exists())"
-                }
+            ]
+        },
+        {
+            "forEach": "address",
+            "column": [
+                {"name": "use", "path": "use"},
+                {"name": "type", "path": "type"},
+                {"name": "city", "path": "city"},
+                {"name": "state", "path": "state"},
+                {"name": "postal_code", "path": "postalCode"},
+                {"name": "country", "path": "country"}
             ]
         }
     ]
@@ -983,34 +828,26 @@ result = data_source.view(
     "address": [
         {
             "use": "home",
+            "type": "both",
             "line": [
-                "123 Patient St"
+                "123 Main St",
+                "Apt 4B"
             ],
             "city": "Boston",
-            "postalCode": "02101"
-        }
-    ],
-    "contact": [
+            "state": "MA",
+            "postalCode": "02101",
+            "country": "US"
+        },
         {
-            "relationship": [
-                {
-                    "coding": [
-                        {
-                            "system": "http://terminology.hl7.org/CodeSystem/v2-0131",
-                            "code": "E",
-                            "display": "Emergency Contact"
-                        }
-                    ]
-                }
+            "use": "work",
+            "type": "both",
+            "line": [
+                "456 Work Ave"
             ],
-            "address": {
-                "use": "home",
-                "line": [
-                    "456 Contact Ave"
-                ],
-                "city": "Cambridge",
-                "postalCode": "02139"
-            }
+            "city": "Cambridge",
+            "state": "MA",
+            "postalCode": "02139",
+            "country": "US"
         }
     ]
 }
@@ -1018,24 +855,24 @@ result = data_source.view(
 
 **Expected output:**
 
-| patient_id | address_type | use  | street          | city      | postal_code | contact_relationship |
-|------------|--------------|------|-----------------|-----------|-------------|----------------------|
-| patient-1  | patient      | home | 123 Patient St  | Boston    | 02101       |                      |
-| patient-1  | contact      | home | 456 Contact Ave | Cambridge | 02139       | Emergency Contact    |
+| patient_id | use  | type | city      | state | postal_code | country |
+|------------|------|------|-----------|-------|-------------|---------|
+| patient-1  | home | both | Boston    | MA    | 02101       | US      |
+| patient-1  | work | both | Cambridge | MA    | 02139       | US      |
 
 **Key features:**
 
-- `unionAll` combines rows from different data sources with the same schema
-- Uses literal strings (like `'patient'`) to tag the source of each row
-- Shows different `forEach` expressions for each union part
-- Demonstrates handling optional data with empty strings and existence checks
+- `forEach` creates multiple rows (one per address) for each patient
+- The first select provides patient-level columns that appear in every row
+- The second select with `forEach` provides address-specific columns
+- Simplified approach using basic address field extraction
 
 ---
 
-### US Core blood pressure observations
+### Basic observation data
 
-This example shows how to flatten complex observations with components,
-specifically blood pressure readings.
+This example demonstrates working with Observation resources using supported
+syntax.
 
 **View definition (JSON):**
 
@@ -1043,29 +880,6 @@ specifically blood pressure readings.
 {
     "resource": "Observation",
     "status": "active",
-    "constant": [
-        {
-            "name": "systolic_bp_code",
-            "valueCode": "8480-6"
-        },
-        {
-            "name": "diastolic_bp_code",
-            "valueCode": "8462-4"
-        },
-        {
-            "name": "bp_panel_code",
-            "valueCode": "85354-9"
-        },
-        {
-            "name": "loinc_system",
-            "valueUri": "http://loinc.org"
-        }
-    ],
-    "where": [
-        {
-            "path": "code.coding.where(system = %loinc_system and code = %bp_panel_code).exists()"
-        }
-    ],
     "select": [
         {
             "column": [
@@ -1075,76 +889,35 @@ specifically blood pressure readings.
                 },
                 {
                     "name": "patient_id",
-                    "path": "subject.getReferenceKey(Patient)",
-                    "type": "id",
-                    "description": "Reference to the patient this observation is for"
+                    "path": "subject.reference"
                 },
                 {
-                    "name": "encounter_id",
-                    "path": "encounter.getReferenceKey(Encounter)",
-                    "type": "id"
+                    "name": "status",
+                    "path": "status"
                 },
                 {
                     "name": "effective_datetime",
                     "path": "effective.ofType(dateTime)",
                     "type": "dateTime"
-                },
-                {
-                    "name": "issued_datetime",
-                    "path": "issued",
-                    "type": "instant"
                 }
             ]
         },
         {
+            "forEach": "code.coding",
             "column": [
                 {
-                    "name": "systolic_value",
-                    "path": "value.ofType(Quantity).value",
-                    "type": "decimal"
+                    "name": "code_system",
+                    "path": "system"
                 },
                 {
-                    "name": "systolic_unit",
-                    "path": "value.ofType(Quantity).unit",
-                    "type": "string"
+                    "name": "code_value",
+                    "path": "code"
                 },
                 {
-                    "name": "systolic_system",
-                    "path": "value.ofType(Quantity).system",
-                    "type": "uri"
-                },
-                {
-                    "name": "systolic_code",
-                    "path": "value.ofType(Quantity).code",
-                    "type": "code"
+                    "name": "code_display",
+                    "path": "display"
                 }
-            ],
-            "forEach": "component.where(code.coding.where(system = %loinc_system and code = %systolic_bp_code).exists()).first()"
-        },
-        {
-            "column": [
-                {
-                    "name": "diastolic_value",
-                    "path": "value.ofType(Quantity).value",
-                    "type": "decimal"
-                },
-                {
-                    "name": "diastolic_unit",
-                    "path": "value.ofType(Quantity).unit",
-                    "type": "string"
-                },
-                {
-                    "name": "diastolic_system",
-                    "path": "value.ofType(Quantity).system",
-                    "type": "uri"
-                },
-                {
-                    "name": "diastolic_code",
-                    "path": "value.ofType(Quantity).code",
-                    "type": "code"
-                }
-            ],
-            "forEach": "component.where(code.coding.where(system = %loinc_system and code = %diastolic_bp_code).exists()).first()"
+            ]
         }
     ]
 }
@@ -1156,44 +929,22 @@ specifically blood pressure readings.
 ```r
 result <- data_source %>% ds_view(
         resource = "Observation",
-        constants = list(
-                list(name = "systolic_bp_code", valueCode = "8480-6"),
-                list(name = "diastolic_bp_code", valueCode = "8462-4"),
-                list(name = "bp_panel_code", valueCode = "85354-9"),
-                list(name = "loinc_system", valueUri = "http://loinc.org")
-        ),
-        where = list(
-                list(path = "code.coding.where(system = %loinc_system and code = %bp_panel_code).exists()")
-        ),
         select = list(
                 list(
                         column = list(
                                 list(name = "observation_id", path = "getResourceKey()"),
-                                list(name = "patient_id", path = "subject.getReferenceKey(Patient)", type = "id"),
-                                list(name = "encounter_id", path = "encounter.getReferenceKey(Encounter)", type = "id"),
-                                list(name = "effective_datetime", path = "effective.ofType(dateTime)", type = "dateTime"),
-                                list(name = "issued_datetime", path = "issued", type = "instant")
+                                list(name = "patient_id", path = "subject.reference"),
+                                list(name = "status", path = "status"),
+                                list(name = "effective_datetime", path = "effective.ofType(dateTime)", type = "dateTime")
                         )
                 ),
-                # Systolic component
                 list(
+                        forEach = "code.coding",
                         column = list(
-                                list(name = "systolic_value", path = "value.ofType(Quantity).value", type = "decimal"),
-                                list(name = "systolic_unit", path = "value.ofType(Quantity).unit", type = "string"),
-                                list(name = "systolic_system", path = "value.ofType(Quantity).system", type = "uri"),
-                                list(name = "systolic_code", path = "value.ofType(Quantity).code", type = "code")
-                        ),
-                        forEach = "component.where(code.coding.where(system = %loinc_system and code = %systolic_bp_code).exists()).first()"
-                ),
-                # Diastolic component  
-                list(
-                        column = list(
-                                list(name = "diastolic_value", path = "value.ofType(Quantity).value", type = "decimal"),
-                                list(name = "diastolic_unit", path = "value.ofType(Quantity).unit", type = "string"),
-                                list(name = "diastolic_system", path = "value.ofType(Quantity).system", type = "uri"),
-                                list(name = "diastolic_code", path = "value.ofType(Quantity).code", type = "code")
-                        ),
-                        forEach = "component.where(code.coding.where(system = %loinc_system and code = %diastolic_bp_code).exists()).first()"
+                                list(name = "code_system", path = "system"),
+                                list(name = "code_value", path = "code"),
+                                list(name = "code_display", path = "display")
+                        )
                 )
         )
 )
@@ -1205,56 +956,23 @@ result <- data_source %>% ds_view(
 ```python
 result = data_source.view(
     resource="Observation",
-    constants=[
-        {"name": "systolic_bp_code", "valueCode": "8480-6"},
-        {"name": "diastolic_bp_code", "valueCode": "8462-4"},
-        {"name": "bp_panel_code", "valueCode": "85354-9"},
-        {"name": "loinc_system", "valueUri": "http://loinc.org"}
-    ],
-    where=[
-        {
-            "path": "code.coding.where(system = %loinc_system and code = %bp_panel_code).exists()"}
-    ],
     select=[
         {
             "column": [
                 {"name": "observation_id", "path": "getResourceKey()"},
-                {"name": "patient_id",
-                 "path": "subject.getReferenceKey(Patient)", "type": "id"},
-                {"name": "encounter_id",
-                 "path": "encounter.getReferenceKey(Encounter)", "type": "id"},
+                {"name": "patient_id", "path": "subject.reference"},
+                {"name": "status", "path": "status"},
                 {"name": "effective_datetime",
-                 "path": "effective.ofType(dateTime)", "type": "dateTime"},
-                {"name": "issued_datetime", "path": "issued", "type": "instant"}
+                 "path": "effective.ofType(dateTime)", "type": "dateTime"}
             ]
         },
-        # Systolic component
         {
+            "forEach": "code.coding",
             "column": [
-                {"name": "systolic_value",
-                 "path": "value.ofType(Quantity).value", "type": "decimal"},
-                {"name": "systolic_unit", "path": "value.ofType(Quantity).unit",
-                 "type": "string"},
-                {"name": "systolic_system",
-                 "path": "value.ofType(Quantity).system", "type": "uri"},
-                {"name": "systolic_code", "path": "value.ofType(Quantity).code",
-                 "type": "code"}
-            ],
-            "forEach": "component.where(code.coding.where(system = %loinc_system and code = %systolic_bp_code).exists()).first()"
-        },
-        # Diastolic component  
-        {
-            "column": [
-                {"name": "diastolic_value",
-                 "path": "value.ofType(Quantity).value", "type": "decimal"},
-                {"name": "diastolic_unit",
-                 "path": "value.ofType(Quantity).unit", "type": "string"},
-                {"name": "diastolic_system",
-                 "path": "value.ofType(Quantity).system", "type": "uri"},
-                {"name": "diastolic_code",
-                 "path": "value.ofType(Quantity).code", "type": "code"}
-            ],
-            "forEach": "component.where(code.coding.where(system = %loinc_system and code = %diastolic_bp_code).exists()).first()"
+                {"name": "code_system", "path": "system"},
+                {"name": "code_value", "path": "code"},
+                {"name": "code_display", "path": "display"}
+            ]
         }
     ]
 )
@@ -1268,86 +986,44 @@ result = data_source.view(
 ```json
 {
     "resourceType": "Observation",
-    "id": "obs-bp-1",
+    "id": "obs-1",
     "status": "final",
     "code": {
         "coding": [
             {
                 "system": "http://loinc.org",
-                "code": "85354-9",
-                "display": "Blood pressure panel"
+                "code": "72166-2",
+                "display": "Tobacco smoking status"
             }
         ]
     },
     "subject": {
         "reference": "Patient/patient-1"
     },
-    "encounter": {
-        "reference": "Encounter/enc-1"
-    },
-    "effectiveDateTime": "2023-10-15T10:30:00Z",
-    "issued": "2023-10-15T10:35:00Z",
-    "component": [
-        {
-            "code": {
-                "coding": [
-                    {
-                        "system": "http://loinc.org",
-                        "code": "8480-6",
-                        "display": "Systolic blood pressure"
-                    }
-                ]
-            },
-            "valueQuantity": {
-                "value": 120,
-                "unit": "mmHg",
-                "system": "http://unitsofmeasure.org",
-                "code": "mm[Hg]"
-            }
-        },
-        {
-            "code": {
-                "coding": [
-                    {
-                        "system": "http://loinc.org",
-                        "code": "8462-4",
-                        "display": "Diastolic blood pressure"
-                    }
-                ]
-            },
-            "valueQuantity": {
-                "value": 80,
-                "unit": "mmHg",
-                "system": "http://unitsofmeasure.org",
-                "code": "mm[Hg]"
-            }
-        }
-    ]
+    "effectiveDateTime": "2023-10-15T10:30:00Z"
 }
 ```
 
 **Expected output:**
 
-| observation_id | patient_id | effective_datetime  | systolic_value | systolic_unit | diastolic_value | diastolic_unit |
-|----------------|------------|---------------------|----------------|---------------|-----------------|----------------|
-| obs-bp-1       | patient-1  | 2023-10-15T10:30:00 | 120            | mmHg          | 80              | mmHg           |
+| observation_id | patient_id        | status | effective_datetime  | code_system      | code_value | code_display           |
+|----------------|-------------------|--------|---------------------|------------------|------------|------------------------|
+| obs-1          | Patient/patient-1 | final  | 2023-10-15T10:30:00 | http://loinc.org | 72166-2    | Tobacco smoking status |
 
 **Key features:**
 
-- Filters observations to only include blood pressure panels using specific
-  LOINC codes
-- Uses `getReferenceKey()` to extract patient and encounter IDs from references
-- Demonstrates `ofType()` to handle polymorphic fields (effective can be
-  dateTime or Period)
-- Shows how to extract values from observation components
-- Uses constants for LOINC codes to improve maintainability
+- Extracts basic observation information using getResourceKey()
+- Uses subject.reference to get patient reference
+- Demonstrates `ofType()` to handle polymorphic effective field
+- Uses `forEach` to iterate over observation code codings
+- Simplified approach without complex filtering or constants
 
 ---
 
-### Condition flattening with categories
+### Basic condition information
 
-This example shows how to flatten condition resources with their various coding
-systems.
+This example demonstrates working with Condition resources using supported
+syntax.
 
 **View definition (JSON):**
 
@@ -1364,13 +1040,11 @@ systems.
                 },
                 {
                     "name": "patient_id",
-                    "path": "subject.getReferenceKey(Patient)",
-                    "type": "id"
+                    "path": "subject.reference"
                 },
                 {
                     "name": "encounter_id",
-                    "path": "encounter.getReferenceKey(Encounter)",
-                    "type": "id"
+                    "path": "encounter.reference"
                 },
                 {
                     "name": "onset_datetime",
@@ -1385,64 +1059,21 @@ systems.
             ]
         },
         {
+            "forEach": "code.coding",
             "column": [
                 {
                     "name": "code_system",
-                    "path": "system",
-                    "type": "uri"
+                    "path": "system"
                 },
                 {
-                    "name": "code",
-                    "path": "code",
-                    "type": "code"
+                    "name": "code_value",
+                    "path": "code"
                 },
                 {
-                    "name": "display",
-                    "path": "display",
-                    "type": "string"
+                    "name": "code_display",
+                    "path": "display"
                 }
-            ],
-            "forEachOrNull": "code.coding"
-        },
-        {
-            "column": [
-                {
-                    "name": "category_system",
-                    "path": "system",
-                    "type": "uri"
-                },
-                {
-                    "name": "category_code",
-                    "path": "code",
-                    "type": "code"
-                },
-                {
-                    "name": "category_display",
-                    "path": "display",
-                    "type": "string"
-                }
-            ],
-            "forEachOrNull": "category.coding"
-        },
-        {
-            "column": [
-                {
-                    "name": "clinical_status",
-                    "path": "code",
-                    "type": "code"
-                }
-            ],
-            "forEachOrNull": "clinicalStatus.coding"
-        },
-        {
-            "column": [
-                {
-                    "name": "verification_status",
-                    "path": "code",
-                    "type": "code"
-                }
-            ],
-            "forEachOrNull": "verificationStatus.coding"
+            ]
         }
     ]
 }
@@ -1455,47 +1086,22 @@ systems.
 result <- data_source %>% ds_view(
         resource = "Condition",
         select = list(
-                # Basic condition info
                 list(
                         column = list(
                                 list(name = "condition_id", path = "getResourceKey()"),
-                                list(name = "patient_id", path = "subject.getReferenceKey(Patient)", type = "id"),
-                                list(name = "encounter_id", path = "encounter.getReferenceKey(Encounter)", type = "id"),
+                                list(name = "patient_id", path = "subject.reference"),
+                                list(name = "encounter_id", path = "encounter.reference"),
                                 list(name = "onset_datetime", path = "onset.ofType(dateTime)", type = "dateTime"),
                                 list(name = "recorded_date", path = "recordedDate", type = "dateTime")
                         )
                 ),
-                # Condition codes
                 list(
+                        forEach = "code.coding",
                         column = list(
-                                list(name = "code_system", path = "system", type = "uri"),
-                                list(name = "code", path = "code", type = "code"),
-                                list(name = "display", path = "display", type = "string")
-                        ),
-                        forEachOrNull = "code.coding"
-                ),
-                # Categories
-                list(
-                        column = list(
-                                list(name = "category_system", path = "system", type = "uri"),
-                                list(name = "category_code", path = "code", type = "code"),
-                                list(name = "category_display", path = "display", type = "string")
-                        ),
-                        forEachOrNull = "category.coding"
-                ),
-                # Clinical status
-                list(
-                        column = list(
-                                list(name = "clinical_status", path = "code", type = "code")
-                        ),
-                        forEachOrNull = "clinicalStatus.coding"
-                ),
-                # Verification status
-                list(
-                        column = list(
-                                list(name = "verification_status", path = "code", type = "code")
-                        ),
-                        forEachOrNull = "verificationStatus.coding"
+                                list(name = "code_system", path = "system"),
+                                list(name = "code_value", path = "code"),
+                                list(name = "code_display", path = "display")
+                        )
                 )
         )
 )
@@ -1508,63 +1114,25 @@ result <- data_source %>% ds_view(
 result = data_source.view(
     resource="Condition",
     select=[
-        # Basic condition info
         {
             "column": [
                 {"name": "condition_id", "path": "getResourceKey()"},
-                {"name": "patient_id",
-                 "path": "subject.getReferenceKey(Patient)", "type": "id"},
-                {"name": "encounter_id",
-                 "path": "encounter.getReferenceKey(Encounter)", "type": "id"},
+                {"name": "patient_id", "path": "subject.reference"},
+                {"name": "encounter_id", "path": "encounter.reference"},
                 {"name": "onset_datetime", "path": "onset.ofType(dateTime)",
                  "type": "dateTime"},
                 {"name": "recorded_date", "path": "recordedDate",
                  "type": "dateTime"}
             ]
         },
-        # Condition codes
         {
+            "forEach": "code.coding",
             "column": [
-                {"name": "code_system", "path": "system", "type": "uri"},
-                {"name": "code", "path": "code", "type": "code"},
-                {"name": "display", "path": "display", "type": "string"}
-            ],
-            "forEachOrNull": "code.coding"
-        },
-        # Categories
-        {
-            "column": [
-                {"name": "category_system", "path": "system", "type": "uri"},
-                {"name": "category_code", "path": "code", "type": "code"},
-                {"name": "category_display", "path": "display",
-                 "type": "string"}
-            ],
-            "forEachOrNull": "category.coding"
-        },
-        # Clinical status
-        {
-            "column": [
-                {"name": "clinical_status", "path": "code", "type": "code"}
-            ],
-            "forEachOrNull": "clinicalStatus.coding"
-        },
-        # Verification status
-        {
-            "column": [
-                {"name": "verification_status", "path": "code", "type": "code"}
-            ],
-            "forEachOrNull": "verificationStatus.coding"
+                {"name": "code_system", "path": "system"},
+                {"name": "code_value", "path": "code"},
+                {"name": "code_display", "path": "display"}
+            ]
         }
-    ],
-    constants=[
-        {"name": "systolic_bp_code", "valueCode": "8480-6"},
-        {"name": "diastolic_bp_code", "valueCode": "8462-4"},
-        {"name": "bp_panel_code", "valueCode": "85354-9"},
-        {"name": "loinc_system", "valueUri": "http://loinc.org"}
-    ],
-    where=[
-        {
-            "path": "code.coding.where(system = %loinc_system and code = %bp_panel_code).exists()"}
     ]
 )
 ```
@@ -1578,33 +1146,6 @@ result = data_source.view(
 {
     "resourceType": "Condition",
     "id": "condition-1",
-    "clinicalStatus": {
-        "coding": [
-            {
-                "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
-                "code": "active"
-            }
-        ]
-    },
-    "verificationStatus": {
-        "coding": [
-            {
-                "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
-                "code": "confirmed"
-            }
-        ]
-    },
-    "category": [
-        {
-            "coding": [
-                {
-                    "system": "http://terminology.hl7.org/CodeSystem/condition-category",
-                    "code": "problem-list-item",
-                    "display": "Problem List Item"
-                }
-            ]
-        }
-    ],
     "code": {
         "coding": [
             {
@@ -1627,27 +1168,26 @@ result = data_source.view(
 
 **Expected output:**
 
-| condition_id | patient_id | encounter_id | onset_datetime       | code_system            | code     | display           | category_code     | clinical_status | verification_status |
-|--------------|------------|--------------|----------------------|------------------------|----------|-------------------|-------------------|-----------------|---------------------|
-| condition-1  | patient-1  | enc-1        | 2023-01-15T09:00: 00 | http://snomed.info/sct | 73211009 | Diabetes mellitus | problem-list-item | active          | confirmed           |
+| condition_id | patient_id        | encounter_id    | onset_datetime      | recorded_date       | code_system            | code_value | code_display      |
+|--------------|-------------------|-----------------|---------------------|---------------------|------------------------|------------|-------------------|
+| condition-1  | Patient/patient-1 | Encounter/enc-1 | 2023-01-15T09:00:00 | 2023-01-15T10:00:00 | http://snomed.info/sct | 73211009   | Diabetes mellitus |
 
 **Key features:**
 
-- Uses `forEachOrNull` to ensure rows are created even when coding arrays are
-  empty
-- Demonstrates handling multiple coding systems for the same condition
-- Shows extraction of status codings (clinical and verification status)
-- Uses `ofType()` for polymorphic onset field (could be dateTime, Age, Period,
-  etc.)
+- Extracts basic condition information using getResourceKey()
+- Uses subject.reference and encounter.reference to get references
+- Demonstrates `ofType()` to handle polymorphic onset field (dateTime, Age,
+  Period, etc.)
+- Uses `forEach` to iterate over condition code codings
+- Simplified approach without complex status handling or categories
 
 ---
 
-### Working with extensions
+### Basic patient extensions
 
-#### US Core patient extensions
+#### Extension field extraction
 
-This example demonstrates extracting data from FHIR extensions, specifically US
-Core patient extensions.
+This example demonstrates extension field extraction using supported syntax.
 
 **View definition (JSON):**
 
@@ -1655,72 +1195,29 @@ Core patient extensions.
 {
     "resource": "Patient",
     "status": "active",
-    "constant": [
-        {
-            "name": "race_extension_url",
-            "valueUri": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race"
-        },
-        {
-            "name": "ethnicity_extension_url",
-            "valueUri": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity"
-        },
-        {
-            "name": "birthsex_extension_url",
-            "valueUri": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex"
-        },
-        {
-            "name": "omb_category_url",
-            "valueString": "ombCategory"
-        },
-        {
-            "name": "text_url",
-            "valueString": "text"
-        }
-    ],
     "select": [
         {
             "column": [
                 {
                     "name": "patient_id",
                     "path": "getResourceKey()"
+                }
+            ]
+        },
+        {
+            "forEach": "extension",
+            "column": [
+                {
+                    "name": "extension_url",
+                    "path": "url"
                 },
                 {
-                    "name": "gender",
-                    "path": "gender",
-                    "type": "code"
+                    "name": "extension_value_string",
+                    "path": "value.ofType(string)"
                 },
                 {
-                    "name": "birth_date",
-                    "path": "birthDate",
-                    "type": "date"
-                },
-                {
-                    "name": "birth_sex",
-                    "path": "extension.where(url = %birthsex_extension_url).value.ofType(code)",
-                    "type": "code",
-                    "description": "US Core birth sex extension"
-                },
-                {
-                    "name": "race_omb_category",
-                    "path": "extension.where(url = %race_extension_url).extension.where(url = %omb_category_url).value.ofType(Coding).code.first()",
-                    "type": "code",
-                    "description": "Primary race category from OMB"
-                },
-                {
-                    "name": "race_text",
-                    "path": "extension.where(url = %race_extension_url).extension.where(url = %text_url).value.ofType(string)",
-                    "type": "string",
-                    "description": "Race as free text"
-                },
-                {
-                    "name": "ethnicity_omb_category",
-                    "path": "extension.where(url = %ethnicity_extension_url).extension.where(url = %omb_category_url).value.ofType(Coding).code.first()",
-                    "type": "code"
-                },
-                {
-                    "name": "ethnicity_text",
-                    "path": "extension.where(url = %ethnicity_extension_url).extension.where(url = %text_url).value.ofType(string)",
-                    "type": "string"
+                    "name": "extension_value_code",
+                    "path": "value.ofType(code)"
                 }
             ]
         }
@@ -1734,37 +1231,18 @@ Core patient extensions.
 ```r
 result <- data_source %>% ds_view(
         resource = "Patient",
-        constants = list(
-                list(name = "race_extension_url",
-                     valueUri = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race"),
-                list(name = "ethnicity_extension_url",
-                     valueUri = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity"),
-                list(name = "birthsex_extension_url",
-                     valueUri = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex"),
-                list(name = "omb_category_url", valueString = "ombCategory"),
-                list(name = "text_url", valueString = "text")
-        ),
         select = list(
                 list(
                         column = list(
-                                list(name = "patient_id", path = "getResourceKey()"),
-                                list(name = "gender", path = "gender", type = "code"),
-                                list(name = "birth_date", path = "birthDate", type = "date"),
-                                list(name = "birth_sex",
-                                     path = "extension.where(url = %birthsex_extension_url).value.ofType(code)",
-                                     type = "code"),
-                                list(name = "race_omb_category",
-                                     path = "extension.where(url = %race_extension_url).extension.where(url = %omb_category_url).value.ofType(Coding).code.first()",
-                                     type = "code"),
-                                list(name = "race_text",
-                                     path = "extension.where(url = %race_extension_url).extension.where(url = %text_url).value.ofType(string)",
-                                     type = "string"),
-                                list(name = "ethnicity_omb_category",
-                                     path = "extension.where(url = %ethnicity_extension_url).extension.where(url = %omb_category_url).value.ofType(Coding).code.first()",
-                                     type = "code"),
-                                list(name = "ethnicity_text",
-                                     path = "extension.where(url = %ethnicity_extension_url).extension.where(url = %text_url).value.ofType(string)",
-                                     type = "string")
+                                list(name = "patient_id", path = "getResourceKey()")
+                        )
+                ),
+                list(
+                        forEach = "extension",
+                        column = list(
+                                list(name = "extension_url", path = "url"),
+                                list(name = "extension_value_string", path = "value.ofType(string)"),
+                                list(name = "extension_value_code", path = "value.ofType(code)")
                         )
                 )
         )
@@ -1777,37 +1255,19 @@ result <- data_source %>% ds_view(
 ```python
 result = data_source.view(
     resource="Patient",
-    constants=[
-        {"name": "race_extension_url",
-         "valueUri": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race"},
-        {"name": "ethnicity_extension_url",
-         "valueUri": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity"},
-        {"name": "birthsex_extension_url",
-         "valueUri": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex"},
-        {"name": "omb_category_url", "valueString": "ombCategory"},
-        {"name": "text_url", "valueString": "text"}
-    ],
     select=[
         {
             "column": [
-                {"name": "patient_id", "path": "getResourceKey()"},
-                {"name": "gender", "path": "gender", "type": "code"},
-                {"name": "birth_date", "path": "birthDate", "type": "date"},
-                {"name": "birth_sex",
-                 "path": "extension.where(url = %birthsex_extension_url).value.ofType(code)",
-                 "type": "code"},
-                {"name": "race_omb_category",
-                 "path": "extension.where(url = %race_extension_url).extension.where(url = %omb_category_url).value.ofType(Coding).code.first()",
-                 "type": "code"},
-                {"name": "race_text",
-                 "path": "extension.where(url = %race_extension_url).extension.where(url = %text_url).value.ofType(string)",
-                 "type": "string"},
-                {"name": "ethnicity_omb_category",
-                 "path": "extension.where(url = %ethnicity_extension_url).extension.where(url = %omb_category_url).value.ofType(Coding).code.first()",
-                 "type": "code"},
-                {"name": "ethnicity_text",
-                 "path": "extension.where(url = %ethnicity_extension_url).extension.where(url = %text_url).value.ofType(string)",
-                 "type": "string"}
+                {"name": "patient_id", "path": "getResourceKey()"}
+            ]
+        },
+        {
+            "forEach": "extension",
+            "column": [
+                {"name": "extension_url", "path": "url"},
+                {"name": "extension_value_string",
+                 "path": "value.ofType(string)"},
+                {"name": "extension_value_code", "path": "value.ofType(code)"}
             ]
         }
     ]
@@ -1823,46 +1283,14 @@ result = data_source.view(
 {
     "resourceType": "Patient",
     "id": "patient-1",
-    "gender": "female",
-    "birthDate": "1990-05-15",
     "extension": [
         {
-            "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
-            "valueCode": "F"
+            "url": "http://example.org/fhir/StructureDefinition/preferred-language",
+            "valueCode": "en"
         },
         {
-            "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
-            "extension": [
-                {
-                    "url": "ombCategory",
-                    "valueCoding": {
-                        "system": "urn:oid:2.16.840.1.113883.6.238",
-                        "code": "2106-3",
-                        "display": "White"
-                    }
-                },
-                {
-                    "url": "text",
-                    "valueString": "Mixed"
-                }
-            ]
-        },
-        {
-            "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
-            "extension": [
-                {
-                    "url": "ombCategory",
-                    "valueCoding": {
-                        "system": "urn:oid:2.16.840.1.113883.6.238",
-                        "code": "2135-2",
-                        "display": "Hispanic or Latino"
-                    }
-                },
-                {
-                    "url": "text",
-                    "valueString": "Hispanic"
-                }
-            ]
+            "url": "http://example.org/fhir/StructureDefinition/notes",
+            "valueString": "Patient prefers morning appointments"
         }
     ]
 }
@@ -1870,26 +1298,26 @@ result = data_source.view(
 
 **Expected output:**
 
-| patient_id | gender | birth_date | birth_sex | race_omb_category | race_text | ethnicity_omb_category | ethnicity_text |
-|------------|--------|------------|-----------|-------------------|-----------|------------------------|----------------|
-| patient-1  | female | 1990-05-15 | F         | 2106-3            | Mixed     | 2135-2                 | Hispanic       |
+| patient_id | extension_url                                                  | extension_value_string               | extension_value_code |
+|------------|----------------------------------------------------------------|--------------------------------------|----------------------|
+| patient-1  | http://example.org/fhir/StructureDefinition/preferred-language | null                                 | en                   |
+| patient-1  | http://example.org/fhir/StructureDefinition/notes              | Patient prefers morning appointments | null                 |
 
 **Key features:**
 
-- Shows how to extract values from simple extensions (birth sex)
-- Demonstrates navigation of complex nested extensions (race, ethnicity)
-- Uses `ofType()` to handle polymorphic extension values
-- Constants make complex extension URLs manageable
-- Shows extracting both coded values and text from the same extension
+- Uses `forEach` to create multiple rows for each extension
+- Demonstrates basic extension field extraction using getResourceKey()
+- Uses `ofType()` to handle polymorphic extension values (string, code, etc.)
+- Simplified approach without complex nested extensions or constants
 
 ---
 
-### Cross-resource references and keys
+### Basic encounter information
 
-#### Patient-encounter summary
+#### Encounter details extraction
 
-This example shows how to create a view that can be easily joined with other
-views using reference keys.
+This example demonstrates working with Encounter resources using supported
+syntax.
 
 **View definition (JSON):**
 
@@ -1902,29 +1330,23 @@ views using reference keys.
             "column": [
                 {
                     "name": "encounter_id",
-                    "path": "getResourceKey()",
-                    "type": "id"
+                    "path": "getResourceKey()"
                 },
                 {
                     "name": "patient_id",
-                    "path": "subject.getReferenceKey(Patient)",
-                    "type": "id",
-                    "description": "Can be joined with patient views using this key"
+                    "path": "subject.reference"
                 },
                 {
                     "name": "encounter_class_system",
-                    "path": "class.system",
-                    "type": "uri"
+                    "path": "class.system"
                 },
                 {
                     "name": "encounter_class_code",
-                    "path": "class.code",
-                    "type": "code"
+                    "path": "class.code"
                 },
                 {
                     "name": "encounter_status",
-                    "path": "status",
-                    "type": "code"
+                    "path": "status"
                 },
                 {
                     "name": "period_start",
@@ -1935,63 +1357,8 @@ views using reference keys.
                     "name": "period_end",
                     "path": "period.end",
                     "type": "dateTime"
-                },
-                {
-                    "name": "length_minutes",
-                    "path": "length.value",
-                    "type": "decimal"
-                },
-                {
-                    "name": "service_provider_id",
-                    "path": "serviceProvider.getReferenceKey(Organization)",
-                    "type": "id"
                 }
             ]
-        },
-        {
-            "column": [
-                {
-                    "name": "type_system",
-                    "path": "system",
-                    "type": "uri"
-                },
-                {
-                    "name": "type_code",
-                    "path": "code",
-                    "type": "code"
-                },
-                {
-                    "name": "type_display",
-                    "path": "display",
-                    "type": "string"
-                }
-            ],
-            "forEachOrNull": "type.coding"
-        },
-        {
-            "column": [
-                {
-                    "name": "diagnosis_condition_id",
-                    "path": "condition.getReferenceKey(Condition)",
-                    "type": "id"
-                },
-                {
-                    "name": "diagnosis_use_system",
-                    "path": "use.system",
-                    "type": "uri"
-                },
-                {
-                    "name": "diagnosis_use_code",
-                    "path": "use.code",
-                    "type": "code"
-                },
-                {
-                    "name": "diagnosis_rank",
-                    "path": "rank",
-                    "type": "positiveInt"
-                }
-            ],
-            "forEach": "diagnosis"
         }
     ]
 }
@@ -2004,38 +1371,16 @@ views using reference keys.
 result <- data_source %>% ds_view(
         resource = "Encounter",
         select = list(
-                # Basic encounter info  
                 list(
                         column = list(
-                                list(name = "encounter_id", path = "getResourceKey()", type = "id"),
-                                list(name = "patient_id", path = "subject.getReferenceKey(Patient)", type = "id"),
-                                list(name = "encounter_class_system", path = "class.system", type = "uri"),
-                                list(name = "encounter_class_code", path = "class.code", type = "code"),
-                                list(name = "encounter_status", path = "status", type = "code"),
+                                list(name = "encounter_id", path = "getResourceKey()"),
+                                list(name = "patient_id", path = "subject.reference"),
+                                list(name = "encounter_class_system", path = "class.system"),
+                                list(name = "encounter_class_code", path = "class.code"),
+                                list(name = "encounter_status", path = "status"),
                                 list(name = "period_start", path = "period.start", type = "dateTime"),
-                                list(name = "period_end", path = "period.end", type = "dateTime"),
-                                list(name = "length_minutes", path = "length.value", type = "decimal"),
-                                list(name = "service_provider_id", path = "serviceProvider.getReferenceKey(Organization)", type = "id")
+                                list(name = "period_end", path = "period.end", type = "dateTime")
                         )
-                ),
-                # Encounter types
-                list(
-                        column = list(
-                                list(name = "type_system", path = "system", type = "uri"),
-                                list(name = "type_code", path = "code", type = "code"),
-                                list(name = "type_display", path = "display", type = "string")
-                        ),
-                        forEachOrNull = "type.coding"
-                ),
-                # Diagnoses
-                list(
-                        column = list(
-                                list(name = "diagnosis_condition_id", path = "condition.getReferenceKey(Condition)", type = "id"),
-                                list(name = "diagnosis_use_system", path = "use.system", type = "uri"),
-                                list(name = "diagnosis_use_code", path = "use.code", type = "code"),
-                                list(name = "diagnosis_rank", path = "rank", type = "positiveInt")
-                        ),
-                        forEach = "diagnosis"
                 )
         )
 )
@@ -2048,51 +1393,17 @@ result <- data_source %>% ds_view(
 result = data_source.view(
     resource="Encounter",
     select=[
-        # Basic encounter info  
         {
             "column": [
-                {"name": "encounter_id", "path": "getResourceKey()",
-                 "type": "id"},
-                {"name": "patient_id",
-                 "path": "subject.getReferenceKey(Patient)", "type": "id"},
-                {"name": "encounter_class_system", "path": "class.system",
-                 "type": "uri"},
-                {"name": "encounter_class_code", "path": "class.code",
-                 "type": "code"},
-                {"name": "encounter_status", "path": "status", "type": "code"},
+                {"name": "encounter_id", "path": "getResourceKey()"},
+                {"name": "patient_id", "path": "subject.reference"},
+                {"name": "encounter_class_system", "path": "class.system"},
+                {"name": "encounter_class_code", "path": "class.code"},
+                {"name": "encounter_status", "path": "status"},
                 {"name": "period_start", "path": "period.start",
                  "type": "dateTime"},
-                {"name": "period_end", "path": "period.end",
-                 "type": "dateTime"},
-                {"name": "length_minutes", "path": "length.value",
-                 "type": "decimal"},
-                {"name": "service_provider_id",
-                 "path": "serviceProvider.getReferenceKey(Organization)",
-                 "type": "id"}
+                {"name": "period_end", "path": "period.end", "type": "dateTime"}
             ]
-        },
-        # Encounter types
-        {
-            "column": [
-                {"name": "type_system", "path": "system", "type": "uri"},
-                {"name": "type_code", "path": "code", "type": "code"},
-                {"name": "type_display", "path": "display", "type": "string"}
-            ],
-            "forEachOrNull": "type.coding"
-        },
-        # Diagnoses
-        {
-            "column": [
-                {"name": "diagnosis_condition_id",
-                 "path": "condition.getReferenceKey(Condition)", "type": "id"},
-                {"name": "diagnosis_use_system", "path": "use.system",
-                 "type": "uri"},
-                {"name": "diagnosis_use_code", "path": "use.code",
-                 "type": "code"},
-                {"name": "diagnosis_rank", "path": "rank",
-                 "type": "positiveInt"}
-            ],
-            "forEach": "diagnosis"
         }
     ]
 )
@@ -2113,72 +1424,37 @@ result = data_source.view(
         "code": "AMB",
         "display": "ambulatory"
     },
-    "type": [
-        {
-            "coding": [
-                {
-                    "system": "http://snomed.info/sct",
-                    "code": "185349003",
-                    "display": "Encounter for check up"
-                }
-            ]
-        }
-    ],
     "subject": {
         "reference": "Patient/patient-1"
     },
     "period": {
         "start": "2023-10-15T09:00:00Z",
         "end": "2023-10-15T10:30:00Z"
-    },
-    "length": {
-        "value": 90,
-        "unit": "min"
-    },
-    "serviceProvider": {
-        "reference": "Organization/org-1"
-    },
-    "diagnosis": [
-        {
-            "condition": {
-                "reference": "Condition/condition-1"
-            },
-            "use": {
-                "coding": [
-                    {
-                        "system": "http://terminology.hl7.org/CodeSystem/diagnosis-role",
-                        "code": "AD",
-                        "display": "Admission diagnosis"
-                    }
-                ]
-            },
-            "rank": 1
-        }
-    ]
+    }
 }
 ```
 
 **Expected output:**
 
-| encounter_id | patient_id | encounter_class_code | encounter_status | period_start        | period_end           | length_minutes | type_code | diagnosis_condition_id | diagnosis_rank |
-|--------------|------------|----------------------|------------------|---------------------|----------------------|----------------|-----------|------------------------|----------------|
-| enc-1        | patient-1  | AMB                  | finished         | 2023-10-15T09:00:00 | 2023-10-15T10:30: 00 | 90             | 185349003 | condition-1            | 1              |
+| encounter_id | patient_id        | encounter_class_system                           | encounter_class_code | encounter_status | period_start        | period_end          |
+|--------------|-------------------|--------------------------------------------------|----------------------|------------------|---------------------|---------------------|
+| enc-1        | Patient/patient-1 | http://terminology.hl7.org/CodeSystem/v3-ActCode | AMB                  | finished         | 2023-10-15T09:00:00 | 2023-10-15T10:30:00 |
 
 **Key features:**
 
-- Uses `getReferenceKey()` to extract IDs that can be used for joins
-- Shows how to handle encounter class (Coding datatype)
-- Demonstrates extracting period start/end dates
-- Uses `forEach` for diagnoses to create multiple rows per encounter
-- Shows extraction of reference IDs from various reference fields
+- Extracts basic encounter information using getResourceKey()
+- Uses subject.reference to get patient reference
+- Shows how to handle encounter class (Coding datatype) with system and code
+- Demonstrates extracting period start/end dates with dateTime type
+- Simplified approach without complex diagnosis handling or reference extraction
 
 ---
 
-### Conditional logic and complex expressions
+### Basic telecom extraction
 
-#### Patient risk stratification
+#### Patient telecom with boolean flag
 
-This example shows advanced FHIRPath expressions with conditional logic.
+This example demonstrates telecom field extraction with forEach.
 
 **View definition (JSON):**
 
@@ -2192,42 +1468,27 @@ This example shows advanced FHIRPath expressions with conditional logic.
                 {
                     "name": "patient_id",
                     "path": "getResourceKey()"
+                }
+            ]
+        },
+        {
+            "forEach": "telecom",
+            "column": [
+                {
+                    "name": "system",
+                    "path": "system"
                 },
                 {
-                    "name": "age_years",
-                    "path": "(today() - birthDate).days() / 365.25",
-                    "type": "decimal"
+                    "name": "value",
+                    "path": "value"
                 },
                 {
-                    "name": "age_category",
-                    "path": "iif((today() - birthDate).days() / 365.25 < 18, 'pediatric', iif((today() - birthDate).days() / 365.25 < 65, 'adult', 'geriatric'))",
-                    "type": "string",
-                    "description": "Age-based risk category"
+                    "name": "use",
+                    "path": "use"
                 },
                 {
                     "name": "has_phone",
-                    "path": "telecom.where(system = 'phone').exists()",
-                    "type": "boolean"
-                },
-                {
-                    "name": "has_email",
-                    "path": "telecom.where(system = 'email').exists()",
-                    "type": "boolean"
-                },
-                {
-                    "name": "contact_score",
-                    "path": "telecom.where(system = 'phone').count() + telecom.where(system = 'email').count()",
-                    "type": "integer",
-                    "description": "Simple contact method availability score"
-                },
-                {
-                    "name": "primary_language",
-                    "path": "communication.where(preferred = true).language.coding.where(system = 'urn:ietf:bcp:47').code.first()",
-                    "type": "code"
-                },
-                {
-                    "name": "deceased_flag",
-                    "path": "deceased.exists()",
+                    "path": "system = 'phone'",
                     "type": "boolean"
                 }
             ]
@@ -2245,20 +1506,16 @@ result <- data_source %>% ds_view(
         select = list(
                 list(
                         column = list(
-                                list(name = "patient_id", path = "getResourceKey()"),
-                                list(name = "age_years", path = "(today() - birthDate).days() / 365.25", type = "decimal"),
-                                list(name = "age_category",
-                                     path = "iif((today() - birthDate).days() / 365.25 < 18, 'pediatric', iif((today() - birthDate).days() / 365.25 < 65, 'adult', 'geriatric'))",
-                                     type = "string"),
-                                list(name = "has_phone", path = "telecom.where(system = 'phone').exists()", type = "boolean"),
-                                list(name = "has_email", path = "telecom.where(system = 'email').exists()", type = "boolean"),
-                                list(name = "contact_score",
-                                     path = "telecom.where(system = 'phone').count() + telecom.where(system = 'email').count()",
-                                     type = "integer"),
-                                list(name = "primary_language",
-                                     path = "communication.where(preferred = true).language.coding.where(system = 'urn:ietf:bcp:47').code.first()",
-                                     type = "code"),
-                                list(name = "deceased_flag", path = "deceased.exists()", type = "boolean")
+                                list(name = "patient_id", path = "getResourceKey()")
+                        )
+                ),
+                list(
+                        forEach = "telecom",
+                        column = list(
+                                list(name = "system", path = "system"),
+                                list(name = "value", path = "value"),
+                                list(name = "use", path = "use"),
+                                list(name = "has_phone", path = "system = 'phone'", type = "boolean")
                         )
                 )
         )
@@ -2274,26 +1531,16 @@ result = data_source.view(
     select=[
         {
             "column": [
-                {"name": "patient_id", "path": "getResourceKey()"},
-                {"name": "age_years",
-                 "path": "(today() - birthDate).days() / 365.25",
-                 "type": "decimal"},
-                {"name": "age_category",
-                 "path": "iif((today() - birthDate).days() / 365.25 < 18, 'pediatric', iif((today() - birthDate).days() / 365.25 < 65, 'adult', 'geriatric'))",
-                 "type": "string"},
-                {"name": "has_phone",
-                 "path": "telecom.where(system = 'phone').exists()",
-                 "type": "boolean"},
-                {"name": "has_email",
-                 "path": "telecom.where(system = 'email').exists()",
-                 "type": "boolean"},
-                {"name": "contact_score",
-                 "path": "telecom.where(system = 'phone').count() + telecom.where(system = 'email').count()",
-                 "type": "integer"},
-                {"name": "primary_language",
-                 "path": "communication.where(preferred = true).language.coding.where(system = 'urn:ietf:bcp:47').code.first()",
-                 "type": "code"},
-                {"name": "deceased_flag", "path": "deceased.exists()",
+                {"name": "patient_id", "path": "getResourceKey()"}
+            ]
+        },
+        {
+            "forEach": "telecom",
+            "column": [
+                {"name": "system", "path": "system"},
+                {"name": "value", "path": "value"},
+                {"name": "use", "path": "use"},
+                {"name": "has_phone", "path": "system = 'phone'",
                  "type": "boolean"}
             ]
         }
@@ -2310,7 +1557,6 @@ result = data_source.view(
 {
     "resourceType": "Patient",
     "id": "patient-1",
-    "birthDate": "1975-08-20",
     "telecom": [
         {
             "system": "phone",
@@ -2322,37 +1568,23 @@ result = data_source.view(
             "value": "patient@email.com",
             "use": "home"
         }
-    ],
-    "communication": [
-        {
-            "language": {
-                "coding": [
-                    {
-                        "system": "urn:ietf:bcp:47",
-                        "code": "en-US",
-                        "display": "English (United States)"
-                    }
-                ]
-            },
-            "preferred": true
-        }
     ]
 }
 ```
 
 **Expected output:**
 
-| patient_id | age_years | age_category | has_phone | has_email | contact_score | primary_language | deceased_flag |
-|------------|-----------|--------------|-----------|-----------|---------------|------------------|---------------|
-| patient-1  | 49.0      | adult        | true      | true      | 2             | en-US            | false         |
+| patient_id | system | value | use | has_phone |
+|------------|--------|---------------------|------|-----------||
+| patient-1 | phone | +1-617-555-1234 | home | true |
+| patient-1 | email | patient@email.com | home | false |
 
 **Key features:**
 
-- Uses `iif()` (immediate if) for conditional logic
-- Demonstrates date arithmetic for age calculation
-- Shows counting and aggregation within expressions
-- Uses `exists()` function for boolean flags
-- Complex navigation through communication preferences
+- Uses `forEach` to create multiple rows for each telecom entry
+- Demonstrates basic telecom field extraction using getResourceKey()
+- Shows boolean expression evaluation with `system = 'phone'`
+- Simplified approach focusing on basic telecom iteration and boolean flags
 
 ---
 
