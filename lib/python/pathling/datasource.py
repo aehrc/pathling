@@ -57,7 +57,7 @@ class DataSource(SparkConversionsMixin):
         
         :return: A list of strings representing the resource types.
         """
-        return [r.toCode() for r in self._jds.getResourceTypes()]
+        return list(self._jds.getResourceTypes())
 
     @property
     def write(self) -> "DataSinks":
