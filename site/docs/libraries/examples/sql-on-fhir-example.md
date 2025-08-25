@@ -9,22 +9,56 @@ description: Example of running SQL on FHIR queries using the Pathling libraries
 This is a worked example that demonstrates how to use SQL on FHIR views to a set
 of risk factors for prostate cancer from FHIR data.
 
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+<!--suppress CheckEmptyScriptTag -->
+<Tabs>
+<TabItem value="python" label="Python">
+
 ```python
 from pathling import PathlingContext
 from pyspark.sql.functions import to_date, to_timestamp, round, min, nth_value
 from pyspark.sql.window import Window
 ```
 
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(pathling)
+library(sparklyr)
+library(dplyr)
+```
+
+</TabItem>
+</Tabs>
+
 As a first step, we will initialise the Pathling context.
 
 You can call this with no arguments and it will either create a new Spark
 session with some sensible defaults, or pick up an existing Spark session.
+
+<Tabs>
+<TabItem value="python" label="Python">
 
 ```python
 pc = PathlingContext.create()
 pc.spark.sql("CREATE SCHEMA IF NOT EXISTS paper_lg")
 pc.spark.catalog.setCurrentDatabase("paper_lg")
 ```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+pc <- pathling_connect()
+DBI::dbExecute(pc, "CREATE SCHEMA IF NOT EXISTS paper_lg")
+DBI::dbExecute(pc, "USE paper_lg")
+```
+
+</TabItem>
+</Tabs>
 
 # Read data from tables
 
@@ -36,15 +70,41 @@ approximately 10,000 patients.
 The object returned is a "data source", which contains each of the data frames
 that have been encoded, as well as methods to run queries over them.
 
+<Tabs>
+<TabItem value="python" label="Python">
+
 ```python
 data = pc.read.tables()
 ```
 
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+data <- pc %>% pathling_from_tables()
+```
+
+</TabItem>
+</Tabs>
+
 Here are the resources that are contained within our new data source:
+
+<Tabs>
+<TabItem value="python" label="Python">
 
 ```python
 data.resource_types()
 ```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+data %>% ds_resource_types()
+```
+
+</TabItem>
+</Tabs>
 
 ```
     ['Condition',
@@ -70,6 +130,9 @@ data.resource_types()
 
 Here are the row counts for some of the resources:
 
+<Tabs>
+<TabItem value="python" label="Python">
+
 ```python
 data.read('Patient').count()
 ```
@@ -93,6 +156,36 @@ data.read('Condition').count()
 ```
     373288
 ```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+data %>% ds_read('Patient') %>% sdf_nrow()
+```
+
+```
+    11515
+```
+
+```r
+data %>% ds_read('Observation') %>% sdf_nrow()
+```
+
+```
+    2881995
+```
+
+```r
+data %>% ds_read('Condition') %>% sdf_nrow()
+```
+
+```
+    373288
+```
+
+</TabItem>
+</Tabs>
 
 # Prostate cancer risk factors
 
@@ -146,6 +239,9 @@ Postal code returns multiple values, as a patient can have more than one
 address. In this example we have chosen to keep this as an array, by setting the
 `collection` element to `true`.
 
+<Tabs>
+<TabItem value="python" label="Python">
+
 ```python
 patients = data.view(
     "Patient",
@@ -179,9 +275,60 @@ patients = data.view(
 )
 ```
 
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+patients <- data %>%
+        ds_view(
+                "Patient",
+                select = list(
+                        column = list(
+                                list(
+                                        description = "Patient ID",
+                                        path = "getResourceKey()",
+                                        name = "id"
+                                ),
+                                list(
+                                        description = "Birth date",
+                                        path = "birthDate",
+                                        name = "birth_date"
+                                ),
+                                list(
+                                        description = "Postal code",
+                                        path = "address.postalCode",
+                                        name = "postal_code",
+                                        collection = TRUE
+                                ),
+                                list(
+                                        description = "Deceased time",
+                                        path = "deceased.ofType(dateTime)",
+                                        name = "deceased"
+                                )
+                        )
+                )
+        )
+```
+
+</TabItem>
+</Tabs>
+
+<Tabs>
+<TabItem value="python" label="Python">
+
 ```python
 patients.show(10, truncate=False)
 ```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+patients %>% head(10) %>% collect()
+```
+
+</TabItem>
+</Tabs>
 
 | id                                           | birth_date | postal_code | deceased                  |
 |----------------------------------------------|------------|-------------|---------------------------|
@@ -209,6 +356,9 @@ This view will provide the following data elements:
 
 The view will be filtered to only total cholesterol observations that exceed 240
 mg/dL.
+
+<Tabs>
+<TabItem value="python" label="Python">
 
 ```python
 cholesterol = data.view(
@@ -273,9 +423,92 @@ cholesterol = data.view(
 )
 ```
 
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+cholesterol <- data %>%
+        ds_view(
+                "Observation",
+                select = list(
+                        column = list(
+                                list(
+                                        description = "Observation ID",
+                                        path = "getResourceKey()",
+                                        name = "id"
+                                ),
+                                list(
+                                        description = "Patient ID",
+                                        path = "subject.getReferenceKey()",
+                                        name = "patient_id"
+                                ),
+                                list(
+                                        description = "Observation date",
+                                        path = "effective.ofType(dateTime)",
+                                        name = "date"
+                                )
+                        ),
+                        select = list(
+                                list(
+                                        forEach = "code.coding",
+                                        column = list(
+                                                list(
+                                                        description = "Observation code",
+                                                        path = "code",
+                                                        name = "code"
+                                                )
+                                        )
+                                ),
+                                list(
+                                        forEach = "value.ofType(Quantity)",
+                                        column = list(
+                                                list(
+                                                        description = "Total cholesterol unit",
+                                                        path = "unit",
+                                                        name = "unit"
+                                                ),
+                                                list(
+                                                        description = "Total cholesterol value",
+                                                        path = "value",
+                                                        name = "value"
+                                                )
+                                        )
+                                )
+                        )
+                ),
+                where = list(
+                        list(
+                                description = "Total cholesterol > 240 mg/dL",
+                                path = paste0(
+                                        "where(code.coding.exists(system = 'http://loinc.org'",
+                                        "and code = '2093-3'))",
+                                        ".value.ofType(Quantity).where(code = 'mg/dL')",
+                                        ".value > 240"
+                                )
+                        )
+                )
+        )
+```
+
+</TabItem>
+</Tabs>
+
+<Tabs>
+<TabItem value="python" label="Python">
+
 ```python
 cholesterol.show(10, truncate=False)
 ```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+cholesterol %>% head(10) %>% collect()
+```
+
+</TabItem>
+</Tabs>
 
 | id                                               | patient_id                                   | date                      | code   | unit  | value  |
 |--------------------------------------------------|----------------------------------------------|---------------------------|--------|-------|--------|
@@ -307,6 +540,9 @@ One of the nice things about the Pathling implementation is that the encoding
 process includes canonicalisation of UCUM units. This means that the comparison
 of total cholesterol values in this query will also pick up observations that
 were made with different but comparable units, such as mg/dL.
+
+<Tabs>
+<TabItem value="python" label="Python">
 
 ```python
 bmi = data.view(
@@ -371,9 +607,92 @@ bmi = data.view(
 )
 ```
 
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+bmi <- data %>%
+        ds_view(
+                "Observation",
+                select = list(
+                        column = list(
+                                list(
+                                        description = "Observation ID",
+                                        path = "getResourceKey()",
+                                        name = "id"
+                                ),
+                                list(
+                                        description = "Patient ID",
+                                        path = "subject.getReferenceKey()",
+                                        name = "patient_id"
+                                ),
+                                list(
+                                        description = "Observation date",
+                                        path = "effective.ofType(dateTime)",
+                                        name = "date"
+                                )
+                        ),
+                        select = list(
+                                list(
+                                        forEach = "code.coding",
+                                        column = list(
+                                                list(
+                                                        description = "Observation code",
+                                                        path = "code",
+                                                        name = "code"
+                                                )
+                                        )
+                                ),
+                                list(
+                                        forEach = "value.ofType(Quantity)",
+                                        column = list(
+                                                list(
+                                                        description = "BMI unit",
+                                                        path = "unit",
+                                                        name = "unit"
+                                                ),
+                                                list(
+                                                        description = "BMI value",
+                                                        path = "value",
+                                                        name = "value"
+                                                )
+                                        )
+                                )
+                        )
+                ),
+                where = list(
+                        list(
+                                description = "BMI > 30 kg/m2",
+                                path = paste0(
+                                        "where(code.coding.exists(system = 'http://loinc.org'",
+                                        "and code = '39156-5'))",
+                                        ".value.ofType(Quantity).where(code = 'kg/m2')",
+                                        ".value > 30"
+                                )
+                        )
+                )
+        )
+```
+
+</TabItem>
+</Tabs>
+
+<Tabs>
+<TabItem value="python" label="Python">
+
 ```python
 bmi.show(10, truncate=False)
 ```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+bmi %>% head(10) %>% collect()
+```
+
+</TabItem>
+</Tabs>
 
 | id                                               | patient_id                                   | date                      | code    | unit  | value |
 |--------------------------------------------------|----------------------------------------------|---------------------------|---------|-------|-------|
@@ -398,6 +717,9 @@ This view will provide the following data elements:
 - Condition code
 
 The view will be filtered to only prostate cancer diagnoses.
+
+<Tabs>
+<TabItem value="python" label="Python">
 
 ```python
 prostate_cancer_diagnoses = data.view(
@@ -438,9 +760,70 @@ prostate_cancer_diagnoses = data.view(
 )
 ```
 
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+prostate_cancer_diagnoses <- data %>%
+        ds_view(
+                "Condition",
+                select = list(
+                        column = list(
+                                list(
+                                        description = "Condition ID",
+                                        path = "getResourceKey()",
+                                        name = "id"
+                                ),
+                                list(
+                                        description = "Patient ID",
+                                        path = "subject.getReferenceKey()",
+                                        name = "patient_id"
+                                ),
+                                list(
+                                        description = "SNOMED CT diagnosis code",
+                                        path = "code.coding.where(system = 'http://snomed.info/sct').code",
+                                        name = "sct_id"
+                                ),
+                                list(
+                                        description = "Date of onset",
+                                        path = "onsetDateTime",
+                                        name = "onset"
+                                )
+                        )
+                ),
+                where = list(
+                        list(
+                                description = "Neoplasm of prostate",
+                                path = paste0(
+                                        "code.coding.exists(system = 'http://snomed.info/sct'",
+                                        "and code = '126906006')"
+                                )
+                        )
+                )
+        )
+```
+
+</TabItem>
+</Tabs>
+
+<Tabs>
+<TabItem value="python" label="Python">
+
 ```python
 prostate_cancer_diagnoses.show(10, truncate=False)
 ```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+prostate_cancer_diagnoses %>%
+        head(10) %>%
+        collect()
+```
+
+</TabItem>
+</Tabs>
 
 | id                                             | patient_id                                   | sct_id    | onset                     |
 |------------------------------------------------|----------------------------------------------|-----------|---------------------------|
@@ -463,6 +846,9 @@ to create our final view.
 First we will create a new column on the prostate cancer diagnosis view to get
 the first date of diagnosis (as there could be multiple).
 
+<Tabs>
+<TabItem value="python" label="Python">
+
 ```python
 prostate_cancer_diagnoses = prostate_cancer_diagnoses.withColumn(
     "latest_onset",
@@ -472,6 +858,23 @@ prostate_cancer_diagnoses = prostate_cancer_diagnoses.withColumn(
 )
 prostate_cancer_diagnoses.show(10, truncate=False)
 ```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+prostate_cancer_diagnoses <- prostate_cancer_diagnoses %>%
+        group_by(patient_id) %>%
+        mutate(latest_onset = min(as_datetime(onset))) %>%
+        ungroup()
+
+prostate_cancer_diagnoses %>%
+        head(10) %>%
+        collect()
+```
+
+</TabItem>
+</Tabs>
 
 | id                                             | patient_id                                   | sct_id    | onset                     | latest_onset        |
 |------------------------------------------------|----------------------------------------------|-----------|---------------------------|---------------------|
@@ -488,6 +891,9 @@ prostate_cancer_diagnoses.show(10, truncate=False)
 
 Then we can join the diagnosis view to the patient demographics.
 
+<Tabs>
+<TabItem value="python" label="Python">
+
 ```python
 patient_diagnoses = patients.join(
     prostate_cancer_diagnoses,
@@ -496,6 +902,22 @@ patient_diagnoses = patients.join(
 )
 patient_diagnoses.show(10, truncate=False)
 ```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+patient_diagnoses <- patients %>%
+        inner_join(
+                prostate_cancer_diagnoses,
+                by = c("id" = "patient_id")
+        )
+
+patient_diagnoses %>% head(10) %>% collect()
+```
+
+</TabItem>
+</Tabs>
 
 | id                                           | birth_date | postal_code | deceased                  | id                                             | patient_id                                   | sct_id    | onset                     | latest_onset        |
 |----------------------------------------------|------------|-------------|---------------------------|------------------------------------------------|----------------------------------------------|-----------|---------------------------|---------------------|
@@ -514,6 +936,9 @@ For the hyperlipidemia view, the first thing we will do is join it to the
 patient details and diagnoses - but limiting the target rows to only those
 observed before the date of diagnosis.
 
+<Tabs>
+<TabItem value="python" label="Python">
+
 ```python
 cholesterol = cholesterol.withColumn("timestamp",
                                      to_timestamp(cholesterol.date))
@@ -525,8 +950,29 @@ with_cholesterol = (patient_diagnoses.join(
 ))
 ```
 
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+cholesterol <- cholesterol %>%
+        mutate(timestamp = as_datetime(date))
+
+with_cholesterol <- patient_diagnoses %>%
+        left_join(
+                cholesterol,
+                by = c("patient_id" = "patient_id"),
+                sql_on = "patient_diagnoses.latest_onset > cholesterol.timestamp"
+        )
+```
+
+</TabItem>
+</Tabs>
+
 Then we will add new columns to the table to get the latest cholesterol
 observation date and value for each patient (prior to the diagnosis).
+
+<Tabs>
+<TabItem value="python" label="Python">
 
 ```python
 window = Window.partitionBy(patient_diagnoses.patient_id).orderBy(
@@ -543,8 +989,29 @@ with_cholesterol = with_cholesterol.withColumn(
 )
 ```
 
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+with_cholesterol <- with_cholesterol %>%
+        group_by(patient_id) %>%
+        arrange(desc(timestamp)) %>%
+        mutate(
+                latest_cholesterol_date = first(timestamp),
+                latest_cholesterol_value = first(value),
+                latest_cholesterol_unit = first(unit)
+        ) %>%
+        ungroup()
+```
+
+</TabItem>
+</Tabs>
+
 Then we will select just the columns we need so far, ready for joining to the
 BMI view.
+
+<Tabs>
+<TabItem value="python" label="Python">
 
 ```python
 with_cholesterol = with_cholesterol.select(
@@ -559,8 +1026,31 @@ with_cholesterol = with_cholesterol.select(
 )
 ```
 
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+with_cholesterol <- with_cholesterol %>%
+        select(
+                patient_id = id,
+                birth_date,
+                postal_code,
+                deceased,
+                prostate_cancer_onset = latest_onset,
+                latest_cholesterol_date,
+                latest_cholesterol_value,
+                latest_cholesterol_unit
+        )
+```
+
+</TabItem>
+</Tabs>
+
 We'll do something similar with the BMI to the cholesterol - joining only to
 prior observations.
+
+<Tabs>
+<TabItem value="python" label="Python">
 
 ```python
 bmi = bmi.withColumn("timestamp", to_timestamp(bmi.date))
@@ -572,8 +1062,29 @@ with_bmi = (with_cholesterol.join(
 ))
 ```
 
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+bmi <- bmi %>%
+        mutate(timestamp = as_datetime(date))
+
+with_bmi <- with_cholesterol %>%
+        left_join(
+                bmi,
+                by = c("patient_id" = "patient_id"),
+                sql_on = "with_cholesterol.prostate_cancer_onset > bmi.timestamp"
+        )
+```
+
+</TabItem>
+</Tabs>
+
 And then we'll add new columns to get the latest BMI observation date and value
 for each patient (prior to the diagnosis).
+
+<Tabs>
+<TabItem value="python" label="Python">
 
 ```python
 window = Window.partitionBy(with_cholesterol.patient_id).orderBy(
@@ -590,7 +1101,28 @@ with_bmi = with_bmi.withColumn(
 )
 ```
 
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+with_bmi <- with_bmi %>%
+        group_by(patient_id) %>%
+        arrange(desc(timestamp)) %>%
+        mutate(
+                latest_bmi_date = first(timestamp),
+                latest_bmi_value = first(value),
+                latest_bmi_unit = first(unit)
+        ) %>%
+        ungroup()
+```
+
+</TabItem>
+</Tabs>
+
 The view can be finished off with a final selection of the desired columns.
+
+<Tabs>
+<TabItem value="python" label="Python">
 
 ```python
 result = with_bmi.select(
@@ -607,6 +1139,32 @@ result = with_bmi.select(
     with_bmi.latest_cholesterol_unit.alias("total_cholesterol_unit"),
 )
 ```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+result <- with_bmi %>%
+        select(
+                patient_id,
+                birth_date = as_date(birth_date),
+                postal_code,
+                deceased,
+                prostate_cancer_onset,
+                high_bmi_observed = latest_bmi_date,
+                bmi_value = round(latest_bmi_value, 2),
+                bmi_unit = latest_bmi_unit,
+                hyperlipidemia_observed = latest_cholesterol_date,
+                total_cholesterol_value = latest_cholesterol_value,
+                total_cholesterol_unit = latest_cholesterol_unit
+        )
+```
+
+</TabItem>
+</Tabs>
+
+<Tabs>
+<TabItem value="python" label="Python">
 
 ```python
 result.printSchema()
@@ -631,6 +1189,35 @@ result.printSchema()
 ```python
 result.show(10, truncate=False)
 ```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+result %>% glimpse()
+```
+
+```
+Columns: 11
+$ patient_id                <chr>
+$ birth_date                <date>
+$ postal_code               <list>
+$ deceased                  <chr>
+$ prostate_cancer_onset     <dttm>
+$ high_bmi_observed         <dttm>
+$ bmi_value                 <dbl>
+$ bmi_unit                  <chr>
+$ hyperlipidemia_observed   <dttm>
+$ total_cholesterol_value   <chr>
+$ total_cholesterol_unit    <chr>
+```
+
+```r
+result %>% head(10) %>% collect()
+```
+
+</TabItem>
+</Tabs>
 
 | patient_id                                   | birth_date | postal_code | deceased                  | prostate_cancer_onset | high_bmi_observed   | bmi_value | bmi_unit | hyperlipidemia_observed | total_cholesterol_value | total_cholesterol_unit |
 |----------------------------------------------|------------|-------------|---------------------------|-----------------------|---------------------|-----------|----------|-------------------------|-------------------------|------------------------|
