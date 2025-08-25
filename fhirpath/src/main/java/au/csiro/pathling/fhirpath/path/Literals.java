@@ -223,8 +223,8 @@ public class Literals {
   public static LiteralPath quantityLiteral(@Nonnull final String literalValue,
       @Nonnull final String unit, final boolean isUCUM) {
     return isUCUM
-           ? calendarDurationLiteral(String.format("%s %s", literalValue, unit))
-           : ucumQuantityLiteral(String.format("%s %s", literalValue, unit));
+           ? ucumQuantityLiteral(String.format("%s %s", literalValue, unit))
+           : calendarDurationLiteral(String.format("%s %s", literalValue, unit));
   }
 
   /**
