@@ -273,3 +273,121 @@ jobs:
         with:
           name: python-wheel
           path: lib/python/target/py-dist/pathling-*.whl
+
+  upload-to-dap:
+    name: Upload source code to CSIRO DAP
+    environment: csiro-dap
+    runs-on: ubuntu-latest
+    needs: [release-maven, release-pypi]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download source code ZIP from release
+        run: |
+          gh release download ${{ github.ref_name }} --pattern "*.zip" || echo "No zip file found in release"
+          # If no zip file exists in the release, create one from the source
+          if [ ! -f *.zip ]; then
+            zip -r pathling-${{ github.ref_name }}-source.zip . \
+              -x "*.git*" "*/target/*" "*/.m2/*" "*/node_modules/*" "*/__pycache__/*" "*.pyc"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to CSIRO DAP
+        run: |
+          # Get the data collection ID for csiro:49524
+          echo "Getting collection information for csiro:49524..."
+          COLLECTION_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.DAP_API_TOKEN }}" \
+            "https://data.csiro.au/dap/api/v2/my-collections")
+          
+          # Find the collection with PID csiro:49524
+          COLLECTION_ID=$(echo "$COLLECTION_RESPONSE" | jq -r '.[] | select(.dataCollectionPid == "csiro:49524") | .dataCollectionId')
+          
+          if [ "$COLLECTION_ID" = "null" ] || [ -z "$COLLECTION_ID" ]; then
+            echo "Collection csiro:49524 not found or not accessible"
+            exit 1
+          fi
+          
+          echo "Found collection ID: $COLLECTION_ID"
+          
+          # Create a new version of the collection
+          echo "Creating new version of collection..."
+          UPDATE_RESPONSE=$(curl -s -X POST -H "Authorization: Bearer ${{ secrets.DAP_API_TOKEN }}" \
+            "https://data.csiro.au/dap/api/v2/collections/$COLLECTION_ID/update")
+          
+          NEW_COLLECTION_ID=$(echo "$UPDATE_RESPONSE" | jq -r '.dataCollectionId')
+          
+          if [ "$NEW_COLLECTION_ID" = "null" ] || [ -z "$NEW_COLLECTION_ID" ]; then
+            echo "Failed to create new version of collection"
+            echo "Response: $UPDATE_RESPONSE"
+            exit 1
+          fi
+          
+          echo "Created new collection version with ID: $NEW_COLLECTION_ID"
+          
+          # Unlock files for modification
+          echo "Unlocking files for modification..."
+          curl -s -X POST -H "Authorization: Bearer ${{ secrets.DAP_API_TOKEN }}" \
+            "https://data.csiro.au/dap/api/v2/collections/$NEW_COLLECTION_ID/files/unlock"
+          
+          # Wait for files to be unlocked
+          echo "Waiting for files to be unlocked..."
+          while true; do
+            sleep 10
+            FILE_STATE=$(curl -s -H "Authorization: Bearer ${{ secrets.DAP_API_TOKEN }}" \
+              "https://data.csiro.au/dap/api/v2/collections/$NEW_COLLECTION_ID/files/fileState")
+            echo "File state: $FILE_STATE"
+            if [ "$FILE_STATE" = "unlocked" ]; then
+              break
+            fi
+            if [ "$FILE_STATE" = "error" ]; then
+              echo "Error unlocking files"
+              exit 1
+            fi
+          done
+          
+          # Upload the source code zip file
+          echo "Uploading source code zip file..."
+          ZIP_FILE=$(ls *.zip | head -n 1)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "No zip file found to upload"
+            exit 1
+          fi
+          
+          echo "Uploading file: $ZIP_FILE"
+          
+          # Get presigned URL for upload
+          UPLOAD_URL=$(curl -s -H "Authorization: Bearer ${{ secrets.DAP_API_TOKEN }}" \
+            "https://data.csiro.au/dap/api/v2/collections/$NEW_COLLECTION_ID/s3uploadurl?path=/$ZIP_FILE")
+          
+          # Upload file using presigned URL
+          curl -X PUT --upload-file "$ZIP_FILE" "$UPLOAD_URL"
+          
+          echo "File uploaded successfully"
+          
+          # Validate the collection
+          echo "Validating collection..."
+          VALIDATION_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.DAP_API_TOKEN }}" \
+            "https://data.csiro.au/dap/api/v2/collections/$NEW_COLLECTION_ID/validate")
+          
+          echo "Validation response: $VALIDATION_RESPONSE"
+          
+          # Check if validation passed
+          VALIDATION_ERRORS=$(echo "$VALIDATION_RESPONSE" | jq -r '.errors // []')
+          if [ "$VALIDATION_ERRORS" != "[]" ] && [ "$VALIDATION_ERRORS" != "null" ]; then
+            echo "Validation errors found: $VALIDATION_ERRORS"
+            exit 1
+          fi
+          
+          # Submit collection for publication (bypass approval if possible)
+          echo "Submitting collection for publication..."
+          SUBMIT_PAYLOAD='{"approver": null, "businessUnit": null, "notesToApprover": null, "supportingFilesForApprover": []}'
+          
+          curl -s -X POST -H "Authorization: Bearer ${{ secrets.DAP_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "$SUBMIT_PAYLOAD" \
+            "https://data.csiro.au/dap/api/v2/collections/$NEW_COLLECTION_ID/submit"
+          
+          echo "Collection submitted for publication"
+        timeout-minutes: 60
