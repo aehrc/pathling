@@ -131,3 +131,7 @@ The result of this query would look something like this:
 | 3          | 442 Bruen Arcade           | home | Nantucket  | NULL  |
 | 4          | 858 Miller Junction Apt 61 | work | Brockton   | 02301 |
 
+For a more comprehensive example demonstrating SQL on FHIR queries with multiple
+views, complex transformations and joins, see
+the [SQL on FHIR example](examples/sql-on-fhir-example.md).
+
