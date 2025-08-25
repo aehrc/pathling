@@ -17,10 +17,9 @@ import os
 from tempfile import TemporaryDirectory
 
 from flask import Response
-from pyspark.sql import Row, DataFrame
-from pytest import fixture
-
 from pathling.datasource import DataSource
+from pyspark.sql import DataFrame, Row
+from pytest import fixture
 
 
 @fixture(scope="function", autouse=True)
@@ -290,3 +289,21 @@ def parquet_query(data_source: DataSource) -> DataFrame:
 
 def delta_query(data_source: DataSource) -> DataFrame:
     return ndjson_query(data_source)
+
+
+def test_datasource_resource_types(ndjson_test_data_dir, pathling_ctx):
+    """Test that resource_types() returns a list of strings."""
+    data_source = pathling_ctx.read.ndjson(ndjson_test_data_dir)
+    
+    # Call the resource_types method.
+    resource_types = data_source.resource_types()
+    
+    # Verify it returns a list.
+    assert isinstance(resource_types, list)
+    
+    # Verify the list contains strings.
+    assert all(isinstance(rt, str) for rt in resource_types)
+    
+    # Verify expected resource types are present.
+    assert "Patient" in resource_types
+    assert "Condition" in resource_types
