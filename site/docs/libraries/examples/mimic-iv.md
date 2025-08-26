@@ -4,18 +4,20 @@ title: MIMIC-IV
 description: Examples of running queries over the MIMIC-IV on FHIR dataset using the Pathling libraries.
 ---
 
-# Querying MIMIC-IV data with Pathling: A data preparation walkthrough
+# Querying MIMIC-IV data
 
 This article demonstrates how to extract and prepare clinical data from MIMIC-IV
 using Pathling. We use
-a [clinical research study on oxygen supplementation differences](https://jamanetwork.com/journals/jamainternalmedicine/fullarticle/2794196)
-between racial groups as our example, focusing on the data preparation steps
-that transform raw healthcare records into analysis-ready datasets.
+a [clinical study](https://jamanetwork.com/journals/jamainternalmedicine/fullarticle/2794196)
+on oxygen supplementation differences between racial groups as our example,
+focusing on the data preparation steps that transform raw healthcare records
+into analysis-ready datasets.
 
 This work was originally published as part of the
 paper [SQL on FHIR - Tabular views of FHIR data using FHIRPath](https://www.nature.com/articles/s41746-025-01708-w)
-published in npj Digital Medicine. The full code is available in the
-[aehrc/sql-on-fhir-evaluation](https://github.com/aehrc/sql-on-fhir-evaluation)
+published in [npj Digital Medicine](https://www.nature.com/npjdigitalmed/). The
+full code is available in
+the [aehrc/sql-on-fhir-evaluation](https://github.com/aehrc/sql-on-fhir-evaluation)
 repository.
 
 ## Introduction
@@ -54,53 +56,33 @@ data = pc.read.ndjson(
 
 ### Layered data transformation
 
-The data extraction process works in stages, each building on the previous one:
+import MimicIv from '@site/src/images/mimic-iv.png';
+import MimicIv2x from '@site/src/images/mimic-iv@2x.png';
+import MimicIvDark from '@site/src/images/mimic-iv-dark.png';
+import MimicIvDark2x from '@site/src/images/mimic-iv-dark@2x.png';
 
-```
-Healthcare Records (FHIR format)
-         ↓
-Basic Data Views (extract raw values)
-         ↓
-Standardised Views (clean and format data)
-         ↓
-Clinical Concept Views (create familiar medical measures)
-         ↓
-Study-specific Views (filter for research questions)
-         ↓
-Analysis-ready Tables (CSV files)
-```
+<img srcset={`${MimicIv2x} 2x, ${MimicIv} 1x`} title="Views used to transform
+raw FHIR data into tables ready for analysis" className="light-mode-only"
+width="800" />
+<img srcset={`${MimicIvDark2x} 2x, ${MimicIvDark} 1x`} title="Views used to
+transform raw FHIR data into tables ready for analysis" className="
+dark-mode-only" width="800" />
 
-Each layer serves a distinct purpose:
+Data is first extracted into a set of intermediate views using SQL on FHIR view
+definitions. These views extract all relevant elements from the FHIR data.
 
-1. **Basic Data Views**: Extract individual data points from complex medical
-   records
-2. **Standardised Views**: Ensure consistent data types and formatting across
-   systems
-3. **Clinical Concept Views**: Combine related measurements into recognisable
-   clinical measures (e.g., vital signs, blood gases)
-4. **Study-specific Views**: Select and filter data relevant to specific
-   research questions
-5. **Analysis-ready Tables**: Export clean data tables ready for statistical
-   analysis
+Next, related measurements are combined into clinical concepts such as vital
+signs and oxygen delivery using SQL transformations.
 
-### Why use this layered approach?
+## SQL on FHIR views
 
-This systematic approach provides several advantages:
+The first step is to define SQL on FHIR views that extract relevant data from
+the FHIR resources. Each view corresponds to a FHIR resource type and includes
+only the fields needed for the analysis.
 
-- **Clarity**: Each step has a clear, single purpose
-- **Reusability**: Early layers can support multiple different research projects
-- **Maintenance**: Changes to data formats only require updates to the
-  appropriate layer
-- **Quality control**: Each layer provides an opportunity to validate and clean
-  the data
-- **Familiarity**: Final layers produce data structures that match what
-  researchers expect from traditional medical databases
-
-## Basic data views: Extracting clinical information from FHIR
-
-The first layer extracts specific pieces of information from the complex
-healthcare record format. Each view focuses on one type of clinical data. Let's
-examine all six views used in our oxygen supplementation study.
+The view definitions are also capable of coercing the types of fields using
+column tags. This ensures that timestamps, numeric values, and coded fields
+are represented correctly for downstream analysis.
 
 ### Patient demographics (`rv_patient.json`)
 
@@ -172,12 +154,24 @@ This view captures information about patients' stays in the intensive care unit:
                 {
                     "name": "admittime",
                     "path": "period.start",
-                    "type": "dateTime"
+                    "type": "dateTime",
+                    "tag": [
+                        {
+                            "name": "ansi/type",
+                            "value": "TIMESTAMP"
+                        }
+                    ]
                 },
                 {
                     "name": "dischtime",
                     "path": "period.end",
-                    "type": "dateTime"
+                    "type": "dateTime",
+                    "tag": [
+                        {
+                            "name": "ansi/type",
+                            "value": "TIMESTAMP"
+                        }
+                    ]
                 }
             ]
         }
@@ -222,7 +216,24 @@ and oxygen saturation:
                 {
                     "name": "charttime",
                     "path": "effective.ofType(dateTime)",
-                    "type": "dateTime"
+                    "type": "dateTime",
+                    "tag": [
+                        {
+                            "name": "ansi/type",
+                            "value": "TIMESTAMP"
+                        }
+                    ]
+                },
+                {
+                    "name": "storetime",
+                    "path": "issued",
+                    "type": "instant",
+                    "tag": [
+                        {
+                            "name": "ansi/type",
+                            "value": "TIMESTAMP"
+                        }
+                    ]
                 },
                 {
                     "name": "valuenum",
@@ -232,7 +243,13 @@ and oxygen saturation:
                 {
                     "name": "itemid",
                     "path": "code.coding.code",
-                    "type": "code"
+                    "type": "code",
+                    "tag": [
+                        {
+                            "name": "ansi/type",
+                            "value": "INTEGER"
+                        }
+                    ]
                 }
             ]
         }
@@ -269,9 +286,31 @@ This view captures oxygen flow rates from respiratory equipment:
                     "type": "string"
                 },
                 {
+                    "name": "stay_id",
+                    "path": "encounter.getReferenceKey()",
+                    "type": "string"
+                },
+                {
                     "name": "charttime",
                     "path": "effective.ofType(dateTime)",
-                    "type": "dateTime"
+                    "type": "dateTime",
+                    "tag": [
+                        {
+                            "name": "ansi/type",
+                            "value": "TIMESTAMP"
+                        }
+                    ]
+                },
+                {
+                    "name": "storetime",
+                    "path": "issued",
+                    "type": "instant",
+                    "tag": [
+                        {
+                            "name": "ansi/type",
+                            "value": "TIMESTAMP"
+                        }
+                    ]
                 },
                 {
                     "name": "valuenum",
@@ -281,7 +320,13 @@ This view captures oxygen flow rates from respiratory equipment:
                 {
                     "name": "itemid",
                     "path": "code.coding.code",
-                    "type": "code"
+                    "type": "code",
+                    "tag": [
+                        {
+                            "name": "ansi/type",
+                            "value": "INTEGER"
+                        }
+                    ]
                 }
             ]
         }
@@ -319,9 +364,20 @@ This view records what types of oxygen delivery equipment were used:
                     "type": "string"
                 },
                 {
+                    "name": "stay_id",
+                    "path": "encounter.getReferenceKey()",
+                    "type": "string"
+                },
+                {
                     "name": "charttime",
                     "path": "effective.ofType(dateTime)",
-                    "type": "dateTime"
+                    "type": "dateTime",
+                    "tag": [
+                        {
+                            "name": "ansi/type",
+                            "value": "TIMESTAMP"
+                        }
+                    ]
                 },
                 {
                     "name": "value",
@@ -363,9 +419,36 @@ This view extracts laboratory results from blood gas analyses:
                     "type": "string"
                 },
                 {
+                    "name": "hadm_id",
+                    "path": "encounter.getReferenceKey()",
+                    "type": "string"
+                },
+                {
                     "name": "charttime",
                     "path": "effective.ofType(dateTime)",
-                    "type": "dateTime"
+                    "type": "dateTime",
+                    "tag": [
+                        {
+                            "name": "ansi/type",
+                            "value": "TIMESTAMP"
+                        }
+                    ]
+                },
+                {
+                    "name": "storetime",
+                    "path": "issued",
+                    "type": "instant",
+                    "tag": [
+                        {
+                            "name": "ansi/type",
+                            "value": "TIMESTAMP"
+                        }
+                    ]
+                },
+                {
+                    "name": "value",
+                    "path": "value.ofType(string)",
+                    "type": "string"
                 },
                 {
                     "name": "valuenum",
@@ -375,7 +458,13 @@ This view extracts laboratory results from blood gas analyses:
                 {
                     "name": "itemid",
                     "path": "code.coding.code",
-                    "type": "code"
+                    "type": "code",
+                    "tag": [
+                        {
+                            "name": "ansi/type",
+                            "value": "INTEGER"
+                        }
+                    ]
                 },
                 {
                     "name": "specimen_id",
@@ -401,12 +490,13 @@ information (52033).
 measuring oxygen levels, which researchers compare against pulse oximeter
 readings to assess device accuracy.
 
-## Building clinical concepts from basic data
+## Building clinical concepts from SQL on FHIR views
 
-After extracting individual data points, the next step combines related
-measurements into familiar clinical concepts. This process transforms raw
-observations into the types of measurements that clinicians and researchers
-typically work with.
+The next step combines related measurements from the SQL on FHIR views into
+familiar
+clinical concepts. This process transforms individual observations into the
+types
+of measurements that clinicians and researchers typically work with.
 
 ### Vital signs processing (`md_vitalsigns.sql`)
 
@@ -430,7 +520,7 @@ SELECT ce.subject_id,
                WHEN itemid IN (220277)
                    AND valuenum > 0 AND valuenum <= 100
                    THEN valuenum END) AS spo2
-FROM dv_obs_vitalsigns ce
+FROM rv_obs_vitalsigns ce
 WHERE ce.stay_id IS NOT NULL
 GROUP BY ce.subject_id, ce.stay_id, ce.charttime;
 ```
@@ -462,7 +552,7 @@ WITH ce_stg1 AS (SELECT ce.subject_id,
                             WHEN itemid IN (223834, 227582) THEN 223834
                             ELSE itemid END AS itemid,
                         valuenum
-                 FROM dv_obs_o2_flow ce
+                 FROM rv_obs_o2_flow ce
                  WHERE ce.valuenum IS NOT NULL),
 -- Additional processing steps...
      SELECT
@@ -534,7 +624,7 @@ SELECT MAX(subject_id)                                 AS subject_id,
                WHEN itemid = 50817 AND valuenum <= 100
                    THEN valuenum END)                  AS so2,
        MAX(CASE WHEN itemid = 50818 THEN valuenum END) AS pco2
-FROM dv_obs_bg le
+FROM rv_obs_bg le
 WHERE le.itemid IN (52033, 50817, 50818, -- additional blood gas parameters
     GROUP BY le . specimen_id;
 ```
@@ -685,9 +775,8 @@ def create_sql_ctx():
 # Load and process views in the correct order
 view_ctx = (ViewCtx.Builder(sql_ctx=create_sql_ctx())
             .load_sof(
-    os.path.join(VIEW_SRC_DIR, 'sof/*.json'))  # Basic extraction
-            .load_sql(
-    os.path.join(VIEW_SRC_DIR, 'sof_typed.spark/*.sql'))  # Data formatting  
+    os.path.join(VIEW_SRC_DIR,
+                 'sof/*.json'))  # SQL on FHIR views with type hints
             .load_sql(
     os.path.join(VIEW_SRC_DIR, 'mimic-fhir/*.sql'))  # Clinical concepts
             .load_sql(
