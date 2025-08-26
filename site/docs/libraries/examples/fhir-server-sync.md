@@ -1,5 +1,5 @@
 ---
-sidebar_position: 3
+sidebar_position: 2
 title: FHIR server synchronisation
 description: Examples of synchronising your analytic data store with a FHIR server.
 ---

@@ -133,5 +133,5 @@ The result of this query would look something like this:
 
 For a more comprehensive example demonstrating SQL on FHIR queries with multiple
 views, complex transformations and joins, see
-the [SQL on FHIR example](examples/sql-on-fhir-example.md).
+the [SQL on FHIR example](examples/sql-on-fhir.md).
 

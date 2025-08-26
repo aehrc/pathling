@@ -1,5 +1,5 @@
 ---
-sidebar_position: 4
+sidebar_position: 3
 title: Streaming
 description: Examples of running streaming queries over FHIR data using the Pathling libraries.
 ---
