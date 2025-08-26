@@ -1,10 +1,10 @@
 ---
 sidebar_position: 1
-title: SQL on FHIR worked example
+title: Prostate cancer risk factors
 description: Example of running SQL on FHIR queries using the Pathling libraries.
 ---
 
-# SQL on FHIR example
+# Prostate cancer risk factors
 
 This example demonstrates how to use SQL on FHIR views to query a set of risk
 factors from FHIR data for the purpose of identifying patients at a high-risk of

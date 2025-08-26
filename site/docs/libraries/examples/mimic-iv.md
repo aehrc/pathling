@@ -874,5 +874,5 @@ The extraction process creates five CSV files ready for analysis:
   Original research paper demonstrating these techniques
 - [aehrc/sql-on-fhir-evaluation](https://github.com/aehrc/sql-on-fhir-evaluation) -
   Full code repository for this example
-- [SQL on FHIR example](/docs/libraries/examples/sql-on-fhir) - More examples of
-  SQL on FHIR queries
+- [SQL on FHIR example](/docs/libraries/examples/prostate-cancer.md) - More
+  examples of SQL on FHIR queries
