@@ -9,9 +9,9 @@ description: Examples of running streaming queries over FHIR data using the Path
 Pathling supports streaming data sources, and all the operations available
 within the library are able to execute continuously across a stream of data.
 
-Here is an example of streaming a source of FHIR data
-from [Kafka](https://kafka.apache.org/), encoding it and then
-performing a terminology operation upon it in Python:
+The following demonstrates streaming FHIR data
+from [Kafka](https://kafka.apache.org/), encoding the data, and performing
+terminology operations using Python:
 
 ```python
 from pathling import PathlingContext, Coding, subsumes
@@ -55,26 +55,29 @@ the [Structured Streaming + Kafka Integration Guide](https://spark.apache.org/do
 
 # Worked example: FHIR ETL pipeline with SQL on FHIR
 
-This section demonstrates a complete, production-ready ETL pipeline that
+This implementation shows an ETL (Extract, Transform, Load) pipeline that
 consumes FHIR resources from Kafka, transforms them using SQL on FHIR queries
-with terminology operations, and persists the results to PostgreSQL. This
-example showcases how Pathling can be used to build sophisticated streaming
-analytics over clinical data.
+with terminology operations, and stores the results to PostgreSQL. This
+example illustrates how Pathling enables streaming analytics over clinical data.
 
 ## Overview
 
-The pipeline implements a real-time data processing system that:
+The pipeline processes data in real time by:
 
 1. Consumes FHIR bundles from Kafka topics
-2. Extracts and encodes specific resource types (Patient, Encounter, Condition)
-3. Transforms the data using SQL on FHIR views with complex FHIRPath expressions
-4. Performs terminology operations including code translation and concept
+2. Extracting and encoding specific resource types (Patient, Encounter,
+   Condition)
+3. Transforming the data using SQL on FHIR views with [FHIRPath](/docs/fhirpath)
+   expressions
+4. Performing terminology operations including code translation and concept
    subsumption
-5. Persists the transformed data to PostgreSQL using an upsert strategy
+5. Storing the transformed data to PostgreSQL using an upsert strategy (
+   inserting new records or updating existing ones)
 
 ## Setting up the Spark environment
 
-The first step is configuring Spark with all necessary dependencies for FHIR
+The initial step involves configuring Spark with the required dependencies for
+FHIR
 processing, Kafka connectivity, and database integration:
 
 ```python
@@ -95,17 +98,18 @@ def _get_or_create_spark() -> SparkSession:
     return spark_builder.getOrCreate()
 ```
 
-This configuration includes:
+This configuration incorporates:
 
 - **Kafka connector**: For consuming streaming data
-- **Pathling runtime**: For FHIR encoding and SQL on FHIR operations
+- **Pathling library**: For FHIR encoding and SQL on FHIR operations
 - **PostgreSQL driver**: For database persistence
-- **Checkpoint location**: For fault-tolerant streaming
+- **Checkpoint location**: For fault-tolerant streaming (enabling recovery from
+  failures)
 
 ## Consuming FHIR bundles from Kafka
 
 The pipeline subscribes to a Kafka topic containing FHIR bundles and converts
-them into typed resource streams:
+these into typed resource streams:
 
 ```python
 def _subscribe_to_kafka_topic(spark: SparkSession,
@@ -147,7 +151,7 @@ def _to_resource_stream(kafka_stream: DataFrame,
     return pc.encode(json_stream, resource_type)
 ```
 
-This process:
+This conversion process:
 
 1. Reads raw messages from Kafka
 2. Parses FHIR bundles from JSON
@@ -158,7 +162,8 @@ This process:
 ## Defining SQL on FHIR views
 
 The pipeline defines three views that transform raw FHIR resources into
-analytical datasets. Each view uses FHIRPath expressions to extract and
+analytical datasets. Each view uses FHIRPath expressions (a path-based query
+language for FHIR) to extract and
 transform clinical data.
 
 ### Patient demographics view
@@ -189,7 +194,7 @@ def view_patient(data: DataSource) -> DataFrame:
 
 ### Diagnosis view with terminology operations
 
-This view demonstrates advanced terminology capabilities:
+This view illustrates terminology processing capabilities:
 
 ```python
 def view_diagnosis(data: DataSource) -> DataFrame:
@@ -232,9 +237,9 @@ def view_diagnosis(data: DataSource) -> DataFrame:
 Key features:
 
 - **Code extraction**: Filters codings by system to extract SNOMED CT codes
-- **Code translation**: Uses [`translate()`](/docs/fhirpath#translate) to map
+- **Code translation**: Uses [`translate`](/docs/fhirpath#translate) to map
   SNOMED CT to ICD-10-AM via a ConceptMap
-- **Concept subsumption**: Uses [`subsumedBy()`](/docs/fhirpath#subsumedby) to
+- **Concept subsumption**: Uses [`subsumedBy`](/docs/fhirpath#subsumedby) to
   detect if a condition is a viral infection by checking against parent concepts
 
 ### Encounter view with complex nested data
@@ -311,7 +316,7 @@ translation:
 ```python
 pc = PathlingContext.create(
     spark,
-    terminology_server_url="http://velonto-ontoserver-service/fhir",
+    terminology_server_url="https://terminology-service/fhir",
 )
 ```
 
@@ -360,7 +365,7 @@ def write_postgresql(df: DataFrame, db_name: str, schema: str, view_name: str):
     df.foreachPartition(upsert_partition)
 ```
 
-This approach:
+This method:
 
 - Inserts new records
 - Updates existing records when IDs match
@@ -430,14 +435,14 @@ def start_consumer(kafka_topic: str, kafka_bootstrap_servers: str,
 
 ## Key benefits
 
-This architecture provides:
+This architecture enables:
 
 1. **Real-time processing**: Continuous processing of FHIR data as it arrives
 2. **Complex transformations**: SQL on FHIR queries with FHIRPath expressions
 3. **Terminology integration**: Live code validation and translation
-4. **Fault tolerance**: Spark checkpointing for recovery from failures
+4. **Fault tolerance**: Spark checkpointing enables recovery from failures
 5. **Scalability**: Distributed processing across Spark clusters
-6. **Data persistence**: Maintaining up-to-date analytical views in PostgreSQL
+6. **Data persistence**: Maintains current analytical views in PostgreSQL
 
 ## Deployment considerations
 
@@ -451,6 +456,6 @@ When deploying this pipeline in production:
 - **Schema evolution**: Plan for FHIR profile changes and version updates
 - **Security**: Secure Kafka connections with SSL/SASL and database credentials
 
-This example demonstrates how Pathling enables sophisticated real-time analytics
-over FHIR data streams, combining the expressiveness of SQL on FHIR with the
-scalability of Apache Spark and Kafka.
+This example shows how Pathling enables real-time analytics
+over FHIR data streams by combining SQL on FHIR query capabilities with
+Apache Spark and Kafka scalability.
