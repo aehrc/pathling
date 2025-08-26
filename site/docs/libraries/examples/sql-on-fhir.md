@@ -1,13 +1,14 @@
 ---
 sidebar_position: 1
-title: SQL on FHIR
+title: SQL on FHIR worked example
 description: Example of running SQL on FHIR queries using the Pathling libraries.
 ---
 
 # SQL on FHIR example
 
-This is a worked example that demonstrates how to use SQL on FHIR views to a set
-of risk factors for prostate cancer from FHIR data.
+This example demonstrates how to use SQL on FHIR views to query a set of risk
+factors from FHIR data for the purpose of identifying patients at a high-risk of
+being diagnosed with prostate cancer.
 
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";

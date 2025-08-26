@@ -1,7 +1,7 @@
 ---
 sidebar_position: 4
-title: MIMIC-IV
-description: Examples of running queries over the MIMIC-IV on FHIR dataset using the Pathling libraries.
+title: Querying MIMIC-IV data
+description: Example of running queries over the MIMIC-IV on FHIR dataset using the Pathling libraries.
 ---
 
 # Querying MIMIC-IV data
@@ -756,55 +756,87 @@ for assessing whether pulse oximeters work equally well for all patient groups.
 
 ## Running the data extraction process
 
-The data extraction system processes these layered views automatically, handling
-the dependencies between each step.
+The data extraction system processes these layered views using Pathling's
+datasources API.
 
-### How Pathling processes the views
+### Processing the view definitions
 
-The Python script coordinates the entire extraction process:
+With the datasource already loaded, we can execute the SQL on FHIR view
+definitions and register them as Spark temporary views for further processing:
 
 ```python
-def create_sql_ctx():
-    # Set up the data processing environment
-    os.environ['SPARK_CONF_DIR'] = SPARK_CONF_DIR
-    pc = PathlingContext.create()
-    spark = pc.spark
-    return PtlSqlCtx(spark=spark, ds=pc.read.parquet(mimic_ptl_dir))
+import json
+import os
 
+# Process SQL on FHIR views
+view_definitions = [
+    "rv_patient", "rv_icu_encounter", "rv_obs_vitalsigns",
+    "rv_obs_o2_flow", "rv_o2_delivery_device", "rv_obs_bg"
+]
 
-# Load and process views in the correct order
-view_ctx = (ViewCtx.Builder(sql_ctx=create_sql_ctx())
-            .load_sof(
-    os.path.join(VIEW_SRC_DIR,
-                 'sof/*.json'))  # SQL on FHIR views with type hints
-            .load_sql(
-    os.path.join(VIEW_SRC_DIR, 'mimic-fhir/*.sql'))  # Clinical concepts
-            .load_sql(
-    os.path.join(VIEW_SRC_DIR, 'study/*.sql'))  # Study datasets
-            .build())
+for view_name in view_definitions:
+    view_path = f"views/sof/{view_name}.json"
+    with open(view_path) as f:
+        view_json = f.read()
+        # Execute the view definition
+        df = datasource.view(json=view_json)
+        # Register as temporary view for SQL processing
+        df.createOrReplaceTempView(view_name)
 
-# Export the final datasets to CSV files
-DataExporter(view_ctx).export(output_dir)
+# Process clinical concept views using SQL
+clinical_views = ["md_vitalsigns", "md_oxygen_delivery", "md_bg"]
+
+for view_name in clinical_views:
+    sql_path = f"views/clinical/{view_name}.sql"
+    with open(sql_path) as f:
+        sql_query = f.read()
+        # Execute SQL and register result
+        spark.sql(sql_query).createOrReplaceTempView(view_name)
 ```
 
-**What this accomplishes**: The system automatically processes views in
-dependency order, ensuring that each layer builds correctly on the previous one.
+**What this accomplishes**:
 
-### Executing the extraction
+- The `datasource.view(json=...)` method executes each SQL on FHIR view
+  definition, handling type hints automatically
+- Results are registered as Spark temporary views, making them available for SQL
+  queries
+- Clinical concept views can then reference these base views in their SQL
 
-To run the complete data extraction process:
+### Running study-specific views and exporting to CSV
 
-```bash
-./bin/export-ptl.py \
-  --mimic-ptl-dir "${MIMIC_PTL_DIR}" \
-  --output-dir "${PTL_OUTPUT_DIR}"
+The final step executes the study-specific SQL views and exports the results to
+CSV files using Spark's CSV writer:
+
+```python
+# Execute study-specific views and export to CSV
+study_views = ["st_subject", "st_reading_o2_flow", "st_reading_spo2",
+               "st_reading_so2"]
+output_directory = "output"
+
+for view_name in study_views:
+    sql_path = f"views/study/{view_name}.sql"
+    with open(sql_path) as f:
+        sql_query = f.read()
+        # Execute the SQL query
+        df = spark.sql(sql_query)
+
+        # Export to CSV with proper naming
+        csv_name = view_name.replace("st_", "")  # Remove "st_" prefix
+        output_path = f"{output_directory}/{csv_name}"
+
+        df.write.mode("overwrite")
+        .option("header", "true")
+        .csv(output_path)
+
+print("Data extraction complete. CSV files saved to output directory.")
 ```
 
-Or using the configuration file:
+**What this accomplishes**:
 
-```bash
-./scripts/export-ptl.sh local-env.sh
-```
+- Executes each study-specific SQL view in sequence
+- Uses Spark's native CSV writer with headers enabled
+- Overwrites existing files to ensure clean output
+- Creates properly named CSV files ready for analysis
 
 ### Output datasets
 
@@ -836,154 +868,11 @@ The extraction process creates five CSV files ready for analysis:
     - `chart_time`: When status was recorded
     - `ventilation_status`: Type of respiratory support
 
-## Data quality and validation
+## Further reading
 
-The extraction process includes several quality control measures to ensure
-reliable research data:
-
-### Clinical range validation
-
-Each measurement type includes appropriate clinical limits:
-
-- Heart rate: 0-300 beats per minute
-- Respiratory rate: 0-70 breaths per minute
-- Oxygen saturation: 0-100%
-- Oxygen flow rate: Positive values only
-
-### Missing data handling
-
-The system explicitly excludes records with:
-
-- Missing patient demographics required for the study
-- Invalid or out-of-range measurements
-- Time periods with insufficient data (less than 12 hours)
-
-### Temporal alignment
-
-All measurements are linked to specific time periods:
-
-- Study periods are clearly defined (admission to 5 days or discharge)
-- Measurements are only included if they fall within these time windows
-- Multiple measurements at the same time are appropriately averaged
-
-## Key advantages of this approach
-
-### Reproducibility
-
-The layered view approach provides several benefits for research:
-
-**Transparent methodology**: Each step of data transformation is explicitly
-documented in SQL code, making it possible to review and verify the data
-processing logic.
-
-**Version control**: View definitions can be stored in version control systems,
-allowing researchers to track changes and reproduce results from specific
-versions.
-
-**Cross-platform compatibility**: The same view definitions work across
-different SQL on FHIR implementations, reducing the need to rewrite analysis
-code for different systems.
-
-### Research efficiency
-
-**Reusable components**: Lower-level views (patient demographics, vital signs)
-can support multiple research projects without modification.
-
-**Familiar output format**: The final CSV files match the structure researchers
-expect from traditional medical databases, reducing learning curves.
-
-**Quality assurance**: Each layer provides an opportunity to validate data
-quality and apply appropriate clinical filters.
-
-### Scalability
-
-**Distributed processing**: Pathling uses Apache Spark for processing, enabling
-analysis of large datasets across multiple machines.
-
-**Efficient storage**: The underlying Parquet format provides fast access to
-specific columns and time ranges.
-
-**Memory management**: The system handles datasets too large to fit in memory by
-processing data in chunks.
-
-## Limitations and considerations
-
-### Data transformation constraints
-
-**Information loss during conversion**: Converting MIMIC-IV data to FHIR format
-and then to tabular data may result in some information being lost or
-simplified. Researchers should be aware that this approach may not capture every
-nuance present in the original medical records.
-
-**Version differences**: The original oxygen supplementation study used MIMIC-IV
-version 1.0, while MIMIC-FHIR is based on version 2.2. These version differences
-mean that exact replication of the original study results is not possible.
-
-**Processing complexity**: The multi-layer transformation approach, while
-providing benefits, does add complexity compared to working directly with
-traditional database tables.
-
-### Technical requirements
-
-**Specialised infrastructure**: The approach requires MIMIC-IV data in a
-specific Pathling-processed format, which may not be readily available to all
-researchers.
-
-**Memory and processing requirements**: Large datasets require substantial
-computational resources, particularly memory for processing time-series medical
-data.
-
-**Learning curve**: Researchers need to understand both FHIR concepts and the
-SQL on FHIR approach, which may require initial investment in training.
-
-### Study-specific limitations
-
-**Simplified analysis**: The example focuses on data preparation rather than the
-complete statistical analysis performed in the original study.
-
-**Subset of measurements**: The walkthrough covers a subset of the clinical
-measurements and outcomes examined in the original research.
-
-## Conclusion
-
-This walkthrough demonstrates a systematic approach to extracting clinical
-research data from FHIR-formatted healthcare records using Pathling. The layered
-methodology provides several key benefits:
-
-**Systematic data processing**: The step-by-step approach from raw healthcare
-records to analysis-ready datasets ensures transparent and reproducible data
-preparation.
-
-**Clinical validity**: Each transformation step includes appropriate clinical
-validation and quality control measures.
-
-**Reusable components**: Lower-level views can support multiple research
-projects, improving efficiency and consistency across studies.
-
-**Standard compliance**: Using FHIR as the data format and SQL on FHIR for
-extraction provides interoperability across different healthcare data systems.
-
-The oxygen supplementation study example shows that complex clinical research
-questions can be addressed using this approach. The method produces clean,
-well-documented datasets suitable for statistical analysis while maintaining the
-rigour required for medical research.
-
-For researchers working with healthcare data, this methodology offers a
-structured path to transform complex medical records into datasets suitable for
-epidemiological and clinical research, bridging the gap between clinical data
-standards and research analysis requirements.
-
-## Next steps for implementation
-
-Researchers interested in applying this approach should:
-
-1. **Assess data availability**: Ensure access to FHIR-formatted data or budget
-   for conversion costs
-2. **Plan computational resources**: Allocate appropriate processing power and
-   memory for large datasets
-3. **Develop expertise**: Build team knowledge in FHIR concepts and SQL on FHIR
-   methodology
-4. **Start simple**: Begin with basic extractions before attempting complex
-   multi-layer transformations
-5. **Validate thoroughly**: Compare results with traditional database approaches
-   where possible to ensure data quality
+- [SQL on FHIR - Tabular views of FHIR data using FHIRPath](https://www.nature.com/articles/s41746-025-01708-w) -
+  Original research paper demonstrating these techniques
+- [aehrc/sql-on-fhir-evaluation](https://github.com/aehrc/sql-on-fhir-evaluation) -
+  Full code repository for this example
+- [SQL on FHIR example](/docs/libraries/examples/sql-on-fhir) - More examples of
+  SQL on FHIR queries
