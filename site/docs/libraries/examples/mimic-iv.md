@@ -4,6 +4,9 @@ title: Querying MIMIC-IV data
 description: Example of running queries over the MIMIC-IV on FHIR dataset using the Pathling libraries.
 ---
 
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
 # Querying MIMIC-IV data
 
 This article demonstrates how to extract and prepare clinical data from MIMIC-IV
@@ -43,6 +46,9 @@ NDJSON reader in Pathling to load it into a set of Spark dataframes. Because
 MIMIC-IV uses a non-standard naming convention for its files, we need to provide
 a custom file name mapper to correctly identify the resource type for each file:
 
+<Tabs>
+<TabItem value="python" label="Python">
+
 ```python
 data = pc.read.ndjson(
     "/usr/share/staging/ndjson",
@@ -51,6 +57,26 @@ data = pc.read.ndjson(
                                                   r"Outputevents|Lab|Mix|VitalSigns|VitalSignsED)?$",
                                                   file_name))
 ```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+pc <- pathling_connect()
+data <- pc %>% 
+  pathling_read_ndjson(
+    "/usr/share/staging/ndjson",
+    file_name_mapper = function(file_name) {
+      stringr::str_extract(file_name, "(?<=Mimic)\\w+?(?=ED|ICU|Chartevents|Datetimeevents|Labevents|MicroOrg|MicroSusc|MicroTest|Outputevents|Lab|Mix|VitalSigns|VitalSignsED|$)")
+    }
+  )
+```
+
+</TabItem>
+</Tabs>
 
 ## Understanding the data extraction approach
 
@@ -764,6 +790,9 @@ datasources API.
 With the datasource already loaded, we can execute the SQL on FHIR view
 definitions and register them as Spark temporary views for further processing:
 
+<Tabs>
+<TabItem value="python" label="Python">
+
 ```python
 import json
 import os
@@ -794,6 +823,42 @@ for view_name in clinical_views:
         spark.sql(sql_query).createOrReplaceTempView(view_name)
 ```
 
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+# Process SQL on FHIR views
+view_definitions <- c(
+  "rv_patient", "rv_icu_encounter", "rv_obs_vitalsigns",
+  "rv_obs_o2_flow", "rv_o2_delivery_device", "rv_obs_bg"
+)
+
+for (view_name in view_definitions) {
+  view_path <- file.path("views", "sof", paste0(view_name, ".json"))
+  view_json <- paste(readLines(view_path), collapse = "")
+  
+  # Execute the view definition
+  df <- data %>% ds_view(json = view_json)
+  # Register as temporary view for SQL processing
+  sdf_register(df, view_name)
+}
+
+# Process clinical concept views using SQL
+clinical_views <- c("md_vitalsigns", "md_oxygen_delivery", "md_bg")
+
+for (view_name in clinical_views) {
+  sql_path <- file.path("views", "clinical", paste0(view_name, ".sql"))
+  sql_query <- paste(readLines(sql_path), collapse = "\n")
+  
+  # Execute SQL and register result
+  result_df <- spark_sql(pc, sql_query)
+  sdf_register(result_df, view_name)
+}
+```
+
+</TabItem>
+</Tabs>
+
 **What this accomplishes**:
 
 - The `datasource.view(json=...)` method executes each SQL on FHIR view
@@ -806,6 +871,9 @@ for view_name in clinical_views:
 
 The final step executes the study-specific SQL views and exports the results to
 CSV files using Spark's CSV writer:
+
+<Tabs>
+<TabItem value="python" label="Python">
 
 ```python
 # Execute study-specific views and export to CSV
@@ -824,12 +892,45 @@ for view_name in study_views:
         csv_name = view_name.replace("st_", "")  # Remove "st_" prefix
         output_path = f"{output_directory}/{csv_name}"
 
-        df.write.mode("overwrite")
-        .option("header", "true")
-        .csv(output_path)
+        df.write.mode("overwrite") \
+          .option("header", "true") \
+          .csv(output_path)
 
 print("Data extraction complete. CSV files saved to output directory.")
 ```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+# Execute study-specific views and export to CSV
+study_views <- c("st_subject", "st_reading_o2_flow", "st_reading_spo2",
+                 "st_reading_so2")
+output_directory <- "output"
+
+for (view_name in study_views) {
+  sql_path <- file.path("views", "study", paste0(view_name, ".sql"))
+  sql_query <- paste(readLines(sql_path), collapse = "\n")
+  
+  # Execute the SQL query
+  df <- spark_sql(pc, sql_query)
+  
+  # Export to CSV with proper naming
+  csv_name <- gsub("^st_", "", view_name)  # Remove "st_" prefix
+  output_path <- file.path(output_directory, csv_name)
+  
+  df %>% spark_write_csv(
+    path = output_path,
+    mode = "overwrite",
+    header = TRUE
+  )
+}
+
+cat("Data extraction complete. CSV files saved to output directory.\n")
+```
+
+</TabItem>
+</Tabs>
 
 **What this accomplishes**:
 
