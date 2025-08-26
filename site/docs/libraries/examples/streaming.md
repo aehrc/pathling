@@ -1,10 +1,12 @@
 ---
 sidebar_position: 3
-title: Streaming
+title: Streaming queries
 description: Examples of running streaming queries over FHIR data using the Pathling libraries.
 ---
 
-# Streaming
+# Streaming queries
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/e-hFKckQITw?si=fzgfFzdB8C0X4RIX" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 Pathling supports streaming data sources, and all the operations available
 within the library are able to execute continuously across a stream of data.
