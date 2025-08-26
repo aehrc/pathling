@@ -6,44 +6,45 @@ description: Examples of synchronising your analytic data store with a FHIR serv
 
 # FHIR server synchronisation
 
-This guide demonstrates how to build a robust synchronisation pipeline that
-periodically fetches data from a FHIR bulk export endpoint and maintains an
-up-to-date set of Delta tables for analytics.
+This guide describes how to create a synchronisation pipeline that periodically
+retrieves data from a FHIR bulk export endpoint and maintains a set of Delta
+tables for analysis.
 
 ## Overview
 
-The FHIR Bulk Data Access specification provides a standardised way to export
-large volumes of healthcare data from FHIR servers. By combining this with
-Pathling's built-in Delta Lake support, we can build efficient data pipelines
-that:
+The FHIR (Fast Healthcare Interoperability Resources) Bulk Data Access
+specification defines a standard method for extracting large volumes of
+healthcare data from FHIR servers. When combined with Pathling's Delta Lake
+support, this approach enables data pipelines with the following
+characteristics:
 
-- Perform initial full exports to establish baseline data
-- Run incremental exports using the `since` parameter to capture only changes
-- Merge updates automatically using Pathling's `SaveMode.MERGE`
-- Handle failures gracefully with built-in retry logic
-- Maintain data consistency with Delta Lake's ACID transactions
+- Initial full data exports establish baseline datasets
+- Incremental exports use the `since` parameter to retrieve only changed records
+- Data merging occurs automatically through Pathling's merge functionality
+- Error handling and retry mechanisms are built into the bulk client
+- Delta Lake provides transactional consistency for data operations
 
 ### Authentication
 
-The script
+The synchronisation process
 uses [SMART Backend Services](https://www.hl7.org/fhir/smart-app-launch/backend-services.html)
-with the client-confidential-asymmetric profile for secure authentication. This
-approach is specifically designed for backend services that need autonomous
-access to FHIR resources, such as:
+with the `client-confidential-asymmetric` profile for authentication. This
+authentication method was designed for automated backend services that require
+unattended access to FHIR resources. Common applications include:
 
-- Analytics platforms performing bulk data imports
+- Analytics platforms importing bulk healthcare data
 - Data integration services synchronising patient records
 - Public health surveillance systems
-- Utilisation tracking systems
+- Healthcare utilisation tracking systems
 
-The authentication flow uses asymmetric keys (public/private key pairs) rather
-than shared secrets, providing enhanced security for automated systems that
-access healthcare data.
+This authentication approach uses asymmetric cryptography (public and private
+key pairs) instead of shared secrets, which reduces security risks in automated
+environments that handle sensitive healthcare information.
 
-## Complete synchronisation script
+## Synchronisation script
 
-Here's a Python script that leverages Pathling's built-in bulk export and Delta
-merge capabilities:
+The following Python script demonstrates the synchronisation process using
+Pathling's bulk export and Delta merge functionality:
 
 ```python
 #!/usr/bin/env python3
@@ -135,8 +136,8 @@ def sync_fhir_to_delta(
     # Determine export parameters.
     since = None if full_refresh else state.last_sync_time
 
-    # Perform bulk export and get data source.
-    # The bulk client handles retries automatically.
+    # Execute bulk export to retrieve data from FHIR server.
+    # Retry logic is handled internally by the bulk client.
     data_source = pc.read.bulk(
         fhir_endpoint_url=fhir_endpoint,
         group_id=group_id,
@@ -146,8 +147,8 @@ def sync_fhir_to_delta(
         timeout=3600  # 1 hour timeout.
     )
 
-    # Write to Delta tables using merge mode.
-    # Pathling handles both initial creation and incremental updates.
+    # Save data to Delta tables using merge operation.
+    # The merge process handles both initial table creation and updates to existing data.
     data_source.write.delta(delta_path, save_mode=SaveMode.MERGE)
 
     # Update sync state.
@@ -235,8 +236,8 @@ if __name__ == "__main__":
 
 ### Using cron
 
-The simplest way to schedule periodic synchronisation is using cron. Create a
-shell script wrapper:
+Periodic synchronisation can be scheduled using cron. The following shell script
+provides a basic wrapper:
 
 ```bash
 #!/bin/bash
@@ -266,7 +267,8 @@ Then add to crontab to run every hour:
 
 ### Using Python scheduler
 
-For more complex scheduling requirements, use the `schedule` library:
+More complex scheduling requirements can be addressed using Python's `schedule`
+library:
 
 ```python
 import schedule
@@ -301,7 +303,8 @@ while True:
 
 ### Using Apache Airflow
 
-For enterprise deployments, create an Airflow DAG:
+Enterprise environments may implement scheduling through Apache Airflow using a
+DAG (Directed Acyclic Graph):
 
 ```python
 from airflow import DAG
@@ -360,7 +363,7 @@ sync >> notify
 
 ## Monitoring and health checks
 
-Implement health check endpoints for monitoring:
+Health check endpoints can be implemented for system monitoring:
 
 ```python
 from flask import Flask, jsonify
@@ -395,10 +398,10 @@ def health_check():
 
 ## Production considerations
 
-### Security best practices
+### Security considerations
 
-1. **Secure credential storage**: Use environment variables or secret management
-   systems:
+Credentials should be stored securely using environment variables or dedicated
+secret management systems:
 
 ```python
 import os
@@ -434,12 +437,12 @@ def get_auth_config():
     }
 ```
 
-### Handling large datasets
+### Large dataset configuration
 
-For very large datasets, consider tuning the bulk export parameters:
+Large datasets may require parameter adjustments to the bulk export process:
 
 ```python
-# For large datasets, increase timeout and concurrent downloads.
+# Timeout and concurrency parameters can be increased for large datasets.
 data_source = pc.read.bulk(
     fhir_endpoint_url=fhir_endpoint,
     types=resource_types,
@@ -452,19 +455,22 @@ data_source = pc.read.bulk(
 
 ## Summary
 
-This guide demonstrates how to build a simple yet powerful synchronisation
-pipeline between FHIR bulk export endpoints and Delta tables using Pathling's
-built-in capabilities. The solution provides:
+This guide describes the implementation of a synchronisation pipeline between
+FHIR bulk export endpoints and Delta tables using Pathling's built-in
+functionality. The approach provides several key characteristics:
 
-- **Incremental updates**: Leverages the `since` parameter for efficient sync
-- **Automatic merging**: Uses Pathling's `SaveMode.MERGE` for conflict
-  resolution
-- **Built-in retry logic**: The bulk client handles transient failures
-  automatically
-- **Minimal code**: Just a few dozen lines of core synchronisation logic
-- **Production ready**: Includes scheduling, monitoring, and security
-  considerations
+- **Incremental processing**: The `since` parameter enables efficient
+  synchronisation by retrieving only changed data
+- **Data merging**: Pathling's `SaveMode.MERGE` automatically handles conflicts
+  and updates
+- **Error handling**: Built-in retry mechanisms address transient network and
+  server issues
+- **Code efficiency**: The core synchronisation logic requires minimal custom
+  implementation
+- **Operational features**: Scheduling, monitoring, and security components
+  support production deployment
 
-By leveraging Pathling's built-in bulk export and Delta merge functionality, you
-can maintain an up-to-date analytical data store with minimal custom code while
-ensuring robust, scalable synchronisation with your FHIR server.
+The combination of Pathling's bulk export capabilities and Delta Lake's merge
+functionality enables maintenance of current analytical datasets with limited
+custom development effort while providing consistent synchronisation with FHIR
+data sources.
