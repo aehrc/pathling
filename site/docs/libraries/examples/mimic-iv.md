@@ -41,10 +41,21 @@ Our data preparation process will extract:
 
 ## Importing the MIMIC-IV dataset
 
-The MIMIC-IV dataset is provided in FHIR NDJSON format, and we can use the
-NDJSON reader in Pathling to load it into a set of Spark dataframes. Because
-MIMIC-IV uses a non-standard naming convention for its files, we need to provide
-a custom file name mapper to correctly identify the resource type for each file:
+The MIMIC-IV on FHIR dataset is provided in FHIR NDJSON format, and we can use
+the NDJSON reader in Pathling to load it into a set of Spark dataframes.
+
+MIMIC-IV is available from Physionet. It comes in two variants:
+
+- [The full dataset](https://physionet.org/content/mimic-iv-fhir/2.1/)
+  (approximately 625M resources). This dataset requires credentialed access
+  and the use must accept a data use agreement which includes a mandatory
+  training course.
+- [A demo sample](https://physionet.org/content/mimic-iv-fhir-demo/2.1.0/)
+  (approximately 1M resources).
+
+Because MIMIC-IV uses a non-standard naming convention for its files, we need to
+provide a custom file name mapper to correctly identify the resource type for
+each file:
 
 <Tabs>
 <TabItem value="python" label="Python">
@@ -66,13 +77,13 @@ library(sparklyr)
 library(pathling)
 
 pc <- pathling_connect()
-data <- pc %>% 
-  pathling_read_ndjson(
-    "/usr/share/staging/ndjson",
-    file_name_mapper = function(file_name) {
-      stringr::str_extract(file_name, "(?<=Mimic)\\w+?(?=ED|ICU|Chartevents|Datetimeevents|Labevents|MicroOrg|MicroSusc|MicroTest|Outputevents|Lab|Mix|VitalSigns|VitalSignsED|$)")
-    }
-  )
+data <- pc %>%
+        pathling_read_ndjson(
+                "/usr/share/staging/ndjson",
+                file_name_mapper = function(file_name) {
+                    stringr::str_extract(file_name, "(?<=Mimic)\\w+?(?=ED|ICU|Chartevents|Datetimeevents|Labevents|MicroOrg|MicroSusc|MicroTest|Outputevents|Lab|Mix|VitalSigns|VitalSignsED|$)")
+                }
+        )
 ```
 
 </TabItem>
@@ -829,30 +840,30 @@ for view_name in clinical_views:
 ```r
 # Process SQL on FHIR views
 view_definitions <- c(
-  "rv_patient", "rv_icu_encounter", "rv_obs_vitalsigns",
-  "rv_obs_o2_flow", "rv_o2_delivery_device", "rv_obs_bg"
+        "rv_patient", "rv_icu_encounter", "rv_obs_vitalsigns",
+        "rv_obs_o2_flow", "rv_o2_delivery_device", "rv_obs_bg"
 )
 
 for (view_name in view_definitions) {
-  view_path <- file.path("views", "sof", paste0(view_name, ".json"))
-  view_json <- paste(readLines(view_path), collapse = "")
-  
-  # Execute the view definition
-  df <- data %>% ds_view(json = view_json)
-  # Register as temporary view for SQL processing
-  sdf_register(df, view_name)
+    view_path <- file.path("views", "sof", paste0(view_name, ".json"))
+    view_json <- paste(readLines(view_path), collapse = "")
+
+    # Execute the view definition
+    df <- data %>% ds_view(json = view_json)
+    # Register as temporary view for SQL processing
+    sdf_register(df, view_name)
 }
 
 # Process clinical concept views using SQL
 clinical_views <- c("md_vitalsigns", "md_oxygen_delivery", "md_bg")
 
 for (view_name in clinical_views) {
-  sql_path <- file.path("views", "clinical", paste0(view_name, ".sql"))
-  sql_query <- paste(readLines(sql_path), collapse = "\n")
-  
-  # Execute SQL and register result
-  result_df <- spark_sql(pc, sql_query)
-  sdf_register(result_df, view_name)
+    sql_path <- file.path("views", "clinical", paste0(view_name, ".sql"))
+    sql_query <- paste(readLines(sql_path), collapse = "\n")
+
+    # Execute SQL and register result
+    result_df <- spark_sql(pc, sql_query)
+    sdf_register(result_df, view_name)
 }
 ```
 
@@ -892,9 +903,9 @@ for view_name in study_views:
         csv_name = view_name.replace("st_", "")  # Remove "st_" prefix
         output_path = f"{output_directory}/{csv_name}"
 
-        df.write.mode("overwrite") \
-          .option("header", "true") \
-          .csv(output_path)
+        df.write.mode("overwrite")
+        .option("header", "true")
+        .csv(output_path)
 
 print("Data extraction complete. CSV files saved to output directory.")
 ```
@@ -909,21 +920,21 @@ study_views <- c("st_subject", "st_reading_o2_flow", "st_reading_spo2",
 output_directory <- "output"
 
 for (view_name in study_views) {
-  sql_path <- file.path("views", "study", paste0(view_name, ".sql"))
-  sql_query <- paste(readLines(sql_path), collapse = "\n")
-  
-  # Execute the SQL query
-  df <- spark_sql(pc, sql_query)
-  
-  # Export to CSV with proper naming
-  csv_name <- gsub("^st_", "", view_name)  # Remove "st_" prefix
-  output_path <- file.path(output_directory, csv_name)
-  
-  df %>% spark_write_csv(
-    path = output_path,
-    mode = "overwrite",
-    header = TRUE
-  )
+    sql_path <- file.path("views", "study", paste0(view_name, ".sql"))
+    sql_query <- paste(readLines(sql_path), collapse = "\n")
+
+    # Execute the SQL query
+    df <- spark_sql(pc, sql_query)
+
+    # Export to CSV with proper naming
+    csv_name <- gsub("^st_", "", view_name)  # Remove "st_" prefix
+    output_path <- file.path(output_directory, csv_name)
+
+    df %>% spark_write_csv(
+            path = output_path,
+            mode = "overwrite",
+            header = TRUE
+    )
 }
 
 cat("Data extraction complete. CSV files saved to output directory.\n")
