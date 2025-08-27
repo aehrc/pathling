@@ -14,7 +14,7 @@
 
   <properties>
     <pathling.jmhVersion>1.37</pathling.jmhVersion>
-    <pathling.testDataVersion>1.0.0-SNAPSHOT</pathling.testDataVersion>
+    <pathling.testDataVersion>1.0.0</pathling.testDataVersion>
   </properties>
 
   <dependencies>
@@ -34,7 +34,7 @@
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>test-data</artifactId>
-      <version>1.0.0-SNAPSHOT</version>
+      <version>${pathling.testDataVersion}</version>
     </dependency>
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
