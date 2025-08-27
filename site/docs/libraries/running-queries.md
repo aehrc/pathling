@@ -3,7 +3,7 @@ sidebar_position: 3
 description: The Pathling library can be used to query datasets of FHIR resources using SQL on FHIR views. This is useful for creating tabular views of FHIR data for use in analytic tools.
 ---
 
-# Running queries
+# Running SQL on FHIR views
 
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";

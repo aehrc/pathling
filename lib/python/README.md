@@ -1,8 +1,8 @@
 Python API for Pathling
 =======================
 
-This is the Python API for [Pathling](https://pathling.csiro.au). It provides a 
-set of tools that aid the use of FHIR terminology services and FHIR data within 
+This is the Python API for [Pathling](https://pathling.csiro.au). It provides a
+set of tools that aid the use of FHIR terminology services and FHIR data within
 Python applications and data science workflows.
 
 [View the API documentation &rarr;](https://pathling.csiro.au/docs/python/pathling.html)
@@ -70,6 +70,55 @@ patients = pc.encode_bundle(bundles, 'Patient')
 # Do some stuff.
 patients.select('id', 'gender', 'birthDate').show()
 ```
+
+## Running SQL on FHIR views
+
+The Pathling library leverages the SQL on FHIR specification to provide a way to
+project FHIR data into easy-to-use tabular forms.
+
+Once you have transformed your FHIR data into tabular views, you can choose to
+keep it in a Spark dataframe and continue to work with in Apache Spark, or
+export it to Python or R dataframes or a variety of different file formats for
+use in the tool of your choice.
+
+```python
+from pathling import PathlingContext
+
+pc = PathlingContext.create()
+data = pc.read.ndjson("/some/file/location")
+
+result = data.view(
+    resource="Patient",
+    select=[
+        {"column": [{"path": "getResourceKey()", "name": "patient_id"}]},
+        {
+            "forEach": "address",
+            "column": [
+                {"path": "line.join('\\n')", "name": "street"},
+                {"path": "use", "name": "use"},
+                {"path": "city", "name": "city"},
+                {"path": "postalCode", "name": "zip"},
+            ],
+        },
+    ],
+)
+
+display(result)
+```
+
+The result of this query would look something like this:
+
+| patient_id | street                     | use  | city       | zip   |
+|------------|----------------------------|------|------------|-------|
+| 1          | 398 Kautzer Walk Suite 62  | home | Barnstable | 02675 |
+| 1          | 186 Nitzsche Forge         | work | Revere     | 02151 |
+| 2          | 1087 Quitzon Club          | home | Plymouth   | NULL  |
+| 3          | 442 Bruen Arcade           | home | Nantucket  | NULL  |
+| 4          | 858 Miller Junction Apt 61 | work | Brockton   | 02301 |
+
+For a more comprehensive example demonstrating SQL on FHIR queries with multiple
+views, complex transformations and joins, see
+the [SQL on FHIR example](https://pathling.csiro.au/docs/libraries/examples/prostate-cancer.md).
 
 ## Terminology functions
 
@@ -195,29 +244,31 @@ with_displays = exploded_parents.withColumn(
 
 Results in:
 
-| CODE      | DESCRIPTION               | PARENT    | PARENT_DISPLAY                             |
-|-----------|---------------------------|-----------|--------------------------------------------|
-| 65363002  | Otitis media              | 43275000  | Otitis                                     |
-| 65363002  | Otitis media              | 68996008  | Disorder of middle ear                     |
-| 16114001  | Fracture of ankle         | 125603006 | Injury of ankle                            |
-| 16114001  | Fracture of ankle         | 46866001  | Fracture of lower limb                     |
-| 444814009 | Viral sinusitis           | 36971009  | Sinusitis                                  |
-| 444814009 | Viral sinusitis           | 281794004 | Viral upper respiratory tract infection    |
-| 444814009 | Viral sinusitis           | 363166002 | Infective disorder of head                 |
-| 444814009 | Viral sinusitis           | 36971009  | Sinusitis                                  |
-| 444814009 | Viral sinusitis           | 281794004 | Viral upper respiratory tract infection    |
-| 444814009 | Viral sinusitis           | 363166002 | Infective disorder of head                 |
+| CODE      | DESCRIPTION       | PARENT    | PARENT_DISPLAY                          |
+|-----------|-------------------|-----------|-----------------------------------------|
+| 65363002  | Otitis media      | 43275000  | Otitis                                  |
+| 65363002  | Otitis media      | 68996008  | Disorder of middle ear                  |
+| 16114001  | Fracture of ankle | 125603006 | Injury of ankle                         |
+| 16114001  | Fracture of ankle | 46866001  | Fracture of lower limb                  |
+| 444814009 | Viral sinusitis   | 36971009  | Sinusitis                               |
+| 444814009 | Viral sinusitis   | 281794004 | Viral upper respiratory tract infection |
+| 444814009 | Viral sinusitis   | 363166002 | Infective disorder of head              |
+| 444814009 | Viral sinusitis   | 36971009  | Sinusitis                               |
+| 444814009 | Viral sinusitis   | 281794004 | Viral upper respiratory tract infection |
+| 444814009 | Viral sinusitis   | 363166002 | Infective disorder of head              |
 
 ### Retrieving designations
 
 Some terminologies contain additional display terms for codes. These can be used
-for language translations, synonyms, and more. You can query these terms using the `designation` function.
+for language translations, synonyms, and more. You can query these terms using
+the `designation` function.
 
 ```python
 # Get the synonyms for each code in the dataset.
 synonyms = csv.withColumn(
     "SYNONYMS",
-    designation(to_snomed_coding(csv.CODE), Coding.of_snomed("900000000000013009")),
+    designation(to_snomed_coding(csv.CODE),
+                Coding.of_snomed("900000000000013009")),
 )
 # Split each synonyms into a separate row.
 exploded_synonyms = synonyms.selectExpr(
