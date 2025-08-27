@@ -12,6 +12,7 @@
 - [ ] Update the supported Databricks Runtime versions in the
   documentation (`site/docs/libraries/installation/databricks.md`)
 - [ ] Update licenses (`mvn install -DskipTests -Plicenses`)
+- [ ] Update copyright statements in all files
 - [ ] Update the version to the release version
 - [ ] Tag the release (`v[version]`)
 - [ ] Merge to main and make sure it is green
