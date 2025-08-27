@@ -16,22 +16,11 @@ includes both language libraries and a server implementation.
 
 [**Read the documentation &rarr;**](https://pathling.csiro.au/docs)
 
-<picture>
-    <source srcset="https://raw.githubusercontent.com/aehrc/pathling/main/site/src/images/components-dark@2x.png"
-            media="(prefers-color-scheme: dark) and (min-resolution: 2dppx)"/>
-    <source srcset="https://raw.githubusercontent.com/aehrc/pathling/main/site/src/images/components-dark.png"
-            media="(prefers-color-scheme: dark)"/>
-    <source srcset="https://raw.githubusercontent.com/aehrc/pathling/main/site/src/images/components@2x.png"
-            media="(prefers-color-scheme: light) and (min-resolution: 2dppx)"/>
-    <img src="https://raw.githubusercontent.com/aehrc/pathling/main/site/src/images/components.png" alt="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" title="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" width="800"/>
-</picture>
-
 ## What can it do?
 
 ### Query and transformation of FHIR data
 
-[FHIR R4](https://hl7.org/fhir/R4) is the dominant standard for exchanging
-health
+[FHIR R4](https://hl7.org/fhir) is the dominant standard for exchanging health
 data. It comes in both [JSON](https://hl7.org/fhir/json.html)
 or [XML](https://hl7.org/fhir/xml.html) formats, and can contain over 140
 different types of resources, such
@@ -44,13 +33,13 @@ Pathling is capable of reading all the different types of FHIR resources into a
 format suitable for data analysis tasks. This makes the following things
 possible:
 
-- Querying FHIR data using SQL and [FHIRPath](/docs/fhirpath)
+- Creating SQL-friendly views from FHIR data
 - Transforming data into other formats, such as CSV
   or [Parquet](https://parquet.apache.org/)
 - Performing terminology queries against coded fields within the FHIR data
 
-See [Encoders](https://pathling.csiro.au/docs/libraries/encoders) for more
-information.
+See [Data in and out](/docs/libraries/io) and
+[Running queries](/docs/libraries/running-queries) for more information.
 
 ### Terminology queries
 
@@ -73,17 +62,7 @@ Examples of the types of questions that can be answered include:
 - Is this ICD-10 code within the pre-defined list of codes within my cohort
   definition?
 
-See [Terminology functions](https://pathling.csiro.au/docs/libraries/terminology)
-for more information.
-
-### FHIR analytics API
-
-Pathling also provides a FHIR server implementation, providing a REST API that
-can be used to perform analytic queries over FHIR data. This is useful for
-powering interactive web and mobile applications that need to be able to
-aggregate, group and transform FHIR data.
-
-See [Server](https://pathling.csiro.au/docs/server) for more information.
+See [Terminology functions](/docs/libraries/terminology) for more information.
 
 ## Artifact signing
 
@@ -93,7 +72,8 @@ Published Maven artifacts are signed with the following GPG key:
 - **Fingerprint**: `F814 751C 64B5 F5E7 08A8 C73F C3C6 291F ED48 678D`
 - **User ID**: `Pathling Developers <pathling@csiro.au>`
 
-The public key is available on [keys.openpgp.org](https://keys.openpgp.org/search?q=F814751C64B5F5E708A8C73FC3C6291FED48678D).
+The public key is available
+on [keys.openpgp.org](https://keys.openpgp.org/search?q=F814751C64B5F5E708A8C73FC3C6291FED48678D).
 
 ## Licensing and attribution
 
