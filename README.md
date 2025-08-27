@@ -10,9 +10,11 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=aehrc_pathling&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=aehrc_pathling)
 
 Pathling is a set of tools that make it easier to
-use [FHIR&reg;](https://hl7.org/fhir/R4) and clinical terminology within health
+use [FHIR&reg;](https://hl7.org/fhir) and clinical terminology within health
 data analytics. It is built on [Apache Spark](https://spark.apache.org), and
-includes both language libraries and a server implementation.
+it implements the [SQL on FHIR](https://sql-on-fhir.org) view specification and
+the [Bulk Data Access](https://hl7.org/fhir/uv/bulkdata/STU2/) implementation
+guide.
 
 [**Read the documentation &rarr;**](https://pathling.csiro.au/docs)
 
@@ -38,8 +40,9 @@ possible:
   or [Parquet](https://parquet.apache.org/)
 - Performing terminology queries against coded fields within the FHIR data
 
-See [Data in and out](/docs/libraries/io) and
-[Running queries](/docs/libraries/running-queries) for more information.
+See [Data in and out](https://pathling.csiro.au/docs/libraries/io) and
+[Running queries](https://pathling.csiro.au/docs/libraries/running-queries) for
+more information.
 
 ### Terminology queries
 
@@ -62,7 +65,8 @@ Examples of the types of questions that can be answered include:
 - Is this ICD-10 code within the pre-defined list of codes within my cohort
   definition?
 
-See [Terminology functions](/docs/libraries/terminology) for more information.
+See [Terminology functions](https://pathling.csiro.au/docs/libraries/terminology)
+for more information.
 
 ## Artifact signing
 
