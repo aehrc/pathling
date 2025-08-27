@@ -3,7 +3,7 @@ sidebar_position: 3
 description: The Pathling library can be used to query datasets of FHIR resources using SQL on FHIR views. This is useful for creating tabular views of FHIR data for use in analytic tools.
 ---
 
-# Running queries
+# Running SQL on FHIR views
 
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
@@ -130,4 +130,8 @@ The result of this query would look something like this:
 | 2          | 1087 Quitzon Club          | home | Plymouth   | NULL  |
 | 3          | 442 Bruen Arcade           | home | Nantucket  | NULL  |
 | 4          | 858 Miller Junction Apt 61 | work | Brockton   | 02301 |
+
+For a more comprehensive example demonstrating SQL on FHIR queries with multiple
+views, complex transformations and joins, see
+the [SQL on FHIR example](examples/prostate-cancer.md).
 
