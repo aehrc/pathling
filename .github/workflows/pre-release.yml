@@ -91,7 +91,7 @@ jobs:
           gpg --list-secret-keys --keyid-format LONG
 
       - name: Configure Maven settings
-        uses: s4u/maven-settings-action@v2.6.0
+        uses: s4u/maven-settings-action@v3.1.0
         with:
           servers: |
             [{

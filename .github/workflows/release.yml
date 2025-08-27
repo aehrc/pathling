@@ -13,7 +13,7 @@ env:
 
 permissions:
   id-token: write
-  contents: write  # Required to upload release assets
+  contents: write # Required to upload release assets
 
 jobs:
   release-maven:
@@ -89,7 +89,7 @@ jobs:
           gpg --list-secret-keys --keyid-format LONG
 
       - name: Configure Maven settings
-        uses: s4u/maven-settings-action@v2.6.0
+        uses: s4u/maven-settings-action@v3.1.0
         with:
           servers: |
             [{
@@ -286,14 +286,14 @@ jobs:
       - name: Download source code ZIP from release
         run: |
           gh release download ${{ github.ref_name }} --pattern "*.zip"
-          
+
           # Verify that a ZIP file was downloaded
           if [ ! -f *.zip ]; then
             echo "Error: No ZIP file found in release ${{ github.ref_name }}"
             echo "The release must contain a ZIP file to upload to DAP"
             exit 1
           fi
-          
+
           echo "Found ZIP file(s): $(ls *.zip)"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -304,19 +304,19 @@ jobs:
           echo "Getting collection information for csiro:49524..."
           COLLECTION_RESPONSE=$(curl -s -u "${{ secrets.DAP_USERNAME }}:${{ secrets.DAP_PASSWORD }}" \
             "https://data.csiro.au/dap/api/v2/my-collections")
-          
+
           # Find the collection with PID csiro:49524
           COLLECTION_DATA=$(echo "$COLLECTION_RESPONSE" | jq -r ".[] | select(.dataCollectionPid == \"csiro:49524\")")
           COLLECTION_ID=$(echo "$COLLECTION_DATA" | jq -r ".dataCollectionId")
           COLLECTION_STATUS=$(echo "$COLLECTION_DATA" | jq -r ".status")
-          
+
           if [ "$COLLECTION_ID" = "null" ] || [ -z "$COLLECTION_ID" ]; then
             echo "Collection csiro:49524 not found or not accessible"
             exit 1
           fi
-          
+
           echo "Found collection ID: $COLLECTION_ID (Status: $COLLECTION_STATUS)"
-          
+
           # Create a new version of the collection (or use existing draft)
           if [ "$COLLECTION_STATUS" = "Draft" ]; then
             echo "Using existing draft version..."
@@ -336,12 +336,12 @@ jobs:
             
             echo "Created new collection version with ID: $NEW_COLLECTION_ID"
           fi
-          
+
           # Unlock files for modification
           echo "Unlocking files for modification..."
           curl -s -X POST -u "${{ secrets.DAP_USERNAME }}:${{ secrets.DAP_PASSWORD }}" \
             "https://data.csiro.au/dap/api/v2/collections/$NEW_COLLECTION_ID/files/unlock"
-          
+
           # Wait for files to be unlocked
           echo "Waiting for files to be unlocked..."
           while true; do
@@ -358,7 +358,7 @@ jobs:
               exit 1
             fi
           done
-          
+
           # Upload the source code zip file
           echo "Uploading source code zip file..."
           ZIP_FILE=$(ls *.zip | head -n 1)
@@ -366,57 +366,57 @@ jobs:
             echo "No zip file found to upload"
             exit 1
           fi
-          
+
           echo "Uploading file: $ZIP_FILE"
-          
+
           # Get S3 credentials
           echo "Getting S3 credentials..."
           S3_CREDS=$(curl -s -u "${{ secrets.DAP_USERNAME }}:${{ secrets.DAP_PASSWORD }}" \
             "https://data.csiro.au/dap/api/v2/collections/$NEW_COLLECTION_ID/files/s3")
-          
+
           S3_ACCESS_KEY=$(echo "$S3_CREDS" | jq -r '.accessKey')
           S3_SECRET_KEY=$(echo "$S3_CREDS" | jq -r '.secretAccessKey')
           S3_BUCKET=$(echo "$S3_CREDS" | jq -r '.bucket')
           S3_PATH=$(echo "$S3_CREDS" | jq -r '.remoteDirectory')
           S3_ENDPOINT=$(echo "$S3_CREDS" | jq -r '.endPointUrl')
-          
+
           echo "S3 Endpoint: $S3_ENDPOINT"
           echo "S3 Bucket: $S3_BUCKET"
           echo "S3 Path: $S3_PATH"
-          
+
           # Upload using AWS CLI
           echo "Uploading to S3..."
           # Remove bucket name from path if it's duplicated
           S3_PATH_CLEAN=$(echo "$S3_PATH" | sed "s|^$S3_BUCKET/||")
-          
+
           AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY" AWS_SECRET_ACCESS_KEY="$S3_SECRET_KEY" \
             aws s3 cp "$ZIP_FILE" "s3://$S3_BUCKET/${S3_PATH_CLEAN}$ZIP_FILE" \
             --endpoint-url "$S3_ENDPOINT"
-          
+
           echo "File uploaded successfully"
-          
+
           # Validate the collection
           echo "Validating collection..."
           VALIDATION_RESPONSE=$(curl -s -u "${{ secrets.DAP_USERNAME }}:${{ secrets.DAP_PASSWORD }}" \
             "https://data.csiro.au/dap/api/v2/collections/$NEW_COLLECTION_ID/validate")
-          
+
           echo "Validation response: $VALIDATION_RESPONSE"
-          
+
           # Check if validation passed
           VALIDATION_ERRORS=$(echo "$VALIDATION_RESPONSE" | jq -r '.errors // []')
           if [ "$VALIDATION_ERRORS" != "[]" ] && [ "$VALIDATION_ERRORS" != "null" ]; then
             echo "Validation errors found: $VALIDATION_ERRORS"
             exit 1
           fi
-          
+
           # Submit collection for publication (bypass approval if possible)
           echo "Submitting collection for publication..."
           SUBMIT_PAYLOAD='{"approver": null, "businessUnit": null, "notesToApprover": null, "supportingFilesForApprover": []}'
-          
+
           curl -s -X POST -u "${{ secrets.DAP_USERNAME }}:${{ secrets.DAP_PASSWORD }}" \
             -H "Content-Type: application/json" \
             -d "$SUBMIT_PAYLOAD" \
             "https://data.csiro.au/dap/api/v2/collections/$NEW_COLLECTION_ID/submit"
-          
+
           echo "Collection submitted for publication"
         timeout-minutes: 60
