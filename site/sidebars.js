@@ -44,11 +44,6 @@ const sidebars = {
     },
     {
       type: "link",
-      label: "Scala API docs",
-      href: "pathname:///docs/scala/au/csiro/pathling/index.html",
-    },
-    {
-      type: "link",
       label: "Java API docs",
       href: "pathname:///docs/java/index.html",
     },

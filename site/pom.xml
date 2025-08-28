@@ -162,19 +162,6 @@
                   <outputDirectory>${project.build.directory}/site/docs/r</outputDirectory>
                 </configuration>
               </execution>
-              <execution>
-                <id>unpack-scala-docs</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>unpack-dependencies</goal>
-                </goals>
-                <configuration>
-                  <includeGroupIds>au.csiro.pathling</includeGroupIds>
-                  <includeArtifactIds>encoders</includeArtifactIds>
-                  <includeClassifiers>javadoc</includeClassifiers>
-                  <outputDirectory>${project.build.directory}/site/docs/scala</outputDirectory>
-                </configuration>
-              </execution>
             </executions>
           </plugin>
           <plugin>
