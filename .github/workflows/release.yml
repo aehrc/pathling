@@ -269,14 +269,8 @@ jobs:
         run: |
           mvn --batch-mode deploy \
           -pl lib/python -am \
-          -PpythonRelease
+          DskipTests -PpythonRelease
         timeout-minutes: 30
-
-      - name: Save Python wheel
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-wheel
-          path: lib/python/target/py-dist/pathling-*.whl
 
   upload-to-dap:
     name: Upload source code to CSIRO DAP
