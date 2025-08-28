@@ -30,12 +30,12 @@
     <maven.compiler.target>17</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
-  
+
   <dependencies>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>library-runtime</artifactId>
-      <version>8.0.0-SNAPSHOT</version>
+      <version>8.0.0</version>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
