@@ -175,19 +175,6 @@
                   <outputDirectory>${project.build.directory}/site/docs/scala</outputDirectory>
                 </configuration>
               </execution>
-              <execution>
-                <id>unpack-helm-chart</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>unpack-dependencies</goal>
-                </goals>
-                <configuration>
-                  <includeGroupIds>au.csiro.pathling</includeGroupIds>
-                  <includeArtifactIds>helm</includeArtifactIds>
-                  <excludes>META-INF/**</excludes>
-                  <outputDirectory>${project.build.directory}/site/helm</outputDirectory>
-                </configuration>
-              </execution>
             </executions>
           </plugin>
           <plugin>
