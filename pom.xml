@@ -880,6 +880,7 @@
             <artifactId>central-publishing-maven-plugin</artifactId>
             <configuration>
               <autoPublish>true</autoPublish>
+              <ignorePublishedComponents>true</ignorePublishedComponents>
             </configuration>
           </plugin>
           <plugin>
