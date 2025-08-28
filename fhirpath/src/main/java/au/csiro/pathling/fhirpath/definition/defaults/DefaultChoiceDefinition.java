@@ -24,7 +24,7 @@ import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
 import lombok.Value;
-import org.apache.commons.lang.WordUtils;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * The default implementation of a choice data type allowing for explicit definition of its possible
@@ -57,7 +57,7 @@ public class DefaultChoiceDefinition implements ChoiceDefinition {
   @Override
   @Nonnull
   public Optional<ElementDefinition> getChildByType(@Nonnull final String type) {
-    return getChildElement(name + WordUtils.capitalize(type))
+    return getChildElement(name + StringUtils.capitalize(type))
         .map(ElementDefinition.class::cast);
   }
 

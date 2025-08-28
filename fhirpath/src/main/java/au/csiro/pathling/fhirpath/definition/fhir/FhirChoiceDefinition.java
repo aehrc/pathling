@@ -23,7 +23,7 @@ import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import org.apache.commons.lang.WordUtils;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * Represents the definition of an element that can be represented by multiple different data
@@ -51,7 +51,7 @@ class FhirChoiceDefinition implements ChoiceDefinition {
   @Nonnull
   public static String getColumnName(@Nonnull final String elementName,
       @Nonnull final String type) {
-    return elementName + WordUtils.capitalize(type);
+    return elementName + StringUtils.capitalize(type);
   }
 
   @Nonnull
