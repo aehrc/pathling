@@ -27,12 +27,19 @@ jobs:
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
+          submodules: recursive
 
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: "zulu"
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v4
+        id: python-install
+        with:
+          python-version: 3.8
 
       - name: Cache local Maven repository
         uses: actions/cache@v4
@@ -42,8 +49,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      - name: Run the deploy goal with Maven
+      - name: Cache Python packages
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('lib/python/requirements/dev.txt', 'lib/python/requirements/package.txt') }}
+
+      - name: Run deploy goal (pre-release)
         env:
+          PYSPARK_PYTHON: ${{ steps.python-install.outputs.python-path }}
+          PYSPARK_DRIVER_PYTHON: ${{ steps.python-install.outputs.python-path }}
           TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
         run: |

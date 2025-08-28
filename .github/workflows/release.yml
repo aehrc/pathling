@@ -93,7 +93,7 @@ jobs:
         with:
           servers: |
             [{
-              "id": "ossrh",
+              "id": "central",
               "username": "${{ secrets.OSSRH_USERNAME }}",
               "password": "${{ secrets.OSSRH_PASSWORD }}"
             }]
@@ -117,8 +117,6 @@ jobs:
         env:
           PYSPARK_PYTHON: ${{ steps.python-install.outputs.python-path }}
           PYSPARK_DRIVER_PYTHON: ${{ steps.python-install.outputs.python-path }}
-          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
           R_KEEP_PKG_SOURCE: yes
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
@@ -127,6 +125,7 @@ jobs:
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
           -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
           -Dsonar.host.url=https://sonarcloud.io \
+          -Dsonar.sarifReportPaths=trivy-results.sarif \
           -pl '!benchmark' -Pdocs,mavenRelease
         timeout-minutes: 60
 
@@ -142,6 +141,8 @@ jobs:
           name: coverage-reports
           path: |
             **/jacoco.xml
+            **/target/site/jacoco
+            **/target/site/jacoco-aggregate
             lib/python/**/coverage.xml
 
       - name: Save built JARs
@@ -204,6 +205,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
           submodules: recursive
 
@@ -233,7 +235,7 @@ jobs:
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |-
+          restore-keys: |
             ${{ runner.os }}-maven-
 
       - name: Cache Python packages
@@ -265,8 +267,9 @@ jobs:
           R_KEEP_PKG_SOURCE: yes
         run: |
           mvn --batch-mode deploy \
-          -pl '!benchmark' -Pdocs,pythonRelease
-        timeout-minutes: 60
+          -pl lib/python -am \
+          -PpythonRelease
+        timeout-minutes: 30
 
       - name: Save Python wheel
         uses: actions/upload-artifact@v4
@@ -419,4 +422,4 @@ jobs:
             "https://data.csiro.au/dap/api/v2/collections/$NEW_COLLECTION_ID/submit"
 
           echo "Collection submitted for publication"
-        timeout-minutes: 60
+        timeout-minutes: 20
