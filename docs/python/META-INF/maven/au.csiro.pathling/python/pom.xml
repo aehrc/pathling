@@ -332,6 +332,7 @@
                     <argument>twine</argument>
                     <argument>upload</argument>
                     <argument>--verbose</argument>
+                    <argument>--skip-existing</argument>
                     <argument>--repository</argument>
                     <argument>${pathling.pypi.repository}</argument>
                     <argument>${project.build.directory}/py-dist/*</argument>
