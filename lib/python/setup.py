@@ -50,7 +50,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Australian e-Health Research Centre, CSIRO",
-    author_email="ontoserver-support@csiro.au",
+    author_email="pathling@csiro.au",
     url="https://github.com/aehrc/pathling",
     keywords=["pathling", "fhir", "analytics", "spark", "standards", "terminology"],
     classifiers=[

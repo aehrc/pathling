@@ -6,7 +6,7 @@ Authors@R:
     c(
       person("Australian e-Health Research Centre, CSIRO", 
              role = c("cph", "cre"),
-             email = "ontoserver-support@csiro.au"),
+             email = "pathling@csiro.au"),
       person(given = "Piotr",
              family = "Szul",
              role = "aut",
@@ -16,7 +16,7 @@ Authors@R:
              role = "aut",
              email = "john.grimes@csiro.au")
      )
-Maintainer: "Australian e-Health Research Centre, CSIRO" <ontoserver-support@csiro.au>
+Maintainer: "Australian e-Health Research Centre, CSIRO" <pathling@csiro.au>
 Description: R API for 'Pathling', a tool for querying and transforming electronic health record data that is represented using the 'Fast Healthcare Interoperability Resources' (FHIR) standard - see <https://pathling.csiro.au/docs>.
 License: Apache License 2.0
 URL: https://pathling.csiro.au/
