@@ -88,15 +88,10 @@ jobs:
           name: site
           path: site/target/site/
 
-      - name: Prepare site directory
-        run: |
-          mkdir -p site/target/site
-          cp -r site-artifact/* site/target/site/
-
       - name: Copy R package into site
         run: |
           mkdir -p site/target/site/R
-          cp r-package-artifact/pathling_*.tar.gz site/target/site/R/
+          cp lib/R/target/pathling_*.tar.gz site/target/site/R/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
