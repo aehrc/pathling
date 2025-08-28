@@ -4,6 +4,7 @@ CVE-2024-29025
 CVE-2024-47535
 CVE-2025-25193
 CVE-2025-24970
+CVE-2025-55163
 
 # The vulnerable version of protobuf-java is a transitive provided dependency, we do not bundle it into our distribution.
 CVE-2024-7254
