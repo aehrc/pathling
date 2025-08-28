@@ -38,3 +38,4 @@ Config/pathling/ScalaVersion: %pathling.Rapi.scalaVersion%
 Config/pathling/HadoopMajorVersion: %pathling.Rapi.hadoopMajorVersion%
 Config/pathling/HadoopVersion: %pathling.Rapi.hadoopVersion%
 Config/pathling/DeltaVersion: %pathling.Rapi.deltaVersion%
+NeedsCompilation: no
