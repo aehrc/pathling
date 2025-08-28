@@ -77,15 +77,9 @@ jobs:
           PYSPARK_PYTHON: ${{ steps.python-install.outputs.python-path }}
           PYSPARK_DRIVER_PYTHON: ${{ steps.python-install.outputs.python-path }}
           R_KEEP_PKG_SOURCE: yes
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
-          mvn --batch-mode deploy \
-          org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-          -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
-          -Dsonar.host.url=https://sonarcloud.io \
-          -Dsonar.sarifReportPaths=trivy-results.sarif \
-          -pl '!benchmark' -Pdocs,mavenPreRelease
+          mvn --batch-mode install \
+          -pl site -am -DskipTests -Pdocs
         timeout-minutes: 60
 
       - name: Save site
