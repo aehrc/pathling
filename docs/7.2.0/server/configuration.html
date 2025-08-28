@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-7.2.0 docs-doc-page docs-doc-id-server/configuration" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.8.1">
+<title data-rh="true">Configuration | Pathling</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:image" content="https://pathling.csiro.au/assets/images/social-preview.png"><meta data-rh="true" name="twitter:image" content="https://pathling.csiro.au/assets/images/social-preview.png"><meta data-rh="true" property="og:url" content="https://pathling.csiro.au/docs/7.2.0/server/configuration"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="7.2.0"><meta data-rh="true" name="docusaurus_tag" content="docs-default-7.2.0"><meta data-rh="true" name="docsearch:version" content="7.2.0"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-7.2.0"><meta data-rh="true" name="robots" content="noindex, nofollow"><meta data-rh="true" property="og:title" content="Configuration | Pathling"><meta data-rh="true" name="description" content="Configuration options for the Pathling server."><meta data-rh="true" property="og:description" content="Configuration options for the Pathling server."><link data-rh="true" rel="icon" href="/favicon.ico"><link data-rh="true" rel="canonical" href="https://pathling.csiro.au/docs/7.2.0/server/configuration"><link data-rh="true" rel="alternate" href="https://pathling.csiro.au/docs/7.2.0/server/configuration" hreflang="en"><link data-rh="true" rel="alternate" href="https://pathling.csiro.au/docs/7.2.0/server/configuration" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Configuration","item":"https://pathling.csiro.au/docs/7.2.0/server/configuration"}]}</script><link rel="stylesheet" href="/assets/css/styles.58cc8ec6.css">
+<script src="/assets/js/runtime~main.8f259b3a.js" defer="defer"></script>
+<script src="/assets/js/main.eb4df5f2.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t="light";var e=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();document.documentElement.setAttribute("data-theme",e||t),document.documentElement.setAttribute("data-theme-choice",e||t)}(),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a href="https://pathling.csiro.au" target="_blank" rel="noopener noreferrer" class="navbar__brand"><div class="navbar__logo"><img src="/assets/images/logo-colour.svg" alt="Pathling" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/assets/images/logo-colour-dark.svg" alt="Pathling" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div></a><a class="navbar__item navbar__link" href="/docs/7.2.0">Overview</a><a class="navbar__item navbar__link" href="/docs/7.2.0/libraries">Libraries</a><a class="navbar__item navbar__link" href="/docs/7.2.0/fhirpath">FHIRPath</a><a aria-current="page" class="navbar__item navbar__link navbar__link--active" href="/docs/7.2.0/server">Server</a><a class="navbar__item navbar__link" href="/roadmap">Roadmap</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a class="navbar__link" aria-haspopup="true" aria-expanded="false" role="button" href="/docs/7.2.0/server/configuration">7.2.0</a><ul class="dropdown__menu"><li><a class="dropdown__link" href="/docs">8.0.0</a></li><li><a aria-current="page" class="dropdown__link dropdown__link--active" href="/docs/7.2.0/server/configuration">7.2.0</a></li></ul></div><a href="https://github.com/aehrc/pathling" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-hidden="true" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type="button" disabled="" title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP lightToggleIcon_pyhR"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP darkToggleIcon_wfgR"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP systemToggleIcon_QzmC"><path fill="currentColor" d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"></path></svg></button></div><div class="navbarSearchContainer_Bca1"></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd"><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/docs/7.2.0/server">Introduction</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/docs/7.2.0/server/getting-started">Getting started</a></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="menu__link">Operations</a></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/docs/7.2.0/server/operations/import">Import</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/docs/7.2.0/server/operations/search">Search</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/docs/7.2.0/server/operations/aggregate">Aggregate</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/docs/7.2.0/server/operations/extract">Extract</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/docs/7.2.0/server/operations/update">Update and batch</a></li></ul></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" href="/docs/7.2.0/server/configuration">Configuration</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/docs/7.2.0/server/authorization">Authorization</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/docs/7.2.0/server/async">Async</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/docs/7.2.0/server/caching">Caching</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/docs/7.2.0/server/sync">Synchronization</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/docs/7.2.0/server/kubernetes">Kubernetes</a></li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">Configuration</span></li></ul></nav><span class="theme-doc-version-badge badge badge--secondary">Version: 7.2.0</span><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Configuration</h1></header>
+<p>Pathling is distributed in two forms: as a JAR file, and a Docker image. The
+easiest way to configure Pathling is through environment variables.</p>
+<p>If environment variables are problematic for your deployment, Pathling can be
+also configured in a variety of other ways as supported by the Spring Boot
+framework (see
+<a href="https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-external-config" target="_blank" rel="noopener noreferrer">Spring Boot Reference Documentation: Externalized Configuration</a>).</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="configuration-variables">Configuration variables<a href="#configuration-variables" class="hash-link" aria-label="Direct link to Configuration variables" title="Direct link to Configuration variables">​</a></h2>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="general">General<a href="#general" class="hash-link" aria-label="Direct link to General" title="Direct link to General">​</a></h3>
+<ul>
+<li><code>server.port</code> - (default: <code>8080</code>) The port which the server should bind to and
+listen for HTTP connections.</li>
+<li><code>server.servlet.context-path</code> - A prefix to add to the API endpoint, e.g. a
+value of <code>/foo</code> would cause the FHIR endpoint to be changed to <code>/foo/fhir</code>.</li>
+<li><code>pathling.implementationDescription</code> - (default:
+<code>Yet Another Pathling Server</code>) Controls the content of the
+<code>implementation.description</code> element within the server&#x27;s
+<a href="https://hl7.org/fhir/R4/http.html#capabilities" target="_blank" rel="noopener noreferrer">CapabilityStatement</a>.</li>
+<li><code>JAVA_TOOL_OPTIONS</code> - (default in Docker image: <code>-Xmx2g</code>) Allows for the
+configuration of arbitrary options on the Java VM that Pathling runs within.</li>
+</ul>
+<p>Additionally, you can set any variable supported by Spring Boot, see
+<a href="https://docs.spring.io/spring-boot/docs/current/reference/html/appendix-application-properties.html#common-application-properties" target="_blank" rel="noopener noreferrer">Spring Boot Reference Documentation: Common Application properties</a>.</p>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="import">Import<a href="#import" class="hash-link" aria-label="Direct link to Import" title="Direct link to Import">​</a></h3>
+<ul>
+<li><code>pathling.import.allowableSources</code> - (default: <code>file:///usr/share/staging</code>) A
+set of URL prefixes which are allowable for use within the import operation.
+<strong>Important note</strong>: a trailing slash should be used in cases where an attacker
+could create an alternative URL with the same prefix, e.g. <code>s3://some-bucket</code>
+would also match <code>s3://some-bucket-alternative</code>.</li>
+</ul>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="asynchronous-processing">Asynchronous processing<a href="#asynchronous-processing" class="hash-link" aria-label="Direct link to Asynchronous processing" title="Direct link to Asynchronous processing">​</a></h3>
+<ul>
+<li>
+<p><code>pathling.async.enabled</code> - (default: <code>true</code>) Enables asynchronous processing
+for those operations that support it, when explicitly requested.</p>
+</li>
+<li>
+<p><code>pathling.async.varyHeadersExcludedFromCacheKey</code> - (default: <code>Accept</code>,
+<code>Accept-Encoding</code>) A subset  of <code>pathling.httpCaching.vary</code> HTTP headers,
+which should be excluded from determining that asynchronous requests are
+equivalent and can be routed to the same asynchronous job.</p>
+</li>
+</ul>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="encoding">Encoding<a href="#encoding" class="hash-link" aria-label="Direct link to Encoding" title="Direct link to Encoding">​</a></h3>
+<ul>
+<li><code>pathling.encoding.maxNestingLevel</code> - (default: <code>3</code>) Controls the maximum
+depth of nested element data that is encoded upon import. This affects certain
+elements within FHIR resources that contain recursive references, e.g.
+<a href="https://hl7.org/fhir/R4/questionnaireresponse.html" target="_blank" rel="noopener noreferrer">QuestionnaireResponse.item</a>.</li>
+<li><code>pathling.encoding.enableExtensions</code> - (default: <code>true</code>) Enables support for
+FHIR extensions.</li>
+<li><code>pathling.encoding.openTypes</code> - (default: <code>boolean</code>,<code>code</code>,<code>date</code>,<code>dateTime</code>,
+<code>decimal</code>,<code>integer</code>,<code>string</code>,<code>Coding</code>,<code>CodeableConcept</code>,<code>Address</code>,<code>Identifier</code>
+,<code>Reference</code>) The list of types that are encoded within open types,
+such as extensions. This default list was taken from the data types that are
+common to extensions found in widely-used IGs, such as the US and AU base
+profiles. In general, you will get the best query performance by encoding your
+data with the shortest possible list.</li>
+</ul>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="storage">Storage<a href="#storage" class="hash-link" aria-label="Direct link to Storage" title="Direct link to Storage">​</a></h3>
+<ul>
+<li><code>pathling.storage.warehouseUrl</code> - (default: <code>file:///usr/share/warehouse</code>) The
+base URL at which Pathling will look for data files, and where it will save
+data received within <a href="/docs/7.2.0/server/operations/import">import</a> requests. Can be an
+<a href="https://aws.amazon.com/s3/" target="_blank" rel="noopener noreferrer">Amazon S3</a> (<code>s3://</code>),
+<a href="https://hadoop.apache.org/docs/r1.2.1/hdfs_design.html" target="_blank" rel="noopener noreferrer">HDFS</a> (<code>hdfs://</code>) or
+filesystem (<code>file://</code>) URL.</li>
+<li><code>pathling.storage.databaseName</code> - (default: <code>default</code>) The subdirectory within
+the warehouse path used to read and write data.</li>
+</ul>
+<p>Pathling will automatically detect AWS authentication details within the
+environment and use them to access S3 buckets. It uses a chain of authentication
+methods,
+see <a href="https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/auth/DefaultAWSCredentialsProviderChain.html" target="_blank" rel="noopener noreferrer">DefaultAWSCredentialsProviderChain</a>
+for details.</p>
+<p>In addition to this, any Hadoop S3 configuration variable (<code>fs.s3a.*</code>) can be
+set within Pathling directly. See
+the <a href="https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/index.html" target="_blank" rel="noopener noreferrer">Hadoop AWS documentation</a>
+for all the possible options.</p>
+<p>This is the default S3 configuration, along with some hints on how to add some
+common configuration parameters:</p>
+<div class="language-yaml codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-yaml codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token key atrule" style="color:#00a4db">fs</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">  </span><span class="token key atrule" style="color:#00a4db">s3a</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">    </span><span class="token key atrule" style="color:#00a4db">aws</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token comment" style="color:#999988;font-style:italic"># credentials:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token comment" style="color:#999988;font-style:italic">#   provider: org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token comment" style="color:#999988;font-style:italic">#   provider: org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token comment" style="color:#999988;font-style:italic">#</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token comment" style="color:#999988;font-style:italic"># For use with: SimpleAWSCredentialsProvider</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token comment" style="color:#999988;font-style:italic"># access:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token comment" style="color:#999988;font-style:italic">#   key: [access key]</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token comment" style="color:#999988;font-style:italic"># secret:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token comment" style="color:#999988;font-style:italic">#   key: [secret key]</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token comment" style="color:#999988;font-style:italic">#</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token comment" style="color:#999988;font-style:italic"># For use with: AssumedRoleCredentialProvider</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token comment" style="color:#999988;font-style:italic"># assumed:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token comment" style="color:#999988;font-style:italic">#   role:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token comment" style="color:#999988;font-style:italic">#     arn: [role ARN]</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token comment" style="color:#999988;font-style:italic">#</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token key atrule" style="color:#00a4db">connection</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">        </span><span class="token key atrule" style="color:#00a4db">maximum</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">100</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token key atrule" style="color:#00a4db">committer</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">        </span><span class="token key atrule" style="color:#00a4db">name</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"> magic</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">        </span><span class="token key atrule" style="color:#00a4db">magic</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">          </span><span class="token key atrule" style="color:#00a4db">enabled</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"> </span><span class="token boolean important" style="color:#36acaa">true</span><br></span></code></pre></div></div>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="apache-spark">Apache Spark<a href="#apache-spark" class="hash-link" aria-label="Direct link to Apache Spark" title="Direct link to Apache Spark">​</a></h3>
+<ul>
+<li><code>pathling.spark.appName</code> - (default: <code>pathling</code>) Controls the application name
+that Pathling will be identified as within any Spark cluster that it
+participates in.</li>
+<li><code>pathling.spark.explainQueries</code> - (default: <code>false</code>) If set to true, Spark
+query plans will be written to the logs.</li>
+<li><code>pathling.spark.cacheDatasets</code> - (default: <code>true</code>) This controls whether the
+built-in caching within Spark is used for resource datasets and search
+results. It may be useful to turn this off for large datasets in
+memory-constrained environments.</li>
+<li><code>pathling.spark.compactionThreshold</code> - (default: <code>10</code>) When a table is
+updated, the number of partitions is checked. If the number exceeds this
+threshold, the table will be repartitioned back to the default number of
+partitions. This prevents large numbers of small updates causing poor
+subsequent query performance.</li>
+</ul>
+<p>Any Spark configuration variable can be set within Pathling directly. See
+<a href="https://spark.apache.org/docs/latest/configuration.html" target="_blank" rel="noopener noreferrer">Spark Configuration</a>
+for the full list.</p>
+<p>Here are a few that you might be particularly interested in:</p>
+<ul>
+<li><code>spark.master</code> - (default: <code>local[*]</code>) Address of the master node of an
+<a href="https://spark.apache.org/" target="_blank" rel="noopener noreferrer">Apache Spark</a> cluster to use for processing data,
+see <a href="https://spark.apache.org/docs/latest/submitting-applications.html#master-urls" target="_blank" rel="noopener noreferrer">Master URLs</a>.</li>
+<li><code>spark.executor.memory</code> - (default: <code>1g</code>) The quantity of memory available for
+each child task to process data within, in the same format as JVM memory
+strings with a size unit suffix (<code>k</code>, <code>m</code>, <code>g</code> or <code>t</code>) (e.g. <code>512m</code>, <code>2g</code>).</li>
+<li><code>spark.sql.shuffle.partitions</code> - (default: <code>2</code>) This option controls the
+number of data partitions used to distribute data between child tasks. This
+can be tuned to higher numbers for larger data sets. It also controls the
+granularity of requests made to the configured terminology service.</li>
+</ul>
+<p>This is the default Spark configuration:</p>
+<div class="language-yaml codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-yaml codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token key atrule" style="color:#00a4db">spark</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">  </span><span class="token key atrule" style="color:#00a4db">master</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"> local</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">*</span><span class="token punctuation" style="color:#393A34">]</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">  </span><span class="token key atrule" style="color:#00a4db">sql</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">    </span><span class="token key atrule" style="color:#00a4db">adaptive</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token key atrule" style="color:#00a4db">enabled</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"> </span><span class="token boolean important" style="color:#36acaa">true</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token key atrule" style="color:#00a4db">coalescePartitions</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">        </span><span class="token key atrule" style="color:#00a4db">enabled</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"> </span><span class="token boolean important" style="color:#36acaa">true</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">    </span><span class="token key atrule" style="color:#00a4db">extensions</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"> io.delta.sql.DeltaSparkSessionExtension</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">    </span><span class="token key atrule" style="color:#00a4db">catalog</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token key atrule" style="color:#00a4db">spark_catalog</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"> org.apache.spark.sql.delta.catalog.DeltaCatalog</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">  </span><span class="token key atrule" style="color:#00a4db">databricks</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">    </span><span class="token key atrule" style="color:#00a4db">delta</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">      </span><span class="token key atrule" style="color:#00a4db">schema</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">        </span><span class="token key atrule" style="color:#00a4db">autoMerge</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">          </span><span class="token key atrule" style="color:#00a4db">enabled</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"> </span><span class="token boolean important" style="color:#36acaa">true</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">  </span><span class="token key atrule" style="color:#00a4db">scheduler</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">    </span><span class="token key atrule" style="color:#00a4db">mode</span><span class="token punctuation" style="color:#393A34">:</span><span class="token plain"> FAIR</span><br></span></code></pre></div></div>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="terminology-service">Terminology service<a href="#terminology-service" class="hash-link" aria-label="Direct link to Terminology service" title="Direct link to Terminology service">​</a></h3>
+<ul>
+<li><code>pathling.terminology.enabled</code> - (default: <code>true</code>) Enables use of terminology
+functions within queries.</li>
+<li><code>pathling.terminology.serverUrl</code> - (default:
+<code>https://tx.ontoserver.csiro.au/fhir</code>) The endpoint of the
+<a href="https://hl7.org/fhir/R4/terminology-service.html" target="_blank" rel="noopener noreferrer">FHIR terminology service</a>
+(R4) that the server can use to resolve terminology queries.</li>
+<li><code>pathling.terminology.verboseLogging</code> - (default: <code>false</code>) Setting this option
+to <code>true</code> will enable additional logging of the details of requests between
+the server and the terminology service.</li>
+<li><code>pathling.terminology.acceptLanguage</code> - If this variable is set, it will be
+used as the value of the <code>Accept-Language</code> HTTP header passed to the terminology
+server. The value may contain multiple languages, with weighted preferences
+as defined in
+<a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language" target="_blank" rel="noopener noreferrer">RFC 9110</a>.
+If not provided, the header is not sent.
+The server can use the header to return the result in the preferred language
+if it is able. The actual behaviour may depend on the server implementation
+and the code systems used.</li>
+</ul>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="client">Client<a href="#client" class="hash-link" aria-label="Direct link to Client" title="Direct link to Client">​</a></h4>
+<ul>
+<li><code>pathling.terminology.client.maxConnectionsTotal</code> - (default: <code>32</code>) The
+maximum number of total connections allowed from the client.</li>
+<li><code>pathling.terminology.client.maxConnectionsPerRoute</code> - (default: <code>16</code>) The
+maximum number of connections allowed from the client, per route.</li>
+<li><code>pathling.terminology.client.socketTimeout</code> - (default: <code>60000</code>) The maximum
+period (in milliseconds) that the server should wait for incoming data from
+the terminology service.</li>
+<li><code>pathling.terminology.client.retryEnabled</code> - (default: <code>true</code>) Enables
+automatic retry of failed terminology service requests.</li>
+<li><code>pathling.terminology.client.retryCount</code> - (default: <code>2</code>) The maximum
+number of times that failed terminology service requests should be retried.</li>
+</ul>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="cache">Cache<a href="#cache" class="hash-link" aria-label="Direct link to Cache" title="Direct link to Cache">​</a></h4>
+<ul>
+<li><code>pathling.terminology.cache.enabled</code> - (default: <code>true</code>) Set this to false to
+disable caching of terminology requests (not recommended).</li>
+<li><code>pathling.terminology.cache.storageType</code> - (default: <code>memory</code>) The type of
+storage to be used by the terminology cache. Valid values are <code>memory</code> and
+<code>disk</code>.</li>
+<li><code>pathling.terminology.cache.maxEntries</code> - (default: <code>50000</code>) Sets the maximum
+number of entries that will be held in memory. Only applicable when using
+the <code>memory</code> storage type.</li>
+<li><code>pathling.terminology.cache.storagePath</code> - The path at which to store cache
+data. Required if <code>pathling.terminology.cache.storageType</code> is set to <code>disk</code>.</li>
+<li><code>pathling.terminology.cache.defaultExpiry</code> - (default: <code>600</code>) The amount
+of time (in seconds) that a response from the terminology server should be
+cached if the server does not specify an expiry.</li>
+<li><code>pathling.terminology.cache.overrideExpiry</code> - If provided, this value
+overrides the expiry time provided by the terminology server.</li>
+</ul>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="authentication">Authentication<a href="#authentication" class="hash-link" aria-label="Direct link to Authentication" title="Direct link to Authentication">​</a></h4>
+<ul>
+<li><code>pathling.terminology.authentication.enabled</code> - (default: <code>false</code>) Enables
+authentication for requests to the terminology service.</li>
+<li><code>pathling.terminology.authentication.tokenEndpoint</code>,
+<code>pathling.terminology.authentication.clientId</code>,
+<code>pathling.terminology.authentication.clientSecret</code> - Authentication details
+for connecting to a terminology service that requires authentication, using
+<a href="https://datatracker.ietf.org/doc/html/rfc6749#section-4.4" target="_blank" rel="noopener noreferrer">OAuth 2.0 client credentials flow</a>.</li>
+</ul>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="authorization">Authorization<a href="#authorization" class="hash-link" aria-label="Direct link to Authorization" title="Direct link to Authorization">​</a></h3>
+<ul>
+<li><code>pathling.auth.enabled</code> - (default: <code>false</code>) Enables authorization. If this
+option is set to <code>true</code>, <code>pathling.auth.issuer</code> and
+<code>pathling.auth.audience</code> options must also be set.</li>
+<li><code>pathling.auth.issuer</code> - Configures the issuing domain for bearer tokens, e.g.
+<code>https://pathling.au.auth0.com/</code>. Must match the contents of
+the <a href="https://tools.ietf.org/html/rfc7519#section-4.1.1" target="_blank" rel="noopener noreferrer">issuer claim</a>
+within bearer tokens.</li>
+<li><code>pathling.auth.audience</code> - Configures the audience for bearer tokens, which is
+the FHIR endpoint that tokens are intended to be authorised for, e.g.
+<code>https://pathling.csiro.au/fhir</code>. Must match the contents of the
+<a href="https://tools.ietf.org/html/rfc7519#section-4.1.3" target="_blank" rel="noopener noreferrer">audience claim</a>
+within bearer tokens.</li>
+<li><code>pathling.auth.ga4ghPassports.patientIdSystem</code> - (default:
+<code>http://www.australiangenomics.org.au/id/study-number</code>) When GA4GH passport
+authentication is enabled, this option configures the
+<a href="https://hl7.org/fhir/R4/datatypes.html#identifier" target="_blank" rel="noopener noreferrer">identifier</a> system that is
+used to identify and control access to patient data.</li>
+<li><code>pathling.auth.ga4ghPassports.allowedVisaIssuers</code> - (default: <code>[]</code>) When GA4GH
+passport authentication is enabled, this option configures the list of
+endpoints that are allowed to issue visas.</li>
+</ul>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="http-caching">HTTP Caching<a href="#http-caching" class="hash-link" aria-label="Direct link to HTTP Caching" title="Direct link to HTTP Caching">​</a></h3>
+<ul>
+<li><code>pathling.httpCaching.vary</code> - (default: <code>Accept</code>, <code>Accept-Encoding</code>, <code>Prefer</code>,
+<code>Authorization</code>) A list of values to return within the <code>Vary</code> header.</li>
+<li><code>pathling.httpCaching.cacheableControl</code> - (default: <code>must-revalidate</code>,
+<code>max-age=1</code>) A list of values to return within the <code>Cache-Control</code> header, for
+cacheable responses.</li>
+<li><code>pathling.httpCaching.uncacheableControl</code> - (default: <code>no-store</code>) A list of
+values to return within the <code>Cache-Control</code> header, for uncacheable responses.</li>
+</ul>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="cross-origin-resource-sharing-cors">Cross-Origin Resource Sharing (CORS)<a href="#cross-origin-resource-sharing-cors" class="hash-link" aria-label="Direct link to Cross-Origin Resource Sharing (CORS)" title="Direct link to Cross-Origin Resource Sharing (CORS)">​</a></h3>
+<p>See the
+<a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS" target="_blank" rel="noopener noreferrer">Cross-Origin Resource Sharing</a>
+specification for more information about the meaning of the different headers
+that are controlled by this configuration.</p>
+<ul>
+<li><code>pathling.cors.allowedOrigins</code> - (default: <code>[empty]</code>) This is a
+comma-delimited list of domain names that controls which domains are permitted
+to access the server per the <code>Access-Control-Allow-Origin</code> header. The value
+<code>*</code> can be used with this parameter, but only when <code>pathling.auth.enabled</code> is
+set to false. To use wildcards when authorization is enabled, please use
+<code>pathling.cors.allowedOriginPatterns</code>.</li>
+<li><code>pathling.cors.allowedOriginPatterns</code> - (default: <code>[empty]</code>) This is a
+comma-delimited list of domain names that controls which domains are permitted
+to access the server per the <code>Access-Control-Allow-Origin</code> header. It differs
+from <code>pathling.cors.allowedOrigins</code> in that it supports wildcard patterns,
+e.g. <code>https://*.somedomain.com</code>.</li>
+<li><code>pathling.cors.allowedMethods</code> - (default: <code>OPTIONS,GET,POST</code>) This is a
+comma-delimited list of HTTP methods permitted via the
+<code>Access-Control-Allow-Methods</code> header.</li>
+<li><code>pathling.cors.allowedHeaders</code> - (default: <code>Content-Type,Authorization</code>) This
+is a comma-delimited list of HTTP headers permitted via the
+<code>Access-Control-Allow-Headers</code> header.</li>
+<li><code>pathling.cors.exposedHeaders</code> - (default: <code>Content-Location,X-Progress</code>) This
+is a comma-delimited list of HTTP headers that are permitted to be exposed via
+the <code>Access-Control-Expose-Headers</code> header.</li>
+<li><code>pathling.cors.maxAge</code> - (default: <code>600</code>) Controls how long the results of a
+preflight request can be cached via the <code>Access-Control-Max-Age</code> header.</li>
+</ul>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="monitoring">Monitoring<a href="#monitoring" class="hash-link" aria-label="Direct link to Monitoring" title="Direct link to Monitoring">​</a></h3>
+<ul>
+<li><code>pathling.sentryDsn</code> - If this variable is set, all errors will be reported to
+a
+<a href="https://sentry.io" target="_blank" rel="noopener noreferrer">Sentry</a> service, e.g. <code>https://abc123@sentry.io/123456</code>.</li>
+<li><code>pathling.sentryEnvironment</code> - If this variable is set, this will be sent as
+the environment when reporting errors to Sentry.</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="server-base">Server base<a href="#server-base" class="hash-link" aria-label="Direct link to Server base" title="Direct link to Server base">​</a></h2>
+<p>There are a number of operations within the Pathling FHIR API that pass back
+URLs referring back to API endpoints. The host and protocol components of these
+URLs are automatically detected based upon the details of the incoming request.</p>
+<p>In some cases it might be desirable to override the hostname and protocol,
+particularly where Pathling is being hosted behind some sort of proxy. To
+account for this, Pathling also supports the use of the
+<a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Proto" target="_blank" rel="noopener noreferrer">X-Forwarded-Proto</a>
+,
+<a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Host" target="_blank" rel="noopener noreferrer">X-Forwarded-Host</a>
+and <code>X-Forwarded-Port</code> headers to override the protocol, hostname and port
+within URLs sent back by the API.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="spark-compatibility">Spark compatibility<a href="#spark-compatibility" class="hash-link" aria-label="Direct link to Spark compatibility" title="Direct link to Spark compatibility">​</a></h2>
+<p>Pathling can also be run directly within an Apache Spark cluster as a persistent
+application.</p>
+<p>For compatibility, Pathling runs Spark 3.4.1 (Scala 2.12), with Hadoop version
+3.3.3.</p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col"><a href="https://github.com/aehrc/pathling/tree/main/site/versioned_docs/version-7.2.0/server/configuration.md" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_Z9Sw" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>Edit this page</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/docs/7.2.0/server/operations/update"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Update and batch</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/docs/7.2.0/server/authorization"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Authorization</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#configuration-variables" class="table-of-contents__link toc-highlight">Configuration variables</a><ul><li><a href="#general" class="table-of-contents__link toc-highlight">General</a></li><li><a href="#import" class="table-of-contents__link toc-highlight">Import</a></li><li><a href="#asynchronous-processing" class="table-of-contents__link toc-highlight">Asynchronous processing</a></li><li><a href="#encoding" class="table-of-contents__link toc-highlight">Encoding</a></li><li><a href="#storage" class="table-of-contents__link toc-highlight">Storage</a></li><li><a href="#apache-spark" class="table-of-contents__link toc-highlight">Apache Spark</a></li><li><a href="#terminology-service" class="table-of-contents__link toc-highlight">Terminology service</a></li><li><a href="#authorization" class="table-of-contents__link toc-highlight">Authorization</a></li><li><a href="#http-caching" class="table-of-contents__link toc-highlight">HTTP Caching</a></li><li><a href="#cross-origin-resource-sharing-cors" class="table-of-contents__link toc-highlight">Cross-Origin Resource Sharing (CORS)</a></li><li><a href="#monitoring" class="table-of-contents__link toc-highlight">Monitoring</a></li></ul></li><li><a href="#server-base" class="table-of-contents__link toc-highlight">Server base</a></li><li><a href="#spark-compatibility" class="table-of-contents__link toc-highlight">Spark compatibility</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="footer__bottom text--center"><div class="footer__copyright">This documentation is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.</div></div></div></footer></div>
+</body>
+</html>

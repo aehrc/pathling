@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2023 Commonwealth Scientific and Industrial Research
+  ~ Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
   ~ Organisation (CSIRO) ABN 41 687 119 230.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,11 +24,11 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>7.2.0</version>
+    <version>8.0.0</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>python</artifactId>
-  <packaging>jar</packaging>
+  <packaging>pom</packaging>
 
   <name>Pathling Python API</name>
   <description>A library for using Pathling with Python.</description>
@@ -228,7 +228,9 @@
                     <argument>spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension</argument>
                     <argument>--conf</argument>
                     <argument>spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog</argument>
-                    <argument>${project.basedir}/examples/query.py</argument>
+                    <argument>--conf</argument>
+                    <argument>spark.sql.mapKeyDedupPolicy=LAST_WIN</argument>
+                    <argument>${project.basedir}/examples/fhir_view.py</argument>
                   </arguments>
                 </configuration>
               </execution>
@@ -288,10 +290,19 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-jar-plugin</artifactId>
-            <configuration>
-              <classesDirectory>${project.build.directory}/docs/_build/html</classesDirectory>
-              <classifier>docs</classifier>
-            </configuration>
+            <executions>
+              <execution>
+                <id>docs-jar</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+                <configuration>
+                  <classesDirectory>${project.build.directory}/docs/_build/html</classesDirectory>
+                  <classifier>docs</classifier>
+                </configuration>
+              </execution>
+            </executions>
           </plugin>
         </plugins>
       </build>

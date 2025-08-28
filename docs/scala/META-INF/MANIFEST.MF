@@ -1,4 +1,0 @@
-Manifest-Version: 1.0
-Created-By: Maven Archiver 3.6.2
-Build-Jdk-Spec: 17
-

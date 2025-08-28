@@ -4,7 +4,6 @@
 <url><loc>/index.html</loc></url>
 <url><loc>/news/index.html</loc></url>
 <url><loc>/reference/Equivalence.html</loc></url>
-<url><loc>/reference/ImportMode.html</loc></url>
 <url><loc>/reference/LOINC_URI.html</loc></url>
 <url><loc>/reference/MimeType.html</loc></url>
 <url><loc>/reference/PropertyType.html</loc></url>
@@ -13,9 +12,8 @@
 <url><loc>/reference/StorageType.html</loc></url>
 <url><loc>/reference/Version.html</loc></url>
 <url><loc>/reference/conditions.html</loc></url>
-<url><loc>/reference/ds_aggregate.html</loc></url>
-<url><loc>/reference/ds_extract.html</loc></url>
 <url><loc>/reference/ds_read.html</loc></url>
+<url><loc>/reference/ds_view.html</loc></url>
 <url><loc>/reference/ds_write_delta.html</loc></url>
 <url><loc>/reference/ds_write_ndjson.html</loc></url>
 <url><loc>/reference/ds_write_parquet.html</loc></url>

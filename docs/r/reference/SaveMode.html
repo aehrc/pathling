@@ -4,6 +4,7 @@ OVERWRITE: Overwrite any existing data.
 APPEND: Append the new data to the existing data.
 IGNORE: Only save the data if the file does not already exist.
 ERROR: Raise an error if the file already exists.
+MERGE: Merge the new data with the existing data based on resource ID.
 
 "><!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script><!--[if lt IE 9]>
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
@@ -23,7 +24,7 @@ ERROR: Raise an error if the file already exists.
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">pathling</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">7.2.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">8.0.0</span>
       </span>
     </div>
 
@@ -59,6 +60,7 @@ ERROR: Raise an error if the file already exists.
 <li><p><code>APPEND</code>: Append the new data to the existing data.</p></li>
 <li><p><code>IGNORE</code>: Only save the data if the file does not already exist.</p></li>
 <li><p><code>ERROR</code>: Raise an error if the file already exists.</p></li>
+<li><p><code>MERGE</code>: Merge the new data with the existing data based on resource ID.</p></li>
 </ul></div>
 
     <div id="ref-usage">
@@ -67,7 +69,7 @@ ERROR: Raise an error if the file already exists.
 
     <div id="format">
     <h2>Format</h2>
-    <p>An object of class <code>list</code> of length 4.</p>
+    <p>An object of class <code>list</code> of length 5.</p>
     </div>
 
   </div>

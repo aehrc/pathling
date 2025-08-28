@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">pathling</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">7.2.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">8.0.0</span>
       </span>
     </div>
 
@@ -53,7 +53,7 @@
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ds_write_delta</span><span class="op">(</span><span class="va">ds</span>, <span class="va">path</span>, import_mode <span class="op">=</span> <span class="va">ImportMode</span><span class="op">$</span><span class="va">OVERWRITE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ds_write_delta</span><span class="op">(</span><span class="va">ds</span>, <span class="va">path</span>, save_mode <span class="op">=</span> <span class="va">SaveMode</span><span class="op">$</span><span class="va">OVERWRITE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -68,8 +68,8 @@
 <dd><p>The URI of the directory to write the files to.</p></dd>
 
 
-<dt id="arg-import-mode">import_mode<a class="anchor" aria-label="anchor" href="#arg-import-mode"></a></dt>
-<dd><p>The import mode to use when writing the data - "overwrite" will overwrite any
+<dt id="arg-save-mode">save_mode<a class="anchor" aria-label="anchor" href="#arg-save-mode"></a></dt>
+<dd><p>The save mode to use when writing the data - "overwrite" will overwrite any
 existing data, "merge" will merge the new data with the existing data based on resource ID.</p></dd>
 
 </dl></div>
@@ -80,7 +80,7 @@ existing data, "merge" will merge the new data with the existing data based on r
     <div id="see-also">
     <h2>See also</h2>
     <div class="dont-index"><p><a href="https://pathling.csiro.au/docs/libraries/fhirpath-query#delta-lake-1" class="external-link">Pathling documentation - Writing Delta</a></p>
-<p><code><a href="ImportMode.html">ImportMode</a></code></p>
+<p><code><a href="SaveMode.html">SaveMode</a></code></p>
 <p>Other data sink functions:
 <code><a href="ds_write_ndjson.html">ds_write_ndjson</a>()</code>,
 <code><a href="ds_write_parquet.html">ds_write_parquet</a>()</code>,
@@ -93,7 +93,7 @@ existing data, "merge" will merge the new data with the existing data based on r
 <span class="r-in"><span><span class="va">data_source</span> <span class="op">&lt;-</span> <span class="va">pc</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="pathling_read_ndjson.html">pathling_read_ndjson</a></span><span class="op">(</span><span class="fu"><a href="pathling_examples.html">pathling_examples</a></span><span class="op">(</span><span class="st">'ndjson'</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Write the data to a directory of Delta files.</span></span></span>
-<span class="r-in"><span><span class="va">data_source</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu">ds_write_delta</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">'delta'</span><span class="op">)</span>, import_mode <span class="op">=</span> <span class="va">ImportMode</span><span class="op">$</span><span class="va">OVERWRITE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">data_source</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu">ds_write_delta</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">'delta'</span><span class="op">)</span>, save_mode <span class="op">=</span> <span class="va">SaveMode</span><span class="op">$</span><span class="va">OVERWRITE</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pathling_disconnect.html">pathling_disconnect</a></span><span class="op">(</span><span class="va">pc</span><span class="op">)</span></span></span>
 </code></pre></div>

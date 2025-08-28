@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pathling.core &mdash; pathling  documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            pathling
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../pathling.html">pathling package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">pathling</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">pathling.core</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pathling.core</h1><div class="highlight"><pre>
+<span></span><span class="c1">#  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research</span>
+<span class="c1">#  Organisation (CSIRO) ABN 41 687 119 230.</span>
+<span class="c1"># </span>
+<span class="c1">#  Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1">#  you may not use this file except in compliance with the License.</span>
+<span class="c1">#  You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#      http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1">#  Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1">#  distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1">#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1">#  See the License for the specific language governing permissions and</span>
+<span class="c1">#  limitations under the License.</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">py4j.java_collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">SetConverter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">py4j.java_gateway</span><span class="w"> </span><span class="kn">import</span> <span class="n">JavaObject</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">SparkSession</span>
+
+
+<div class="viewcode-block" id="Function"><a class="viewcode-back" href="../../pathling.html#pathling.core.Function">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">Function</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wraps a Python lambda function so that it can be passed to Java functions</span>
+<span class="sd">    that expect a `java.util.function.Function` object.</span>
+
+<span class="sd">    :param lambda_function: A Python lambda function that takes one argument.</span>
+<span class="sd">    :param spark: A `pyspark.sql.SparkSession` object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lambda_function</span><span class="p">,</span> <span class="n">spark</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lambda_function</span> <span class="o">=</span> <span class="n">lambda_function</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_jvm</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">_jvm</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_wrap_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="c1"># we need to manually convert the python object result to the java object</span>
+        <span class="c1"># result, so that it can be returned to the java side and py4j does not seem to be doing</span>
+        <span class="c1"># it automatically. So we just call the identity() to force the conversion.</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jvm</span><span class="o">.</span><span class="n">java</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">function</span><span class="o">.</span><span class="n">Function</span><span class="o">.</span><span class="n">identity</span><span class="p">()</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Function.apply"><a class="viewcode-back" href="../../pathling.html#pathling.core.Function.apply">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arg</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Invokes the wrapped lambda function with the given argument.</span>
+
+<span class="sd">        :param arg: The argument to pass to the lambda function.</span>
+<span class="sd">        :return: The result of the lambda function, converted to a Java object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wrap_result</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_lambda_function</span><span class="p">(</span><span class="n">arg</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Function.Java"><a class="viewcode-back" href="../../pathling.html#pathling.core.Function.Java">[docs]</a>    <span class="k">class</span><span class="w"> </span><span class="nc">Java</span><span class="p">:</span>
+        <span class="n">implements</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;java.util.function.Function&quot;</span><span class="p">]</span></div></div>
+
+
+<div class="viewcode-block" id="SparkConversionsMixin"><a class="viewcode-back" href="../../pathling.html#pathling.core.SparkConversionsMixin">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">SparkConversionsMixin</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A mixin that provides access to the Spark session and a number for utility methods for</span>
+<span class="sd">    converting between Python and Java objects.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spark</span><span class="p">:</span> <span class="n">SparkSession</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_spark</span> <span class="o">=</span> <span class="n">spark</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">spark</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SparkSession</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spark</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_wrap_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">jdf</span><span class="p">:</span> <span class="n">JavaObject</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrame</span><span class="p">:</span>
+        <span class="c1">#</span>
+        <span class="c1"># Before Spark v3.3 Dataframes were constructs with SQLContext, which was available</span>
+        <span class="c1"># in `_wrapped` attribute of SparkSession.</span>
+        <span class="c1"># Since v3.3 Dataframes are constructed with SparkSession instance directly.</span>
+        <span class="c1">#</span>
+        <span class="k">return</span> <span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">jdf</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_spark</span><span class="o">.</span><span class="n">_wrapped</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_spark</span><span class="p">,</span> <span class="s2">&quot;_wrapped&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spark</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_lambda_to_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lambda_function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Function</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Function</span><span class="p">(</span><span class="n">lambda_function</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spark</span><span class="p">)</span></div>
+
+
+<span class="n">ExpOrStr</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="s2">&quot;Expression&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="Expression"><a class="viewcode-back" href="../../pathling.html#pathling.core.Expression">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">Expression</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Represents an FHIRPath expression that may have an optional name/alias.</span>
+<span class="sd">    To make it easier to work with expressions, uses can alias this class with their own name,</span>
+<span class="sd">    for example: &#39;exp&#39; or &#39;fp&#39; using import and then use the alias method to create labeled</span>
+<span class="sd">    expressions. For example:</span>
+
+<span class="sd">    ```</span>
+<span class="sd">    from pathling import Expression as fp</span>
+<span class="sd">    fp(&#39;some FHIRPath expression&#39;).alias(&#39;some name&#39;)</span>
+<span class="sd">    ```</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expression</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initializes a new instance of the Expression class.</span>
+
+<span class="sd">        :param expression: The FHIRPath expression.</span>
+<span class="sd">        :param label: The optional label/alias for the expression.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_expression</span> <span class="o">=</span> <span class="n">expression</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_label</span> <span class="o">=</span> <span class="n">label</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">expression</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the FHIRPath expression.</span>
+
+<span class="sd">        :return: The FHIRPath expression.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_expression</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">label</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the optional label/alias for the expression.</span>
+
+<span class="sd">        :return: The optional label/alias for the expression.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label</span>
+
+<div class="viewcode-block" id="Expression.alias"><a class="viewcode-back" href="../../pathling.html#pathling.core.Expression.alias">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">alias</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Expression&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a new Expression object with the specified label/alias.</span>
+
+<span class="sd">        :param label: The label/alias to use for the new Expression object.</span>
+<span class="sd">        :return: A new Expression object with the specified label/alias.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">Expression</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expression</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Expression.as_tuple"><a class="viewcode-back" href="../../pathling.html#pathling.core.Expression.as_tuple">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">as_tuple</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets a tuple representing the expression and its optional label/alias.</span>
+
+<span class="sd">        :return: A tuple representing the expression and its optional label/alias.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expression</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="k">else</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expression</span><span class="p">,)</span></div>
+
+<div class="viewcode-block" id="Expression.as_expression"><a class="viewcode-back" href="../../pathling.html#pathling.core.Expression.as_expression">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">as_expression</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">exp_or_str</span><span class="p">:</span> <span class="n">ExpOrStr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Expression&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Casts the specified expression or string into an Expression object.</span>
+
+<span class="sd">        :param exp_or_str: The expression or string to cast.</span>
+<span class="sd">        :return: An Expression object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">exp_or_str</span><span class="p">,</span> <span class="n">Expression</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">exp_or_str</span>
+        <span class="k">return</span> <span class="n">Expression</span><span class="p">(</span><span class="n">exp_or_str</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Expression.as_expression_sequence"><a class="viewcode-back" href="../../pathling.html#pathling.core.Expression.as_expression_sequence">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">as_expression_sequence</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">sequence_of_exp_or_str</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">ExpOrStr</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Sequence[Expression]&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Cast a sequence of expressions or strings into a sequence of Expression objects.</span>
+
+<span class="sd">        :param sequence_of_exp_or_str: The sequence of expressions or strings to cast.</span>
+<span class="sd">        :return: A sequence of Expression objects.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">as_expression</span><span class="p">(</span><span class="n">exp_or_str</span><span class="p">)</span> <span class="k">for</span> <span class="n">exp_or_str</span> <span class="ow">in</span> <span class="n">sequence_of_exp_or_str</span>
+        <span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="VariableExpression"><a class="viewcode-back" href="../../pathling.html#pathling.core.VariableExpression">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">VariableExpression</span><span class="p">(</span><span class="n">Expression</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Represents a FHIRPath variable expression that has a `when many` attribute, and may have an</span>
+<span class="sd">    optional name/alias.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">expression</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">when_many</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;array&quot;</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initializes a new instance of the VariableExpression class.</span>
+
+<span class="sd">        :param expression: The FHIRPath expression.</span>
+<span class="sd">        :param label: The optional label/alias for the expression.</span>
+<span class="sd">        :param when_many: The optional `when many` attribute for the expression, can be &quot;error&quot;,</span>
+<span class="sd">               &quot;array&quot;, &quot;unnest&quot; or &quot;cross&quot;.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_when_many</span> <span class="o">=</span> <span class="n">when_many</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">when_many</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the optional `when many` attribute for the expression.</span>
+
+<span class="sd">        :return: The optional `when many` attribute for the expression.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_when_many</span></div>
+
+
+<div class="viewcode-block" id="StringMapper"><a class="viewcode-back" href="../../pathling.html#pathling.core.StringMapper">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">StringMapper</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A wrapper for a Python lambda that can be passed as a Java lambda for mapping a string value to</span>
+<span class="sd">    another string value.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gateway</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_gateway</span> <span class="o">=</span> <span class="n">gateway</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fn</span> <span class="o">=</span> <span class="n">fn</span>
+
+<div class="viewcode-block" id="StringMapper.apply"><a class="viewcode-back" href="../../pathling.html#pathling.core.StringMapper.apply">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arg</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fn</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="StringMapper.Java"><a class="viewcode-back" href="../../pathling.html#pathling.core.StringMapper.Java">[docs]</a>    <span class="k">class</span><span class="w"> </span><span class="nc">Java</span><span class="p">:</span>
+        <span class="n">implements</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;java.util.function.UnaryOperator&quot;</span><span class="p">]</span></div></div>
+
+
+<div class="viewcode-block" id="StringToStringSetMapper"><a class="viewcode-back" href="../../pathling.html#pathling.core.StringToStringSetMapper">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">StringToStringSetMapper</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A wrapper for a Python lambda that can be passed as a Java lambda for mapping a string value</span>
+<span class="sd">    to a list of string values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gateway</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_gateway</span> <span class="o">=</span> <span class="n">gateway</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fn</span> <span class="o">=</span> <span class="n">fn</span>
+
+<div class="viewcode-block" id="StringToStringSetMapper.apply"><a class="viewcode-back" href="../../pathling.html#pathling.core.StringToStringSetMapper.apply">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arg</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">SetConverter</span><span class="p">()</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_fn</span><span class="p">(</span><span class="n">arg</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gateway</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="StringToStringSetMapper.Java"><a class="viewcode-back" href="../../pathling.html#pathling.core.StringToStringSetMapper.Java">[docs]</a>    <span class="k">class</span><span class="w"> </span><span class="nc">Java</span><span class="p">:</span>
+        <span class="n">implements</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;java.util.function.Function&quot;</span><span class="p">]</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2018-2022 CSIRO, dedicated to the public domain via CC0 1.0.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

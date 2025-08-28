@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2023 Commonwealth Scientific and Industrial Research
+  ~ Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
   ~ Organisation (CSIRO) ABN 41 687 119 230.
-  ~  
+  ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
   ~ You may obtain a copy of the License at
-  ~  
+  ~
   ~     http://www.apache.org/licenses/LICENSE-2.0
-  ~  
+  ~
   ~ Unless required by applicable law or agreed to in writing, software
   ~ distributed under the License is distributed on an "AS IS" BASIS,
   ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,7 +24,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>7.2.0</version>
+    <version>8.0.0</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>r</artifactId>
@@ -59,11 +59,11 @@
     <pathling.Rapi.version.qualifier/>
     <pathling.Rapi.version>${pathling.Rapi.version.base}${pathling.Rapi.version.qualifier}</pathling.Rapi.version>
     <!-- 
-      This needs to maintained as a version of Spark that is in the versions manifest of the 
-      sparklyr version that we depend upon that is on the archive site. The reason we can't use the 
-      latest from the CDN is that the files drop off the CDN when a new version is released.
+      This needs to maintained as the most recent version of Spark that is in the versions manifest
+      of the sparklyr version that we depend upon that is on the archive site. The reason we can't 
+      use the latest from the CDN is that the files drop off the CDN when a new version is released.
     -->
-    <pathling.Rapi.sparkVersion>3.5.3</pathling.Rapi.sparkVersion>
+    <pathling.Rapi.sparkVersion>3.5.6</pathling.Rapi.sparkVersion>
     <pathling.Rapi.scalaVersion>${pathling.scalaVersion}</pathling.Rapi.scalaVersion>
     <pathling.Rapi.hadoopMajorVersion>${pathling.hadoopMajorVersion}</pathling.Rapi.hadoopMajorVersion>
     <pathling.Rapi.hadoopVersion>${pathling.hadoopVersion}</pathling.Rapi.hadoopVersion>
@@ -277,25 +277,6 @@
             </configuration>
           </execution>
           <execution>
-            <id>check-package</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <skip>${skipRapiTests}</skip>
-              <executable>R</executable>
-              <workingDirectory>${project.basedir}</workingDirectory>
-              <arguments>
-                <argument>CMD</argument>
-                <argument>check</argument>
-                <argument>--output=${project.basedir}/target</argument>
-                <argument>--as-cran</argument>
-                <argument>target/${pathling.Rapi.packageName}_${pathling.Rapi.version}.tar.gz</argument>
-              </arguments>
-            </configuration>
-          </execution>
-          <execution>
             <id>install-package</id>
             <phase>install</phase>
             <goals>
@@ -375,6 +356,38 @@
                 <configuration>
                   <classesDirectory>${project.build.directory}/docs</classesDirectory>
                   <classifier>docs</classifier>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>check</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>check-package</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${skipRapiTests}</skip>
+                  <executable>R</executable>
+                  <workingDirectory>${project.basedir}</workingDirectory>
+                  <arguments>
+                    <argument>CMD</argument>
+                    <argument>check</argument>
+                    <argument>--output=${project.basedir}/target</argument>
+                    <argument>--as-cran</argument>
+                    <argument>target/${pathling.Rapi.packageName}_${pathling.Rapi.version}.tar.gz</argument>
+                  </arguments>
                 </configuration>
               </execution>
             </executions>
