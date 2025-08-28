@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,9 +19,9 @@ package au.csiro.pathling.sql.misc;
 
 import au.csiro.pathling.sql.udf.SqlFunction1;
 import jakarta.annotation.Nullable;
+import java.io.Serial;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
-import java.io.Serial;
 
 /**
  * Spark UDF that always returns null but evaluates the input column to ensure that side effect are

@@ -81,7 +81,7 @@ on [keys.openpgp.org](https://keys.openpgp.org/search?q=F814751C64B5F5E708A8C73F
 
 ## Licensing and attribution
 
-Pathling is copyright © 2018-2023, Commonwealth Scientific and Industrial
+Pathling is copyright © 2018-2025, Commonwealth Scientific and Industrial
 Research Organisation
 (CSIRO) ABN 41 687 119 230. Licensed under
 the [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0).

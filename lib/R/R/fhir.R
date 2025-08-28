@@ -1,4 +1,4 @@
-#  Copyright 2023 Commonwealth Scientific and Industrial Research
+#  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,6 @@
 #  limitations under the License.
 
 
-
 #' FHIR MIME types
 #'
 #' The following MIME types are supported:
@@ -27,8 +26,8 @@
 #'
 #' @export
 MimeType <- list(
-  FHIR_JSON = "application/fhir+json",
-  FHIR_XML = "application/fhir+xml"
+    FHIR_JSON = "application/fhir+json",
+    FHIR_XML = "application/fhir+xml"
 )
 
 #' FHIR versions
@@ -40,5 +39,5 @@ MimeType <- list(
 #'
 #' @export
 Version <- list(
-  R4 = "R4"
+    R4 = "R4"
 )

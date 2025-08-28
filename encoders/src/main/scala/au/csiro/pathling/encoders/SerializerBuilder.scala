@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2023 Commonwealth Scientific and Industrial Research
+ * These modifications are copyright 2018-2025 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package au.csiro.pathling.encoders
@@ -30,7 +31,7 @@ import au.csiro.pathling.schema.SchemaVisitor.isCollection
 import au.csiro.pathling.schema._
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition.ChildTypeEnum
 import ca.uhn.fhir.context._
-import org.apache.spark.sql.catalyst.expressions.objects.{ExternalMapToCatalyst, Invoke, MapObjects, StaticInvoke}
+import org.apache.spark.sql.catalyst.expressions.objects.{ExternalMapToCatalyst, Invoke, MapObjects}
 import org.apache.spark.sql.catalyst.expressions.{BoundReference, CreateNamedStruct, Expression, If, IsNull, Literal}
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String

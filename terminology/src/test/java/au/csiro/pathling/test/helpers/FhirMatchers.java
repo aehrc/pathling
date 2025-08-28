@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,7 +37,7 @@ public final class FhirMatchers {
 
     @Serial
     private static final long serialVersionUID = -7388475686640982425L;
-    
+
     @Nonnull
     private final T expected;
 

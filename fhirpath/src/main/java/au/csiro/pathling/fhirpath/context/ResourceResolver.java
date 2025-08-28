@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,9 +19,9 @@ package au.csiro.pathling.fhirpath.context;
 
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import jakarta.annotation.Nonnull;
+import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import java.util.Optional;
 
 /**
  * Interface for resolving FHIR resources during FHIRPath evaluation.

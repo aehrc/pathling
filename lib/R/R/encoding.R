@@ -1,4 +1,4 @@
-#  Copyright 2023 Commonwealth Scientific and Industrial Research
+#  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,7 +43,7 @@ library(purrr)
 #' pathling_disconnect(pc)
 pathling_encode <- function(pc, df, resource_name, input_type = NULL, column = NULL) {
   sdf_register(j_invoke(pc, "encode", spark_dataframe(df), resource_name,
-      input_type %||% MimeType$FHIR_JSON, column))
+                        input_type %||% MimeType$FHIR_JSON, column))
 }
 
 #' Encode FHIR Bundles to a dataframe
@@ -75,6 +75,6 @@ pathling_encode <- function(pc, df, resource_name, input_type = NULL, column = N
 #'      input_type = MimeType$FHIR_XML, column = 'contents')
 #' pathling_disconnect(pc)
 pathling_encode_bundle <- function(pc, df, resource_name, input_type = NULL, column = NULL) {
-  sdf_register(j_invoke(pc, "encodeBundle",  spark_dataframe(df), resource_name,
-      input_type %||% MimeType$FHIR_JSON, column))
+  sdf_register(j_invoke(pc, "encodeBundle", spark_dataframe(df), resource_name,
+                        input_type %||% MimeType$FHIR_JSON, column))
 }

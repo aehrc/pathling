@@ -1,4 +1,4 @@
-#  Copyright 2023 Commonwealth Scientific and Industrial Research
+#  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -243,11 +243,11 @@ data_sinks <- function(ds) {
  #'@importFrom sparklyr invoke
 invoke_datasink <- function(ds, name, save_mode = NULL, ...) {
   sink_builder <- ds %>% data_sinks()
-  
+
   if (!is.null(save_mode)) {
     sink_builder <- sink_builder %>% invoke("saveMode", save_mode)
   }
-  
+
   sink_builder %>% invoke(name, ...)
   return(invisible(NULL))
 }
@@ -516,8 +516,8 @@ pathling_read_bulk <- function(pc,
     builder <- builder %>% j_invoke("withSince", instant)
   }
   if (!is.null(patients)) {
-    j_objects <- purrr::map(patients, function(r) j_invoke_static(sc, "au.csiro.fhir.model.Reference", 
-                                                           "of", r))
+    j_objects <- purrr::map(patients, function(r) j_invoke_static(sc, "au.csiro.fhir.model.Reference",
+                                                                  "of", r))
     builder <- builder %>% j_invoke("withPatients", to_java_list(sc, j_objects))
   }
   if (!is.null(elements)) {
@@ -527,8 +527,8 @@ pathling_read_bulk <- function(pc,
     builder <- builder %>% j_invoke("withTypeFilters", to_java_list(sc, type_filters))
   }
   if (!is.null(include_associated_data)) {
-    builder <- builder %>% j_invoke("withIncludeAssociatedData", 
-                                   to_java_list(sc, include_associated_data))
+    builder <- builder %>% j_invoke("withIncludeAssociatedData",
+                                    to_java_list(sc, include_associated_data))
   }
   if (!is.null(output_extension)) {
     builder <- builder %>% j_invoke("withOutputExtension", as.character(output_extension))

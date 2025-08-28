@@ -1,7 +1,24 @@
+/*
+ * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.test.yaml;
 
-import static au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase.ANY_ERROR;
 import static au.csiro.pathling.test.yaml.YamlSupport.YAML;
+import static au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase.ANY_ERROR;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
@@ -29,8 +46,10 @@ import lombok.extern.slf4j.Slf4j;
  */
 @SuppressWarnings("unchecked")
 @Slf4j
-public record YamlTestDefinition(@Nullable Map<Object, Object> subject,
-                                 @Nonnull List<TestCase> cases) {
+public record YamlTestDefinition(
+    @Nullable Map<Object, Object> subject,
+    @Nonnull List<TestCase> cases
+) {
 
   /**
    * Represents an individual test case within a FHIRPath test specification.
@@ -62,11 +81,17 @@ public record YamlTestDefinition(@Nullable Map<Object, Object> subject,
    * @param variables Optional map of variables that can be referenced within the FHIR Path
    * expression using variable syntax (e.g., %variableName).
    */
-  public record TestCase(@Nullable String description, @Nonnull String expression,
-                         @Nullable String errorMsg, @Nullable Object result,
-                         @Nullable String inputFile, @Nullable String model,
-                         @Nullable String context, boolean disable,
-                         @Nullable Map<String, Object> variables) {
+  public record TestCase(
+      @Nullable String description,
+      @Nonnull String expression,
+      @Nullable String errorMsg,
+      @Nullable Object result,
+      @Nullable String inputFile,
+      @Nullable String model,
+      @Nullable String context,
+      boolean disable,
+      @Nullable Map<String, Object> variables
+  ) {
 
     /**
      * Special constant used to indicate that any error message is acceptable for error test cases.
@@ -147,12 +172,14 @@ public record YamlTestDefinition(@Nullable Map<Object, Object> subject,
    *
    * @param caseOrGroup A map representing either a single test case or a group of test cases from
    * the YAML structure. Must not be null.
-   * @param groupName Optional group name to prepend to test descriptions for better test identification.
+   * @param groupName Optional group name to prepend to test descriptions for better test
+   * identification.
    * @return A stream of {@link TestCase} objects parsed from the input map. May be empty if the if
    * the input doesn't contain valid test case data.
    */
   @Nonnull
-  static Stream<TestCase> mapCaseOrGroup(@Nonnull final Map<Object, Object> caseOrGroup, @Nullable final String groupName) {
+  static Stream<TestCase> mapCaseOrGroup(@Nonnull final Map<Object, Object> caseOrGroup,
+      @Nullable final String groupName) {
     // Check if this is a direct test case (contains an "expression" field).
     if (caseOrGroup.containsKey("expression")) {
       // Extract expression(s) - could be a single string or list of strings.
@@ -161,7 +188,8 @@ public record YamlTestDefinition(@Nullable Map<Object, Object> subject,
       // Create a TestCase for each expression, sharing all other properties.
       return expressions.stream()
           .map(expr -> new TestCase(
-              createDescription((String) caseOrGroup.get("desc"), groupName), // Test description with group prefix
+              createDescription((String) caseOrGroup.get("desc"), groupName),
+              // Test description with group prefix
               expr,                                       // Current expression from the list
               // Set error message to ANY_ERROR if "error" flag is true, otherwise null
               (boolean) caseOrGroup.computeIfAbsent("error", k -> false)
@@ -220,7 +248,8 @@ public record YamlTestDefinition(@Nullable Map<Object, Object> subject,
   }
 
   /**
-   * Creates a description by prepending the group name to the test description if both are present.
+   * Creates a description by prepending the group name to the test description if both are
+   * present.
    * <p>
    * This method helps with test identification in IDE test runners by including the group context
    * in the test description. The format is "groupName - description" when both are available.
@@ -230,7 +259,8 @@ public record YamlTestDefinition(@Nullable Map<Object, Object> subject,
    * @return A formatted description string, or null if both inputs are null.
    */
   @Nullable
-  private static String createDescription(@Nullable final String description, @Nullable final String groupName) {
+  private static String createDescription(@Nullable final String description,
+      @Nullable final String groupName) {
     if (groupName != null && description != null) {
       return groupName + " - " + description;
     } else if (groupName != null) {
@@ -270,21 +300,24 @@ public record YamlTestDefinition(@Nullable Map<Object, Object> subject,
   }
 
   /**
-   * Builds a list of test cases from a raw list of case objects parsed from YAML with group context.
+   * Builds a list of test cases from a raw list of case objects parsed from YAML with group
+   * context.
    * <p>
-   * This overloaded method is used when processing test cases within a group. The group name
-   * is passed down to be included in the test descriptions for better identification in test runners.
+   * This overloaded method is used when processing test cases within a group. The group name is
+   * passed down to be included in the test descriptions for better identification in test runners.
    *
    * @param cases List of raw case objects from YAML parsing. Each object should be a Map
    * representing a test case or group. Must not be null.
-   * @param groupName The name of the group containing these test cases, used for test identification.
+   * @param groupName The name of the group containing these test cases, used for test
+   * identification.
    * @return A flattened list of {@link TestCase} objects ready for execution. Never null, but may
    * but may be empty if no valid test cases are found.
    * @throws ClassCastException if the cases list contains objects that cannot be cast to Map
    * @throws NullPointerException if cases is null
    */
   @Nonnull
-  private static List<TestCase> buildCases(@Nonnull final Collection<Object> cases, @Nullable final String groupName) {
+  private static List<TestCase> buildCases(@Nonnull final Collection<Object> cases,
+      @Nullable final String groupName) {
     return cases.stream()
         .map(c -> (Map<Object, Object>) c)
         .flatMap(caseOrGroup -> mapCaseOrGroup(caseOrGroup, groupName))

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -177,11 +177,15 @@ public interface TerminologyService {
     @Serial
     private static final long serialVersionUID = 8827691056493768863L;
 
-    /** The property code. */
+    /**
+     * The property code.
+     */
     @Nonnull
     String code;
 
-    /** The property value. */
+    /**
+     * The property value.
+     */
     @Nonnull
     Type value;
 
@@ -235,15 +239,21 @@ public interface TerminologyService {
      */
     public static final String PROPERTY_CODE = "designation";
 
-    /** The use code for this designation. */
+    /**
+     * The use code for this designation.
+     */
     @Nullable
     Coding use;
 
-    /** The language code for this designation. */
+    /**
+     * The language code for this designation.
+     */
     @Nullable
     String language;
 
-    /** The display value of this designation. */
+    /**
+     * The display value of this designation.
+     */
     @Nonnull
     String value;
 

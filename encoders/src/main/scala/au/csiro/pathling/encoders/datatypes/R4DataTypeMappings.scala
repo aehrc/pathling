@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2023 Commonwealth Scientific and Industrial Research
+ * These modifications are copyright 2018-2025 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package au.csiro.pathling.encoders.datatypes
@@ -28,7 +29,7 @@ import au.csiro.pathling.encoders.{Catalyst, ExpressionWithName, StaticField}
 import ca.uhn.fhir.context._
 import ca.uhn.fhir.model.api.TemporalPrecisionEnum
 import org.apache.spark.sql.catalyst.analysis.GetColumnByOrdinal
-import org.apache.spark.sql.catalyst.expressions.objects.{InitializeJavaBean, Invoke, NewInstance, StaticInvoke}
+import org.apache.spark.sql.catalyst.expressions.objects.{InitializeJavaBean, Invoke, NewInstance}
 import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, Literal}
 import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
 import org.hl7.fhir.instance.model.api.{IBase, IBaseDatatype, IPrimitiveType}
@@ -54,7 +55,7 @@ class R4DataTypeMappings extends DataTypeMappings {
 
   override def baseType(): Class[_ <: IBaseDatatype] = classOf[org.hl7.fhir.r4.model.Type]
 
-  override def overrideCompositeExpression(inputObject: Expression, 
+  override def overrideCompositeExpression(inputObject: Expression,
                                            definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[ExpressionWithName]] = {
     None
   }

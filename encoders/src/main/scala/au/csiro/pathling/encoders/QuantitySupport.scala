@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2023 Commonwealth Scientific and Industrial Research
+ * These modifications are copyright 2018-2025 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package au.csiro.pathling.encoders
@@ -27,7 +28,7 @@ import au.csiro.pathling.encoders.terminology.ucum.Ucum
 import au.csiro.pathling.sql.types.FlexiDecimal
 import au.csiro.pathling.sql.types.FlexiDecimalSupport.createFlexiDecimalSerializer
 import org.apache.spark.sql.catalyst.expressions.Expression
-import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, StaticInvoke}
+import org.apache.spark.sql.catalyst.expressions.objects.Invoke
 import org.apache.spark.sql.types.{DataTypes, ObjectType, StructField}
 import org.apache.spark.unsafe.types.UTF8String
 
@@ -40,6 +41,7 @@ object QuantitySupport {
 
   val VALUE_CANONICALIZED_FIELD_NAME = "_value_canonicalized"
   val CODE_CANONICALIZED_FIELD_NAME = "_code_canonicalized"
+
   /**
    * Creates additional serializers for serialization of quantities.
    *
@@ -60,8 +62,9 @@ object QuantitySupport {
         classOf[UTF8String],
         DataTypes.StringType,
         "fromString",
-        Catalyst.staticInvoke(classOf[Ucum], ObjectType(classOf[java.lang.String]), "getCanonicalCode",
-          Seq(valueExp, codeExp)) :: Nil)
+        Catalyst
+          .staticInvoke(classOf[Ucum], ObjectType(classOf[java.lang.String]), "getCanonicalCode",
+            Seq(valueExp, codeExp)) :: Nil)
     Seq(
       (VALUE_CANONICALIZED_FIELD_NAME, canonicalizedValue),
       (CODE_CANONICALIZED_FIELD_NAME, canonicalizedCode)
