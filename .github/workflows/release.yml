@@ -191,6 +191,7 @@ jobs:
       - name: Upload release assets
         run: |
           gh release upload ${{ github.ref_name }} \
+            --clobber \
             library-runtime/target/library-runtime-*.jar \
             lib/python/target/py-dist/pathling-*.whl \
             lib/R/target/pathling_*.tar.gz
