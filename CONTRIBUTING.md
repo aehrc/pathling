@@ -31,7 +31,7 @@ Your branch should be named `issue/[GitHub issue #]`.
 You will need the following software to build the solution:
 
 * Java 17
-* Maven 3+
+* Maven 3.9+
 * Python 3.8+
 * R 3.5+
 
@@ -52,9 +52,12 @@ from the main `pom.xml` in the root of the repository.
 - `utilities` - Utility functions used by different components of Pathling.
 - `encoders` - Encoders for transforming FHIR data into Spark Datasets.
 - `terminology` - Interact with a FHIR terminology server from Spark.
-- `fhirpath` - A library that can translate FHIRPath expressions into Spark queries.
-- `library-api` - An API that exposes Pathling functionality to language libraries.
-- `library-runtime` - A Spark package that bundles the Pathling Library API and its runtime dependencies for cluster deployment.
+- `fhirpath` - A library that can translate FHIRPath expressions into Spark
+  queries.
+- `library-api` - An API that exposes Pathling functionality to language
+  libraries.
+- `library-runtime` - A Spark package that bundles the Pathling Library API and
+  its runtime dependencies for cluster deployment.
 
 ```mermaid
 graph TD
