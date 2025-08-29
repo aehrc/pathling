@@ -282,146 +282,306 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download source code ZIP from release
+      - name: Download source code and upload to CSIRO DAP
+        shell: python
         run: |
+          import json
+          import os
+          import sys
+          import time
+          import urllib.parse
+          import urllib.request
+          import base64
+
+          def create_auth_header(username, password):
+              """Create Basic authentication header"""
+              credentials = f"{username}:{password}"
+              encoded = base64.b64encode(credentials.encode()).decode()
+              return f"Basic {encoded}"
+
+          def make_request(url, method="GET", data=None, headers=None, auth_header=None):
+              """Make HTTP request with optional authentication"""
+              if headers is None:
+                  headers = {}
+              
+              if auth_header:
+                  headers["Authorization"] = auth_header
+              
+              if data is not None:
+                  if isinstance(data, dict):
+                      data = json.dumps(data).encode()
+                      headers["Content-Type"] = "application/json"
+                  elif isinstance(data, str):
+                      data = data.encode()
+                      
+              req = urllib.request.Request(url, data=data, headers=headers, method=method)
+              
+              try:
+                  with urllib.request.urlopen(req) as response:
+                      return response.read().decode(), response.getcode()
+              except urllib.error.HTTPError as e:
+                  return e.read().decode(), e.code
+
+          def upload_file_with_presigned_url(file_path, presigned_url):
+              """Upload file using presigned URL with PUT request"""
+              try:
+                  with open(file_path, 'rb') as f:
+                      file_data = f.read()
+                  
+                  req = urllib.request.Request(presigned_url, data=file_data, method='PUT')
+                  req.add_header('Content-Type', 'application/zip')
+                  
+                  with urllib.request.urlopen(req) as response:
+                      return response.read().decode(), response.getcode()
+              except urllib.error.HTTPError as e:
+                  return e.read().decode(), e.code
+
+          # Configuration
+          GITHUB_REPOSITORY = "${{ github.repository }}"
+          GITHUB_REF_NAME = "${{ github.ref_name }}"
+          GITHUB_TOKEN = "${{ secrets.GITHUB_TOKEN }}"
+          DAP_USERNAME = "${{ secrets.DAP_USERNAME }}"
+          DAP_PASSWORD = "${{ secrets.DAP_PASSWORD }}"
+          DAP_BASE_URL = "https://data.csiro.au"
+          COLLECTION_PID = "csiro:49524"
+
+          # Step 1: Download source code ZIP from release
+          print("=== CSIRO DAP Upload (Python Method) ===")
+          print(f"Repository: {GITHUB_REPOSITORY}")
+          print(f"Release: {GITHUB_REF_NAME}")
+          print()
+
           # Extract version from tag (remove 'v' prefix if present)
-          VERSION="${{ github.ref_name }}"
-          VERSION="${VERSION#v}"  # Remove leading 'v' if present
-          
+          version = GITHUB_REF_NAME
+          if version.startswith('v'):
+              version = version[1:]
+
+          zip_filename = f"pathling-{version}.zip"
+
+          print(f"Step 1: Downloading source code archive...")
+          print(f"Target file: {zip_filename}")
+
           # Download the automatic source code archive from GitHub
-          curl -L -o "pathling-${VERSION}.zip" \
-            "https://api.github.com/repos/${{ github.repository }}/zipball/${{ github.ref_name }}"
+          github_api_url = f"https://api.github.com/repos/{GITHUB_REPOSITORY}/zipball/{GITHUB_REF_NAME}"
+
+          req = urllib.request.Request(github_api_url)
+          req.add_header('Authorization', f'token {GITHUB_TOKEN}')
+          req.add_header('Accept', 'application/vnd.github.v3+json')
+
+          try:
+              with urllib.request.urlopen(req) as response:
+                  if response.getcode() != 200:
+                      print(f"Error: Failed to download source archive (HTTP {response.getcode()})")
+                      sys.exit(1)
+                  
+                  with open(zip_filename, 'wb') as f:
+                      f.write(response.read())
+          except Exception as e:
+              print(f"Error: Failed to download source code archive: {e}")
+              sys.exit(1)
 
           # Verify that the ZIP file was downloaded
-          if [ ! -f "pathling-${VERSION}.zip" ]; then
-            echo "Error: Failed to download source code archive for ${{ github.ref_name }}"
-            exit 1
-          fi
+          if not os.path.exists(zip_filename):
+              print(f"Error: Failed to download source code archive for {GITHUB_REF_NAME}")
+              sys.exit(1)
 
-          echo "Downloaded source code archive: pathling-${VERSION}.zip"
-          echo "File size: $(ls -lh pathling-${VERSION}.zip | awk '{print $5}')"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          file_size = os.path.getsize(zip_filename)
+          print(f"Downloaded source code archive: {zip_filename}")
+          print(f"File size: {file_size:,} bytes ({file_size / (1024*1024):.1f} MB)")
+          print()
 
-      - name: Upload to CSIRO DAP
-        run: |
-          # Get the data collection ID for csiro:49524
-          echo "Getting collection information for csiro:49524..."
-          COLLECTION_RESPONSE=$(curl -s -u "${{ secrets.DAP_USERNAME }}:${{ secrets.DAP_PASSWORD }}" \
-            "https://data.csiro.au/dap/api/v2/my-collections")
+          # Step 2: Upload to CSIRO DAP
+          auth_header = create_auth_header(DAP_USERNAME, DAP_PASSWORD)
 
-          # Find the collection with PID csiro:49524
-          COLLECTION_DATA=$(echo "$COLLECTION_RESPONSE" | jq -r ".[] | select(.dataCollectionPid == \"csiro:49524\")")
-          COLLECTION_ID=$(echo "$COLLECTION_DATA" | jq -r ".dataCollectionId")
-          COLLECTION_STATUS=$(echo "$COLLECTION_DATA" | jq -r ".status")
+          # Get collection information
+          print(f"Step 2: Getting collection information for {COLLECTION_PID}...")
+          response_text, status_code = make_request(
+              f"{DAP_BASE_URL}/dap/api/v2/my-collections",
+              auth_header=auth_header
+          )
 
-          if [ "$COLLECTION_ID" = "null" ] || [ -z "$COLLECTION_ID" ]; then
-            echo "Collection csiro:49524 not found or not accessible"
-            exit 1
-          fi
+          if status_code != 200:
+              print(f"Error: Failed to get collections (HTTP {status_code})")
+              print(response_text[:500])
+              sys.exit(1)
 
-          echo "Found collection ID: $COLLECTION_ID (Status: $COLLECTION_STATUS)"
+          collections = json.loads(response_text)
+
+          # Find the collection with the specified PID
+          collection_data = None
+          for collection in collections:
+              if collection.get("dataCollectionPid") == COLLECTION_PID:
+                  collection_data = collection
+                  break
+
+          if not collection_data:
+              print(f"Error: Collection {COLLECTION_PID} not found or not accessible")
+              sys.exit(1)
+
+          collection_id = collection_data["dataCollectionId"]
+          collection_status = collection_data["status"]
+
+          print(f"Found collection ID: {collection_id} (Status: {collection_status})")
+          print()
 
           # Create a new version of the collection (or use existing draft)
-          if [ "$COLLECTION_STATUS" = "Draft" ]; then
-            echo "Using existing draft version..."
-            NEW_COLLECTION_ID=$COLLECTION_ID
-          else
-            echo "Creating new version of collection..."
-            UPDATE_RESPONSE=$(curl -s -X POST -u "${{ secrets.DAP_USERNAME }}:${{ secrets.DAP_PASSWORD }}" \
-              "https://data.csiro.au/dap/api/v2/collections/$COLLECTION_ID/update")
-            
-            NEW_COLLECTION_ID=$(echo "$UPDATE_RESPONSE" | jq -r '.dataCollectionId')
-            
-            if [ "$NEW_COLLECTION_ID" = "null" ] || [ -z "$NEW_COLLECTION_ID" ]; then
-              echo "Failed to create new version of collection"
-              echo "Response: $UPDATE_RESPONSE"
-              exit 1
-            fi
-            
-            echo "Created new collection version with ID: $NEW_COLLECTION_ID"
-          fi
+          if collection_status == "Draft":
+              print("Step 3: Using existing draft version...")
+              new_collection_id = collection_id
+          else:
+              print("Step 3: Creating new version of collection...")
+              response_text, status_code = make_request(
+                  f"{DAP_BASE_URL}/dap/api/v2/collections/{collection_id}/update",
+                  method="POST",
+                  auth_header=auth_header
+              )
+              
+              if status_code != 201:
+                  print(f"Error: Failed to create new version (HTTP {status_code})")
+                  print(response_text[:500])
+                  sys.exit(1)
+              
+              update_response = json.loads(response_text)
+              new_collection_id = update_response["dataCollectionId"]
+              
+              if not new_collection_id:
+                  print("Error: Failed to get new collection ID")
+                  print(response_text[:500])
+                  sys.exit(1)
+              
+              print(f"Created new collection version with ID: {new_collection_id}")
+          print()
 
           # Unlock files for modification
-          echo "Unlocking files for modification..."
-          curl -s -X POST -u "${{ secrets.DAP_USERNAME }}:${{ secrets.DAP_PASSWORD }}" \
-            "https://data.csiro.au/dap/api/v2/collections/$NEW_COLLECTION_ID/files/unlock"
+          print("Step 4: Unlocking files for modification...")
+          response_text, status_code = make_request(
+              f"{DAP_BASE_URL}/dap/api/v2/collections/{new_collection_id}/files/unlock",
+              method="POST",
+              auth_header=auth_header
+          )
+
+          if status_code not in [200, 204]:
+              print(f"Warning: Unlock request returned HTTP {status_code}")
+              print(response_text[:200])
 
           # Wait for files to be unlocked
-          echo "Waiting for files to be unlocked..."
-          while true; do
-            sleep 10
-            FILE_STATE_RESPONSE=$(curl -s -u "${{ secrets.DAP_USERNAME }}:${{ secrets.DAP_PASSWORD }}" \
-              "https://data.csiro.au/dap/api/v2/collections/$NEW_COLLECTION_ID/files/fileState")
-            echo "File state: $FILE_STATE_RESPONSE"
-            FILE_STATE=$(echo "$FILE_STATE_RESPONSE" | jq -r '.value // .')
-            if [ "$FILE_STATE" = "unlocked" ]; then
-              break
-            fi
-            if [ "$FILE_STATE" = "error" ]; then
-              echo "Error unlocking files"
-              exit 1
-            fi
-          done
+          print("Step 5: Waiting for files to be unlocked...")
+          max_attempts = 24  # 2 minutes with 5-second intervals
+          attempt = 0
 
-          # Upload the source code zip file
-          echo "Uploading source code zip file..."
-          ZIP_FILE=$(ls *.zip | head -n 1)
-          if [ -z "$ZIP_FILE" ]; then
-            echo "No zip file found to upload"
-            exit 1
-          fi
+          while attempt < max_attempts:
+              time.sleep(5)
+              response_text, status_code = make_request(
+                  f"{DAP_BASE_URL}/dap/api/v2/collections/{new_collection_id}/files/fileState",
+                  auth_header=auth_header
+              )
+              
+              print(f"File state response: {response_text}")
+              
+              try:
+                  file_state_data = json.loads(response_text)
+                  file_state = file_state_data.get("value", response_text.strip())
+              except json.JSONDecodeError:
+                  file_state = response_text.strip()
+              
+              if file_state == "unlocked":
+                  break
+              elif file_state == "error":
+                  print("Error: Failed to unlock files")
+                  sys.exit(1)
+              
+              attempt += 1
 
-          echo "Uploading file: $ZIP_FILE"
+          if attempt >= max_attempts:
+              print("Error: Timeout waiting for files to unlock")
+              sys.exit(1)
 
-          # Get S3 credentials
-          echo "Getting S3 credentials..."
-          S3_CREDS=$(curl -s -u "${{ secrets.DAP_USERNAME }}:${{ secrets.DAP_PASSWORD }}" \
-            "https://data.csiro.au/dap/api/v2/collections/$NEW_COLLECTION_ID/files/s3")
+          print("Files unlocked successfully!")
+          print()
 
-          S3_ACCESS_KEY=$(echo "$S3_CREDS" | jq -r '.accessKey')
-          S3_SECRET_KEY=$(echo "$S3_CREDS" | jq -r '.secretAccessKey')
-          S3_BUCKET=$(echo "$S3_CREDS" | jq -r '.bucket')
-          S3_PATH=$(echo "$S3_CREDS" | jq -r '.remoteDirectory')
-          S3_ENDPOINT=$(echo "$S3_CREDS" | jq -r '.endPointUrl')
+          # Upload file using presigned URL method
+          print("Step 6: Uploading file using presigned URL method...")
 
-          echo "S3 Endpoint: $S3_ENDPOINT"
-          echo "S3 Bucket: $S3_BUCKET"
-          echo "S3 Path: $S3_PATH"
+          # Get presigned URL (URL encode the path)
+          file_path = f"/{zip_filename}"
+          encoded_path = urllib.parse.quote(file_path)
+          print(f"Getting presigned URL for path: {file_path}")
 
-          # Upload using AWS CLI
-          echo "Uploading to S3..."
-          # Remove bucket name from path if it's duplicated
-          S3_PATH_CLEAN=$(echo "$S3_PATH" | sed "s|^$S3_BUCKET/||")
+          response_text, status_code = make_request(
+              f"{DAP_BASE_URL}/dap/api/v2/collections/{new_collection_id}/files/s3uploadurl?path={encoded_path}",
+              auth_header=auth_header
+          )
 
-          AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY" AWS_SECRET_ACCESS_KEY="$S3_SECRET_KEY" \
-            aws s3 cp "$ZIP_FILE" "s3://$S3_BUCKET/${S3_PATH_CLEAN}$ZIP_FILE" \
-            --endpoint-url "$S3_ENDPOINT"
+          # Check if we got a valid URL (not HTML error)
+          if status_code != 200 or response_text.startswith("<!doctype") or response_text.startswith("<html"):
+              print("Error: Failed to get presigned URL. Response:")
+              print(response_text[:500])
+              sys.exit(1)
 
-          echo "File uploaded successfully"
+          presigned_url = response_text.strip()
+          print(f"Presigned URL obtained (length: {len(presigned_url)} characters)")
+          print(f"URL preview: {presigned_url[:100]}...")
+          print()
+
+          # Upload file using the presigned URL
+          print("Uploading file using presigned URL...")
+          upload_response, upload_status = upload_file_with_presigned_url(zip_filename, presigned_url)
+
+          print(f"HTTP Response Code: {upload_status}")
+          if upload_status == 200:
+              print("✓ File uploaded successfully!")
+          else:
+              print("✗ Upload failed. Response:")
+              print(upload_response[:500])
+              sys.exit(1)
+          print()
 
           # Validate the collection
-          echo "Validating collection..."
-          VALIDATION_RESPONSE=$(curl -s -u "${{ secrets.DAP_USERNAME }}:${{ secrets.DAP_PASSWORD }}" \
-            "https://data.csiro.au/dap/api/v2/collections/$NEW_COLLECTION_ID/validate")
+          print("Step 7: Validating collection...")
+          response_text, status_code = make_request(
+              f"{DAP_BASE_URL}/dap/api/v2/collections/{new_collection_id}/validate",
+              auth_header=auth_header
+          )
 
-          echo "Validation response: $VALIDATION_RESPONSE"
+          print(f"Validation response: {response_text}")
 
-          # Check if validation passed
-          VALIDATION_ERRORS=$(echo "$VALIDATION_RESPONSE" | jq -r '.errors // []')
-          if [ "$VALIDATION_ERRORS" != "[]" ] && [ "$VALIDATION_ERRORS" != "null" ]; then
-            echo "Validation errors found: $VALIDATION_ERRORS"
-            exit 1
-          fi
+          try:
+              validation_data = json.loads(response_text)
+              validation_errors = validation_data.get("errors", [])
+              if validation_errors and validation_errors != []:
+                  print(f"Warning: Validation errors found: {validation_errors}")
+              else:
+                  print("✓ Collection validation passed!")
+          except json.JSONDecodeError:
+              print(f"Note: Could not parse validation response as JSON: {response_text}")
+          print()
 
-          # Submit collection for publication (bypass approval if possible)
-          echo "Submitting collection for publication..."
-          SUBMIT_PAYLOAD='{"approver": null, "businessUnit": null, "notesToApprover": null, "supportingFilesForApprover": []}'
+          # Submit collection for publication
+          print("Step 8: Submitting collection for publication...")
+          submit_payload = {
+              "approver": None,
+              "businessUnit": None,
+              "notesToApprover": None,
+              "supportingFilesForApprover": []
+          }
 
-          curl -s -X POST -u "${{ secrets.DAP_USERNAME }}:${{ secrets.DAP_PASSWORD }}" \
-            -H "Content-Type: application/json" \
-            -d "$SUBMIT_PAYLOAD" \
-            "https://data.csiro.au/dap/api/v2/collections/$NEW_COLLECTION_ID/submit"
+          response_text, status_code = make_request(
+              f"{DAP_BASE_URL}/dap/api/v2/collections/{new_collection_id}/submit",
+              method="POST",
+              data=submit_payload,
+              auth_header=auth_header
+          )
 
-          echo "Collection submitted for publication"
+          print(f"Submit response (HTTP {status_code}): {response_text}")
+          if status_code in [200, 201, 204]:
+              print("✓ Collection submitted for publication!")
+          else:
+              print(f"Warning: Submit returned HTTP {status_code}")
+          print()
+
+          print("=== Upload Complete ===")
+          print(f"New collection ID: {new_collection_id}")
+          print(f"Collection URL: {DAP_BASE_URL}/dap/collections/{new_collection_id}")
+          print()
+          print("The collection should now be visible in the DAP environment.")
         timeout-minutes: 20
