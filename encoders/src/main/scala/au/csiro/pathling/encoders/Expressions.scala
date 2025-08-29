@@ -39,6 +39,13 @@ import org.apache.spark.sql.types._
 import scala.language.existentials
 
 /**
+ * Constants used in expression implementations.
+ */
+private object ExpressionConstants {
+  val CODEGEN_ONLY_MSG = "Only code-generated evaluation is supported."
+}
+
+/**
  * Invokes a static function, returning the result.  By default, any of the arguments being null
  * will result in returning null instead of calling the function.
  *
@@ -59,7 +66,7 @@ case class StaticField(staticObject: Class[_],
   override def children: Seq[Expression] = Nil
 
   override def eval(input: InternalRow): Any =
-    throw new UnsupportedOperationException("Only code-generated evaluation is supported.")
+    throw new UnsupportedOperationException(ExpressionConstants.CODEGEN_ONLY_MSG)
 
   override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
     val javaType = CodeGenerator.javaType(dataType)
@@ -98,7 +105,7 @@ case class GetHapiValue(value: Expression,
   override def children: Seq[Expression] = value :: Nil
 
   override def eval(input: InternalRow): Any =
-    throw new UnsupportedOperationException("Only code-generated evaluation is supported.")
+    throw new UnsupportedOperationException(ExpressionConstants.CODEGEN_ONLY_MSG)
 
   override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
 
@@ -141,7 +148,7 @@ case class ObjectCast(value: Expression, resultType: DataType, lenient: Boolean 
   override def children: Seq[Expression] = value :: Nil
 
   override def eval(input: InternalRow): Any =
-    throw new UnsupportedOperationException("Only code-generated evaluation is supported.")
+    throw new UnsupportedOperationException(ExpressionConstants.CODEGEN_ONLY_MSG)
 
   override protected def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
 
@@ -184,7 +191,7 @@ case class RegisterFid(targetObject: Expression,
   override def dataType: DataType = targetObject.dataType
 
   override def eval(input: InternalRow): Any =
-    throw new UnsupportedOperationException("Only code-generated evaluation is supported.")
+    throw new UnsupportedOperationException(ExpressionConstants.CODEGEN_ONLY_MSG)
 
   override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
     val javaType = CodeGenerator.javaType(dataType)
@@ -233,7 +240,7 @@ case class AttachExtensions(targetObject: Expression,
   override def dataType: DataType = targetObject.dataType
 
   override def eval(input: InternalRow): Any =
-    throw new UnsupportedOperationException("Only code-generated evaluation is supported.")
+    throw new UnsupportedOperationException(ExpressionConstants.CODEGEN_ONLY_MSG)
 
   override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
     val javaType = CodeGenerator.javaType(dataType)
