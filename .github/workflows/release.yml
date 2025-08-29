@@ -284,16 +284,22 @@ jobs:
 
       - name: Download source code ZIP from release
         run: |
-          gh release download ${{ github.ref_name }} --pattern "*.zip"
+          # Extract version from tag (remove 'v' prefix if present)
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"  # Remove leading 'v' if present
+          
+          # Download the automatic source code archive from GitHub
+          curl -L -o "pathling-${VERSION}.zip" \
+            "https://api.github.com/repos/${{ github.repository }}/zipball/${{ github.ref_name }}"
 
-          # Verify that a ZIP file was downloaded
-          if [ ! -f *.zip ]; then
-            echo "Error: No ZIP file found in release ${{ github.ref_name }}"
-            echo "The release must contain a ZIP file to upload to DAP"
+          # Verify that the ZIP file was downloaded
+          if [ ! -f "pathling-${VERSION}.zip" ]; then
+            echo "Error: Failed to download source code archive for ${{ github.ref_name }}"
             exit 1
           fi
 
-          echo "Found ZIP file(s): $(ls *.zip)"
+          echo "Downloaded source code archive: pathling-${VERSION}.zip"
+          echo "File size: $(ls -lh pathling-${VERSION}.zip | awk '{print $5}')"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
