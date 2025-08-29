@@ -218,6 +218,45 @@ def main():
         print(f"Created new collection version with ID: {new_collection_id}")
     print()
 
+    # Step 3.5: Update collection version metadata
+    print(f"Step 3.5: Updating collection version to {version}...")
+    
+    # First, get the complete collection DTO
+    collection_dto_response, status_code = make_request(
+        f"{DAP_BASE_URL}/dap/api/v2/collections/{new_collection_id}",
+        method="GET",
+        auth_header=auth_header
+    )
+    
+    if status_code != 200:
+        print(f"Warning: Could not fetch collection details (HTTP {status_code}): {collection_dto_response[:200]}")
+        print("Continuing without version update...")
+    else:
+        try:
+            # Parse and modify the DTO
+            collection_dto = json.loads(collection_dto_response)
+            collection_dto["version"] = version  # Update the version field
+            
+            # Send the complete modified DTO back
+            response_text, status_code = make_request(
+                f"{DAP_BASE_URL}/dap/api/v2/collections/{new_collection_id}",
+                method="PUT",
+                data=collection_dto,
+                auth_header=auth_header
+            )
+            
+            if status_code in [200, 201, 204]:
+                print(f"✓ Collection version updated to {version}")
+            else:
+                print(f"Warning: Version update failed (HTTP {status_code}): {response_text[:200]}")
+        except json.JSONDecodeError:
+            print("Warning: Could not parse collection DTO response")
+        except Exception as e:
+            print(f"Warning: Error updating collection version: {e}")
+    
+    # Continue execution - version update is not critical for file upload
+    print()
+
     # Unlock files for modification
     print("Step 4: Unlocking files for modification...")
     response_text, status_code = make_request(
@@ -347,7 +386,7 @@ def main():
 
     print("=== Upload Complete ===")
     print(f"New collection ID: {new_collection_id}")
-    print(f"Collection URL: {DAP_BASE_URL}/dap/collections/{new_collection_id}")
+    print(f"Collection URL: {DAP_BASE_URL}/collection/{COLLECTION_PID}")
     print()
     print("The collection should now be visible in the DAP environment.")
 
