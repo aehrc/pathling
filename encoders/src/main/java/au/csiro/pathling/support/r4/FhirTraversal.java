@@ -34,6 +34,9 @@ import org.hl7.fhir.r4.model.Base;
  */
 public class FhirTraversal {
 
+  private FhirTraversal() {
+  }
+
   private static void processChildrenRecursive(@Nonnull final Base object,
       @Nonnull final Consumer<Base> processor) {
     object.children().stream()
