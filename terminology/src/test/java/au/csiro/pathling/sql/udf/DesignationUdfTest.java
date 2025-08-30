@@ -34,7 +34,7 @@ import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class DesignationUdfTest extends AbstractTerminologyTestBase {
+class DesignationUdfTest extends AbstractTerminologyTestBase {
 
   private static final String[] EMPTY = new String[0];
 
@@ -51,14 +51,14 @@ public class DesignationUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testReturnsNullWhenNullCoding() {
+  void testReturnsNullWhenNullCoding() {
     assertNull(designationUdf.call(null, encode(CODING_D), null));
     verifyNoMoreInteractions(terminologyService);
   }
 
 
   @Test
-  public void testResultEmptyWhenInvalidUse() {
+  void testResultEmptyWhenInvalidUse() {
     assertArrayEquals(EMPTY, designationUdf.call(encode(CODING_A), encode(INVALID_CODING_0), null));
     assertArrayEquals(EMPTY, designationUdf.call(encode(CODING_B), encode(INVALID_CODING_1), "en"));
     assertArrayEquals(EMPTY, designationUdf.call(encode(CODING_C), encode(INVALID_CODING_2), "fr"));
@@ -66,7 +66,7 @@ public class DesignationUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testResultEmptyIfNoDesignations() {
+  void testResultEmptyIfNoDesignations() {
     assertArrayEquals(EMPTY, designationUdf.call(encode(CODING_A), encode(CODING_D), null));
     assertArrayEquals(EMPTY,
         designationUdf.call(encode(CODING_BB_VERSION1), encode(CODING_E), "en"));
@@ -77,7 +77,7 @@ public class DesignationUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testReturnsCorrectDesignationsWithUseAndLanguage() {
+  void testReturnsCorrectDesignationsWithUseAndLanguage() {
     setupLookup(terminologyService)
         .withDesignation(CODING_A, CODING_C, null, "A_C_??")
         .withDesignation(CODING_A, CODING_C, "en", "A_C_en")
@@ -95,7 +95,7 @@ public class DesignationUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testReturnsCorrectDesignationsWithNoUseOrNoLanguage() {
+  void testReturnsCorrectDesignationsWithNoUseOrNoLanguage() {
     setupLookup(terminologyService)
         .withDesignation(CODING_AA_VERSION1, null, "en", "AA1_?_en")
         .withDesignation(CODING_AA_VERSION1, CODING_D, "en", "AA1_D_en")
