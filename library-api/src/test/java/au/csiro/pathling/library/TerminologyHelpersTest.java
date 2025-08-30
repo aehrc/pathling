@@ -38,7 +38,7 @@ class TerminologyHelpersTest {
   private static SparkSession spark;
 
   @BeforeAll
-  public static void setUp() {
+  static void setUp() {
     spark = TestHelpers.spark();
   }
 
