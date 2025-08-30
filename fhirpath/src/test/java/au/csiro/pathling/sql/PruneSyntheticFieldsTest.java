@@ -35,7 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @SpringBootUnitTest
-public class PruneSyntheticFieldsTest {
+class PruneSyntheticFieldsTest {
 
   @Autowired
   private SparkSession spark;
@@ -48,7 +48,7 @@ public class PruneSyntheticFieldsTest {
   });
 
   @Test
-  public void testPruneSyntheticFields() {
+  void testPruneSyntheticFields() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn("active", DataTypes.BooleanType)
@@ -83,7 +83,7 @@ public class PruneSyntheticFieldsTest {
   }
 
   @Test
-  public void testPruneInGroupBy() {
+  void testPruneInGroupBy() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn("gender", DataTypes.StringType)
