@@ -67,10 +67,10 @@ class R4DataTypeMappings extends DataTypeMappings {
       .getImplementingClass == classOf[ValueSet.ValueSetExpansionContainsComponent] &&
       child.getElementName == "contains"
 
-    // TODO: This is due to a bug in HAPI RuntimeChildExtension.getChildByName() implementation,
-    //       which fails on assertion because the name of the child should be 
-    //       "modifierExtensionExtension", not "extensionExtension".
-    //       See: https://github.com/hapifhir/hapi-fhir/issues/3414
+    // This is due to a bug in HAPI RuntimeChildExtension.getChildByName() 
+    // implementation, which fails on assertion because the name of the child 
+    // should be "modifierExtensionExtension", not "extensionExtension". 
+    // See: https://github.com/hapifhir/hapi-fhir/issues/3414
     val skipModifierExtension = child.getElementName.equals("modifierExtension")
     skipContains || skipModifierExtension
   }
