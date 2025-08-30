@@ -37,6 +37,9 @@ import org.hl7.fhir.r4.model.Coding;
  */
 public abstract class CodingLiteral {
 
+  private CodingLiteral() {
+  }
+
   /**
    * Special characters that require quoting within a Coding literal component.
    */
