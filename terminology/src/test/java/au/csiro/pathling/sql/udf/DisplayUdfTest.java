@@ -31,7 +31,7 @@ import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class DisplayUdfTest extends AbstractTerminologyTestBase {
+class DisplayUdfTest extends AbstractTerminologyTestBase {
 
 
   private static final String DISPLAY_NAME_A = "Test Display Name A";
