@@ -40,7 +40,6 @@ public interface CodingHelpers {
       return right == null;
     } else {
 
-      // TODO: reconsider for immutable systems (ignore version all together)
       return right != null &&
           (left.hasSystem()
            ? left.getSystem().equals(right.getSystem())
