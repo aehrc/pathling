@@ -39,12 +39,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Test;
 import scala.collection.JavaConverters;
 
-public class R4DatatypeMappingsTest {
+class R4DatatypeMappingsTest {
 
-  private final static FhirContext fhirContext = FhirContext.forR4();
+  private static final FhirContext fhirContext = FhirContext.forR4();
 
   // As defined in: https://www.hl7.org/fhir/datatypes.html#open
-  private final static List<String> ALLOWED_R4_OPEN_ELEMENT_TYPES = Arrays.asList(
+  private static final List<String> ALLOWED_R4_OPEN_ELEMENT_TYPES = Arrays.asList(
       "base64Binary",
       "boolean",
       "canonical",
@@ -99,7 +99,7 @@ public class R4DatatypeMappingsTest {
   private final DataTypeMappings dataTypeMappings = new R4DataTypeMappings();
 
   @Test
-  public void testCorrectChoicesOnOpenElementType() {
+  void testCorrectChoicesOnOpenElementType() {
     final ElementCtx<Object, Object> ex = ElementCtx.forExtension(fhirContext);
     final RuntimeChildExtension extension = (RuntimeChildExtension) ex.childDefinition();
     final RuntimeCompositeDatatypeDefinition extensionChild = (RuntimeCompositeDatatypeDefinition) extension
