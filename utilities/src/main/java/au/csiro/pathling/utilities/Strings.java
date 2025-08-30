@@ -33,6 +33,9 @@ import java.util.stream.Stream;
  */
 public abstract class Strings {
 
+  private Strings() {
+  }
+
   /**
    * @param value a String surrounded by single quotes
    * @return the unquoted String
