@@ -61,6 +61,7 @@ import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Type;
+import org.jetbrains.annotations.Unmodifiable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -68,7 +69,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @SpringBootUnitTest
-public class TerminologyUdfTest extends AbstractTerminologyTestBase {
+class TerminologyUdfTest extends AbstractTerminologyTestBase {
 
   @Autowired
   private SparkSession spark;
@@ -146,7 +147,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testValidateCoding() {
+  void testValidateCoding() {
     setupValidateCodingExpectations();
     final Dataset<Row> df = codingDatasetBuilder()
         .withRow("id-1", CodingSchema.encode(CODING_1))
@@ -174,7 +175,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testValidateCodingNullDataset() {
+  void testValidateCodingNullDataset() {
     setupValidateCodingExpectations();
     final Dataset<Row> df = codingDatasetBuilder()
         .withRow("id-1", CodingSchema.encode(CODING_1))
@@ -192,7 +193,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testValidateCodingArray() {
+  void testValidateCodingArray() {
     setupValidateCodingExpectations();
     final Dataset<Row> ds = DatasetBuilder.of(spark)
         .withIdColumn("id")
@@ -271,7 +272,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void validateCodingArrayWithNullDataset() {
+  void validateCodingArrayWithNullDataset() {
     setupValidateCodingExpectations();
     final Dataset<Row> ds = DatasetBuilder.of(spark)
         .withIdColumn("id")
@@ -296,7 +297,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
 
 
   @Test
-  public void testTranslateCoding() {
+  void testTranslateCoding() {
     setupTranslateExpectations();
 
     final Dataset<Row> ds = codingDatasetBuilder()
@@ -322,7 +323,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
 
 
   @Test
-  public void testTranslateCodingArray() {
+  void testTranslateCodingArray() {
     setupTranslateExpectations();
 
     final Dataset<Row> ds = DatasetBuilder.of(spark)
@@ -360,12 +361,12 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Nonnull
-  private static List<Row> toArray(@Nonnull final Coding... codings) {
+  private static @Unmodifiable List<Row> toArray(@Nonnull final Coding... codings) {
     return Stream.of(codings).map(CodingSchema::encode).toList();
   }
 
   @Test
-  public void testSubsumes() {
+  void testSubsumes() {
 
     setupSubsumesExpectations();
 
@@ -409,7 +410,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testSubsumedBy() {
+  void testSubsumedBy() {
 
     setupSubsumesExpectations();
 
@@ -453,7 +454,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testDisplay() {
+  void testDisplay() {
     setupDisplayExpectations();
 
     final Dataset<Row> ds = DatasetBuilder.of(spark)
@@ -479,7 +480,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testDisplayWithLanguage() {
+  void testDisplayWithLanguage() {
     setupDisplayExpectations()
         .withDisplay(CODING_1, "display 1 (de)", "de")
         .withDisplay(CODING_2, "display 2 (de)", "de");
@@ -508,9 +509,10 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
 
   @ParameterizedTest
   @MethodSource("propertyParameters")
-  public void testProperty(final String propertyType, final DataType resultDataType,
+  void testProperty(final String propertyType, final DataType resultDataType,
       final List<Type> propertyAFhirValues, final List<Type> propertyBFhirValues,
-      final List<Object> propertyASqlValues, final List<Object> propertyBSqlValues) {
+      @Nonnull final List<Object> propertyASqlValues,
+      @Nonnull final List<Object> propertyBSqlValues) {
     TerminologyServiceHelpers.setupLookup(terminologyService)
         .withProperty(CODING_1, "property_a", null, propertyAFhirValues)
         .withProperty(CODING_2, "property_b", null, propertyBFhirValues);
@@ -556,7 +558,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testPropertyWithDefaultType() {
+  void testPropertyWithDefaultType() {
     TerminologyServiceHelpers.setupLookup(terminologyService)
         .withProperty(CODING_1, "property_a", null, List.of(new StringType("value_a")));
 
@@ -583,7 +585,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testPropertyWithLanguage() {
+  void testPropertyWithLanguage() {
     TerminologyServiceHelpers.setupLookup(terminologyService)
         .withProperty(CODING_1, "property_a", "de", List.of(new StringType("value_a_de")))
         .withProperty(CODING_2, "property_b", "fr", List.of(new StringType("value_b_fr")));
@@ -667,7 +669,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testDesignationWithLanguage() {
+  void testDesignationWithLanguage() {
 
     final Dataset<Row> resultA = callWithDesignationTestData(
         coding -> designation(coding, USE_A, LANGUAGE_X));
@@ -686,7 +688,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
 
 
   @Test
-  public void testDesignationWithNullLanguageAndUseColumn() {
+  void testDesignationWithNullLanguageAndUseColumn() {
 
     final Dataset<Row> resultA = callWithDesignationTestData(
         coding -> designation(coding,
@@ -705,9 +707,8 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
         .hasRows(expectedResultA);
   }
 
-
   @Test
-  public void testDesignationWithNoLanguageAndAlternativeDisplayName() {
+  void testDesignationWithNoLanguageAndAlternativeDisplayName() {
 
     final Dataset<Row> resultA = callWithDesignationTestData(
         coding -> designation(coding, USE_A.copy().setDisplay("Alternative Display A")));
@@ -725,7 +726,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testDesignationWithNoUse() {
+  void testDesignationWithNoUse() {
 
     //noinspection Convert2MethodRef
     final Dataset<Row> resultA = callWithDesignationTestData(Terminology::designation);
