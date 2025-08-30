@@ -39,7 +39,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Test;
 import scala.collection.JavaConverters;
 
-class R4DatatypeMappingsTest {
+class R4DataTypeMappingsTest {
 
   private static final FhirContext fhirContext = FhirContext.forR4();
 
