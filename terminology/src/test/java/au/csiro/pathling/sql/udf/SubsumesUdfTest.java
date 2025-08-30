@@ -33,7 +33,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("ConstantConditions")
-public class SubsumesUdfTest extends AbstractTerminologyTestBase {
+class SubsumesUdfTest extends AbstractTerminologyTestBase {
 
   private SubsumesUdf subsumesUdf;
   private TerminologyService terminologyService;
