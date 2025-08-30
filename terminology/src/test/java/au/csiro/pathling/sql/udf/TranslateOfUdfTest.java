@@ -44,7 +44,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import scala.collection.mutable.WrappedArray;
 
-public class TranslateOfUdfTest extends AbstractTerminologyTestBase {
+class TranslateOfUdfTest extends AbstractTerminologyTestBase {
 
   private static final String CONCEPT_MAP_A = "uuid:caA";
   private static final String CONCEPT_MAP_B = "uuid:caB";
@@ -115,10 +115,10 @@ public class TranslateOfUdfTest extends AbstractTerminologyTestBase {
 
   @Test
   void testThrowsInputErrorWhenInvalidEquivalence() {
+    final Row coding = encode(CODING_AA);
+    final WrappedArray<String> invalid = newWrappedArray(List.of("invalid"));
     final InvalidUserInputError ex = assertThrows(InvalidUserInputError.class,
-        () -> translateUdf.call(encode(CODING_AA), CONCEPT_MAP_B, true,
-            newWrappedArray(List.of("invalid")),
-            null));
+        () -> translateUdf.call(coding, CONCEPT_MAP_B, true, invalid, null));
     assertEquals("Unknown ConceptMapEquivalence code 'invalid'", ex.getMessage());
     verifyNoMoreInteractions(terminologyService);
   }
