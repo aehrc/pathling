@@ -103,7 +103,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testValidateCodingTrue() {
+  void testValidateCodingTrue() {
     final IOperationUntypedWithInput<Parameters> request = mockRequest(
         RESULT_TRUE);
     when(terminologyClient.buildValidateCode(
@@ -116,7 +116,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testValidateVersionedCodingFalse() {
+  void testValidateVersionedCodingFalse() {
     final IOperationUntypedWithInput<Parameters> request = mockRequest(
         RESULT_FALSE);
     when(terminologyClient.buildValidateCode(
@@ -129,14 +129,14 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testValidateInvalidCodings() {
+  void testValidateInvalidCodings() {
     assertFalse(terminologyService.validateCode(VALUE_SET_Y, INVALID_CODING_0));
     assertFalse(terminologyService.validateCode(VALUE_SET_Y, INVALID_CODING_1));
     assertFalse(terminologyService.validateCode(VALUE_SET_Y, INVALID_CODING_2));
   }
 
   @Test
-  public void testSubsumesNoVersion() {
+  void testSubsumesNoVersion() {
     final IOperationUntypedWithInput<Parameters> request = mockRequest(
         OUTCOME_SUBSUMES);
     when(terminologyClient.buildSubsumes(
@@ -149,7 +149,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testSubsumesLeftVersion() {
+  void testSubsumesLeftVersion() {
     final IOperationUntypedWithInput<Parameters> request = mockRequest(
         OUTCOME_EQUIVALENT);
     when(terminologyClient.buildSubsumes(
@@ -162,7 +162,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testSubsumesRightVersion() {
+  void testSubsumesRightVersion() {
     final IOperationUntypedWithInput<Parameters> request = mockRequest(
         OUTCOME_SUBSUMED_BY);
     when(terminologyClient.buildSubsumes(
@@ -175,7 +175,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testSubsumesBothVersionTheSame() {
+  void testSubsumesBothVersionTheSame() {
     final IOperationUntypedWithInput<Parameters> request = mockRequest(
         OUTCOME_EQUIVALENT);
     when(terminologyClient.buildSubsumes(
@@ -188,19 +188,19 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testSubsumesDifferentVersions() {
+  void testSubsumesDifferentVersions() {
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_AA_VERSION1, CODING_AB_VERSION2));
     verifyNoMoreInteractions(terminologyClient);
   }
 
   @Test
-  public void testSubsumesDifferentSystems() {
+  void testSubsumesDifferentSystems() {
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_AA, CODING_BB_VERSION1));
     verifyNoMoreInteractions(terminologyClient);
   }
 
   @Test
-  public void testSubsumesInvalidCodings() {
+  void testSubsumesInvalidCodings() {
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_0, INVALID_CODING_0));
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_1, INVALID_CODING_1));
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_2, INVALID_CODING_2));
@@ -218,7 +218,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
 
 
   @Test
-  public void testSubsumesEqualCodingsLocally() {
+  void testSubsumesEqualCodingsLocally() {
     assertEquals(EQUIVALENT, terminologyService.subsumes(CODING_B, CODING_B));
     assertEquals(EQUIVALENT, terminologyService.subsumes(CODING_AA, CODING_AA_VERSION1));
     assertEquals(EQUIVALENT, terminologyService.subsumes(CODING_AB_VERSION1, CODING_AB));
@@ -229,7 +229,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
 
 
   @Test
-  public void testTranslatesVersionedCodingWithDefaults() {
+  void testTranslatesVersionedCodingWithDefaults() {
     final IOperationUntypedWithInput<Parameters> request = mockRequest(
         RESULT_FALSE);
     when(terminologyClient.buildTranslate(
@@ -246,7 +246,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testTranslatesUnversionedCoding() {
+  void testTranslatesUnversionedCoding() {
 
     final Parameters translationResponse = translation(
         Translation.of(ConceptMapEquivalence.RELATEDTO, CODING_AA),
@@ -276,7 +276,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testTranslatesInvalidsCoding() {
+  void testTranslatesInvalidsCoding() {
 
     assertEquals(EMPTY_TRANSLATION,
         terminologyService.translate(INVALID_CODING_0, CONCEPT_MAP_0, false, null));
@@ -288,7 +288,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testLooksUpInvalidCoding() {
+  void testLooksUpInvalidCoding() {
     assertEquals(Collections.emptyList(),
         terminologyService.lookup(INVALID_CODING_0, null));
     assertEquals(Collections.emptyList(),
@@ -299,7 +299,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testLooksUpStandardProperty() {
+  void testLooksUpStandardProperty() {
 
     final IOperationUntypedWithInput<Parameters> request = mockRequest(
         standardProperties(CODING_A).build());
@@ -316,7 +316,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testLooksNamedProperties() {
+  void testLooksNamedProperties() {
     final Parameters response = standardProperties(CODING_BB_VERSION1)
         .withProperty("property_A", "string_value_a")
         .withProperty("property_A", new IntegerType(333))
@@ -346,7 +346,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testLookupSubProperties() {
+  void testLookupSubProperties() {
     final Parameters response = standardProperties(CODING_C)
         .withPropertyGroup("group_C")
         .withSubProperty("property_C", new StringType("string_value_c"))
@@ -375,7 +375,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testLookupDesignations() {
+  void testLookupDesignations() {
     final Parameters response = standardProperties(CODING_A)
         .withProperty("property_A", "value_A")
         .withDesignation("designation_D_X", CODING_D, "lang_X")
@@ -406,7 +406,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testLooksUpDesignationsForVersionedCodingAndUse() {
+  void testLooksUpDesignationsForVersionedCodingAndUse() {
     final Parameters response = standardProperties(CODING_BB_VERSION1)
         .withProperty("property_A", "value_A")
         .withDesignation("designation_AB2_Z", CODING_AB_VERSION2, "lang_Z")
@@ -429,7 +429,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testLookupHandles404Exceptions() {
+  void testLookupHandles404Exceptions() {
     when(terminologyClient.buildLookup(any(), any(), any(), any(), any()
     )).thenThrow(BaseServerResponseException.newInstance(404, "Resource Not Found"));
 
@@ -438,8 +438,8 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   }
 
   @SuppressWarnings("unchecked")
-  <ResponseType> IOperationUntypedWithInput<ResponseType> mockRequest(final ResponseType response) {
-    final IOperationUntypedWithInput<ResponseType> request = (IOperationUntypedWithInput<ResponseType>) mock(
+  <R> IOperationUntypedWithInput<R> mockRequest(final R response) {
+    final IOperationUntypedWithInput<R> request = (IOperationUntypedWithInput<R>) mock(
         IOperationUntypedWithInput.class);
     when(request.withAdditionalHeader(anyString(), anyString())).thenReturn(request);
     when(request.execute()).thenReturn(response);
