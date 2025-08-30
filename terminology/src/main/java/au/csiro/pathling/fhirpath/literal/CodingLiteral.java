@@ -37,6 +37,9 @@ import org.hl7.fhir.r4.model.Coding;
  */
 public abstract class CodingLiteral {
 
+  private CodingLiteral() {
+  }
+
   /**
    * Special characters that require quoting within a Coding literal component.
    */
@@ -80,10 +83,8 @@ public abstract class CodingLiteral {
       }
       return coding;
     } else {
-      {
-        throw new IllegalArgumentException(
-            "Coding literal must be of form: <system>|<code>[|<version>][|<display>[|<userSelected>]]].");
-      }
+      throw new IllegalArgumentException(
+          "Coding literal must be of form: <system>|<code>[|<version>][|<display>[|<userSelected>]]].");
     }
   }
 

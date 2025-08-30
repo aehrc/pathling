@@ -47,21 +47,20 @@ import scala.collection.JavaConverters;
 
 public class AllResourcesEncodingTest {
 
-  private final static FhirContext FHIR_CONTEXT = FhirContext.forR4();
-  private final static FhirEncoders FHIR_ENCODERS = FhirEncoders.forR4()
+  private static final FhirContext FHIR_CONTEXT = FhirContext.forR4();
+  private static final FhirEncoders FHIR_ENCODERS = FhirEncoders.forR4()
       .withMaxNestingLevel(2)
       .withOpenTypes(OPEN_TYPES)
       .withExtensionsEnabled(true)
       .getOrCreate();
 
 
-  private final static SchemaConverter SCHEMA_CONVERTER_L2 = new SchemaConverter(FHIR_CONTEXT,
+  private static final SchemaConverter SCHEMA_CONVERTER_L2 = new SchemaConverter(FHIR_CONTEXT,
       new R4DataTypeMappings(),
       EncoderConfig.apply(2, JavaConverters.asScalaSet(OPEN_TYPES).toSet(), true));
 
 
-  // TODO: Remove when the corresponding issues are fixed (#375)
-  final static Set<String> EXCLUDED_RESOURCES = ImmutableSet.of(
+  static final Set<String> EXCLUDED_RESOURCES = ImmutableSet.of(
       "Parameters",
       // Collections are not supported for custom encoders for: condition-> RuntimeIdDatatypeDefinition[id, IdType]
       "StructureDefinition",
@@ -82,7 +81,7 @@ public class AllResourcesEncodingTest {
 
   @ParameterizedTest
   @MethodSource("input")
-  public void testConverterSchemaMatchesEncoder(
+  void testConverterSchemaMatchesEncoder(
       @Nonnull final Class<? extends IBaseResource> resourceClass) {
     final StructType schema = SCHEMA_CONVERTER_L2.resourceSchema(resourceClass);
     final ExpressionEncoder<? extends IBaseResource> encoder = FHIR_ENCODERS
@@ -92,7 +91,7 @@ public class AllResourcesEncodingTest {
 
   @ParameterizedTest
   @MethodSource("input")
-  public <T extends IBaseResource> void testCanEncodeDecodeResource(
+  <T extends IBaseResource> void testCanEncodeDecodeResource(
       @Nonnull final Class<T> resourceClass) throws Exception {
     final ExpressionEncoder<T> encoder = FHIR_ENCODERS.of(resourceClass);
     final ExpressionEncoder<T> resolvedEncoder = EncoderUtils.defaultResolveAndBind(encoder);

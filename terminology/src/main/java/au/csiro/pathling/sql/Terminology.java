@@ -76,10 +76,6 @@ public interface Terminology {
     return call_udf(MemberOfUdf.FUNCTION_NAME, coding, valueSetUrl);
   }
 
-  // TODO: consider the order of target and equivalences
-  // TODO: consider other forms of passing equivalences (i.e collection of enum types)
-  // TODO: add overloaded methods for default arguments.
-
   /**
    * Takes a Coding or an array of Codings column as its input.  Returns the Column which contains
    * an array of Coding value with translation targets from the specified FHIR ConceptMap. There may

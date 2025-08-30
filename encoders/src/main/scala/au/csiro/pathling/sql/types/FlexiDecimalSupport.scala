@@ -57,8 +57,8 @@ object FlexiDecimalSupport {
     // value -> the BigInteger representing digits
     // scale -> the actual position of the decimal point
 
-    // TODO: Performance: consider if the normalized value could be cached in
-    //   a variable
+    // Performance: consider if the normalized value could be cached in a 
+    // variable.
     val normalizedExpression: Expression = Catalyst.staticInvoke(classOf[FlexiDecimal],
       ObjectType(classOf[java.math.BigDecimal]),
       "normalize",

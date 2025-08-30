@@ -26,11 +26,11 @@ import java.util.Optional;
  * An abstraction of a terminology operation that describes how to validate, execute and extract a
  * result from the response.
  *
- * @param <ResponseType> The type of the response returned by the terminology client
- * @param <ResultType> The type of the final result that is extracted from the response
+ * @param <R> The type of the response returned by the terminology client
+ * @param <T> The type of the final result that is extracted from the response
  * @author John Grimes
  */
-public interface TerminologyOperation<ResponseType, ResultType> {
+public interface TerminologyOperation<R, T> {
 
   /**
    * Validates the parameters for this operation.
@@ -39,7 +39,7 @@ public interface TerminologyOperation<ResponseType, ResultType> {
    * containing the result to be returned to the user if the parameters are invalid.
    */
   @Nonnull
-  Optional<ResultType> validate();
+  Optional<T> validate();
 
   /**
    * Builds a request for this operation, ready to send to the terminology server.
@@ -48,7 +48,7 @@ public interface TerminologyOperation<ResponseType, ResultType> {
    * (e.g. headers)
    */
   @Nonnull
-  IOperationUntypedWithInput<ResponseType> buildRequest();
+  IOperationUntypedWithInput<R> buildRequest();
 
   /**
    * Extracts the result from the response from the terminology server.
@@ -57,13 +57,13 @@ public interface TerminologyOperation<ResponseType, ResultType> {
    * @return the extracted result
    */
   @Nonnull
-  ResultType extractResult(@Nonnull final ResponseType response);
+  T extractResult(@Nonnull final R response);
 
   /**
    * @return the result that should be returned to the user if the terminology server returns a 400
    * series response
    */
   @Nonnull
-  ResultType invalidRequestFallback();
+  T invalidRequestFallback();
 
 }

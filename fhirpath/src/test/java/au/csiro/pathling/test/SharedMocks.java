@@ -24,7 +24,7 @@ import org.mockito.Mockito;
 
 public class SharedMocks {
 
-  private final static Map<Class<?>, Object> MOCKS = new HashMap<>();
+  private static final Map<Class<?>, Object> MOCKS = new HashMap<>();
 
   @SuppressWarnings("unchecked")
   @Nonnull

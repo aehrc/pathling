@@ -33,6 +33,7 @@ import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import com.google.common.collect.ImmutableMap;
+import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
@@ -115,6 +116,7 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
               List.of(CODING_A, CODING_BB_VERSION1, CODING_C, CODING_C).toArray(new Coding[]{})))
       ));
 
+  @Nonnull
   private static Stream<Values<?>> allTestValues() {
     return TEST_VALUES.values().stream();
   }
@@ -124,12 +126,13 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
   private TerminologyServiceFactory terminologyServiceFactory;
 
   @BeforeEach
-  public void setUp() {
+  void setUp() {
     terminologyService = mock(TerminologyService.class);
     terminologyServiceFactory = mock(TerminologyServiceFactory.class);
     when(terminologyServiceFactory.build()).thenReturn(terminologyService);
   }
 
+  @Nonnull
   public static Stream<Class<?>> inputs() {
     return TEST_VALUES.keySet().stream();
   }
@@ -140,7 +143,7 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
 
   @ParameterizedTest
   @MethodSource("inputs")
-  public void testReturnsNullWhenNullCoding(final Class<? extends Type> udfClass) {
+  void testReturnsNullWhenNullCoding(final Class<? extends Type> udfClass) {
     setupUdf(udfClass);
     assertNull(propertyUdf.call(null, "display", null));
     verifyNoMoreInteractions(terminologyService);
@@ -148,7 +151,7 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
 
   @ParameterizedTest
   @MethodSource("inputs")
-  public void testReturnsNullWhenInvalidCodings(final Class<? extends Type> udfClass) {
+  void testReturnsNullWhenInvalidCodings(final Class<? extends Type> udfClass) {
     setupUdf(udfClass);
     assertNull(propertyUdf.call(encode(INVALID_CODING_0), "display", null));
     assertNull(propertyUdf.call(encode(INVALID_CODING_1), "name", null));
@@ -158,7 +161,7 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
 
   @ParameterizedTest
   @MethodSource("inputs")
-  public void testReturnsNullWhenNullPropertyCode(final Class<? extends Type> udfClass) {
+  void testReturnsNullWhenNullPropertyCode(final Class<? extends Type> udfClass) {
     setupUdf(udfClass);
     assertNull(propertyUdf.call(encode(CODING_A), null, null));
     verifyNoMoreInteractions(terminologyService);
@@ -166,7 +169,7 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
 
   @ParameterizedTest
   @MethodSource("inputs")
-  public void testReturnsEmptyArrayWhenNonExisingProperty(final Class<? extends Type> udfClass) {
+  void testReturnsEmptyArrayWhenNonExisingProperty(final Class<? extends Type> udfClass) {
     setupUdf(udfClass);
     assertArrayEquals(new String[RANGE_ONE_FROM],
         propertyUdf.call(encode(CODING_A), "unknownProperty_0", null));
@@ -181,7 +184,7 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
 
   @ParameterizedTest
   @MethodSource("inputs")
-  public void testReturnsASingleValueForKnownProperty(final Class<? extends Type> udfClass) {
+  void testReturnsASingleValueForKnownProperty(final Class<? extends Type> udfClass) {
     setupUdf(udfClass);
     setupLookup(terminologyService)
         .withProperty(CODING_A, "property_0", null,
@@ -202,7 +205,7 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
 
   @ParameterizedTest
   @MethodSource("inputs")
-  public void testReturnsManyValueForKnownProperty(final Class<? extends Type> udfClass) {
+  void testReturnsManyValueForKnownProperty(final Class<? extends Type> udfClass) {
     setupUdf(udfClass);
     setupLookup(terminologyService)
         .withProperty(CODING_AA_VERSION1, "property_a", null,
@@ -222,7 +225,7 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
 
   @ParameterizedTest
   @MethodSource("inputs")
-  public void testReturnsManyValueForKnownPropertyWithLanguage(
+  void testReturnsManyValueForKnownPropertyWithLanguage(
       final Class<? extends Type> udfClass) {
     setupUdf(udfClass);
     setupLookup(terminologyService)

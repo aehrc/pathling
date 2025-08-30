@@ -28,6 +28,8 @@ import java.util.Optional;
  */
 public abstract class Lists {
 
+  private Lists() {
+  }
 
   /**
    * Returns an optional of given list for non-empty list, or empty optional otherwise.

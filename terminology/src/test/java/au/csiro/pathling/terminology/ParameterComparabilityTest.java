@@ -25,7 +25,7 @@ import au.csiro.pathling.terminology.validatecode.ValidateCodeParameters;
 import org.hl7.fhir.r4.model.Coding;
 import org.junit.jupiter.api.Test;
 
-public class ParameterComparabilityTest {
+class ParameterComparabilityTest {
 
   @Test
   void validateCode() {

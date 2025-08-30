@@ -22,6 +22,7 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
@@ -115,7 +116,7 @@ public interface Numeric {
     private final BiFunction<Column, Column, Column> sparkFunction;
 
     MathOperation(@Nonnull final String fhirPath,
-        @Nonnull final BiFunction<Column, Column, Column> sparkFunction) {
+        @Nonnull final BinaryOperator<Column> sparkFunction) {
       this.fhirPath = fhirPath;
       this.sparkFunction = sparkFunction;
     }

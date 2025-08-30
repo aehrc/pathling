@@ -26,22 +26,10 @@ public final class TerminologyHelpers {
   }
 
   public static final String SNOMED_URI = "http://snomed.info/sct";
-
-
-  public static final Coding CD_SNOMED_284551006 = snomedCoding("284551006",
-      "Laceration of foot");
-
-  @SuppressWarnings("unused")
-  public static Coding CD_SNOMED_63816008 = snomedCoding("63816008",
-      "Left hepatectomy");
-
-  // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
-
-  // LOINC
-
   public static final String LOINC_URI = "http://loinc.org";
 
-  // Others
+  public static final Coding CODING_LACERATION_OF_FOOT = snomedCoding("284551006",
+      "Laceration of foot");
 
   @Nonnull
   public static Coding snomedCoding(@Nonnull final String code,

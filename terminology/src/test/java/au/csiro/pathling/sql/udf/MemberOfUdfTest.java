@@ -19,7 +19,7 @@ package au.csiro.pathling.sql.udf;
 
 import static au.csiro.pathling.fhirpath.encoding.CodingSchema.encode;
 import static au.csiro.pathling.test.helpers.FhirMatchers.deepEq;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CODING_LACERATION_OF_FOOT;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -65,7 +65,7 @@ class MemberOfUdfTest extends AbstractTerminologyTestBase {
 
   @Test
   void testNullValueSetUrl() {
-    assertNull(memberUdf.call(encode(CD_SNOMED_284551006), null));
+    assertNull(memberUdf.call(encode(CODING_LACERATION_OF_FOOT), null));
   }
 
   @Test

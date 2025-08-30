@@ -62,16 +62,16 @@ public class DatasetBuilder {
 
   public DatasetBuilder(@Nonnull final SparkSession spark) {
     this.spark = spark;
-    final Metadata metadata = new MetadataBuilder().build();
-    requireNonNull(metadata);
-    this.metadata = metadata;
+    final Metadata newMetadata = new MetadataBuilder().build();
+    requireNonNull(newMetadata);
+    this.metadata = newMetadata;
   }
 
   @Nonnull
   public DatasetBuilder withColumn(@Nonnull final DataType dataType) {
     return withColumn(randomAlias(), dataType);
   }
-  
+
   @Nonnull
   public DatasetBuilder withColumn(@Nonnull final String columnName,
       @Nonnull final DataType dataType) {
