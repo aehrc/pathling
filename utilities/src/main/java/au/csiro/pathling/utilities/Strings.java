@@ -23,8 +23,8 @@ import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.jetbrains.annotations.Unmodifiable;
 
 /**
  * Utility class containing some methods for string wrangling.
@@ -64,11 +64,12 @@ public abstract class Strings {
    * @return the list of converted values of type T.
    */
   @Nonnull
-  public static <T> List<T> parseCsvList(@Nonnull final String csvList, final @Nonnull
-  Function<String, T> converter) {
-    return Stream.of(csvList.split(",")).map(String::trim).filter(not(String::isEmpty))
-        .map(converter).collect(
-            Collectors.toList());
+  public static <T> @Unmodifiable List<T> parseCsvList(@Nonnull final String csvList,
+      final @Nonnull Function<String, T> converter) {
+    return Stream.of(csvList.split(","))
+        .map(String::trim).filter(not(String::isEmpty))
+        .map(converter)
+        .toList();
   }
 
 }
