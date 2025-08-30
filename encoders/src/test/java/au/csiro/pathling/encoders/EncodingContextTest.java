@@ -33,13 +33,13 @@ import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.Patient;
 import org.junit.jupiter.api.Test;
 
-public class EncodingContextTest {
+class EncodingContextTest {
 
   private final FhirContext fhirContext = FhirContext.forR4();
 
   @SuppressWarnings("ReturnOfNull")
   @Test
-  public void testCorrectNestingLevels() {
+  void testCorrectNestingLevels() {
 
     final RuntimeResourceDefinition patientDefinition = fhirContext
         .getResourceDefinition(Patient.class);
@@ -85,7 +85,7 @@ public class EncodingContextTest {
 
 
   @Test
-  public void testFailsWithoutContext() {
+  void testFailsWithoutContext() {
 
     final RuntimeResourceDefinition patientDefinition = fhirContext
         .getResourceDefinition(Patient.class);
@@ -98,7 +98,7 @@ public class EncodingContextTest {
 
   @SuppressWarnings("ReturnOfNull")
   @Test
-  public void testFailsWhenNestedContextIsCreated() {
+  void testFailsWhenNestedContextIsCreated() {
 
     EncodingContext.runWithContext(() -> {
       assertThrows(AssertionError.class, () -> EncodingContext.runWithContext(() -> null),
