@@ -28,9 +28,6 @@ public class TestTerminologyServiceFactory implements TerminologyServiceFactory 
   @Serial
   private static final long serialVersionUID = -8229464411116137820L;
 
-  public TestTerminologyServiceFactory() {
-  }
-
   @Nonnull
   @Override
   public TerminologyService build() {
