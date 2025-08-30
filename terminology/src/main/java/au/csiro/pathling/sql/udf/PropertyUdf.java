@@ -113,7 +113,6 @@ public class PropertyUdf implements SqlFunction,
   }
 
 
-  // TODO: This should somehow be integrated with the encoders
   @Nonnull
   private DataType geElementType() {
     // code | Coding | string | integer | boolean | dateTime | decimal
@@ -127,7 +126,6 @@ public class PropertyUdf implements SqlFunction,
     };
   }
 
-  // TODO: This should somehow be integrated with the encoders
   @Nonnull
   private static Object toObjectValue(@Nonnull final Type value) {
     // Special case for DateTimeType as we represent the as SQL strings
