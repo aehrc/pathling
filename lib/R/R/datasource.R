@@ -14,6 +14,10 @@
 #  limitations under the License.
 
  #'@importFrom sparklyr j_invoke
+ #'@importFrom sparklyr spark_connection
+ #'@importFrom sparklyr j_invoke_new
+ #'@importFrom sparklyr invoke_static
+ #'@importFrom purrr map
 data_sources <- function(pc) {
   j_invoke(pc, "read")
 }
@@ -66,7 +70,7 @@ SaveMode <- list(
 #'   that it contains. Currently not implemented.
 #' @return A DataSource object that can be used to run queries against the data.
 #' 
-#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#ndjson}{Pathling documentation - Reading NDJSON}
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/io#ndjson}{Pathling documentation - Reading NDJSON}
 #'
 #' @export
 #' 
@@ -92,7 +96,7 @@ pathling_read_ndjson <- function(pc, path, extension = "ndjson", file_name_mappe
 #' @param mime_type The MIME type of the bundles. Defaults to "application/fhir+json".
 #' @return A DataSource object that can be used to run queries against the data.
 #' 
-#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#fhir-bundles}{Pathling documentation - Reading Bundles}
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/io#fhir-bundles}{Pathling documentation - Reading Bundles}
 #' 
 #' @export
 #' 
@@ -120,7 +124,7 @@ pathling_read_bundles <- function(pc, path, resource_types, mime_type = MimeType
 #'   and the values are the data frames containing the resource data.
 #' @return A DataSource object that can be used to run queries against the data.
 #' 
-#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#datasets}{Pathling documentation - Reading datasets}
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/io#datasets}{Pathling documentation - Reading datasets}
 #' 
 #' @export
 #' 
@@ -152,7 +156,7 @@ pathling_read_datasets <- function(pc, resources) {
 #' @param path The URI of the directory containing the Parquet tables.
 #' @return A DataSource object that can be used to run queries against the data.
 #' 
-#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#parquet}{Pathling documentation - Reading Parquet}
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/io#parquet}{Pathling documentation - Reading Parquet}
 #' 
 #' @export
 #' 
@@ -176,7 +180,7 @@ pathling_read_parquet <- function(pc, path) {
 #' @param path The URI of the directory containing the Delta tables.
 #' @return A DataSource object that can be used to run queries against the data.
 #' 
-#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#delta-lake}{Pathling documentation - Reading Delta}
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/io#delta-lake}{Pathling documentation - Reading Delta}
 #' 
 #' @export
 #' 
@@ -199,7 +203,7 @@ pathling_read_delta <- function(pc, path) {
 #' @param schema An optional schema name that should be used to qualify the table names.
 #' @return A DataSource object that can be used to run queries against the data.
 #' 
-#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#managed-tables}{Pathling documentation - Reading managed tables}
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/io#managed-tables}{Pathling documentation - Reading managed tables}
 #' 
 #' @export
 #'
@@ -266,7 +270,7 @@ invoke_datasink <- function(ds, name, save_mode = NULL, ...) {
 #'
 #' @return No return value, called for side effects only.
 #' 
-#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#ndjson-1}{Pathling documentation - Writing NDJSON}
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/io#ndjson-1}{Pathling documentation - Writing NDJSON}
 #' 
 #' @examples \dontrun{
 #' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
@@ -294,7 +298,7 @@ ds_write_ndjson <- function(ds, path, save_mode = SaveMode$ERROR, file_name_mapp
 #'
 #' @return No return value, called for side effects only.
 #' 
-#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#parquet-1}{Pathling documentation - Writing Parquet}
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/io#parquet-1}{Pathling documentation - Writing Parquet}
 #' 
 #' @examplesIf pathling_is_spark_installed()
 #' pc <- pathling_connect()
@@ -323,7 +327,7 @@ ds_write_parquet <- function(ds, path, save_mode = SaveMode$ERROR) {
 #'
 #' @return No return value, called for side effects only.
 #' 
-#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#delta-lake-1}{Pathling documentation - Writing Delta}
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/io#delta-lake-1}{Pathling documentation - Writing Delta}
 #' 
 #' @seealso \code{\link{SaveMode}}
 #' 
@@ -354,7 +358,7 @@ ds_write_delta <- function(ds, path, save_mode = SaveMode$OVERWRITE) {
 #' 
 #' @return No return value, called for side effects only.
 #' 
-#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#managed-tables-1}{Pathling documentation - Writing managed tables}
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/io#managed-tables-1}{Pathling documentation - Writing managed tables}
 #' 
 #' @seealso \code{\link{SaveMode}}
 #'
@@ -423,7 +427,7 @@ ds_write_tables <- function(ds, schema = NULL, save_mode = SaveMode$OVERWRITE) {
 #'   }
 #' @return A DataSource object that can be used to run queries against the data.
 #'
-#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#fhir-bulk-data-api}{Pathling documentation - Reading from Bulk Data API}
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/io#fhir-bulk-data-api}{Pathling documentation - Reading from Bulk Data API}
 #'
 #' @export
 #'
@@ -534,7 +538,7 @@ pathling_read_bulk <- function(pc,
     builder <- builder %>% j_invoke("withOutputExtension", as.character(output_extension))
   }
   if (!is.null(timeout)) {
-    j_object = j_invoke_static(sc, "java.time.Duration", "ofSeconds", as.numeric(duration))
+    j_object = j_invoke_static(sc, "java.time.Duration", "ofSeconds", as.numeric(timeout))
     builder <- builder %>% j_invoke("withTimeout", j_object)
   }
   if (!is.null(max_concurrent_downloads)) {

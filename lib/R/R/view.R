@@ -28,7 +28,7 @@
 #' @importFrom sparklyr j_invoke sdf_register
 #' @importFrom jsonlite toJSON
 #' 
-#' @seealso \href{https://pathling.csiro.au/docs/libraries/sql-on-fhir}{Pathling documentation - SQL on FHIR}
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/running-queries}{Pathling documentation - SQL on FHIR}
 #' 
 #' @export
 #' @examples \dontrun{
