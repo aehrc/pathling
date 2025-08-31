@@ -28,6 +28,7 @@ The version number needs to be changed in the following places:
   POMs)
 - [ ] `lib/python/Dockerfile`
 - [ ] `docs/libraries/installation/spark.md`
+- [ ] `site/docusaurus.config.js`
 
 ## Helm chart
 
