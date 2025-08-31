@@ -235,7 +235,11 @@ def main():
         try:
             # Parse and modify the DTO
             collection_dto = json.loads(collection_dto_response)
-            collection_dto["version"] = version  # Update the version field
+            
+            # Ensure softwareMetadata exists and update the version field
+            if "softwareMetadata" not in collection_dto:
+                collection_dto["softwareMetadata"] = {}
+            collection_dto["softwareMetadata"]["version"] = version  # Update the version field
             
             # Send the complete modified DTO back
             response_text, status_code = make_request(
