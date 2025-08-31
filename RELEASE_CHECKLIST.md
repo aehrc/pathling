@@ -14,8 +14,8 @@
 - [ ] Update licenses (`mvn install -DskipTests -Plicenses`)
 - [ ] Update copyright statements in all files
 - [ ] Update the version to the release version
-- [ ] Tag the release (`v[version]`)
 - [ ] Merge to main and make sure it is green
+- [ ] Tag the release (`v[version]`)
 - [ ] Create a GitHub release for the tag, describe new features, bug fixes and
   breaking changes
 - [ ] Submit the built R package to CRAN manually
