@@ -185,8 +185,17 @@ jobs:
           role-to-assume: arn:aws:iam::865780493209:role/PathlingBenchmarkUpload
           aws-region: ap-southeast-2
 
+      - name: Extract major version
+        id: extract-version
+        run: |
+          # Extract version from tag (e.g. v8.0.1 -> v8)
+          VERSION_TAG="${{ github.ref_name }}"
+          MAJOR_VERSION=$(echo "$VERSION_TAG" | sed -E 's/^(v[0-9]+).*/\1/')
+          echo "major_version=${MAJOR_VERSION}" >> $GITHUB_OUTPUT
+          echo "Extracted major version: ${MAJOR_VERSION}"
+
       - name: Upload SQL on FHIR test report to S3
-        run: aws s3 cp fhirpath/target/fhir-view-compliance-test.json s3://pathling-benchmark/test-reports/${{ github.ref }}/sof-test-results.json
+        run: aws s3 cp fhirpath/target/fhir-view-compliance-test.json s3://pathling-benchmark/test-reports/${{ steps.extract-version.outputs.major_version }}/sof-test-results.json
 
       - name: Upload release assets
         run: |
