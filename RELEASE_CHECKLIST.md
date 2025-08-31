@@ -11,6 +11,8 @@
   target Databricks release
 - [ ] Update the supported Databricks Runtime versions in the
   documentation (`site/docs/libraries/installation/databricks.md`)
+- [ ] Run `R CMD check --as-cran --no-examples [package file]` and address any
+  warnings or notes
 - [ ] Update licenses (`mvn install -DskipTests -Plicenses`)
 - [ ] Update copyright statements in all files
 - [ ] Update the version to the release version
