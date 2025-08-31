@@ -46,6 +46,38 @@ display(result)
 ```
 
 </TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(pathling)
+
+pc <- pathling_connect()
+data <- pc %>% pathling_read_ndjson("/some/file/location")
+
+result <- data %>% ds_view(
+        resource = "Patient",
+        select = list(
+                list(
+                        column = list(
+                                list(path = "getResourceKey()", name = "patient_id")
+                        )
+                ),
+                list(
+                        forEach = "address",
+                        column = list(
+                                list(path = "line.join('\\n')", name = "street"),
+                                list(path = "use", name = "use"),
+                                list(path = "city", name = "city"),
+                                list(path = "postalCode", name = "zip")
+                        )
+                )
+        )
+)
+
+result %>% show()
+```
+
+</TabItem>
 <TabItem value="java" label="Java">
 
 ```java
