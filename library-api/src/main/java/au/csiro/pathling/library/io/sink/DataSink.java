@@ -19,6 +19,7 @@ package au.csiro.pathling.library.io.sink;
 
 import au.csiro.pathling.io.source.DataSource;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 
 /**
  * Represents a data sink that knows how to read data from a {@link DataSource} and write it to some
@@ -33,6 +34,10 @@ public interface DataSink {
    *
    * @param source the data source to write
    */
-  void write(@Nonnull final DataSource source);
+  WriteDetails write(@Nonnull final DataSource source);
 
+  
+  sealed interface WriteDetails {}
+  public record NdjsonWriteDetails(List<FileInfo> fileInfos) implements WriteDetails {}
+  public record FileInfo(String fhirResourceType, String absoluteUrl, long count) {}
 }

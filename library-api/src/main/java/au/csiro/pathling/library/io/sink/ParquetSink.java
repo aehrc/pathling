@@ -76,7 +76,7 @@ final class ParquetSink implements DataSink {
   }
 
   @Override
-  public void write(@Nonnull final DataSource source) {
+  public WriteDetails write(@Nonnull final DataSource source) {
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       final String fileName = String.join(".", fileNameMapper.apply(resourceType),
@@ -90,6 +90,7 @@ final class ParquetSink implements DataSink {
             "Merge operation is not supported for Parquet - use Delta if merging is required");
       }
     }
+    return null;
   }
 
   void writeDataset(@Nonnull final Dataset<Row> dataset,

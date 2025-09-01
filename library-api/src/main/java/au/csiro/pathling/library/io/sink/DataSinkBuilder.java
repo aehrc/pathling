@@ -22,6 +22,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkArgumentNotNull;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
+import au.csiro.pathling.library.io.sink.DataSink.NdjsonWriteDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.function.UnaryOperator;
@@ -79,8 +80,8 @@ public class DataSinkBuilder {
    *
    * @param path the directory to write the files to
    */
-  public void ndjson(@Nullable final String path) {
-    new NdjsonSink(context, checkArgumentNotNull(path), saveMode).write(source);
+  public NdjsonWriteDetails ndjson(@Nullable final String path) {
+    return new NdjsonSink(context, checkArgumentNotNull(path), saveMode).write(source);
   }
 
   /**
@@ -90,9 +91,9 @@ public class DataSinkBuilder {
    * @param path the directory to write the files to
    * @param fileNameMapper a function that maps a resource type to a file name
    */
-  public void ndjson(@Nullable final String path,
+  public NdjsonWriteDetails ndjson(@Nullable final String path,
       @Nullable final UnaryOperator<String> fileNameMapper) {
-    new NdjsonSink(context, checkArgumentNotNull(path), saveMode,
+    return new NdjsonSink(context, checkArgumentNotNull(path), saveMode,
         checkArgumentNotNull(fileNameMapper)).write(source);
   }
 
