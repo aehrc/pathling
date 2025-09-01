@@ -19,8 +19,10 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * A class for making FHIR data in Parquet format available for query. It is assumed that the schema
@@ -40,7 +42,7 @@ public class ParquetSource extends FileSource {
    * @param context the PathlingContext to use
    * @param path the path to the Parquet file or directory
    */
-  ParquetSource(@Nonnull final PathlingContext context, @Nonnull final String path) {
+  ParquetSource(@Nonnull final PathlingContext context, @Nonnull final String path, @Nonnull final Predicate<ResourceType> additionalResourceTypeFilter) {
     super(context, path,
         // Use the "resource name with qualifier" mapper by default, which takes the resource name
         // from the file name and is tolerant of an optional qualifier string.
@@ -50,7 +52,8 @@ public class ParquetSource extends FileSource {
         context.getSpark().read().format(PARQUET_READ_FORMAT),
         // Apply no transformations on the data - we assume it has already been processed using the 
         // Pathling FHIR encoders.
-        (sourceData, resourceType) -> sourceData);
+        (sourceData, resourceType) -> sourceData,
+        additionalResourceTypeFilter);
   }
 
   /**
@@ -67,7 +70,8 @@ public class ParquetSource extends FileSource {
         context.getSpark().read().format(PARQUET_READ_FORMAT),
         // Apply no transformations on the data - we assume it has already been processed using the 
         // Pathling FHIR encoders.
-        (sourceData, resourceType) -> sourceData);
+        (sourceData, resourceType) -> sourceData,
+        resourceType -> true);
   }
 
 }
