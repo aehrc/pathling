@@ -20,6 +20,7 @@ package au.csiro.pathling.library.io.source;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.PersistenceError;
 import jakarta.annotation.Nonnull;
@@ -28,12 +29,15 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalog.Catalog;
 import org.apache.spark.sql.catalog.Table;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A class for making FHIR data in the Spark catalog available for query.
@@ -48,6 +52,8 @@ public class CatalogSource extends AbstractSource {
 
   @Nonnull
   private final Optional<UnaryOperator<Dataset<Row>>> transformation;
+  
+  private final Optional<Predicate<ResourceType>> filterResourcePredicate;
 
   /**
    * Constructs a CatalogSource with the specified PathlingContext and an empty schema.
@@ -58,6 +64,7 @@ public class CatalogSource extends AbstractSource {
     super(context);
     this.schema = Optional.empty(); // Default schema is empty
     this.transformation = Optional.empty(); // No transformation by default
+    this.filterResourcePredicate = Optional.empty();
   }
 
   /**
@@ -70,14 +77,17 @@ public class CatalogSource extends AbstractSource {
     super(context);
     this.schema = Optional.of(schema);
     this.transformation = Optional.empty(); // No transformation by default
+    this.filterResourcePredicate = Optional.empty();
   }
 
   private CatalogSource(@Nonnull final PathlingContext context,
       @Nonnull final Optional<String> schema,
-      @Nonnull final Optional<UnaryOperator<Dataset<Row>>> transformation) {
+      @Nonnull final Optional<UnaryOperator<Dataset<Row>>> transformation,
+      @Nonnull final Optional<Predicate<ResourceType>> filterResourcePredicate) {
     super(context);
     this.schema = schema;
     this.transformation = transformation;
+    this.filterResourcePredicate = filterResourcePredicate;
   }
 
   @Nonnull
@@ -141,7 +151,13 @@ public class CatalogSource extends AbstractSource {
   @Nonnull
   @Override
   public CatalogSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
-    return new CatalogSource(context, schema, Optional.of(operator));
+    return new CatalogSource(context, schema, Optional.of(operator), filterResourcePredicate);
+  }
+
+  @Override
+  public @NotNull DataSource filterResources(
+      @NotNull final Predicate<ResourceType> resourceTypePredicate) {
+    return new CatalogSource(context, schema, transformation, Optional.of(resourceTypePredicate));
   }
 
   @Override

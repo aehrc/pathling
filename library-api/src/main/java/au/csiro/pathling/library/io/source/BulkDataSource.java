@@ -19,14 +19,18 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.fhir.export.BulkExportClient;
 import au.csiro.fhir.export.BulkExportResult;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A data source that reads data from a FHIR Bulk Data endpoint. This source uses the FHIR Bulk Data
@@ -84,6 +88,12 @@ public class BulkDataSource extends AbstractSource {
   @Override
   public QueryableDataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
     return new BulkDataSource(context, (NdjsonSource) ndjsonSource.map(operator));
+  }
+
+  @Override
+  public @NotNull DataSource filterResources(
+      @NotNull final Predicate<ResourceType> resourceTypePredicate) {
+    return new BulkDataSource(context, (NdjsonSource) ndjsonSource.filterResources(resourceTypePredicate));
   }
 
   @Override
