@@ -155,7 +155,7 @@ public class CatalogSource extends AbstractSource {
   }
 
   @Override
-  public @NotNull DataSource filterResources(
+  public @NotNull DataSource filterByResourceType(
       @NotNull final Predicate<ResourceType> resourceTypePredicate) {
     return new CatalogSource(context, schema, transformation, Optional.of(resourceTypePredicate));
   }

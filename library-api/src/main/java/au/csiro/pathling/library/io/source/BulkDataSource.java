@@ -91,9 +91,9 @@ public class BulkDataSource extends AbstractSource {
   }
 
   @Override
-  public @NotNull DataSource filterResources(
+  public @NotNull DataSource filterByResourceType(
       @NotNull final Predicate<ResourceType> resourceTypePredicate) {
-    return new BulkDataSource(context, (NdjsonSource) ndjsonSource.filterResources(resourceTypePredicate));
+    return new BulkDataSource(context, (NdjsonSource) ndjsonSource.filterByResourceType(resourceTypePredicate));
   }
 
   @Override
