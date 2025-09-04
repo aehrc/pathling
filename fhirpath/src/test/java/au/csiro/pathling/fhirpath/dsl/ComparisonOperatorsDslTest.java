@@ -87,6 +87,11 @@ public class ComparisonOperatorsDslTest extends FhirPathDslTestBase {
         .testEmpty("@2020-01-01 < @2020-01-01T10:00:00Z", "Same full uncomparable Date and DateTime")
         .testTrue("@2020-01 >= @2020-02-01T10", "Partial comparable Date and DateTime")
         .testEmpty("@2020-01 <= @2020-01-01T10", "Partial uncomparable Date and DateTime")
+        .group("Timezone tests")
+        .testTrue("@2018-03-01 < @2018-03-02T00:00:00", "Comparable no timezone")
+        .testTrue("@2018-03-01 < @2018-03-02T00:00:00Z", "Comparable UTC timezone")
+        .testTrue("@2018-03-01 < @2018-03-02T00:00:00-01:00", "Comparable before UTC timezone")
+        .testEmpty("@2018-03-01 < @2018-03-02T00:00:00+01:00", "Uncomparable due to timezone after UTC")
         .build();
   }
 }
