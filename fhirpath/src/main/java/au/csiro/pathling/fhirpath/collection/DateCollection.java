@@ -28,7 +28,9 @@ import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.operator.DateTimeComparator;
 import jakarta.annotation.Nonnull;
+import java.text.ParseException;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.DateType;
@@ -44,6 +46,9 @@ public class DateCollection extends Collection implements StringCoercible, Mater
     Comparable {
 
   private static final ColumnComparator COMPARATOR = new DateTimeComparator();
+
+  // antlr regex for date: '@' [0-9][0-9][0-9][0-9] ('-'[0-9][0-9] ('-'[0-9][0-9])?)?
+  private static final Pattern DATE_REGEX = Pattern.compile("^@[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?$");
 
   /**
    * Creates a new DateCollection.
@@ -91,6 +96,22 @@ public class DateCollection extends Collection implements StringCoercible, Mater
   @Nonnull
   public static DateCollection fromValue(@Nonnull final DateType value) {
     return DateCollection.build(DefaultRepresentation.literal(value.getValueAsString()));
+  }
+
+  /**
+   * Returns a new instance, parsed from a FHIRPath literal.
+   *
+   * @param fhirPath The FHIRPath representation of the literal
+   * @return A new instance of {@link DateCollection}
+   * @throws ParseException if the literal is malformed
+   */
+  @Nonnull
+  public static DateCollection fromLiteral(@Nonnull final String fhirPath) throws ParseException {
+    if (!DATE_REGEX.matcher(fhirPath).matches()) {
+      throw new ParseException("Invalid date literal: " + fhirPath, 0);
+    }
+    final String dateString = fhirPath.replaceFirst("^@", "");
+    return DateCollection.build(DefaultRepresentation.literal(dateString));
   }
 
   @Nonnull

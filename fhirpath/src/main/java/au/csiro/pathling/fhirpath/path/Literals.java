@@ -24,6 +24,8 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.DateCollection;
+import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
@@ -33,6 +35,7 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 import lombok.experimental.UtilityClass;
+import java.text.ParseException;
 
 /**
  * Utility class for creating and working with FHIRPath literal values.
@@ -96,11 +99,9 @@ public class Literals {
    *
    * @param literalValue the date value as a string
    * @return a new date literal instance
-   * @throws UnsupportedOperationException always, as date literals are not supported
    */
-  @SuppressWarnings("unused")
   public static LiteralPath dateLiteral(@Nonnull final String literalValue) {
-    throw new UnsupportedFhirPathFeatureError("Date literals are not supported");
+    return new DateLiteral(literalValue);
   }
 
   /**
@@ -111,11 +112,9 @@ public class Literals {
    *
    * @param literalValue the dateTime value as a string
    * @return a new dateTime literal instance
-   * @throws UnsupportedOperationException always, as dateTime literals are not supported
    */
-  @SuppressWarnings("unused")
   public static LiteralPath dateTimeLiteral(@Nonnull final String literalValue) {
-    throw new UnsupportedFhirPathFeatureError("DateTime literals are not supported");
+    return new DateTimeLiteral(literalValue);
   }
 
   /**
@@ -385,6 +384,67 @@ public class Literals {
     public DecimalCollection apply(@Nonnull final Collection input,
         @Nonnull final EvaluationContext context) {
       return DecimalCollection.fromLiteral(value);
+    }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return value;
+    }
+  }
+
+  /**
+   * Represents a date literal in FHIRPath.
+   * <p>
+   * This class implements a literal that represents a date value.
+   * </p>
+   */
+
+  @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
+  public static class DateLiteral implements LiteralPath {
+
+    @Nonnull
+    String value;
+
+    @Override
+    public DateCollection apply(@Nonnull final Collection input,
+        @Nonnull final EvaluationContext context) {
+      try {
+        return DateCollection.fromLiteral(value);
+      } catch (final ParseException e) {
+        throw new InvalidUserInputError("Unable to parse date format: " + value);
+      }
+    }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return value;
+    }
+  }
+
+  /**
+   * Represents a dateTime literal in FHIRPath.
+   * <p>
+   * This class implements a literal that represents a dateTime value.
+   * </p>
+   */
+  @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
+  public static class DateTimeLiteral implements LiteralPath {
+
+    @Nonnull
+    String value;
+
+    @Override
+    public DateTimeCollection apply(@Nonnull final Collection input,
+        @Nonnull final EvaluationContext context) {
+      try {
+        return DateTimeCollection.fromLiteral(value);
+      } catch (final ParseException e) {
+        throw new InvalidUserInputError("Unable to parse date format: " + value);
+      }
     }
 
     @Nonnull
