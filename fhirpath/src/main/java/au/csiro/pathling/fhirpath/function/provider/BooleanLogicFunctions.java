@@ -48,7 +48,7 @@ public class BooleanLogicFunctions {
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#not--boolean">not</a>
    */
   @Nonnull
-  @SqlOnFhirConformance(Profile.SHARABLE)
+  @SqlOnFhirConformance(Profile.SHAREABLE)
   @FhirPathFunction
   public static BooleanCollection not(@Nonnull final Collection input) {
     return BooleanCollection.build(input.asBooleanSingleton().getColumn().not());

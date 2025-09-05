@@ -45,7 +45,7 @@ public @interface SqlOnFhirConformance {
      * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ShareableViewDefinition.html">Shareable
      * View Definition</a>
      */
-    SHARABLE,
+    SHAREABLE,
     /**
      * Experimental features that are not yet stable.
      */

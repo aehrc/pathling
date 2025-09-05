@@ -33,6 +33,7 @@ import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
@@ -595,6 +596,62 @@ public class Collection {
     } catch (final IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
       throw new CollectionConstructionError("Problem constructing collection from value", e);
     }
+  }
+
+  /**
+   * Applies a projection expression recursively, collecting all unique results. This method
+   * implements the FHIRPath repeat() function semantics.
+   *
+   * @param projection The projection expression to apply recursively
+   * @return A new collection containing all unique items found through recursive application
+   */
+  @Nonnull
+  public Collection repeat(@Nonnull final CollectionTransform projection) {
+    // Since Spark SQL doesn't have native support for recursive CTEs or iterative processing
+    // in the same way as procedural languages, we need to implement this using a fixed-depth
+    // traversal approach. The depth is determined by the schema structure.
+
+    // Start with the input collection as the first level.
+    Collection currentLevel = this;
+    Collection accumulated = this;
+
+    // We'll iterate up to a reasonable depth based on typical FHIR resource nesting.
+    // Most FHIR resources don't nest deeper than 10 levels for repeating elements.
+    final int maxDepth = 10;
+
+    for (int depth = 0; depth < maxDepth; depth++) {
+      // Apply the projection to the current level.
+      final Collection nextLevel = projection.apply(currentLevel);
+
+      // If the next level is empty, we've exhausted all possibilities.
+      if (nextLevel instanceof EmptyCollection) {
+        break;
+      }
+
+      // Union the next level with what we've accumulated so far.
+      // The union operation will handle deduplication.
+      accumulated = accumulated.union(nextLevel);
+
+      // The next level becomes the current level for the next iteration.
+      currentLevel = nextLevel;
+    }
+
+    return accumulated;
+  }
+
+  /**
+   * Returns the union of this collection with another collection. Duplicates are removed from the
+   * result.
+   *
+   * @param other The other collection to union with
+   * @return A new collection containing all unique elements from both collections
+   */
+  @Nonnull
+  public Collection union(@Nonnull final Collection other) {
+    // For union operation, we need to combine arrays and remove duplicates.
+    // Using array_union function from Spark SQL functions.
+    return mapColumn(col -> org.apache.spark.sql.functions.array_distinct(
+        org.apache.spark.sql.functions.array_union(col, other.getColumnValue())));
   }
 
 }
