@@ -21,17 +21,17 @@ import jakarta.annotation.Nonnull;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
-import java.time.temporal.ChronoField;
-import java.time.temporal.TemporalAdjusters;
+import java.time.temporal.ChronoUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.Value;
 
 /**
- * Utility class for handling FHIR date/dateTime values with partial precision.
+ * Utility class for handling FHIRPatj date/dateTime values with partial precision.
  * <p>
- * This class can parse FHIR date/dateTime strings, determine their precision, and compute lower and
+ * This class can parse FHIRPath date/dateTime strings, determine their precision, and compute lower and
  * upper boundary Instants based on that precision.
  */
 @Value
@@ -45,37 +45,45 @@ public class FhirpathDateTime {
     /**
      * Year precision (e.g., 2023)
      */
-    YEAR,
+    YEAR(ChronoUnit.YEARS),
 
     /**
      * Month precision (e.g., 2023-06)
      */
-    MONTH,
+    MONTH(ChronoUnit.MONTHS),
 
     /**
      * Day precision (e.g., 2023-06-15)
      */
-    DAY,
+    DAY(ChronoUnit.DAYS),
 
     /**
      * Hour precision (e.g., 2023-06-15T14)
      */
-    HOUR,
+    HOUR(ChronoUnit.HOURS),
 
     /**
      * Minute precision (e.g., 2023-06-15T14:30)
      */
-    MINUTE,
+    MINUTE(ChronoUnit.MINUTES),
 
     /**
      * Second precision (e.g., 2023-06-15T14:30:45)
      */
-    SECOND,
+    SECOND(ChronoUnit.SECONDS),
 
     /**
      * Up to nanoseconds precision (e.g., 2023-06-15T14:30:45.123456789)
      */
-    FRACS
+    FRACS(ChronoUnit.NANOS);
+
+    @Getter
+    @Nonnull
+    private final ChronoUnit chronoUnit;
+
+    TemporalPrecision(@Nonnull final ChronoUnit chronoUnit) {
+      this.chronoUnit = chronoUnit;
+    }
   }
 
   // Define regex patterns for date/time components
@@ -196,6 +204,8 @@ public class FhirpathDateTime {
    *   <li>2023-06 (MONTH precision) -> 2023-06-30T23:59:59.999999999Z</li>
    *   <li>2023-06-15 (DAY precision) -> 2023-06-15T23:59:59.999999999Z</li>
    * </ul>
+   * The maximum precision for upper bound is SECONDS, i.e.:
+   * SECOND for second and FRACS precision upper bound is the same as the lower bound.
    * </p>
    *
    * @return the upper boundary as an Instant
@@ -203,44 +213,11 @@ public class FhirpathDateTime {
   @Nonnull
   public Instant getUpperBoundary() {
 
-    switch (precision) {
-      case YEAR:
-        return value.with(ChronoField.MONTH_OF_YEAR, 12)
-            .with(TemporalAdjusters.lastDayOfMonth())
-            .with(ChronoField.HOUR_OF_DAY, 23)
-            .with(ChronoField.MINUTE_OF_HOUR, 59)
-            .with(ChronoField.SECOND_OF_MINUTE, 59)
-            .with(ChronoField.NANO_OF_SECOND, 999_999_999)
-            .toInstant();
-      case MONTH:
-        return value.with(TemporalAdjusters.lastDayOfMonth())
-            .with(ChronoField.HOUR_OF_DAY, 23)
-            .with(ChronoField.MINUTE_OF_HOUR, 59)
-            .with(ChronoField.SECOND_OF_MINUTE, 59)
-            .with(ChronoField.NANO_OF_SECOND, 999_999_999)
-            .toInstant();
-      case DAY:
-        return value.with(ChronoField.HOUR_OF_DAY, 23)
-            .with(ChronoField.MINUTE_OF_HOUR, 59)
-            .with(ChronoField.SECOND_OF_MINUTE, 59)
-            .with(ChronoField.NANO_OF_SECOND, 999_999_999)
-            .toInstant();
-      case HOUR:
-        return value.with(ChronoField.MINUTE_OF_HOUR, 59)
-            .with(ChronoField.SECOND_OF_MINUTE, 59)
-            .with(ChronoField.NANO_OF_SECOND, 999_999_999)
-            .toInstant();
-      case MINUTE:
-        return value.with(ChronoField.SECOND_OF_MINUTE, 59)
-            .with(ChronoField.NANO_OF_SECOND, 999_999_999)
-            .toInstant();
-      case SECOND:
-        return value.with(ChronoField.NANO_OF_SECOND, 999_999_999)
-            .toInstant();
-      case FRACS:
-      default:
-        return value.toInstant();
-    }
+    return switch (precision) {
+      // seconds and fracs are already at their upper boundary (i.e: 12:30:45 corresponds to 12:30:45.000000000)
+      case SECOND, FRACS -> value.toInstant();
+      default -> value.plus(1, precision.getChronoUnit()).minusNanos(1).toInstant();
+    };
   }
 
   /**

@@ -84,10 +84,10 @@ class FhirpathDateTimeTest {
         Arguments.of("2023-06-15", "2023-06-15T23:59:59.999999999Z", "DAY precision"),
         Arguments.of("2023-06-15T14", "2023-06-15T14:59:59.999999999Z", "HOUR precision"),
         Arguments.of("2023-06-15T14:30", "2023-06-15T14:30:59.999999999Z", "MINUTE precision"),
-        Arguments.of("2023-06-15T14:30:45", "2023-06-15T14:30:45.999999999Z", "SECOND precision"),
+        Arguments.of("2023-06-15T14:30:45", "2023-06-15T14:30:45.000000000Z", "SECOND precision"),
         Arguments.of("2023-06-15T14:30:45.123", "2023-06-15T14:30:45.123Z",
             "FRACS precision (unchanged)"),
-        Arguments.of("2023-06-15T14:30:45+02:00", "2023-06-15T12:30:45.999999999Z",
+        Arguments.of("2023-06-15T14:30:45+02:00", "2023-06-15T12:30:45.000000000Z",
             "SECONDS With explicit timezone (adjusted to UTC)"),
         Arguments.of("2023-06-15T14:30:45.123-05:00", "2023-06-15T19:30:45.123Z",
             "FRACS With negative timezone (unchanged)")
