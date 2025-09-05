@@ -47,7 +47,8 @@ public class DeltaSource extends FileSource {
         context.getSpark().read().format("delta"),
         // Apply no transformations on the data - we assume it has already been processed using the 
         // Pathling FHIR encoders.
-        (sourceData, resourceType) -> sourceData);
+        (sourceData, resourceType) -> sourceData,
+        resourceType -> true);
   }
 
 }

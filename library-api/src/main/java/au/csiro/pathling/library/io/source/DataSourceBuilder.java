@@ -23,8 +23,10 @@ import au.csiro.fhir.export.BulkExportClient;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * A factory for creating various different data sources capable of preparing FHIR data for query.
@@ -126,6 +128,11 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
     return new DatasetSource(context);
   }
 
+  @Nonnull
+  public QueryableDataSource parquet(@Nullable final String path) {
+    return parquet(path, (Predicate<ResourceType>) ignored -> true);
+  }
+  
   /**
    * Creates a new data source form a directory containing Parquet-encoded FHIR resource data, with
    * filenames representing the resource type the file/directory contains, e.g. 'Patient.parquet'
@@ -135,8 +142,8 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * @return the new data source
    */
   @Nonnull
-  public QueryableDataSource parquet(@Nullable final String path) {
-    return new ParquetSource(context, checkArgumentNotNull(path));
+  public QueryableDataSource parquet(@Nullable final String path, @Nonnull final Predicate<ResourceType> additionalResourceTypeFilter) {
+    return new ParquetSource(context, checkArgumentNotNull(path), checkArgumentNotNull(additionalResourceTypeFilter));
   }
 
   /**
