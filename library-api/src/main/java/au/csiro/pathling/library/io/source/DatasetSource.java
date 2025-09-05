@@ -55,7 +55,7 @@ public class DatasetSource extends AbstractSource {
    *
    * @param context the PathlingContext to use
    */
-  DatasetSource(@Nonnull final PathlingContext context) {
+  public DatasetSource(@Nonnull final PathlingContext context) {
     super(context);
   }
 
