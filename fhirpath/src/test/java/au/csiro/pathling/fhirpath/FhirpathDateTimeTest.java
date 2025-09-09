@@ -3,7 +3,6 @@ package au.csiro.pathling.fhirpath;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import au.csiro.pathling.fhirpath.FhirpathDateTime.TemporalPrecision;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;

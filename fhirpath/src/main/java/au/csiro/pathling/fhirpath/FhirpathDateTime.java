@@ -21,11 +21,9 @@ import jakarta.annotation.Nonnull;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
-import java.time.temporal.ChronoUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
 import lombok.Value;
 
 /**
@@ -37,54 +35,6 @@ import lombok.Value;
 @Value
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class FhirpathDateTime {
-
-  /**
-   * Enumeration of supported temporal precision levels from year to millisecond.
-   */
-  public enum TemporalPrecision {
-    /**
-     * Year precision (e.g., 2023)
-     */
-    YEAR(ChronoUnit.YEARS),
-
-    /**
-     * Month precision (e.g., 2023-06)
-     */
-    MONTH(ChronoUnit.MONTHS),
-
-    /**
-     * Day precision (e.g., 2023-06-15)
-     */
-    DAY(ChronoUnit.DAYS),
-
-    /**
-     * Hour precision (e.g., 2023-06-15T14)
-     */
-    HOUR(ChronoUnit.HOURS),
-
-    /**
-     * Minute precision (e.g., 2023-06-15T14:30)
-     */
-    MINUTE(ChronoUnit.MINUTES),
-
-    /**
-     * Second precision (e.g., 2023-06-15T14:30:45)
-     */
-    SECOND(ChronoUnit.SECONDS),
-
-    /**
-     * Up to nanoseconds precision (e.g., 2023-06-15T14:30:45.123456789)
-     */
-    FRACS(ChronoUnit.NANOS);
-
-    @Getter
-    @Nonnull
-    private final ChronoUnit chronoUnit;
-
-    TemporalPrecision(@Nonnull final ChronoUnit chronoUnit) {
-      this.chronoUnit = chronoUnit;
-    }
-  }
 
   // Define regex patterns for date/time components
   private static final String TIME_FORMAT =
