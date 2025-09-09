@@ -27,14 +27,15 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 
 /**
- * UDF that calculates the low boundary for a FHIR date/dateTime string.
+ * UDF that calculates the low boundary for a FHIR date/dateTime string or a Timestamp  value.
  * <p>
- * This function handles partial dates and returns the earliest possible timestamp for the given
- * precision level.
+ * This function handles partial dates and returns the latest possible timestamp for the given
+ * precision level. Timestamps are treated dates with fractional seconds precision.
  *
  * @author John Grimes
+ * @author Piotr Szul
  */
-public class LowBoundaryForDateTime implements SqlFunction1<String, Timestamp> {
+public class LowBoundaryForDateTime implements SqlFunction1<Object, Timestamp> {
 
   @Serial
   private static final long serialVersionUID = -2161361690351000200L;
@@ -65,22 +66,30 @@ public class LowBoundaryForDateTime implements SqlFunction1<String, Timestamp> {
   }
 
   /**
-   * Calculates the low boundary timestamp for a FHIR date/dateTime string.
+   * Calculates the low boundary timestamp for either a FHIR date/dateTime string or a Timestamp
+   * value.
    *
-   * @param s the date/dateTime string to process
+   * @param input the date/dateTime string or Timestamp representing the dateTime/instant.
    * @return the low boundary timestamp, or null if input is null
-   * @throws IllegalArgumentException if the date format is invalid
+   * @throws IllegalArgumentException if the date format is invalid or the input type is
+   * unsupported
    */
   @Nullable
   @Override
-  public Timestamp call(@Nullable final String s) throws Exception {
-    if (s == null) {
+  public Timestamp call(@Nullable final Object input) throws Exception {
+    if (input == null) {
       return null;
-    }
-    try {
-      return Timestamp.from(FhirpathDateTime.parse(s).getLowerBoundary());
-    } catch (final DateTimeParseException e) {
-      throw new IllegalArgumentException("Invalid date/dateTime format: " + s, e);
+    } else if (input instanceof Timestamp tst) {
+      return tst;
+    } else if (input instanceof String s) {
+      try {
+        return Timestamp.from(FhirpathDateTime.parse(s).getLowerBoundary());
+      } catch (final DateTimeParseException e) {
+        throw new IllegalArgumentException("Invalid date/dateTime format: " + s, e);
+      }
+    } else {
+      throw new IllegalArgumentException("Unsupported input type: " + input.getClass().getName() +
+          ", expected String or Timestamp");
     }
   }
 }

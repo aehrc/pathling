@@ -186,11 +186,6 @@ excludeSet:
           - "1 year < 12 months"
           - "1 minute > 59 seconds"
           - "1 minute < 61 seconds"
-      - title: Unsupported comparison of dates and instants
-        type: new-feature
-        id: "#2421"
-        any:
-          - "DiagnosticReport.issued < DiagnosticReport.effectiveDateTime"
   - title: Collections exclusions
     glob: "fhirpath-js/cases/6.4_collections.yaml"
     exclude:
@@ -241,6 +236,7 @@ excludeSet:
           - "Patient.name.given[3].extension('http://hl7.org/fhir/StructureDefinition/display').value = 'Jacomus2'"
           - "** value of extension of extension (using FHIR model data)"
           - "** id of extension of extension"
+          - "** expression with extension() for primitive type (using FHIR model data)"
   - title: Factory exclusions
     glob: "fhirpath-js/cases/factory.yaml"
     exclude:
