@@ -78,14 +78,17 @@ public class ComparisonOperator implements BinaryOperator {
     if (rightFhirType.isPresent()) {
       rightDisplay += " (" + rightFhirType.get().toCode() + ")";
     }
-    checkUserInput(leftComparable.isComparableTo(rightComparable),
-        "Comparison of paths is not supported: " + leftDisplay + ", " + rightDisplay);
 
     // If the comparison operation is equality, we can use the operands directly. If it is any other
     // type of comparison, we need to enforce that the operands are both singular values.
     if (type == ComparisonOperation.EQUALS || type == ComparisonOperation.NOT_EQUALS) {
+      // equality operations can be applied to any types of collections
+      // they do not need to be comparable or comparable with each other
       return BooleanCollection.build(leftComparable.getComparison(type).apply(rightComparable));
     } else {
+      // actual comparison operations require both sides to be comparable with each other
+      checkUserInput(leftComparable.isComparableTo(rightComparable),
+          "Comparison of paths is not supported: " + leftDisplay + ", " + rightDisplay);
       final Collection leftSingular = left.asSingular(
           "Comparison operator requires singular values");
       check(leftSingular instanceof au.csiro.pathling.fhirpath.comparison.Comparable);

@@ -97,7 +97,16 @@ public interface Comparable {
           singularExpression);
       // The result needs to be wrapped in a DefaultRepresentation, as the vectorize method
       // may have been called on a different type of ColumnRepresentation.
-      return new DefaultRepresentation(result.getValue());
+
+      // for non-comparable type the result of equality operations is false or null.
+      if ((operation == ComparisonOperation.EQUALS || operation == ComparisonOperation.NOT_EQUALS)
+          && !isComparableTo(target)) {
+        // TODO: comparison for non-comparable types with null values should return null
+        // rather than false
+        return DefaultRepresentation.literal(false);
+      } else {
+        return new DefaultRepresentation(result.getValue());
+      }
     };
   }
 

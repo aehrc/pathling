@@ -27,14 +27,15 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 
 /**
- * UDF that calculates the high boundary for a FHIR date/dateTime string.
+ * UDF that calculates the high boundary for a FHIR date/dateTime string or a Timestamp  value.
  * <p>
  * This function handles partial dates and returns the latest possible timestamp for the given
- * precision level.
+ * precision level. Timestamps are treated dates with fractional seconds precision.
  *
  * @author John Grimes
+ * @author Piotr Szul
  */
-public class HighBoundaryForDateTime implements SqlFunction1<String, Timestamp> {
+public class HighBoundaryForDateTime implements SqlFunction1<Object, Timestamp> {
 
   @Serial
   private static final long serialVersionUID = 413946955701564309L;
@@ -44,26 +45,51 @@ public class HighBoundaryForDateTime implements SqlFunction1<String, Timestamp> 
    */
   public static final String FUNCTION_NAME = "high_boundary_for_date";
 
+  /**
+   * Returns the name of this UDF.
+   *
+   * @return the function name
+   */
   @Override
   public String getName() {
     return FUNCTION_NAME;
   }
 
+  /**
+   * Returns the return type of this UDF.
+   *
+   * @return the Spark DataType for timestamp
+   */
   @Override
   public DataType getReturnType() {
     return DataTypes.TimestampType;
   }
 
+  /**
+   * Calculates the high boundary timestamp for either a FHIR date/dateTime string or an Instant
+   * value.
+   *
+   * @param input the date/dateTime string or Timestamp reprsenting a dateTime or an Instant.
+   * @return the high boundary timestamp, or null if input is null
+   * @throws IllegalArgumentException if the date format is invalid or the input type is
+   * unsupported
+   */
   @Nullable
   @Override
-  public Timestamp call(@Nullable final String s) throws Exception {
-    if (s == null) {
+  public Timestamp call(@Nullable final Object input) throws Exception {
+    if (input == null) {
       return null;
-    }
-    try {
-      return Timestamp.from(FhirpathDateTime.parse(s).getUpperBoundary());
-    } catch (final DateTimeParseException e) {
-      throw new IllegalArgumentException("Invalid date/dateTime format: " + s, e);
+    } else if (input instanceof Timestamp tst) {
+      return tst;
+    } else if (input instanceof String s) {
+      try {
+        return Timestamp.from(FhirpathDateTime.parse(s).getUpperBoundary());
+      } catch (final DateTimeParseException e) {
+        throw new IllegalArgumentException("Invalid date/dateTime format: " + s, e);
+      }
+    } else {
+      throw new IllegalArgumentException("Unsupported input type: " + input.getClass().getName() +
+          ", expected String or Timestamp");
     }
   }
 }
