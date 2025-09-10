@@ -83,6 +83,18 @@ public class TimeCollection extends Collection implements StringCoercible, Mater
 
 
   /**
+   * Returns a new instance, parsed from a FHIRPath literal.
+   *
+   * @param literal The FHIRPath representation of the literal
+   * @return A new instance of {@link TimeCollection}
+   */
+  @Nonnull
+  public static TimeCollection fromLiteral(@Nonnull final String literal) {
+    final String timeString = literal.replaceFirst("^@T", "");
+    return TimeCollection.build(DefaultRepresentation.literal(timeString));
+  }
+
+  /**
    * Returns a new instance based upon a {@link TimeType}.
    *
    * @param value The value to use

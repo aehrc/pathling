@@ -30,12 +30,13 @@ import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import jakarta.annotation.Nonnull;
+import java.text.ParseException;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 import lombok.experimental.UtilityClass;
-import java.text.ParseException;
 
 /**
  * Utility class for creating and working with FHIRPath literal values.
@@ -119,17 +120,12 @@ public class Literals {
 
   /**
    * Creates a time literal value.
-   * <p>
-   * Note: This operation is not currently supported and will throw an exception.
-   * </p>
    *
-   * @param literalValue the time value as a string
-   * @return a new time literal instance
-   * @throws UnsupportedOperationException always, as time literals are not supported
+   * @param literalValue the time value as a string (e.g., @T12:00, @T14:30:14.559)
+   * @return a new {@link TimeLiteral} instance
    */
-  @SuppressWarnings("unused")
   public static LiteralPath timeLiteral(@Nonnull final String literalValue) {
-    throw new UnsupportedFhirPathFeatureError("DateTime literals are not supported");
+    return new TimeLiteral(literalValue);
   }
 
   /**
@@ -445,6 +441,32 @@ public class Literals {
       } catch (final ParseException e) {
         throw new InvalidUserInputError("Unable to parse date format: " + value);
       }
+    }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return value;
+    }
+  }
+
+  /**
+   * Represents a time literal in FHIRPath.
+   * <p>
+   * This class implements a literal that represents a time value.
+   * </p>
+   */
+  @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
+  public static class TimeLiteral implements LiteralPath {
+
+    @Nonnull
+    String value;
+
+    @Override
+    public TimeCollection apply(@Nonnull final Collection input,
+        @Nonnull final EvaluationContext context) {
+      return TimeCollection.fromLiteral(value);
     }
 
     @Nonnull
