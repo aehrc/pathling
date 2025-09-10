@@ -22,7 +22,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>8.0.1</version>
+  <version>8.1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -388,7 +388,7 @@
       <dependency>
         <groupId>org.hibernate.validator</groupId>
         <artifactId>hibernate-validator</artifactId>
-        <version>8.0.1.Final</version>
+        <version>8.1.0-SNAPSHOT.Final</version>
         <exclusions>
           <exclusion>
             <groupId>org.jboss.logging</groupId>
