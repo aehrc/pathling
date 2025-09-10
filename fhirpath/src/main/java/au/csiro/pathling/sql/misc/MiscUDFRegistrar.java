@@ -31,6 +31,8 @@ public class MiscUDFRegistrar extends AbstractUDFRegistrar {
         .register(new DecimalToLiteral())
         .register(new ToNull())
         .register(new LowBoundaryForDateTime())
-        .register(new HighBoundaryForDateTime());
+        .register(new HighBoundaryForDateTime())
+        .register(new LowBoundaryForTime())
+        .register(new HighBoundaryForTime());
   }
 }
