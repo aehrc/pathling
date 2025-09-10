@@ -2,7 +2,7 @@ package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
-import au.csiro.pathling.fhirpath.operator.DateTimeComparator;
+import au.csiro.pathling.fhirpath.comparison.TemporalComparator;
 import jakarta.annotation.Nonnull;
 
 /**
@@ -16,7 +16,7 @@ import jakarta.annotation.Nonnull;
  */
 public interface DateTimeComparable extends Comparable {
 
-  ColumnComparator DATETIME_COMPARATOR = new DateTimeComparator();
+  ColumnComparator DATETIME_COMPARATOR = TemporalComparator.forDateTime();
 
   @Override
   @Nonnull
