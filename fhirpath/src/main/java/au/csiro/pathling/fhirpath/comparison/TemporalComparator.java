@@ -18,7 +18,9 @@
 package au.csiro.pathling.fhirpath.comparison;
 
 import au.csiro.pathling.sql.misc.HighBoundaryForDateTime;
+import au.csiro.pathling.sql.misc.HighBoundaryForTime;
 import au.csiro.pathling.sql.misc.LowBoundaryForDateTime;
+import au.csiro.pathling.sql.misc.LowBoundaryForTime;
 import jakarta.annotation.Nonnull;
 import java.util.function.BiFunction;
 import lombok.AllArgsConstructor;
@@ -56,11 +58,26 @@ public class TemporalComparator implements ColumnComparator {
   ) {
 
   }
-
+  /**
+   * Creates a TemporalComparator for DateTime values.
+   *
+   * @return A TemporalComparator that can compare DateTime values.
+   */
   @Nonnull
   public static TemporalComparator forDateTime() {
     return new TemporalComparator(LowBoundaryForDateTime.FUNCTION_NAME,
         HighBoundaryForDateTime.FUNCTION_NAME);
+  }
+
+  /**
+   * Creates a TemporalComparator for Time values.
+   *
+   * @return A TemporalComparator that can compare Time values.
+   */
+  @Nonnull
+  public static TemporalComparator forTime() {
+    return new TemporalComparator(LowBoundaryForTime.FUNCTION_NAME,
+        HighBoundaryForTime.FUNCTION_NAME);
   }
 
   /**
