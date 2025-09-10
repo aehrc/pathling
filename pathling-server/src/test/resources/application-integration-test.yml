@@ -1,0 +1,4 @@
+debug: true
+pathling:
+  storage:
+    warehouseUrl: file://${user.dir}/src/test/resources/test-data/fhir/delta

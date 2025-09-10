@@ -1,0 +1,49 @@
+{
+  "resourceType": "OperationDefinition",
+  "name": "extract",
+  "title": "Pathling Extract Operation",
+  "status": "active",
+  "kind": "operation",
+  "experimental": false,
+  "publisher": "Australian e-Health Research Centre, CSIRO",
+  "description": "This operation allows a user to perform aggregate queries on data held within the FHIR server by specifying aggregation, grouping and filter expressions.",
+  "affectsState": false,
+  "code": "extract",
+  "system": false,
+  "type": true,
+  "instance": false,
+  "parameter": [
+    {
+      "name": "column",
+      "use": "in",
+      "min": 1,
+      "max": "*",
+      "documentation": "A FHIRPath expression that defines a column within the result. The context is a single resource of the subject resource type. The expression must return a materializable type.",
+      "type": "string"
+    },
+    {
+      "name": "filter",
+      "use": "in",
+      "min": 0,
+      "max": "*",
+      "documentation": "A FHIRPath expression that can be evaluated against each resource in the data set to determine whether it is included within the result. The context is an individual resource of the type this operation was invoked against. The expression must evaluate to a singular Boolean value. Multiple filters are combined using AND logic.",
+      "type": "string"
+    },
+    {
+      "name": "limit",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "The maximum number of rows to return.",
+      "type": "integer"
+    },
+    {
+      "name": "url",
+      "use": "out",
+      "min": 1,
+      "max": "1",
+      "documentation": "A URL at which the result of the operation can be retrieved.",
+      "type": "url"
+    }
+  ]
+}

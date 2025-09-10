@@ -1,0 +1,62 @@
+{
+  "resourceType": "OperationDefinition",
+  "name": "import",
+  "title": "Pathling Import Operation",
+  "status": "active",
+  "kind": "operation",
+  "experimental": false,
+  "publisher": "Australian e-Health Research Centre, CSIRO",
+  "description": "This operation allows bulk NDJSON data to be imported into the server, making it available for query",
+  "affectsState": true,
+  "code": "import",
+  "system": true,
+  "type": false,
+  "instance": false,
+  "parameter": [
+    {
+      "name": "source",
+      "use": "in",
+      "min": 1,
+      "max": "*",
+      "documentation": "A source FHIR NDJSON file containing resources to be included within this import operation. Each file must contain only one type of resource.",
+      "part": [
+        {
+          "name": "resourceType",
+          "use": "in",
+          "min": 1,
+          "max": "1",
+          "documentation": "The base FHIR resource type contained within this source file.",
+          "type": "code",
+          "binding": {
+            "strength": "required",
+            "valueSet": "http://hl7.org/fhir/ValueSet/resource-types|4.0.1"
+          }
+        },
+        {
+          "name": "url",
+          "use": "in",
+          "min": 1,
+          "max": "1",
+          "documentation": "A URL that can be used to retrieve this source file.",
+          "type": "url"
+        },
+        {
+          "name": "mode",
+          "use": "in",
+          "min": 0,
+          "max": "1",
+          "documentation": "A value of 'overwrite' will cause all existing resources of the specified type to be deleted and replaced with the contents of the source file. A value of 'merge' will match existing resources with updated resources in the source file based on their ID, and either update the existing resources or add new resources as appropriate. The default value is 'overwrite'.",
+          "type": "code"
+        },
+        {
+          "name": "format",
+          "use": "in",
+          "min": 0,
+          "max": "1",
+          "documentation": "Indicates the format of the source file. Possible values are 'ndjson', 'parquet' and 'delta'. The default value is 'ndjson'.",
+          "type": "code"
+        }
+      ]
+    }
+  ]
+}
