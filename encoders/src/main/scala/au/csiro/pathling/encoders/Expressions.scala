@@ -260,20 +260,19 @@ case class AttachExtensions(targetObject: Expression,
             |$javaType ${ev.value} = null;
             |boolean ${ev.isNull} = true;
             |if (${obj.value} != null) {
-            |// for each of the object in extension maps find the
-            |// corresponding object and set the extension
-            | for(java.util.Map.Entry e: scala.collection.JavaConverters.mapAsJavaMap(${
-        extensionMap.value
-      }).entrySet()) {
-            |   org.hl7.fhir.instance.model.api.IBaseHasExtensions extHolder = (org.hl7.fhir.instance.model.api.IBaseHasExtensions)_fid_mapping.get(e.getKey());
-            |   if (extHolder != null) {
-            |     ((java.util.List)extHolder.getExtension()).addAll((java.util.List)e.getValue());
+            |// Check if extensionMap is not null before converting
+            | if (${extensionMap.value} != null) {
+            |   for(java.util.Map.Entry e: scala.collection.JavaConverters.mapAsJavaMap(${extensionMap.value}).entrySet()) {
+            |     org.hl7.fhir.instance.model.api.IBaseHasExtensions extHolder = (org.hl7.fhir.instance.model.api.IBaseHasExtensions)_fid_mapping.get(e.getKey());
+            |     if (extHolder != null) {
+            |       ((java.util.List)extHolder.getExtension()).addAll((java.util.List)e.getValue());
+            |     }
             |   }
             | }
             | ${ev.value} = ${obj.value};
             | ${ev.isNull} = false;
             |}
-       """.stripMargin)
+   """.stripMargin)
   }
 
   override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {

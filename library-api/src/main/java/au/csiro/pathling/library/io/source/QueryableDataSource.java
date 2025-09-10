@@ -22,6 +22,8 @@ import au.csiro.pathling.library.query.FhirViewQuery;
 import au.csiro.pathling.views.FhirView;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
@@ -63,10 +65,16 @@ public interface QueryableDataSource extends DataSource {
    * @return a new DataSource containing the transformed datasets
    */
   @Nonnull
-  DataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator);
+  default QueryableDataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
+    return map((resourceType, rowDataset) -> operator.apply(rowDataset));
+  }
 
+  QueryableDataSource map(@Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator);
+  
+  QueryableDataSource bulkMap(@Nonnull final Map<String, UnaryOperator<Dataset<Row>>> mapping);
+  
   @Nonnull
-  DataSource filterByResourceType(@Nonnull final Predicate<ResourceType> resourceTypePredicate);
+  QueryableDataSource filterByResourceType(@Nonnull final Predicate<String> resourceTypePredicate);
   /**
    * Caches the datasets in this data source to improve performance for subsequent queries.
    *

@@ -25,8 +25,10 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -95,21 +97,38 @@ public class DatasetSource extends AbstractSource {
 
   @Nonnull
   @Override
-  public QueryableDataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
+  public QueryableDataSource map(@Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
     final Map<String, Dataset<Row>> transformedMap = new HashMap<>();
     for (final Map.Entry<String, Dataset<Row>> entry : resourceMap.entrySet()) {
       final String resourceType = entry.getKey();
       final Dataset<Row> dataset = entry.getValue();
-      transformedMap.put(resourceType, operator.apply(dataset));
+      transformedMap.put(resourceType, operator.apply(entry.getKey(), dataset));
     }
     return new DatasetSource(context, transformedMap);
   }
 
   @Override
-  public @NotNull DataSource filterByResourceType(
-      @NotNull final Predicate<ResourceType> resourceTypePredicate) {
+  public QueryableDataSource bulkMap(
+      @NotNull final Map<String, UnaryOperator<Dataset<Row>>> mapping) {
+    final Map<String, Dataset<Row>> transformedMap = new HashMap<>(resourceMap);
+    
+    mapping.forEach((resourceType, operator) -> transformedMap.computeIfPresent(resourceType, (string, rowDataset) -> operator.apply(rowDataset)));
+    
+    // final Map<String, Dataset<Row>> transformedMappingMap = mapping.entrySet().stream()
+    //     .collect(Collectors.toMap(
+    //         Entry::getKey,
+    //         entry -> entry.getValue().apply(resourceMap.get(entry.getKey())),
+    //         (o, o2) -> o,
+    //         HashMap::new
+    //     ));
+    return new DatasetSource(context, transformedMap);
+  }
+
+  @Override
+  public @NotNull QueryableDataSource filterByResourceType(
+      @NotNull final Predicate<String> resourceTypePredicate) {
     Map<String, Dataset<Row>> filteredMap = resourceMap.entrySet().stream()
-        .filter(entry -> resourceTypePredicate.test(ResourceType.fromCode(entry.getKey())))
+        .filter(entry -> resourceTypePredicate.test(entry.getKey()))
         .collect(Collectors.toMap(
             Map.Entry::getKey,
             Map.Entry::getValue
