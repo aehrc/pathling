@@ -15,23 +15,37 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.operator;
+package au.csiro.pathling.fhirpath.comparison;
 
-import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.sql.misc.HighBoundaryForDateTime;
 import au.csiro.pathling.sql.misc.LowBoundaryForDateTime;
 import jakarta.annotation.Nonnull;
 import java.util.function.BiFunction;
+import lombok.AllArgsConstructor;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 
 /**
- * Comparator for DateTime values that handles partial dates by comparing ranges.
+ * Comparator for Temporal (DateTime and Time) values that handles partial dates by comparing
+ * ranges.
  * <p>
- * Since FHIR DateTime values can be partial (e.g., just year or year-month), comparisons need to
- * consider the range of possible values for each DateTime.
+ * Since FHIR DateTime/Time values can be partial (e.g., just year or year-month), comparisons need
+ * to consider the range of possible values for each DateTime/Time.
  */
-public class DateTimeComparator implements ColumnComparator {
+@AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
+public class TemporalComparator implements ColumnComparator {
+
+
+  /**
+   * The names of the UDFs to compute the low and high boundaries for a temporal value.
+   */
+  @Nonnull
+  private final String lowBoundaryUDF;
+  /**
+   * The names of the UDFs to compute the low and high boundaries for a temporal value.
+   */
+  @Nonnull
+  private final String highBoundaryUDF;
 
   /**
    * Record to hold the low and high boundary columns for a dateTime value.
@@ -43,6 +57,12 @@ public class DateTimeComparator implements ColumnComparator {
 
   }
 
+  @Nonnull
+  public static TemporalComparator forDateTime() {
+    return new TemporalComparator(LowBoundaryForDateTime.FUNCTION_NAME,
+        HighBoundaryForDateTime.FUNCTION_NAME);
+  }
+
   /**
    * Gets the low and high boundary columns for a dateTime column.
    *
@@ -50,10 +70,10 @@ public class DateTimeComparator implements ColumnComparator {
    * @return A Bounds record containing the low and high boundary columns.
    */
   @Nonnull
-  private static Bounds getBounds(@Nonnull final Column column) {
+  private Bounds getBounds(@Nonnull final Column column) {
     return new Bounds(
-        functions.callUDF(LowBoundaryForDateTime.FUNCTION_NAME, column),
-        functions.callUDF(HighBoundaryForDateTime.FUNCTION_NAME, column)
+        functions.callUDF(lowBoundaryUDF, column),
+        functions.callUDF(highBoundaryUDF, column)
     );
   }
 
