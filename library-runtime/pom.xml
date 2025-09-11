@@ -153,6 +153,13 @@
                 <include>org/hibernate/validator/**</include>
               </includes>
             </relocation>
+            <relocation>
+              <pattern>com/</pattern>
+              <shadedPattern>${shaded.dependency.prefix}.com.</shadedPattern>
+              <includes>
+                <include>com/google/gson/**</include>
+              </includes>
+            </relocation>
           </relocations>
         </configuration>
       </plugin>
