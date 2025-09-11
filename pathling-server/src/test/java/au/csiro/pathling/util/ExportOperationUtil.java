@@ -9,6 +9,8 @@ import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ArrayNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ObjectNode;
 import ca.uhn.fhir.parser.IParser;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.InstantType;
@@ -66,30 +68,56 @@ public class ExportOperationUtil {
         return new ExportRequest(originalRequest, outputFormat, since, null, includeResourceTypeFilters, List.of());
     }
 
-    public static ExportRequest req(String base, List<String> elements) {
+    public static ExportRequest req(@Nonnull String base, @Nullable List<String> elements) {
         return req(base, List.of(), elements);
     }
+    
+    public static ExportRequest req(@Nonnull String base, @Nullable InstantType since,@Nullable InstantType until) {
+      return req(base, since, until, null, null);
+    }
 
-    public static ExportRequest req(String base, List<Enumerations.ResourceType> includeResourceTypeFilters, List<String> elements) {
-        InstantType now = InstantType.now();
-        String originalRequest = base + "_outputFormat=" + ExportOutputFormat.asParam(ExportOutputFormat.ND_JSON) + "&_since=" + now;
+    public static ExportRequest req(@Nonnull String base, @Nullable List<Enumerations.ResourceType> includeResourceTypeFilters, @Nullable List<String> elements) {
+      return req(base, null, null, includeResourceTypeFilters, elements);
+    }
+    
+    public static ExportRequest req(
+        @Nonnull String base, 
+        @Nullable InstantType since,
+        @Nullable InstantType until,
+        @Nullable List<Enumerations.ResourceType> includeResourceTypeFilters,
+        @Nullable List<String> elements) {
+      if (since == null) {
+        since = InstantType.now();
+      }
+      String originalRequest =
+          base + "_outputFormat=" + ExportOutputFormat.asParam(ExportOutputFormat.ND_JSON)
+              + "&_since=" + since;
 
-        if(!includeResourceTypeFilters.isEmpty()) {
-            originalRequest += "&_type=" + includeResourceTypeFilters.stream().map(Enumerations.ResourceType::toCode).collect(Collectors.joining(","));
-        }
+      if (until != null) {
+        originalRequest += "&_until=" + until;
+      }
+      if (includeResourceTypeFilters != null && !includeResourceTypeFilters.isEmpty()) {
+        originalRequest +=
+            "&_type=" + includeResourceTypeFilters.stream().map(Enumerations.ResourceType::toCode)
+                .collect(Collectors.joining(","));
+      }
 
+      List<ExportRequest.FhirElement> fhirElements = new ArrayList<>();
+      if (elements != null && !elements.isEmpty()) {
         originalRequest += "&_elements=" + String.join(",", elements);
-        List<ExportRequest.FhirElement> fhirElements = new ArrayList<>();
-        for(String el : elements) {
-            String[] split = el.split("\\.");
-            if(split.length == 1) {
-                fhirElements.add(new ExportRequest.FhirElement(null, split[0]));
-            }
-            if(split.length == 2) {
-                fhirElements.add(new ExportRequest.FhirElement(Enumerations.ResourceType.fromCode(split[0]), split[1]));
-            }
+        for (String el : elements) {
+          String[] split = el.split("\\.");
+          if (split.length == 1) {
+            fhirElements.add(new ExportRequest.FhirElement(null, split[0]));
+          }
+          if (split.length == 2) {
+            fhirElements.add(
+                new ExportRequest.FhirElement(Enumerations.ResourceType.fromCode(split[0]),
+                    split[1]));
+          }
         }
-        return new ExportRequest(originalRequest, ExportOutputFormat.ND_JSON, now, null, List.of(), fhirElements);
+      }
+      return new ExportRequest(originalRequest, ExportOutputFormat.ND_JSON, since, until, List.of(), fhirElements);
     }
 
     public static DataSink.NdjsonWriteDetails write_details(List<DataSink.FileInfo> fileInfos) {
@@ -105,7 +133,7 @@ public class ExportOperationUtil {
     }
 
     public static InstantType date(String date) {
-        return new InstantType(date + "T00:00:00Z");
+        return date != null ? new InstantType(date + "T00:00:00Z") : null;
     }
 
     public static <T extends IBaseResource> T read_first_from_multiple_lines_ndjson(IParser parser, DataSink.FileInfo fileInfo, Class<T> clazz) {

@@ -108,6 +108,23 @@ class ExportOperationTest {
 
         );
     }
+    
+    @ParameterizedTest
+    @MethodSource("provide_until_param")
+    void test_until_param_is_mapped(InstantType until, InstantType expectedUntil) {
+      RequestDetails mockReqDetails = mockRequest("application/fhir+json", "respond-async", false);
+      ExportRequest actualExportRequest = exportOperationValidator.validateRequest(mockReqDetails, ExportOutputFormat.asParam(ND_JSON), InstantType.now(), until, null, null).result();
+      assertThat(actualExportRequest).isNotNull();
+      assertThat(actualExportRequest.until()).isEqualTo(expectedUntil);
+    }
+    
+    private static Stream<Arguments> provide_until_param() {
+      InstantType now = InstantType.now();
+      return Stream.of(
+          arguments(now, now),
+          arguments(null, null)
+      );
+    }
 
     @ParameterizedTest
     @MethodSource("provide_elements_param")
@@ -214,13 +231,13 @@ class ExportOperationTest {
 
     @ParameterizedTest
     @MethodSource("provide_mappings")
-    public void test_input_model_mapping(String originalRequest, String outputFormat, InstantType since, List<String> type, ExportRequest expectedMappedRequest) {
+    void test_input_model_mapping(String originalRequest, String outputFormat, InstantType since, InstantType until, List<String> type, ExportRequest expectedMappedRequest) {
         if(expectedMappedRequest == null) {
-            assertThatException().isThrownBy(() -> exportOperationValidator.createExportRequest(originalRequest, outputFormat, since, null, type, List.of()))
+            assertThatException().isThrownBy(() -> exportOperationValidator.createExportRequest(originalRequest, outputFormat, since, until, type, List.of()))
                     .isExactlyInstanceOf(InvalidRequestException.class);
         }
         else {
-            ExportRequest expectedRequest = exportOperationValidator.createExportRequest(originalRequest, outputFormat, since, null, type, List.of());
+            ExportRequest expectedRequest = exportOperationValidator.createExportRequest(originalRequest, outputFormat, since, until, type, List.of());
             assertThat(expectedRequest).isEqualTo(expectedMappedRequest);
         }
     }
@@ -228,47 +245,53 @@ class ExportOperationTest {
     private static Stream<Arguments> provide_mappings() {
         String base = "http://localhost:8080/fhir/$export?";
         InstantType now = InstantType.now();
+        InstantType until = InstantType.now();
         return Stream.of(
-                arguments(base + "_outputFormat=application/fhir+ndjson", "application/fhir+ndjson", now, List.of(),
+                arguments(base + "_outputFormat=application/fhir+ndjson", "application/fhir+ndjson", now, until, List.of(),
                         ExportRequestBuilder.builder()
                                 .originalRequest(base + "_outputFormat=application/fhir+ndjson")
                                 .outputFormat(ND_JSON)
                                 .since(now)
+                                .until(until)
                                 .build()
                 ),
-                arguments(base + "_outputFormat=application/ndjson", "application/ndjson", now, List.of(),
+                arguments(base + "_outputFormat=application/ndjson", "application/ndjson", now, until, List.of(),
                         ExportRequestBuilder.builder()
                                 .originalRequest(base + "_outputFormat=application/ndjson")
                                 .outputFormat(ND_JSON)
                                 .since(now)
+                                .until(until)
                                 .build()
                 ),
-                arguments(base + "_outputFormat=ndjson", "ndjson", now, List.of(),
+                arguments(base + "_outputFormat=ndjson", "ndjson", now, until, List.of(),
                         ExportRequestBuilder.builder()
                                 .originalRequest(base + "_outputFormat=ndjson")
                                 .outputFormat(ND_JSON)
                                 .since(now)
+                                .until(until)
                                 .build()
                 ),
-                arguments(base + "_outputFormat=abc", "abc", now, List.of(), null),
-                arguments(base + "_outputFormat=ndjson", "ndjson", now, List.of("Patient"),
+                arguments(base + "_outputFormat=abc", "abc", now, until, List.of(), null),
+                arguments(base + "_outputFormat=ndjson", "ndjson", now, until, List.of("Patient"),
                         ExportRequestBuilder.builder()
                                 .originalRequest(base + "_outputFormat=ndjson")
                                 .outputFormat(ND_JSON)
                                 .since(now)
+                                .until(until)
                                 .includeResourceType(Enumerations.ResourceType.PATIENT)
                                 .build()
                 ),
-                arguments(base + "_outputFormat=ndjson", "ndjson", now, List.of("Patient", "Observation"),
+                arguments(base + "_outputFormat=ndjson", "ndjson", now, until, List.of("Patient", "Observation"),
                         ExportRequestBuilder.builder()
                                 .originalRequest(base + "_outputFormat=ndjson")
                                 .outputFormat(ND_JSON)
                                 .since(now)
+                                .until(until)
                                 .includeResourceTypes(Enumerations.ResourceType.PATIENT, Enumerations.ResourceType.OBSERVATION)
                                 .build()
                 ),
-                arguments(base + "_outputFormat=ndjson", "ndjson", now, List.of("not_real"), null),
-                arguments(base + "_outputFormat=ndjson", "ndjson", now, List.of("not_real1", "not_real2"), null)
+                arguments(base + "_outputFormat=ndjson", "ndjson", now, until, List.of("not_real"), null),
+                arguments(base + "_outputFormat=ndjson", "ndjson", now, until, List.of("not_real1", "not_real2"), null)
         );
     }
 

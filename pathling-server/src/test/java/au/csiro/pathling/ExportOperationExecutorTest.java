@@ -59,7 +59,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 })
 @SpringBootUnitTest
 //@TestInstance(TestInstance.Lifecycle.PER_METHOD)
-@Execution(ExecutionMode.CONCURRENT)
+//@Execution(ExecutionMode.CONCURRENT)
 //@ContextConfiguration(initializers = ExportOperationExecutorTest.Initializer.class)
 class ExportOperationExecutorTest {
 
@@ -108,6 +108,32 @@ class ExportOperationExecutorTest {
         exportExecutor.setWarehouseUrl("file://" + uniqueTempDir.toAbsolutePath());
 
         parser = fhirContext.newJsonParser();
+    }
+    
+    @ParameterizedTest
+    @MethodSource("provide_until_param")
+    void test_until_param(String until, boolean returnedResource) {
+      Patient patient = new Patient();
+      patient.setMeta(new Meta().setLastUpdatedElement(date("2025-01-06")));
+
+      exportExecutor = create_exec(patient);
+      ExportRequest req = req(BASE, date("2025-01-04"), date(until));
+      ExportResponse actualResponse = exportExecutor.execute(req);
+      
+      assertThat(actualResponse).isNotNull();
+      assertThat(actualResponse.getWriteDetails().fileInfos()).hasSize(1);
+      long expectedCount = returnedResource ? 1 : 0;
+      assertThat(actualResponse.getWriteDetails().fileInfos().get(0).count()).isEqualTo(expectedCount);
+
+    }
+    
+    private static Stream<Arguments> provide_until_param() {
+      return Stream.of(
+          arguments("2025-01-08", true),
+          arguments("2025-01-04", false),
+          arguments("2025-01-06", true), // same time is also fine here :)
+          arguments(null, true)
+      );
     }
 
     @Test
@@ -192,10 +218,7 @@ class ExportOperationExecutorTest {
         Patient patient = new Patient();
         patient.addIdentifier().setValue("test");
         patient.setActive(true);
-
-//        Patient patient = new Patient();
-//        patient.addIdentifier().setValue("test");
-
+        
         exportExecutor = create_exec(patient);
         ExportRequest req = req(BASE, List.of("Patient.identifier"));
         ExportResponse actualResponse = exportExecutor.execute(req);
@@ -210,10 +233,7 @@ class ExportOperationExecutorTest {
         patient.setId("test-id");
         patient.setMeta(new Meta().setVersionId("1"));
         patient.addIdentifier().setValue("test");
-
-//        Patient patient = new Patient();
-//        patient.addIdentifier().setValue("test");
-
+        
         exportExecutor = create_exec(patient);
         ExportRequest req = req(BASE, List.of("Patient.identifier"));
         ExportResponse actualResponse = exportExecutor.execute(req);
@@ -228,24 +248,9 @@ class ExportOperationExecutorTest {
     }
 
     @Test
-    void non_mandatory_elements_not_in_requested_elements_param_are_not_returned() throws IOException {
-        Patient patient = new Patient();
-        patient.addIdentifier().setValue("test");
-        patient.setActive(true);
-
-        exportExecutor = create_exec(patient);
-        ExportRequest req = req(BASE, List.of("Patient.identifier"));
-        ExportResponse actualResponse = exportExecutor.execute(req);
-        Patient actualPatient = read_ndjson(parser, actualResponse.getWriteDetails().fileInfos().get(0), Patient.class);
-
-        assertThat(actualPatient.hasActive()).isFalse();
-    }
-
-    @Test
     void returned_fhir_resource_has_subsetted_tag() throws IOException {
         Patient patient = new Patient();
         patient.addIdentifier().setValue("test");
-        //patient.setMeta(new Meta().setVersionId("VERSION-1"));
         exportExecutor = create_exec(patient);
         ExportRequest req = req(BASE, List.of("Patient.identifier"));
         ExportResponse actualResponse = exportExecutor.execute(req);
