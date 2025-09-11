@@ -103,7 +103,7 @@ public interface Comparable {
           && !isComparableTo(target)) {
         // TODO: comparison for non-comparable types with null values should return null
         // rather than false
-        return DefaultRepresentation.literal(false);
+        return DefaultRepresentation.literal(operation != ComparisonOperation.EQUALS);
       } else {
         return new DefaultRepresentation(result.getValue());
       }

@@ -95,4 +95,36 @@ public class ComparisonOperatorsDslTest extends FhirPathDslTestBase {
         .testEmpty("@2018-03-01 < @2018-03-02T00:00:00+01:00", "Uncomparable due to timezone after UTC")
         .build();
   }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testTimeComparison() {
+    return builder()
+        .withSubject(sb -> sb
+            .stringEmpty("strEmpty")
+        )
+        .group("Time comparison - same precision")
+        .testTrue("@T12:00 < @T13:00", "Full time less than")
+        .testFalse("@T14:00 < @T14:00", "Equal times less than false case")
+        .testTrue("@T15:30 > @T15:00", "Times greater than")
+        .testTrue("@T16:45 >= @T16:45", "Times greater than or equal true case")
+        .testFalse("@T17:15 <= @T17:00", "Times less than or equal false case")
+        
+        .group("Time comparison - different precision")
+        .testTrue("@T10 < @T11:30", "Hour vs minute precision, comparable")
+        .testFalse("@T11:45 < @T10", "Minute vs hour precision, comparable")
+        .testTrue("@T12:31:45 >= @T12:30", "Second vs minute precision, comparable")
+        .testFalse("@T13:15 > @T14:15:30", "Minute vs second precision, comparable")
+        .testTrue("@T14:20:15.500 > @T14:20:15", "Millisecond precision comparison")
+        
+        .group("Time comparison - incomparable times")
+        .testEmpty("@T10 <= @T10:00:00", "Hour vs second precision, incomparable")
+        .testEmpty("@T12 > @T12:00:00.000", "Hour vs millisecond precision, incomparable")
+        
+        .group("Edge cases")
+        .testTrue("@T23:59:59.999999999 > @T00:00", "End of day vs beginning comparison")
+        .testTrue("@T00:00:00 < @T23:59:59.999999999", "Beginning vs end of day comparison")
+        .testEmpty("{} < @T12:00", "Empty less than time")
+        .testEmpty("@T12:30 > {}", "Time greater than empty")
+        .build();
+  }
 }

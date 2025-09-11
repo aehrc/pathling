@@ -23,7 +23,9 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
+import au.csiro.pathling.fhirpath.comparison.TemporalComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
@@ -38,6 +40,8 @@ import org.hl7.fhir.r4.model.TimeType;
  */
 public class TimeCollection extends Collection implements StringCoercible, Materializable,
     Comparable {
+  
+  private static final ColumnComparator TIME_COMPARATOR = TemporalComparator.forTime();
 
   /**
    * Creates a new TimeCollection with the specified parameters.
@@ -111,4 +115,16 @@ public class TimeCollection extends Collection implements StringCoercible, Mater
   public StringCollection asStringPath() {
     return map(ColumnRepresentation::asString, StringCollection::build);
   }
+
+  @Override
+  @Nonnull
+  public ColumnComparator getComparator() {
+    return TIME_COMPARATOR;
+  }
+
+  @Override
+  public boolean isComparableTo(@Nonnull final Comparable target) {
+    return target instanceof TimeCollection;
+  }
+
 }
