@@ -33,6 +33,7 @@ import au.csiro.pathling.fhirpath.operator.SubsettingOperations;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AdditiveExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AndExpressionContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.EntireExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.EqualityExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ImpliesExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.IndexerExpressionContext;
@@ -60,6 +61,18 @@ import org.antlr.v4.runtime.tree.ParseTree;
  * @author John Grimes
  */
 class Visitor extends FhirPathBaseVisitor<FhirPath> {
+
+
+  /**
+   * Visit the expression and ignore EOF token.
+   *
+   * @param ctx The {@link EntireExpressionContext}
+   * @return A {@link FhirPath} expression
+   */
+  @Override
+  public FhirPath visitEntireExpression(final EntireExpressionContext ctx) {
+    return requireNonNull(ctx).expression().accept(this);
+  }
 
   /**
    * A term is typically a standalone literal or function invocation.
