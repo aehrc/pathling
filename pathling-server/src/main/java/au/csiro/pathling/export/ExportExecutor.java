@@ -61,6 +61,7 @@ public class ExportExecutor {
             }
             return exportRequest.includeResourceTypeFilters().contains(Enumerations.ResourceType.fromCode(resourceType));
         });
+        
         QueryableDataSource mapped = filtered.map(rowDataset -> {
             rowDataset.printSchema(1);
             return rowDataset.filter("meta.lastUpdated IS NULL OR meta.lastUpdated >= '" + exportRequest.since().getValueAsString() + "'");

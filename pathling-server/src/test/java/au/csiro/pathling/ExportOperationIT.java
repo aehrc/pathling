@@ -17,6 +17,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.api.parallel.ResourceAccessMode;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +35,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.stream.StreamSupport;
 
 import static au.csiro.pathling.library.io.sink.DataSink.FileInfo;
@@ -48,6 +52,7 @@ import static org.awaitility.Awaitility.await;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ResourceLock(value = "wiremock", mode = ResourceAccessMode.READ_WRITE)
 @ActiveProfiles({"core", "server", "integration-test"})
+//@Execution(ExecutionMode.CONCURRENT)
 class ExportOperationIT {
 
     @LocalServerPort
@@ -75,6 +80,51 @@ class ExportOperationIT {
         exportExecutor.setWarehouseUrl(warehouseUrl);
         parser = fhirContext.newJsonParser();
     }
+    
+    @Test
+    void test_cancelling_request_returns_202() {
+      testDataSetup.copyTestDataToTempDir(warehouseDir);
+
+      String uri = "http://localhost:" + port + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-01T00:00:00Z";
+      String pollUrl = kickOffRequest(uri);
+
+      // send a DELETE request after 3 seconds
+      await().pollDelay(3, TimeUnit.SECONDS)
+          .atMost(4, TimeUnit.SECONDS)
+          .until(() -> true);
+      
+      webTestClient.delete()
+          .uri(pollUrl)
+          .exchange()
+          .expectStatus().isEqualTo(202);
+    }
+    
+    @Test
+    void test_polling_cancelled_request_returns_404() {
+      testDataSetup.copyTestDataToTempDir(warehouseDir);
+
+      String uri = "http://localhost:" + port + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-02T00:00:00Z";
+      String pollUrl = kickOffRequest(uri);
+
+      // Send DELETE after 2 seconds
+      await().pollDelay(2, TimeUnit.SECONDS)
+          .atMost(3, TimeUnit.SECONDS)
+          .until(() -> true); // Just wait
+
+      webTestClient.delete().uri(pollUrl).exchange().expectStatus().isAccepted();
+
+      // Now wait for the GET to return 404 (polls until condition is met)
+      await()
+          .atMost(10, TimeUnit.SECONDS)
+          .pollInterval(500, TimeUnit.MILLISECONDS)
+          .untilAsserted(() -> {
+            webTestClient.get()
+                .uri(pollUrl)
+                .exchange()
+                .expectStatus().isEqualTo(404);
+          });
+    }
+    
 
     @Test
     void test_invalid_kickoff_request() {
@@ -98,27 +148,35 @@ class ExportOperationIT {
         await()
                 .atMost(30, TimeUnit.SECONDS)
                 .pollInterval(3, TimeUnit.SECONDS)
-                .until(() -> {
-                    EntityExchangeResult<String> pollResult = webTestClient.get()
-                            .uri(pollUrl)
-                            .exchange()
-                            .expectStatus().is2xxSuccessful()
-                            .expectBody(String.class)
-                            .returnResult();
-                    HttpStatusCode status = pollResult.getStatus();
-                    HttpHeaders headers = pollResult.getResponseHeaders();
-                    if(status == HttpStatus.ACCEPTED) {
-                        assertThat(headers).containsKey("X-Progress");
-                        log.info("Polling... {}", headers.get("X-Progress"));
-                        return false; // keep polling
-                    }
-                    if(status == HttpStatus.OK) {
-                        log.info("Polling complete.");
-                        assert_complete_result(uri, pollResult.getResponseBody(), headers);
-                        return true;
-                    }
-                    throw new AssertionError("Unexpected polling status: %s".formatted(status));
-                });
+                .until(() -> doPolling(pollUrl, result -> {
+                  try {
+                    assert_complete_result(uri, result.getResponseBody(), result.getResponseHeaders());
+                  } catch (IOException e) {
+                    throw new RuntimeException(e);
+                  }
+                }));
+    }
+    
+    private boolean doPolling(String pollUrl, Consumer<EntityExchangeResult<String>> consumer) {
+      EntityExchangeResult<String> pollResult = webTestClient.get()
+          .uri(pollUrl)
+          .exchange()
+          .expectStatus().is2xxSuccessful()
+          .expectBody(String.class)
+          .returnResult();
+      HttpStatusCode status = pollResult.getStatus();
+      HttpHeaders headers = pollResult.getResponseHeaders();
+      if(status == HttpStatus.ACCEPTED) {
+        assertThat(headers).containsKey("X-Progress");
+        log.info("Polling... {}", headers.get("X-Progress"));
+        return false; // keep polling
+      }
+      if(status == HttpStatus.OK) {
+        log.info("Polling complete.");
+        consumer.accept(pollResult);
+        return true;
+      }
+      throw new AssertionError("Unexpected polling status: %s".formatted(status));
     }
 
     private @NotNull String kickOffRequest(String uri) {

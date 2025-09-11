@@ -65,6 +65,9 @@ public class Job<T> {
 
   @Setter
   private Consumer<HttpServletResponse> responseModification;
+  
+  @Setter
+  private boolean markedAsDeleted;
 
   /**
    * @param operation the operation that initiated the job, used for enforcing authorization
@@ -105,5 +108,9 @@ public class Job<T> {
     } catch (ClassCastException e) {
       throw new InternalError("PreAsyncValidationResult casting failed.", e);
     }
+  }
+  
+  public boolean isCancelled() {
+    return result.isCancelled();
   }
 }

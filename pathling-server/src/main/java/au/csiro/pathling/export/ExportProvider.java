@@ -6,6 +6,9 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+import jakarta.validation.constraints.NotNull;
 import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.InstantType;
 import org.slf4j.Logger;
@@ -59,19 +62,22 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
     @Operation(name = "export", idempotent = true)
     @AsyncSupported
     public Binary export(
-            @OperationParam(name = OUTPUT_FORMAT_PARAM_NAME) String outputFormat,
-            @OperationParam(name = SINCE_PARAM_NAME) InstantType since,
-            @OperationParam(name = UNTIL_PARAM_NAME) InstantType until,
-            @OperationParam(name = TYPE_PARAM_NAME) List<String> type,
-            @OperationParam(name = ELEMENTS_PARAM_NAME) List<String> elements,
+            @Nonnull @OperationParam(name = OUTPUT_FORMAT_PARAM_NAME) String outputFormat,
+            @Nonnull @OperationParam(name = SINCE_PARAM_NAME) InstantType since,
+            @Nullable @OperationParam(name = UNTIL_PARAM_NAME) InstantType until,
+            @Nullable @OperationParam(name = TYPE_PARAM_NAME) List<String> type,
+            @Nullable @OperationParam(name = ELEMENTS_PARAM_NAME) List<String> elements,
 
             ServletRequestDetails requestDetails
             ) {
         RequestTag ownTag = requestTagFactory.createTag(requestDetails);
         Job<ExportRequest> ownJob = jobRegistry.get(ownTag);
         ExportRequest exportRequest = ownJob.getPreAsyncValidationResult();
+        if(ownJob.isCancelled()) {
+          return null;
+        }
         ExportResponse exportResponse = exportExecutor.execute(exportRequest);
-
+        
         // TODO - this is invoked everytime the $job endpoint is called, so the Expires header is "refreshed" everytime
         // This is allowed (see 2.5.7) but what's missing here is the actual file updating
         // Right now, this is just an arbitrary time not bound to anything

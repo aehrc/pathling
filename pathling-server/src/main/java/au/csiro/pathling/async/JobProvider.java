@@ -21,9 +21,13 @@ import au.csiro.pathling.cache.EntityTagInterceptor;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ResourceNotFoundError;
+import ca.uhn.fhir.rest.annotation.Delete;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
+import ca.uhn.fhir.rest.api.Constants;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,9 +39,18 @@ import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.utilities.http.HTTPRequest.HttpMethod;
+import org.jetbrains.annotations.NotNull;
+import org.json.HTTP;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
@@ -74,7 +87,14 @@ public class JobProvider {
     this.configuration = configuration;
     this.jobRegistry = jobRegistry;
   }
-
+  
+  
+  public void deleteJob(String jobId, HttpServletResponse response) {
+    final Job<?> job = getJob(jobId);
+    handleJobDeleteRequest(job);
+  }
+  
+  
   /**
    * Queries a running job for its progress, completion status and final result.
    *
@@ -89,6 +109,22 @@ public class JobProvider {
       @Nullable final HttpServletRequest request,
       @Nullable final HttpServletResponse response) {
 
+    final Job<?> job = getJob(id);
+
+    //    if (configuration.getAuth().isEnabled()) {
+//      // Check for the required authority associated with the operation that initiated the job.
+//      checkHasAuthority(PathlingAuthority.operationAccess(job.getOperation()));
+//      // Check that the user requesting the job status is the same user that started the job.
+//      final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//      final Optional<String> currentUserId = getCurrentUserId(authentication);
+//      if (!job.getOwnerId().equals(currentUserId)) {
+//        throw new AccessDeniedError("The requested job is not owned by the current user");
+//      }
+//    }
+    return handleJobGetRequest(request, response, job);
+  }
+
+  private @NotNull Job<?> getJob(@Nullable String id) {
     // Validate that the ID looks reasonable.
     if (id == null || !ID_PATTERN.matcher(id).matches()) {
       throw new ResourceNotFoundError("Job ID not found");
@@ -100,18 +136,41 @@ public class JobProvider {
     if (job == null) {
       throw new ResourceNotFoundError("Job ID not found");
     }
+    return job;
+  }
 
-//    if (configuration.getAuth().isEnabled()) {
-//      // Check for the required authority associated with the operation that initiated the job.
-//      checkHasAuthority(PathlingAuthority.operationAccess(job.getOperation()));
-//      // Check that the user requesting the job status is the same user that started the job.
-//      final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//      final Optional<String> currentUserId = getCurrentUserId(authentication);
-//      if (!job.getOwnerId().equals(currentUserId)) {
-//        throw new AccessDeniedError("The requested job is not owned by the current user");
-//      }
-//    }
+  private IBaseResource handleJobDeleteRequest(Job<?> job) {
+    /*
+    Two possible situations:
+      - The initial kick-off request is still ongoing -> cancel it and delete the partial files
+      - The initial kick-off request is complete (and the client may have already downloaded the files) 
+        -> interpret delete request from client as "do no longer need them". Depending on the caching setup,
+        these files may or may not be deleted. Either way return a success status code
+        
+      handle if a delete request was initiated and another delete request is being called before the old one finishes
+      -> just return success as well but don't schedule a new deletion internally OR return a 404
+     */
+    if(job.isMarkedAsDeleted()) {
+      throw new ResourceNotFoundException("Already deleted this job.");
+    }
+    job.setMarkedAsDeleted(true);
+    if(!job.getResult().isDone()) {
+      job.getResult().cancel(false);
+    }
+    // TODO - implement caching layer and decide if the files should actually be deleted
+    throw new ProcessingNotCompletedException("The job and its resources will be deleted.");
+    
+  }
 
+  private IBaseResource handleJobGetRequest(@NotNull HttpServletRequest request,
+      @Nullable HttpServletResponse response, @NotNull Job<?> job) {
+    if(job.getResult().isCancelled()) {
+      // a DELETE request was initiated before the job completed
+      // Depending on the async task is running, the task may periodically check the isCancelled state and abort.
+      // Otherwise, the job actually finishes but the user will never see the result (unless they 
+      // initiate a new request and the cache-layer determined that is can reuse the result)
+      throw new ResourceNotFoundException("A DELETE request cancelled this job or deleted all files associated with this job.");
+    }
     if (job.getResult().isDone()) {
       // If the job is done, we return the Parameters resource.
       try {

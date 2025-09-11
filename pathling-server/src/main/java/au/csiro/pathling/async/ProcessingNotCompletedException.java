@@ -32,6 +32,10 @@ public class ProcessingNotCompletedException extends BaseServerResponseException
   private static final long serialVersionUID = -1755375090680736458L;
   private static final int STATUS_CODE = Constants.STATUS_HTTP_202_ACCEPTED;
 
+  public ProcessingNotCompletedException(@Nonnull final String theMessage) {
+    super(STATUS_CODE, theMessage);
+  }
+  
   /**
    * @param theMessage a descriptive message
    * @param theOperationOutcome an {@link org.hl7.fhir.r4.model.OperationOutcome} describing the

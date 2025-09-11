@@ -6,6 +6,7 @@ import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ErrorReportingInterceptor;
 import au.csiro.pathling.export.ExportProvider;
 import au.csiro.pathling.fhir.ConformanceProvider;
+import au.csiro.pathling.interceptors.BulkExportDeleteInterceptor;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.ApacheProxyAddressStrategy;
 import ca.uhn.fhir.rest.server.FifoMemoryPagingProvider;
@@ -54,15 +55,20 @@ public class FhirServer extends RestfulServer {
 
     @Nonnull
     private final EntityTagInterceptor entityTagInterceptor;
+    
+    @Nonnull
+    private final BulkExportDeleteInterceptor bulkExportDeleteInterceptor;
 
     @Nonnull
     private final ConformanceProvider conformanceProvider;
 
-    public FhirServer(@Nonnull Optional<JobProvider> jobProvider, @Nonnull ExportProvider exportProvider, @Nonnull ErrorReportingInterceptor errorReportingInterceptor, @Nonnull EntityTagInterceptor entityTagInterceptor, @Nonnull ConformanceProvider conformanceProvider) {
+    public FhirServer(@Nonnull Optional<JobProvider> jobProvider, @Nonnull ExportProvider exportProvider, @Nonnull ErrorReportingInterceptor errorReportingInterceptor, @Nonnull EntityTagInterceptor entityTagInterceptor, @Nonnull
+    BulkExportDeleteInterceptor bulkExportDeleteInterceptor, @Nonnull ConformanceProvider conformanceProvider) {
         this.jobProvider = jobProvider;
         this.exportProvider = exportProvider;
         this.errorReportingInterceptor = errorReportingInterceptor;
         this.entityTagInterceptor = entityTagInterceptor;
+        this.bulkExportDeleteInterceptor = bulkExportDeleteInterceptor;
         this.conformanceProvider = conformanceProvider;
     }
 
@@ -91,6 +97,8 @@ public class FhirServer extends RestfulServer {
 
 
             registerInterceptor(new ResponseHighlighterInterceptor());
+            
+            registerInterceptor(bulkExportDeleteInterceptor);
 
             // Configure paging.
             final FifoMemoryPagingProvider pagingProvider = new FifoMemoryPagingProvider(SEARCH_MAP_SIZE);
