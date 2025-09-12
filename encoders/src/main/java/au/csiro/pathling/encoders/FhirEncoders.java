@@ -236,11 +236,9 @@ public class FhirEncoders {
    */
   @SuppressWarnings("unchecked")
   public final <T extends IBaseResource> ExpressionEncoder<T> of(final Class<T> type) {
-    final RuntimeResourceDefinition definition =
-        context.getResourceDefinition(type);
+    final RuntimeResourceDefinition definition = context.getResourceDefinition(type);
 
     final int key = type.getName().hashCode();
-
     return (ExpressionEncoder<T>) encoderCache.computeIfAbsent(key, k ->
         EncoderBuilder.of(definition,
             context,

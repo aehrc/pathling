@@ -105,7 +105,7 @@ class CatalogSink implements DataSink {
   }
 
   @Override
-  public void write(@Nonnull final DataSource source) {
+  public WriteDetails write(@Nonnull final DataSource source) {
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       final String tableName = getTableName(resourceType);
@@ -136,6 +136,7 @@ class CatalogSink implements DataSink {
         }
       }
     }
+    return null;
   }
 
   private void writeDataset(@Nonnull final Dataset<Row> dataset,

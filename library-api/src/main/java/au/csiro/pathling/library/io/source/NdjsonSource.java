@@ -75,7 +75,7 @@ public class NdjsonSource extends FileSource {
         context.getSpark().read().format("text"),
         // Encode each line of input as a JSON FHIR resource.
         (sourceData, resourceType) -> context.encode(sourceData, resourceType,
-            PathlingContext.FHIR_JSON));
+            PathlingContext.FHIR_JSON), resourceType -> true);
   }
 
 }

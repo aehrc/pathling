@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -81,6 +82,9 @@ public abstract class FileSource extends DatasetSource {
    */
   @Nonnull
   protected final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer;
+  
+  @Nonnull
+  protected final Predicate<ResourceType> additionalResourceTypeFilter;
 
   /**
    * @param context the Pathling context
@@ -95,12 +99,14 @@ public abstract class FileSource extends DatasetSource {
       @Nonnull final String path,
       @Nonnull final Function<String, Set<String>> fileNameMapper, @Nonnull final String extension,
       @Nonnull final DataFrameReader reader,
-      @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer) {
+      @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer,
+      @Nonnull Predicate<ResourceType> additionalResourceTypeFilter) {
     super(context);
     this.fileNameMapper = fileNameMapper;
     this.extension = extension;
     this.reader = reader;
     this.transformer = transformer;
+    this.additionalResourceTypeFilter = additionalResourceTypeFilter;
 
     final org.apache.hadoop.conf.Configuration hadoopConfiguration = requireNonNull(
         context.getSpark().sparkContext().hadoopConfiguration());
@@ -163,6 +169,8 @@ public abstract class FileSource extends DatasetSource {
         .flatMap(this::resourceCodeAndPath)
         // Filter out any resource codes that are not supported.
         .filter(p -> context.isResourceTypeSupported(p.getKey()))
+        // Filter out any resource that should be explicitly ignored
+        .filter(p -> additionalResourceTypeFilter.test(ResourceType.fromCode(p.getKey())))
         // Group the pairs by resource type, and collect the associated paths into a list.
         .collect(Collectors.groupingBy(Pair::getKey,
             Collectors.mapping(Pair::getValue, Collectors.toList())));

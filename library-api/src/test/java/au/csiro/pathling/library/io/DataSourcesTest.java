@@ -841,7 +841,7 @@ class DataSourcesTest {
   void parquetWithNullFileNameMapperShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
     final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.parquet("path", null));
+        () -> builder.parquet("path", (Function<String, Set<String>>) null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 

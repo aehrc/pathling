@@ -24,6 +24,9 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
 import jakarta.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
 
@@ -88,12 +91,13 @@ final class NdjsonSink implements DataSink {
   }
 
   @Override
-  public void write(@Nonnull final DataSource source) {
+  public NdjsonWriteDetails write(@Nonnull final DataSource source) {
+    List<FileInfo> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       // Convert the dataset of structured FHIR data to a dataset of JSON strings.
       final Dataset<String> jsonStrings = context.decode(source.read(resourceType),
           resourceType, PathlingContext.FHIR_JSON);
-
+      
       // Write the JSON strings to the file system, using a single partition.
       final String fileName = String.join(".", fileNameMapper.apply(resourceType),
           "ndjson");
@@ -106,10 +110,12 @@ final class NdjsonSink implements DataSink {
         case MERGE -> throw new UnsupportedOperationException(
             "Merge operation is not supported for NDJSON");
       }
-
+      FileInfo fileInfo = new FileInfo(resourceType, resultUrl, jsonStrings.count());
+      fileInfos.add(fileInfo);
       // Remove the partitioned directory and replace it with a single file.
       departitionResult(context.getSpark(), resultUrlPartitioned, resultUrl, "txt");
     }
+    return new NdjsonWriteDetails(fileInfos);
   }
 
   void writeJsonStrings(@Nonnull final Dataset<String> jsonStrings,
@@ -117,7 +123,6 @@ final class NdjsonSink implements DataSink {
       @Nonnull final SaveMode saveMode) {
     final var writer = jsonStrings.coalesce(1)
         .write();
-    
     // Apply save mode if it has a Spark equivalent
     saveMode.getSparkSaveMode().ifPresent(writer::mode);
     
