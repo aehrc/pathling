@@ -290,6 +290,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download source code and upload to CSIRO DAP
         run: python .github/scripts/dap_upload.py
