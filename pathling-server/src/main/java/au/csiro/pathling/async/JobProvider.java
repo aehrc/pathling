@@ -33,6 +33,7 @@ import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
@@ -158,7 +159,7 @@ public class JobProvider {
       job.getResult().cancel(false);
     }
     // TODO - implement caching layer and decide if the files should actually be deleted
-    throw new ProcessingNotCompletedException("The job and its resources will be deleted.");
+    throw new ProcessingNotCompletedException("The job and its resources will be deleted.", buildDeletionOutcome());
     
   }
 
@@ -201,6 +202,15 @@ public class JobProvider {
       }
       throw new ProcessingNotCompletedException("Processing", buildProcessingOutcome());
     }
+  }
+
+  private static IBaseOperationOutcome buildDeletionOutcome() {
+    OperationOutcome operationOutcome = new OperationOutcome();
+    operationOutcome.addIssue()
+        .setCode(IssueType.INFORMATIONAL)
+        .setSeverity(IssueSeverity.INFORMATION)
+        .setDiagnostics("The job and its resources will be deleted.");
+    return operationOutcome;
   }
 
   @Nonnull

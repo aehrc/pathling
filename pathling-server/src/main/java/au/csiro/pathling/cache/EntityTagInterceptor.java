@@ -52,7 +52,7 @@ public class EntityTagInterceptor {
   private final ServerConfiguration configuration;
 
   @Nonnull
-  private final CacheableDatabase2 database;
+  private final CacheableDatabase database;
 
   @Nonnull
   private final ConformanceProvider conformanceProvider;
@@ -66,7 +66,7 @@ public class EntityTagInterceptor {
    * @param conformanceProvider for determining the cacheability of conformance statement requests
    */
   public EntityTagInterceptor(@Nonnull final ServerConfiguration configuration,
-      @Nonnull final CacheableDatabase2 database,
+      @Nonnull final CacheableDatabase database,
       @Nonnull final ConformanceProvider conformanceProvider) {
     this.configuration = configuration;
     this.database = database;

@@ -18,7 +18,7 @@
 package au.csiro.pathling.async;
 
 import au.csiro.pathling.cache.Cacheable;
-import au.csiro.pathling.cache.CacheableDatabase2;
+import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
@@ -66,7 +66,7 @@ public final class RequestTagFactory {
    * Public constructor to use for Spring component bean creation.
    */
   @Autowired
-  public RequestTagFactory(@Nonnull final CacheableDatabase2 database,
+  public RequestTagFactory(@Nonnull final CacheableDatabase database,
                            @Nonnull final ServerConfiguration configuration) {
     this(database, getSalientHeaderNames(configuration));
   }

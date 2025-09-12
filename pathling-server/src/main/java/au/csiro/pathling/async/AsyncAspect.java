@@ -125,6 +125,11 @@ public class AsyncAspect {
           throw ErrorHandlingInterceptor.convertError(preValidationException);
         }
       }
+      if(result == null) {
+        // the class containing the async annotation on a method does not implement PreAsyncValidation
+        // set some values to prevent NPEs
+        result = new PreAsyncValidationResult<>(new Object(), List.of());
+      }
       processRequestAsynchronously(joinPoint, requestDetails, result, spark);
       throw new ProcessingNotCompletedException("Accepted", buildOperationOutcome(result));
     } else {
@@ -167,7 +172,7 @@ public class AsyncAspect {
           cleanUpAfterJob(spark, jobId);
         }
       });
-      Optional<String> ownerId = Optional.empty();
+      Optional<String> ownerId = Optional.empty(); // TODO - only useful when auth is implemented
       return new Job<>(jobId, operation, result, ownerId);
     });
     job.setPreAsyncValidationResult(preAsyncValidationResult.result());

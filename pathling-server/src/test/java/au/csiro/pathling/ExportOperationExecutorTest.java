@@ -59,7 +59,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 })
 @SpringBootUnitTest
 //@TestInstance(TestInstance.Lifecycle.PER_METHOD)
-//@Execution(ExecutionMode.CONCURRENT)
+@Execution(ExecutionMode.CONCURRENT)
 //@ContextConfiguration(initializers = ExportOperationExecutorTest.Initializer.class)
 class ExportOperationExecutorTest {
 
