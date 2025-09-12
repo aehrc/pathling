@@ -290,8 +290,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ssh-user: ${{ secrets.CHECKOUT_SSH_USER }}
 
       - name: Download source code and upload to CSIRO DAP
         run: python .github/scripts/dap_upload.py
