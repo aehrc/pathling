@@ -76,7 +76,7 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
         if(ownJob.isCancelled()) {
           return null;
         }
-        ExportResponse exportResponse = exportExecutor.execute(exportRequest);
+        ExportResponse exportResponse = exportExecutor.execute(exportRequest, ownJob.getId());
         
         // TODO - this is invoked everytime the $job endpoint is called, so the Expires header is "refreshed" everytime
         // This is allowed (see 2.5.7) but what's missing here is the actual file updating

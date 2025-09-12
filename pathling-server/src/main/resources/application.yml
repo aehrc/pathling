@@ -40,7 +40,7 @@ pathling:
     # within import requests. Can be an Amazon S3 (s3://), HDFS (hdfs://) or filesystem (file://)
     # URL.
     # warehouseUrl: file:///Users/felixnaumann/Documents/pathling-server/warehouse
-    warehouseUrl: file:///Users/felixnaumann/Documents/pathling-server/src/test/resources/test-data/fhir/delta
+    warehouseUrl: file://${user.dir}/src/test/resources/test-data/fhir/delta
 
     # The subdirectory within the warehouse path used to read and write data.
     databaseName: default

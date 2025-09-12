@@ -9,10 +9,16 @@ import au.csiro.pathling.views.FhirView;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
+import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.functions;
@@ -26,6 +32,9 @@ import org.springframework.stereotype.Component;
 import scala.collection.Seq;
 import scala.collection.TraversableOnce;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
@@ -43,18 +52,30 @@ public class ExportExecutor {
     private final PathlingContext pathlingContext;
     private final QueryableDataSource deltaLake;
     private final FhirContext fhirContext;
-
-    @Value("${pathling.storage.warehouseUrl}")
+  private final SparkSession sparkSession;
     private String warehouseUrl;
 
     @Autowired
-    public ExportExecutor(PathlingContext pathlingContext, QueryableDataSource deltaLake, FhirContext fhirContext) {
+    public ExportExecutor(PathlingContext pathlingContext, QueryableDataSource deltaLake, FhirContext fhirContext,
+        SparkSession sparkSession, @Value("${pathling.storage.warehouseUrl}") String warehouseUrl) {
         this.pathlingContext = pathlingContext;
         this.deltaLake = deltaLake;
         this.fhirContext = fhirContext;
+      this.sparkSession = sparkSession;
+      this.warehouseUrl = new Path(warehouseUrl, "jobs").toString();
     }
 
+  /**
+   * Use for tests only where it does not matter in which subdirectory the ndjson is written to.
+   * @param exportRequest Information about the export request.
+   * @return Information about the export response.
+   */
+  @VisibleForTesting
     public ExportResponse execute(ExportRequest exportRequest) {
+      return execute(exportRequest, UUID.randomUUID().toString());
+    }
+    
+    public ExportResponse execute(ExportRequest exportRequest, String jobId) {
         QueryableDataSource filtered = deltaLake.filterByResourceType(resourceType -> {
             if(exportRequest.includeResourceTypeFilters().isEmpty()) {
                 return true;
@@ -149,8 +170,25 @@ public class ExportExecutor {
                     )
             ));
         }
-        DataSink.NdjsonWriteDetails writeDetails = new DataSinkBuilder(pathlingContext, mapped).saveMode("overwrite").ndjson(warehouseUrl);
+        URI warehouseUri = URI.create(warehouseUrl);
+        Path warehousePath = new Path(warehouseUri);
+        Path jobDirPath = new Path(warehousePath, jobId);
+        Configuration configuration = sparkSession.sparkContext().hadoopConfiguration();
+      try {
+        FileSystem fs = FileSystem.get(configuration);
+        if(!fs.exists(jobDirPath)) {
+          boolean created = fs.mkdirs(jobDirPath);
+          if(!created) {
+            throw new InternalErrorException("Failed to created subdirectory at %s for job %s."
+                .formatted(warehouseUrl, jobId));
+          }
+        }
+        DataSink.NdjsonWriteDetails writeDetails = new DataSinkBuilder(pathlingContext, mapped).saveMode("overwrite").ndjson(jobDirPath.toString());
         return new ExportResponse(exportRequest.originalRequest(), writeDetails);
+      } catch (IOException e) {
+        throw new InternalErrorException("Failed to created subdirectory at %s for job %s."
+            .formatted(warehouseUrl, jobId));
+      }
     }
 
     private Dataset<Row> applyColumnNullification(Dataset<Row> dataset, Set<String> columnsToKeep) {

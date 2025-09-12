@@ -90,14 +90,16 @@ class ExportOperationExecutorTest {
 
     @BeforeEach
     void setup() {
-        SharedMocks.resetAll();
-        exportExecutor = new ExportExecutor(
+      SharedMocks.resetAll();
+      uniqueTempDir = tempDir.resolve(UUID.randomUUID().toString());
+      exportExecutor = new ExportExecutor(
                 pathlingContext,
                 deltaLake,
-                fhirContext
+                fhirContext,
+                sparkSession,
+          "file://" + uniqueTempDir.toAbsolutePath()
         );
 
-        uniqueTempDir = tempDir.resolve(UUID.randomUUID().toString());
         try {
             Files.createDirectories(uniqueTempDir);
         } catch (IOException e) {
@@ -105,7 +107,6 @@ class ExportOperationExecutorTest {
         }
 
         testDataSetup.copyTestDataToTempDir(uniqueTempDir);
-        exportExecutor.setWarehouseUrl("file://" + uniqueTempDir.toAbsolutePath());
 
         parser = fhirContext.newJsonParser();
     }
@@ -323,8 +324,7 @@ class ExportOperationExecutorTest {
 
     private ExportExecutor create_exec(List<IBaseResource> resources) {
         CustomObjectDataSource objectDataSource = new CustomObjectDataSource(sparkSession, pathlingContext, fhirEncoders, resources);
-        exportExecutor = new ExportExecutor(pathlingContext, objectDataSource, fhirContext);
-        exportExecutor.setWarehouseUrl("file://" + uniqueTempDir.toAbsolutePath());
+        exportExecutor = new ExportExecutor(pathlingContext, objectDataSource, fhirContext, sparkSession, "file://" + uniqueTempDir.toAbsolutePath());
         return exportExecutor;
     }
 
@@ -337,9 +337,10 @@ class ExportOperationExecutorTest {
         exportExecutor = new ExportExecutor(
                 pathlingContext,
                 objectDataSource,
-                fhirContext
+                fhirContext,
+            sparkSession,
+            "file://" + uniqueTempDir.toAbsolutePath()
         );
-        exportExecutor.setWarehouseUrl("file://" + uniqueTempDir.toAbsolutePath());
 
         expectedExportResponse = resolveTempDirIn(expectedExportResponse, uniqueTempDir);
         ExportResponse actualExportResponse = exportExecutor.execute(exportRequest);

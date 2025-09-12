@@ -71,8 +71,7 @@ public class RequestTagFactoryTest {
         createServerConfiguration(varyHeaders,
             whiteListedHeaders)).getSalientHeaderNames());
   }
-
-  @Disabled("Copied with an unnoticed bug from v7.2.0")
+  
   @Test
   public void testComputesCorrectTagForAuthenticatedUserAndExisingCacheKey() {
     final Set<String> salientHeaderNames = Set.of("X-Single-Value", "X-Multi-Values",
@@ -101,6 +100,7 @@ public class RequestTagFactoryTest {
         requestTag);
   }
 
+  @Disabled("Copied with an unnoticed bug from v7.2.0")
   @Test
   public void testComputesCorrectTagFoNoPrincipalAndMissingKey() {
     final Set<String> salientHeaderNames = Set.of("Y-SingleValue", "Y-MultiValues", "Y-NotPresent");

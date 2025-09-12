@@ -1,5 +1,8 @@
 package au.csiro.pathling.util;
 
+import au.csiro.pathling.async.JobRegistry;
+import au.csiro.pathling.async.SparkListener;
+import au.csiro.pathling.async.StageMap;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
@@ -65,4 +68,15 @@ public class FhirServerTestConfiguration {
         return new TestTerminologyServiceFactory();
     }
 
-}
+    @Bean
+    public SparkListener sparkListener(JobRegistry jobRegistry, StageMap stageMap,
+        SparkSession sparkSession) {
+      return new SparkListener(jobRegistry, stageMap, sparkSession);
+    }
+    
+    @Primary
+    @Bean
+    public StageMap stageMap() {
+      return new StageMap();
+    }
+} 

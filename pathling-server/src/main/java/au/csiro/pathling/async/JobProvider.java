@@ -33,6 +33,10 @@ import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.OperationOutcome;
@@ -43,6 +47,7 @@ import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.utilities.http.HTTPRequest.HttpMethod;
 import org.jetbrains.annotations.NotNull;
 import org.json.HTTP;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
@@ -53,6 +58,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 
@@ -78,15 +84,19 @@ public class JobProvider {
 
   @Nonnull
   private final JobRegistry jobRegistry;
+  private final SparkSession sparkSession;
+  private final String warehouseUrl;
 
   /**
    * @param configuration a {@link ServerConfiguration} for determining if authorization is enabled
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
    */
   public JobProvider(@Nonnull final ServerConfiguration configuration,
-      @Nonnull final JobRegistry jobRegistry) {
+      @Nonnull final JobRegistry jobRegistry, SparkSession sparkSession, @Value("${pathling.storage.warehouseUrl}") String warehouseUrl) {
     this.configuration = configuration;
     this.jobRegistry = jobRegistry;
+    this.sparkSession = sparkSession;
+    this.warehouseUrl = new Path(warehouseUrl, "jobs").toString();
   }
   
   
@@ -157,8 +167,24 @@ public class JobProvider {
     job.setMarkedAsDeleted(true);
     if(!job.getResult().isDone()) {
       job.getResult().cancel(false);
+      // TODO - The job cancellation might take some time (its async)
+      // Currently, only the files up until "now" will be deleted. Anything that is created between
+      // the cancel request and the job actually being cancelled by spark will remain on the disk
     }
-    // TODO - implement caching layer and decide if the files should actually be deleted
+    Configuration hadoopConfig = sparkSession.sparkContext().hadoopConfiguration();
+    try {
+      FileSystem fs = FileSystem.get(hadoopConfig);
+      Path jobDirToDel = new Path(warehouseUrl, job.getId());
+      log.info("Deleting dir {}", jobDirToDel);
+      boolean deleted = fs.delete(jobDirToDel, true);
+      if(!deleted) {
+        log.warn("Failed to delete dir {}", jobDirToDel);
+      }
+      log.info("Deleted dir {}", jobDirToDel);
+    } catch (IOException e) {
+      throw new InternalErrorException("Failed to delete files associated with the job.", e);
+    }
+    
     throw new ProcessingNotCompletedException("The job and its resources will be deleted.", buildDeletionOutcome());
     
   }

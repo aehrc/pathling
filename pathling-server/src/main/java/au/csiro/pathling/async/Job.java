@@ -24,6 +24,7 @@ import lombok.Setter;
 import lombok.ToString;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
+import java.net.URI;
 import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;

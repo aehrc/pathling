@@ -20,9 +20,13 @@ package au.csiro.pathling.async;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.scheduler.JobFailed;
+import org.apache.spark.scheduler.SparkListenerJobEnd;
 import org.apache.spark.scheduler.SparkListenerStageCompleted;
 import org.apache.spark.scheduler.SparkListenerStageSubmitted;
+import org.apache.spark.sql.SparkSession;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -44,15 +48,17 @@ public class SparkListener extends org.apache.spark.scheduler.SparkListener {
 
   @Nonnull
   private final StageMap stageMap;
+  private final SparkSession sparkSession;
 
   /**
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
    * @param stageMap the {@link StageMap} used to map stages to job IDs
    */
   public SparkListener(@Nonnull final JobRegistry jobRegistry,
-                       @Nonnull final StageMap stageMap) {
+                       @Nonnull final StageMap stageMap, @Lazy SparkSession sparkSession) {
     this.jobRegistry = jobRegistry;
     this.stageMap = stageMap;
+    this.sparkSession = sparkSession;
   }
 
   @Override
@@ -62,6 +68,11 @@ public class SparkListener extends org.apache.spark.scheduler.SparkListener {
     if (jobGroupId != null) {
       @Nullable final Job<?> job = jobRegistry.get(jobGroupId);
       if (job != null) {
+        if(job.isCancelled()) {
+          log.info("Stage submitted called but job {} is cancelled. Cancelling the associated job group.", job.getId());
+          sparkSession.sparkContext().cancelJobGroup(job.getId());
+          return;
+        }
         job.incrementCompletedStages();
       }
     }
@@ -77,9 +88,13 @@ public class SparkListener extends org.apache.spark.scheduler.SparkListener {
     }
     @Nullable final Job<?> job = jobRegistry.get(jobGroupId);
     if (job != null) {
+      if(job.isCancelled()) {
+        log.info("Stage submitted called but job {} is cancelled. Cancelling the associated job group.", job.getId());
+        sparkSession.sparkContext().cancelJobGroup(job.getId());
+        return;
+      }
       stageMap.put(stageSubmitted.stageInfo().stageId(), jobGroupId);
       job.incrementTotalStages();
     }
   }
-
 }
