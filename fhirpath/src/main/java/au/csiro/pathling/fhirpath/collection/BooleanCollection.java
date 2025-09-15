@@ -22,7 +22,6 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
@@ -35,7 +34,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class BooleanCollection extends Collection implements Comparable, StringCoercible,
+public class BooleanCollection extends Collection implements StringCoercible,
     Materializable {
 
   /**
@@ -126,17 +125,7 @@ public class BooleanCollection extends Collection implements Comparable, StringC
   public static BooleanCollection empty() {
     return build(DefaultRepresentation.empty());
   }
-
-  /**
-   * {@inheritDoc}
-   * <p>
-   * This implementation returns a new instance with the specified column representation.
-   */
-  @Override
-  public boolean isComparableTo(@Nonnull final Comparable path) {
-    return path instanceof BooleanCollection;
-  }
-
+  
   /**
    * {@inheritDoc}
    * <p>

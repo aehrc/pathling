@@ -40,7 +40,7 @@ import org.hl7.fhir.r4.model.TimeType;
  */
 public class TimeCollection extends Collection implements StringCoercible, Materializable,
     Comparable {
-  
+
   private static final ColumnComparator TIME_COMPARATOR = TemporalComparator.forTime();
 
   /**
@@ -123,7 +123,7 @@ public class TimeCollection extends Collection implements StringCoercible, Mater
   }
 
   @Override
-  public boolean isComparableTo(@Nonnull final Comparable target) {
+  public boolean isComparableTo(@Nonnull final Collection target) {
     return target instanceof TimeCollection;
   }
 

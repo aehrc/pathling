@@ -25,7 +25,7 @@ public interface DateTimeComparable extends Comparable {
   }
 
   @Override
-  default boolean isComparableTo(@Nonnull final Comparable target) {
+  default boolean isComparableTo(@Nonnull final Collection target) {
     return target instanceof DateTimeComparable;
   }
 

@@ -153,7 +153,7 @@ public class CodingCollection extends Collection implements Comparable, StringCo
   }
 
   @Override
-  public boolean isComparableTo(@Nonnull final Comparable path) {
+  public boolean isComparableTo(@Nonnull final Collection path) {
     return path instanceof CodingCollection;
   }
 

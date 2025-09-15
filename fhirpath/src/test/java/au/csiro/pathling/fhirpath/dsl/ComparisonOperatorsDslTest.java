@@ -24,6 +24,28 @@ import org.junit.jupiter.api.DynamicTest;
 
 public class ComparisonOperatorsDslTest extends FhirPathDslTestBase {
 
+
+  @FhirPathTest
+  public Stream<DynamicTest> testBooleanComparison() {
+    return builder()
+        .withSubject(sb -> sb
+            .stringEmpty("emptyString")
+            .boolArray("allTrue", true, true)
+            .boolArray("allFalse", false, false)
+        )
+        .group("Boolean equality")
+        .testTrue("true=true", "Boolean equality")
+        .testTrue("false!=true", "Boolean inequality")
+        .testTrue("allTrue!=allFalse", "Boolean array inequality")
+        .testFalse("allTrue=true", "Boolean array vs singleton equality")
+        .testFalse("false=allFalse", "Boolean singleton vs array equality")
+        .group("Boolean comparison")
+        // booleans are not comparable (orderable) despite having equality
+        .testError("true > false", "Boolean comparison is not supported")
+        .testEmpty("true > {}", "Boolean comparison with empty literal")
+        .build();
+  }
+
   @FhirPathTest
   public Stream<DynamicTest> testNumericComparison() {
     return builder()
@@ -35,12 +57,14 @@ public class ComparisonOperatorsDslTest extends FhirPathDslTestBase {
             .integerArray("intArray", 1, 2, 3)
             .decimalArray("decArray", 1.1, 2.2, 3.3)
         )
-        .group("Integer math operations")
+        .group("Numeric comparisons operations")
         .testTrue("int1 > int2", "Integer greater than with variables")
         .testFalse("dec1 < dec2", "Decimal less than with variables")
         .testFalse("int2 >= dec1", "Integer greater that or equal with variables false case")
         .testEmpty("{} > int1", "Empty greater than with variable")
         .testError("int1 <= intArray", "Integer less than or equal with array")
+        .group("Numeric equality operations")
+        .testTrue("int1 = 5.0", "Integer equals decimal with variables")
         .build();
   }
 
@@ -75,24 +99,33 @@ public class ComparisonOperatorsDslTest extends FhirPathDslTestBase {
         .testTrue("@2020-01-01 < @2020-01-02", "Full dates less than")
         .testFalse("@2008 <  @2008", "Equal partial dates less than false case")
         .testFalse("@2020-01 > @2020-02", "Partial date same precision greater than")
-        .testTrue("@2020-03-01 >= @2020-02", "Comparable partial date different precision greater than")
-        .testEmpty("@2020 <= @2020-01", "Incomparable partials dates less than with different precisions")
+        .testTrue("@2020-03-01 >= @2020-02",
+            "Comparable partial date different precision greater than")
+        .testEmpty("@2020 <= @2020-01",
+            "Incomparable partials dates less than with different precisions")
         .group("DateTime comparison")
-        .testTrue("@2020-01-01T10:00:00+00:00 < @2020-01-01T11:00:00+00:00", "Full DateTimes less than")
-        .testFalse("@2020-01-01T12:00 < @2020-01-01T11:00", "Partial same precision DateTimes less than false case")
-        .testTrue("@2020-01-01T12:00 >= @2020-01-01T11", "Comparable partial date different precision >=")
-        .testFalse("@2018-03-01T10:30:00 > @2018-03-01T10:30:00.0", "Seconds and miliseconds precision can be compared")
-        .testEmpty("@2020-01-01T12:00 <= @2020-01-01T12", "Incomparable partials dates less than with different precisions")
+        .testTrue("@2020-01-01T10:00:00+00:00 < @2020-01-01T11:00:00+00:00",
+            "Full DateTimes less than")
+        .testFalse("@2020-01-01T12:00 < @2020-01-01T11:00",
+            "Partial same precision DateTimes less than false case")
+        .testTrue("@2020-01-01T12:00 >= @2020-01-01T11",
+            "Comparable partial date different precision >=")
+        .testFalse("@2018-03-01T10:30:00 > @2018-03-01T10:30:00.0",
+            "Seconds and miliseconds precision can be compared")
+        .testEmpty("@2020-01-01T12:00 <= @2020-01-01T12",
+            "Incomparable partials dates less than with different precisions")
         .group("Date vs DateTime comparison")
         .testTrue("@2020-01-02 > @2020-01-01T10:00:00Z", "Same full comparable Date and DateTime")
-        .testEmpty("@2020-01-01 < @2020-01-01T10:00:00Z", "Same full uncomparable Date and DateTime")
+        .testEmpty("@2020-01-01 < @2020-01-01T10:00:00Z",
+            "Same full uncomparable Date and DateTime")
         .testFalse("@2020-02-01T10 <= @2020-01", "Partial comparable DateTime and Date")
         .testEmpty("@2020-01 <= @2020-01-01T10", "Partial uncomparable Date and DateTime")
         .group("Timezone tests")
         .testTrue("@2018-03-01 < @2018-03-02T00:00:00", "Comparable no timezone")
         .testTrue("@2018-03-01 < @2018-03-02T00:00:00Z", "Comparable UTC timezone")
         .testTrue("@2018-03-01 < @2018-03-02T00:00:00-01:00", "Comparable before UTC timezone")
-        .testEmpty("@2018-03-01 < @2018-03-02T00:00:00+01:00", "Uncomparable due to timezone after UTC")
+        .testEmpty("@2018-03-01 < @2018-03-02T00:00:00+01:00",
+            "Uncomparable due to timezone after UTC")
         .build();
   }
 
@@ -108,18 +141,18 @@ public class ComparisonOperatorsDslTest extends FhirPathDslTestBase {
         .testTrue("@T15:30 > @T15:00", "Times greater than")
         .testTrue("@T16:45 >= @T16:45", "Times greater than or equal true case")
         .testFalse("@T17:15 <= @T17:00", "Times less than or equal false case")
-        
+
         .group("Time comparison - different precision")
         .testTrue("@T10 < @T11:30", "Hour vs minute precision, comparable")
         .testFalse("@T11:45 < @T10", "Minute vs hour precision, comparable")
         .testTrue("@T12:31:45 >= @T12:30", "Second vs minute precision, comparable")
         .testFalse("@T13:15 > @T14:15:30", "Minute vs second precision, comparable")
         .testTrue("@T14:20:15.500 > @T14:20:15", "Millisecond precision comparison")
-        
+
         .group("Time comparison - incomparable times")
         .testEmpty("@T10 <= @T10:00:00", "Hour vs second precision, incomparable")
         .testEmpty("@T12 > @T12:00:00.000", "Hour vs millisecond precision, incomparable")
-        
+
         .group("Edge cases")
         .testTrue("@T23:59:59.999999999 > @T00:00", "End of day vs beginning comparison")
         .testTrue("@T00:00:00 < @T23:59:59.999999999", "Beginning vs end of day comparison")

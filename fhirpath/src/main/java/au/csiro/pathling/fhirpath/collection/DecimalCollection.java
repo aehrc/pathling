@@ -155,7 +155,7 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
   }
 
   @Override
-  public boolean isComparableTo(@Nonnull final Comparable path) {
+  public boolean isComparableTo(@Nonnull final Collection path) {
     return IntegerCollection.getComparableTypes().contains(path.getClass());
   }
 

@@ -20,13 +20,11 @@ package au.csiro.pathling.fhirpath.comparison;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.operator.DefaultComparator;
 import jakarta.annotation.Nonnull;
+import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.UnaryOperator;
 import org.apache.commons.lang3.function.TriFunction;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 
 /**
  * Describes a set of methods that can be used to compare {@link Collection} objects to other paths,
@@ -35,21 +33,18 @@ import org.apache.spark.sql.functions;
  * @author John Grimes
  * @author Piotr Szul
  */
-public interface Comparable {
+public interface Comparable extends WithEquality {
 
-  /**
-   * The default column comparator instance.
-   */
-  ColumnComparator DEFAULT_COMPARATOR = new DefaultComparator();
 
   /**
    * Gets the column comparator for this comparable object.
    *
    * @return the column comparator to use for comparisons
    */
+  @Override
   @Nonnull
   default ColumnComparator getComparator() {
-    return DEFAULT_COMPARATOR;
+    return DefaultComparator.getInstance();
   }
 
   /**
@@ -57,8 +52,6 @@ public interface Comparable {
    * comparison condition. The type of condition is controlled by supplying a
    * {@link ComparisonOperation}.
    * <p>
-   * Please use {@link #isComparableTo(Comparable)} to first check whether the specified path should
-   * be compared to this path.
    *
    * @param operation The {@link ComparisonOperation} type to retrieve a comparison for
    * @return A {@link Function} that takes a Comparable as its parameter, and returns a
@@ -69,44 +62,11 @@ public interface Comparable {
       @Nonnull final ComparisonOperation operation) {
     return target -> {
 
-      final UnaryOperator<Column> arrayExpression = sourceArray -> {
-        final Column targetArray = target.getColumn().toArray().getValue();
-
-        // If the comparison is between two arrays, use the zip_with function to compare element-wise.
-        final Column zip = functions.zip_with(sourceArray, targetArray,
-            (left, right) -> operation.comparisonFunction.apply(getComparator(), left, right));
-
-        // Check if all elements in the zipped array are true.
-        final Column allTrue = functions.forall(zip, c -> c);
-
-        // If the arrays are of different sizes, return false.
-        return functions.when(
-                functions.size(sourceArray).equalTo(functions.size(targetArray)), allTrue)
-            .otherwise(functions.lit(false));
-      };
-
-      // If the comparison is between singular values, use the comparison function directly.
-      final UnaryOperator<Column> singularExpression = column ->
-          operation.comparisonFunction.apply(getComparator(), column,
-              // We need to assert that the target is singular. We already know that the source is
-              // singular, but in the case of equality we may still be looking at an array
-              // target.
-              target.getColumn().singular("Comparison requires singular target").getValue());
-
-      final ColumnRepresentation result = getColumn().vectorize(arrayExpression,
-          singularExpression);
-      // The result needs to be wrapped in a DefaultRepresentation, as the vectorize method
-      // may have been called on a different type of ColumnRepresentation.
-
-      // for non-comparable type the result of equality operations is false or null.
-      if ((operation == ComparisonOperation.EQUALS || operation == ComparisonOperation.NOT_EQUALS)
-          && !isComparableTo(target)) {
-        // TODO: comparison for non-comparable types with null values should return null
-        // rather than false
-        return DefaultRepresentation.literal(operation != ComparisonOperation.EQUALS);
-      } else {
-        return new DefaultRepresentation(result.getValue());
-      }
+      final Column columnResult = operation.comparisonFunction.apply(getComparator(),
+          getColumn().singular("Comparison requires singular left operand").getValue(),
+          target.getColumn().singular("Comparison requires singular right operand").getValue()
+      );
+      return new DefaultRepresentation(columnResult);
     };
   }
 
@@ -117,14 +77,6 @@ public interface Comparable {
    */
   @Nonnull
   ColumnRepresentation getColumn();
-
-  /**
-   * @param path the path to check compatibility with
-   * @return {@code true} if this path can be compared to the specified class
-   */
-  default boolean isComparableTo(@Nonnull final Comparable path) {
-    return true;
-  }
 
   /**
    * Represents a type of comparison operation.
@@ -178,6 +130,17 @@ public interface Comparable {
       return fhirPath;
     }
 
+    /**
+     * Binds a {@link ColumnComparator} to this operation, returning a function that takes two
+     * {@link Column} objects and produces a {@link Column} containing the result of the
+     * comparison.
+     *
+     * @param comparator the comparator to bind
+     * @return a function that takes two columns and produces a comparison result column
+     */
+    @Nonnull
+    public BiFunction<Column, Column, Column> bind(@Nonnull final ColumnComparator comparator) {
+      return (a, b) -> comparisonFunction.apply(comparator, a, b);
+    }
   }
-
 }
