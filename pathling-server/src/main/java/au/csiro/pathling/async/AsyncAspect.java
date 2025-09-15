@@ -111,22 +111,22 @@ public class AsyncAspect {
       @Nonnull final AsyncSupported asyncSupported) throws Throwable {
     final Object[] args = joinPoint.getArgs();
     final ServletRequestDetails requestDetails = getServletRequestDetails(args);
-    final HttpServletRequest request = requestDetails.getServletRequest();
-    
-    final String prefer = request.getHeader(ASYNC_HEADER);
-    if (prefer != null && FhirServer.PREFER_RESPOND_TYPE_HEADER.validValue(request)) {
+    // final HttpServletRequest request = requestDetails.getServletRequest();
+
+    // Run some validation in sync before (and let validation modify headers if desired)
+    Object target = joinPoint.getTarget();
+    PreAsyncValidationResult<?> result = null;
+    if(target instanceof PreAsyncValidation<?> preAsyncValidation) {
+      try {
+        result = preAsyncValidation.preAsyncValidate(requestDetails, Arrays.copyOf(args, args.length - 1));
+      } catch (InvalidRequestException preValidationException) {
+        throw ErrorHandlingInterceptor.convertError(preValidationException);
+      }
+    }
+    if (FhirServer.PREFER_RESPOND_TYPE_HEADER.validValue(requestDetails)) {
       log.info("Asynchronous processing requested");
 
-      // Run some validation in sync before
-      Object target = joinPoint.getTarget();
-      PreAsyncValidationResult<?> result = null;
-      if(target instanceof PreAsyncValidation<?> preAsyncValidation) {
-        try {
-          result = preAsyncValidation.preAsyncValidate(requestDetails, Arrays.copyOf(args, args.length - 1));
-        } catch (InvalidRequestException preValidationException) {
-          throw ErrorHandlingInterceptor.convertError(preValidationException);
-        }
-      }
+
       if(result == null) {
         // the class containing the async annotation on a method does not implement PreAsyncValidation
         // set some values to prevent NPEs

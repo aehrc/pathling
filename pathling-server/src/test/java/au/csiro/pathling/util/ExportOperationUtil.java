@@ -14,16 +14,23 @@ import jakarta.annotation.Nullable;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.InstantType;
+import org.hl7.fhir.r4.model.Resource;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Fail.fail;
 
 /**
  * @author Felix Naumann
@@ -136,6 +143,24 @@ public class ExportOperationUtil {
         return date != null ? new InstantType(date + "T00:00:00Z") : null;
     }
 
+  public static List<Resource> parseNDJSON(IParser parser, String jsonContent, String expectedType) {
+    return jsonContent.lines()
+        .filter(line -> !line.trim().isEmpty()) // Skip empty lines
+        .map(line -> {
+          try {
+            Resource resource = (Resource) parser.parseResource(line);
+            // Verify the resource type matches what's expected
+            assertThat(resource.getResourceType().name()).isEqualTo(expectedType);
+            return resource;
+          } catch (Exception e) {
+            fail("Failed to parse FHIR resource from line: " + line + ". Error: " + e.getMessage());
+            return null;
+          }
+        })
+        .filter(Objects::nonNull)
+        .collect(Collectors.toList());
+  }
+
     public static <T extends IBaseResource> T read_first_from_multiple_lines_ndjson(IParser parser, DataSink.FileInfo fileInfo, Class<T> clazz) {
         try (BufferedReader reader = Files.newBufferedReader(Paths.get(URI.create(fileInfo.absoluteUrl())))) {
             String firstLine = reader.readLine();
@@ -152,4 +177,17 @@ public class ExportOperationUtil {
     public static <T extends IBaseResource> T read_ndjson(IParser parser, DataSink.FileInfo fileInfo, Class<T> clazz) throws IOException {
         return parser.parseResource(clazz, Files.readString(Paths.get(URI.create(fileInfo.absoluteUrl()))));
     }
+
+  public static ExportResponse resolveTempDirIn(ExportResponse exportResponse, Path tempDir, UUID fakeJobId) {
+      List<DataSink.FileInfo> newFileInfos = exportResponse.getWriteDetails().fileInfos().stream()
+              .map(
+                      fileInfo -> fi(fileInfo.fhirResourceType(),
+                              fileInfo.absoluteUrl().replace("WAREHOUSE_PATH", "file:" + tempDir.toAbsolutePath().toString() + "/jobs/" + fakeJobId.toString()),
+                              fileInfo.count()))
+              .toList();
+      return new ExportResponse(
+              exportResponse.getKickOffRequestUrl(),
+              write_details(newFileInfos)
+      );
+  }
 }

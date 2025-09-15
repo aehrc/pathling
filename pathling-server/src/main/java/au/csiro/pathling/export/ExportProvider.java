@@ -1,10 +1,12 @@
 package au.csiro.pathling.export;
 
+import au.csiro.pathling.FhirServer;
 import au.csiro.pathling.async.*;
 import au.csiro.pathling.library.PathlingContext;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -72,6 +74,9 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
             ) {
         RequestTag ownTag = requestTagFactory.createTag(requestDetails);
         Job<ExportRequest> ownJob = jobRegistry.get(ownTag);
+        if(ownJob == null) {
+          throw new InvalidRequestException("Missing 'Prefer: respond-async' header value.");
+        }
         ExportRequest exportRequest = ownJob.getPreAsyncValidationResult();
         if(ownJob.isCancelled()) {
           return null;

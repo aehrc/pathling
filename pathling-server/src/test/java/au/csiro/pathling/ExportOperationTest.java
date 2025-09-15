@@ -8,6 +8,7 @@ import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.util.ExportOperationUtil;
 import au.csiro.pathling.util.ExportRequestBuilder;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -24,9 +25,11 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import static au.csiro.pathling.async.PreAsyncValidation.*;
@@ -202,7 +205,7 @@ class ExportOperationTest {
     @ParameterizedTest
     @MethodSource("provide_output_mappings")
     void test_output_model_mapping(ExportResponse exportResponse, JsonNode expectedJSON) throws IOException {
-        Binary actualBinary = exportResponse.toOutput();
+        Binary actualBinary = resolveTempDirIn(exportResponse, Paths.get("test"), UUID.randomUUID()).toOutput();
         assertThat(actualBinary.getContentType()).isEqualTo("application/json");
         JsonNode actualJSON = objectMapper.readTree(actualBinary.getContent());
         assertThat(actualJSON)

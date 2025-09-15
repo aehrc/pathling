@@ -17,6 +17,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.Optional;
 
@@ -94,5 +96,4 @@ public class ServerConfiguration {
     public QueryableDataSource deltaLake(SparkSession sparkSession, PathlingContext pathlingContext) {
         return new DataSourceBuilder(pathlingContext).delta(warehouseUrl);
     }
-
 }

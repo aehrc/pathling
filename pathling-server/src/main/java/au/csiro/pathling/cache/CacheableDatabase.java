@@ -26,15 +26,13 @@ import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.desc;
 
 /**
+ * A cache-aware implementation layer between the {@link au.csiro.pathling.library.io.sink.DataSink} implementations.
+ * 
  * @author Felix Naumann
  */
 @Component
 @Slf4j
 public class CacheableDatabase implements Cacheable {
-
-    // TODO - I need access to the CacheableDatabase in fhirpath, but that's not accessible
-    // Try to implement it manually (again) but there is too much stuff going on
-    // Surely there's a better way than just
 
   private final SparkSession spark;
   

@@ -11,6 +11,7 @@ import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.ApacheProxyAddressStrategy;
 import ca.uhn.fhir.rest.server.FifoMemoryPagingProvider;
 import ca.uhn.fhir.rest.server.RestfulServer;
+import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
 import jakarta.annotation.Nonnull;
@@ -20,8 +21,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
+import org.springframework.web.cors.CorsConfiguration;
 
+import java.net.InetAddress;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
@@ -34,7 +38,7 @@ import java.util.Set;
 @Profile("server")
 @Slf4j
 public class FhirServer extends RestfulServer {
-
+  
     public static final Header ACCEPT_HEADER = new Header("Accept", List.of("application/fhir+json"));
     public static final Header PREFER_RESPOND_TYPE_HEADER = new Header("Prefer", List.of("respond-async"));
     public static final Header PREFER_LENIENT_HEADER = new Header("Prefer", List.of("handling=lenient"));
@@ -58,11 +62,12 @@ public class FhirServer extends RestfulServer {
     
     @Nonnull
     private final BulkExportDeleteInterceptor bulkExportDeleteInterceptor;
-
-    @Nonnull
+    
+  @Nonnull
     private final ConformanceProvider conformanceProvider;
 
-    public FhirServer(@Nonnull Optional<JobProvider> jobProvider, @Nonnull ExportProvider exportProvider, @Nonnull ErrorReportingInterceptor errorReportingInterceptor, @Nonnull EntityTagInterceptor entityTagInterceptor, @Nonnull
+
+  public FhirServer(@Nonnull Optional<JobProvider> jobProvider, @Nonnull ExportProvider exportProvider, @Nonnull ErrorReportingInterceptor errorReportingInterceptor, @Nonnull EntityTagInterceptor entityTagInterceptor, @Nonnull
     BulkExportDeleteInterceptor bulkExportDeleteInterceptor, @Nonnull ConformanceProvider conformanceProvider) {
         this.jobProvider = jobProvider;
         this.exportProvider = exportProvider;
@@ -71,6 +76,15 @@ public class FhirServer extends RestfulServer {
         this.bulkExportDeleteInterceptor = bulkExportDeleteInterceptor;
         this.conformanceProvider = conformanceProvider;
     }
+    
+  public CorsInterceptor corsInterceptor() {
+    CorsConfiguration config = new CorsConfiguration();
+    config.addAllowedHeader("*");
+    config.addAllowedOrigin("http://localhost:9443");
+    config.addAllowedMethod("*");
+    config.setAllowCredentials(true);
+    return new CorsInterceptor(config);
+  }
 
     @Override
     protected void initialize() throws ServletException {
@@ -115,9 +129,11 @@ public class FhirServer extends RestfulServer {
             // Report errors to Sentry, if configured.
             registerInterceptor(errorReportingInterceptor);
 
+            registerInterceptor(corsInterceptor());
+            
             // Initialise the capability statement.
             setServerConformanceProvider(conformanceProvider);
-
+            
             log.info("FHIR server initialized");
         } catch (final Exception e) {
             throw new ServletException("Error initializing AnalyticsServer", e);

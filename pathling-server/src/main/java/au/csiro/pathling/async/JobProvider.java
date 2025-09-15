@@ -220,11 +220,12 @@ public class JobProvider {
       // Add progress information to the response.
       if (job.getTotalStages() > 0) {
         final int progress = job.getProgressPercentage();
-        //if (progress != 100) {
+        // TODO - always showing 100% causes inconsistent numbers for clients, but some integration tests require 100% to be present
+        if (progress != 100) {
           // We don't bother showing 100%, this usually means that there are outstanding stages
           // which have not yet been submitted.
           response.setHeader(PROGRESS_HEADER, progress + "%");
-        //}
+        }
       }
       throw new ProcessingNotCompletedException("Processing", buildProcessingOutcome());
     }
