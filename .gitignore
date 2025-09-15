@@ -46,3 +46,4 @@ pathling-server/.idea
 pathling-server/.mvn
 pathling-server/warehouse
 pathling-server/src/test/resources/test-data/fhir
+pathling-server/client-tests
