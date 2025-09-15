@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.async;
 
+import au.csiro.pathling.FhirServer;
 import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
 import au.csiro.pathling.errors.DiagnosticContext;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
@@ -111,8 +112,9 @@ public class AsyncAspect {
     final Object[] args = joinPoint.getArgs();
     final ServletRequestDetails requestDetails = getServletRequestDetails(args);
     final HttpServletRequest request = requestDetails.getServletRequest();
+    
     final String prefer = request.getHeader(ASYNC_HEADER);
-    if (prefer != null && prefer.equals(ASYNC_HEADER_VALUE)) {
+    if (prefer != null && FhirServer.PREFER_RESPOND_TYPE_HEADER.validValue(request)) {
       log.info("Asynchronous processing requested");
 
       // Run some validation in sync before
