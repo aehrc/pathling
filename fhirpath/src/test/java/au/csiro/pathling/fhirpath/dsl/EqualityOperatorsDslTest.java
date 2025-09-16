@@ -295,11 +295,88 @@ public class EqualityOperatorsDslTest extends FhirPathDslTestBase {
         .testFalse("dtArray5 = dtArray1", "array not equals different size")
         .testFalse("dtArray6 = dtArray1", "array not equals different size and precision")
         .group("Date vs DateTime equality: singleton vs singleton")
-        .testEmpty("@2020-01-01 = @2020-01-01T00:00", "date vs dateTime with different precision (missing timezone)")
+        .testEmpty("@2020-01-01 = @2020-01-01T00:00",
+            "date vs dateTime with different precision (missing timezone)")
         .testEmpty("@2020-01-01 = @2020-01-01T00", "date vs dateTime with hour precision")
         .group("Date vs DateTime equality: array vs array")
-        .testFalse("dateArray1 = dtArray1", "date array equals dateTime array (all match at midnight)")
+        .testFalse("dateArray1 = dtArray1",
+            "date array equals dateTime array (all match at midnight)")
         .testTrue("dtArray2 != dateArray1", "dateTime array not equals date array (!=)")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testCodingEquality() {
+    return builder()
+        .withSubject(sb -> sb
+            .coding("noCoding", null)
+            .coding("oneCoding", "http://loinc.org|8867-4||'Heart rate'")
+            .codingArray("manyCoding",
+                "http://loinc.org|8480-6||'Systolic blood pressure'",
+                "http://loinc.org|8867-4||'Heart rate'"
+            )
+            .codingArray("manyCoding1",
+                "http://loinc.org|8480-6||'Systolic blood pressure'",
+                "http://loinc.org|8462-4||'Diastolic blood pressure'"
+            )
+        )
+        .group("Coding equality: singleton vs singleton (literals)")
+        .testTrue("http://loinc.org|8867-4||'Heart rate' = http://loinc.org|8867-4||'Heart rate'",
+            "coding literal equals itself")
+        .testFalse(
+            "http://loinc.org|8867-4||'Heart rate' = http://loinc.org|8480-6||'Systolic blood pressure'",
+            "coding literal not equals different code")
+        .testTrue(
+            "http://loinc.org|8867-4||'Heart rate' != http://loinc.org|8480-6||'Systolic blood pressure'",
+            "coding literal not equals coding (!=)")
+        .testFalse("http://loinc.org|8867-4||'Heart rate' != http://loinc.org|8867-4||'Heart rate'",
+            "coding literal equals itself (not !=)")
+        .group("Coding equality: singleton vs explicit empty")
+        .testEmpty("http://loinc.org|8867-4||'Heart rate' = {}",
+            "coding literal equals explicit empty")
+        .testEmpty("http://loinc.org|8867-4||'Heart rate' != {}",
+            "coding literal not equals explicit empty")
+        .group("Coding equality: singleton vs computed empty")
+        .testEmpty(
+            "http://loinc.org|8867-4||'Heart rate' = http://loinc.org|8867-4||'Heart rate'.where(false)",
+            "coding literal equals computed empty")
+        .testEmpty(
+            "http://loinc.org|8867-4||'Heart rate' != http://loinc.org|8867-4||'Heart rate'.where(false)",
+            "coding literal not equals computed empty")
+        .group("Coding equality: array vs singleton (literal)")
+        .testTrue("manyCoding != http://loinc.org|8867-4||'Heart rate'",
+            "coding array differs singleton literal (one match)")
+        .testFalse("manyCoding = http://loinc.org|9999-9||'Other'",
+            "coding array not equals singleton literal (no match)")
+        .group("Coding equality: array vs array (literals)")
+        .testTrue("manyCoding = manyCoding", "coding array equals itself")
+        .testTrue(
+            "manyCoding != manyCoding1",
+            "coding array not equals different array (different vaules)")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testMinimalUncomparableTypesEquality() {
+    return builder()
+        .withSubject(sb -> sb
+            .string("str", "abc")
+            .integer("intVal", 123)
+            .bool("boolVal", true)
+            .date("dateVal", "2020-01-01")
+            .stringArray("strArray", "a", "b")
+            .integerArray("intArray", 1, 2)
+            .boolArray("boolArray", true, false)
+            .dateArray("dateArray", "2020-01-01", "2020-01-02")
+        )
+        .group("Minimal uncomparable types: singleton vs singleton")
+        .testFalse("str = intVal", "string = integer is false")
+        .testTrue("str != boolVal", "string != boolean is true")
+        .testEmpty("intVal = dateVal.where(false)", "integer = empty date is empty")
+        .group("Minimal uncomparable types: array vs array")
+        .testFalse("strArray = intArray", "string[] = integer[] is false")
+        .testTrue("boolArray != dateArray", "boolean[] != date[] is true")
+        .testEmpty("intArray.where(false) != dateArray", "empty integer[] = date[] is empty")
         .build();
   }
 }
