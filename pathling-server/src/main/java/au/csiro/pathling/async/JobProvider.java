@@ -28,6 +28,7 @@ import ca.uhn.fhir.rest.api.Constants;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletRequest;
@@ -86,23 +87,26 @@ public class JobProvider {
   private final JobRegistry jobRegistry;
   private final SparkSession sparkSession;
   private final String warehouseUrl;
+  private final RequestTagFactory requestTagFactory;
 
   /**
    * @param configuration a {@link ServerConfiguration} for determining if authorization is enabled
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
    */
   public JobProvider(@Nonnull final ServerConfiguration configuration,
-      @Nonnull final JobRegistry jobRegistry, SparkSession sparkSession, @Value("${pathling.storage.warehouseUrl}") String warehouseUrl) {
+      @Nonnull final JobRegistry jobRegistry, SparkSession sparkSession, @Value("${pathling.storage.warehouseUrl}") String warehouseUrl,
+      RequestTagFactory requestTagFactory) {
     this.configuration = configuration;
     this.jobRegistry = jobRegistry;
     this.sparkSession = sparkSession;
     this.warehouseUrl = new Path(warehouseUrl, "jobs").toString();
+    this.requestTagFactory = requestTagFactory;
   }
   
   
-  public void deleteJob(String jobId, HttpServletResponse response) {
+  public void deleteJob(String jobId, ServletRequestDetails requestDetails) {
     final Job<?> job = getJob(jobId);
-    handleJobDeleteRequest(job);
+    handleJobDeleteRequest(job, requestDetails);
   }
   
   
@@ -150,7 +154,7 @@ public class JobProvider {
     return job;
   }
 
-  private IBaseResource handleJobDeleteRequest(Job<?> job) {
+  private void handleJobDeleteRequest(Job<?> job, ServletRequestDetails requestDetails) {
     /*
     Two possible situations:
       - The initial kick-off request is still ongoing -> cancel it and delete the partial files
@@ -171,22 +175,32 @@ public class JobProvider {
       // Currently, only the files up until "now" will be deleted. Anything that is created between
       // the cancel request and the job actually being cancelled by spark will remain on the disk
     }
-    Configuration hadoopConfig = sparkSession.sparkContext().hadoopConfiguration();
     try {
-      FileSystem fs = FileSystem.get(hadoopConfig);
-      Path jobDirToDel = new Path(warehouseUrl, job.getId());
-      log.info("Deleting dir {}", jobDirToDel);
-      boolean deleted = fs.delete(jobDirToDel, true);
-      if(!deleted) {
-        log.warn("Failed to delete dir {}", jobDirToDel);
-      }
-      log.info("Deleted dir {}", jobDirToDel);
+      deleteJobFiles(job.getId());
     } catch (IOException e) {
       throw new InternalErrorException("Failed to delete files associated with the job.", e);
+    } finally {
+      boolean removed = jobRegistry.remove(job);
+      if(removed) {
+        log.debug("Removed job {} from registry.", job.getId());
+      }
+      else {
+        log.warn("Failed to remove job {} from registry. This might in wrong caching results.", job.getId());
+      }
     }
-    
     throw new ProcessingNotCompletedException("The job and its resources will be deleted.", buildDeletionOutcome());
-    
+  }
+
+  public void deleteJobFiles(String jobId) throws IOException {
+    Configuration hadoopConfig = sparkSession.sparkContext().hadoopConfiguration();
+    FileSystem fs = FileSystem.get(hadoopConfig);
+    Path jobDirToDel = new Path(warehouseUrl, jobId);
+    log.debug("Deleting dir {}", jobDirToDel);
+    boolean deleted = fs.delete(jobDirToDel, true);
+    if(!deleted) {
+      log.warn("Failed to delete dir {}", jobDirToDel);
+    }
+    log.debug("Deleted dir {}", jobDirToDel);
   }
 
   private IBaseResource handleJobGetRequest(@NotNull HttpServletRequest request,

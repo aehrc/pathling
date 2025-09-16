@@ -5,6 +5,7 @@ import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Pointcut;
 import ca.uhn.fhir.rest.api.RequestTypeEnum;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
+import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,15 +28,16 @@ public class BulkExportDeleteInterceptor {
     this.jobProvider = jobProvider;
   }
 
-  @Hook(Pointcut.SERVER_INCOMING_REQUEST_PRE_PROCESSED)
+  @Hook(Pointcut.SERVER_INCOMING_REQUEST_POST_PROCESSED)
   public boolean interceptJobDeletion(
       HttpServletRequest request,
-      HttpServletResponse response) throws IOException, ServletException {
+      HttpServletResponse response,
+      ServletRequestDetails requestDetails) throws IOException, ServletException {
     if(!request.getMethod().equals("DELETE") || !request.getPathInfo().matches(".*/\\$job$")) {
       return true;
     }
     
-    jobProvider.deleteJob(request.getParameter("id"), response);
+    jobProvider.deleteJob(request.getParameter("id"), requestDetails);
     
     return false;
   }

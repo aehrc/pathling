@@ -87,6 +87,7 @@ public class AsyncAspect {
 
   @Nonnull
   private final SparkSession spark;
+  private final JobProvider jobProvider;
 
   /**
    * @param executor used to run asynchronous jobs in the background
@@ -98,12 +99,13 @@ public class AsyncAspect {
   public AsyncAspect(@Nonnull final ThreadPoolTaskExecutor executor,
       @Nonnull final RequestTagFactory requestTagFactory,
       @Nonnull final JobRegistry jobRegistry, @Nonnull final StageMap stageMap,
-      @Nonnull final SparkSession spark) {
+      @Nonnull final SparkSession spark, JobProvider jobProvider) {
     this.executor = executor;
     this.requestTagFactory = requestTagFactory;
     this.jobRegistry = jobRegistry;
     this.stageMap = stageMap;
     this.spark = spark;
+    this.jobProvider = jobProvider;
   }
 
   @Around("@annotation(asyncSupported)")
@@ -169,6 +171,8 @@ public class AsyncAspect {
             log.warn("Asynchronous execution failed: {}.",
                 ErrorReportingInterceptor.getReportableError(convertedError).getMessage());
           }
+          // Any (partial) files may be deleted if an unexpected error was thrown during the processing
+          jobProvider.deleteJobFiles(jobId);
           throw new IllegalStateException("Problem processing request asynchronously", actualEx);
         } finally {
           cleanUpAfterJob(spark, jobId);

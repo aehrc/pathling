@@ -28,6 +28,8 @@ import static org.apache.spark.sql.functions.desc;
 /**
  * A cache-aware implementation layer between the {@link au.csiro.pathling.library.io.sink.DataSink} implementations.
  * 
+ * It works on the assumption that all changes happen through the official interactions so it's always logged.
+ * 
  * @author Felix Naumann
  */
 @Component

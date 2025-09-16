@@ -18,6 +18,8 @@
 package au.csiro.pathling.async;
 
 import au.csiro.pathling.async.Job.JobTag;
+import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +28,9 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -43,6 +47,8 @@ public class JobRegistry {
 
   private final Map<String, Job<?>> jobsById = new HashMap<>();
   private final Map<JobTag, Job<?>> jobsByTags = new HashMap<>();
+  
+  private final Set<String> removedFromRegistryButStillWithSparkJob = new HashSet<>();
 
   /**
    * Gets the job with the given tag if it exists, or creates a new one using the given factory
@@ -85,5 +91,27 @@ public class JobRegistry {
   @Nullable
   public synchronized <T> Job<T> get(@Nonnull final String id) {
     return (Job<T>) jobsById.get(id);
+  }
+  
+  public synchronized <T> boolean remove(@Nonnull Job<T> job) {
+    boolean removed = jobsById.remove(job.getId(), job);
+    if(!removed) {
+      log.warn("Failed to remove job {} from registry.", job.getId());
+      return false;
+    }
+    boolean removedFromTags = jobsByTags.values().removeIf(otherJob -> otherJob.equals(job));
+    if(!removedFromTags) {
+      throw new InternalErrorException("Removed job %s from id map but failed to remove it from tag map.".formatted(job.getId()));
+    }
+    removedFromRegistryButStillWithSparkJob.add(job.getId());
+    return  true;
+  }
+
+  public boolean removedFromRegistryButStillWithSparkJobContains(String jobId) {
+    return removedFromRegistryButStillWithSparkJob.contains(jobId);
+  }
+  
+  public boolean removeCompletelyAfterSparkCleanup(String jobId) {
+    return removedFromRegistryButStillWithSparkJob.remove(jobId);
   }
 }

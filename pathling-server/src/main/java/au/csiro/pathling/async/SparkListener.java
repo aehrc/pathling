@@ -69,11 +69,15 @@ public class SparkListener extends org.apache.spark.scheduler.SparkListener {
       @Nullable final Job<?> job = jobRegistry.get(jobGroupId);
       if (job != null) {
         if(job.isCancelled()) {
-          log.info("Stage submitted called but job {} is cancelled. Cancelling the associated job group.", job.getId());
+          log.debug("Stage submitted called but job {} is cancelled. Cancelling the associated job group.", job.getId());
           sparkSession.sparkContext().cancelJobGroup(job.getId());
           return;
         }
         job.incrementCompletedStages();
+      }
+      else if(jobRegistry.removedFromRegistryButStillWithSparkJobContains(jobGroupId)) {
+        log.debug("Detected a cancelled job that has been removed from the registry but has a running spark job attached to it. Cancelling the spark job.");
+        sparkSession.sparkContext().cancelJobGroup(jobGroupId);
       }
     }
   }
@@ -95,6 +99,10 @@ public class SparkListener extends org.apache.spark.scheduler.SparkListener {
       }
       stageMap.put(stageSubmitted.stageInfo().stageId(), jobGroupId);
       job.incrementTotalStages();
+    }
+    else if(jobRegistry.removedFromRegistryButStillWithSparkJobContains(jobGroupId)) {
+      log.debug("Detected a cancelled job that has been removed from the registry but has a running spark job attached to it. Cancelling the spark job.");
+      sparkSession.sparkContext().cancelJobGroup(jobGroupId);
     }
   }
 }

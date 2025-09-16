@@ -11,10 +11,17 @@ import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ObjectNode;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.Resource;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.test.web.reactive.server.EntityExchangeResult;
+import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -27,6 +34,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,6 +43,7 @@ import static org.assertj.core.api.Fail.fail;
 /**
  * @author Felix Naumann
  */
+@Slf4j
 public class ExportOperationUtil {
 
     public static JsonNode json(ObjectMapper mapper, String request, DataSink.NdjsonWriteDetails writeDetails) {
@@ -189,5 +198,43 @@ public class ExportOperationUtil {
               exportResponse.getKickOffRequestUrl(),
               write_details(newFileInfos)
       );
+  }
+
+    public static @NotNull String kickOffRequest(WebTestClient webTestClient, String uri) {
+      String pollUrl = webTestClient.get()
+          .uri(uri)
+          .header("Accept", "application/fhir+json")
+          .header("Prefer", "respond-async")
+          .exchange()
+          .expectStatus().is2xxSuccessful()
+          .expectHeader().exists("Content-Location")
+          .returnResult(String.class)
+          .getResponseHeaders()
+          .getFirst("Content-Location");
+  
+      assertThat(pollUrl).isNotNull();
+      return pollUrl;
+    }
+
+  public static boolean doPolling(WebTestClient webTestClient, String pollUrl, Consumer<EntityExchangeResult<String>> consumer) {
+    EntityExchangeResult<String> pollResult = webTestClient.get()
+        .uri(pollUrl)
+        .exchange()
+        .expectStatus().is2xxSuccessful()
+        .expectBody(String.class)
+        .returnResult();
+    HttpStatusCode status = pollResult.getStatus();
+    HttpHeaders headers = pollResult.getResponseHeaders();
+    if (status == HttpStatus.ACCEPTED) {
+      // assertThat(headers).containsKey("X-Progress");
+      log.info("Polling... {}", headers.get("X-Progress"));
+      return false; // keep polling
+    }
+    if (status == HttpStatus.OK) {
+      log.info("Polling complete.");
+      consumer.accept(pollResult);
+      return true;
+    }
+    throw new AssertionError("Unexpected polling status: %s".formatted(status));
   }
 }

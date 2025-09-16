@@ -1,6 +1,8 @@
 package au.csiro.pathling;
 
 import static au.csiro.pathling.library.io.sink.DataSink.FileInfo;
+import static au.csiro.pathling.util.ExportOperationUtil.doPolling;
+import static au.csiro.pathling.util.ExportOperationUtil.kickOffRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
@@ -17,12 +19,10 @@ import ca.uhn.fhir.parser.IParser;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.stream.StreamSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
@@ -31,8 +31,6 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Resource;
-import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -42,18 +40,11 @@ import org.junit.jupiter.api.parallel.ResourceAccessMode;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 /**
@@ -159,7 +150,7 @@ class ExportOperationIT {
 
     String uri = "http://localhost:" + port
         + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-01T00:00:00Z";
-    String pollUrl = kickOffRequest(uri);
+    String pollUrl = kickOffRequest(webTestClient, uri);
 
     // send a DELETE request after 3 seconds
     await().pollDelay(3, TimeUnit.SECONDS)
@@ -178,7 +169,7 @@ class ExportOperationIT {
 
     String uri = "http://localhost:" + port
         + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-02T00:00:00Z";
-    String pollUrl = kickOffRequest(uri);
+    String pollUrl = kickOffRequest(webTestClient, uri);
 
     // Send DELETE after 2 seconds
     await().pollDelay(2, TimeUnit.SECONDS)
@@ -220,55 +211,17 @@ class ExportOperationIT {
 
     String uri = "http://localhost:" + port
         + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-01T00:00:00Z&_type=Patient,Encounter&_elements=identifier,Patient.name,Encounter.subject";
-    String pollUrl = kickOffRequest(uri);
+    String pollUrl = kickOffRequest(webTestClient, uri);
     await()
         .atMost(30, TimeUnit.SECONDS)
         .pollInterval(3, TimeUnit.SECONDS)
-        .until(() -> doPolling(pollUrl, result -> {
+        .until(() -> doPolling(webTestClient, pollUrl, result -> {
           try {
             assert_complete_result(uri, result.getResponseBody(), result.getResponseHeaders());
           } catch (IOException e) {
             throw new RuntimeException(e);
           }
         }));
-  }
-
-  private boolean doPolling(String pollUrl, Consumer<EntityExchangeResult<String>> consumer) {
-    EntityExchangeResult<String> pollResult = webTestClient.get()
-        .uri(pollUrl)
-        .exchange()
-        .expectStatus().is2xxSuccessful()
-        .expectBody(String.class)
-        .returnResult();
-    HttpStatusCode status = pollResult.getStatus();
-    HttpHeaders headers = pollResult.getResponseHeaders();
-    if (status == HttpStatus.ACCEPTED) {
-      // assertThat(headers).containsKey("X-Progress");
-      log.info("Polling... {}", headers.get("X-Progress"));
-      return false; // keep polling
-    }
-    if (status == HttpStatus.OK) {
-      log.info("Polling complete.");
-      consumer.accept(pollResult);
-      return true;
-    }
-    throw new AssertionError("Unexpected polling status: %s".formatted(status));
-  }
-
-  private @NotNull String kickOffRequest(String uri) {
-    String pollUrl = webTestClient.get()
-        .uri(uri)
-        .header("Accept", "application/fhir+json")
-        .header("Prefer", "respond-async")
-        .exchange()
-        .expectStatus().is2xxSuccessful()
-        .expectHeader().exists("Content-Location")
-        .returnResult(String.class)
-        .getResponseHeaders()
-        .getFirst("Content-Location");
-
-    assertThat(pollUrl).isNotNull();
-    return pollUrl;
   }
 
   private void assert_complete_result(String originalRequestUri, String responseBody,

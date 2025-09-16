@@ -65,7 +65,7 @@ public class ExportExecutor {
     this.deltaLake = deltaLake;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
-    this.warehouseUrl = new Path(warehouseUrl, "jobs").toString();
+    this.warehouseUrl = warehouseUrl;
   }
 
   @VisibleForTesting
@@ -211,7 +211,7 @@ public class ExportExecutor {
     }
     URI warehouseUri = URI.create(warehouseUrl);
     Path warehousePath = new Path(warehouseUri);
-    Path jobDirPath = new Path(warehousePath, jobId);
+    Path jobDirPath = new Path(new Path(warehousePath, "jobs"), jobId);
     Configuration configuration = sparkSession.sparkContext().hadoopConfiguration();
     try {
       FileSystem fs = FileSystem.get(configuration);
@@ -221,6 +221,7 @@ public class ExportExecutor {
           throw new InternalErrorException("Failed to created subdirectory at %s for job %s."
               .formatted(warehouseUrl, jobId));
         }
+        log.debug("Created dir {}", jobDirPath);
       }
       DataSink.NdjsonWriteDetails writeDetails = new DataSinkBuilder(pathlingContext,
           mapped).saveMode("overwrite").ndjson(jobDirPath.toString());
