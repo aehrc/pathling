@@ -26,17 +26,50 @@ public class ComparisonOperatorsDslTest extends FhirPathDslTestBase {
 
 
   @FhirPathTest
-  public Stream<DynamicTest> testBooleanComparison() {
+  public Stream<DynamicTest> testUncomparableTypesComparison() {
     return builder()
         .withSubject(sb -> sb
             .stringEmpty("emptyString")
             .boolArray("allTrue", true, true)
             .boolArray("allFalse", false, false)
+            .string("str", "abc")
+            .integer("intVal", 123)
+            .date("dateVal", "2020-01-01")
+            .bool("boolVal", true)
+            .coding("codingVal", "http://loinc.org|8867-4||'Heart rate'")
+            .stringArray("strArray", "a", "b")
+            .integerArray("intArray", 1, 2)
+            .dateArray("dateArray", "2020-01-01", "2020-01-02")
+            .boolArray("boolArray", true, false)
+            .codingArray("codingArray", "http://loinc.org|8867-4||'Heart rate'",
+                "http://loinc.org|8480-6||'Systolic blood pressure'")
         )
         .group("Boolean comparison")
         // booleans are not comparable (orderable) despite having equality
         .testError("true > false", "Boolean comparison is not supported")
         .testEmpty("true > {}", "Boolean comparison with empty literal")
+        .group("Coding comparison")
+        // booleans are not comparable (orderable) despite having equality
+        .testError("codingVal < codingVal", "Coding comparison is not supported")
+        .testEmpty("{} >= codingVal", "Coding comparison with empty literal")
+        .group("Other uncomparable types")
+        .testError("str > intVal", "String > Integer is not supported")
+        .testError("str < dateVal", "String > Date is not supported")
+        .testError("str >= boolVal", "String > Boolean is not supported")
+        .testError("str <= codingVal", "String > Coding is not supported")
+        .testError("dateVal > boolVal", "Date > Boolean is not supported")
+        .testError("dateVal < codingVal", "Date > Coding is not supported")
+        .testError("codingVal >= intVal", "Coding > Integer is not supported")
+        .testError("codingVal <= str", "Coding > String is not supported")
+        .testError("codingVal > dateVal", "Coding > Date is not supported")
+        .testError("codingVal < boolVal", "Coding > Boolean is not supported")
+        .group("Uncomparable arrays")
+        .testError("strArray > intArray", "String[] > Integer[] is not supported")
+        .testError("dateArray < boolArray", "Date[] > Boolean[] is not supported")
+        .testError("codingArray >= intArray", "Coding[] > Integer[] is not supported")
+        .testError("codingArray <= strArray", "Coding[] > String[] is not supported")
+        .testError("codingArray > dateArray", "Coding[] > Date[] is not supported")
+        .testError("codingArray < boolArray", "Coding[] > Boolean[] is not supported")
         .build();
   }
 
