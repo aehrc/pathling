@@ -148,4 +148,158 @@ public class EqualityOperatorsDslTest extends FhirPathDslTestBase {
         .testTrue("intArray1 != decArray2", "int array not equals different decimal array (!=)")
         .build();
   }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testTimeEquality() {
+    return builder()
+        .withSubject(sb -> sb
+            .time("t1", "12:00")
+            .time("t2", "13:00")
+            .time("t3", "12:00:00")
+            .time("t4", "12:00:00.000")
+            .timeArray("timeArray1", "12:00", "13:00")
+            .timeArray("timeArray2", "12:00", "12:00")
+            .timeArray("timeArray3", "12:00", "12:00:00")
+            .timeArray("timeArray4", "12:00:00", "12:00:00")
+            .timeArray("timeArray5", "12:00")
+            .timeArray("timeArray6", "12:00", "13:00", "14:00")
+            .timeArray("timeArray7", "12:00:00", "13:00:00")
+            .timeArray("emptyTimeArray")
+        )
+        .group("Time equality: singleton vs singleton, same precision")
+        .testTrue("t1 = @T12:00", "t1 equals @T12:00")
+        .testFalse("t1 = t2", "t1 not equals t2")
+        .testTrue("t1 != t2", "t1 not equals t2 (!=)")
+        .testFalse("t1 != @T12:00", "t1 equals @T12:00 (not !=)")
+        .group("Time equality: singleton vs singleton, different precision")
+        .testEmpty("t1 = t3", "t1 equals t3 (different precision)")
+        .testEmpty("t1 != t3", "t1 not equals t3 (different precision)")
+        .testEmpty("t1 = t4", "t1 equals t4 (different precision)")
+        .testTrue("t3 = t4", "t3 equals t4 (both fractional seconds)")
+        .group("Time equality: singleton vs explicit empty")
+        .testEmpty("t1 = {}", "t1 equals explicit empty")
+        .testEmpty("t1 != {}", "t1 not equals explicit empty")
+        .group("Time equality: singleton vs computed empty")
+        .testEmpty("t1 = t1.where(false)", "t1 equals computed empty")
+        .testEmpty("t1 != t1.where(false)", "t1 not equals computed empty")
+        .group("Time equality: array vs singleton, all comparable")
+        .testFalse("timeArray1 = t1", "array equals singleton (one matches, one does not)")
+        .testTrue("timeArray2 != t1", "array does equals singleton")
+        .group("Time equality: array vs singleton, some incomparable")
+        .testFalse("timeArray3 = t1", "array equals singleton (one comparable, one incomparable)")
+        .group("Time equality: array vs array, all comparable")
+        .testTrue("timeArray1 = timeArray1", "array equals itself")
+        .testFalse("timeArray1 = timeArray2", "array not equals different array")
+        .testTrue("timeArray2 = timeArray2", "array equals itself (all same)")
+        .group("Time equality: array vs array, some incomparable")
+        .testFalse("timeArray3 = timeArray4", "array not equals (different precision)")
+        .testTrue("timeArray3 != timeArray2", "array not equals (one element different precision)")
+        .group("Time equality: array vs array, different sizes")
+        .testFalse("timeArray5 = timeArray1", "array not equals different size")
+        .testFalse("timeArray6 = timeArray7", "array not equals different size and precision")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testDateAndDateTimeEquality() {
+    return builder()
+        .withSubject(sb -> sb
+            .dateArray("dateArray1", "2020-01-01", "2020-01-02")
+            .dateArray("dateArray2", "2020-01-01", "2020-01-01")
+            .dateArray("dateArray3", "2020-01-01", "2020-01")
+            .dateArray("dateArray4", "2020-01", "2020-01")
+            .dateArray("dateArray5", "2020-01-01")
+            .dateArray("dateArray6", "2020-01-01", "2020-01-02", "2020-01-03")
+            .dateArray("emptyDateArray")
+            .dateTimeArray("dtArray1", "2020-01-01T10:00:00+00:00", "2020-01-01T11:00:00+00:00")
+            .dateTimeArray("dtArray2", "2020-01-01T10:00:00+00:00", "2020-01-01T10:00:00+00:00")
+            .dateTimeArray("dtArray3", "2020-01-01T10:00:00+00:00", "2020-01-01T10:00:00")
+            .dateTimeArray("dtArray4", "2020-01-01T10:00:00", "2020-01-01T10:00:00")
+            .dateTimeArray("dtArray5", "2020-01-01T10:00:00+00:00")
+            .dateTimeArray("dtArray6", "2020-01-01T10:00:00+00:00", "2020-01-01T11:00:00+00:00",
+                "2020-01-01T12:00:00+00:00")
+            .dateTimeArray("emptyDateTimeArray")
+        )
+        .group("Date equality: singleton vs singleton, same precision")
+        .testTrue("@2020-01-01 = @2020-01-01", "date literal equals itself")
+        .testFalse("@2020-01-01 = @2020-01-02", "date literal not equals different date")
+        .testTrue("@2020-01-01 != @2020-01-02", "date literal not equals different date (!=)")
+        .testFalse("@2020-01-01 != @2020-01-01", "date literal equals itself (not !=)")
+        .group("Date equality: singleton vs singleton, different precision")
+        .testEmpty("@2020-01-01 = @2020-01", "date literal equals different precision")
+        .testEmpty("@2020-01-01 != @2020-01", "date literal not equals different precision")
+        .testEmpty("@2020-01 = @2020", "date literal equals different precision")
+        .group("Date equality: singleton vs explicit empty")
+        .testEmpty("@2020-01-01 = {}", "date literal equals explicit empty")
+        .testEmpty("@2020-01-01 != {}", "date literal not equals explicit empty")
+        .group("Date equality: singleton vs computed empty")
+        .testEmpty("@2020-01-01 = @2020-01-01.where(false)", "date literal equals computed empty")
+        .testEmpty("@2020-01-01 != @2020-01-01.where(false)",
+            "date literal not equals computed empty")
+        .group("Date equality: array vs singleton, all comparable")
+        .testFalse("dateArray1 = @2020-01-01", "array equals singleton (one matches, one does not)")
+        .testTrue("dateArray2 != @2020-01-01", "array differs from singleton (all match)")
+        .group("Date equality: array vs singleton, some incomparable")
+        .testFalse("dateArray3 = @2020-01-01",
+            "array equals singleton (one comparable, one incomparable)")
+        .group("Date equality: array vs array, all comparable")
+        .testTrue("dateArray1 = dateArray1", "array equals itself")
+        .testFalse("dateArray1 = dateArray2", "array not equals different array")
+        .testTrue("dateArray2 = dateArray2", "array equals itself (all same)")
+        .group("Date equality: array vs array, some incomparable")
+        .testFalse("dateArray3 = dateArray4", "array not equals (different precision)")
+        .testTrue("dateArray3 != dateArray2", "array not equals (one element different precision)")
+        .group("Date equality: array vs array, different sizes")
+        .testFalse("dateArray5 = dateArray1", "array not equals different size")
+        .testFalse("dateArray6 = dateArray1", "array not equals different size and precision")
+        .group("DateTime equality: singleton vs singleton, same precision")
+        .testTrue("@2020-01-01T10:00:00+00:00 = @2020-01-01T10:00:00+00:00",
+            "dateTime literal equals itself")
+        .testFalse("@2020-01-01T10:00:00+00:00 = @2020-01-01T11:00:00+00:00",
+            "dateTime literal not equals different instant")
+        .testTrue("@2020-01-01T10:00:00+00:00 != @2020-01-01T11:00:00+00:00",
+            "dateTime literal not equals different instant (!=)")
+        .testFalse("@2020-01-01T10:00:00+00:00 != @2020-01-01T10:00:00+00:00",
+            "dateTime literal equals itself (not !=)")
+        .group("DateTime equality: singleton vs singleton, different precision")
+        .testTrue("@2020-01-01T10:00:00+00:00 = @2020-01-01T10:00:00",
+            "dateTime literal equals different one with timezone vs no timezone")
+        .testFalse("@2020-01-01T10:00:00+00:00 != @2020-01-01T10:00:00.000",
+            "dateTime literal equals different one with fractional seconds vs no fractional seconds")
+        .testEmpty("@2020-01-01T10:00:00 = @2020-01-01T10:00",
+            "dateTime literal equals different precision")
+        .group("DateTime equality: singleton vs explicit empty")
+        .testEmpty("@2020-01-01T10:00:00+00:00 = {}", "dateTime literal equals explicit empty")
+        .testEmpty("@2020-01-01T10:00:00+00:00 != {}", "dateTime literal not equals explicit empty")
+        .group("DateTime equality: singleton vs computed empty")
+        .testEmpty("@2020-01-01T10:00:00+00:00 = @2020-01-01T10:00:00+00:00.where(false)",
+            "dateTime literal equals computed empty")
+        .testEmpty("@2020-01-01T10:00:00+00:00 != @2020-01-01T10:00:00+00:00.where(false)",
+            "dateTime literal not equals computed empty")
+        .group("DateTime equality: array vs singleton, all comparable")
+        .testFalse("dtArray1 = @2020-01-01T10:00:00+00:00",
+            "array equals singleton (one matches, one does not)")
+        .testTrue("dtArray2 != @2020-01-01T10:00:00+00:00",
+            "array differs from singleton (all match)")
+        .group("DateTime equality: array vs singleton, some incomparable")
+        .testFalse("dtArray3 = @2020-01-01T10:00:00+00:00",
+            "array equals singleton (one comparable, one incomparable)")
+        .group("DateTime equality: array vs array, all comparable")
+        .testTrue("dtArray1 = dtArray1", "array equals itself")
+        .testFalse("dtArray1 = dtArray2", "array not equals different array")
+        .testTrue("dtArray2 = dtArray2", "array equals itself (all same)")
+        .group("DateTime equality: array vs array, some incomparable")
+        .testTrue("dtArray3 = dtArray4", "array equals (some with TZ, some without)")
+        .testFalse("dtArray3 != dtArray2", "array not equals (some with TZ, some without)")
+        .group("DateTime equality: array vs array, different sizes")
+        .testFalse("dtArray5 = dtArray1", "array not equals different size")
+        .testFalse("dtArray6 = dtArray1", "array not equals different size and precision")
+        .group("Date vs DateTime equality: singleton vs singleton")
+        .testEmpty("@2020-01-01 = @2020-01-01T00:00", "date vs dateTime with different precision (missing timezone)")
+        .testEmpty("@2020-01-01 = @2020-01-01T00", "date vs dateTime with hour precision")
+        .group("Date vs DateTime equality: array vs array")
+        .testFalse("dateArray1 = dtArray1", "date array equals dateTime array (all match at midnight)")
+        .testTrue("dtArray2 != dateArray1", "dateTime array not equals date array (!=)")
+        .build();
+  }
 }

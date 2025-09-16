@@ -75,8 +75,12 @@ public class EqualityOperator implements BinaryOperator {
                                  : functions.forall(zip, c -> c);
       // If the arrays are of different sizes, return false.
       return functions.when(
-              functions.size(left).equalTo(functions.size(right)), arrayResult)
-          .otherwise(functions.lit(defaultNonMatch));
+          functions.size(left).equalTo(functions.size(right)),
+          // this is to handle the case where some elements cannot be compared
+          // e.g. temporal values with different precisions
+          // in which case arrayResult may be null
+          functions.coalesce(arrayResult, lit(defaultNonMatch))
+      ).otherwise(functions.lit(defaultNonMatch));
     };
   }
 
