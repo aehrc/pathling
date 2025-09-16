@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.cors.CorsConfiguration;
 
 import java.net.InetAddress;
@@ -76,15 +77,6 @@ public class FhirServer extends RestfulServer {
         this.bulkExportDeleteInterceptor = bulkExportDeleteInterceptor;
         this.conformanceProvider = conformanceProvider;
     }
-    
-  public CorsInterceptor corsInterceptor() {
-    CorsConfiguration config = new CorsConfiguration();
-    config.addAllowedHeader("*");
-    config.addAllowedOrigin("http://localhost:9443");
-    config.addAllowedMethod("*");
-    config.setAllowCredentials(true);
-    return new CorsInterceptor(config);
-  }
 
     @Override
     protected void initialize() throws ServletException {
@@ -128,8 +120,6 @@ public class FhirServer extends RestfulServer {
 
             // Report errors to Sentry, if configured.
             registerInterceptor(errorReportingInterceptor);
-
-            registerInterceptor(corsInterceptor());
             
             // Initialise the capability statement.
             setServerConformanceProvider(conformanceProvider);

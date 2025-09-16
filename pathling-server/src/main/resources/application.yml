@@ -191,4 +191,7 @@ fs:
       name: magic
       magic:
         enabled: true
-debug: false
+debug: true
+logging:
+  level:
+    au.csiro.pathling: DEBUG

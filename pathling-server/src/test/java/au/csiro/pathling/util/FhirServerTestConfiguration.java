@@ -87,4 +87,10 @@ public class FhirServerTestConfiguration {
   public StageMap stageMap() {
     return new StageMap();
   }
+  
+  @Primary
+  @Bean
+  public TestDataSetup testDataSetup(PathlingContext pathlingContext) {
+    return new TestDataSetup(pathlingContext);
+  }
 } 
