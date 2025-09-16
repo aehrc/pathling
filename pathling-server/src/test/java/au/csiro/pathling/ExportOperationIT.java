@@ -15,7 +15,9 @@ import au.csiro.pathling.util.TestDataSetup;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,12 +25,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.StreamSupport;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Resource;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -37,11 +42,17 @@ import org.junit.jupiter.api.parallel.ResourceAccessMode;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
@@ -55,7 +66,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @ActiveProfiles({"core", "server", "integration-test"})
     //@Execution(ExecutionMode.CONCURRENT)
 class ExportOperationIT {
-
+  
   @LocalServerPort
   int port;
 
@@ -63,9 +74,8 @@ class ExportOperationIT {
   WebTestClient webTestClient;
 
   @TempDir
-  private Path warehouseDir;
+  private static Path warehouseDir;
   private String warehouseUrl;
-  private ExportExecutor exportExecutor;
   @Autowired
   private TestDataSetup testDataSetup;
   @Autowired
@@ -77,16 +87,44 @@ class ExportOperationIT {
   private QueryableDataSource deltaLake;
   @Autowired
   private SparkSession sparkSession;
+  @Autowired
+  private ExportExecutor exportExecutor;
+
+  @DynamicPropertySource
+  static void configureProperties(DynamicPropertyRegistry registry) {
+    TestDataSetup.staticCopyTestDataToTempDir(warehouseDir);
+    registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.resolve("delta").toAbsolutePath());
+  }
 
   @BeforeEach
   void setup() {
+    
+    
     warehouseUrl = "file://" + warehouseDir.toAbsolutePath();
-    exportExecutor = new ExportExecutor(pathlingContext, deltaLake, fhirContext, sparkSession,
-        warehouseUrl);
+    // exportExecutor = new ExportExecutor(pathlingContext, deltaLake, fhirContext, sparkSession,
+    //     warehouseUrl);
+    //exportExecutor.setWarehouseUrl(Paths.get(warehouseUrl).toString());
     parser = fhirContext.newJsonParser();
     
     webTestClient = webTestClient.mutate()
         .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024)).build(); // 100 MB
+  }
+  
+  @AfterEach
+  void cleanup() throws IOException {
+    try (var files = Files.list(warehouseDir)) {
+      files.forEach(path -> {
+        try {
+          if (Files.isDirectory(path)) {
+            FileUtils.deleteDirectory(path.toFile());
+          } else {
+            Files.delete(path);
+          }
+        } catch (IOException e) {
+          log.warn("Failed to delete: " + path, e);
+        }
+      });
+    }
   }
 
   @Test

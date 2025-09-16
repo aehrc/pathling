@@ -168,6 +168,17 @@ public class TestDataSetup {
         }
     }
 
+  public static void staticCopyTestDataToTempDir(Path tempDir) {
+    File deltaTestData = Path.of("src/test/resources/test-data/fhir/delta").toFile();
+    try {
+      FileUtils.copyDirectoryToDirectory(deltaTestData, tempDir.toFile());
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    } finally {
+      logDirectoryContents(tempDir);
+    }
+  }
+    
     /**
      * Copies the generated parquet data from src/test/resources/test-data/fhir/delta/** to the tempdir, preserving
      * the directory structure. I.e. delta/Encounter.parquet/* is copied with the directory structure so it copies to
