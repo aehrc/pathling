@@ -28,11 +28,11 @@ import au.csiro.pathling.fhirpath.comparison.Comparable.ComparisonOperation;
 import jakarta.annotation.Nonnull;
 
 /**
- * Provides the functionality of the family of comparison operators within FHIRPath, i.e. {@code =},
- * {@code !=}, {@code <=}, {@code <}, {@code >}, {@code >=}.
+ * Provides the functionality of the family of comparison operators within FHIRPath, i.e.
+ * {@code <=}, {@code <}, {@code >}, {@code >=}.
  *
  * @author John Grimes
- * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#equality">Equality</a>
+ * @author Piotr Szul
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#comparison">Comparison</a>
  */
 public class ComparisonOperator implements BinaryOperator {
@@ -74,7 +74,7 @@ public class ComparisonOperator implements BinaryOperator {
             + right.getDisplayExpression());
     final Collection leftSingular = left.asSingular(
         "Comparison operator requires singular values");
-    
+
     check(leftSingular instanceof Comparable);
     return BooleanCollection.build(
         ((Comparable) leftSingular).getComparison(type)

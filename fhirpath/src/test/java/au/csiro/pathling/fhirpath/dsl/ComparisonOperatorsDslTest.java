@@ -33,12 +33,6 @@ public class ComparisonOperatorsDslTest extends FhirPathDslTestBase {
             .boolArray("allTrue", true, true)
             .boolArray("allFalse", false, false)
         )
-        .group("Boolean equality")
-        .testTrue("true=true", "Boolean equality")
-        .testTrue("false!=true", "Boolean inequality")
-        .testTrue("allTrue!=allFalse", "Boolean array inequality")
-        .testFalse("allTrue=true", "Boolean array vs singleton equality")
-        .testFalse("false=allFalse", "Boolean singleton vs array equality")
         .group("Boolean comparison")
         // booleans are not comparable (orderable) despite having equality
         .testError("true > false", "Boolean comparison is not supported")

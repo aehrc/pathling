@@ -68,11 +68,14 @@ public class EqualityOperator implements BinaryOperator {
       @Nonnull final BiFunction<Column, Column, Column> comparator, boolean defaultNonMatch) {
     return (left, right) -> {
       final Column zip = functions.zip_with(left, right, comparator::apply);
-      // Check if all elements in the zipped array are true.
-      final Column allTrue = functions.forall(zip, c -> c);
+      // Check if all elements in the zipped array are true in case of equality
+      // or any is true in case of inequality
+      final Column arrayResult = defaultNonMatch
+                                 ? functions.exists(zip, c -> c)
+                                 : functions.forall(zip, c -> c);
       // If the arrays are of different sizes, return false.
       return functions.when(
-              functions.size(left).equalTo(functions.size(right)), allTrue)
+              functions.size(left).equalTo(functions.size(right)), arrayResult)
           .otherwise(functions.lit(defaultNonMatch));
     };
   }
@@ -99,8 +102,9 @@ public class EqualityOperator implements BinaryOperator {
       return BooleanCollection.build(new DefaultRepresentation(equalityResult));
     }
 
-    // if types are compatible do element by element application 
-    // of element comparator
+    // if types are compatible do element by element application of element comparator
+    // We do actually use the equalTo and nonEqualTo methods here, rahter than negating the
+    // result of equalTo because this may be more efficient in some cases.
     final BiFunction<Column, Column, Column> elementComparator = type.bind(
         (ColumnComparator) leftCollection.getComparator());
 
