@@ -91,9 +91,9 @@ public class SystemDslTest extends FhirPathDslTestBase {
         .testEquals("00:00:00.000000001", "@T00:00:00.000000001", "Time literal with nanoseconds")
         .testError("@T10:10:30+01:00", "Time literals with timezone offset are not supported")
         .testError("@T", "Time literals with invalid format")
-        .group("Unsupported literal types")
-        .testError("10 'mg'", "Quantity literal is not supported")
-        .testError("4 days", "Time quantity literal is not supported")
+        .group("Quantity literals")
+        .testTrue("(10 'mg').exists()", "Quantity literal is  supported")
+        .testTrue("(4 days).exists()", "Time quantity literal is supported")
         .build();
   }
 

@@ -24,9 +24,11 @@ import au.csiro.pathling.fhirpath.collection.DateCollection;
 import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import au.csiro.pathling.fhirpath.encoding.CodingSchema;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -85,7 +87,14 @@ public enum FhirPathType {
    * Coding FHIRPath type.
    */
   CODING("Coding", CodingSchema.codingStructType(), CodingCollection.class,
-      FHIRDefinedType.CODING);
+      FHIRDefinedType.CODING),
+
+  /**
+   * Quantity FHIRPath type.
+   */
+  QUANTITY("Quantity", QuantityEncoding.dataType(), QuantityCollection.class,
+      FHIRDefinedType.QUANTITY);
+
 
   @Nonnull
   private final String typeSpecifier;
@@ -123,6 +132,7 @@ public enum FhirPathType {
           .put(FHIRDefinedType.INSTANT, DATETIME)
           .put(FHIRDefinedType.TIME, TIME)
           .put(FHIRDefinedType.CODING, CODING)
+          .put(FHIRDefinedType.QUANTITY, QUANTITY)
           .build();
 
   FhirPathType(@Nonnull final String typeSpecifier, @Nonnull final DataType sqlDataType,
