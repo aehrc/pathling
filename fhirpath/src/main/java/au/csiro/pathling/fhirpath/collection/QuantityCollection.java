@@ -24,11 +24,14 @@ import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
+import au.csiro.pathling.fhirpath.comparison.QuantityComparator;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultCompositeDefinition;
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
+import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.sql.misc.QuantityToLiteral;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -42,7 +45,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class QuantityCollection extends Collection implements StringCoercible, Numeric {
+public class QuantityCollection extends Collection implements Comparable, StringCoercible, Numeric {
 
   /**
    * Creates a definition for a Coding element with the specified name and cardinality.
@@ -140,5 +143,11 @@ public class QuantityCollection extends Collection implements StringCoercible, N
   @Override
   public @Nonnull Collection negate() {
     throw new UnsupportedFhirPathFeatureError("Quantity math operations are not supported yet");
+  }
+
+  @Override
+  @Nonnull
+  public ColumnComparator getComparator() {
+    return QuantityComparator.getInstance();
   }
 }
