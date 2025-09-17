@@ -12,6 +12,7 @@ public enum CalendarDurationUnit {
     YEAR("year"),
     MONTH("month"),
     DAY("day"),
+    WEEK("week"),
     HOUR("hour"),
     MINUTE("minute"),
     SECOND("second"),

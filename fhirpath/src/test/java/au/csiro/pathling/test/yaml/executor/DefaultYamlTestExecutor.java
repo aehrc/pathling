@@ -23,10 +23,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -116,7 +118,6 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
    * null.
    * @throws AssertionError if the test fails validation, or if an excluded test doesn't behave
    * according to its exclusion configuration
-   * @throws Exception if an unexpected error occurs during test execution
    * @see ExcludeRule
    */
   @Override
@@ -176,7 +177,6 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
    *
    * @param rb the resolver builder used to create the ResourceResolver for the evaluator. Must not
    * be null.
-   * @throws Exception if an error occurs during test execution or result validation
    */
   private void doCheck(@Nonnull final ResolverBuilder rb) {
     // Create the FHIRPath evaluator with the provided resolver.
@@ -285,8 +285,12 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     // Evaluate the expression to get the actual result.
     final Collection evalResult = verifyEvaluation(evaluator);
 
+    final Collection flattenedResult = evalResult instanceof QuantityCollection
+                                       ? ((StringCoercible) evalResult).asStringPath()
+                                       : evalResult;
+
     // Get column representations for both actual and expected results.
-    final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
+    final ColumnRepresentation actualRepresentation = flattenedResult.getColumn().asCanonical();
     final ColumnRepresentation expectedRepresentation = getResultRepresentation();
 
     // Create a single row with both actual and expected values for comparison.

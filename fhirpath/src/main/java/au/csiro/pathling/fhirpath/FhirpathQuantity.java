@@ -17,7 +17,7 @@ public class FhirpathQuantity {
   /**
    * The system URI for Fhipath calendar duration units (e.g. year, month, day).
    */
-  public static final String FHIRPATH_CALENDAR_DURATION_SYSTEM = "http://hl7.org/fhirpath/CodeSystem/calendar-units";
+  public static final String FHIRPATH_CALENDAR_DURATION_SYSTEM = "https://hl7.org/fhirpath/N1/calendar-duration";
 
   /**
    * The system URI for UCUM units.
@@ -28,7 +28,7 @@ public class FhirpathQuantity {
    * Regex pattern for parsing FHIRPath quantity literals.
    */
   private static final Pattern QUANTITY_REGEX = Pattern.compile(
-          "(?<value>[+-]?\\d+(?:\\.\\d+)?)\\s*(?:'(?<unit>[^']+)'|(?<time>[a-zA-Z]+))"
+      "(?<value>[+-]?\\d+(?:\\.\\d+)?)\\s*(?:'(?<unit>[^']+)'|(?<time>[a-zA-Z]+))"
   );
 
   @Nonnull
@@ -39,6 +39,25 @@ public class FhirpathQuantity {
   String system;
   @Nonnull
   String code;
+
+  /**
+   * Check if the quantity is a calendar duration.
+   *
+   * @return true if the quantity is a calendar duration, false otherwise
+   */
+  public boolean isCalendarDuration() {
+    return FHIRPATH_CALENDAR_DURATION_SYSTEM.equals(system);
+  }
+
+  /**
+   * Check if the quantity is a UCUM quantity.
+   *
+   * @return true if the quantity is a UCUM quantity, false otherwise
+   */
+
+  public boolean isUCUM() {
+    return UCUM_SYSTEM.equals(system);
+  }
 
   /**
    * Factory method for UCUM quantities.
@@ -85,7 +104,7 @@ public class FhirpathQuantity {
       @Nonnull final CalendarDurationUnit unit) {
     return ofCalendar(value, unit, unit.getName());
   }
-  
+
   /**
    * Parses a FHIRPath quantity literal (e.g. 5.4 'mg', 1 year). Only supports UCUM and calendar
    * duration units.
