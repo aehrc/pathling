@@ -27,7 +27,7 @@ import lombok.AllArgsConstructor;
 import lombok.Value;
 
 /**
- * Utility class for handling FHIRPatj date/dateTime values with partial precision.
+ * Utility class for handling FHIRPath date/dateTime values with partial precision.
  * <p>
  * This class can parse FHIRPath date/dateTime strings, determine their precision, and compute lower and
  * upper boundary Instants based on that precision.

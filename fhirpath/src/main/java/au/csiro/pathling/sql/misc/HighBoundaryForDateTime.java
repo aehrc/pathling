@@ -69,7 +69,7 @@ public class HighBoundaryForDateTime implements SqlFunction1<Object, Timestamp> 
    * Calculates the high boundary timestamp for either a FHIR date/dateTime string or an Instant
    * value.
    *
-   * @param input the date/dateTime string or Timestamp reprsenting a dateTime or an Instant.
+   * @param input the date/dateTime string or Timestamp representing a dateTime or an Instant.
    * @return the high boundary timestamp, or null if input is null
    * @throws IllegalArgumentException if the date format is invalid or the input type is
    * unsupported
