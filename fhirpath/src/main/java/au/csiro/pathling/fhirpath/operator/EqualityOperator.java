@@ -40,7 +40,7 @@ import org.apache.spark.sql.functions;
  * @author Piotr Szul
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#equality">Equality</a>
  */
-public class EqualityOperator implements BinaryOperator {
+public class EqualityOperator implements FhirPathBinaryOperator {
 
   @Nonnull
   private final ComparisonOperation type;

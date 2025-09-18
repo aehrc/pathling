@@ -40,12 +40,6 @@ import org.apache.spark.sql.functions;
 @UtilityClass
 public class CollectionOperations {
 
-  private static final String IN_OPERATOR = "in";
-  private static final String CONTAINS_OPERATOR = "contains";
-
-  private static final String LEFT_OPERAND = "left";
-  private static final String RIGHT_OPERAND = "right";
-
   /**
    * If the left operand is a collection with a single item, this operator returns {@code true} if
    * the item is in the right operand using equality semantics. If the left-hand side of the
@@ -62,7 +56,7 @@ public class CollectionOperations {
   @Nonnull
   public static Collection in(@Nonnull final Collection element,
       @Nonnull final Collection collection) {
-    return executeContains(collection, element, IN_OPERATOR, true);
+    return executeContains(collection, element);
   }
 
   /**
@@ -81,12 +75,12 @@ public class CollectionOperations {
   @Nonnull
   public static Collection contains(@Nonnull final Collection collection,
       @Nonnull final Collection element) {
-    return executeContains(collection, element, CONTAINS_OPERATOR, false);
+    return executeContains(collection, element);
   }
 
   @Nonnull
   private static Collection executeContains(@Nonnull final Collection collection,
-      @Nonnull final Collection element, final String operator, final boolean invert) {
+      @Nonnull final Collection element) {
     // Check if either operand is an EmptyCollection and handle accordingly.
     final Optional<Collection> returnValue = checkForEmptyOperands(element, collection);
     if (returnValue.isPresent()) {

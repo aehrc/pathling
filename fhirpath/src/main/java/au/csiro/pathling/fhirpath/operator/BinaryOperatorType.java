@@ -99,7 +99,7 @@ public enum BinaryOperatorType {
 
   private final String symbol;
 
-  private final BinaryOperator instance;
+  private final FhirPathBinaryOperator instance;
 
   /**
    * Mapping of operator symbols to instances of those operators.
@@ -114,7 +114,7 @@ public enum BinaryOperatorType {
     SYMBOL_TO_TYPE = builder.build();
   }
 
-  BinaryOperatorType(@Nonnull final String symbol, @Nonnull final BinaryOperator instance) {
+  BinaryOperatorType(@Nonnull final String symbol, @Nonnull final FhirPathBinaryOperator instance) {
     this.symbol = symbol;
     this.instance = instance;
   }

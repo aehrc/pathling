@@ -35,7 +35,7 @@ import jakarta.annotation.Nonnull;
  * @author Piotr Szul
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#comparison">Comparison</a>
  */
-public class ComparisonOperator implements BinaryOperator {
+public class ComparisonOperator implements FhirPathBinaryOperator {
 
   @Nonnull
   private final ComparisonOperation type;

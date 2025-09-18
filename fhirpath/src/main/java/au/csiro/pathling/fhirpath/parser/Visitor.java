@@ -23,7 +23,7 @@ import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
-import au.csiro.pathling.fhirpath.operator.BinaryOperator;
+import au.csiro.pathling.fhirpath.operator.FhirPathBinaryOperator;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import au.csiro.pathling.fhirpath.operator.CollectionOperations;
 import au.csiro.pathling.fhirpath.operator.MethodDefinedOperator;
@@ -105,7 +105,7 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
     return invocationSubject.andThen(invocationVerb);
   }
 
-  private static final Map<String, BinaryOperator> BINARY_OPERATORS = MethodDefinedOperator.mapOf(
+  private static final Map<String, FhirPathBinaryOperator> BINARY_OPERATORS = MethodDefinedOperator.mapOf(
       CollectionOperations.class);
 
   @Nonnull

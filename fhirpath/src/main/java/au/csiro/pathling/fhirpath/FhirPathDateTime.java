@@ -164,8 +164,14 @@ public class FhirPathDateTime {
   public Instant getUpperBoundary() {
 
     return switch (precision) {
-      // seconds and fracs are already at their upper boundary (i.e: 12:30:45 corresponds to 12:30:45.000000000)
+      // seconds and fracs are already repesented with the same precisions
+      // (i.e: 12:30:45 corresponds to 12:30:45.000000000)
+      // so the upper boundary is the same as the lower boundary 
       case SECOND, FRACS -> value.toInstant();
+      // for everything else we compute the next dateTime at given precision 
+      // (e.g. for 2010-10-10T10 + 1 hour  = 2010-10-10T11)
+      // and then decrease it by 1 nanosecond to get the upper bound of the previous period 
+      // (e.g. 2010-10-10T11 - 1 ns = 2010-10-10T10:59:59.999999999)
       default -> value.plus(1, precision.getChronoUnit()).minusNanos(1).toInstant();
     };
   }

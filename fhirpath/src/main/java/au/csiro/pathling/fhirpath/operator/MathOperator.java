@@ -33,7 +33,7 @@ import org.apache.commons.lang3.tuple.Pair;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#math">Math</a>
  */
-public class MathOperator implements BinaryOperator {
+public class MathOperator implements FhirPathBinaryOperator {
 
   private static final String NON_SINGULAR_ERROR_FORMAT = "Math operator (%s) requires the %s operand to be singular.";
 
@@ -52,7 +52,7 @@ public class MathOperator implements BinaryOperator {
   @Override
   public Collection invoke(@Nonnull final BinaryOperatorInput input) {
 
-    final Pair<Collection, Collection> reconciledArguments = BinaryOperator.reconcileTypes(
+    final Pair<Collection, Collection> reconciledArguments = FhirPathBinaryOperator.reconcileTypes(
         input.left(), input.right());
 
     final Collection left = reconciledArguments.getLeft()
