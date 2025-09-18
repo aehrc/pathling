@@ -183,7 +183,15 @@ public class Collection {
     // Look up the class that represents an element with the specified FHIR type.
     final FHIRDefinedType resolvedType = fhirType
         .or(() -> definition.flatMap(ElementDefinition::getFhirType))
-        .orElseThrow(() -> new IllegalArgumentException("Must have a fhirType or a definition"));
+        .orElseThrow(() -> {
+          // Check if this is a choice element selection scenario.
+          if (definition.isPresent() && definition.get().isChoiceElement()) {
+            final String elementName = definition.get().getElementName();
+            return new IllegalArgumentException(
+                "Selection of mixed collection not supported: " + elementName);
+          }
+          return new IllegalArgumentException("Must have a fhirType or a definition");
+        });
     final Class<? extends Collection> elementPathClass = classForType(
         resolvedType)
         .orElse(Collection.class);
