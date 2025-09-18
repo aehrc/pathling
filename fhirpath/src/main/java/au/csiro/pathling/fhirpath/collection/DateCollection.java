@@ -100,10 +100,10 @@ public class DateCollection extends Collection implements StringCoercible, Mater
   @Nonnull
   public static DateCollection fromLiteral(@Nonnull final String dateLiteral)
       throws ParseException {
-    if (!FhirPathDateTime.isDateLiteral(dateLiteral)) {
+    final String dateString = dateLiteral.replaceFirst("^@", "");
+    if (!FhirPathDateTime.isDateValue(dateString)) {
       throw new ParseException("Invalid dateTime literal: " + dateLiteral, 0);
     }
-    final String dateString = dateLiteral.replaceFirst("^@", "");
     return DateCollection.build(DefaultRepresentation.literal(dateString));
   }
 

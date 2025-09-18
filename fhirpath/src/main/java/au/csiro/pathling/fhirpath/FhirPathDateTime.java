@@ -190,14 +190,14 @@ public class FhirPathDateTime {
   }
 
   /**
-   * Checks if given string represents a valid Fhirpath dateTime literal
+   * Checks if given string represents a valid FhirPath dateTime value.
    *
-   * @param dateTimeLiteral the dateTime literal
-   * @return true is the literal is valid
+   * @param dateTimeValue the dateTime value
+   * @return true is the value is valid dateTime
    */
-  public static boolean isDateTimeLiteral(@Nonnull final String dateTimeLiteral) {
+  public static boolean isDateTimeValue(@Nonnull final String dateTimeValue) {
     try {
-      parse(dateTimeLiteral);
+      parse(dateTimeValue);
       return true;
     } catch (final DateTimeParseException ignore) {
       return false;
@@ -205,14 +205,14 @@ public class FhirPathDateTime {
   }
 
   /**
-   * Checks if given string represents a valid Fhirpath date literal
+   * Checks if given string represents a valid FhirPath date value.
    *
-   * @param dateTimeLiteral the dateTime literal
-   * @return true is the literal is valid
+   * @param dateValue the date value
+   * @return true is the value is as valid date
    */
-  public static boolean isDateLiteral(@Nonnull final String dateTimeLiteral) {
+  public static boolean isDateValue(@Nonnull final String dateValue) {
     try {
-      return parse(dateTimeLiteral).getPrecision().ordinal() <= TemporalPrecision.DAY.ordinal();
+      return parse(dateValue).getPrecision().ordinal() <= TemporalPrecision.DAY.ordinal();
     } catch (final DateTimeParseException ignore) {
       return false;
     }

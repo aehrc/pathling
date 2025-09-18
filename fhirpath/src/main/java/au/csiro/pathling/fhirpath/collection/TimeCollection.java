@@ -96,10 +96,10 @@ public class TimeCollection extends Collection implements StringCoercible, Mater
    */
   @Nonnull
   public static TimeCollection fromLiteral(@Nonnull final String literal) throws ParseException {
-    if (!FhirPathTime.isTimeLiteral(literal)) {
+    final String timeString = literal.replaceFirst("^@T", "");
+    if (!FhirPathTime.isTimeValue(timeString)) {
       throw new ParseException("Invalid dateTime literal: " + literal, 0);
     }
-    final String timeString = literal.replaceFirst("^@T", "");
     return TimeCollection.build(DefaultRepresentation.literal(timeString));
   }
 

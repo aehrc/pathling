@@ -136,14 +136,14 @@ public class FhirPathTime {
 
 
   /**
-   * Checks if given string represents a valid Fhirpath string literal.
+   * Checks if given string represents a valid Fhirpath time value.
    *
-   * @param timeLiteral the time literal
-   * @return true is the literal is valid
+   * @param timeValue the time value
+   * @return true is the value is a valid time.
    */
-  public static boolean isTimeLiteral(@Nonnull final String timeLiteral) {
+  public static boolean isTimeValue(@Nonnull final String timeValue) {
     try {
-      parse(timeLiteral);
+      parse(timeValue);
       return true;
     } catch (final DateTimeParseException ignore) {
       return false;

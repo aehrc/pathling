@@ -40,7 +40,7 @@ class FhirpathTimeTest {
         fromTimeString(expectedTime, expectedPrecision),
         FhirPathTime.parse(input)
     );
-    assertTrue(FhirPathTime.isTimeLiteral(input));
+    assertTrue(FhirPathTime.isTimeValue(input));
   }
 
   static Stream<Arguments> lowerBoundaryProvider() {
@@ -94,7 +94,7 @@ class FhirpathTimeTest {
   })
   void testParseErrorsInvalidFormat(String input) {
     assertThrows(DateTimeParseException.class, () -> FhirPathTime.parse(input));
-    assertFalse(FhirPathTime.isTimeLiteral(input));
+    assertFalse(FhirPathTime.isTimeValue(input));
   }
 }
 

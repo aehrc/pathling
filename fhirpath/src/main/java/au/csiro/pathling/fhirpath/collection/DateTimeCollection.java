@@ -46,7 +46,7 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
     DateTimeComparable {
 
   private static final String SPARK_FHIRPATH_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
-  
+
   /**
    * Creates a new DateTimeCollection.
    *
@@ -132,11 +132,11 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
   @Nonnull
   public static DateTimeCollection fromLiteral(@Nonnull final String dateTimeLiteral)
       throws ParseException {
-    if (!FhirPathDateTime.isDateTimeLiteral(dateTimeLiteral)) {
+    final String dateTimeString = dateTimeLiteral.replaceFirst("^@", "");
+    if (!FhirPathDateTime.isDateTimeValue(dateTimeString)) {
       throw new ParseException("Invalid dateTime literal: " + dateTimeLiteral, 0);
     }
-    final String dateString = dateTimeLiteral.replaceFirst("^@", "");
-    return DateTimeCollection.build(DefaultRepresentation.literal(dateString));
+    return DateTimeCollection.build(DefaultRepresentation.literal(dateTimeString));
   }
 
   @Nonnull
