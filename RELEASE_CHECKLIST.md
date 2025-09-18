@@ -2,9 +2,12 @@
 
 - [ ] Create a release branch (`release/[version]`)
 - [ ] Update the version to a SNAPSHOT version for pre-release activities
+- [ ] Update SQL on FHIR repository pointer
 - [ ] Update all dependencies
 - [ ] Get all tests and checks passing on CI ("Build, test and pre-release"
   workflow)
+- [ ] Check the status of the Quality Gate
+  on [SonarCloud](https://sonarcloud.io/project/branches_list?id=aehrc_pathling)
 - [ ] Create a Python pre-release ("Python pre-release" workflow, manually
   triggered)
 - [ ] Test snapshot library API, dev Python library release and R package on
