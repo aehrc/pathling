@@ -86,6 +86,8 @@ excludeSet:
           - "Observation.value with an STU3 FHIR model"
           - "Observation.value with an DSTU2 FHIR model"
           - "Observation.value without a model"
+          - "Observation.value / 185 'mo'"
+          - "Observation.value / 185 months = 1"
       - title: "Contained resources not supported"
         type: feature
         id: "#2406"
@@ -179,6 +181,13 @@ excludeSet:
         expression:
           - "Ops.coll = Ops.collsame"
           - "Ops.coll = Ops.collother"
+  - title: Math6 exclusions
+    glob: "fhirpath-js/cases/6.6_math.yaml"
+    exclude:
+      - title: Unsupported dateTime arithmetics operator (Quantity + Date)
+        type: wontfix
+        any:
+          - "1 year + @2016-02-29"
   - title: Comparison exclusions
     glob: "fhirpath-js/cases/6.2_comparision.yaml"
     exclude:
