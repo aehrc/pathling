@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.sql.misc;
 
-import au.csiro.pathling.fhirpath.FhirpathDateTime;
+import au.csiro.pathling.fhirpath.FhirPathDateTime;
 import au.csiro.pathling.sql.udf.SqlFunction1;
 import jakarta.annotation.Nullable;
 import java.io.Serial;
@@ -83,7 +83,7 @@ public class HighBoundaryForDateTime implements SqlFunction1<Object, Timestamp> 
       return tst;
     } else if (input instanceof String s) {
       try {
-        return Timestamp.from(FhirpathDateTime.parse(s).getUpperBoundary());
+        return Timestamp.from(FhirPathDateTime.parse(s).getUpperBoundary());
       } catch (final DateTimeParseException e) {
         throw new IllegalArgumentException("Invalid date/dateTime format: " + s, e);
       }

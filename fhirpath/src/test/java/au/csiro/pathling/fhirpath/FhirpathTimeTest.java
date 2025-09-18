@@ -15,8 +15,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class FhirpathTimeTest {
 
-  FhirpathTime fromTimeString(String timeString, TemporalPrecision precision) {
-    return FhirpathTime.fromLocalTime(LocalTime.parse(timeString), precision);
+  FhirPathTime fromTimeString(String timeString, TemporalPrecision precision) {
+    return FhirPathTime.fromLocalTime(LocalTime.parse(timeString), precision);
   }
 
   static Stream<Arguments> parseTestProvider() {
@@ -35,7 +35,7 @@ class FhirpathTimeTest {
       String ignoredDescription) {
     assertEquals(
         fromTimeString(expectedTime, expectedPrecision),
-        FhirpathTime.parse(input)
+        FhirPathTime.parse(input)
     );
   }
 
@@ -52,7 +52,7 @@ class FhirpathTimeTest {
   @ParameterizedTest(name = "{0} -> {1} ({2})")
   @MethodSource("lowerBoundaryProvider")
   void testGetLowerBoundary(String input, String expectedLowerBound, String ignoredDescription) {
-    final FhirpathTime time = FhirpathTime.parse(input);
+    final FhirPathTime time = FhirPathTime.parse(input);
     assertEquals(Instant.parse(expectedLowerBound), time.getLowerBoundary());
   }
 
@@ -68,7 +68,7 @@ class FhirpathTimeTest {
   @ParameterizedTest(name = "{0} -> {1} ({2})")
   @MethodSource("upperBoundaryProvider")
   void testGetUpperBoundary(String input, String expectedUpperBound, String ignoredDescription) {
-    final FhirpathTime time = FhirpathTime.parse(input);
+    final FhirPathTime time = FhirPathTime.parse(input);
     assertEquals(Instant.parse(expectedUpperBound), time.getUpperBoundary());
   }
 
@@ -76,7 +76,7 @@ class FhirpathTimeTest {
   @NullAndEmptySource
   @ValueSource(strings = {" "})
   void testParseErrorsNullOrEmpty(String input) {
-    assertThrows(Exception.class, () -> FhirpathTime.parse(input));
+    assertThrows(Exception.class, () -> FhirPathTime.parse(input));
   }
 
   @ParameterizedTest(name = "Parse error with invalid format: {0}")
@@ -89,7 +89,7 @@ class FhirpathTimeTest {
       "12:30:45.abc" // Non-numeric fraction
   })
   void testParseErrorsInvalidFormat(String input) {
-    assertThrows(DateTimeParseException.class, () -> FhirpathTime.parse(input));
+    assertThrows(DateTimeParseException.class, () -> FhirPathTime.parse(input));
   }
 }
 

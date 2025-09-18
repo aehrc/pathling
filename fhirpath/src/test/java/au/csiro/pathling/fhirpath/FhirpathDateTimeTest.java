@@ -15,8 +15,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class FhirpathDateTimeTest {
 
-  FhirpathDateTime fromDateTimeString(String dateTimeString, TemporalPrecision precision) {
-    return FhirpathDateTime.fromDateTime(OffsetDateTime.parse(dateTimeString), precision);
+  FhirPathDateTime fromDateTimeString(String dateTimeString, TemporalPrecision precision) {
+    return FhirPathDateTime.fromDateTime(OffsetDateTime.parse(dateTimeString), precision);
   }
 
   static Stream<Arguments> parseTestProvider() {
@@ -43,7 +43,7 @@ class FhirpathDateTimeTest {
       String ignoredDescription) {
     assertEquals(
         fromDateTimeString(expectedInstant, expectedPrecision),
-        FhirpathDateTime.parse(input)
+        FhirPathDateTime.parse(input)
     );
   }
 
@@ -68,7 +68,7 @@ class FhirpathDateTimeTest {
   @ParameterizedTest(name = "{0} -> {1} ({2})")
   @MethodSource("lowerBoundaryProvider")
   void testGetLowerBoundary(String input, String expectedLowerBound, String ignoredDescription) {
-    final FhirpathDateTime dateTime = FhirpathDateTime.parse(input);
+    final FhirPathDateTime dateTime = FhirPathDateTime.parse(input);
     assertEquals(Instant.parse(expectedLowerBound), dateTime.getLowerBoundary());
   }
 
@@ -96,7 +96,7 @@ class FhirpathDateTimeTest {
   @ParameterizedTest(name = "{0} -> {1} ({2})")
   @MethodSource("upperBoundaryProvider")
   void testGetUpperBoundary(String input, String expectedUpperBound, String ignoredDescription) {
-    final FhirpathDateTime dateTime = FhirpathDateTime.parse(input);
+    final FhirPathDateTime dateTime = FhirPathDateTime.parse(input);
     assertEquals(Instant.parse(expectedUpperBound), dateTime.getUpperBoundary());
   }
 
@@ -104,7 +104,7 @@ class FhirpathDateTimeTest {
   @NullAndEmptySource
   @ValueSource(strings = {" "})
   void testParseErrorsNullOrEmpty(String input) {
-    assertThrows(Exception.class, () -> FhirpathDateTime.parse(input));
+    assertThrows(Exception.class, () -> FhirPathDateTime.parse(input));
   }
 
   @ParameterizedTest(name = "Parse error with invalid format: {0}")
@@ -119,7 +119,7 @@ class FhirpathDateTimeTest {
       "2023-05-15T12:30:45." // Dot with no fraction
   })
   void testParseErrorsInvalidFormat(String input) {
-    assertThrows(DateTimeParseException.class, () -> FhirpathDateTime.parse(input));
+    assertThrows(DateTimeParseException.class, () -> FhirPathDateTime.parse(input));
   }
 
   static Stream<Arguments> invalidValueProvider() {
@@ -143,6 +143,6 @@ class FhirpathDateTimeTest {
   @MethodSource("invalidValueProvider")
   void testParseErrorsInvalidValues(String input, String ignoredDescription) {
     assertThrows(DateTimeParseException.class,
-        () -> FhirpathDateTime.parse(input));
+        () -> FhirPathDateTime.parse(input));
   }
 }

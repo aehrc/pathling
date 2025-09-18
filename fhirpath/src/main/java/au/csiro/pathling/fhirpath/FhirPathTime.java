@@ -20,7 +20,7 @@ import lombok.Value;
  */
 @Value
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
-public class FhirpathTime {
+public class FhirPathTime {
 
   // Regex for time part, reused from FhirpathDateTime
   public static final String TIME_FORMAT =
@@ -41,7 +41,7 @@ public class FhirpathTime {
    * @throws DateTimeParseException if the string cannot be parsed
    */
   @Nonnull
-  public static FhirpathTime parse(@Nonnull final String timeString) {
+  public static FhirPathTime parse(@Nonnull final String timeString) {
     final Matcher matcher = TIME_REGEX.matcher(timeString);
     if (!matcher.matches()) {
       throw new DateTimeParseException("Invalid FHIR time format", timeString, 0);
@@ -126,14 +126,14 @@ public class FhirpathTime {
    * @return a new FhirpathTime
    */
   @Nonnull
-  public static FhirpathTime fromLocalTime(@Nonnull final LocalTime localTime,
-      @Nonnull final TemporalPrecision precision) {
+  public static FhirPathTime fromLocalTime(@Nonnull final LocalTime localTime,
+                                           @Nonnull final TemporalPrecision precision) {
     if (!precision.isTimeBased()) {
       throw new IllegalArgumentException("Precision must be time-based for FhirpathTime");
     }
     final Instant instant = localTime.atDate(LocalDate.ofEpochDay(0))
         .toInstant(ZoneOffset.UTC);
-    return new FhirpathTime(instant, precision);
+    return new FhirPathTime(instant, precision);
   }
 }
 

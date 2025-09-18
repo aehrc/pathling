@@ -15,13 +15,11 @@ import jakarta.annotation.Nonnull;
  * @author Piotr Szul
  */
 public interface DateTimeComparable extends Comparable {
-
-  ColumnComparator DATETIME_COMPARATOR = TemporalComparator.forDateTime();
-
+  
   @Override
   @Nonnull
   default ColumnComparator getComparator() {
-    return DATETIME_COMPARATOR;
+    return TemporalComparator.forDateTime();
   }
 
   @Override

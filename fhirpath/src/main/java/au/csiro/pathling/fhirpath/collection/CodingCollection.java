@@ -27,7 +27,7 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.CodingComparator;
 import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
-import au.csiro.pathling.fhirpath.comparison.Comparable;
+import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultCompositeDefinition;
@@ -47,7 +47,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class CodingCollection extends Collection implements Comparable, StringCoercible {
+public class CodingCollection extends Collection implements StringCoercible {
 
   private static final ColumnComparator COMPARATOR = new CodingComparator();
 
@@ -159,8 +159,8 @@ public class CodingCollection extends Collection implements Comparable, StringCo
 
   @Nonnull
   @Override
-  public ColumnComparator getComparator() {
-    return COMPARATOR;
+  public ColumnEquality getComparator() {
+    return  COMPARATOR;
   }
 
   @Override

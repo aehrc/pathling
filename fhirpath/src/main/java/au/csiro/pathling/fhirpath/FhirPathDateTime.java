@@ -34,7 +34,7 @@ import lombok.Value;
  */
 @Value
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
-public class FhirpathDateTime {
+public class FhirPathDateTime {
 
   // Define regex patterns for date/time components
   private static final String TIME_FORMAT =
@@ -60,7 +60,7 @@ public class FhirpathDateTime {
    * @throws DateTimeParseException if the string cannot be parsed
    */
   @Nonnull
-  public static FhirpathDateTime parse(@Nonnull final String dateTimeString) {
+  public static FhirPathDateTime parse(@Nonnull final String dateTimeString) {
     final Matcher matcher = DATETIME_REGEX.matcher(dateTimeString);
     if (!matcher.matches()) {
       throw new DateTimeParseException("Invalid FHIR date/dateTime format", dateTimeString, 0);
@@ -123,7 +123,7 @@ public class FhirpathDateTime {
          ? offsetGroup
          : "Z");
     final OffsetDateTime dateTime = OffsetDateTime.parse(parseableDateTime);
-    return new FhirpathDateTime(dateTime, precision);
+    return new FhirPathDateTime(dateTime, precision);
   }
 
   /**
@@ -178,8 +178,8 @@ public class FhirpathDateTime {
    * @return a new PartialDateTime with the specified precision
    */
   @Nonnull
-  static FhirpathDateTime fromDateTime(@Nonnull final OffsetDateTime dateTime,
-      @Nonnull final TemporalPrecision precision) {
-    return new FhirpathDateTime(dateTime, precision);
+  static FhirPathDateTime fromDateTime(@Nonnull final OffsetDateTime dateTime,
+                                       @Nonnull final TemporalPrecision precision) {
+    return new FhirPathDateTime(dateTime, precision);
   }
 }

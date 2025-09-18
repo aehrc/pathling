@@ -22,7 +22,7 @@ import jakarta.annotation.Nonnull;
 /**
  * Registration of miscellaneous UDFs.
  */
-public class MiscUDFRegistrar extends AbstractUDFRegistrar {
+public class PathlingUdfRegistrar extends AbstractUDFRegistrar {
 
   @Override
   protected void registerUDFs(@Nonnull final UDFRegistrar udfRegistrar) {

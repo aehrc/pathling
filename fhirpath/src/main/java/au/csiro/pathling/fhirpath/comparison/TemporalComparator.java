@@ -22,7 +22,7 @@ import au.csiro.pathling.sql.misc.HighBoundaryForTime;
 import au.csiro.pathling.sql.misc.LowBoundaryForDateTime;
 import au.csiro.pathling.sql.misc.LowBoundaryForTime;
 import jakarta.annotation.Nonnull;
-import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
 import lombok.AllArgsConstructor;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
@@ -37,7 +37,13 @@ import org.apache.spark.sql.functions;
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class TemporalComparator implements ColumnComparator {
 
+  private static final TemporalComparator DATE_TIME_COMPARATOR = new TemporalComparator(
+      LowBoundaryForDateTime.FUNCTION_NAME,
+      HighBoundaryForDateTime.FUNCTION_NAME);
 
+  private static final TemporalComparator TIME_COMPARATOR = new TemporalComparator(
+      LowBoundaryForTime.FUNCTION_NAME,
+      HighBoundaryForTime.FUNCTION_NAME);
   /**
    * The names of the UDFs to compute the low and high boundaries for a temporal value.
    */
@@ -58,26 +64,25 @@ public class TemporalComparator implements ColumnComparator {
   ) {
 
   }
+
   /**
-   * Creates a TemporalComparator for DateTime values.
+   * Returns a TemporalComparator for DateTime values.
    *
    * @return A TemporalComparator that can compare DateTime values.
    */
   @Nonnull
   public static TemporalComparator forDateTime() {
-    return new TemporalComparator(LowBoundaryForDateTime.FUNCTION_NAME,
-        HighBoundaryForDateTime.FUNCTION_NAME);
+    return DATE_TIME_COMPARATOR;
   }
 
   /**
-   * Creates a TemporalComparator for Time values.
+   * Returns a TemporalComparator for Time values.
    *
    * @return A TemporalComparator that can compare Time values.
    */
   @Nonnull
   public static TemporalComparator forTime() {
-    return new TemporalComparator(LowBoundaryForTime.FUNCTION_NAME,
-        HighBoundaryForTime.FUNCTION_NAME);
+    return TIME_COMPARATOR;
   }
 
   /**
@@ -126,7 +131,7 @@ public class TemporalComparator implements ColumnComparator {
 
   @Nonnull
   private Column implementWithSql(@Nonnull final Column left, @Nonnull final Column right, @Nonnull
-  BiFunction<Column, Column, Column> comparator) {
+  BinaryOperator<Column> comparator) {
     final Bounds leftBounds = getBounds(left);
     final Bounds rightBounds = getBounds(right);
 

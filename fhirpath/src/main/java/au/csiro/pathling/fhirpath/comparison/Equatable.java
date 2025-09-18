@@ -12,7 +12,7 @@ import java.util.Optional;
  *
  * @author John Grimes
  */
-public interface WithEquality {
+public interface Equatable {
 
 
   /**

@@ -33,7 +33,7 @@ import org.apache.spark.sql.Column;
  * @author John Grimes
  * @author Piotr Szul
  */
-public interface Comparable extends WithEquality {
+public interface Comparable extends Equatable {
 
 
   /**

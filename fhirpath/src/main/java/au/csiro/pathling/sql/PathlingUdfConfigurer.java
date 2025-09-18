@@ -18,7 +18,7 @@
 package au.csiro.pathling.sql;
 
 import au.csiro.pathling.spark.SparkConfigurer;
-import au.csiro.pathling.sql.misc.MiscUDFRegistrar;
+import au.csiro.pathling.sql.misc.PathlingUdfRegistrar;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import org.apache.spark.sql.SparkSession;
@@ -28,10 +28,10 @@ import org.apache.spark.sql.SparkSession;
  *
  * @author Piotr Szul
  */
-public class FhirpathUDFRegistrar implements SparkConfigurer {
+public class PathlingUdfConfigurer implements SparkConfigurer {
 
   private final List<SparkConfigurer> children = List.of(
-      new MiscUDFRegistrar()
+      new PathlingUdfRegistrar()
   );
 
   @Override
@@ -45,6 +45,6 @@ public class FhirpathUDFRegistrar implements SparkConfigurer {
    * @param spark the Spark session to register the UDFs with
    */
   public static void registerUDFs(@Nonnull final SparkSession spark) {
-    new FhirpathUDFRegistrar().configure(spark);
+    new PathlingUdfConfigurer().configure(spark);
   }
 }

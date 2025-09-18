@@ -20,7 +20,7 @@ package au.csiro.pathling;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
-import au.csiro.pathling.sql.FhirpathUDFRegistrar;
+import au.csiro.pathling.sql.PathlingUdfConfigurer;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -85,7 +85,7 @@ public class UnitTestDependencies {
         .config("spark.sql.mapKeyDedupPolicy", "LAST_WIN")
         .getOrCreate();
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
-    FhirpathUDFRegistrar.registerUDFs(spark);
+    PathlingUdfConfigurer.registerUDFs(spark);
     return spark;
   }
 

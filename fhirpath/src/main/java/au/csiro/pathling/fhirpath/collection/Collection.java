@@ -29,7 +29,7 @@ import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.comparison.WithEquality;
+import au.csiro.pathling.fhirpath.comparison.Equatable;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ChoiceDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
@@ -59,7 +59,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @Getter
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 @Slf4j
-public class Collection implements WithEquality {
+public class Collection implements Equatable {
 
   // Additional mappings for collection classes that don't directly map to FhirPathType
   @Nonnull
