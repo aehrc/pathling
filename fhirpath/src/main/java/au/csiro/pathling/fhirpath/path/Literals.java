@@ -466,7 +466,11 @@ public class Literals {
     @Override
     public TimeCollection apply(@Nonnull final Collection input,
         @Nonnull final EvaluationContext context) {
-      return TimeCollection.fromLiteral(value);
+      try {
+        return TimeCollection.fromLiteral(value);
+      } catch (final ParseException e) {
+        throw new InvalidUserInputError("Unable to parse date format: " + value);
+      }
     }
 
     @Nonnull

@@ -1,7 +1,9 @@
 package au.csiro.pathling.fhirpath;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
 import java.time.LocalTime;
@@ -25,7 +27,8 @@ class FhirpathTimeTest {
         Arguments.of("14:30", "14:30:00", TemporalPrecision.MINUTE, "Hour and minute"),
         Arguments.of("14:30:14", "14:30:14", TemporalPrecision.SECOND, "Up to second"),
         Arguments.of("14:30:14.559", "14:30:14.559", TemporalPrecision.FRACS, "With milliseconds"),
-        Arguments.of("00:00:00.000000001", "00:00:00.000000001", TemporalPrecision.FRACS, "With nanoseconds")
+        Arguments.of("00:00:00.000000001", "00:00:00.000000001", TemporalPrecision.FRACS,
+            "With nanoseconds")
     );
   }
 
@@ -37,6 +40,7 @@ class FhirpathTimeTest {
         fromTimeString(expectedTime, expectedPrecision),
         FhirPathTime.parse(input)
     );
+    assertTrue(FhirPathTime.isTimeLiteral(input));
   }
 
   static Stream<Arguments> lowerBoundaryProvider() {
@@ -90,6 +94,7 @@ class FhirpathTimeTest {
   })
   void testParseErrorsInvalidFormat(String input) {
     assertThrows(DateTimeParseException.class, () -> FhirPathTime.parse(input));
+    assertFalse(FhirPathTime.isTimeLiteral(input));
   }
 }
 

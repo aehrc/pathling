@@ -24,7 +24,7 @@ public class FhirPathTime {
 
   // Regex for time part, reused from FhirpathDateTime
   public static final String TIME_FORMAT =
-      "(?<hours>[0-9][0-9])(:(?<minutes>[0-9][0-9])(:(?<seconds>[0-9][0-9])(\\.(?<frac>[0-9]+))?)?)?";
+      "(?<hours>\\d\\d)(:(?<minutes>\\d\\d)(:(?<seconds>\\d\\d)(\\.(?<frac>\\d+))?)?)?";
   private static final Pattern TIME_REGEX =
       Pattern.compile("^" + TIME_FORMAT + "$");
 
@@ -101,11 +101,9 @@ public class FhirPathTime {
    * <p>
    * For example:
    *
-   * @return the upper boundary as an Instant
-   * {@code 12} (HOUR precision) -> 12:59:59.999999999
-   * {@code 12:30} (MINUTE precision) -> 12:30:59.999999999
-   * {@code 12:30:45} (SECOND precision) -> 12:30:45.000000000
-   * {@code 12:30:45.123} (FRACS precision) -> 12:30:45.123
+   * @return the upper boundary as an Instant {@code 12} (HOUR precision) -> 12:59:59.999999999
+   * {@code 12:30} (MINUTE precision) -> 12:30:59.999999999 {@code 12:30:45} (SECOND precision) ->
+   * 12:30:45.000000000 {@code 12:30:45.123} (FRACS precision) -> 12:30:45.123
    * </p>
    */
   @Nonnull
@@ -127,13 +125,29 @@ public class FhirPathTime {
    */
   @Nonnull
   public static FhirPathTime fromLocalTime(@Nonnull final LocalTime localTime,
-                                           @Nonnull final TemporalPrecision precision) {
+      @Nonnull final TemporalPrecision precision) {
     if (!precision.isTimeBased()) {
       throw new IllegalArgumentException("Precision must be time-based for FhirpathTime");
     }
     final Instant instant = localTime.atDate(LocalDate.ofEpochDay(0))
         .toInstant(ZoneOffset.UTC);
     return new FhirPathTime(instant, precision);
+  }
+
+
+  /**
+   * Checks if given string represents a valid Fhirpath string literal.
+   *
+   * @param timeLiteral the time literal
+   * @return true is the literal is valid
+   */
+  public static boolean isTimeLiteral(@Nonnull final String timeLiteral) {
+    try {
+      parse(timeLiteral);
+      return true;
+    } catch (final DateTimeParseException ignore) {
+      return false;
+    }
   }
 }
 

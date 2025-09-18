@@ -1,7 +1,9 @@
 package au.csiro.pathling.fhirpath;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -45,6 +47,13 @@ class FhirpathDateTimeTest {
         fromDateTimeString(expectedInstant, expectedPrecision),
         FhirPathDateTime.parse(input)
     );
+    assertTrue(FhirPathDateTime.isDateTimeLiteral(input));
+    if (expectedPrecision == TemporalPrecision.DAY || expectedPrecision == TemporalPrecision.MONTH
+        || expectedPrecision == TemporalPrecision.YEAR) {
+      assertTrue(FhirPathDateTime.isDateLiteral(input));
+    } else {
+      assertFalse(FhirPathDateTime.isDateLiteral(input));
+    }
   }
 
   static Stream<Arguments> lowerBoundaryProvider() {
@@ -56,7 +65,8 @@ class FhirpathDateTimeTest {
         Arguments.of("2023-06-15T14", "2023-06-15T14:00:00Z", "HOUR precision"),
         Arguments.of("2023-06-15T14:30", "2023-06-15T14:30:00Z", "MINUTE precision"),
         Arguments.of("2023-06-15T14:30:45", "2023-06-15T14:30:45Z", "SECOND precision"),
-        Arguments.of("2023-06-15T14:30:45.123456", "2023-06-15T14:30:45.123456Z", "FRACS precision"),
+        Arguments.of("2023-06-15T14:30:45.123456", "2023-06-15T14:30:45.123456Z",
+            "FRACS precision"),
         Arguments.of("2023-06-15T14:30:45+02:00", "2023-06-15T14:30:45+02:00",
             "With explicit positive timezone"),
         Arguments.of("2023-06-15T14:30:45-05:00", "2023-06-15T14:30:45-05:00",
@@ -79,7 +89,8 @@ class FhirpathDateTimeTest {
         Arguments.of("2023-06", "2023-06-30T23:59:59.999999999Z", "MONTH precision - 30 days"),
         Arguments.of("2023-02", "2023-02-28T23:59:59.999999999Z",
             "MONTH precision - February non-leap year"),
-        Arguments.of("2024-02", "2024-02-29T23:59:59.999999999Z", "MONTH precision - February leap year"),
+        Arguments.of("2024-02", "2024-02-29T23:59:59.999999999Z",
+            "MONTH precision - February leap year"),
         Arguments.of("2023-06-15", "2023-06-15T23:59:59.999999999Z", "DAY precision"),
         Arguments.of("2023-06-15T14", "2023-06-15T14:59:59.999999999Z", "HOUR precision"),
         Arguments.of("2023-06-15T14:30", "2023-06-15T14:30:59.999999999Z", "MINUTE precision"),
@@ -144,5 +155,7 @@ class FhirpathDateTimeTest {
   void testParseErrorsInvalidValues(String input, String ignoredDescription) {
     assertThrows(DateTimeParseException.class,
         () -> FhirPathDateTime.parse(input));
+    assertFalse(FhirPathDateTime.isDateTimeLiteral(input));
+    assertFalse(FhirPathDateTime.isDateLiteral(input));
   }
 }

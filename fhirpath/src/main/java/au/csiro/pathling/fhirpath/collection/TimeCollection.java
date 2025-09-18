@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.annotations.UsedByReflection;
+import au.csiro.pathling.fhirpath.FhirPathTime;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
@@ -28,7 +29,9 @@ import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.comparison.TemporalComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
+import java.text.ParseException;
 import java.util.Optional;
+import org.apache.jena.reasoner.rulesys.Rule.ParserException;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.TimeType;
@@ -40,7 +43,7 @@ import org.hl7.fhir.r4.model.TimeType;
  */
 public class TimeCollection extends Collection implements StringCoercible, Materializable,
     Comparable {
-  
+
   /**
    * Creates a new TimeCollection with the specified parameters.
    *
@@ -89,9 +92,13 @@ public class TimeCollection extends Collection implements StringCoercible, Mater
    *
    * @param literal The FHIRPath representation of the literal
    * @return A new instance of {@link TimeCollection}
+   * @throws ParserException if the literal is malformed
    */
   @Nonnull
-  public static TimeCollection fromLiteral(@Nonnull final String literal) {
+  public static TimeCollection fromLiteral(@Nonnull final String literal) throws ParseException {
+    if (!FhirPathTime.isTimeLiteral(literal)) {
+      throw new ParseException("Invalid dateTime literal: " + literal, 0);
+    }
     final String timeString = literal.replaceFirst("^@T", "");
     return TimeCollection.build(DefaultRepresentation.literal(timeString));
   }

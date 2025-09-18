@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.collection;
 import static org.apache.spark.sql.functions.date_format;
 
 import au.csiro.pathling.annotations.UsedByReflection;
+import au.csiro.pathling.fhirpath.FhirPathDateTime;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
@@ -30,7 +31,6 @@ import jakarta.annotation.Nonnull;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.Optional;
-import java.util.regex.Pattern;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.DateTimeType;
@@ -46,12 +46,7 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
     DateTimeComparable {
 
   private static final String SPARK_FHIRPATH_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
-
-  // antlr regex for dateTime: '@' ([0-9][0-9][0-9][0-9] ('-'[0-9][0-9] ('-'[0-9][0-9])?)?) 
-  // 'T' (([0-9][0-9] (':'[0-9][0-9] (':'[0-9][0-9] ('.'[0-9]+)?)?)?) ('Z' | ('+' | '-') [0-9][0-9]':'[0-9][0-9])?)?
-  private static final Pattern DATETIME_REGEX = Pattern.compile(
-      "^@[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?T([0-9]{2}(:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?)?)(Z|([+-][0-9]{2}:[0-9]{2}))?$");
-
+  
   /**
    * Creates a new DateTimeCollection.
    *
@@ -130,17 +125,17 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
    *
-   * @param fhirPath The FHIRPath representation of the literal
+   * @param dateTimeLiteral The FHIRPath representation of the literal
    * @return A new instance of {@link DateTimeCollection}
    * @throws ParseException if the literal is malformed
    */
   @Nonnull
-  public static DateTimeCollection fromLiteral(@Nonnull final String fhirPath)
+  public static DateTimeCollection fromLiteral(@Nonnull final String dateTimeLiteral)
       throws ParseException {
-    if (!DATETIME_REGEX.matcher(fhirPath).matches()) {
-      throw new ParseException("Invalid dateTime literal: " + fhirPath, 0);
+    if (!FhirPathDateTime.isDateTimeLiteral(dateTimeLiteral)) {
+      throw new ParseException("Invalid dateTime literal: " + dateTimeLiteral, 0);
     }
-    final String dateString = fhirPath.replaceFirst("^@", "");
+    final String dateString = dateTimeLiteral.replaceFirst("^@", "");
     return DateTimeCollection.build(DefaultRepresentation.literal(dateString));
   }
 

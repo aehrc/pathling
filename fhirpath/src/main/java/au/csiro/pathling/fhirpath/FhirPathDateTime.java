@@ -26,23 +26,23 @@ import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 
+import static au.csiro.pathling.fhirpath.FhirPathTime.*;
+
 /**
  * Utility class for handling FHIRPath date/dateTime values with partial precision.
  * <p>
- * This class can parse FHIRPath date/dateTime strings, determine their precision, and compute lower and
- * upper boundary Instants based on that precision.
+ * This class can parse FHIRPath date/dateTime strings, determine their precision, and compute lower
+ * and upper boundary Instants based on that precision.
  */
 @Value
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class FhirPathDateTime {
 
   // Define regex patterns for date/time components
-  private static final String TIME_FORMAT =
-      "(?<time>(?<hours>[0-9][0-9])(:(?<minutes>[0-9][0-9])(:(?<seconds>[0-9][0-9])(\\.(?<frac>[0-9]+))?)?)?)";
   private static final String OFFSET_FORMAT =
-      "(?<offset>Z|([+\\-])([0-9][0-9]):([0-9][0-9]))";
+      "(?<offset>Z|([+\\-])(\\d\\d):(\\d\\d))";
   private static final String DATETIME_FORMAT =
-      "(?<year>[0-9]{4})(-(?<month>[0-9][0-9])(-(?<day>[0-9][0-9])(T" + TIME_FORMAT + ")?)?)?" +
+      "(?<year>\\d{4})(-(?<month>\\d\\d)(-(?<day>\\d\\d)(T(?<time>" + TIME_FORMAT + "))?)?)?" +
           OFFSET_FORMAT + "?";
   private static final Pattern DATETIME_REGEX =
       Pattern.compile("^" + DATETIME_FORMAT + "$");
@@ -179,7 +179,36 @@ public class FhirPathDateTime {
    */
   @Nonnull
   static FhirPathDateTime fromDateTime(@Nonnull final OffsetDateTime dateTime,
-                                       @Nonnull final TemporalPrecision precision) {
+      @Nonnull final TemporalPrecision precision) {
     return new FhirPathDateTime(dateTime, precision);
+  }
+
+  /**
+   * Checks if given string represents a valid Fhirpath dateTime literal
+   *
+   * @param dateTimeLiteral the dateTime literal
+   * @return true is the literal is valid
+   */
+  public static boolean isDateTimeLiteral(@Nonnull final String dateTimeLiteral) {
+    try {
+      parse(dateTimeLiteral);
+      return true;
+    } catch (final DateTimeParseException ignore) {
+      return false;
+    }
+  }
+
+  /**
+   * Checks if given string represents a valid Fhirpath date literal
+   *
+   * @param dateTimeLiteral the dateTime literal
+   * @return true is the literal is valid
+   */
+  public static boolean isDateLiteral(@Nonnull final String dateTimeLiteral) {
+    try {
+      return parse(dateTimeLiteral).getPrecision().ordinal() <= TemporalPrecision.DAY.ordinal();
+    } catch (final DateTimeParseException ignore) {
+      return false;
+    }
   }
 }
