@@ -15,7 +15,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-class FhirpathDateTimeTest {
+class FhirPathDateTimeTest {
 
   FhirPathDateTime fromDateTimeString(String dateTimeString, TemporalPrecision precision) {
     return FhirPathDateTime.fromDateTime(OffsetDateTime.parse(dateTimeString), precision);
