@@ -50,12 +50,22 @@ import lombok.experimental.UtilityClass;
 public class Literals {
 
   /**
+   * Interface for all literal path implementations.
+   * <p>
+   * This interface represents a FHIRPath literal value that can be used in expressions.
+   * </p>
+   */
+  public interface LiteralPath extends FhirPath {
+
+  }
+
+  /**
    * Creates a null literal value.
    *
    * @return a new {@link NullLiteral} instance
    */
   @Nonnull
-  public static NullLiteral nullLiteral() {
+  public static LiteralPath nullLiteral() {
     return new NullLiteral();
   }
 
@@ -66,7 +76,7 @@ public class Literals {
    * @return a new {@link StringLiteral} instance
    */
   @Nonnull
-  public static StringLiteral stringLiteral(@Nonnull final String literalValue) {
+  public static LiteralPath stringLiteral(@Nonnull final String literalValue) {
     return new StringLiteral(literalValue);
   }
 
@@ -77,7 +87,7 @@ public class Literals {
    * @return a new {@link BooleanLiteral} instance
    */
   @Nonnull
-  public static BooleanLiteral booleanLiteral(@Nonnull final String literalValue) {
+  public static LiteralPath booleanLiteral(@Nonnull final String literalValue) {
     return new BooleanLiteral(literalValue);
   }
 
@@ -88,18 +98,15 @@ public class Literals {
    * @return a new {@link CodingLiteral} instance
    */
   @Nonnull
-  public static CodingLiteral codingLiteral(@Nonnull final String literalValue) {
+  public static LiteralPath codingLiteral(@Nonnull final String literalValue) {
     return new CodingLiteral(literalValue);
   }
 
   /**
    * Creates a date literal value.
-   * <p>
-   * Note: This operation is not currently supported and will throw an exception.
-   * </p>
    *
    * @param literalValue the date value as a string
-   * @return a new date literal instance
+   * @return a new {@link DateLiteral} instance
    */
   public static LiteralPath dateLiteral(@Nonnull final String literalValue) {
     return new DateLiteral(literalValue);
@@ -107,12 +114,9 @@ public class Literals {
 
   /**
    * Creates a dateTime literal value.
-   * <p>
-   * Note: This operation is not currently supported and will throw an exception.
-   * </p>
    *
    * @param literalValue the dateTime value as a string
-   * @return a new dateTime literal instance
+   * @return a new {@link DateTimeLiteral} instance
    */
   public static LiteralPath dateTimeLiteral(@Nonnull final String literalValue) {
     return new DateTimeLiteral(literalValue);
@@ -136,7 +140,7 @@ public class Literals {
    */
   @SuppressWarnings("WeakerAccess")
   @Nonnull
-  public static IntegerLiteral integerLiteral(@Nonnull final String literalValue) {
+  public static LiteralPath integerLiteral(@Nonnull final String literalValue) {
     return new IntegerLiteral(literalValue);
   }
 
@@ -148,7 +152,7 @@ public class Literals {
    */
   @SuppressWarnings("WeakerAccess")
   @Nonnull
-  public static DecimalLiteral decimalLiteral(@Nonnull final String literalValue) {
+  public static LiteralPath decimalLiteral(@Nonnull final String literalValue) {
     return new DecimalLiteral(literalValue);
   }
 
@@ -223,16 +227,6 @@ public class Literals {
   }
 
   /**
-   * Interface for all literal path implementations.
-   * <p>
-   * This interface represents a FHIRPath literal value that can be used in expressions.
-   * </p>
-   */
-  public interface LiteralPath extends FhirPath {
-
-  }
-
-  /**
    * Represents a null literal in FHIRPath.
    * <p>
    * This class implements a literal that represents an empty collection.
@@ -240,7 +234,7 @@ public class Literals {
    */
   @Value
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class NullLiteral implements LiteralPath {
+  private static class NullLiteral implements LiteralPath {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
@@ -263,7 +257,7 @@ public class Literals {
    */
   @Value
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class StringLiteral implements LiteralPath {
+  private static class StringLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -289,7 +283,7 @@ public class Literals {
    */
   @Value
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class BooleanLiteral implements LiteralPath {
+  private static class BooleanLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -315,7 +309,7 @@ public class Literals {
    */
   @Value
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class CodingLiteral implements LiteralPath {
+  private static class CodingLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -345,7 +339,7 @@ public class Literals {
    */
   @Value
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class IntegerLiteral implements LiteralPath {
+  private static class IntegerLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -371,7 +365,7 @@ public class Literals {
    */
   @Value
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class DecimalLiteral implements LiteralPath {
+  private static class DecimalLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -398,7 +392,7 @@ public class Literals {
 
   @Value
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class DateLiteral implements LiteralPath {
+  private static class DateLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -428,7 +422,7 @@ public class Literals {
    */
   @Value
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class DateTimeLiteral implements LiteralPath {
+  private static class DateTimeLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -458,7 +452,7 @@ public class Literals {
    */
   @Value
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class TimeLiteral implements LiteralPath {
+  private static class TimeLiteral implements LiteralPath {
 
     @Nonnull
     String value;
