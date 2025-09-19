@@ -133,6 +133,9 @@ production environments such as the Pathling website and sandbox instance.
   even for single statements.
 - Use `final` for variables, parameters, and methods that should not change.
 - Avoid using magic numbers; define constants with meaningful names.
+- Avoid the use of inner classes, records and enums - having each class defined
+  in its own file is preferred and avoids any implicit dependencies on code
+  within the enclosing scope.
 - Document public classes and methods with Javadoc comments.
 - Handle exceptions appropriately; do not use empty catch blocks.
 - Close resources (e.g., streams, connections) in a `finally` block or use
