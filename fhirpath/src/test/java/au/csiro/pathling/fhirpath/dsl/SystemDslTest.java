@@ -247,6 +247,10 @@ public class SystemDslTest extends FhirPathDslTestBase {
             "correct typeOf() traversal to an missing choice value in FHIR resource")
         .testEmpty("valueInteger",
             "correct direct traversal to an missing choice value in FHIR resource")
+        .group("choice type error handling")
+        .testError("Selection of mixed collection not supported: value",
+            "value",
+            "selecting a choice type without ofType() provides helpful error message")
         .build();
   }
 
