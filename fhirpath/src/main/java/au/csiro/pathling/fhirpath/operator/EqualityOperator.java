@@ -27,7 +27,6 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.Equatable.EqualityOperation;
 import jakarta.annotation.Nonnull;
-import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
@@ -61,8 +60,8 @@ public class EqualityOperator implements FhirPathBinaryOperator {
    * @param comparator the comparator function to wrap
    * @return a comparator function that can be applied to two array columns
    */
-  private static BiFunction<Column, Column, Column> asArrayComparator(
-      @Nonnull final BiFunction<Column, Column, Column> comparator, boolean defaultNonMatch) {
+  private static BinaryOperator<Column> asArrayComparator(
+      @Nonnull final BinaryOperator<Column> comparator, final boolean defaultNonMatch) {
     return (left, right) -> {
       final Column zip = functions.zip_with(left, right, comparator::apply);
       // Check if all elements in the zipped array are true in case of equality
@@ -104,7 +103,7 @@ public class EqualityOperator implements FhirPathBinaryOperator {
     }
 
     // if types are compatible do element by element application of element comparator
-    // We do actually use the equalTo and nonEqualTo methods here, rahter than negating the
+    // We do actually use the equalTo and nonEqualTo methods here, rather than negating the
     // result of equalTo because this may be more efficient in some cases.
     final BinaryOperator<Column> elementComparator = type.bind(leftCollection.getComparator());
 
