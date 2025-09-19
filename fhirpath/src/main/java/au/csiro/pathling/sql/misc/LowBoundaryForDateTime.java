@@ -79,9 +79,9 @@ public class LowBoundaryForDateTime implements SqlFunction1<Object, Timestamp> {
   public Timestamp call(@Nullable final Object input) throws Exception {
     if (input == null) {
       return null;
-    } else if (input instanceof Timestamp tst) {
+    } else if (input instanceof final Timestamp tst) {
       return tst;
-    } else if (input instanceof String s) {
+    } else if (input instanceof final String s) {
       try {
         return Timestamp.from(FhirPathDateTime.parse(s).getLowerBoundary());
       } catch (final DateTimeParseException e) {
