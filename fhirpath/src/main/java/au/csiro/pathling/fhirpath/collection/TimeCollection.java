@@ -18,15 +18,20 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.annotations.UsedByReflection;
+import au.csiro.pathling.fhirpath.FhirPathTime;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
+import au.csiro.pathling.fhirpath.comparison.TemporalComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import jakarta.annotation.Nonnull;
+import java.text.ParseException;
 import java.util.Optional;
+import org.apache.jena.reasoner.rulesys.Rule.ParserException;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.TimeType;
@@ -83,6 +88,23 @@ public class TimeCollection extends Collection implements StringCoercible, Mater
 
 
   /**
+   * Returns a new instance, parsed from a FHIRPath literal.
+   *
+   * @param literal The FHIRPath representation of the literal
+   * @return A new instance of {@link TimeCollection}
+   * @throws ParserException if the literal is malformed
+   * @throws ParseException if the literal cannot be parsed to a valid time
+   */
+  @Nonnull
+  public static TimeCollection fromLiteral(@Nonnull final String literal) throws ParseException {
+    final String timeString = literal.replaceFirst("^@T", "");
+    if (!FhirPathTime.isTimeValue(timeString)) {
+      throw new ParseException("Invalid dateTime literal: " + literal, 0);
+    }
+    return TimeCollection.build(DefaultRepresentation.literal(timeString));
+  }
+
+  /**
    * Returns a new instance based upon a {@link TimeType}.
    *
    * @param value The value to use
@@ -99,4 +121,16 @@ public class TimeCollection extends Collection implements StringCoercible, Mater
   public StringCollection asStringPath() {
     return map(ColumnRepresentation::asString, StringCollection::build);
   }
+
+  @Override
+  @Nonnull
+  public ColumnComparator getComparator() {
+    return TemporalComparator.forTime();
+  }
+
+  @Override
+  public boolean isComparableTo(@Nonnull final Collection target) {
+    return target instanceof TimeCollection;
+  }
+
 }

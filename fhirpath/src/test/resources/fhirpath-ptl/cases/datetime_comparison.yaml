@@ -159,10 +159,10 @@ tests:
         expression: "Observation.effective.ofType(dateTime) >= component.where(code.coding.code = 'month-2023-03').value.ofType(dateTime)"
         result: []
 
-  - "Error Cases":
-      - desc: "DateTime vs issued (Instant) comparison - should error"
+  - "Compare DateTime with Instant":
+      - desc: "DateTime with seconds vs issued (Instant) comparison"
         expression: "Observation.effective.ofType(dateTime) = issued"
-        error: true
+        result: [true]
 
 subject:
   resourceType: Observation

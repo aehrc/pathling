@@ -23,7 +23,7 @@ import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
-import au.csiro.pathling.fhirpath.operator.BinaryOperator;
+import au.csiro.pathling.fhirpath.operator.FhirPathBinaryOperator;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import au.csiro.pathling.fhirpath.operator.CollectionOperations;
 import au.csiro.pathling.fhirpath.operator.MethodDefinedOperator;
@@ -33,6 +33,7 @@ import au.csiro.pathling.fhirpath.operator.SubsettingOperations;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AdditiveExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AndExpressionContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.EntireExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.EqualityExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ImpliesExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.IndexerExpressionContext;
@@ -60,6 +61,18 @@ import org.antlr.v4.runtime.tree.ParseTree;
  * @author John Grimes
  */
 class Visitor extends FhirPathBaseVisitor<FhirPath> {
+
+
+  /**
+   * Visit the expression and ignore EOF token.
+   *
+   * @param ctx The {@link EntireExpressionContext}
+   * @return A {@link FhirPath} expression
+   */
+  @Override
+  public FhirPath visitEntireExpression(final EntireExpressionContext ctx) {
+    return requireNonNull(ctx).expression().accept(this);
+  }
 
   /**
    * A term is typically a standalone literal or function invocation.
@@ -92,7 +105,7 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
     return invocationSubject.andThen(invocationVerb);
   }
 
-  private static final Map<String, BinaryOperator> BINARY_OPERATORS = MethodDefinedOperator.mapOf(
+  private static final Map<String, FhirPathBinaryOperator> BINARY_OPERATORS = MethodDefinedOperator.mapOf(
       CollectionOperations.class);
 
   @Nonnull

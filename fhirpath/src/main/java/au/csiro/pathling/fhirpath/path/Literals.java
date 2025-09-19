@@ -24,11 +24,15 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.DateCollection;
+import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import jakarta.annotation.Nonnull;
+import java.text.ParseException;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Value;
@@ -46,12 +50,22 @@ import lombok.experimental.UtilityClass;
 public class Literals {
 
   /**
+   * Interface for all literal path implementations.
+   * <p>
+   * This interface represents a FHIRPath literal value that can be used in expressions.
+   * </p>
+   */
+  public interface LiteralPath extends FhirPath {
+
+  }
+
+  /**
    * Creates a null literal value.
    *
    * @return a new {@link NullLiteral} instance
    */
   @Nonnull
-  public static NullLiteral nullLiteral() {
+  public static LiteralPath nullLiteral() {
     return new NullLiteral();
   }
 
@@ -62,7 +76,7 @@ public class Literals {
    * @return a new {@link StringLiteral} instance
    */
   @Nonnull
-  public static StringLiteral stringLiteral(@Nonnull final String literalValue) {
+  public static LiteralPath stringLiteral(@Nonnull final String literalValue) {
     return new StringLiteral(literalValue);
   }
 
@@ -73,7 +87,7 @@ public class Literals {
    * @return a new {@link BooleanLiteral} instance
    */
   @Nonnull
-  public static BooleanLiteral booleanLiteral(@Nonnull final String literalValue) {
+  public static LiteralPath booleanLiteral(@Nonnull final String literalValue) {
     return new BooleanLiteral(literalValue);
   }
 
@@ -84,53 +98,38 @@ public class Literals {
    * @return a new {@link CodingLiteral} instance
    */
   @Nonnull
-  public static CodingLiteral codingLiteral(@Nonnull final String literalValue) {
+  public static LiteralPath codingLiteral(@Nonnull final String literalValue) {
     return new CodingLiteral(literalValue);
   }
 
   /**
    * Creates a date literal value.
-   * <p>
-   * Note: This operation is not currently supported and will throw an exception.
-   * </p>
    *
    * @param literalValue the date value as a string
-   * @return a new date literal instance
-   * @throws UnsupportedOperationException always, as date literals are not supported
+   * @return a new {@link DateLiteral} instance
    */
-  @SuppressWarnings("unused")
   public static LiteralPath dateLiteral(@Nonnull final String literalValue) {
-    throw new UnsupportedFhirPathFeatureError("Date literals are not supported");
+    return new DateLiteral(literalValue);
   }
 
   /**
    * Creates a dateTime literal value.
-   * <p>
-   * Note: This operation is not currently supported and will throw an exception.
-   * </p>
    *
    * @param literalValue the dateTime value as a string
-   * @return a new dateTime literal instance
-   * @throws UnsupportedOperationException always, as dateTime literals are not supported
+   * @return a new {@link DateTimeLiteral} instance
    */
-  @SuppressWarnings("unused")
   public static LiteralPath dateTimeLiteral(@Nonnull final String literalValue) {
-    throw new UnsupportedFhirPathFeatureError("DateTime literals are not supported");
+    return new DateTimeLiteral(literalValue);
   }
 
   /**
    * Creates a time literal value.
-   * <p>
-   * Note: This operation is not currently supported and will throw an exception.
-   * </p>
    *
-   * @param literalValue the time value as a string
-   * @return a new time literal instance
-   * @throws UnsupportedOperationException always, as time literals are not supported
+   * @param literalValue the time value as a string (e.g., @T12:00, @T14:30:14.559)
+   * @return a new {@link TimeLiteral} instance
    */
-  @SuppressWarnings("unused")
   public static LiteralPath timeLiteral(@Nonnull final String literalValue) {
-    throw new UnsupportedFhirPathFeatureError("DateTime literals are not supported");
+    return new TimeLiteral(literalValue);
   }
 
   /**
@@ -141,7 +140,7 @@ public class Literals {
    */
   @SuppressWarnings("WeakerAccess")
   @Nonnull
-  public static IntegerLiteral integerLiteral(@Nonnull final String literalValue) {
+  public static LiteralPath integerLiteral(@Nonnull final String literalValue) {
     return new IntegerLiteral(literalValue);
   }
 
@@ -153,7 +152,7 @@ public class Literals {
    */
   @SuppressWarnings("WeakerAccess")
   @Nonnull
-  public static DecimalLiteral decimalLiteral(@Nonnull final String literalValue) {
+  public static LiteralPath decimalLiteral(@Nonnull final String literalValue) {
     return new DecimalLiteral(literalValue);
   }
 
@@ -228,16 +227,6 @@ public class Literals {
   }
 
   /**
-   * Interface for all literal path implementations.
-   * <p>
-   * This interface represents a FHIRPath literal value that can be used in expressions.
-   * </p>
-   */
-  public interface LiteralPath extends FhirPath {
-
-  }
-
-  /**
    * Represents a null literal in FHIRPath.
    * <p>
    * This class implements a literal that represents an empty collection.
@@ -245,7 +234,7 @@ public class Literals {
    */
   @Value
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class NullLiteral implements LiteralPath {
+  private static class NullLiteral implements LiteralPath {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
@@ -268,7 +257,7 @@ public class Literals {
    */
   @Value
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class StringLiteral implements LiteralPath {
+  private static class StringLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -294,7 +283,7 @@ public class Literals {
    */
   @Value
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class BooleanLiteral implements LiteralPath {
+  private static class BooleanLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -320,7 +309,7 @@ public class Literals {
    */
   @Value
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class CodingLiteral implements LiteralPath {
+  private static class CodingLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -350,7 +339,7 @@ public class Literals {
    */
   @Value
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class IntegerLiteral implements LiteralPath {
+  private static class IntegerLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -376,7 +365,7 @@ public class Literals {
    */
   @Value
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
-  public static class DecimalLiteral implements LiteralPath {
+  private static class DecimalLiteral implements LiteralPath {
 
     @Nonnull
     String value;
@@ -385,6 +374,97 @@ public class Literals {
     public DecimalCollection apply(@Nonnull final Collection input,
         @Nonnull final EvaluationContext context) {
       return DecimalCollection.fromLiteral(value);
+    }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return value;
+    }
+  }
+
+  /**
+   * Represents a date literal in FHIRPath.
+   * <p>
+   * This class implements a literal that represents a date value.
+   * </p>
+   */
+
+  @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
+  private static class DateLiteral implements LiteralPath {
+
+    @Nonnull
+    String value;
+
+    @Override
+    public DateCollection apply(@Nonnull final Collection input,
+        @Nonnull final EvaluationContext context) {
+      try {
+        return DateCollection.fromLiteral(value);
+      } catch (final ParseException e) {
+        throw new InvalidUserInputError("Unable to parse date format: " + value);
+      }
+    }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return value;
+    }
+  }
+
+  /**
+   * Represents a dateTime literal in FHIRPath.
+   * <p>
+   * This class implements a literal that represents a dateTime value.
+   * </p>
+   */
+  @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
+  private static class DateTimeLiteral implements LiteralPath {
+
+    @Nonnull
+    String value;
+
+    @Override
+    public DateTimeCollection apply(@Nonnull final Collection input,
+        @Nonnull final EvaluationContext context) {
+      try {
+        return DateTimeCollection.fromLiteral(value);
+      } catch (final ParseException e) {
+        throw new InvalidUserInputError("Unable to parse date format: " + value);
+      }
+    }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return value;
+    }
+  }
+
+  /**
+   * Represents a time literal in FHIRPath.
+   * <p>
+   * This class implements a literal that represents a time value.
+   * </p>
+   */
+  @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
+  private static class TimeLiteral implements LiteralPath {
+
+    @Nonnull
+    String value;
+
+    @Override
+    public TimeCollection apply(@Nonnull final Collection input,
+        @Nonnull final EvaluationContext context) {
+      try {
+        return TimeCollection.fromLiteral(value);
+      } catch (final ParseException e) {
+        throw new InvalidUserInputError("Unable to parse date format: " + value);
+      }
     }
 
     @Nonnull

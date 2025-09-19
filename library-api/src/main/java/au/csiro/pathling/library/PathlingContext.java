@@ -26,7 +26,7 @@ import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.FhirEncoderBuilder;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
-import au.csiro.pathling.sql.FhirpathUDFRegistrar;
+import au.csiro.pathling.sql.PathlingUdfConfigurer;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -106,7 +106,7 @@ public class PathlingContext {
     this.fhirEncoders = fhirEncoders;
     this.terminologyServiceFactory = terminologyServiceFactory;
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
-    FhirpathUDFRegistrar.registerUDFs(spark);
+    PathlingUdfConfigurer.registerUDFs(spark);
     gson = buildGson();
   }
 

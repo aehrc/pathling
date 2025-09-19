@@ -18,16 +18,15 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.annotations.UsedByReflection;
+import au.csiro.pathling.fhirpath.FhirPathDateTime;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
-import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import au.csiro.pathling.fhirpath.operator.DateTimeComparator;
 import jakarta.annotation.Nonnull;
+import java.text.ParseException;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
@@ -41,10 +40,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 @Slf4j
 public class DateCollection extends Collection implements StringCoercible, Materializable,
-    Comparable {
-
-  private static final ColumnComparator COMPARATOR = new DateTimeComparator();
-
+    DateTimeComparable {
+  
   /**
    * Creates a new DateCollection.
    *
@@ -93,16 +90,27 @@ public class DateCollection extends Collection implements StringCoercible, Mater
     return DateCollection.build(DefaultRepresentation.literal(value.getValueAsString()));
   }
 
+  /**
+   * Returns a new instance, parsed from a FHIRPath literal.
+   *
+   * @param dateLiteral The FHIRPath representation of the literal
+   * @return A new instance of {@link DateCollection}
+   * @throws ParseException if the literal is malformed
+   */
   @Nonnull
-  @Override
-  public StringCollection asStringPath() {
-    return Collection.defaultAsStringPath(this);
+  public static DateCollection fromLiteral(@Nonnull final String dateLiteral)
+      throws ParseException {
+    final String dateString = dateLiteral.replaceFirst("^@", "");
+    if (!FhirPathDateTime.isDateValue(dateString)) {
+      throw new ParseException("Invalid dateTime literal: " + dateLiteral, 0);
+    }
+    return DateCollection.build(DefaultRepresentation.literal(dateString));
   }
 
   @Nonnull
   @Override
-  public ColumnComparator getComparator() {
-    return COMPARATOR;
+  public StringCollection asStringPath() {
+    return Collection.defaultAsStringPath(this);
   }
 
 }

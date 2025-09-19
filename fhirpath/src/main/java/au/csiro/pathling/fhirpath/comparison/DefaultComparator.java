@@ -15,9 +15,8 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.operator;
+package au.csiro.pathling.fhirpath.comparison;
 
-import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
@@ -26,6 +25,22 @@ import org.apache.spark.sql.Column;
  * operators.
  */
 public class DefaultComparator implements ColumnComparator {
+
+  private static final DefaultComparator INSTANCE = new DefaultComparator();
+
+  /**
+   * Gets the singleton instance of the {@link DefaultComparator}
+   *
+   * @return the singleton instance of {@link DefaultComparator}
+   */
+  @Nonnull
+  public static DefaultComparator getInstance() {
+    return INSTANCE;
+  }
+
+
+  private DefaultComparator() {
+  }
 
   @Nonnull
   @Override

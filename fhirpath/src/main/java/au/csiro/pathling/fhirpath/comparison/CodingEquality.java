@@ -20,18 +20,31 @@ package au.csiro.pathling.fhirpath.comparison;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.errors.InvalidUserInputError;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.spark.sql.Column;
 
 /**
- * Implementation of a Spark SQL comparator for the Coding type.
+ * Implementation of a Spark SQL equality for the Coding type.
  *
  * @author Piotr Szul
  */
-public class CodingComparator implements ColumnComparator {
+public class CodingEquality implements ColumnEquality {
+
+
+  @Nonnull
+  private static final CodingEquality INSTANCE = new CodingEquality();
+
+  /**
+   * Gets the singleton instance of the comparator.
+   *
+   * @return the singleton instance
+   */
+  @Nonnull
+  public static CodingEquality getInstance() {
+    return INSTANCE;
+  }
 
   private static final List<String> EQUALITY_COLUMNS = Arrays
       .asList("system", "code", "version", "display", "userSelected");
@@ -46,18 +59,4 @@ public class CodingComparator implements ColumnComparator {
                 .reduce(Column::and).orElseThrow(() -> new AssertionError("No fields to compare"))
         );
   }
-
-  @Nonnull
-  @Override
-  public Column lessThan(@Nonnull final Column left, @Nonnull final Column right) {
-    throw new InvalidUserInputError("Coding type does not support the less than operator");
-
-  }
-
-  @Nonnull
-  @Override
-  public Column greaterThan(@Nonnull final Column left, @Nonnull final Column right) {
-    throw new InvalidUserInputError("Coding type does not support the greater than operator");
-  }
-
 }

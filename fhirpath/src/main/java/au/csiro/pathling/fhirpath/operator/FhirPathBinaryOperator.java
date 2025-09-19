@@ -26,7 +26,7 @@ import org.apache.commons.lang3.tuple.Pair;
  *
  * @author John Grimes
  */
-public interface BinaryOperator {
+public interface FhirPathBinaryOperator {
 
   /**
    * Invokes this operator with the specified inputs.

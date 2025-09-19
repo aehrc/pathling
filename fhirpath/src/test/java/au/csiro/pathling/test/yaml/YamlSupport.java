@@ -96,6 +96,7 @@ public class YamlSupport {
         switch (fhirLiteral.getType()) {
           case NULL -> gen.writeNull();
           case INTEGER, DECIMAL, BOOLEAN -> gen.writeRawValue(literalValue);
+          case TIME, DATE, DATETIME -> gen.writeString(literalValue);
           case STRING -> gen.writeString(StringCollection.parseStringLiteral(literalValue));
           case CODING -> writeCoding(literalValue, gen);
           default ->
@@ -164,16 +165,21 @@ public class YamlSupport {
     }
   }
 
-  private static final Map<FHIRDefinedType, DataType> FHIR_TO_SQL = Map.of(
-      FHIRDefinedType.STRING, DataTypes.StringType,
-      FHIRDefinedType.URI, DataTypes.StringType,
-      FHIRDefinedType.CODE, DataTypes.StringType,
-      FHIRDefinedType.INTEGER, DataTypes.IntegerType,
-      FHIRDefinedType.BOOLEAN, DataTypes.BooleanType,
-      FHIRDefinedType.DECIMAL, DecimalCollection.DECIMAL_TYPE,
-      FHIRDefinedType.CODING, CodingSchema.codingStructType(),
-      FHIRDefinedType.NULL, DataTypes.NullType
+
+  private static final Map<FHIRDefinedType, DataType> FHIR_TO_SQL = Map.ofEntries(
+      Map.entry(FHIRDefinedType.STRING, DataTypes.StringType),
+      Map.entry(FHIRDefinedType.URI, DataTypes.StringType),
+      Map.entry(FHIRDefinedType.CODE, DataTypes.StringType),
+      Map.entry(FHIRDefinedType.INTEGER, DataTypes.IntegerType),
+      Map.entry(FHIRDefinedType.BOOLEAN, DataTypes.BooleanType),
+      Map.entry(FHIRDefinedType.DECIMAL, DecimalCollection.DECIMAL_TYPE),
+      Map.entry(FHIRDefinedType.CODING, CodingSchema.codingStructType()),
+      Map.entry(FHIRDefinedType.TIME, DataTypes.StringType),
+      Map.entry(FHIRDefinedType.DATETIME, DataTypes.StringType),
+      Map.entry(FHIRDefinedType.DATE, DataTypes.StringType),
+      Map.entry(FHIRDefinedType.NULL, DataTypes.NullType)
   );
+  
   public static final Yaml YAML = new Yaml(new FhirConstructor(), new FhirRepresenter());
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 

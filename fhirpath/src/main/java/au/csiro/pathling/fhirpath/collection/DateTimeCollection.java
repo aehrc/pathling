@@ -20,18 +20,16 @@ package au.csiro.pathling.fhirpath.collection;
 import static org.apache.spark.sql.functions.date_format;
 
 import au.csiro.pathling.annotations.UsedByReflection;
+import au.csiro.pathling.fhirpath.FhirPathDateTime;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
-import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import au.csiro.pathling.fhirpath.operator.DateTimeComparator;
-import au.csiro.pathling.fhirpath.operator.DefaultComparator;
 import jakarta.annotation.Nonnull;
 import java.sql.Timestamp;
+import java.text.ParseException;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
@@ -45,11 +43,9 @@ import org.hl7.fhir.r4.model.InstantType;
  * @author John Grimes
  */
 public class DateTimeCollection extends Collection implements StringCoercible, Materializable,
-    Comparable {
+    DateTimeComparable {
 
   private static final String SPARK_FHIRPATH_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
-  private static final ColumnComparator DATE_TIME_COMPARATOR = new DateTimeComparator();
-  private static final ColumnComparator INSTANT_COMPARATOR = new DefaultComparator();
 
   /**
    * Creates a new DateTimeCollection.
@@ -125,6 +121,24 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
         Optional.empty(), Optional.empty());
   }
 
+
+  /**
+   * Returns a new instance, parsed from a FHIRPath literal.
+   *
+   * @param dateTimeLiteral The FHIRPath representation of the literal
+   * @return A new instance of {@link DateTimeCollection}
+   * @throws ParseException if the literal is malformed
+   */
+  @Nonnull
+  public static DateTimeCollection fromLiteral(@Nonnull final String dateTimeLiteral)
+      throws ParseException {
+    final String dateTimeString = dateTimeLiteral.replaceFirst("^@", "");
+    if (!FhirPathDateTime.isDateTimeValue(dateTimeString)) {
+      throw new ParseException("Invalid dateTime literal: " + dateTimeLiteral, 0);
+    }
+    return DateTimeCollection.build(DefaultRepresentation.literal(dateTimeString));
+  }
+
   @Nonnull
   @Override
   public StringCollection asStringPath() {
@@ -137,35 +151,5 @@ public class DateTimeCollection extends Collection implements StringCoercible, M
       valueColumn = getColumn();
     }
     return StringCollection.build(valueColumn);
-  }
-
-  @Nonnull
-  @Override
-  public ColumnComparator getComparator() {
-    final Optional<FHIRDefinedType> fhirType = getFhirType();
-    if (fhirType.isPresent() && fhirType.get() == FHIRDefinedType.INSTANT) {
-      return INSTANT_COMPARATOR;
-    }
-    return DATE_TIME_COMPARATOR;
-  }
-
-  @Override
-  public boolean isComparableTo(@Nonnull final Comparable path) {
-    if (!(path instanceof final DateTimeCollection other)) {
-      return false;
-    }
-
-    final Optional<FHIRDefinedType> thisFhirType = getFhirType();
-    final Optional<FHIRDefinedType> otherFhirType = other.getFhirType();
-
-    // Both must have FHIR types defined.
-    if (thisFhirType.isEmpty() || otherFhirType.isEmpty()) {
-      return false;
-    }
-
-    // DateTime and Instant types cannot be compared to each other. This is because we currently
-    // represent Instant using the TIMESTAMP type in Spark, which involves changing the precision
-    // from the original source data. The original precision is necessary for correct comparison.
-    return thisFhirType.get() == otherFhirType.get();
   }
 }

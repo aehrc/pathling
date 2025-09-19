@@ -47,6 +47,21 @@ public class FhirTypedLiteral {
     return of(Enumerations.FHIRDefinedType.CODING, literal);
   }
 
+  @Nonnull
+  public static FhirTypedLiteral toDateTime(@Nullable final String literal) {
+    return of(Enumerations.FHIRDefinedType.DATETIME, literal);
+  }
+
+  @Nonnull
+  public static FhirTypedLiteral toDate(@Nullable final String literal) {
+    return of(Enumerations.FHIRDefinedType.DATE, literal);
+  }
+
+  @Nonnull
+  public static FhirTypedLiteral toTime(@Nullable final String literal) {
+    return of(Enumerations.FHIRDefinedType.TIME, literal);
+  }
+
   /**
    * Creates a String typed literal.
    *

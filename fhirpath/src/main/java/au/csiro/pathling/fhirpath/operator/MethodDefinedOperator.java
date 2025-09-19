@@ -26,12 +26,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * A {@link BinaryOperator} that is defined using a static method.
+ * A {@link FhirPathBinaryOperator} that is defined using a static method.
  *
  * @author Piotr Szul
  * @author John Grimes
  */
-public record MethodDefinedOperator(Method method) implements BinaryOperator {
+public record MethodDefinedOperator(Method method) implements FhirPathBinaryOperator {
 
   /**
    * @param operatorInput the input to the operator
@@ -64,13 +64,13 @@ public record MethodDefinedOperator(Method method) implements BinaryOperator {
   }
 
   /**
-   * Builds a map of {@link BinaryOperator}s from the methods defined within a class.
+   * Builds a map of {@link FhirPathBinaryOperator}s from the methods defined within a class.
    *
    * @param clazz The class to build the operators from
-   * @return A map of {@link BinaryOperator}s
+   * @return A map of {@link FhirPathBinaryOperator}s
    */
   @Nonnull
-  public static Map<String, BinaryOperator> mapOf(@Nonnull final Class<?> clazz) {
+  public static Map<String, FhirPathBinaryOperator> mapOf(@Nonnull final Class<?> clazz) {
     return Stream.of(clazz.getDeclaredMethods())
         .filter(m -> m.getAnnotation(FhirPathOperator.class) != null)
         .collect(Collectors.toUnmodifiableMap(

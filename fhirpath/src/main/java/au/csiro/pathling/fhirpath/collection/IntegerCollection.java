@@ -176,7 +176,7 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
   }
 
   @Override
-  public boolean isComparableTo(@Nonnull final Comparable path) {
+  public boolean isComparableTo(@Nonnull final Collection path) {
     return COMPARABLE_TYPES.contains(path.getClass());
   }
 

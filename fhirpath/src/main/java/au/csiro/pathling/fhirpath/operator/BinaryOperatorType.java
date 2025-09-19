@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.operator;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.comparison.Comparable.ComparisonOperation;
+import au.csiro.pathling.fhirpath.comparison.Equatable.EqualityOperation;
 import au.csiro.pathling.fhirpath.operator.BooleanOperator.BooleanOperatorType;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
@@ -35,41 +36,71 @@ import lombok.Getter;
 @Getter
 public enum BinaryOperatorType {
 
-  /** Logical AND operator. */
+  /**
+   * Logical AND operator.
+   */
   AND("and", new BooleanOperator(BooleanOperatorType.AND)),
-  /** Logical OR operator. */
+  /**
+   * Logical OR operator.
+   */
   OR("or", new BooleanOperator(BooleanOperatorType.OR)),
-  /** Logical exclusive OR operator. */
+  /**
+   * Logical exclusive OR operator.
+   */
   XOR("xor", new BooleanOperator(BooleanOperatorType.XOR)),
-  /** Logical implication operator. */
+  /**
+   * Logical implication operator.
+   */
   IMPLIES("implies", new BooleanOperator(BooleanOperatorType.IMPLIES)),
-  /** Equality comparison operator. */
-  EQUALS("=", new ComparisonOperator(ComparisonOperation.EQUALS)),
-  /** Inequality comparison operator. */
-  NOT_EQUALS("!=", new ComparisonOperator(ComparisonOperation.NOT_EQUALS)),
-  /** Less than or equal to comparison operator. */
+  /**
+   * Equality comparison operator.
+   */
+  EQUALS("=", new EqualityOperator(EqualityOperation.EQUALS)),
+  /**
+   * Inequality comparison operator.
+   */
+  NOT_EQUALS("!=", new EqualityOperator(EqualityOperation.NOT_EQUALS)),
+  /**
+   * Less than or equal to comparison operator.
+   */
   LESS_THAN_OR_EQUAL_TO("<=", new ComparisonOperator(ComparisonOperation.LESS_THAN_OR_EQUAL_TO)),
-  /** Less than comparison operator. */
+  /**
+   * Less than comparison operator.
+   */
   LESS_THAN("<", new ComparisonOperator(ComparisonOperation.LESS_THAN)),
-  /** Greater than or equal to comparison operator. */
+  /**
+   * Greater than or equal to comparison operator.
+   */
   GREATER_THAN_OR_EQUAL_TO(">=",
       new ComparisonOperator(ComparisonOperation.GREATER_THAN_OR_EQUAL_TO)),
-  /** Greater than comparison operator. */
+  /**
+   * Greater than comparison operator.
+   */
   GREATER_THAN(">", new ComparisonOperator(ComparisonOperation.GREATER_THAN)),
-  /** Arithmetic addition operator. */
+  /**
+   * Arithmetic addition operator.
+   */
   ADDITION("+", new MathOperator(MathOperation.ADDITION)),
-  /** Arithmetic subtraction operator. */
+  /**
+   * Arithmetic subtraction operator.
+   */
   SUBTRACTION("-", new MathOperator(MathOperation.SUBTRACTION)),
-  /** Arithmetic multiplication operator. */
+  /**
+   * Arithmetic multiplication operator.
+   */
   MULTIPLICATION("*", new MathOperator(MathOperation.MULTIPLICATION)),
-  /** Arithmetic division operator. */
+  /**
+   * Arithmetic division operator.
+   */
   DIVISION("/", new MathOperator(MathOperation.DIVISION)),
-  /** Arithmetic modulus operator. */
+  /**
+   * Arithmetic modulus operator.
+   */
   MODULUS("mod", new MathOperator(MathOperation.MODULUS));
 
   private final String symbol;
 
-  private final BinaryOperator instance;
+  private final FhirPathBinaryOperator instance;
 
   /**
    * Mapping of operator symbols to instances of those operators.
@@ -84,7 +115,7 @@ public enum BinaryOperatorType {
     SYMBOL_TO_TYPE = builder.build();
   }
 
-  BinaryOperatorType(@Nonnull final String symbol, @Nonnull final BinaryOperator instance) {
+  BinaryOperatorType(@Nonnull final String symbol, @Nonnull final FhirPathBinaryOperator instance) {
     this.symbol = symbol;
     this.instance = instance;
   }

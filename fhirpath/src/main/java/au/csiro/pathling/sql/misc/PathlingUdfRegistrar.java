@@ -22,7 +22,7 @@ import jakarta.annotation.Nonnull;
 /**
  * Registration of miscellaneous UDFs.
  */
-public class MiscUDFRegistrar extends AbstractUDFRegistrar {
+public class PathlingUdfRegistrar extends AbstractUDFRegistrar {
 
   @Override
   protected void registerUDFs(@Nonnull final UDFRegistrar udfRegistrar) {
@@ -31,6 +31,8 @@ public class MiscUDFRegistrar extends AbstractUDFRegistrar {
         .register(new DecimalToLiteral())
         .register(new ToNull())
         .register(new LowBoundaryForDateTime())
-        .register(new HighBoundaryForDateTime());
+        .register(new HighBoundaryForDateTime())
+        .register(new LowBoundaryForTime())
+        .register(new HighBoundaryForTime());
   }
 }
