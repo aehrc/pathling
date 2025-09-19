@@ -17,7 +17,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class FhirPathTimeTest {
 
-  FhirPathTime fromTimeString(String timeString, TemporalPrecision precision) {
+  FhirPathTime fromTimeString(final String timeString, final TemporalPrecision precision) {
     return FhirPathTime.fromLocalTime(LocalTime.parse(timeString), precision);
   }
 
@@ -34,8 +34,8 @@ class FhirPathTimeTest {
 
   @ParameterizedTest(name = "{0} -> {1} ({3})")
   @MethodSource("parseTestProvider")
-  void testParse(String input, String expectedTime, TemporalPrecision expectedPrecision,
-      String ignoredDescription) {
+  void testParse(final String input, final String expectedTime,
+      final TemporalPrecision expectedPrecision, final String ignoredDescription) {
     assertEquals(
         fromTimeString(expectedTime, expectedPrecision),
         FhirPathTime.parse(input)
@@ -55,7 +55,8 @@ class FhirPathTimeTest {
 
   @ParameterizedTest(name = "{0} -> {1} ({2})")
   @MethodSource("lowerBoundaryProvider")
-  void testGetLowerBoundary(String input, String expectedLowerBound, String ignoredDescription) {
+  void testGetLowerBoundary(final String input, final String expectedLowerBound,
+      final String ignoredDescription) {
     final FhirPathTime time = FhirPathTime.parse(input);
     assertEquals(Instant.parse(expectedLowerBound), time.getLowerBoundary());
   }
@@ -71,7 +72,8 @@ class FhirPathTimeTest {
 
   @ParameterizedTest(name = "{0} -> {1} ({2})")
   @MethodSource("upperBoundaryProvider")
-  void testGetUpperBoundary(String input, String expectedUpperBound, String ignoredDescription) {
+  void testGetUpperBoundary(final String input, final String expectedUpperBound,
+      final String ignoredDescription) {
     final FhirPathTime time = FhirPathTime.parse(input);
     assertEquals(Instant.parse(expectedUpperBound), time.getUpperBoundary());
   }
@@ -79,7 +81,7 @@ class FhirPathTimeTest {
   @ParameterizedTest(name = "Parse error with null or empty value: \"{0}\"")
   @NullAndEmptySource
   @ValueSource(strings = {" "})
-  void testParseErrorsNullOrEmpty(String input) {
+  void testParseErrorsNullOrEmpty(final String input) {
     assertThrows(Exception.class, () -> FhirPathTime.parse(input));
   }
 
@@ -92,7 +94,7 @@ class FhirPathTimeTest {
       "12:30:45.",  // Dot with no fraction
       "12:30:45.abc" // Non-numeric fraction
   })
-  void testParseErrorsInvalidFormat(String input) {
+  void testParseErrorsInvalidFormat(final String input) {
     assertThrows(DateTimeParseException.class, () -> FhirPathTime.parse(input));
     assertFalse(FhirPathTime.isTimeValue(input));
   }

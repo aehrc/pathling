@@ -17,7 +17,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class FhirPathDateTimeTest {
 
-  FhirPathDateTime fromDateTimeString(String dateTimeString, TemporalPrecision precision) {
+  FhirPathDateTime fromDateTimeString(final String dateTimeString,
+      final TemporalPrecision precision) {
     return FhirPathDateTime.fromDateTime(OffsetDateTime.parse(dateTimeString), precision);
   }
 
@@ -41,8 +42,8 @@ class FhirPathDateTimeTest {
 
   @ParameterizedTest(name = "{0} -> {1} ({3})")
   @MethodSource("parseTestProvider")
-  void testParse(String input, String expectedInstant, TemporalPrecision expectedPrecision,
-      String ignoredDescription) {
+  void testParse(final String input, final String expectedInstant,
+      final TemporalPrecision expectedPrecision, final String ignoredDescription) {
     assertEquals(
         fromDateTimeString(expectedInstant, expectedPrecision),
         FhirPathDateTime.parse(input)
@@ -77,7 +78,8 @@ class FhirPathDateTimeTest {
 
   @ParameterizedTest(name = "{0} -> {1} ({2})")
   @MethodSource("lowerBoundaryProvider")
-  void testGetLowerBoundary(String input, String expectedLowerBound, String ignoredDescription) {
+  void testGetLowerBoundary(final String input, final String expectedLowerBound,
+      final String ignoredDescription) {
     final FhirPathDateTime dateTime = FhirPathDateTime.parse(input);
     assertEquals(Instant.parse(expectedLowerBound), dateTime.getLowerBoundary());
   }
@@ -106,7 +108,8 @@ class FhirPathDateTimeTest {
 
   @ParameterizedTest(name = "{0} -> {1} ({2})")
   @MethodSource("upperBoundaryProvider")
-  void testGetUpperBoundary(String input, String expectedUpperBound, String ignoredDescription) {
+  void testGetUpperBoundary(final String input, final String expectedUpperBound,
+      final String ignoredDescription) {
     final FhirPathDateTime dateTime = FhirPathDateTime.parse(input);
     assertEquals(Instant.parse(expectedUpperBound), dateTime.getUpperBoundary());
   }
@@ -114,7 +117,7 @@ class FhirPathDateTimeTest {
   @ParameterizedTest(name = "Parse error with null or empty value: \"{0}\"")
   @NullAndEmptySource
   @ValueSource(strings = {" "})
-  void testParseErrorsNullOrEmpty(String input) {
+  void testParseErrorsNullOrEmpty(final String input) {
     assertThrows(Exception.class, () -> FhirPathDateTime.parse(input));
   }
 
@@ -129,7 +132,7 @@ class FhirPathDateTimeTest {
       "2023-05-15T12-30-45", // Wrong time separators
       "2023-05-15T12:30:45." // Dot with no fraction
   })
-  void testParseErrorsInvalidFormat(String input) {
+  void testParseErrorsInvalidFormat(final String input) {
     assertThrows(DateTimeParseException.class, () -> FhirPathDateTime.parse(input));
   }
 
@@ -152,7 +155,7 @@ class FhirPathDateTimeTest {
 
   @ParameterizedTest(name = "{0} - {1}")
   @MethodSource("invalidValueProvider")
-  void testParseErrorsInvalidValues(String input, String ignoredDescription) {
+  void testParseErrorsInvalidValues(final String input, final String ignoredDescription) {
     assertThrows(DateTimeParseException.class,
         () -> FhirPathDateTime.parse(input));
     assertFalse(FhirPathDateTime.isDateTimeValue(input));
