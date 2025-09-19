@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
+import jakarta.annotation.Nonnull;
 import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -11,6 +12,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 class ParserTest {
 
+  @Nonnull
   static Stream<Arguments> validExpressions() {
     return Stream.of(
         Arguments.of("@T12:00:00", "Time with hour, minute, second"),
@@ -33,6 +35,7 @@ class ParserTest {
     );
   }
 
+  @Nonnull
   static Stream<Arguments> invalidExpressions() {
     return Stream.of(
         Arguments.of("@T12:00:00XXXXX", "Time with extra characters"),
