@@ -21,14 +21,13 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import jakarta.annotation.Nonnull;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import org.apache.commons.lang3.function.TriFunction;
 import org.apache.spark.sql.Column;
 
 /**
- * Describes a set of methods that can be used to compare {@link Collection} objects to other paths,
- * e.g. for equality.
+ * Describes a set of methods that can be used to compare {@link Collection} objects with an order
+ * to other paths, e.g. determining which is greater than the other.
  *
  * @author John Grimes
  * @author Piotr Szul
@@ -71,26 +70,9 @@ public interface Comparable extends Equatable {
   }
 
   /**
-   * Returns a {@link Column} within the dataset containing the values of the nodes.
-   *
-   * @return A {@link Column}
-   */
-  @Nonnull
-  ColumnRepresentation getColumn();
-
-  /**
    * Represents a type of comparison operation.
    */
   enum ComparisonOperation {
-    /**
-     * The equals operation.
-     */
-    EQUALS("=", ColumnComparator::equalsTo),
-
-    /**
-     * The not equals operation.
-     */
-    NOT_EQUALS("!=", ColumnComparator::notEqual),
 
     /**
      * The less than or equal to operation.
@@ -128,19 +110,6 @@ public interface Comparable extends Equatable {
     @Nonnull
     public String toString() {
       return fhirPath;
-    }
-
-    /**
-     * Binds a {@link ColumnComparator} to this operation, returning a function that takes two
-     * {@link Column} objects and produces a {@link Column} containing the result of the
-     * comparison.
-     *
-     * @param comparator the comparator to bind
-     * @return a function that takes two columns and produces a comparison result column
-     */
-    @Nonnull
-    public BiFunction<Column, Column, Column> bind(@Nonnull final ColumnComparator comparator) {
-      return (a, b) -> comparisonFunction.apply(comparator, a, b);
     }
   }
 }

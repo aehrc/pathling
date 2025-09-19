@@ -44,12 +44,7 @@ public class ComparisonOperator implements FhirPathBinaryOperator {
    * @param type The type of operator
    */
   public ComparisonOperator(@Nonnull final ComparisonOperation type) {
-
-    if (type == ComparisonOperation.EQUALS || type == ComparisonOperation.NOT_EQUALS) {
-      throw new IllegalArgumentException("Wrong operation type for comparison: " + type);
-    }
     this.type = type;
-
   }
 
   @Nonnull

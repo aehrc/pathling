@@ -25,10 +25,10 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
-import au.csiro.pathling.fhirpath.comparison.Comparable.ComparisonOperation;
+import au.csiro.pathling.fhirpath.comparison.Equatable.EqualityOperation;
 import jakarta.annotation.Nonnull;
 import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 
@@ -43,15 +43,12 @@ import org.apache.spark.sql.functions;
 public class EqualityOperator implements FhirPathBinaryOperator {
 
   @Nonnull
-  private final ComparisonOperation type;
+  private final EqualityOperation type;
 
   /**
    * @param type The type of operator
    */
-  public EqualityOperator(@Nonnull final ComparisonOperation type) {
-    if (type != ComparisonOperation.EQUALS && type != ComparisonOperation.NOT_EQUALS) {
-      throw new IllegalArgumentException("Unsupported equality comparison operation: " + type);
-    }
+  public EqualityOperator(@Nonnull final EqualityOperation type) {
     this.type = type;
   }
 
@@ -102,15 +99,14 @@ public class EqualityOperator implements FhirPathBinaryOperator {
       // for different types it's either dynamic null if any is null or false otherwise
       final Column equalityResult = when(
           left.isEmpty().getValue().or(right.isEmpty().getValue()), lit(null))
-          .otherwise(lit(type == ComparisonOperation.NOT_EQUALS));
+          .otherwise(lit(type == EqualityOperation.NOT_EQUALS));
       return BooleanCollection.build(new DefaultRepresentation(equalityResult));
     }
 
     // if types are compatible do element by element application of element comparator
     // We do actually use the equalTo and nonEqualTo methods here, rahter than negating the
     // result of equalTo because this may be more efficient in some cases.
-    final BiFunction<Column, Column, Column> elementComparator = type.bind(
-        (ColumnComparator) leftCollection.getComparator());
+    final BinaryOperator<Column> elementComparator = type.bind(leftCollection.getComparator());
 
     final Column equalityResult =
         when(
@@ -123,7 +119,7 @@ public class EqualityOperator implements FhirPathBinaryOperator {
                 elementComparator.apply(left.singular().getValue(), right.singular().getValue()))
             .otherwise(
                 // this works because we know that both sides is plural (count > 1)
-                asArrayComparator(elementComparator, type == ComparisonOperation.NOT_EQUALS)
+                asArrayComparator(elementComparator, type == EqualityOperation.NOT_EQUALS)
                     .apply(left.plural().getValue(), right.plural().getValue()));
     return BooleanCollection.build(new DefaultRepresentation(equalityResult));
   }

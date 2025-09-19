@@ -25,8 +25,7 @@ import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.TerminologyConcepts;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
-import au.csiro.pathling.fhirpath.comparison.CodingComparator;
-import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
+import au.csiro.pathling.fhirpath.comparison.CodingEquality;
 import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
@@ -48,8 +47,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 public class CodingCollection extends Collection implements StringCoercible {
-
-  private static final ColumnComparator COMPARATOR = new CodingComparator();
 
   /**
    * Creates a definition for a Coding element with the specified name and cardinality.
@@ -160,7 +157,7 @@ public class CodingCollection extends Collection implements StringCoercible {
   @Nonnull
   @Override
   public ColumnEquality getComparator() {
-    return  COMPARATOR;
+    return CodingEquality.getInstance();
   }
 
   @Override

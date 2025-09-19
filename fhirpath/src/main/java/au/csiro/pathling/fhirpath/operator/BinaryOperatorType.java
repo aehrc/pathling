@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.operator;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.comparison.Comparable.ComparisonOperation;
+import au.csiro.pathling.fhirpath.comparison.Equatable.EqualityOperation;
 import au.csiro.pathling.fhirpath.operator.BooleanOperator.BooleanOperatorType;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
@@ -54,11 +55,11 @@ public enum BinaryOperatorType {
   /**
    * Equality comparison operator.
    */
-  EQUALS("=", new EqualityOperator(ComparisonOperation.EQUALS)),
+  EQUALS("=", new EqualityOperator(EqualityOperation.EQUALS)),
   /**
    * Inequality comparison operator.
    */
-  NOT_EQUALS("!=", new EqualityOperator(ComparisonOperation.NOT_EQUALS)),
+  NOT_EQUALS("!=", new EqualityOperator(EqualityOperation.NOT_EQUALS)),
   /**
    * Less than or equal to comparison operator.
    */
