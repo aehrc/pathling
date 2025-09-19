@@ -59,7 +59,7 @@ public class ExistenceFunctions {
    * Specification - exists</a>
    */
   @FhirPathFunction
-  @SqlOnFhirConformance(Profile.SHAREABLE)
+  @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static BooleanCollection exists(@Nonnull final Collection input,
       @Nullable final CollectionTransform criteria) {
@@ -78,7 +78,7 @@ public class ExistenceFunctions {
    * empty</a>
    */
   @FhirPathFunction
-  @SqlOnFhirConformance(Profile.SHAREABLE)
+  @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static BooleanCollection empty(@Nonnull final Collection input) {
     return BooleanCollection.build(input.getColumn().isEmpty());

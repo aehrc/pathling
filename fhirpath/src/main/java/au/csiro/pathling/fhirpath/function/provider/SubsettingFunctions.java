@@ -47,7 +47,7 @@ public class SubsettingFunctions {
    * - first</a>
    */
   @FhirPathFunction
-  @SqlOnFhirConformance(Profile.SHAREABLE)
+  @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static Collection first(@Nonnull final Collection input) {
     return input.copyWith(input.getColumn().first());

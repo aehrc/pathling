@@ -54,7 +54,7 @@ public class FhirFunctions {
    * @return A collection containing only those elements for which the criteria expression evaluates
    */
   @FhirPathFunction
-  @SqlOnFhirConformance(Profile.SHAREABLE)
+  @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static Collection extension(@Nonnull final Collection input,
       @Nonnull final StringCollection url) {

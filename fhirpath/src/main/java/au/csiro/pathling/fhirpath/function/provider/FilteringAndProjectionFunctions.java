@@ -57,7 +57,7 @@ public class FilteringAndProjectionFunctions {
    * href="https://build.fhir.org/ig/HL7/FHIRPath/#wherecriteria--expression--collection">where</a>
    */
   @FhirPathFunction
-  @SqlOnFhirConformance(Profile.SHAREABLE)
+  @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static Collection where(@Nonnull final Collection input,
       @Nonnull final CollectionTransform expression) {
@@ -77,38 +77,11 @@ public class FilteringAndProjectionFunctions {
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#oftype">ofType</a>
    */
   @FhirPathFunction
-  @SqlOnFhirConformance(Profile.SHAREABLE)
+  @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static Collection ofType(@Nonnull final Collection input,
       @Nonnull final TypeSpecifier typeSpecifier) {
     return input.filterByType(typeSpecifier);
-  }
-
-  /**
-   * Returns a collection containing all items resulting from applying the projection expression
-   * recursively. The function adds items to the output collection only if they are not already
-   * present. This is useful for traversing tree structures and selecting descendants without
-   * duplication.
-   * <p>
-   * The algorithm works by maintaining a queue of items to process. Each item in the queue has the
-   * projection applied to it, and any results that are not already in the output are added to both
-   * the output and the queue for further processing. This continues until the queue is empty.
-   * <p>
-   * The order of items in the result is undefined.
-   *
-   * @param input The input collection
-   * @param projection The expression to apply recursively
-   * @return A collection containing all unique items found through recursive application of the
-   * projection
-   * @see <a
-   * href="https://build.fhir.org/ig/HL7/FHIRPath/#repeatprojection-expression--collection">repeat</a>
-   */
-  @FhirPathFunction
-  @SqlOnFhirConformance(Profile.SHAREABLE)
-  @Nonnull
-  public static Collection repeat(@Nonnull final Collection input,
-      @Nonnull final CollectionTransform projection) {
-    return input.repeat(projection);
   }
 
 }
