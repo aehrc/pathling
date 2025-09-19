@@ -22,9 +22,12 @@ import lombok.Value;
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class FhirPathTime {
 
-  // Regex for time part, reused from FhirpathDateTime
+  /**
+   * Regular expression for a FHIR time string.
+   */
   public static final String TIME_FORMAT =
       "(?<hours>\\d\\d)(:(?<minutes>\\d\\d)(:(?<seconds>\\d\\d)(\\.(?<frac>\\d+))?)?)?";
+
   private static final Pattern TIME_REGEX =
       Pattern.compile("^" + TIME_FORMAT + "$");
 
