@@ -93,6 +93,7 @@ public class TimeCollection extends Collection implements StringCoercible, Mater
    * @param literal The FHIRPath representation of the literal
    * @return A new instance of {@link TimeCollection}
    * @throws ParserException if the literal is malformed
+   * @throws ParseException if the literal cannot be parsed to a valid time
    */
   @Nonnull
   public static TimeCollection fromLiteral(@Nonnull final String literal) throws ParseException {

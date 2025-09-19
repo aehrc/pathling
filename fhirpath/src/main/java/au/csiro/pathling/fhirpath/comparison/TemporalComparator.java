@@ -131,6 +131,7 @@ public class TemporalComparator implements ColumnComparator {
 
   @Nonnull
   private Column implementWithSql(@Nonnull final Column left, @Nonnull final Column right, @Nonnull
+  final
   BinaryOperator<Column> comparator) {
     final Bounds leftBounds = getBounds(left);
     final Bounds rightBounds = getBounds(right);

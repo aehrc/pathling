@@ -30,6 +30,7 @@ import jakarta.annotation.Nonnull;
 import java.util.function.BinaryOperator;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.jetbrains.annotations.Contract;
 
 /**
  * Provides the functionality of the family of equality operators within FHIRPath, i.e. {@code =},
@@ -60,6 +61,8 @@ public class EqualityOperator implements FhirPathBinaryOperator {
    * @param comparator the comparator function to wrap
    * @return a comparator function that can be applied to two array columns
    */
+  @Nonnull
+  @Contract(pure = true)
   private static BinaryOperator<Column> asArrayComparator(
       @Nonnull final BinaryOperator<Column> comparator, final boolean defaultNonMatch) {
     return (left, right) -> {
