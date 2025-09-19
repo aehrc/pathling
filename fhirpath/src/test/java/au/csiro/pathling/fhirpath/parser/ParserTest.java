@@ -50,6 +50,7 @@ class ParserTest {
   @ParameterizedTest(name = "{1}")
   @MethodSource("invalidExpressions")
   void testParseErrors(final String input, final String description) {
-    assertThrows(InvalidUserInputError.class, () -> new Parser().parse(input));
+    final Parser parser = new Parser();
+    assertThrows(InvalidUserInputError.class, () -> parser.parse(input));
   }
 }
