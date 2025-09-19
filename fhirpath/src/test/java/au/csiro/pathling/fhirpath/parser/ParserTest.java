@@ -43,13 +43,13 @@ class ParserTest {
 
   @ParameterizedTest(name = "{1}")
   @MethodSource("validExpressions")
-  void testParse(String input, String description) {
+  void testParse(final String input, final String description) {
     assertEquals(input, new Parser().parse(input).toExpression());
   }
 
   @ParameterizedTest(name = "{1}")
   @MethodSource("invalidExpressions")
-  void testParseErrors(String input, String description) {
+  void testParseErrors(final String input, final String description) {
     assertThrows(InvalidUserInputError.class, () -> new Parser().parse(input));
   }
 }
