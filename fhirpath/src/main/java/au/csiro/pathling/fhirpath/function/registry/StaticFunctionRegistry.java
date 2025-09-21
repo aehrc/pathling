@@ -27,6 +27,7 @@ import au.csiro.pathling.fhirpath.function.provider.JoinKeyFunctions;
 import au.csiro.pathling.fhirpath.function.provider.StringFunctions;
 import au.csiro.pathling.fhirpath.function.provider.SubsettingFunctions;
 import au.csiro.pathling.fhirpath.function.provider.TerminologyFunctions;
+import au.csiro.pathling.fhirpath.function.provider.TreeNavigationFunctions;
 import com.google.common.collect.ImmutableMap.Builder;
 
 /**
@@ -53,6 +54,7 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry {
         .putAll(MethodDefinedFunction.mapOf(StringFunctions.class))
         .putAll(MethodDefinedFunction.mapOf(SubsettingFunctions.class))
         .putAll(MethodDefinedFunction.mapOf(TerminologyFunctions.class))
+        .putAll(MethodDefinedFunction.mapOf(TreeNavigationFunctions.class))
         .build());
   }
 

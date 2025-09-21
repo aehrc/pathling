@@ -22,6 +22,7 @@ import static au.csiro.pathling.fhirpath.TypeSpecifier.SYSTEM_NAMESPACE;
 import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.encoders.ExtensionSupport;
+import au.csiro.pathling.encoders.UnresolvedRepeatAll;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.TerminologyConcepts;
@@ -361,6 +362,28 @@ public class Collection {
       @Nonnull final ColumnTransform lambda) {
     return map(
         ctx -> ctx.filter(col -> lambda.apply(new DefaultRepresentation(col)).getValue()));
+  }
+
+  /**
+   * Returns a collection that contains all items in this collection, and recursively adds all items
+   * that are reachable by repeatedly applying the projection expression to this collection. Unlike
+   * repeat(), this function does not check for duplicates and will include all items found during
+   * the traversal.
+   *
+   * @param expression The projection expression to apply recursively
+   * @return A new collection containing all items reachable through repeated application of the
+   * expression
+   */
+  @Nonnull
+  public Collection repeatAll(@Nonnull final ColumnTransform expression) {
+    final UnresolvedRepeatAll unresolvedRepeatAll = new UnresolvedRepeatAll(
+        getColumn().getValue().expr(),
+        expr -> expression.apply(copyWith(new DefaultRepresentation(new Column(expr)))).getColumn()
+            .getValue().expr()
+    );
+
+    // Return a new collection with the unresolved expression
+    return copyWith(new DefaultRepresentation(new Column(unresolvedRepeatAll)));
   }
 
 
