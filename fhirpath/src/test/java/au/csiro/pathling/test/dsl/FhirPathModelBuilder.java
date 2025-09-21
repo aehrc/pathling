@@ -126,6 +126,70 @@ public class FhirPathModelBuilder {
   }
 
   @Nonnull
+  public FhirPathModelBuilder time(@Nonnull final String name, @Nullable final String value) {
+    model.put(name, FhirTypedLiteral.toTime(value));
+    return this;
+  }
+
+  @Nonnull
+  public FhirPathModelBuilder timeEmpty(@Nonnull final String name) {
+    model.put(name, FhirTypedLiteral.toTime(null));
+    return this;
+  }
+
+  @Nonnull
+  public FhirPathModelBuilder timeArray(@Nonnull final String name,
+      @Nonnull final String... values) {
+    model.put(name, Stream.of(values)
+        .map(FhirTypedLiteral::toTime)
+        .toList());
+    return this;
+  }
+
+
+  @Nonnull
+  public FhirPathModelBuilder date(@Nonnull final String name, @Nullable final String value) {
+    model.put(name, FhirTypedLiteral.toDate(value));
+    return this;
+  }
+
+  @Nonnull
+  public FhirPathModelBuilder dateEmpty(@Nonnull final String name) {
+    model.put(name, FhirTypedLiteral.toDate(null));
+    return this;
+  }
+
+  @Nonnull
+  public FhirPathModelBuilder dateArray(@Nonnull final String name,
+      @Nonnull final String... values) {
+    model.put(name, Stream.of(values)
+        .map(FhirTypedLiteral::toDate)
+        .toList());
+    return this;
+  }
+
+  @Nonnull
+  public FhirPathModelBuilder dateTime(@Nonnull final String name, @Nullable final String value) {
+    model.put(name, FhirTypedLiteral.toDateTime(value));
+    return this;
+  }
+
+  @Nonnull
+  public FhirPathModelBuilder dateTimeEmpty(@Nonnull final String name) {
+    model.put(name, FhirTypedLiteral.toDateTime(null));
+    return this;
+  }
+
+  @Nonnull
+  public FhirPathModelBuilder dateTimeArray(@Nonnull final String name,
+      @Nonnull final String... values) {
+    model.put(name, Stream.of(values)
+        .map(FhirTypedLiteral::toDateTime)
+        .toList());
+    return this;
+  }
+
+  @Nonnull
   public FhirPathModelBuilder coding(@Nonnull final String name, @Nullable final String value) {
     model.put(name, FhirTypedLiteral.toCoding(value));
     return this;

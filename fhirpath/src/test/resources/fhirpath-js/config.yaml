@@ -68,6 +68,10 @@ excludeSet:
           - "@T10:04:23-04:00 != @T18:04:24+04:00"
           - "@T10:04:23-04:00 != @T14:04:23Z"
           - "@T10:04:23-04:00 != @T14:04:24Z"
+          - "@T09:45Z + 120 seconds = @T04:47-05:00"
+          - "@T09:45Z + 59 seconds = @T09:45Z"
+          - "@T09:45:23Z + 2 minutes = @T04:47:23.000-05:00"
+          - "@T23:59:23Z + 2 minutes = @T00:01:23Z"
   - title: Path exclusions
     glob: "fhirpath-js/cases/3.2_paths.yaml"
     exclude:
@@ -186,11 +190,6 @@ excludeSet:
           - "1 year < 12 months"
           - "1 minute > 59 seconds"
           - "1 minute < 61 seconds"
-      - title: Unsupported comparison of dates and instants
-        type: new-feature
-        id: "#2421"
-        any:
-          - "DiagnosticReport.issued < DiagnosticReport.effectiveDateTime"
   - title: Collections exclusions
     glob: "fhirpath-js/cases/6.4_collections.yaml"
     exclude:
@@ -241,6 +240,7 @@ excludeSet:
           - "Patient.name.given[3].extension('http://hl7.org/fhir/StructureDefinition/display').value = 'Jacomus2'"
           - "** value of extension of extension (using FHIR model data)"
           - "** id of extension of extension"
+          - "** expression with extension() for primitive type (using FHIR model data)"
   - title: Factory exclusions
     glob: "fhirpath-js/cases/factory.yaml"
     exclude:

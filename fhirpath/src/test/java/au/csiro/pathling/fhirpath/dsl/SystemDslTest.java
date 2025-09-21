@@ -77,10 +77,21 @@ public class SystemDslTest extends FhirPathDslTestBase {
         .testEquals("All escapes: \\\r\n\t\f\"`'",
             "'All escapes: \\\\\\r\\n\\t\\f\\\"`\\''",
             "String literal with all escape sequences")
+        .group("Date and time literals")
+        .testEquals("2019-02-04", "@2019-02-04", "Date literal")
+        .testEquals("2019-02-04T14", "@2019-02-04T14",
+            "DateTime literal with hours precision")
+        .testEquals("2019-02-04T14:34:28+09:00", "@2019-02-04T14:34:28+09:00",
+            "DateTime literal with time and timezone")
+        .group("Time literals")
+        .testEquals("10", "@T10", "Time literal with hours only")
+        .testEquals("10:10", "@T10:10", "Time literal with hours and minutes")
+        .testEquals("10:10:30", "@T10:10:30", "Time literal with hours, minutes, and seconds")
+        .testEquals("10:10:30.123", "@T10:10:30.123", "Time literal with milliseconds")
+        .testEquals("00:00:00.000000001", "@T00:00:00.000000001", "Time literal with nanoseconds")
+        .testError("@T10:10:30+01:00", "Time literals with timezone offset are not supported")
+        .testError("@T", "Time literals with invalid format")
         .group("Unsupported literal types")
-        .testError("@2019-02-04", "DateTime literal is not supported")
-        .testError("@2019-02-04T14:34:28+09:00", "DateTime with time literal is not supported")
-        .testError("@T14:34:28", "Time literal is not supported")
         .testError("10 'mg'", "Quantity literal is not supported")
         .testError("4 days", "Time quantity literal is not supported")
         .build();
