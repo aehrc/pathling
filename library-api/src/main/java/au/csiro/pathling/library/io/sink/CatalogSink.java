@@ -25,6 +25,7 @@ import au.csiro.pathling.library.io.SaveMode;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
+import jakarta.annotation.Nullable;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -105,6 +106,7 @@ class CatalogSink implements DataSink {
   }
 
   @Override
+  @Nullable
   public WriteDetails write(@Nonnull final DataSource source) {
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);

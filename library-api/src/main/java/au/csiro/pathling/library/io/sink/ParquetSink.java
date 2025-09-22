@@ -23,6 +23,7 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.SaveMode;
 import jakarta.annotation.Nonnull;
 import java.util.function.UnaryOperator;
+import jakarta.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
@@ -76,6 +77,7 @@ final class ParquetSink implements DataSink {
   }
 
   @Override
+  @Nullable
   public WriteDetails write(@Nonnull final DataSource source) {
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);

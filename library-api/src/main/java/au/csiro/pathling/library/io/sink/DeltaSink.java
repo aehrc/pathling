@@ -108,6 +108,7 @@ final class DeltaSink implements DataSink {
   }
 
   @Override
+  @Nullable
   public WriteDetails write(@Nonnull final DataSource source) {
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
