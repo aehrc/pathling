@@ -54,6 +54,8 @@ public enum TemporalPrecision {
 
   /**
    * Returns true if the underlying ChronoUnit is time-based.
+   *
+   * @return true if the underlying ChronoUnit is time-based, false otherwise
    */
   public boolean isTimeBased() {
     return chronoUnit.isTimeBased();

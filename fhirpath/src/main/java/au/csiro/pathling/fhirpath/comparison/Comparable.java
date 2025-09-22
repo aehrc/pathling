@@ -50,7 +50,6 @@ public interface Comparable extends Equatable {
    * Get a function that can take two Comparable paths and return a {@link Column} that contains a
    * comparison condition. The type of condition is controlled by supplying a
    * {@link ComparisonOperation}.
-   * <p>
    *
    * @param operation The {@link ComparisonOperation} type to retrieve a comparison for
    * @return A {@link Function} that takes a Comparable as its parameter, and returns a

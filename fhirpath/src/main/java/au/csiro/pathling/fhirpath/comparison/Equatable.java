@@ -49,7 +49,6 @@ public interface Equatable {
    * Get a function that can take two Equatable paths and return a {@link ColumnRepresentation} that
    * contains an element equality condition. The type of condition is controlled by supplying
    * a{@link EqualityOperation}.
-   * <p>
    *
    * @param operation The {@link EqualityOperation} type to retrieve the equality for
    * @return A {@link Function} that takes an Equatable as its parameter, and returns a

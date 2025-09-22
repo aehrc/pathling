@@ -130,12 +130,12 @@ public class FhirPathDateTime {
    * Gets the lower boundary for this date/time value based on its precision.
    * <p>
    * For example:
+   * </p>
    * <ul>
    *   <li>2023 (YEAR precision) -> 2023-01-01T00:00:00Z</li>
    *   <li>2023-06 (MONTH precision) -> 2023-06-01T00:00:00Z</li>
    *   <li>2023-06-15 (DAY precision) -> 2023-06-15T00:00:00Z</li>
    * </ul>
-   * </p>
    *
    * @return the lower boundary as an Instant
    */
@@ -149,11 +149,13 @@ public class FhirPathDateTime {
    * Gets the upper boundary for this date/time value based on its precision.
    * <p>
    * For example:
+   * </p>
    * <ul>
    *   <li>2023 (YEAR precision) -> 2023-12-31T23:59:59.999999999Z</li>
    *   <li>2023-06 (MONTH precision) -> 2023-06-30T23:59:59.999999999Z</li>
    *   <li>2023-06-15 (DAY precision) -> 2023-06-15T23:59:59.999999999Z</li>
    * </ul>
+   * <p>
    * The maximum precision for upper bound is SECONDS, i.e.:
    * SECOND for second and FRACS precision upper bound is the same as the lower bound.
    * </p>

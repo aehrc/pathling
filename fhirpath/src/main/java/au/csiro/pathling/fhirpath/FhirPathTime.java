@@ -103,11 +103,15 @@ public class FhirPathTime {
    * Gets the upper boundary for this time value based on its precision.
    * <p>
    * For example:
-   *
-   * @return the upper boundary as an Instant {@code 12} (HOUR precision) -> 12:59:59.999999999
-   * {@code 12:30} (MINUTE precision) -> 12:30:59.999999999 {@code 12:30:45} (SECOND precision) ->
-   * 12:30:45.000000000 {@code 12:30:45.123} (FRACS precision) -> 12:30:45.123
    * </p>
+   * <ul>
+   *   <li>{@code 12} (HOUR precision) -> 12:59:59.999999999</li>
+   *   <li>{@code 12:30} (MINUTE precision) -> 12:30:59.999999999</li>
+   *   <li>{@code 12:30:45} (SECOND precision) -> 12:30:45.000000000</li>
+   *   <li>{@code 12:30:45.123} (FRACS precision) -> 12:30:45.123</li>
+   * </ul>
+   *
+   * @return the upper boundary as an Instant
    */
   @Nonnull
   public Instant getUpperBoundary() {
