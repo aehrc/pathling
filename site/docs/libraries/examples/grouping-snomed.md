@@ -7,9 +7,9 @@ description: Tutorial demonstrating how to group and analyse SNOMED CT data usin
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/ahVHCWpXSPA?si=pDKHIt7_wceB270D" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-
 # Grouping and analysing SNOMED CT data
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/ahVHCWpXSPA?si=pDKHIt7_wceB270D" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 This tutorial demonstrates how to group and analyse SNOMED CT data using
 Python with the Pathling library and a terminology server. The process involves
