@@ -2,6 +2,7 @@ package au.csiro.pathling;
 
 import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.cache.EntityTagInterceptor;
+import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ErrorReportingInterceptor;
 import au.csiro.pathling.export.ExportProvider;
@@ -25,12 +26,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.cors.CorsConfiguration;
+import scala.collection.JavaConverters;
 
 import java.net.InetAddress;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * @author Felix Naumann
@@ -151,18 +154,13 @@ public class FhirServer extends RestfulServer {
      */
     @Nonnull
     public static Set<Enumerations.ResourceType> supportedResourceTypes() {
-        // TODO - currently copied over from ResourcePath class, which is only available in the fhirpath module (not here)
         final Set<Enumerations.ResourceType> availableResourceTypes = EnumSet.allOf(
                 Enumerations.ResourceType.class);
-//        final Set<Enumerations.ResourceType> unsupportedResourceTypes =
-//                JavaConverters.setAsJavaSet(EncoderBuilder.UNSUPPORTED_RESOURCES()).stream()
-//                        .map(Enumerations.ResourceType::fromCode)
-//                        .collect(Collectors.toSet());
-//        availableResourceTypes.removeAll(unsupportedResourceTypes);
-        availableResourceTypes.remove(Enumerations.ResourceType.RESOURCE);
-        availableResourceTypes.remove(Enumerations.ResourceType.DOMAINRESOURCE);
-        availableResourceTypes.remove(Enumerations.ResourceType.NULL);
-        availableResourceTypes.remove(Enumerations.ResourceType.OPERATIONDEFINITION);
+       final Set<Enumerations.ResourceType> unsupportedResourceTypes =
+               JavaConverters.setAsJavaSet(EncoderBuilder.UNSUPPORTED_RESOURCES()).stream()
+                       .map(Enumerations.ResourceType::fromCode)
+                       .collect(Collectors.toSet());
+       availableResourceTypes.removeAll(unsupportedResourceTypes);
         return availableResourceTypes;
     }
 
