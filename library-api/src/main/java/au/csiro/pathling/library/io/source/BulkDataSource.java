@@ -93,12 +93,6 @@ public class BulkDataSource extends AbstractSource {
   }
 
   @Override
-  public QueryableDataSource bulkMap(
-      @NotNull final Map<String, UnaryOperator<Dataset<Row>>> mapping) {
-    return new BulkDataSource(context, (NdjsonSource) ndjsonSource.bulkMap(mapping));
-  }
-
-  @Override
   public @NotNull QueryableDataSource filterByResourceType(
       @NotNull final Predicate<String> resourceTypePredicate) {
     return new BulkDataSource(context, (NdjsonSource) ndjsonSource.filterByResourceType(resourceTypePredicate));

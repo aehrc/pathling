@@ -10,6 +10,7 @@ import static org.apache.spark.sql.functions.struct;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSink;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
+import au.csiro.pathling.library.io.sink.NdjsonWriteDetails;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.FhirContext;
@@ -23,6 +24,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -74,7 +76,7 @@ public class ExportExecutor {
       return exportResponse.getKickOffRequestUrl();
     }
 
-    public DataSink.NdjsonWriteDetails getWriteDetails() {
+    public NdjsonWriteDetails getWriteDetails() {
       return exportResponse.getWriteDetails();
     }
     
@@ -109,13 +111,15 @@ public class ExportExecutor {
       return exportRequest.includeResourceTypeFilters()
           .contains(Enumerations.ResourceType.fromCode(resourceType));
     });
-
-    QueryableDataSource mapped = filtered.map(rowDataset -> {
-      rowDataset.printSchema(1);
-      return rowDataset.filter(
-          "meta.lastUpdated IS NULL OR meta.lastUpdated >= '" + exportRequest.since()
-              .getValueAsString() + "'");
-    });
+    QueryableDataSource mapped = filtered;
+    if(exportRequest.since() != null) {
+      mapped = filtered.map(rowDataset -> {
+        rowDataset.printSchema(1);
+        return rowDataset.filter(
+            "meta.lastUpdated IS NULL OR meta.lastUpdated >= '" + exportRequest.since()
+                .getValueAsString() + "'");
+      });
+    }
     if (exportRequest.until() != null) {
       mapped = mapped.map(rowDataset -> rowDataset.filter(
           "meta.lastUpdated IS NULL OR meta.lastUpdated <= '" + exportRequest.until()
@@ -151,10 +155,9 @@ public class ExportExecutor {
                 allElementsForThisResourceType.addAll(globalElements);
                 return rowDataset -> rowDataset.select(
                     columnsWithNullification(rowDataset, allElementsForThisResourceType));
-                //return rowDataset -> applyColumnNullification(rowDataset, allElementsForThisResourceType);
               }
           ));
-      mapped = mapped.bulkMap(localGlobalCombined);
+      mapped = mapped.map((resourceType, rowDataset) -> localGlobalCombined.getOrDefault(resourceType, UnaryOperator.identity()).apply(rowDataset));
 
       // Apply global elements to all other resource types that don't have specific elements
       if (!globalElements.isEmpty()) {
@@ -223,7 +226,7 @@ public class ExportExecutor {
         }
         log.debug("Created dir {}", jobDirPath);
       }
-      DataSink.NdjsonWriteDetails writeDetails = new DataSinkBuilder(pathlingContext,
+      NdjsonWriteDetails writeDetails = new DataSinkBuilder(pathlingContext,
           mapped).saveMode("overwrite").ndjson(jobDirPath.toString());
       return new ExportResponse(exportRequest.originalRequest(), writeDetails);
     } catch (IOException e) {

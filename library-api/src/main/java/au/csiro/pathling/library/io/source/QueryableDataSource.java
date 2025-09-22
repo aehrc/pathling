@@ -69,9 +69,8 @@ public interface QueryableDataSource extends DataSource {
     return map((resourceType, rowDataset) -> operator.apply(rowDataset));
   }
 
-  QueryableDataSource map(@Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator);
   
-  QueryableDataSource bulkMap(@Nonnull final Map<String, UnaryOperator<Dataset<Row>>> mapping);
+  QueryableDataSource map(@Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator);
   
   @Nonnull
   QueryableDataSource filterByResourceType(@Nonnull final Predicate<String> resourceTypePredicate);

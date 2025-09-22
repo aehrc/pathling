@@ -54,7 +54,7 @@ public class CatalogSource extends AbstractSource {
   private final Optional<String> schema;
 
   @Nonnull
-  private final Optional<Map<String, UnaryOperator<Dataset<Row>>>> transformation;
+  private final Optional<UnaryOperator<Dataset<Row>>> transformation;
   private final Optional<BiFunction<String, Dataset<Row>, Dataset<Row>>> universalOperator;
   
   private final Optional<Predicate<String>> filterResourcePredicate;
@@ -88,7 +88,7 @@ public class CatalogSource extends AbstractSource {
 
   private CatalogSource(@Nonnull final PathlingContext context,
       @Nonnull final Optional<String> schema,
-      @Nonnull final Optional<Map<String, UnaryOperator<Dataset<Row>>>> transformation,
+      @Nonnull final Optional<UnaryOperator<Dataset<Row>>> transformation,
       @Nonnull final Optional<BiFunction<String, Dataset<Row>, Dataset<Row>>> universalOperator,
       @Nonnull final Optional<Predicate<String>> filterResourcePredicate) {
     super(context);
@@ -105,26 +105,15 @@ public class CatalogSource extends AbstractSource {
     Dataset<Row> table = context.getSpark().table(getTableName(resourceCode));
     // If a transformation is provided, apply it to the table. 
     // Otherwise, return the table as is.
-    
-    /*
-    TODO - Understand intended behavior
-    What does it mean when multiple fields are present at the same time?
-    transformation and universalOperator -> apply universalOperator, then apply resourceCode (if transformation has one)
-    filterResourcePredicate -> only allow further mapping when resourceCode passes the predicate, otherwise it's always empty (?)  
-     */
-    
     if(filterResourcePredicate.isPresent() && !filterResourcePredicate.get().test(resourceCode)) {
       // The resourceCode is meant to be excluded, no more mapping required
       return table.limit(0);
     }
-    
     if(universalOperator.isPresent()) {
       table = universalOperator.get().apply(resourceCode, table);
     }
     final Dataset<Row> finalTable = table;
-    return transformation
-        .flatMap(transformationMap -> Optional.ofNullable(transformationMap.get(resourceCode)))
-        .map(t -> t.apply(finalTable))
+    return transformation.map(t -> t.apply(finalTable))
         .orElse(table);
   }
 
@@ -179,12 +168,6 @@ public class CatalogSource extends AbstractSource {
   public CatalogSource map(
       @NotNull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
     return new CatalogSource(context, schema, transformation, Optional.of(operator), filterResourcePredicate);
-  }
-
-  @Override
-  public QueryableDataSource bulkMap(
-      @NotNull final Map<String, UnaryOperator<Dataset<Row>>> mapping) {
-    return new CatalogSource(context, schema, Optional.of(mapping), universalOperator, filterResourcePredicate);
   }
 
   @Override
