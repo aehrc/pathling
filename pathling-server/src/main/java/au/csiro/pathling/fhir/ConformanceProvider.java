@@ -72,8 +72,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   /**
    * All system-level operations available within Pathling.
    */
-  protected static final List<String> SYSTEM_LEVEL_OPERATIONS = Arrays.asList("import", "result",
-      "job", "export");
+  protected static final List<String> SYSTEM_LEVEL_OPERATIONS = Arrays.asList("job", "export");
 
   private static final String FHIR_RESOURCE_BASE = "http://hl7.org/fhir/StructureDefinition/";
   private static final String UNKNOWN_VERSION = "UNKNOWN";
@@ -81,8 +80,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   /**
    * All resource-level operations available within Pathling.
    */
-  private static final List<String> RESOURCE_LEVEL_OPERATIONS = Arrays.asList("aggregate",
-      "search", "extract");
+  private static final List<String> RESOURCE_LEVEL_OPERATIONS = List.of();
 
   /**
    * All operations available within Pathling.
