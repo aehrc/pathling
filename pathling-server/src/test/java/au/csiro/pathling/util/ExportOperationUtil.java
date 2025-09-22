@@ -4,6 +4,8 @@ import au.csiro.pathling.export.ExportOutputFormat;
 import au.csiro.pathling.export.ExportRequest;
 import au.csiro.pathling.export.ExportResponse;
 import au.csiro.pathling.library.io.sink.DataSink;
+import au.csiro.pathling.library.io.sink.FileInfo;
+import au.csiro.pathling.library.io.sink.NdjsonWriteDetails;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ArrayNode;
@@ -46,11 +48,11 @@ import static org.assertj.core.api.Fail.fail;
 @Slf4j
 public class ExportOperationUtil {
 
-    public static JsonNode json(ObjectMapper mapper, String request, DataSink.NdjsonWriteDetails writeDetails) {
+    public static JsonNode json(ObjectMapper mapper, String request, NdjsonWriteDetails writeDetails) {
         return json(mapper, InstantType.now(), request, false, writeDetails.fileInfos());
     }
 
-    public static JsonNode json(ObjectMapper mapper, InstantType transactionTime, String request, boolean requiresAccessToken, List<DataSink.FileInfo> output) {
+    public static JsonNode json(ObjectMapper mapper, InstantType transactionTime, String request, boolean requiresAccessToken, List<FileInfo> output) {
         ObjectNode node = mapper.createObjectNode();
         node.put("transactionTime", transactionTime.toString());
         node.put("request", request);
@@ -69,7 +71,7 @@ public class ExportOperationUtil {
         return node;
     }
 
-    public static ExportResponse res(ExportRequest request, DataSink.NdjsonWriteDetails writeDetails) {
+    public static ExportResponse res(ExportRequest request, NdjsonWriteDetails writeDetails) {
         return new ExportResponse(request.originalRequest(), writeDetails);
     }
 
@@ -136,16 +138,16 @@ public class ExportOperationUtil {
       return new ExportRequest(originalRequest, ExportOutputFormat.ND_JSON, since, until, List.of(), fhirElements);
     }
 
-    public static DataSink.NdjsonWriteDetails write_details(List<DataSink.FileInfo> fileInfos) {
-        return new DataSink.NdjsonWriteDetails(fileInfos);
+    public static NdjsonWriteDetails write_details(List<FileInfo> fileInfos) {
+        return new NdjsonWriteDetails(fileInfos);
     }
 
-    public static DataSink.NdjsonWriteDetails write_details(DataSink.FileInfo... fileInfos) {
-        return new DataSink.NdjsonWriteDetails(Arrays.asList(fileInfos));
+    public static NdjsonWriteDetails write_details(FileInfo... fileInfos) {
+        return new NdjsonWriteDetails(Arrays.asList(fileInfos));
     }
 
-    public static DataSink.FileInfo fi(String fhirResourceType, String absoluteUrl, long count) {
-        return new DataSink.FileInfo(fhirResourceType, absoluteUrl, count);
+    public static FileInfo fi(String fhirResourceType, String absoluteUrl, long count) {
+        return new FileInfo(fhirResourceType, absoluteUrl, count);
     }
 
     public static InstantType date(String date) {
@@ -170,7 +172,7 @@ public class ExportOperationUtil {
         .collect(Collectors.toList());
   }
 
-    public static <T extends IBaseResource> T read_first_from_multiple_lines_ndjson(IParser parser, DataSink.FileInfo fileInfo, Class<T> clazz) {
+    public static <T extends IBaseResource> T read_first_from_multiple_lines_ndjson(IParser parser, FileInfo fileInfo, Class<T> clazz) {
         try (BufferedReader reader = Files.newBufferedReader(Paths.get(URI.create(fileInfo.absoluteUrl())))) {
             String firstLine = reader.readLine();
             if (firstLine != null && !firstLine.trim().isEmpty()) {
@@ -183,12 +185,12 @@ public class ExportOperationUtil {
         throw new RuntimeException();
     }
 
-    public static <T extends IBaseResource> T read_ndjson(IParser parser, DataSink.FileInfo fileInfo, Class<T> clazz) throws IOException {
+    public static <T extends IBaseResource> T read_ndjson(IParser parser, FileInfo fileInfo, Class<T> clazz) throws IOException {
         return parser.parseResource(clazz, Files.readString(Paths.get(URI.create(fileInfo.absoluteUrl()))));
     }
 
   public static ExportResponse resolveTempDirIn(ExportResponse exportResponse, Path tempDir, UUID fakeJobId) {
-      List<DataSink.FileInfo> newFileInfos = exportResponse.getWriteDetails().fileInfos().stream()
+      List<FileInfo> newFileInfos = exportResponse.getWriteDetails().fileInfos().stream()
               .map(
                       fileInfo -> fi(fileInfo.fhirResourceType(),
                               fileInfo.absoluteUrl().replace("WAREHOUSE_PATH", "file:" + tempDir.toAbsolutePath().toString() + "/jobs/" + fakeJobId.toString()),

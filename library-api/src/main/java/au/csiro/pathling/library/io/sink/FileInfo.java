@@ -1,6 +1,7 @@
 package au.csiro.pathling.library.io.sink;
 
 import au.csiro.pathling.io.source.DataSource;
+import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 
 /**
@@ -9,10 +10,10 @@ import jakarta.validation.constraints.NotNull;
  * 
  * @param fhirResourceType The FHIR resource type code (as a string) this file belongs to.
  * @param absoluteUrl The download url. It may be required to have a controller in between to resolve it to an actual file.
- * @param count Convenience information about the amount of resources in this file. 
+ * @param count Convenience information about the amount of resources in this file (optional). 
  * 
  * @author Felix Naumann
  */
-public record FileInfo(@NotNull String fhirResourceType, @NotNull String absoluteUrl, long count) {
+public record FileInfo(@NotNull String fhirResourceType, @NotNull String absoluteUrl, @Nullable Long count) {
 
 }

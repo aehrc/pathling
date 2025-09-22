@@ -2,6 +2,7 @@ package au.csiro.pathling.export;
 
 import au.csiro.pathling.OperationResponse;
 import au.csiro.pathling.library.io.sink.DataSink;
+import au.csiro.pathling.library.io.sink.NdjsonWriteDetails;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ArrayNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ObjectNode;
@@ -26,9 +27,9 @@ public class ExportResponse implements OperationResponse<Binary> {
     private final ObjectMapper mapper = new ObjectMapper();
 
     private final String kickOffRequestUrl;
-    private final DataSink.NdjsonWriteDetails writeDetails;
+    private final NdjsonWriteDetails writeDetails;
 
-    public ExportResponse(String kickOffRequestUrl, DataSink.NdjsonWriteDetails writeDetails) {
+    public ExportResponse(String kickOffRequestUrl, NdjsonWriteDetails writeDetails) {
         this.kickOffRequestUrl = kickOffRequestUrl;
         this.writeDetails = writeDetails;
     }
@@ -48,7 +49,7 @@ public class ExportResponse implements OperationResponse<Binary> {
         return binary;
     }
 
-    private String buildManifest(String requestUrl, DataSink.NdjsonWriteDetails writeDetails) throws IOException {
+    private String buildManifest(String requestUrl, NdjsonWriteDetails writeDetails) throws IOException {
         ObjectNode manifest = mapper.createObjectNode();
 
         String baseServerUrl = requestUrl.split("fhir")[0];
@@ -61,7 +62,7 @@ public class ExportResponse implements OperationResponse<Binary> {
         manifest.put("requiresAccessToken", false); // TODO - no auth, correct?
         ArrayNode outputArray = mapper.createArrayNode();
         List<ObjectNode> objectNodes = writeDetails.fileInfos().stream()
-                .filter(fileInfo -> fileInfo.count() > 0)
+                .filter(fileInfo -> fileInfo.count() == null || fileInfo.count() > 0)
                 .map(fileInfo -> mapper.createObjectNode()
                         .put("type", fileInfo.fhirResourceType())
                         .put("url",  localUrlToRemoteUrl.apply(fileInfo.absoluteUrl()))
@@ -81,7 +82,7 @@ public class ExportResponse implements OperationResponse<Binary> {
         return kickOffRequestUrl;
     }
 
-    public DataSink.NdjsonWriteDetails getWriteDetails() {
+    public NdjsonWriteDetails getWriteDetails() {
         return writeDetails;
     }
 

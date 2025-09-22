@@ -3,6 +3,7 @@ package au.csiro.pathling.util;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSink;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
+import au.csiro.pathling.library.io.sink.FileInfo;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
@@ -117,13 +118,13 @@ public class TestDataSetup {
 
     private Mono<Void> downloadFiles(String responseBody, Path downloadDir) {
         log.info("Downloading files");
-        List<DataSink.FileInfo> files = parseFileUrls(responseBody);
+        List<FileInfo> files = parseFileUrls(responseBody);
         return Flux.fromIterable(files)
                 .flatMap(fileInfo -> downloadFile(fileInfo, downloadDir))
                 .then();
     }
 
-    private Mono<Void> downloadFile(DataSink.FileInfo fileInfo, Path downloadDir) {
+    private Mono<Void> downloadFile(FileInfo fileInfo, Path downloadDir) {
         String filename = fileInfo.fhirResourceType() + ".ndjson";
         Path filePath = downloadDir.resolve(filename);
         log.info("Downloading {} to {}", filename, filePath.toAbsolutePath());
@@ -147,19 +148,18 @@ public class TestDataSetup {
                 });
     }
 
-    private List<DataSink.FileInfo> parseFileUrls(String responseBody) {
-        // Using Jackson ObjectMapper (assuming it's available)
+    private List<FileInfo> parseFileUrls(String responseBody) {
         ObjectMapper mapper = new ObjectMapper();
         try {
             JsonNode root = mapper.readTree(responseBody);
             JsonNode outputArray = root.get("output");
 
-            List<DataSink.FileInfo> files = new ArrayList<>();
+            List<FileInfo> files = new ArrayList<>();
             for (JsonNode item : outputArray) {
-                files.add(new DataSink.FileInfo(
+                files.add(new FileInfo(
                         item.get("type").asText(),
                         item.get("url").asText(),
-                        item.get("count").asInt()
+                        item.get("count").asLong()
                 ));
             }
             return files;

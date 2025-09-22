@@ -131,7 +131,7 @@ public abstract class FileSource extends DatasetSource {
    * does not match the expected format
    */
   @Nonnull
-  static Set<String> resourceNameWithQualifierMapper(@Nonnull final String baseName) {
+  public static Set<String> resourceNameWithQualifierMapper(@Nonnull final String baseName) {
     final Matcher matcher = BASE_NAME_WITH_QUALIFIER.matcher(baseName);
     // If the base name does not match the expected format, return an empty set.
     if (!matcher.matches()) {

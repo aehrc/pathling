@@ -1,14 +1,16 @@
 package au.csiro.pathling;
-
-import static au.csiro.pathling.library.io.sink.DataSink.FileInfo;
 import static au.csiro.pathling.util.ExportOperationUtil.doPolling;
 import static au.csiro.pathling.util.ExportOperationUtil.kickOffRequest;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import au.csiro.pathling.export.ExportExecutor;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.sink.FileInfo;
+import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,9 +18,15 @@ import au.csiro.pathling.util.ExportOperationUtil;
 import au.csiro.pathling.util.TestDataSetup;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +74,6 @@ class ExportOperationIT {
 
   @TempDir
   private static Path warehouseDir;
-  private String warehouseUrl;
   @Autowired
   private TestDataSetup testDataSetup;
   @Autowired
@@ -89,12 +96,6 @@ class ExportOperationIT {
 
   @BeforeEach
   void setup() {
-    
-    
-    warehouseUrl = "file://" + warehouseDir.toAbsolutePath();
-    // exportExecutor = new ExportExecutor(pathlingContext, deltaLake, fhirContext, sparkSession,
-    //     warehouseUrl);
-    //exportExecutor.setWarehouseUrl(Paths.get(warehouseUrl).toString());
     parser = fhirContext.newJsonParser();
     
     webTestClient = webTestClient.mutate()
@@ -295,11 +296,21 @@ class ExportOperationIT {
       }
     });
     
+    // Also verify that pathling can read in the downloaded ndjson files
+    // Usually the user does not have access to the files on the filesystem directly, instead
+    // they can request them through the FileController where the contents of the files are returned
+    // in the request.
+    actualFileInfos.forEach(fileInfo -> {
+      try {
+        String fullFilepath = warehouseDir.resolve("delta").resolve(new URL(fileInfo.absoluteUrl()).getPath().substring(1)).toString();
+        assumeTrue(new File(fullFilepath).exists(), "Failed to find %s for pathling ndjson input.".formatted(fullFilepath));
+        String parentPath = Paths.get(fullFilepath).getParent().toString();
+        assertThatCode(() -> new DataSourceBuilder(pathlingContext).ndjson(parentPath).read(fileInfo.fhirResourceType())).doesNotThrowAnyException();
+      } catch (MalformedURLException e) {
+        throw new RuntimeException(e);
+      }
 
-    // List<FileInfo> expectedFileInfos = List.of(
-    //     new FileInfo("Patient", RESOLVE_PATIENT.apply(warehouseUrl), PATIENT_COUNT),
-    //     new FileInfo("Encounter", RESOLVE_ENCOUNTER.apply(warehouseUrl), ENCOUNTER_COUNT)
-    // );
-    // assertThat(actualFileInfos).containsExactlyInAnyOrderElementsOf(expectedFileInfos);
+    });
+
   }
 }

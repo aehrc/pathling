@@ -17,14 +17,16 @@
 
 package au.csiro.pathling.library.io.sink;
 
-import static au.csiro.pathling.library.io.FileSystemPersistence.departitionResult;
+import static au.csiro.pathling.library.io.FileSystemPersistence.renamePartitionedFiles;
 import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
 
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.FileSystemPersistence;
 import au.csiro.pathling.library.io.SaveMode;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
@@ -98,22 +100,21 @@ final class NdjsonSink implements DataSink {
       final Dataset<String> jsonStrings = context.decode(source.read(resourceType),
           resourceType, PathlingContext.FHIR_JSON);
       
-      // Write the JSON strings to the file system, using a single partition.
+      // Write the JSON strings to the file system. Each partition will have their id added to the name later
       final String fileName = String.join(".", fileNameMapper.apply(resourceType),
           "ndjson");
       final String resultUrl = safelyJoinPaths(path, fileName);
-      final String resultUrlPartitioned = resultUrl + ".partitioned";
 
       switch (saveMode) {
         case ERROR_IF_EXISTS, OVERWRITE, APPEND, IGNORE ->
-            writeJsonStrings(jsonStrings, resultUrlPartitioned, saveMode);
+            writeJsonStrings(jsonStrings, resultUrl, saveMode);
         case MERGE -> throw new UnsupportedOperationException(
             "Merge operation is not supported for NDJSON");
       }
-      FileInfo fileInfo = new FileInfo(resourceType, resultUrl, jsonStrings.count());
-      fileInfos.add(fileInfo);
-      // Remove the partitioned directory and replace it with a single file.
-      departitionResult(context.getSpark(), resultUrlPartitioned, resultUrl, "txt");
+      // Remove the partitioned directory and replace it with the renamed partitioned files
+      // <resource_type>.<partId>.ndjson, i.e. Patient.00000.ndjson
+      Collection<String> renamed = FileSystemPersistence.renamePartitionedFiles(context.getSpark(), resultUrl, resultUrl, "txt");
+      renamed.forEach(renamedFilename -> fileInfos.add(new FileInfo(resourceType, renamedFilename, null)));
     }
     return new NdjsonWriteDetails(fileInfos);
   }
@@ -121,8 +122,8 @@ final class NdjsonSink implements DataSink {
   void writeJsonStrings(@Nonnull final Dataset<String> jsonStrings,
       @Nonnull final String resultUrlPartitioned,
       @Nonnull final SaveMode saveMode) {
-    final var writer = jsonStrings.coalesce(1)
-        .write();
+    //final var writer = jsonStrings.coalesce(1).write()
+    final var writer = jsonStrings.write();
     // Apply save mode if it has a Spark equivalent
     saveMode.getSparkSaveMode().ifPresent(writer::mode);
     
