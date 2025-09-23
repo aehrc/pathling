@@ -36,8 +36,8 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
-import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.Enumerations;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -69,21 +69,6 @@ public class ExportExecutor {
     this.databasePath = databasePath;
   }
 
-  @VisibleForTesting
-  public record TestExportResponse(UUID fakeJobId, ExportResponse exportResponse) {
-    public String getKickOffRequestUrl() {
-      return exportResponse.getKickOffRequestUrl();
-    }
-
-    public NdjsonWriteDetails getWriteDetails() {
-      return exportResponse.getWriteDetails();
-    }
-    
-    public Binary toOutput() {
-      return exportResponse.toOutput();
-    }
-  }
-  
   /**
    * Use for tests only where it does not matter in which subdirectory the ndjson is written to.
    *
@@ -103,114 +88,21 @@ public class ExportExecutor {
    * @return The export response data.
    */
   public ExportResponse execute(ExportRequest exportRequest, String jobId) {
-    QueryableDataSource filtered = deltaLake.filterByResourceType(resourceType -> {
-      if (exportRequest.includeResourceTypeFilters().isEmpty()) {
-        return true;
-      }
-      return exportRequest.includeResourceTypeFilters()
-          .contains(Enumerations.ResourceType.fromCode(resourceType));
-    });
-    QueryableDataSource mapped = filtered;
-    if(exportRequest.since() != null) {
-      mapped = filtered.map(rowDataset -> {
-        rowDataset.printSchema(1);
-        return rowDataset.filter(
-            "meta.lastUpdated IS NULL OR meta.lastUpdated >= '" + exportRequest.since()
-                .getValueAsString() + "'");
-      });
-    }
-    if (exportRequest.until() != null) {
-      mapped = mapped.map(rowDataset -> rowDataset.filter(
-          "meta.lastUpdated IS NULL OR meta.lastUpdated <= '" + exportRequest.until()
-              .getValueAsString() + "'"));
-    }
+    QueryableDataSource mapped = applyResourceTypeFiltering(exportRequest);
+    mapped = applySinceDateFilter(exportRequest, mapped);
+    mapped = applyUntilDateFilter(exportRequest, mapped);
 
     if (!exportRequest.elements().isEmpty()) {
-      Map<String, Set<String>> localElements = exportRequest.elements().stream()
-          .filter(fhirElement -> fhirElement.resourceType() != null)
-          .collect(Collectors.groupingBy(
-              fhirElement -> fhirElement.resourceType().toCode(),
-              Collectors.mapping(
-                  ExportRequest.FhirElement::elementName,
-                  Collectors.toSet()
-              )
-          ));
-      Set<String> globalElements = exportRequest.elements().stream()
-          .filter(fhirElement -> fhirElement.resourceType() == null)
-          .map(ExportRequest.FhirElement::elementName)
-          .collect(Collectors.toCollection(HashSet::new));
-      globalElements.add("id"); // id is globally mandatory
-      globalElements.add("id_versioned"); // id_versioned is coupled to id in spark datasets
-      globalElements.add("meta"); // meta is globally mandatory
-      Map<String, UnaryOperator<Dataset<Row>>> localGlobalCombined = localElements.entrySet()
-          .stream()
-          .collect(Collectors.toMap(
-              Map.Entry::getKey,
-              entry -> {
-                Set<String> allElementsForThisResourceType = new HashSet<>(entry.getValue());
-                allElementsForThisResourceType.addAll(getMandatoryElements(
-                    Enumerations.ResourceType.fromCode(
-                        entry.getKey()))); // add all local mandatory elements to be returned
-                allElementsForThisResourceType.addAll(globalElements);
-                return rowDataset -> rowDataset.select(
-                    columnsWithNullification(rowDataset, allElementsForThisResourceType));
-              }
-          ));
-      mapped = mapped.map((resourceType, rowDataset) -> localGlobalCombined.getOrDefault(resourceType, UnaryOperator.identity()).apply(rowDataset));
-
-      // Apply global elements to all other resource types that don't have specific elements
-      if (!globalElements.isEmpty()) {
-        mapped = mapped.map((resourceType, dataset) -> {
-          // Only apply if this resource type wasn't already handled by bulkMap
-          if (!localGlobalCombined.containsKey(resourceType)) {
-            return dataset.select(columnsWithNullification(dataset, globalElements));
-            //return applyColumnNullification(dataset, globalElements);
-          }
-          return dataset; // Already transformed by bulkMap
-        });
-      }
-
+      mapped = applyElementsParams(exportRequest, mapped);
       // If the returned ndjson is limited by the _elements param, then it should have the SUBSETTED tag
-      Column subsettedTagArray = array(struct(
-          lit(null).cast(DataTypes.StringType).as("id"),
-          lit("http://terminology.hl7.org/CodeSystem/v3-ObservationValue").as("system"),
-          lit(null).cast(DataTypes.StringType).as("version"),
-          lit("SUBSETTED").as("code"),
-          lit("Resource encoded in summary mode").as("display"),
-          lit(null).cast(DataTypes.BooleanType).as("userSelected"),
-          lit(null).cast(DataTypes.IntegerType).as("_fid")
-      ));
-
-      mapped = mapped.map(rowDataset -> rowDataset.withColumn("meta",
-          struct(
-              coalesce(col("meta.id"), lit(null).cast(DataTypes.StringType)).as("id"),
-              coalesce(col("meta.versionId"), lit(null).cast(DataTypes.StringType)).as("versionId"),
-              coalesce(col("meta.versionId_versioned"), lit(null).cast(DataTypes.StringType)).as(
-                  "versionId_versioned"),
-              coalesce(col("meta.lastUpdated"), lit(null).cast(DataTypes.TimestampType)).as(
-                  "lastUpdated"),
-              coalesce(col("meta.source"), lit(null).cast(DataTypes.StringType)).as("source"),
-              coalesce(col("meta.profile"),
-                  lit(null).cast(DataTypes.createArrayType(DataTypes.StringType))).as("profile"),
-              coalesce(col("meta.security"), lit(null).cast(
-                  DataTypes.createArrayType(DataTypes.createStructType(new StructField[]{
-                      DataTypes.createStructField("id", DataTypes.StringType, true),
-                      DataTypes.createStructField("system", DataTypes.StringType, true),
-                      DataTypes.createStructField("version", DataTypes.StringType, true),
-                      DataTypes.createStructField("code", DataTypes.StringType, true),
-                      DataTypes.createStructField("display", DataTypes.StringType, true),
-                      DataTypes.createStructField("userSelected", DataTypes.BooleanType, true),
-                      DataTypes.createStructField("_fid", DataTypes.IntegerType, true)
-                  })))).as("security"),
-              // Always combine existing tags with the new SUBSETTED tag
-              array_union(
-                  coalesce(col("meta.tag"), array()),
-                  subsettedTagArray
-              ).as("tag"),
-              coalesce(col("meta._fid"), lit(null).cast(DataTypes.IntegerType)).as("_fid")
-          )
-      ));
+      Column subsettedTagArray = createSubsettedTagInSparkStructure();
+      mapped = addSubsettedTag(mapped, subsettedTagArray);
     }
+    return writeResultToJobDirectory(exportRequest, jobId, mapped);
+  }
+
+  private @NotNull ExportResponse writeResultToJobDirectory(ExportRequest exportRequest, String jobId,
+      QueryableDataSource mapped) {
     URI warehouseUri = URI.create(databasePath);
     Path warehousePath = new Path(warehouseUri);
     Path jobDirPath = new Path(new Path(warehousePath, "jobs"), jobId);
@@ -234,6 +126,132 @@ public class ExportExecutor {
     }
   }
 
+  private static @NotNull QueryableDataSource addSubsettedTag(QueryableDataSource mapped,
+      Column subsettedTagArray) {
+    mapped = mapped.map(rowDataset -> rowDataset.withColumn("meta",
+        struct(
+            coalesce(col("meta.id"), lit(null).cast(DataTypes.StringType)).as("id"),
+            coalesce(col("meta.versionId"), lit(null).cast(DataTypes.StringType)).as("versionId"),
+            coalesce(col("meta.versionId_versioned"), lit(null).cast(DataTypes.StringType)).as(
+                "versionId_versioned"),
+            coalesce(col("meta.lastUpdated"), lit(null).cast(DataTypes.TimestampType)).as(
+                "lastUpdated"),
+            coalesce(col("meta.source"), lit(null).cast(DataTypes.StringType)).as("source"),
+            coalesce(col("meta.profile"),
+                lit(null).cast(DataTypes.createArrayType(DataTypes.StringType))).as("profile"),
+            coalesce(col("meta.security"), lit(null).cast(
+                DataTypes.createArrayType(DataTypes.createStructType(new StructField[]{
+                    DataTypes.createStructField("id", DataTypes.StringType, true),
+                    DataTypes.createStructField("system", DataTypes.StringType, true),
+                    DataTypes.createStructField("version", DataTypes.StringType, true),
+                    DataTypes.createStructField("code", DataTypes.StringType, true),
+                    DataTypes.createStructField("display", DataTypes.StringType, true),
+                    DataTypes.createStructField("userSelected", DataTypes.BooleanType, true),
+                    DataTypes.createStructField("_fid", DataTypes.IntegerType, true)
+                })))).as("security"),
+            // Always combine existing tags with the new SUBSETTED tag
+            array_union(
+                coalesce(col("meta.tag"), array()),
+                subsettedTagArray
+            ).as("tag"),
+            coalesce(col("meta._fid"), lit(null).cast(DataTypes.IntegerType)).as("_fid")
+        )
+    ));
+    return mapped;
+  }
+
+  private static Column createSubsettedTagInSparkStructure() {
+    return array(struct(
+        lit(null).cast(DataTypes.StringType).as("id"),
+        lit("http://terminology.hl7.org/CodeSystem/v3-ObservationValue").as("system"),
+        lit(null).cast(DataTypes.StringType).as("version"),
+        lit("SUBSETTED").as("code"),
+        lit("Resource encoded in summary mode").as("display"),
+        lit(null).cast(DataTypes.BooleanType).as("userSelected"),
+        lit(null).cast(DataTypes.IntegerType).as("_fid")
+    ));
+  }
+
+  private QueryableDataSource applyElementsParams(ExportRequest exportRequest,
+      QueryableDataSource mapped) {
+    Map<String, Set<String>> localElements = exportRequest.elements().stream()
+        .filter(fhirElement -> fhirElement.resourceType() != null)
+        .collect(Collectors.groupingBy(
+            fhirElement -> fhirElement.resourceType().toCode(),
+            Collectors.mapping(
+                ExportRequest.FhirElement::elementName,
+                Collectors.toSet()
+            )
+        ));
+    Set<String> globalElements = exportRequest.elements().stream()
+        .filter(fhirElement -> fhirElement.resourceType() == null)
+        .map(ExportRequest.FhirElement::elementName)
+        .collect(Collectors.toCollection(HashSet::new));
+    globalElements.add("id"); // id is globally mandatory
+    globalElements.add("id_versioned"); // id_versioned is coupled to id in spark datasets
+    globalElements.add("meta"); // meta is globally mandatory
+    Map<String, UnaryOperator<Dataset<Row>>> localGlobalCombined = localElements.entrySet()
+        .stream()
+        .collect(Collectors.toMap(
+            Map.Entry::getKey,
+            entry -> {
+              Set<String> allElementsForThisResourceType = new HashSet<>(entry.getValue());
+              allElementsForThisResourceType.addAll(getMandatoryElements(
+                  Enumerations.ResourceType.fromCode(
+                      entry.getKey()))); // add all local mandatory elements to be returned
+              allElementsForThisResourceType.addAll(globalElements);
+              return rowDataset -> rowDataset.select(
+                  columnsWithNullification(rowDataset, allElementsForThisResourceType));
+            }
+        ));
+    mapped = mapped.map((resourceType, rowDataset) -> localGlobalCombined.getOrDefault(resourceType, UnaryOperator.identity()).apply(rowDataset));
+
+    // Apply global elements to all other resource types that don't have specific elements
+    if (!globalElements.isEmpty()) {
+      mapped = mapped.map((resourceType, dataset) -> {
+        // Only apply if this resource type wasn't already handled by bulkMap
+        if (!localGlobalCombined.containsKey(resourceType)) {
+          return dataset.select(columnsWithNullification(dataset, globalElements));
+        }
+        return dataset;
+      });
+    }
+    return mapped;
+  }
+
+  private static QueryableDataSource applyUntilDateFilter(ExportRequest exportRequest,
+      QueryableDataSource mapped) {
+    if (exportRequest.until() != null) {
+      mapped = mapped.map(rowDataset -> rowDataset.filter(
+          "meta.lastUpdated IS NULL OR meta.lastUpdated <= '" + exportRequest.until()
+              .getValueAsString() + "'"));
+    }
+    return mapped;
+  }
+
+  private static QueryableDataSource applySinceDateFilter(ExportRequest exportRequest,
+      QueryableDataSource mapped) {
+    if(exportRequest.since() != null) {
+      mapped = mapped.map(rowDataset -> {
+        rowDataset.printSchema(1);
+        return rowDataset.filter(
+            "meta.lastUpdated IS NULL OR meta.lastUpdated >= '" + exportRequest.since()
+                .getValueAsString() + "'");
+      });
+    }
+    return mapped;
+  }
+
+  private @NotNull QueryableDataSource applyResourceTypeFiltering(ExportRequest exportRequest) {
+    return deltaLake.filterByResourceType(resourceType -> {
+      if (exportRequest.includeResourceTypeFilters().isEmpty()) {
+        return true;
+      }
+      return exportRequest.includeResourceTypeFilters()
+          .contains(Enumerations.ResourceType.fromCode(resourceType));
+    });
+  }
+
   private Column[] columnsWithNullification(Dataset<Row> dataset, Set<String> columnsToKeep) {
     return Arrays.stream(dataset.columns())
         .map(colName -> {
@@ -241,9 +259,7 @@ public class ExportExecutor {
             return col(colName);
           } else {
             DataType expectedType = dataset.schema().apply(colName).dataType();
-            //return createNullColumn(colName, expectedType);
             return lit(null).cast(expectedType).as(colName);
-            //return lit(null).as(colName);
           }
         })
         .toArray(Column[]::new);

@@ -19,7 +19,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.export.ExportExecutor;
-import au.csiro.pathling.export.ExportExecutor.TestExportResponse;
+import au.csiro.pathling.export.TestExportResponse;
 import au.csiro.pathling.export.ExportOperationValidator;
 import au.csiro.pathling.export.ExportOutputFormat;
 import au.csiro.pathling.export.ExportRequest;
@@ -41,7 +41,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -84,7 +83,7 @@ import org.springframework.context.annotation.Import;
     //@ContextConfiguration(initializers = ExportOperationExecutorTest.Initializer.class)
 class ExportOperationExecutorTest {
 
-  private static String BASE = "http://localhost:8080/fhir/$export?";
+  private static final String BASE = "http://localhost:8080/fhir/$export?";
 
   private ExportExecutor exportExecutor;
 
@@ -144,11 +143,6 @@ class ExportOperationExecutorTest {
     
     assertThat(actualResponse).isNotNull();
     assertThat(actualResponse.exportResponse().getWriteDetails().fileInfos()).hasSize(1);
-    // long expectedCount = returnedResource
-    //                      ? 1
-    //                      : 0;
-    // assertThat(actualResponse.getWriteDetails().fileInfos().get(0).count()).isEqualTo(
-    //     expectedCount);
 
   }
 
@@ -177,7 +171,6 @@ class ExportOperationExecutorTest {
     TestExportResponse actualResponse = exportExecutor.execute(req);
     Patient actualPatient = read_ndjson(parser, actualResponse.getWriteDetails().fileInfos().get(0),
         Patient.class);
-    //Patient actualObservation = read_ndjson(actualResponse.getWriteDetails().fileInfos().get(1), Patient.class);
 
     assertThat(actualPatient.hasIdentifier()).isTrue();
     assertThat(actualPatient.getIdentifierFirstRep().getValue()).isEqualTo("test");
@@ -276,8 +269,6 @@ class ExportOperationExecutorTest {
         Patient.class);
 
     assertThat(actualPatient.hasId()).isTrue();
-    // don't actually assert the content because it's modified by pathling (due to history tracking)
-    // assertThat(actualPatient.getId()).isEqualTo("test-id");
     assertThat(actualPatient.hasMeta()).isTrue();
     assertThat(actualPatient.getMeta().hasVersionId()).isTrue();
     assertThat(actualPatient.getMeta().getVersionId()).isEqualTo("1");
