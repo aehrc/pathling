@@ -19,7 +19,7 @@ package au.csiro.pathling.spark;
 
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.async.SparkListener;
+import au.csiro.pathling.async.SparkJobListener;
 import au.csiro.pathling.config.ServerConfiguration;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
@@ -52,7 +52,7 @@ public class Spark {
    * @param configuration a {@link ServerConfiguration} object containing the parameters to use in
    * the creation
    * @param environment Spring {@link Environment} from which to harvest Spark configuration
-   * @param sparkListener a {@link SparkListener} that is used to monitor progress of jobs
+   * @param sparkListener a {@link SparkJobListener} that is used to monitor progress of jobs
    * @param sparkConfigurers a list of {@link SparkConfigurer} that should use to configure spark
    * session
    * @return A shiny new {@link SparkSession}
@@ -62,7 +62,7 @@ public class Spark {
   @Nonnull
   public static SparkSession build(@Nonnull final ServerConfiguration configuration,
       @Nonnull final Environment environment,
-      @Nonnull final Optional<SparkListener> sparkListener,
+      @Nonnull final Optional<SparkJobListener> sparkListener,
       @Nonnull final List<SparkConfigurer> sparkConfigurers) {
     log.debug("Creating Spark session");
 

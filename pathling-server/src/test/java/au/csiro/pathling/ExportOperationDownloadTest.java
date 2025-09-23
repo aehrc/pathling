@@ -18,7 +18,7 @@ import org.springframework.http.ResponseEntity;
 //@WebMvcTest(FileController.class)
 // @Import({FhirServerTestConfiguration.class, UnitTestDependencies.class})
 @SpringBootUnitTest
-public class ExportOperationDownloadTest {
+class ExportOperationDownloadTest {
 
   private static final String TEST_JOB_ID = "test-job-123";
   private static final String TEST_FILENAME = "test-file.ndjson";
@@ -33,7 +33,7 @@ public class ExportOperationDownloadTest {
   private Path tempDir;
   
   @BeforeEach
-  public void setup() throws IOException {
+  void setup() throws IOException {
     fileController = new FileController("file://" + tempDir.toString());
 
     // Create the jobs directory structure

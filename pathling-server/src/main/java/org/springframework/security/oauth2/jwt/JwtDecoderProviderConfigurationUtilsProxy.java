@@ -28,6 +28,9 @@ import java.util.Map;
  */
 public class JwtDecoderProviderConfigurationUtilsProxy {
 
+  private JwtDecoderProviderConfigurationUtilsProxy() {
+  }
+
   /**
    * @param issuer the issuer required to be asserted within the token
    * @return a {@link Map} containing the OIDC configuration values

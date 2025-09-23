@@ -3,13 +3,15 @@ package au.csiro.pathling.util;
 import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.async.RequestTagFactory;
-import au.csiro.pathling.async.SparkListener;
+import au.csiro.pathling.async.SparkJobListener;
 import au.csiro.pathling.async.StageMap;
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.sql.FhirpathUDFRegistrar;
+import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import jakarta.annotation.Nonnull;
@@ -53,7 +55,6 @@ public class FhirServerTestConfiguration {
       @Nonnull final Environment environment,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory
       /*@Nonnull final Optional<SparkListener> sparkListener*/) {
-    // TODO: See it this properies can be set from Environment (extract common code from Spark class)
     final SparkSession spark = SparkSession.builder()
         .master("local[*]")
         .appName("pathling-unittest")
@@ -67,8 +68,8 @@ public class FhirServerTestConfiguration {
             "file://" + Path.of("src/test/resources/test-data/fhir/out").toAbsolutePath()
                 .toString())
         .getOrCreate();
-    //TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
-    //FhirpathUDFRegistrar.registerUDFs(spark);
+    TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
+    FhirpathUDFRegistrar.registerUDFs(spark);
     return spark;
   }
 
@@ -86,9 +87,9 @@ public class FhirServerTestConfiguration {
   }
 
   @Bean
-  public SparkListener sparkListener(JobRegistry jobRegistry, StageMap stageMap,
+  public SparkJobListener sparkListener(JobRegistry jobRegistry, StageMap stageMap,
       SparkSession sparkSession) {
-    return new SparkListener(jobRegistry, stageMap, sparkSession);
+    return new SparkJobListener(jobRegistry, stageMap, sparkSession);
   }
 
   @Primary
@@ -131,17 +132,13 @@ public class FhirServerTestConfiguration {
       ServerConfiguration serverConfiguration,
       JobRegistry jobRegistry,
       SparkSession sparkSession,
-      @Value("${pathling.storage.warehouseUrl}") String warehouseUrl,
-      RequestTagFactory requestTagFactory,
-      StageMap stageMap
+      @Value("${pathling.storage.warehouseUrl}") String warehouseUrl
   ) {
     return new JobProvider(
         serverConfiguration,
         jobRegistry,
         sparkSession,
-        warehouseUrl,
-        requestTagFactory,
-        stageMap
+        warehouseUrl
     );
   }
   

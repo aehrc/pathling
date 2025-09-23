@@ -66,9 +66,6 @@ import org.springframework.stereotype.Component;
 @Order(200)
 public class AsyncAspect {
 
-  private static final String ASYNC_HEADER = "Prefer";
-  private static final String ASYNC_HEADER_VALUE = "respond-async";
-
   @Nonnull
   private final ThreadPoolTaskExecutor executor;
 
@@ -112,7 +109,6 @@ public class AsyncAspect {
       @Nonnull final AsyncSupported asyncSupported) throws Throwable {
     final Object[] args = joinPoint.getArgs();
     final ServletRequestDetails requestDetails = getServletRequestDetails(args);
-    // final HttpServletRequest request = requestDetails.getServletRequest();
 
     // Run some validation in sync before (and let validation modify headers if desired)
     Object target = joinPoint.getTarget();

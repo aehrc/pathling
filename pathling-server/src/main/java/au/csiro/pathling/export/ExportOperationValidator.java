@@ -114,7 +114,6 @@ public class ExportOperationValidator {
 
     private List<OperationOutcome.OperationOutcomeIssueComponent> validatePreferHeader(RequestDetails requestDetails, boolean lenient) {
         List<String> preferHeaders = requestDetails.getHeaders(FhirServer.PREFER_RESPOND_TYPE_HEADER.headerName());
-        // FhirServer.PREFER_LENIENT_HEADER.acceptedHeaderValues().forEach(preferHeaders::remove);
         boolean hasRespondTypeHeaderValue = preferHeaders.stream().anyMatch(FhirServer.PREFER_RESPOND_TYPE_HEADER::validValue);
         if (!lenient && !hasRespondTypeHeaderValue) {
             throw new InvalidRequestException(

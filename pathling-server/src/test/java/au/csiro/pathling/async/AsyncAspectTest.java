@@ -50,7 +50,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @SpringBootUnitTest
-public class AsyncAspectTest {
+class AsyncAspectTest {
 
   @MockBean
   private ThreadPoolTaskExecutor threadPoolTaskExecutor;
@@ -86,7 +86,7 @@ public class AsyncAspectTest {
       "([^?]+)\\?id=([\\w\\-]{36})");
 
   @BeforeEach
-  public void setUp() throws Throwable {
+  void setUp() throws Throwable {
 
     // Wire the asynAspects and it's dependencied
     final ServerConfiguration serverConfiguration = createServerConfiguration(
@@ -141,14 +141,14 @@ public class AsyncAspectTest {
 
 
   @Test
-  public void testSynchronousRequestReturnsExpectedResponse() throws Throwable {
+  void testSynchronousRequestReturnsExpectedResponse() throws Throwable {
     final IBaseResource result = executeRequest();
     assertEquals(RESULT_RESOURCE, result);
   }
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testAsyncRequestsSchedulesNewJob() {
+  void testAsyncRequestsSchedulesNewJob() {
     // setup thread pool executor to return a mock future
     final Future<IBaseResource> mockFuture = mock(Future.class);
     when(threadPoolTaskExecutor.submit(ArgumentMatchers.<Callable<IBaseResource>>any())).thenReturn(
@@ -170,7 +170,7 @@ public class AsyncAspectTest {
   }
 
   @Test
-  public void testReusesAsynJobIfOnlyWhitelistedHeadersChange() {
+  void testReusesAsynJobIfOnlyWhitelistedHeadersChange() {
     setAuthenticationPrincipal("principal1");
     servletRequest.addHeader("Accept", "value1");
     assertEquals("value1", servletRequest.getHeader("Accept"));
@@ -186,7 +186,7 @@ public class AsyncAspectTest {
   }
 
   @Test
-  public void testCreatesNewAsyncJobWhenSalientHeaderChanges() {
+  void testCreatesNewAsyncJobWhenSalientHeaderChanges() {
     servletRequest.addHeader("Authorization", "value1");
     assertEquals("value1", servletRequest.getHeader("Authorization"));
     final String jobId1 = assertExecutedAsync();
@@ -199,7 +199,7 @@ public class AsyncAspectTest {
   }
 
   @Test
-  public void testCreatesNewAsyncJobWhenDatabaseVersionChanges() {
+  void testCreatesNewAsyncJobWhenDatabaseVersionChanges() {
     when(database.getCacheKey()).thenReturn(Optional.of("key1"));
     final String jobId1 = assertExecutedAsync();
     when(database.getCacheKey()).thenReturn(Optional.of("key2"));
@@ -208,7 +208,7 @@ public class AsyncAspectTest {
   }
 
   @Test
-  public void testCreatesNewAsyncJobWhenQueryStringChanges() {
+  void testCreatesNewAsyncJobWhenQueryStringChanges() {
     requestDetails.setCompleteUrl(FHIR_SERVER_BASE + "/Patient/$aggregate?param=value1");
     final String jobId1 = assertExecutedAsync();
     requestDetails.setCompleteUrl(FHIR_SERVER_BASE + "/Patient/$aggregate?param=value2");
@@ -217,7 +217,7 @@ public class AsyncAspectTest {
   }
 
   @Test
-  public void testReusesAsyncJobWhenAuthenticationPrincipalChanges() {
+  void testReusesAsyncJobWhenAuthenticationPrincipalChanges() {
     setAuthenticationPrincipal("principal1");
     final String jobId1 = assertExecutedAsync();
     setAuthenticationPrincipal("principal2");

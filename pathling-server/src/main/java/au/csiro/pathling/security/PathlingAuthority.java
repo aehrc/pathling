@@ -135,7 +135,7 @@ public class PathlingAuthority {
       
       final List<String> accessCodes = Arrays.stream(ResourceAccess.AccessType.values())
           .map(ResourceAccess.AccessType::getCode)
-          .collect(Collectors.toList());
+          .toList();
       if (action.isPresent() && !accessCodes.contains(action.get()) && subject.isPresent()) {
         throw new IllegalArgumentException("Subject not supported for action: " + action);
       }

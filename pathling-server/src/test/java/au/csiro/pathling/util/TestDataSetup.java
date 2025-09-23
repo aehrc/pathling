@@ -184,14 +184,7 @@ public class TestDataSetup {
      * @param tempDir Where to copy to
      */
     public void copyTestDataToTempDir(Path tempDir) {
-        File deltaTestData = Path.of("src/test/resources/test-data/fhir/delta").toFile();
-        try {
-            FileUtils.copyDirectoryToDirectory(deltaTestData, tempDir.toFile());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } finally {
-            logDirectoryContents(tempDir);
-        }
+      staticCopyTestDataToTempDir(tempDir);
     }
 
     public void setupTestData(Path ndjsonTestDataDir) {

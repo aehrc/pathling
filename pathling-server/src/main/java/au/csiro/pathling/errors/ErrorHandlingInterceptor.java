@@ -125,7 +125,7 @@ public class ErrorHandlingInterceptor {
       // Errors relating to invalid user input are passed through using the corresponding HAPI
       // exception.
       return new InvalidRequestException(e);
-    } catch (final Throwable e) {
+    } catch (final Throwable e) { // NO-SONAR we really want to catch everything here
       // Anything else is unexpected and triggers a 500.
       return internalServerError(e);
     }

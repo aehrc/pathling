@@ -167,7 +167,7 @@ public class ExportOperationUtil {
           }
         })
         .filter(Objects::nonNull)
-        .collect(Collectors.toList());
+        .toList();
   }
 
     public static <T extends IBaseResource> T read_first_from_multiple_lines_ndjson(IParser parser, FileInfo fileInfo, Class<T> clazz) {
@@ -226,7 +226,6 @@ public class ExportOperationUtil {
     HttpStatusCode status = pollResult.getStatus();
     HttpHeaders headers = pollResult.getResponseHeaders();
     if (status == HttpStatus.ACCEPTED) {
-      // assertThat(headers).containsKey("X-Progress");
       log.info("Polling... {}", headers.get("X-Progress"));
       return false; // keep polling
     }

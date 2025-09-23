@@ -33,7 +33,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ResourceLock(value = "wiremock", mode = ResourceAccessMode.READ_WRITE)
 @ActiveProfiles({"core", "server", "integration-test"})
-public class ExportOperationCacheIT {
+class ExportOperationCacheIT {
 
   @LocalServerPort
   int port;

@@ -190,19 +190,6 @@ public class CacheableDatabase implements Cacheable {
   }
 
   /**
-   * Updates the cache key based upon the latest update time of the specified resource type.
-   *
-   * @param resourceType the resource type to update the cache key for
-   */
-  private void invalidateCache(@Nonnull final String resourceType) {
-    executor.execute(() -> {
-      final DeltaTable table = DeltaTable.forPath(spark, getTableUrl(databasePath, resourceType));
-      cacheKey = buildCacheKeyFromTable(table);
-      this.spark.sqlContext().clearCache();
-    });
-  }
-
-  /**
    * @param path the URL of the warehouse location
    * @param resourceType the resource type to be read or written to
    * @return the URL of the resource within the warehouse

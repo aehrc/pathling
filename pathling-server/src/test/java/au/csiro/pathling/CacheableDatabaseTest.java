@@ -9,7 +9,6 @@ import au.csiro.pathling.util.TestDataSetup;
 import io.delta.tables.DeltaTable;
 import java.nio.file.Path;
 import org.apache.spark.sql.SparkSession;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +20,7 @@ import org.springframework.context.annotation.Import;
 //@Execution(ExecutionMode.CONCURRENT)
 @Import(FhirServerTestConfiguration.class)
 @SpringBootUnitTest
-public class CacheableDatabaseTest {
+class CacheableDatabaseTest {
 
   private CacheableDatabase cacheableDatabase;
   
@@ -32,11 +31,6 @@ public class CacheableDatabaseTest {
   private Path tempDir;
   @Autowired
   private TestDataSetup testDataSetup;
-
-  @BeforeEach
-  void setUp() {
-    
-  }
   
   @Test
   void cache_key_is_empty_if_no_files() {

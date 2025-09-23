@@ -39,7 +39,7 @@ import org.springframework.stereotype.Component;
 @Profile("server")
 @ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
 @Slf4j
-public class SparkListener extends org.apache.spark.scheduler.SparkListener {
+public class SparkJobListener extends org.apache.spark.scheduler.SparkListener {
 
   @Nonnull
   private final JobRegistry jobRegistry;
@@ -52,8 +52,8 @@ public class SparkListener extends org.apache.spark.scheduler.SparkListener {
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
    * @param stageMap the {@link StageMap} used to map stages to job IDs
    */
-  public SparkListener(@Nonnull final JobRegistry jobRegistry,
-                       @Nonnull final StageMap stageMap, @Lazy SparkSession sparkSession) {
+  public SparkJobListener(@Nonnull final JobRegistry jobRegistry,
+                          @Nonnull final StageMap stageMap, @Lazy SparkSession sparkSession) {
     this.jobRegistry = jobRegistry;
     this.stageMap = stageMap;
     this.sparkSession = sparkSession;

@@ -64,9 +64,6 @@ public class TestDataImporter implements CommandLineRunner {
     public void run(final String... args) {
         final String sourcePath = args[0];
         final boolean downloadFromSmartHealth = Boolean.parseBoolean(args[1].split("=")[1]);
-        //final File srcNdJsonDir = new File(sourcePath);
-        //final FileFilter fileFilter = WildcardFileFilter.builder().setWildcards("*.ndjson").get();
-        //final File[] srcNdJsonFiles = srcNdJsonDir.listFiles(fileFilter);
         log.info("Setting up test data at: {}", sourcePath);
         if(downloadFromSmartHealth) {
             testDataSetup.downloadFromSmartHealthBlocking();

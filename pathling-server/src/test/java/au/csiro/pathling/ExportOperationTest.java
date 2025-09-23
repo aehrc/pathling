@@ -204,13 +204,6 @@ class ExportOperationTest {
         );
     }
 
-    private static Map<String, String[]> query_p(String key1, String val1, String key2, String val2) {
-        return Map.of(
-                key1, new String[] { val1 },
-                key2, new String[] { val2 }
-        );
-    }
-
     @ParameterizedTest
     @MethodSource("provide_output_mappings")
     void test_output_model_mapping(ExportResponse exportResponse, JsonNode expectedJSON) throws IOException {
@@ -305,10 +298,6 @@ class ExportOperationTest {
                 arguments(base + "_outputFormat=ndjson", "ndjson", now, until, List.of("not_real"), null),
                 arguments(base + "_outputFormat=ndjson", "ndjson", now, until, List.of("not_real1", "not_real2"), null)
         );
-    }
-
-    private static RequestDetails mockRequest(String acceptHeader, String preferHeader) {
-        return mockRequest(acceptHeader, preferHeader, false);
     }
 
     private static RequestDetails mockRequest(String acceptHeader, String preferHeader, boolean lenient) {

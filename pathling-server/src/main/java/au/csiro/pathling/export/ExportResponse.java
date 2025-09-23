@@ -50,11 +50,9 @@ public class ExportResponse implements OperationResponse<Binary> {
         String baseServerUrl = requestUrl.split("fhir")[0];
         UnaryOperator<String> localUrlToRemoteUrl = localUrl -> baseServerUrl + "jobs" + URI.create(localUrl).getPath().split("jobs")[1];
         
-      //final String transactionTime = DateTimeFormatter.ISO_INSTANT.format(LocalDateTime.now());
-      //manifest.put("transactionTime", transactionTime); // TODO - is the transactionTime "now"?
         manifest.put("transactionTime", InstantType.now().getValueAsString());
         manifest.put("request", requestUrl);
-        manifest.put("requiresAccessToken", false); // TODO - no auth, correct?
+        manifest.put("requiresAccessToken", false);
         ArrayNode outputArray = mapper.createArrayNode();
         List<ObjectNode> objectNodes = writeDetails.fileInfos().stream()
                 .filter(fileInfo -> fileInfo.count() == null || fileInfo.count() > 0)

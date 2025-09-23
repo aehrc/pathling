@@ -39,6 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.logging.log4j.ThreadContext;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -75,28 +76,23 @@ public class JobProvider {
   private final JobRegistry jobRegistry;
   private final SparkSession sparkSession;
   private final String databasePath;
-  private final RequestTagFactory requestTagFactory;
-  private final StageMap stageMap;
 
   /**
    * @param configuration a {@link ServerConfiguration} for determining if authorization is enabled
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
    */
   public JobProvider(@Nonnull final ServerConfiguration configuration,
-      @Nonnull final JobRegistry jobRegistry, SparkSession sparkSession, @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") String databasePath,
-      RequestTagFactory requestTagFactory, StageMap stageMap) {
+      @Nonnull final JobRegistry jobRegistry, SparkSession sparkSession, @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") String databasePath) {
     this.configuration = configuration;
     this.jobRegistry = jobRegistry;
     this.sparkSession = sparkSession;
     this.databasePath = new Path(databasePath, "jobs").toString();
-    this.requestTagFactory = requestTagFactory;
-    this.stageMap = stageMap;
   }
   
   
-  public void deleteJob(String jobId, ServletRequestDetails requestDetails) {
+  public void deleteJob(String jobId) {
     final Job<?> job = getJob(jobId);
-    handleJobDeleteRequest(job, requestDetails);
+    handleJobDeleteRequest(job);
   }
   
   
@@ -111,9 +107,9 @@ public class JobProvider {
   @SuppressWarnings({"unused", "TypeMayBeWeakened"})
   @Operation(name = "$job", idempotent = true)
   public IBaseResource job(@Nullable @OperationParam(name = "id") final String id,
-      @Nullable final HttpServletRequest request,
+      @jakarta.validation.constraints.NotNull final HttpServletRequest request,
       @Nullable final HttpServletResponse response) {
-
+    
     final Job<?> job = getJob(id);
 
     //    if (configuration.getAuth().isEnabled()) {
@@ -144,7 +140,7 @@ public class JobProvider {
     return job;
   }
 
-  private void handleJobDeleteRequest(Job<?> job, ServletRequestDetails requestDetails) {
+  private void handleJobDeleteRequest(Job<?> job) {
     /*
     Two possible situations:
       - The initial kick-off request is still ongoing -> cancel it and delete the partial files
@@ -161,7 +157,6 @@ public class JobProvider {
     job.setMarkedAsDeleted(true);
     if(!job.getResult().isDone()) {
       job.getResult().cancel(false);
-      // TODO - The job cancellation might take some time (its async)
       // Currently, only the files up until "now" will be deleted. Anything that is created between
       // the cancel request and the job actually being cancelled by spark will remain on the disk
     }
@@ -208,6 +203,7 @@ public class JobProvider {
         job.getResponseModification().accept(response);
         return job.getResult().get();
       } catch (final InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw new InternalErrorException("Job was interrupted", e);
       } catch (final ExecutionException e) {
         // This needs to go down two levels of causes: one for the ExecutionException added by the
@@ -218,7 +214,7 @@ public class JobProvider {
       // If the job is not done, we return a 202 along with an OperationOutcome and progress header.
       requireNonNull(response);
       // We need to set the caching headers such that the incomplete response is never cached.
-      if (request != null && EntityTagInterceptor.requestIsCacheable(request)) {
+      if (EntityTagInterceptor.requestIsCacheable(request)) {
         EntityTagInterceptor.makeRequestNonCacheable(response, configuration);
       }
       // Add progress information to the response.

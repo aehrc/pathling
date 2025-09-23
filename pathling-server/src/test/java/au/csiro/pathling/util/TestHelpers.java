@@ -77,16 +77,6 @@ public abstract class TestHelpers {
         when(dataSource.read(resourceType.toCode())).thenReturn(dataset);
     }
 
-//    public static void mockAllEmptyResources(@Nonnull final DataSource dataSource,
-//                                             @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders) {
-//        final Set<ResourceType> resourceTypes = ResourcePath.supportedResourceTypes();
-//        for (final ResourceType resourceType : resourceTypes) {
-//            final Dataset<Row> dataset = QueryHelpers.createEmptyDataset(spark, fhirEncoders,
-//                    resourceType);
-//            when(dataSource.read(resourceType)).thenReturn(dataset);
-//        }
-//    }
-
     @Nonnull
     public static Dataset<Row> getDatasetForResourceType(@Nonnull final SparkSession spark,
                                                          @Nonnull final ResourceType resourceType) {

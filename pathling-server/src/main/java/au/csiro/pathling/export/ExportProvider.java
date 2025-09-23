@@ -32,9 +32,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("server")
 public class ExportProvider implements PreAsyncValidation<ExportRequest> {
-
-    private static final Logger log = LoggerFactory.getLogger(ExportProvider.class);
-
+  
     public static final String OUTPUT_FORMAT_PARAM_NAME = "_outputFormat";
     public static final String SINCE_PARAM_NAME = "_since";
     public static final String UNTIL_PARAM_NAME = "_until";
@@ -42,17 +40,13 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
     public static final String ELEMENTS_PARAM_NAME = "_elements";
 
     private final ExportExecutor exportExecutor;
-    private final PathlingContext pathlingContext;
-    private final FhirContext fhirContext;
     private final ExportOperationValidator exportOperationValidator;
     private final JobRegistry jobRegistry;
     private final RequestTagFactory requestTagFactory;
 
     @Autowired
-    public ExportProvider(ExportExecutor exportExecutor, PathlingContext pathlingContext, FhirContext fhirContext, ExportOperationValidator exportOperationValidator, JobRegistry jobRegistry, RequestTagFactory requestTagFactory) {
+    public ExportProvider(ExportExecutor exportExecutor, ExportOperationValidator exportOperationValidator, JobRegistry jobRegistry, RequestTagFactory requestTagFactory) {
         this.exportExecutor = exportExecutor;
-        this.pathlingContext = pathlingContext;
-        this.fhirContext = fhirContext;
         this.exportOperationValidator = exportOperationValidator;
         this.jobRegistry = jobRegistry;
         this.requestTagFactory = requestTagFactory;

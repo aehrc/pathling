@@ -98,7 +98,7 @@ public class SecurityAspect {
         .map(GrantedAuthority::getAuthority)
         .filter(authority -> authority.startsWith("pathling"))
         .map(PathlingAuthority::fromAuthority)
-        .collect(Collectors.toList());
+        .toList();
     if (authToken.getAuthorities() == null || !requiredAuthority
         .subsumedByAny(authorities)) {
       throw new AccessDeniedError(
@@ -112,8 +112,8 @@ public class SecurityAspect {
     String subject = null;
     if (authentication != null) {
       final Object principal = authentication.getPrincipal();
-      if (principal instanceof JwtClaimAccessor) {
-        subject = ((JwtClaimAccessor) principal).getSubject();
+      if (principal instanceof JwtClaimAccessor jwtClaimAccessor) {
+        subject = jwtClaimAccessor.getSubject();
       }
     }
     return Optional.ofNullable(subject);

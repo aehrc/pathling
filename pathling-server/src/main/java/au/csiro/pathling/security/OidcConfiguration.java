@@ -43,7 +43,7 @@ import org.springframework.stereotype.Component;
 @Getter
 public class OidcConfiguration {
 
-  private final Map<String, Object> oidcConfiguration;
+  private final Map<String, Object> oidcConfigurationMap;
 
   /**
    * @param configuration A {@link ServerConfiguration} instance which controls the behaviour of the
@@ -56,7 +56,7 @@ public class OidcConfiguration {
         "Configuration for issuer must be present if authorization is enabled");
     final String issuer = authConfig.getIssuer().orElseThrow(authConfigError);
 
-    oidcConfiguration = getConfigurationForIssuerLocation(issuer);
+    oidcConfigurationMap = getConfigurationForIssuerLocation(issuer);
   }
 
   /**
@@ -66,16 +66,16 @@ public class OidcConfiguration {
    * @param issuer a specified value for the issuer
    */
   public OidcConfiguration(@Nonnull final String issuer) {
-    oidcConfiguration = getConfigurationForIssuerLocation(issuer);
+    oidcConfigurationMap = getConfigurationForIssuerLocation(issuer);
   }
 
   /**
    * This constructor is used for testing purposes only.
    *
-   * @param oidcConfiguration a map of OIDC {@link ConfigItem} values
+   * @param oidcConfigurationMap a map of OIDC {@link ConfigItem} values
    */
-  public OidcConfiguration(@Nonnull final Map<String, Object> oidcConfiguration) {
-    this.oidcConfiguration = oidcConfiguration;
+  public OidcConfiguration(@Nonnull final Map<String, Object> oidcConfigurationMap) {
+    this.oidcConfigurationMap = oidcConfigurationMap;
   }
 
   /**
@@ -84,7 +84,7 @@ public class OidcConfiguration {
    */
   @Nonnull
   public Optional<String> get(@Nonnull final ConfigItem item) {
-    final Object value = oidcConfiguration.get(item.getKey());
+    final Object value = oidcConfigurationMap.get(item.getKey());
     if (value != null) {
       check(value instanceof String);
     }

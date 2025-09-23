@@ -4,10 +4,8 @@ import au.csiro.pathling.async.JobProvider;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Pointcut;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import org.springframework.stereotype.Component;
 
 /**
@@ -27,12 +25,12 @@ public class BulkExportDeleteInterceptor {
   public boolean interceptJobDeletion(
       HttpServletRequest request,
       HttpServletResponse response,
-      ServletRequestDetails requestDetails) throws IOException, ServletException {
+      ServletRequestDetails requestDetails) {
     if(!request.getMethod().equals("DELETE") || !request.getPathInfo().matches(".*/\\$job$")) {
       return true;
     }
     
-    jobProvider.deleteJob(request.getParameter("id"), requestDetails);
+    jobProvider.deleteJob(request.getParameter("id"));
     
     return false;
   }
