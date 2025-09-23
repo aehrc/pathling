@@ -202,7 +202,7 @@ production environments such as the Pathling website and sandbox instance.
 
 This repository uses multiple code formatters:
 
-- Prettier for JavaScript/TypeScript code
+- Prettier for JavaScript/TypeScript code, JSON and YAML
 - Ruff for Python code
 - EditorConfig for all other languages
 
