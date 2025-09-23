@@ -23,14 +23,11 @@ import java.util.List;
 public record ExportRequest(
         @Nonnull String originalRequest,
         @Nonnull ExportOutputFormat outputFormat,
-        @Nonnull InstantType since,
+        @Nullable InstantType since,
         @Nullable InstantType until,
         @Nonnull List<ResourceType> includeResourceTypeFilters,
         @Nonnull List<FhirElement> elements
 ) {
-        public ExportRequest(@Nonnull String originalRequest, @Nonnull ExportOutputFormat outputFormat, @Nonnull InstantType since) {
-                this(originalRequest, outputFormat, since, null, List.of(), List.of());
-        }
 
   /**
    * A small container for resource types and their top level elements.
