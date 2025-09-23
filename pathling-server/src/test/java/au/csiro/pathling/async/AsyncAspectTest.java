@@ -59,6 +59,9 @@ public class AsyncAspectTest {
 
   @MockBean
   ProceedingJoinPoint proceedingJoinPoint;
+  
+  @MockBean
+  JobProvider jobProvider;
 
   @Autowired
   SparkSession spark;
@@ -77,8 +80,6 @@ public class AsyncAspectTest {
   // regular expression that matches content location header
   private static final Pattern CONTENT_LOCATION_REGEX = Pattern.compile(
       "([^?]+)\\?id=([\\w\\-]{36})");
-  @Autowired
-  private JobProvider jobProvider;
 
   @BeforeEach
   public void setUp() throws Throwable {

@@ -33,7 +33,7 @@ import static org.awaitility.Awaitility.await;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ResourceLock(value = "wiremock", mode = ResourceAccessMode.READ_WRITE)
 @ActiveProfiles({"core", "server", "integration-test"})
-public class ExportOperationCacheTest {
+public class ExportOperationCacheIT {
 
   @LocalServerPort
   int port;

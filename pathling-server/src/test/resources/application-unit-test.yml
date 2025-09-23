@@ -1,0 +1,194 @@
+spring:
+  banner:
+    location: classpath:banner.txt
+
+# Actuator endpoints let you monitor and interact with your application.
+# <https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html#actuator.endpoints>
+management:
+  server:
+    port: 8081
+  endpoints:
+    web:
+      exposure:
+        include: "health,prometheus"
+  endpoint:
+    health:
+      probes:
+        add-additional-paths: true
+
+pathling:
+  # Controls the description of this server as displayed within the FHIR CapabilityStatement.
+  implementationDescription: Yet Another Pathling Server
+
+  # If this variable is set, all errors will be reported to a Sentry service, e.g.
+  # `https://abc123@sentry.io/123456`.
+  # sentryDsn: [Sentry DSN]
+
+  # This variable sets the environment that each Sentry report is tagged with.
+  # sentryEnvironment: [environment]
+
+  spark:
+    # The name that Pathling will be identified as within the Spark cluster.
+    appName: pathling
+
+  storage:
+    # The base URL at which Pathling will look for data files, and where it will save data received
+    # within import requests. Can be an Amazon S3 (s3://), HDFS (hdfs://) or filesystem (file://)
+    # URL.
+    # warehouseUrl: file:///Users/felixnaumann/Documents/pathling-server/warehouse
+    warehouseUrl: file://${user.dir}/src/test/resources/test-data/fhir/delta
+
+    # The subdirectory within the warehouse path used to read and write data.
+    databaseName: default
+
+    # This controls whether the built-in caching within Spark is used for resource datasets
+    # It may be useful to turn this off for large datasets in memory-constrained environments.
+    cacheDatasets: true
+
+    # When a table is updated, the number of partitions is checked. If the number exceeds this
+    # threshold, the table will be repartitioned back to the default number of partitions. This
+    # prevents large numbers of small updates causing poor subsequent query performance.
+    compactionThreshold: 10
+
+  query:
+    # Setting this option to true will enable additional logging relating to the query plan used to
+    # execute queries.
+    explainQueries: false
+
+    # This controls whether the built-in caching within Spark is used for search results.
+    # It may be useful to turn this off for large datasets in memory-constrained environments.
+    cacheResults: true
+
+  auth:
+    # Enables authorization.
+    enabled: false
+
+    # Configures the issuing domain for bearer tokens, which will be checked against the claims
+    # within incoming bearer tokens.
+    # issuer: [issuer]
+
+    # Configures the audience for bearer tokens, which is the FHIR endpoint that tokens are
+    # intended to be authorised for.
+    # audience: [audience]
+
+    # Provides the URL which will be advertised as the authorization endpoint.
+    # authorizeUrl: [authorization URL]
+
+    # Provides the URL which will be advertised as the token endpoint.
+    # tokenUrl: [token URL]
+
+    # Provides the URL which will be advertised as the token revocation endpoint.
+    # revokeUrl: [token revocation URL]
+
+    ga4ghPassports:
+      # When GA4GH passport authentication is enabled, this option configures the identifier system
+      # that is used to identify and control access to patient data.
+      patientIdSystem: http://www.australiangenomics.org.au/id/study-number
+
+      # When GA4GH passport authentication is enabled, this option configures the list of endpoints
+      # that are allowed to issue visas.
+      allowedVisaIssuers: [ ]
+
+  # This section configures HTTP caching response headers.
+  httpCaching:
+    # A list of values to return within the Vary header.
+    vary:
+      - Accept
+      - Accept-Encoding
+      - Prefer
+      - Authorization
+    # A list of values to return within the Cache-Control header, for cacheable responses.
+    cacheableControl:
+      - must-revalidate
+      - max-age=1
+    # A list of values to return within the Cache-Control header, for uncacheable responses.
+    uncacheableControl:
+      - no-store
+
+  # This section configures the CORS functionality of the server.
+  # For more information, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+  cors:
+    allowedOrigins: [ ]
+    allowedOriginPatterns: [ ]
+    allowedMethods:
+      - OPTIONS
+      - GET
+      - POST
+    allowedHeaders:
+      - Content-Type
+      - Authorization
+      - Prefer
+    exposedHeaders:
+      - Content-Location
+      - X-Progress
+    maxAge: 600
+
+  import:
+    allowableSources:
+      - "file:///usr/share/staging"
+
+  # This section configures the server's support asynchronous processing of HTTP requests.
+  async:
+    # Enables asynchronous processing for those operations that support it,
+    # when explicitly requested by an HTTP client.
+    enabled: true
+    
+    #  A subset of `pathling.httpCaching.vary` HTTP headers, which should 
+    #  be  excluded from determining that asynchronous requests are the equivalent
+    #  and can be routed to the same asynchronous job.
+    varyHeadersExcludedFromCacheKey:
+      - Accept
+      - Accept-Encoding
+
+# Use this section to set or override any Spark configuration parameter. Tuning these parameters is
+# essential to get the optimal performance for your dataset.
+# Here is the full list: https://spark.apache.org/docs/latest/configuration.html
+spark:
+  master: local[*]
+  sql:
+    adaptive:
+      enabled: true
+      coalescePartitions:
+        enabled: true
+    extensions: io.delta.sql.DeltaSparkSessionExtension
+    catalog:
+      spark_catalog: org.apache.spark.sql.delta.catalog.DeltaCatalog
+  databricks:
+    delta:
+      schema:
+        autoMerge:
+          enabled: false
+  scheduler:
+    mode: FAIR
+
+# Use this section to set or override configuration relating to S3 configuration.
+# See: https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/index.html
+fs:
+  s3a:
+    aws:
+    # credentials:
+    #   provider: org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider
+    #   provider: org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider
+    #
+    # For use with: SimpleAWSCredentialsProvider
+    # access:
+    #   key: [access key]
+    # secret:
+    #   key: [secret key]
+    #
+    # For use with: AssumedRoleCredentialProvider
+    # assumed:
+    #   role:
+    #     arn: [role ARN]
+    #
+    connection:
+      maximum: 100
+    committer:
+      name: magic
+      magic:
+        enabled: true
+debug: false
+logging:
+  level:
+    root: INFO
+    au.csiro.pathling: DEBUG
