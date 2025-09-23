@@ -292,8 +292,6 @@ public class PathlingContext {
     final ExpressionEncoder<T> encoder = fhirEncoders.of(resourceClass);
     final Dataset<T> typedResources = resources.as(encoder);
     
-    // TODO - apply _elements filtering here after casting
-    
     final MapPartitionsFunction<T, String> mapper = new DecodeResourceMapPartitions<>(fhirVersion,
         outputMimeType);
 
