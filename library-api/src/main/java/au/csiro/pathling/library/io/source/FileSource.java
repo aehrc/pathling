@@ -196,13 +196,21 @@ public abstract class FileSource extends DatasetSource {
 
   /**
    * Converts a path to a stream of pairs of resource codes and paths.
+   * The file represented as part of the path may have a partition id in the name.
+   * I.e. the path may be 'path/to/resource/Patient.00000.ndjson'. The partition id will be discarded
+   * and 'Patient' will be returned as the key.
    *
    * @param path the path to convert
    * @return a stream of pairs of resource codes and paths
    */
   @Nonnull
   private Stream<Pair<String, String>> resourceCodeAndPath(@Nonnull final String path) {
-    final String fileName = FilenameUtils.getBaseName(path);
+    String fileName = FilenameUtils.getBaseName(path);
+    final String[] split = fileName.split("\\.");
+    if(split.length == 2) {
+      // has partition id like '<resource_type>.<partition_id>'
+      fileName = split[0];
+    }
     return fileNameMapper.apply(fileName).stream()
         .map(resourceType -> Pair.of(resourceType, path));
   }
