@@ -47,9 +47,6 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
     private final JobRegistry jobRegistry;
     private final RequestTagFactory requestTagFactory;
 
-    @Value("${pathling.storage.warehouseUrl}")
-    private String warehouseUrl;
-
     @Autowired
     public ExportProvider(ExportExecutor exportExecutor, PathlingContext pathlingContext, FhirContext fhirContext, ExportOperationValidator exportOperationValidator, JobRegistry jobRegistry, RequestTagFactory requestTagFactory) {
         this.exportExecutor = exportExecutor;

@@ -44,9 +44,6 @@ import java.nio.file.Path;
 @Slf4j
 public class TestDataImporter implements CommandLineRunner {
 
-    @Value("${pathling.storage.warehouseUrl}")
-    private String warehouseUrl;
-
     @Nonnull
     protected final SparkSession spark;
     private final TestDataSetup testDataSetup;

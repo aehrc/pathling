@@ -91,7 +91,7 @@ class ExportOperationIT {
   @DynamicPropertySource
   static void configureProperties(DynamicPropertyRegistry registry) {
     TestDataSetup.staticCopyTestDataToTempDir(warehouseDir);
-    registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.resolve("delta").toAbsolutePath());
+    registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.toAbsolutePath());
   }
 
   @BeforeEach

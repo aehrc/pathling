@@ -1,9 +1,6 @@
 package au.csiro.pathling.cache;
 
-import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.FileSystemPersistence;
-import au.csiro.pathling.library.io.source.DataSourceBuilder;
-import au.csiro.pathling.library.io.source.QueryableDataSource;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -46,16 +43,16 @@ public class CacheableDatabase implements Cacheable {
   private final ThreadPoolTaskExecutor executor;
   private final SparkSession spark;
   
-  private final String warehouseUrl;
+  private final String databasePath;
   
   @Nonnull
   @Getter
   private Optional<String> cacheKey;
 
   @Autowired
-  public CacheableDatabase(SparkSession spark, @Value("${pathling.storage.warehouseUrl}") String warehouseUrl, @Nonnull final ThreadPoolTaskExecutor executor) {
+  public CacheableDatabase(SparkSession spark, @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") String databasePath, @Nonnull final ThreadPoolTaskExecutor executor) {
     this.spark = spark;
-    this.warehouseUrl = convertS3ToS3aUrl(warehouseUrl);
+    this.databasePath = convertS3ToS3aUrl(databasePath);
     this.cacheKey = buildCacheKeyFromStorage();
     this.executor = executor;
   }
@@ -78,27 +75,27 @@ public class CacheableDatabase implements Cacheable {
    */
   @Nonnull
   private Optional<Long> latestUpdate() {
-    log.info("Querying latest snapshot from database: {}", warehouseUrl);
+    log.info("Querying latest snapshot from database: {}", databasePath);
 
     @Nullable final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()
         .hadoopConfiguration();
     requireNonNull(hadoopConfiguration);
     @Nullable final FileSystem warehouse;
     try {
-      warehouse = FileSystem.get(new URI(warehouseUrl), hadoopConfiguration);
+      warehouse = FileSystem.get(new URI(databasePath), hadoopConfiguration);
     } catch (final IOException | URISyntaxException e) {
       log.debug("Unable to access warehouse location, returning empty snapshot time: {}",
-          warehouseUrl);
+          databasePath);
       return Optional.empty();
     }
     requireNonNull(warehouse);
 
     // Check that the database path exists.
     try {
-      warehouse.exists(new Path(warehouseUrl));
+      warehouse.exists(new Path(databasePath));
     } catch (final IOException e) {
       log.debug("Unable to access database location, returning empty snapshot time: {}",
-          warehouseUrl);
+          databasePath);
       return Optional.empty();
     }
 
@@ -106,10 +103,10 @@ public class CacheableDatabase implements Cacheable {
     // types.
     @Nullable final FileStatus[] fileStatuses;
     try {
-      fileStatuses = warehouse.listStatus(new Path(warehouseUrl));
+      fileStatuses = warehouse.listStatus(new Path(databasePath));
     } catch (final IOException e) {
       log.debug("Unable to access database location, returning empty snapshot time: {}",
-          warehouseUrl);
+          databasePath);
       return Optional.empty();
     }
     requireNonNull(fileStatuses);
@@ -200,7 +197,7 @@ public class CacheableDatabase implements Cacheable {
    */
   private void invalidateCache(@Nonnull final String resourceType) {
     executor.execute(() -> {
-      final DeltaTable table = DeltaTable.forPath(spark, getTableUrl(warehouseUrl, resourceType));
+      final DeltaTable table = DeltaTable.forPath(spark, getTableUrl(databasePath, resourceType));
       cacheKey = buildCacheKeyFromTable(table);
       this.spark.sqlContext().clearCache();
     });

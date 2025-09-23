@@ -8,7 +8,6 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.sink.DataSink;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.io.sink.NdjsonWriteDetails;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
@@ -24,7 +23,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -57,17 +55,18 @@ public class ExportExecutor {
   private final QueryableDataSource deltaLake;
   private final FhirContext fhirContext;
   private final SparkSession sparkSession;
-  private final String warehouseUrl;
+  private final String databasePath;
 
   @Autowired
   public ExportExecutor(PathlingContext pathlingContext, QueryableDataSource deltaLake,
       FhirContext fhirContext,
-      SparkSession sparkSession, @Value("${pathling.storage.warehouseUrl}") String warehouseUrl) {
+      SparkSession sparkSession, 
+      @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") String databasePath) {
     this.pathlingContext = pathlingContext;
     this.deltaLake = deltaLake;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
-    this.warehouseUrl = warehouseUrl;
+    this.databasePath = databasePath;
   }
 
   @VisibleForTesting
@@ -212,7 +211,7 @@ public class ExportExecutor {
           )
       ));
     }
-    URI warehouseUri = URI.create(warehouseUrl);
+    URI warehouseUri = URI.create(databasePath);
     Path warehousePath = new Path(warehouseUri);
     Path jobDirPath = new Path(new Path(warehousePath, "jobs"), jobId);
     Configuration configuration = sparkSession.sparkContext().hadoopConfiguration();
@@ -222,7 +221,7 @@ public class ExportExecutor {
         boolean created = fs.mkdirs(jobDirPath);
         if (!created) {
           throw new InternalErrorException("Failed to created subdirectory at %s for job %s."
-              .formatted(warehouseUrl, jobId));
+              .formatted(databasePath, jobId));
         }
         log.debug("Created dir {}", jobDirPath);
       }
@@ -231,19 +230,8 @@ public class ExportExecutor {
       return new ExportResponse(exportRequest.originalRequest(), writeDetails);
     } catch (IOException e) {
       throw new InternalErrorException("Failed to created subdirectory at %s for job %s."
-          .formatted(warehouseUrl, jobId));
+          .formatted(databasePath, jobId));
     }
-  }
-
-  private Dataset<Row> applyColumnNullification(Dataset<Row> dataset, Set<String> columnsToKeep) {
-    Dataset<Row> result = dataset;
-    for (String colName : dataset.columns()) {
-      if (!columnsToKeep.contains(colName)) {
-        DataType expectedType = dataset.schema().apply(colName).dataType();
-        result = result.withColumn(colName, lit(null).cast(expectedType));
-      }
-    }
-    return result;
   }
 
   private Column[] columnsWithNullification(Dataset<Row> dataset, Set<String> columnsToKeep) {
@@ -276,9 +264,5 @@ public class ExportExecutor {
 
     mandatoryElements.addAll(alwaysMandatory);
     return mandatoryElements;
-  }
-
-  public String getWarehouseUrl() {
-    return warehouseUrl;
   }
 }

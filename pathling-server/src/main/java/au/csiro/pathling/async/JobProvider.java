@@ -21,12 +21,9 @@ import au.csiro.pathling.cache.EntityTagInterceptor;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ResourceNotFoundError;
-import ca.uhn.fhir.rest.annotation.Delete;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
-import ca.uhn.fhir.rest.api.Constants;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
@@ -37,8 +34,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.spark.SparkContext;
-import org.apache.spark.SparkJobInfo;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -47,19 +42,11 @@ import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.Parameters;
-import org.hl7.fhir.utilities.http.HTTPRequest.HttpMethod;
 import org.jetbrains.annotations.NotNull;
-import org.json.HTTP;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -88,7 +75,7 @@ public class JobProvider {
   @Nonnull
   private final JobRegistry jobRegistry;
   private final SparkSession sparkSession;
-  private final String warehouseUrl;
+  private final String databasePath;
   private final RequestTagFactory requestTagFactory;
   private final StageMap stageMap;
 
@@ -97,12 +84,12 @@ public class JobProvider {
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
    */
   public JobProvider(@Nonnull final ServerConfiguration configuration,
-      @Nonnull final JobRegistry jobRegistry, SparkSession sparkSession, @Value("${pathling.storage.warehouseUrl}") String warehouseUrl,
+      @Nonnull final JobRegistry jobRegistry, SparkSession sparkSession, @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") String databasePath,
       RequestTagFactory requestTagFactory, StageMap stageMap) {
     this.configuration = configuration;
     this.jobRegistry = jobRegistry;
     this.sparkSession = sparkSession;
-    this.warehouseUrl = new Path(warehouseUrl, "jobs").toString();
+    this.databasePath = new Path(databasePath, "jobs").toString();
     this.requestTagFactory = requestTagFactory;
     this.stageMap = stageMap;
   }
@@ -198,7 +185,7 @@ public class JobProvider {
   public void deleteJobFiles(String jobId) throws IOException {
     Configuration hadoopConfig = sparkSession.sparkContext().hadoopConfiguration();
     FileSystem fs = FileSystem.get(hadoopConfig);
-    Path jobDirToDel = new Path(warehouseUrl, jobId);
+    Path jobDirToDel = new Path(databasePath, jobId);
     log.debug("Deleting dir {}", jobDirToDel);
     boolean deleted = fs.delete(jobDirToDel, true);
     if(!deleted) {

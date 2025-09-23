@@ -53,8 +53,8 @@ public class ServerConfiguration {
   @Nullable
   private String sentryEnvironment;
 
-  @Value("${pathling.storage.warehouseUrl}")
-  private String warehouseUrl;
+  @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") 
+  private String databasePath;
 
   @Nonnull
   public Optional<String> getSentryDsn() {
@@ -91,7 +91,7 @@ public class ServerConfiguration {
 
   @Bean
   public QueryableDataSource deltaLake(SparkSession sparkSession, PathlingContext pathlingContext) {
-    return new DataSourceBuilder(pathlingContext).delta(warehouseUrl);
+    return new DataSourceBuilder(pathlingContext).delta(databasePath);
   }
 
   @NotNull
