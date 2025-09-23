@@ -69,6 +69,14 @@ public class Job<T> {
   
   @Setter
   private boolean markedAsDeleted;
+  
+  /*
+  When a job is at 100% that does not always indicate that the job is actually finished. Most of the time,
+  this indicates that a new stage has not been submitted while the current stage is already completed.
+  In that case just show the last calculated percentage again.
+   */
+  @Setter
+  private int lastProgress;
 
   /**
    * @param operation the operation that initiated the job, used for enforcing authorization

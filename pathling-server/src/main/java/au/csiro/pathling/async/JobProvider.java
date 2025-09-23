@@ -37,6 +37,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.spark.SparkContext;
+import org.apache.spark.SparkJobInfo;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -88,6 +90,7 @@ public class JobProvider {
   private final SparkSession sparkSession;
   private final String warehouseUrl;
   private final RequestTagFactory requestTagFactory;
+  private final StageMap stageMap;
 
   /**
    * @param configuration a {@link ServerConfiguration} for determining if authorization is enabled
@@ -95,12 +98,13 @@ public class JobProvider {
    */
   public JobProvider(@Nonnull final ServerConfiguration configuration,
       @Nonnull final JobRegistry jobRegistry, SparkSession sparkSession, @Value("${pathling.storage.warehouseUrl}") String warehouseUrl,
-      RequestTagFactory requestTagFactory) {
+      RequestTagFactory requestTagFactory, StageMap stageMap) {
     this.configuration = configuration;
     this.jobRegistry = jobRegistry;
     this.sparkSession = sparkSession;
     this.warehouseUrl = new Path(warehouseUrl, "jobs").toString();
     this.requestTagFactory = requestTagFactory;
+    this.stageMap = stageMap;
   }
   
   
@@ -234,11 +238,15 @@ public class JobProvider {
       // Add progress information to the response.
       if (job.getTotalStages() > 0) {
         final int progress = job.getProgressPercentage();
-        // TODO - always showing 100% causes inconsistent numbers for clients, but some integration tests require 100% to be present
         if (progress != 100) {
           // We don't bother showing 100%, this usually means that there are outstanding stages
           // which have not yet been submitted.
           response.setHeader(PROGRESS_HEADER, progress + "%");
+          job.setLastProgress(progress);
+        }
+        else {
+          // instead show last percentage again
+          response.setHeader(PROGRESS_HEADER, job.getLastProgress() + "%");
         }
       }
       throw new ProcessingNotCompletedException("Processing", buildProcessingOutcome());
