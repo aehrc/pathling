@@ -83,13 +83,4 @@ public class PathlingVersion {
     return gitShaProperty.map(sha -> String.format("%s+%s", getBuildVersion().get(), sha));
   }
 
-  /**
-   * @return the major version component of the POM version
-   * @see <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning 2.0.0</a>
-   */
-  @Nonnull
-  public Optional<String> getMajorVersion() {
-    return getBuildVersion().map(version -> version.split("\\.")[0]);
-  }
-
 }
