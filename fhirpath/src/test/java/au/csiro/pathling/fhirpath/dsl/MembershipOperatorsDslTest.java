@@ -155,11 +155,24 @@ public class MembershipOperatorsDslTest extends FhirPathDslTestBase {
   }
 
   @FhirPathTest
+  public Stream<DynamicTest> complexTypeMembership() {
+    return builder()
+        .withSubject(sb -> sb
+            .element("name", b -> b.fhirType(FHIRDefinedType.HUMANNAME).string("family", "Smith"))
+        )
+        .testError("Unsupported equality for complex types", "name in name",
+            "In with comparable complex type")
+        .build();
+  }
+
+  @FhirPathTest
   public Stream<DynamicTest> testCrossTypeMembership() {
     return builder()
         .withSubject(sb -> sb
             .string("oneString", "test")
             .boolArray("manyBoolean", true, false, true)
+            .boolArray("twoBooleans", true, false)
+            .stringArray("manyString", "test1", "test2", "test3")
             .codingArray("manyCoding",
                 "http://loinc.org|8480-6||'Systolic blood pressure'",
                 "http://loinc.org|8867-4||'Heart rate'",
@@ -167,23 +180,27 @@ public class MembershipOperatorsDslTest extends FhirPathDslTestBase {
             .element("name", b -> b.fhirType(FHIRDefinedType.HUMANNAME).string("family", "Smith"))
         )
         .group("Cross type membership")
-        .testError("10 in oneString", "Integer in String one")
-        .testError("'true' in manyBoolean", "String in boolean one")
-        .testError("'http://loinc.org|8480-6||\\'Systolic blood pressure\\'' in manyCoding",
+        .testFalse("10 in oneString", "Integer in String one")
+        .testFalse("'true' in manyBoolean", "String in boolean one")
+        .testFalse("'http://loinc.org|8480-6||\\'Systolic blood pressure\\'' in manyCoding",
             "String in Coding many")
-        .group("Test illegal membership operations")
-        .testError("Left operand to contains operator must be comparable",
+        .testFalse(
             "name contains true",
             "Contains with not comparable collection")
-        .testError("Right operand to in operator must be comparable",
+        .testFalse(
             "1 in name",
             "In with not comparable collection")
-        .testError("Right operand to contains operator must be comparable",
+        .testFalse(
             "true contains name",
             "Contains with not comparable element")
-        .testError("Left operand to in operator must be comparable",
+        .testFalse(
             "name in 10",
             "In with not comparable element")
+        .group("Test illegal membership operations")
+        .testError("twoBooleans in manyBoolean",
+            "Left operand to in operator must be single-valued")
+        .testError("manyBoolean contains manyString",
+            "Left operand to contains operator must be single-valued")
         .build();
   }
 }

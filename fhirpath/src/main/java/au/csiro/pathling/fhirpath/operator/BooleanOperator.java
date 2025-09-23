@@ -32,7 +32,7 @@ import jakarta.annotation.Nonnull;
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#boolean-logic">Boolean
  * logic</a>
  */
-public class BooleanOperator implements BinaryOperator {
+public class BooleanOperator implements FhirPathBinaryOperator {
 
   private final BooleanOperatorType type;
 

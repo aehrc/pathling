@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.fhirpath.function.provider;
 
-import static au.csiro.pathling.fhirpath.comparison.Comparable.ComparisonOperation.EQUALS;
-
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
@@ -27,6 +25,8 @@ import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
+
+import static au.csiro.pathling.fhirpath.comparison.Equatable.EqualityOperation.EQUALS;
 
 /**
  * Additional FHIRPath functions that are defined within the FHIR specification.
@@ -67,12 +67,11 @@ public class FhirFunctions {
                 .filter(StringCollection.class::isInstance)
                 // Use the comparison operation to check if the URL matches the input URL.
                 .map(urlCollection ->
-                    ((StringCollection) urlCollection).getComparison(EQUALS).apply(url))
+                    urlCollection.getElementEquality(EQUALS).apply(url))
                 // If the URL is present, build a BooleanCollection from the result.
                 .map(BooleanCollection::build)
                 // If the URL is not present, return a false Boolean literal.
                 .orElse(BooleanCollection.fromValue(false)))
     ).orElse(EmptyCollection.getInstance());
   }
-
 }

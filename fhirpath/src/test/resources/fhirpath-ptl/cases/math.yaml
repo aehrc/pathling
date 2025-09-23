@@ -1,16 +1,16 @@
 tests:
-  - 'Polarity operator':
-      - desc: '** Integer negation **'
+  - "Polarity operator":
+      - desc: "** Integer negation **"
         expression: "-10"
-        result: [ -10 ]
-      - desc: '** Integer positive **'
+        result: [-10]
+      - desc: "** Integer positive **"
         expression: "+7"
-        result: [ 7 ]
-      - desc: '** Decimal negation **'
+        result: [7]
+      - desc: "** Decimal negation **"
         expression: "-10.23"
-        result: [ -10.23 ]
-      - desc: '** Integer positive **'
+        result: [-10.23]
+      - desc: "** Integer positive **"
         expression: "+7.3"
-        result: [ 7.3 ]
+        result: [7.3]
 subject:
   prop: val

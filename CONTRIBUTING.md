@@ -50,9 +50,9 @@ The core of Pathling consists of the following modules, all of which inherit
 from the main `pom.xml` in the root of the repository.
 
 - `utilities` - Utility functions used by different components of Pathling.
-- `encoders` - Encoders for transforming FHIR data into Spark Datasets.
-- `terminology` - Interact with a FHIR terminology server from Spark.
-- `fhirpath` - A library that can translate FHIRPath expressions into Spark
+- `encoders` - Encoders for transforming [FHIR](https://hl7.org/fhir/) data into Spark Datasets.
+- `terminology` - Interact with a [FHIR terminology server](https://hl7.org/fhir/terminology-service.html) from Spark.
+- `fhirpath` - A library that can translate [FHIRPath expressions](https://hl7.org/fhirpath/) into Spark
   queries.
 - `library-api` - An API that exposes Pathling functionality to language
   libraries.
@@ -133,7 +133,10 @@ production environments such as the Pathling website and sandbox instance.
   even for single statements.
 - Use `final` for variables, parameters, and methods that should not change.
 - Avoid using magic numbers; define constants with meaningful names.
-- Document public classes and methods with Javadoc comments.
+- Avoid the use of inner classes, records and enums - having each class defined
+  in its own file is preferred and avoids any implicit dependencies on code
+  within the enclosing scope.
+- Document public classes and methods with [Javadoc comments](https://www.oracle.com/technical-resources/articles/java/javadoc-tool.html).
 - Handle exceptions appropriately; do not use empty catch blocks.
 - Close resources (e.g., streams, connections) in a `finally` block or use
   try-with-resources.
@@ -156,7 +159,7 @@ production environments such as the Pathling website and sandbox instance.
 
 #### Scala
 
-- Use meaningful and descriptive names following Scala conventions.
+- Use meaningful and descriptive names following [Scala conventions](https://docs.scala-lang.org/style/).
 - Follow standard Scala naming conventions:
     - Classes and traits: PascalCase (e.g., `MyClass`)
     - Methods and variables: camelCase (e.g., `myVariable`, `calculateTotal`)
@@ -172,19 +175,19 @@ production environments such as the Pathling website and sandbox instance.
 
 #### Python
 
-- Follow PEP 8 style guidelines.
+- Follow [PEP 8](https://peps.python.org/pep-0008/) style guidelines.
 - Use meaningful and descriptive names with snake_case convention.
 - Use type hints for function parameters and return values.
 - Use docstrings for all public functions, classes, and modules.
 - Prefer list comprehensions over loops where appropriate.
 - Use context managers (`with` statements) for resource management.
 - Handle exceptions explicitly; avoid bare `except` clauses.
-- Write unit tests using pytest framework.
+- Write unit tests using [pytest framework](https://pytest.org/).
 - Keep imports organized: standard library, third-party, local imports.
 
 #### R
 
-- Follow tidyverse style guide conventions.
+- Follow [tidyverse style guide](https://style.tidyverse.org/) conventions.
 - Use snake_case for variable and function names.
 - Use meaningful and descriptive names.
 - Prefer vectorized operations over loops.
@@ -199,9 +202,9 @@ production environments such as the Pathling website and sandbox instance.
 
 This repository uses multiple code formatters:
 
-- Prettier for JavaScript/TypeScript code
-- Ruff for Python code
-- EditorConfig for all other languages
+- [Prettier](https://prettier.io/) for JavaScript/TypeScript code, JSON and YAML
+- [Ruff](https://docs.astral.sh/ruff/) for Python code
+- [EditorConfig](https://editorconfig.org/) for all other languages
 
 Please use the appropriate formatter to reformat your code before pushing.
 

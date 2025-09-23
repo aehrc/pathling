@@ -17,28 +17,26 @@
 
 package au.csiro.pathling.sql.misc;
 
+import au.csiro.pathling.fhirpath.FhirPathDateTime;
 import au.csiro.pathling.sql.udf.SqlFunction1;
 import jakarta.annotation.Nullable;
 import java.io.Serial;
 import java.sql.Timestamp;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 
 /**
- * UDF that calculates the low boundary for a FHIR date/dateTime string.
+ * UDF that calculates the low boundary for a FHIR date/dateTime string or a Timestamp  value.
  * <p>
- * This function handles partial dates and returns the earliest possible timestamp for the given
- * precision level.
+ * This function handles partial dates and returns the latest possible timestamp for the given
+ * precision level. Timestamps are treated dates with fractional seconds precision.
  *
  * @author John Grimes
+ * @author Piotr Szul
  */
-public class LowBoundaryForDateTime implements SqlFunction1<String, Timestamp> {
-  
+public class LowBoundaryForDateTime implements SqlFunction1<Object, Timestamp> {
+
   @Serial
   private static final long serialVersionUID = -2161361690351000200L;
 
@@ -68,42 +66,30 @@ public class LowBoundaryForDateTime implements SqlFunction1<String, Timestamp> {
   }
 
   /**
-   * Calculates the low boundary timestamp for a FHIR date/dateTime string.
+   * Calculates the low boundary timestamp for either a FHIR date/dateTime string or a Timestamp
+   * value.
    *
-   * @param s the date/dateTime string to process
+   * @param input the date/dateTime string or Timestamp representing the dateTime/instant.
    * @return the low boundary timestamp, or null if input is null
-   * @throws IllegalArgumentException if the date format is invalid
+   * @throws IllegalArgumentException if the date format is invalid or the input type is
+   * unsupported
    */
   @Nullable
   @Override
-  public Timestamp call(@Nullable final String s) throws Exception {
-    if (s == null) {
+  public Timestamp call(@Nullable final Object input) throws Exception {
+    if (input == null) {
       return null;
-    }
-    
-    try {
-      // Handle different FHIR date/dateTime formats
-      if (s.matches("\\d{4}")) {
-        // Year only: YYYY -> start of year
-        final int year = Integer.parseInt(s);
-        return Timestamp.from(LocalDateTime.of(year, 1, 1, 0, 0, 0, 0)
-            .toInstant(ZoneOffset.UTC));
-      } else if (s.matches("\\d{4}-\\d{2}")) {
-        // Year-Month: YYYY-MM -> start of month
-        final LocalDate date = LocalDate.parse(s + "-01");
-        return Timestamp.from(LocalDateTime.of(date, LocalDateTime.MIN.toLocalTime())
-            .toInstant(ZoneOffset.UTC));
-      } else if (s.matches("\\d{4}-\\d{2}-\\d{2}")) {
-        // Date only: YYYY-MM-DD -> start of day
-        final LocalDate date = LocalDate.parse(s);
-        return Timestamp.from(LocalDateTime.of(date, LocalDateTime.MIN.toLocalTime())
-            .toInstant(ZoneOffset.UTC));
-      } else {
-        // Full dateTime with timezone -> parse as-is
-        return Timestamp.from(Instant.parse(s));
+    } else if (input instanceof final Timestamp tst) {
+      return tst;
+    } else if (input instanceof final String s) {
+      try {
+        return Timestamp.from(FhirPathDateTime.parse(s).getLowerBoundary());
+      } catch (final DateTimeParseException e) {
+        throw new IllegalArgumentException("Invalid date/dateTime format: " + s, e);
       }
-    } catch (final DateTimeParseException e) {
-      throw new IllegalArgumentException("Invalid date/dateTime format: " + s, e);
+    } else {
+      throw new IllegalArgumentException("Unsupported input type: " + input.getClass().getName() +
+          ", expected String or Timestamp");
     }
   }
 }

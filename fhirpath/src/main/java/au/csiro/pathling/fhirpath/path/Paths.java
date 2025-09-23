@@ -25,7 +25,7 @@ import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.function.FunctionInput;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionError;
-import au.csiro.pathling.fhirpath.operator.BinaryOperator;
+import au.csiro.pathling.fhirpath.operator.FhirPathBinaryOperator;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorInput;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import au.csiro.pathling.fhirpath.operator.UnaryOperator;
@@ -94,7 +94,7 @@ public final class Paths {
   public record EvalOperator(
       @Nonnull FhirPath leftPath,
       @Nonnull FhirPath rightPath,
-      @Nonnull BinaryOperator operator
+      @Nonnull FhirPathBinaryOperator operator
   ) implements FhirPath {
 
     @Nonnull
