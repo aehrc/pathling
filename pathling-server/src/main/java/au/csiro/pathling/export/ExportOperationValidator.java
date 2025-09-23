@@ -141,13 +141,10 @@ public class ExportOperationValidator {
 
     ) {
         if(outputFormat == null) {
-            throw new InvalidRequestException("'%s' is missing.".formatted(ExportProvider.OUTPUT_FORMAT_PARAM_NAME));
+            log.debug("Missing _outputFormat detected.");
         }
-        if(!FhirServer.OUTPUT_FORMAT.validValue(outputFormat)) {
+        if(outputFormat != null && !FhirServer.OUTPUT_FORMAT.validValue(outputFormat)) {
             throw new InvalidRequestException("Unknown '%s' value '%s'. Only %s are allowed.".formatted(ExportProvider.OUTPUT_FORMAT_PARAM_NAME, outputFormat, FhirServer.OUTPUT_FORMAT.acceptedHeaderValues()));
-        }
-        if(since == null) {
-            throw new InvalidRequestException("'%s' is missing.".formatted(ExportProvider.SINCE_PARAM_NAME));
         }
         List<Enumerations.ResourceType> resourceFilter;
         try {
