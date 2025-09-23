@@ -38,9 +38,8 @@ public class FileController {
     if(!resource.exists() || !resource.isFile()) {
       return ResponseEntity.notFound().build();
     }
-    
     return ResponseEntity.ok()
-        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + requestedFilePath + "\"")
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
         .body(resource);
   }
 }

@@ -1,5 +1,9 @@
 package au.csiro.pathling.cache;
 
+import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.FileSystemPersistence;
+import au.csiro.pathling.library.io.source.DataSourceBuilder;
+import au.csiro.pathling.library.io.source.QueryableDataSource;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -10,8 +14,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -36,19 +42,22 @@ import static org.apache.spark.sql.functions.desc;
 @Slf4j
 public class CacheableDatabase implements Cacheable {
 
+  @Nonnull
+  private final ThreadPoolTaskExecutor executor;
   private final SparkSession spark;
   
   private final String warehouseUrl;
   
   @Nonnull
   @Getter
-  private final Optional<String> cacheKey;
-  
+  private Optional<String> cacheKey;
+
   @Autowired
-  public CacheableDatabase(SparkSession spark, @Value("${pathling.storage.warehouseUrl}") String warehouseUrl) {
+  public CacheableDatabase(SparkSession spark, @Value("${pathling.storage.warehouseUrl}") String warehouseUrl, @Nonnull final ThreadPoolTaskExecutor executor) {
     this.spark = spark;
     this.warehouseUrl = convertS3ToS3aUrl(warehouseUrl);
     this.cacheKey = buildCacheKeyFromStorage();
+    this.executor = executor;
   }
 
   /**
@@ -171,5 +180,49 @@ public class CacheableDatabase implements Cacheable {
   @Override
   public boolean cacheKeyMatches(@Nonnull final String otherKey) {
     return cacheKey.map(key -> key.equals(otherKey)).orElse(false);
+  }
+
+  /**
+   * Generates a new cache key based upon the latest update time of the specified table.
+   *
+   * @param table the table to generate the cache key for
+   * @return the cache key, or empty if no update time could be determined
+   */
+  @Nonnull
+  private Optional<String> buildCacheKeyFromTable(@Nonnull final DeltaTable table) {
+    return latestUpdateToTable(table).map(this::cacheKeyFromTimestamp);
+  }
+
+  /**
+   * Updates the cache key based upon the latest update time of the specified resource type.
+   *
+   * @param resourceType the resource type to update the cache key for
+   */
+  private void invalidateCache(@Nonnull final String resourceType) {
+    executor.execute(() -> {
+      final DeltaTable table = DeltaTable.forPath(spark, getTableUrl(warehouseUrl, resourceType));
+      cacheKey = buildCacheKeyFromTable(table);
+      this.spark.sqlContext().clearCache();
+    });
+  }
+
+  /**
+   * @param path the URL of the warehouse location
+   * @param resourceType the resource type to be read or written to
+   * @return the URL of the resource within the warehouse
+   */
+  @Nonnull
+  protected static String getTableUrl(@Nonnull final String path,
+      @Nonnull final String resourceType) {
+    return FileSystemPersistence.safelyJoinPaths(path, fileNameForResource(resourceType));
+  }
+
+  /**
+   * @param resourceType A HAPI {@link ResourceType} describing the type of resource
+   * @return The filename that should be used
+   */
+  @Nonnull
+  private static String fileNameForResource(@Nonnull final String resourceType) {
+    return resourceType + ".parquet";
   }
 }

@@ -27,6 +27,7 @@ import au.csiro.pathling.config.AsyncConfiguration;
 import au.csiro.pathling.config.HttpServerCachingConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -112,8 +113,7 @@ public class RequestTagFactoryTest {
     when(mockRequestDetails.getHeaders()).thenReturn(requestHeaders);
 
     final RequestTagFactory requestTagFactory = new RequestTagFactory(mockDatabase,
-        createServerConfiguration(List.of("X-Single-Value", "X-Multi-Values",
-            "X-Not-Present"), Collections.emptyList()));
+        createServerConfiguration(new ArrayList<>(salientHeaderNames), Collections.emptyList()));
 
     // final RequestTagFactory requestTagFactory = new RequestTagFactory(mockDatabase,
     //     createServerConfiguration(List.of("Y-SingleValue", "Y-MultiValues",

@@ -74,6 +74,7 @@ public class SparkListener extends org.apache.spark.scheduler.SparkListener {
           return;
         }
         job.incrementCompletedStages();
+        log.debug("Completed stage of job {} (Total completed stages now: {})", job.getId(), job.getCompletedStages());
       }
       else if(jobRegistry.removedFromRegistryButStillWithSparkJobContains(jobGroupId)) {
         log.debug("Detected a cancelled job that has been removed from the registry but has a running spark job attached to it. Cancelling the spark job.");
@@ -99,6 +100,7 @@ public class SparkListener extends org.apache.spark.scheduler.SparkListener {
       }
       stageMap.put(stageSubmitted.stageInfo().stageId(), jobGroupId);
       job.incrementTotalStages();
+      log.debug("Incremented total stages of job {} (Total stages now: {})", job.getId(), job.getTotalStages());
     }
     else if(jobRegistry.removedFromRegistryButStillWithSparkJobContains(jobGroupId)) {
       log.debug("Detected a cancelled job that has been removed from the registry but has a running spark job attached to it. Cancelling the spark job.");

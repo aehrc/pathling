@@ -77,6 +77,8 @@ public class AsyncAspectTest {
   // regular expression that matches content location header
   private static final Pattern CONTENT_LOCATION_REGEX = Pattern.compile(
       "([^?]+)\\?id=([\\w\\-]{36})");
+  @Autowired
+  private JobProvider jobProvider;
 
   @BeforeEach
   public void setUp() throws Throwable {
@@ -89,7 +91,7 @@ public class AsyncAspectTest {
         serverConfiguration);
     jobRegistry = new JobRegistry();
     asyncAspect = new AsyncAspect(threadPoolTaskExecutor, requestTagFactory, jobRegistry, stageMap,
-        spark);
+        spark, jobProvider);
 
     // Initialise mock request and response
     requestDetails = new ServletRequestDetails();
