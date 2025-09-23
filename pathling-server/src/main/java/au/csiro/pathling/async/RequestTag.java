@@ -20,11 +20,10 @@ package au.csiro.pathling.async;
 
 import au.csiro.pathling.async.Job.JobTag;
 import jakarta.annotation.Nonnull;
-import lombok.Value;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import lombok.Value;
 
 /**
  * Represents a tag which includes all aspects a request that need to be compared in order to

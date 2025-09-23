@@ -1,9 +1,19 @@
 package au.csiro.pathling.cache;
 
+import static java.util.Objects.requireNonNull;
+import static org.apache.spark.sql.functions.desc;
+
 import au.csiro.pathling.library.io.FileSystemPersistence;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.fs.FileStatus;
@@ -16,17 +26,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
-
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
-import static java.util.Objects.requireNonNull;
-import static org.apache.spark.sql.functions.desc;
 
 /**
  * A cache-aware implementation layer between the {@link au.csiro.pathling.library.io.sink.DataSink} implementations.

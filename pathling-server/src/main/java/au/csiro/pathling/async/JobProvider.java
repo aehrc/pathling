@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.async;
 
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.cache.EntityTagInterceptor;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
@@ -30,6 +32,9 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.concurrent.ExecutionException;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -47,12 +52,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
-
-import java.io.IOException;
-import java.util.concurrent.ExecutionException;
-import java.util.regex.Pattern;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * @author John Grimes

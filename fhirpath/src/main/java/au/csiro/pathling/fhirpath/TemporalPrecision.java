@@ -18,9 +18,8 @@
 package au.csiro.pathling.fhirpath;
 
 import jakarta.annotation.Nonnull;
-import lombok.Getter;
-
 import java.time.temporal.ChronoUnit;
+import lombok.Getter;
 
 /**
  * Enumeration of supported temporal precision levels from year to millisecond.

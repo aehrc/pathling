@@ -17,21 +17,20 @@
 
 package au.csiro.pathling.util;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.when;
+
 import au.csiro.pathling.io.source.DataSource;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.http.MediaType;
-
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.when;
 
 /**
  * @author John Grimes

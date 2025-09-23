@@ -18,10 +18,10 @@ package au.csiro.pathling.util;
  */
 
 import jakarta.annotation.Nonnull;
+import java.nio.file.Path;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -29,8 +29,6 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
-
-import java.nio.file.Path;
 
 /**
  * Converts the test fhir data in `src/test/resources/test-data/fhir` to their parquet version in

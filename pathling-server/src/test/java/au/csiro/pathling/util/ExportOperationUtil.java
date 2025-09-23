@@ -1,9 +1,11 @@
 package au.csiro.pathling.util;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Fail.fail;
+
 import au.csiro.pathling.export.ExportOutputFormat;
 import au.csiro.pathling.export.ExportRequest;
 import au.csiro.pathling.export.ExportResponse;
-import au.csiro.pathling.library.io.sink.DataSink;
 import au.csiro.pathling.library.io.sink.FileInfo;
 import au.csiro.pathling.library.io.sink.NdjsonWriteDetails;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
@@ -13,18 +15,6 @@ import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ObjectNode;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Enumerations;
-import org.hl7.fhir.r4.model.InstantType;
-import org.hl7.fhir.r4.model.Resource;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.test.web.reactive.server.EntityExchangeResult;
-import org.springframework.test.web.reactive.server.WebTestClient;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.URI;
@@ -38,9 +28,17 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Fail.fail;
+import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Enumerations;
+import org.hl7.fhir.r4.model.InstantType;
+import org.hl7.fhir.r4.model.Resource;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.test.web.reactive.server.EntityExchangeResult;
+import org.springframework.test.web.reactive.server.WebTestClient;
 
 /**
  * @author Felix Naumann

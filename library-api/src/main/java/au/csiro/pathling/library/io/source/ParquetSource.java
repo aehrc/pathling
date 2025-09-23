@@ -19,10 +19,10 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A class for making FHIR data in Parquet format available for query. It is assumed that the schema

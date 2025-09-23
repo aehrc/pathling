@@ -1,12 +1,10 @@
 package au.csiro.pathling.export;
 
-import ca.uhn.fhir.rest.client.method.ElementsParameter;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.List;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.InstantType;
-
-import java.util.List;
 
 /**
  * Parsed data of the incoming export request.

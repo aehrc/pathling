@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.function.provider;
 
+import static au.csiro.pathling.fhirpath.comparison.Equatable.EqualityOperation.EQUALS;
+
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
@@ -25,8 +27,6 @@ import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
-
-import static au.csiro.pathling.fhirpath.comparison.Equatable.EqualityOperation.EQUALS;
 
 /**
  * Additional FHIRPath functions that are defined within the FHIR specification.

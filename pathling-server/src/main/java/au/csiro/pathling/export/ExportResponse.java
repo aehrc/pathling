@@ -1,23 +1,18 @@
 package au.csiro.pathling.export;
 
 import au.csiro.pathling.OperationResponse;
-import au.csiro.pathling.library.io.sink.DataSink;
 import au.csiro.pathling.library.io.sink.NdjsonWriteDetails;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ArrayNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ObjectNode;
-import org.hl7.fhir.r4.model.Binary;
-import org.hl7.fhir.r4.model.InstantType;
-
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.UnaryOperator;
+import org.hl7.fhir.r4.model.Binary;
+import org.hl7.fhir.r4.model.InstantType;
 
 /**
  * @author Felix Naumann

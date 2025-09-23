@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.errors;
 
+import static java.util.Objects.requireNonNull;
+
 import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import io.sentry.Sentry;
@@ -24,12 +26,9 @@ import io.sentry.protocol.Request;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletRequest;
-import org.slf4j.MDC;
-
 import java.util.HashMap;
 import java.util.Map;
-
-import static java.util.Objects.requireNonNull;
+import org.slf4j.MDC;
 
 /**
  * This class represents the diagnostic information collected from a servlet request for the purpose

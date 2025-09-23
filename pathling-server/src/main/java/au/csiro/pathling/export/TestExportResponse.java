@@ -2,9 +2,8 @@ package au.csiro.pathling.export;
 
 import au.csiro.pathling.library.io.sink.NdjsonWriteDetails;
 import com.google.common.annotations.VisibleForTesting;
-import org.hl7.fhir.r4.model.Binary;
-
 import java.util.UUID;
+import org.hl7.fhir.r4.model.Binary;
 
 /**
  * This record is necessary to perform unit tests in the {@link ExportExecutor}. Otherwise, the unit test

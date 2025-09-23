@@ -1,13 +1,10 @@
 package au.csiro.pathling;
 
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Stream;
 
 /**
  * Utility class to interact with HTTP headers.

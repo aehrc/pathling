@@ -16,6 +16,9 @@
  */
 
 package au.csiro.pathling.cache;
+
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.fhir.ConformanceProvider;
 import ca.uhn.fhir.interceptor.api.Hook;
@@ -27,14 +30,11 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
-
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * Intercepts requests and validates ETags, skipping processing if possible. Also adds ETags to

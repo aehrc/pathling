@@ -23,10 +23,10 @@ import au.csiro.fhir.export.BulkExportClient;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A factory for creating various different data sources capable of preparing FHIR data for query.

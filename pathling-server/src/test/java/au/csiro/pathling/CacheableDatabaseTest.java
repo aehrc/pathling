@@ -1,23 +1,19 @@
 package au.csiro.pathling;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
 import au.csiro.pathling.util.TestDataSetup;
 import io.delta.tables.DeltaTable;
-import org.apache.commons.io.FileUtils;
+import java.nio.file.Path;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.api.parallel.Execution;
-import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
-import java.io.IOException;
-import java.nio.file.Path;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Felix Naumann

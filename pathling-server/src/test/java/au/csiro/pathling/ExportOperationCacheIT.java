@@ -1,5 +1,9 @@
 package au.csiro.pathling;
 
+import static au.csiro.pathling.util.ExportOperationUtil.doPolling;
+import static au.csiro.pathling.util.ExportOperationUtil.kickOffRequest;
+import static org.awaitility.Awaitility.await;
+
 import au.csiro.pathling.util.TestDataSetup;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -20,10 +24,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
-
-import static au.csiro.pathling.util.ExportOperationUtil.doPolling;
-import static au.csiro.pathling.util.ExportOperationUtil.kickOffRequest;
-import static org.awaitility.Awaitility.await;
 
 /**
  * @author Felix Naumann

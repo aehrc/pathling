@@ -19,7 +19,6 @@ package au.csiro.pathling.library.io;
 
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.library.io.source.FileSource;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.IOException;

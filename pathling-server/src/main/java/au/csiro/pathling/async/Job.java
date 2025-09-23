@@ -19,15 +19,13 @@ package au.csiro.pathling.async;
 
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.Optional;
+import java.util.concurrent.Future;
+import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-
-import java.net.URI;
-import java.util.Optional;
-import java.util.concurrent.Future;
-import java.util.function.Consumer;
 
 /**
  * Represents a background job that is in progress or complete.

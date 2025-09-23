@@ -25,8 +25,6 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.core.env.Environment;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-import static org.mockito.Mockito.mock;
-
 /**
  * @author Felix Naumann
  */

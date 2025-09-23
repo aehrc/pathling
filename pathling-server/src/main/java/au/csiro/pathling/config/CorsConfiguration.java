@@ -2,8 +2,8 @@ package au.csiro.pathling.config;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
 import java.util.List;
+import lombok.Data;
 
 /**
  * Represents configuration relating to Cross-Origin Resource Sharing (CORS).

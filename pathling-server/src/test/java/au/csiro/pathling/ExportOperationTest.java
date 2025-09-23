@@ -1,17 +1,44 @@
 package au.csiro.pathling;
 
-import au.csiro.pathling.async.PreAsyncValidation;
-import au.csiro.pathling.export.*;
+import static au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
+import static au.csiro.pathling.export.ExportOutputFormat.ND_JSON;
+import static au.csiro.pathling.util.ExportOperationUtil.fi;
+import static au.csiro.pathling.util.ExportOperationUtil.json;
+import static au.csiro.pathling.util.ExportOperationUtil.req;
+import static au.csiro.pathling.util.ExportOperationUtil.res;
+import static au.csiro.pathling.util.ExportOperationUtil.resolveTempDirIn;
+import static au.csiro.pathling.util.ExportOperationUtil.write_details;
+import static au.csiro.pathling.util.TestConstants.RESOLVE_PATIENT;
+import static au.csiro.pathling.util.TestConstants.WAREHOUSE_PLACEHOLDER;
+import static org.assertj.core.api.Assertions.LIST;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatException;
+import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import au.csiro.pathling.export.ExportExecutor;
+import au.csiro.pathling.export.ExportOperationValidator;
+import au.csiro.pathling.export.ExportOutputFormat;
+import au.csiro.pathling.export.ExportRequest;
+import au.csiro.pathling.export.ExportResponse;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.util.ExportOperationUtil;
 import au.csiro.pathling.util.ExportRequestBuilder;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.InstantType;
@@ -23,24 +50,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
-
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.stream.Stream;
-
-import static au.csiro.pathling.async.PreAsyncValidation.*;
-import static au.csiro.pathling.export.ExportOutputFormat.ND_JSON;
-import static au.csiro.pathling.util.ExportOperationUtil.*;
-import static au.csiro.pathling.util.TestConstants.RESOLVE_PATIENT;
-import static au.csiro.pathling.util.TestConstants.WAREHOUSE_PLACEHOLDER;
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.params.provider.Arguments.arguments;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * @author Felix Naumann

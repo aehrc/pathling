@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.library.io.sink;
 
-import static au.csiro.pathling.library.io.FileSystemPersistence.renamePartitionedFiles;
 import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
 
 import au.csiro.pathling.io.source.DataSource;

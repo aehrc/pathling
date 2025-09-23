@@ -22,8 +22,8 @@ import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.SaveMode;
 import jakarta.annotation.Nonnull;
-import java.util.function.UnaryOperator;
 import jakarta.annotation.Nullable;
+import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 

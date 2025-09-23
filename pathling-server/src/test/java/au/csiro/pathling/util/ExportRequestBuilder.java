@@ -1,14 +1,13 @@
 package au.csiro.pathling.util;
 
+import static org.hl7.fhir.r4.model.Enumerations.ResourceType;
+
 import au.csiro.pathling.export.ExportOutputFormat;
 import au.csiro.pathling.export.ExportRequest;
-import org.hl7.fhir.r4.model.InstantType;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import static org.hl7.fhir.r4.model.Enumerations.*;
+import org.hl7.fhir.r4.model.InstantType;
 
 /**
  * @author Felix Naumann
