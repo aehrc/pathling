@@ -202,9 +202,9 @@ production environments such as the Pathling website and sandbox instance.
 
 This repository uses multiple code formatters:
 
-- Prettier for JavaScript/TypeScript code, JSON and YAML
-- Ruff for Python code
-- EditorConfig for all other languages
+- [Prettier](https://prettier.io/) for JavaScript/TypeScript code, JSON and YAML
+- [Ruff](https://docs.astral.sh/ruff/) for Python code
+- [EditorConfig](https://editorconfig.org/) for all other languages
 
 Please use the appropriate formatter to reformat your code before pushing.
 
