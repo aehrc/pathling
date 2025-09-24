@@ -22,7 +22,7 @@ public class TestDataFileLogger {
       log.info("Directory tree for: {}", directory);
       List<Path> paths = Files.walk(directory)
           .sorted()
-          .collect(Collectors.toList());
+          .toList();
 
       printTree(paths, directory);
     } catch (IOException e) {
