@@ -18,7 +18,7 @@ import org.junit.jupiter.api.io.TempDir;
  * @author Felix Naumann
  */
 
-public class FileSystemPersistenceTest {
+class FileSystemPersistenceTest {
 
   @TempDir
   private File tempDir;
