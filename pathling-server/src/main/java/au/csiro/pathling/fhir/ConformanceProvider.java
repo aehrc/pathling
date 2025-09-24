@@ -235,27 +235,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
       update.setCode(TypeRestfulInteraction.UPDATE);
       resource.getInteraction().add(create);
       resource.getInteraction().add(update);
-
-      // Add the `aggregate` operation to all resources.
-      final CanonicalType aggregateOperationUri = new CanonicalType(getOperationUri("aggregate"));
-      final CapabilityStatementRestResourceOperationComponent aggregateOperation =
-          new CapabilityStatementRestResourceOperationComponent(new StringType("aggregate"),
-              aggregateOperationUri);
-      resource.addOperation(aggregateOperation);
-
-      // Add the `extract` operation to all resources.
-      final CanonicalType extractOperationUri = new CanonicalType(getOperationUri("extract"));
-      final CapabilityStatementRestResourceOperationComponent extractOperation =
-          new CapabilityStatementRestResourceOperationComponent(new StringType("extract"),
-              extractOperationUri);
-      resource.addOperation(extractOperation);
-
-      // Add the `fhirPath` search parameter to all resources.
-      final CapabilityStatementRestResourceOperationComponent searchOperation = new CapabilityStatementRestResourceOperationComponent();
-      searchOperation.setName("fhirPath");
-      searchOperation.setDefinition(getOperationUri("search"));
-      resource.addOperation(searchOperation);
-
+      
       resources2.add(resource);
     }
 
