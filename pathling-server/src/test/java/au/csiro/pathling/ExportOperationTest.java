@@ -12,12 +12,14 @@ import static au.csiro.pathling.util.TestConstants.RESOLVE_PATIENT;
 import static au.csiro.pathling.util.TestConstants.WAREHOUSE_PLACEHOLDER;
 import static org.assertj.core.api.Assertions.LIST;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatException;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.export.ExportExecutor;
 import au.csiro.pathling.export.ExportOperationValidator;
 import au.csiro.pathling.export.ExportOutputFormat;
@@ -41,6 +43,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.Enumerations;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +53,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import scala.collection.JavaConverters;
 
 /**
  * @author Felix Naumann
@@ -138,13 +142,51 @@ class ExportOperationTest {
       );
     }
 
+  @ParameterizedTest
+  @MethodSource("provide_type_param")
+  void test_type_param_is_mapped(List<String> types, boolean lenient, List<ResourceType> expectedTypes) {
+    RequestDetails mockReqDetails = mockRequest("application/fhir+json", "respond-async", lenient);
+    InstantType now = InstantType.now();
+    if(expectedTypes != null) {
+      ExportRequest actualExportRequest = exportOperationValidator.validateRequest(mockReqDetails, ExportOutputFormat.asParam(ND_JSON), now, null, types, null).result();
+      assertThat(actualExportRequest).isNotNull();
+      assertThat(actualExportRequest.includeResourceTypeFilters()).containsExactlyInAnyOrderElementsOf(expectedTypes);
+    }
+    else {
+      String outputFormat = ExportOutputFormat.asParam(ND_JSON);
+      assertThatCode(() -> exportOperationValidator.validateRequest(mockReqDetails, outputFormat, now, null, types, null))
+          .isExactlyInstanceOf(InvalidRequestException.class);
+    }
+  }
+  
+  private static Stream<Arguments> provide_type_param() {
+      String unsupportedResource = JavaConverters.setAsJavaSet(EncoderBuilder.UNSUPPORTED_RESOURCES()).stream().findFirst().orElseThrow();
+      return Stream.of(
+          arguments(List.of("Patient"), false, List.of(ResourceType.PATIENT)),
+          arguments(List.of("Patient", "Observation"), false, List.of(ResourceType.PATIENT, ResourceType.OBSERVATION)),
+          arguments(List.of("Patient2", "Observation"), false, null), // invalid resource type and lenient=false -> error
+          arguments(List.of("Patient2", "Observation"), true, List.of(ResourceType.OBSERVATION)), // invalid resource type and lenient=true -> pass but ignore invalid resource
+          arguments(List.of(unsupportedResource, "Patient"), true, List.of(ResourceType.PATIENT)),
+          arguments(List.of(unsupportedResource, "Patient"), false, null),
+          arguments(List.of("NULL", "Patient"), false, null),
+          arguments(List.of("NULL", "Patient"), true, List.of(ResourceType.PATIENT))
+      );
+  }
+
     @ParameterizedTest
     @MethodSource("provide_elements_param")
     void test_elements_param_is_mapped(List<String> elements, List<ExportRequest.FhirElement> expectedElements) {
         RequestDetails mockReqDetails = mockRequest("application/fhir+json", "respond-async", false);
-        ExportRequest actualExportRequest = exportOperationValidator.validateRequest(mockReqDetails, ExportOutputFormat.asParam(ND_JSON), InstantType.now(), null, null, elements).result();
-        assertThat(actualExportRequest).isNotNull();
-        assertThat(actualExportRequest.elements()).containsExactlyInAnyOrderElementsOf(expectedElements);
+        String outputFormat = ExportOutputFormat.asParam(ND_JSON);
+        InstantType now = InstantType.now();
+        if(expectedElements != null) {
+          ExportRequest actualExportRequest = exportOperationValidator.validateRequest(mockReqDetails, outputFormat, now, null, null, elements).result();
+          assertThat(actualExportRequest).isNotNull();
+          assertThat(actualExportRequest.elements()).containsExactlyInAnyOrderElementsOf(expectedElements);
+        } else {
+          assertThatCode(() -> exportOperationValidator.validateRequest(mockReqDetails, outputFormat, now, null, null, elements))
+              .isExactlyInstanceOf(InvalidRequestException.class);
+        }
     }
 
     private static Stream<Arguments> provide_elements_param() {
@@ -153,7 +195,11 @@ class ExportOperationTest {
                 arguments(List.of("identifier"), List.of(fe(null, "identifier"))),
                 arguments(List.of("Patient.identifier", "name"), List.of(fe("Patient", "identifier"), fe(null, "name"))),
                 arguments(List.of("Patient.identifier", "name", "Observation.subject"), List.of(fe("Patient", "identifier"), fe(null, "name"), fe("Observation", "subject"))),
-                arguments(List.of("Patient.identifier", "name", "Observation.identifier"), List.of(fe("Patient", "identifier"), fe(null, "name"), fe("Observation", "identifier")))
+                arguments(List.of("Patient.identifier", "name", "Observation.identifier"), List.of(fe("Patient", "identifier"), fe(null, "name"), fe("Observation", "identifier"))),
+                arguments(List.of("Patient2.identifier"), null),
+                arguments(List.of("Patient.identifier", "Patient.not_real"), null),
+                arguments(List.of("Patient.identifier", "Patient.subject"), null),
+                arguments(List.of("null.identifier"), null)
         );
     }
 
@@ -192,7 +238,7 @@ class ExportOperationTest {
                 arguments(ND_JSON, now, List.of(""), Map.of(), false, List.of(), true),
                 arguments(ND_JSON, now, List.of("Patient"), Map.of(), false, List.of(), true),
                 arguments(ND_JSON, now, List.of("Patient123"), Map.of(), false, List.of(), false),
-                arguments(ND_JSON, now, List.of("Patient123"), Map.of(), true, List.of(), false),
+                arguments(ND_JSON, now, List.of("Patient123"), Map.of(), true, List.of(), true),
                 arguments(ND_JSON, now, List.<String>of(), query_p("_typeFilter", "test"), false, List.of(), false),
                 arguments(ND_JSON, now, List.<String>of(), query_p("_typeFilter", "test"), true, List.of("The query parameter '_typeFilter' is not supported. Ignoring because lenient handling is enabled."), true)
         );
@@ -238,11 +284,11 @@ class ExportOperationTest {
     @MethodSource("provide_mappings")
     void test_input_model_mapping(String originalRequest, String outputFormat, InstantType since, InstantType until, List<String> type, ExportRequest expectedMappedRequest) {
         if(expectedMappedRequest == null) {
-            assertThatException().isThrownBy(() -> exportOperationValidator.createExportRequest(originalRequest, outputFormat, since, until, type, List.of()))
+            assertThatException().isThrownBy(() -> exportOperationValidator.createExportRequest(originalRequest, false, outputFormat, since, until, type, List.of()))
                     .isExactlyInstanceOf(InvalidRequestException.class);
         }
         else {
-            ExportRequest expectedRequest = exportOperationValidator.createExportRequest(originalRequest, outputFormat, since, until, type, List.of());
+            ExportRequest expectedRequest = exportOperationValidator.createExportRequest(originalRequest, false, outputFormat, since, until, type, List.of());
             assertThat(expectedRequest).isEqualTo(expectedMappedRequest);
         }
     }
@@ -317,6 +363,7 @@ class ExportOperationTest {
             prefer.add("handling=lenient");
         }
         when(details.getHeaders("Prefer")).thenReturn(prefer);
+        when(details.getCompleteUrl()).thenReturn("test-url");
         return details;
     }
 

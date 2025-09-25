@@ -13,13 +13,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Enumerations;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.jetbrains.annotations.NotNull;
@@ -57,7 +60,7 @@ public class ExportOperationValidator {
             elements = new ArrayList<>();
         }
 
-        ExportRequest exportRequest = createExportRequest(requestDetails.getCompleteUrl(), outputFormat, since, until, type, elements);
+        ExportRequest exportRequest = createExportRequest(requestDetails.getCompleteUrl(), lenient, outputFormat, since, until, type, elements);
         List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
                         validateAcceptHeader(requestDetails, lenient),
                         validatePreferHeader(requestDetails, lenient),
@@ -134,6 +137,7 @@ public class ExportOperationValidator {
 
     public ExportRequest createExportRequest(
             @Nonnull String originalRequest,
+            boolean lenient,
             String outputFormat,
             InstantType since,
             InstantType until,
@@ -147,15 +151,33 @@ public class ExportOperationValidator {
         if(outputFormat != null && !FhirServer.OUTPUT_FORMAT.validValue(outputFormat)) {
             throw new InvalidRequestException("Unknown '%s' value '%s'. Only %s are allowed.".formatted(ExportProvider.OUTPUT_FORMAT_PARAM_NAME, outputFormat, FhirServer.OUTPUT_FORMAT.acceptedHeaderValues()));
         }
-        List<Enumerations.ResourceType> resourceFilter;
-        try {
-            resourceFilter = type.stream()
-                    .flatMap(string -> Arrays.stream(string.split(",")))
-                    .map(Enumerations.ResourceType::fromCode)
-                    .toList();
-        } catch (FHIRException e) {
-            throw new InvalidRequestException("Failed to map '_type' value '%s' to actual FHIR resource types.".formatted(type));
-        }
+      List<Enumerations.ResourceType> resourceFilter = type.stream()
+          .map(String::strip)
+          .filter(Predicate.not(String::isEmpty))
+          .flatMap(string -> Arrays.stream(string.split(",")))
+          .map(code -> {
+            try {
+              ResourceType resourceType = Enumerations.ResourceType.fromCode(code);
+              Set<ResourceType> unsupported = FhirServer.unsupportedResourceTypes();
+              if(!lenient && unsupported.contains(resourceType)) {
+                throw new InvalidRequestException("'_type' includes unsupported resource type '%s'. Note that '%s' are all unsupported.".formatted(resourceType.toCode(), unsupported));
+              } else if (lenient && unsupported.contains(resourceType)) {
+                return Optional.<Enumerations.ResourceType>empty();
+              }
+              return Optional.of(resourceType);
+            } catch (FHIRException e) {
+              if (lenient) {
+                log.info("Failed to map '_type' value '{}' to actual FHIR resource type. Skipping.", code);
+              } else {
+                throw new InvalidRequestException("Failed to map '_type' value '%s' to actual FHIR resource types.".formatted(code));
+              }
+              return Optional.<Enumerations.ResourceType>empty();
+            }
+          })
+          .filter(Optional::isPresent)
+          .map(Optional::get)
+          .toList();
+        
         List<ExportRequest.FhirElement> fhirElements = elements.stream()
                 .flatMap(string -> Arrays.stream(string.split(",")))
                 .map(this::mapFhirElement)
@@ -179,7 +201,7 @@ public class ExportOperationValidator {
         else if(split.length == 2) {
             // [resource type].[element name] -> apply to this resource type only
             validateTopLevelElement(split[0], split[1]);
-            return new ExportRequest.FhirElement(Enumerations.ResourceType.fromCode(split[0]), split[1]);
+            return new ExportRequest.FhirElement(ResourceType.fromCode(split[0]), split[1]);
         } else {
             throw new InvalidRequestException("Failed to parse '_elements' parameter with value '%s'".formatted(element));
         }
