@@ -203,7 +203,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     final List<CapabilityStatementRestComponent> rest = new ArrayList<>();
     final CapabilityStatementRestComponent server = new CapabilityStatementRestComponent();
     server.setMode(RestfulCapabilityMode.SERVER);
-    server.setResource(buildResources());
+    // server.setResource(buildResources());
     server.setOperation(buildOperations());
     server.setInteraction(buildSystemLevelInteractions());
     rest.add(server);
