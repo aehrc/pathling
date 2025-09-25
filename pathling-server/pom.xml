@@ -20,6 +20,7 @@
     <pathling.deltaVersion>3.3.0</pathling.deltaVersion>
     <pathling.nettyVersion>4.1.114.Final</pathling.nettyVersion>
     <pathling.testSetup.download>true</pathling.testSetup.download>
+    <pathling.jacksonVersion>2.18.1</pathling.jacksonVersion>
   </properties>
 
   <dependencies>
@@ -43,11 +44,6 @@
       <artifactId>awaitility</artifactId>
       <version>4.3.0</version>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-core</artifactId>
-      <version>2.15.2</version>
     </dependency>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
@@ -197,6 +193,14 @@
 
   <dependencyManagement>
     <dependencies>
+      <!-- Ensure that consistent and correct versions of Jackson and Jersey are used. -->
+      <dependency>
+        <groupId>com.fasterxml.jackson</groupId>
+        <artifactId>jackson-bom</artifactId>
+        <version>${pathling.jacksonVersion}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-bom</artifactId>
