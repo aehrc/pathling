@@ -12,6 +12,7 @@
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <pathling.version>8.1.1-SNAPSHOT</pathling.version>
     <pathling.hapiFhirVersion>8.4.0</pathling.hapiFhirVersion>
     <pathling.springBootVersion>3.3.5</pathling.springBootVersion>
     <pathling.sparkVersion>3.5.5</pathling.sparkVersion>
@@ -57,7 +58,7 @@
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>fhirpath</artifactId>
-      <version>8.0.1</version>
+      <version>${pathling.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
@@ -88,7 +89,7 @@
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>library-runtime</artifactId>
-      <version>8.1.0-SNAPSHOT</version>
+      <version>8.1.1-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>io.sentry</groupId>
@@ -202,6 +203,11 @@
         <version>${pathling.nettyVersion}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.google.code.gson</groupId>
+        <artifactId>gson</artifactId>
+        <version>2.10</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
