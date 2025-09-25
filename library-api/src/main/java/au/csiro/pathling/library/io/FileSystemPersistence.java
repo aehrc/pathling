@@ -29,6 +29,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -143,8 +145,8 @@ public class FileSystemPersistence {
       List<String> renamedFiles = new ArrayList<>();
       for (String fileName : targetFiles) {
         Path filenamePath = new Path(fileName);
-
-        String[] partIdSplit = filenamePath.getName().split("-");
+        
+        String[] partIdSplit = FilenameUtils.removeExtension(filenamePath.getName()).split("-");
         if(partIdSplit.length < 2) {
           throw new PersistenceError("Unexpected spark partitioning structure. Expected %s to have the partitioned id after the first '-'".formatted(fileName), null);
         }

@@ -1,6 +1,8 @@
 package au.csiro.pathling.library.io;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -17,7 +19,6 @@ import org.junit.jupiter.api.io.TempDir;
 /**
  * @author Felix Naumann
  */
-
 class FileSystemPersistenceTest {
 
   @TempDir
@@ -52,6 +53,101 @@ class FileSystemPersistenceTest {
     assertFalse(fs.exists(new Path(hadoopPath, "Patient.ndjson")));
   }
 
+  @Test
+  void test_throws_exception_when_partition_files_not_found() {
+    String partitionPath = new Path(hadoopPath, "NonExistent.ndjson").toString();
+
+    PersistenceError exception = assertThrows(PersistenceError.class, () ->
+        FileSystemPersistence.renamePartitionedFiles(fs, partitionPath, partitionPath, "txt")
+    );
+
+    assertInstanceOf(IOException.class, exception.getCause());
+  }
+
+  @Test
+  void test_throws_exception_when_no_files_with_expected_extension() throws IOException {
+    // Create a directory with files that don't have the expected extension
+    Path testDir = new Path(hadoopPath, "NoMatchingExtension.ndjson");
+    fs.mkdirs(testDir);
+
+    // Create a file with wrong extension
+    Path wrongExtFile = new Path(testDir, "part-00000-hash.json"); // .json instead of .txt
+    fs.create(wrongExtFile).close();
+
+    String testDirString = testDir.toString();
+    
+    PersistenceError exception = assertThrows(PersistenceError.class, () ->
+        FileSystemPersistence.renamePartitionedFiles(fs, testDirString, testDirString, "txt")
+    );
+
+    assertInstanceOf(IOException.class, exception.getCause());
+    assertTrue(exception.getCause().getMessage().contains("Partition file not found"));
+  }
+
+  @Test
+  void test_throws_exception_for_invalid_departitioned_filename_no_dot() {
+    String partitionPath = new Path(hadoopPath, "Patient.ndjson").toString();
+    String invalidDepartitionedUrl = new Path(hadoopPath, "InvalidFilename").toString(); // No dot
+
+    PersistenceError exception = assertThrows(PersistenceError.class, () ->
+        FileSystemPersistence.renamePartitionedFiles(fs, partitionPath, invalidDepartitionedUrl, "txt")
+    );
+
+    assertTrue(exception.getMessage().contains("Unexpected departitioning filename structure"));
+    assertTrue(exception.getMessage().contains("exactly one FHIR resource type and the ndjson extension"));
+  }
+
+  @Test
+  void test_throws_exception_for_invalid_departitioned_filename_multiple_dots() {
+    String partitionPath = new Path(hadoopPath, "Patient.ndjson").toString();
+    String invalidDepartitionedUrl = new Path(hadoopPath, "Patient.backup.ndjson").toString(); // Multiple dots
+
+    PersistenceError exception = assertThrows(PersistenceError.class, () ->
+        FileSystemPersistence.renamePartitionedFiles(fs, partitionPath, invalidDepartitionedUrl, "txt")
+    );
+
+    assertTrue(exception.getMessage().contains("Unexpected departitioning filename structure"));
+  }
+
+  @Test
+  void test_throws_exception_for_partition_file_without_dash() throws IOException {
+    // Create a partition directory with a file that doesn't have a dash in the name
+    Path testDir = new Path(hadoopPath, "InvalidPartition.ndjson");
+    fs.mkdirs(testDir);
+
+    // Create a file without dash in name
+    Path invalidFile = new Path(testDir, "part00000hash.txt"); // No dash
+    fs.create(invalidFile).close();
+
+    String testDirString = testDir.toString();
+    
+    PersistenceError exception = assertThrows(PersistenceError.class, () ->
+        FileSystemPersistence.renamePartitionedFiles(fs, testDirString, testDirString, "txt")
+    );
+
+    assertTrue(exception.getMessage().contains("Unexpected spark partitioning structure"));
+    assertTrue(exception.getMessage().contains("partitioned id after the first '-'"));
+  }
+
+  @Test
+  void test_throws_exception_for_partition_file_with_only_prefix_before_dash() throws IOException {
+    // Create a partition directory with a file that has only one part before the dash
+    Path testDir = new Path(hadoopPath, "InvalidPartition2.ndjson");
+    fs.mkdirs(testDir);
+
+    // Create a file with only prefix before dash (no partition id)
+    Path invalidFile = new Path(testDir, "part-.txt"); // Dash but no partition id
+    fs.create(invalidFile).close();
+
+    String testDirString = testDir.toString();
+
+    PersistenceError exception = assertThrows(PersistenceError.class, () ->
+        FileSystemPersistence.renamePartitionedFiles(fs, testDirString, testDirString, "txt")
+    );
+
+    assertTrue(exception.getMessage().contains("Unexpected spark partitioning structure"));
+  }
+  
   private static void copyTestFiles(FileSystem fs, String from, String to) throws IOException {
     Path fromPath = new Path(from);
     Path toPath = new Path(to);
