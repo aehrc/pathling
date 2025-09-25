@@ -19,12 +19,14 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import java.io.Serial;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Enumerations;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
@@ -159,12 +161,21 @@ public class FhirServer extends RestfulServer {
   public static Set<Enumerations.ResourceType> supportedResourceTypes() {
     final Set<Enumerations.ResourceType> availableResourceTypes = EnumSet.allOf(
         Enumerations.ResourceType.class);
+    availableResourceTypes.removeAll(unsupportedResourceTypes());
+    return availableResourceTypes;
+  }
+
+  /**
+   * @return The set of resource types currently UN-supported by this server.
+   */
+  @Nonnull
+  public static Set<ResourceType> unsupportedResourceTypes() {
     final Set<Enumerations.ResourceType> unsupportedResourceTypes =
         JavaConverters.setAsJavaSet(EncoderBuilder.UNSUPPORTED_RESOURCES()).stream()
             .map(Enumerations.ResourceType::fromCode)
-            .collect(Collectors.toSet());
-    availableResourceTypes.removeAll(unsupportedResourceTypes);
-    return availableResourceTypes;
+            .collect(Collectors.toCollection(HashSet::new));
+    unsupportedResourceTypes.add(ResourceType.NULL);
+    return unsupportedResourceTypes;
   }
 
 
