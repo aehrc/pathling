@@ -17,10 +17,13 @@
 
 package au.csiro.pathling.fhirpath.function.provider;
 
+import au.csiro.pathling.encoders.UnresolvedRepeatAll;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
+import org.apache.spark.sql.Column;
 
 /**
  * Contains functions for tree navigation within FHIR resources.
@@ -60,7 +63,16 @@ public class TreeNavigationFunctions {
   @Nonnull
   public static Collection repeatAll(@Nonnull final Collection input,
       @Nonnull final CollectionTransform expression) {
-    return input.repeatAll(expression.toColumnTransformation(input));
+    final Collection argument = expression.apply(input);
+    final UnresolvedRepeatAll unresolvedRepeatAll = new UnresolvedRepeatAll(
+        // The input expression to traverse.
+        input.getColumn().getValue().expr(),
+        // A function that takes an expression and returns the projection.
+        projectionInput -> argument.getColumn().getValue().expr()
+    );
+
+    // Return a new collection based on the argument but defined using the repeat all expression.
+    return argument.copyWith(new DefaultRepresentation(new Column(unresolvedRepeatAll)));
   }
 
 }
