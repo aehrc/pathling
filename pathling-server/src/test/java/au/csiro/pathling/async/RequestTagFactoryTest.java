@@ -93,7 +93,7 @@ public class RequestTagFactoryTest {
         salientHeaderNames);
     // final RequestTag requestTag = requestTagFactory.createTag(mockRequestDetails,
     //     mockAuthentication);
-    final RequestTag requestTag = requestTagFactory.createTag(mockRequestDetails);
+    final RequestTag requestTag = requestTagFactory.createTag(mockRequestDetails, null);
     assertEquals(new RequestTag("uri:requestUri-A",
             Map.of("x-single-value", List.of("singleValue"),
                 "x-multi-values", List.of("multiValue1", "multiValue2")),
@@ -121,7 +121,7 @@ public class RequestTagFactoryTest {
 
     // final RequestTag requestTag = requestTagFactory.createTag(mockRequestDetails,
     //     mockAuthentication);
-    final RequestTag requestTag = requestTagFactory.createTag(mockRequestDetails);
+    final RequestTag requestTag = requestTagFactory.createTag(mockRequestDetails, null);
     assertEquals(new RequestTag("uri:requestUri-B",
             Map.of("Y-SingleValue", List.of("singleValue"),
                 "Y-MultiValues", List.of("multiValue1", "multiValue2")),

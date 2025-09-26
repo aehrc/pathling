@@ -83,15 +83,6 @@ pathling:
     # Provides the URL which will be advertised as the token revocation endpoint.
     # revokeUrl: [token revocation URL]
 
-    ga4ghPassports:
-      # When GA4GH passport authentication is enabled, this option configures the identifier system
-      # that is used to identify and control access to patient data.
-      patientIdSystem: http://www.australiangenomics.org.au/id/study-number
-
-      # When GA4GH passport authentication is enabled, this option configures the list of endpoints
-      # that are allowed to issue visas.
-      allowedVisaIssuers: [ ]
-
   # This section configures HTTP caching response headers.
   httpCaching:
     # A list of values to return within the Vary header.
