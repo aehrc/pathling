@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -81,6 +82,9 @@ public abstract class FileSource extends DatasetSource {
    */
   @Nonnull
   protected final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer;
+  
+  @Nonnull
+  protected final Predicate<ResourceType> additionalResourceTypeFilter;
 
   /**
    * @param context the Pathling context
@@ -95,12 +99,14 @@ public abstract class FileSource extends DatasetSource {
       @Nonnull final String path,
       @Nonnull final Function<String, Set<String>> fileNameMapper, @Nonnull final String extension,
       @Nonnull final DataFrameReader reader,
-      @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer) {
+      @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer,
+      @Nonnull Predicate<ResourceType> additionalResourceTypeFilter) {
     super(context);
     this.fileNameMapper = fileNameMapper;
     this.extension = extension;
     this.reader = reader;
     this.transformer = transformer;
+    this.additionalResourceTypeFilter = additionalResourceTypeFilter;
 
     final org.apache.hadoop.conf.Configuration hadoopConfiguration = requireNonNull(
         context.getSpark().sparkContext().hadoopConfiguration());
@@ -125,7 +131,7 @@ public abstract class FileSource extends DatasetSource {
    * does not match the expected format
    */
   @Nonnull
-  static Set<String> resourceNameWithQualifierMapper(@Nonnull final String baseName) {
+  public static Set<String> resourceNameWithQualifierMapper(@Nonnull final String baseName) {
     final Matcher matcher = BASE_NAME_WITH_QUALIFIER.matcher(baseName);
     // If the base name does not match the expected format, return an empty set.
     if (!matcher.matches()) {
@@ -163,6 +169,8 @@ public abstract class FileSource extends DatasetSource {
         .flatMap(this::resourceCodeAndPath)
         // Filter out any resource codes that are not supported.
         .filter(p -> context.isResourceTypeSupported(p.getKey()))
+        // Filter out any resource that should be explicitly ignored
+        .filter(p -> additionalResourceTypeFilter.test(ResourceType.fromCode(p.getKey())))
         // Group the pairs by resource type, and collect the associated paths into a list.
         .collect(Collectors.groupingBy(Pair::getKey,
             Collectors.mapping(Pair::getValue, Collectors.toList())));
@@ -188,13 +196,21 @@ public abstract class FileSource extends DatasetSource {
 
   /**
    * Converts a path to a stream of pairs of resource codes and paths.
+   * The file represented as part of the path may have a partition id in the name.
+   * I.e. the path may be 'path/to/resource/Patient.00000.ndjson'. The partition id will be discarded
+   * and 'Patient' will be returned as the key.
    *
    * @param path the path to convert
    * @return a stream of pairs of resource codes and paths
    */
   @Nonnull
   private Stream<Pair<String, String>> resourceCodeAndPath(@Nonnull final String path) {
-    final String fileName = FilenameUtils.getBaseName(path);
+    String fileName = FilenameUtils.getBaseName(path);
+    final String[] split = fileName.split("\\.");
+    if(split.length == 2) {
+      // has partition id like '<resource_type>.<partition_id>'
+      fileName = split[0];
+    }
     return fileNameMapper.apply(fileName).stream()
         .map(resourceType -> Pair.of(resourceType, path));
   }

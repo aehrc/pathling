@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath;
 
+import static au.csiro.pathling.fhirpath.FhirPathTime.TIME_FORMAT;
+
 import jakarta.annotation.Nonnull;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -25,8 +27,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Value;
-
-import static au.csiro.pathling.fhirpath.FhirPathTime.*;
 
 /**
  * Utility class for handling FHIRPath date/dateTime values with partial precision.

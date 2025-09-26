@@ -1,0 +1,24 @@
+{
+  "resourceType": "OperationDefinition",
+  "name": "job",
+  "title": "Pathling Job Operation",
+  "status": "active",
+  "kind": "operation",
+  "experimental": false,
+  "publisher": "Australian e-Health Research Centre, CSIRO",
+  "description": "This operation allows a client to query the progress and final result of asynchronous jobs.",
+  "affectsState": false,
+  "code": "job",
+  "system": true,
+  "type": false,
+  "instance": false,
+  "parameter": [
+    {
+      "name": "id",
+      "use": "in",
+      "min": 1,
+      "max": "1",
+      "documentation": "The ID of the job for which to retrieve the details."
+    }
+  ]
+}

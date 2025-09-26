@@ -28,12 +28,15 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalog.Catalog;
 import org.apache.spark.sql.catalog.Table;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A class for making FHIR data in the Spark catalog available for query.
@@ -48,6 +51,9 @@ public class CatalogSource extends AbstractSource {
 
   @Nonnull
   private final Optional<UnaryOperator<Dataset<Row>>> transformation;
+  private final Optional<BiFunction<String, Dataset<Row>, Dataset<Row>>> universalOperator;
+  
+  private final Optional<Predicate<String>> filterResourcePredicate;
 
   /**
    * Constructs a CatalogSource with the specified PathlingContext and an empty schema.
@@ -58,6 +64,8 @@ public class CatalogSource extends AbstractSource {
     super(context);
     this.schema = Optional.empty(); // Default schema is empty
     this.transformation = Optional.empty(); // No transformation by default
+    this.universalOperator = Optional.empty();
+    this.filterResourcePredicate = Optional.empty();
   }
 
   /**
@@ -70,24 +78,38 @@ public class CatalogSource extends AbstractSource {
     super(context);
     this.schema = Optional.of(schema);
     this.transformation = Optional.empty(); // No transformation by default
+    this.universalOperator = Optional.empty();
+    this.filterResourcePredicate = Optional.empty();
   }
 
   private CatalogSource(@Nonnull final PathlingContext context,
       @Nonnull final Optional<String> schema,
-      @Nonnull final Optional<UnaryOperator<Dataset<Row>>> transformation) {
+      @Nonnull final Optional<UnaryOperator<Dataset<Row>>> transformation,
+      @Nonnull final Optional<BiFunction<String, Dataset<Row>, Dataset<Row>>> universalOperator,
+      @Nonnull final Optional<Predicate<String>> filterResourcePredicate) {
     super(context);
     this.schema = schema;
     this.transformation = transformation;
+    this.universalOperator = universalOperator;
+    this.filterResourcePredicate = filterResourcePredicate;
   }
 
   @Nonnull
   @Override
   public Dataset<Row> read(@Nullable final String resourceCode) {
     requireNonNull(resourceCode);
-    final Dataset<Row> table = context.getSpark().table(getTableName(resourceCode));
+    Dataset<Row> table = context.getSpark().table(getTableName(resourceCode));
     // If a transformation is provided, apply it to the table. 
     // Otherwise, return the table as is.
-    return transformation.map(t -> t.apply(table))
+    if(filterResourcePredicate.isPresent() && !filterResourcePredicate.get().test(resourceCode)) {
+      // The resourceCode is meant to be excluded, no more mapping required
+      return table.limit(0);
+    }
+    if(universalOperator.isPresent()) {
+      table = universalOperator.get().apply(resourceCode, table);
+    }
+    final Dataset<Row> finalTable = table;
+    return transformation.map(t -> t.apply(finalTable))
         .orElse(table);
   }
 
@@ -138,15 +160,21 @@ public class CatalogSource extends AbstractSource {
     return tablesDataset.collectAsList();
   }
 
-  @Nonnull
   @Override
-  public CatalogSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
-    return new CatalogSource(context, schema, Optional.of(operator));
+  public CatalogSource map(
+      @NotNull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
+    return new CatalogSource(context, schema, transformation, Optional.of(operator), filterResourcePredicate);
+  }
+
+  @Override
+  public @NotNull QueryableDataSource filterByResourceType(
+      @NotNull final Predicate<String> resourceTypePredicate) {
+    return new CatalogSource(context, schema, transformation, universalOperator, Optional.of(resourceTypePredicate));
   }
 
   @Override
   public CatalogSource cache() {
-    return map(Dataset::cache);
+    return map((resourceType, rowDataset) -> rowDataset.cache());
   }
 
 }
