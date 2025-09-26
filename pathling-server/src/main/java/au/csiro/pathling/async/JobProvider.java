@@ -17,12 +17,16 @@
 
 package au.csiro.pathling.async;
 
+import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
+import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.cache.EntityTagInterceptor;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ResourceNotFoundError;
+import au.csiro.pathling.security.PathlingAuthority;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
@@ -33,6 +37,7 @@ import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -52,6 +57,8 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
@@ -112,16 +119,16 @@ public class JobProvider {
     
     final Job<?> job = getJob(id);
 
-    //    if (configuration.getAuth().isEnabled()) {
-//      // Check for the required authority associated with the operation that initiated the job.
-//      checkHasAuthority(PathlingAuthority.operationAccess(job.getOperation()));
-//      // Check that the user requesting the job status is the same user that started the job.
-//      final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//      final Optional<String> currentUserId = getCurrentUserId(authentication);
-//      if (!job.getOwnerId().equals(currentUserId)) {
-//        throw new AccessDeniedError("The requested job is not owned by the current user");
-//      }
-//    }
+    if (configuration.getAuth().isEnabled()) {
+     // Check for the required authority associated with the operation that initiated the job.
+     checkHasAuthority(PathlingAuthority.operationAccess(job.getOperation()));
+     // Check that the user requesting the job status is the same user that started the job.
+     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+     final Optional<String> currentUserId = getCurrentUserId(authentication);
+     if (!job.getOwnerId().equals(currentUserId)) {
+       throw new AccessDeniedError("The requested job is not owned by the current user");
+     }
+   }
     return handleJobGetRequest(request, response, job);
   }
 

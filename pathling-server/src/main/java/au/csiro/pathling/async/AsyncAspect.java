@@ -50,7 +50,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+
+import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 
 /**
  * Intercepts calls to methods annotated with {@link AsyncSupported} to run them asynchronously,
@@ -141,14 +145,15 @@ public class AsyncAspect {
                                             @Nonnull PreAsyncValidationResult<?> preAsyncValidationResult,
                                             @Nonnull final SparkSession spark
   ) {
-
-    final RequestTag requestTag = requestTagFactory.createTag(requestDetails);
+    final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    final RequestTag requestTag = requestTagFactory.createTag(requestDetails, authentication);
     final Job<?> job = jobRegistry.getOrCreate(requestTag, jobId -> {
       final DiagnosticContext diagnosticContext = DiagnosticContext.fromSentryScope();
       final String operation = requestDetails.getOperation().replaceFirst("\\$", "");
       final Future<IBaseResource> result = executor.submit(() -> {
         try {
           diagnosticContext.configureScope(true);
+          SecurityContextHolder.getContext().setAuthentication(authentication);
           spark.sparkContext().setJobGroup(jobId, jobId, true);
           return (IBaseResource) joinPoint.proceed();
         } catch (final Throwable e) {
@@ -173,7 +178,7 @@ public class AsyncAspect {
           cleanUpAfterJob(spark, jobId);
         }
       });
-      Optional<String> ownerId = Optional.empty(); // TODO - only useful when auth is implemented
+      Optional<String> ownerId = getCurrentUserId(authentication);
       return new Job<>(jobId, operation, result, ownerId);
     });
     job.setPreAsyncValidationResult(preAsyncValidationResult.result());

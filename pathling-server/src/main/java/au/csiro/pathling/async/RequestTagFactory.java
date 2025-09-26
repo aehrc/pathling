@@ -31,10 +31,12 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import jakarta.annotation.Nullable;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 
@@ -82,7 +84,9 @@ public final class RequestTagFactory {
    * @return the request tag
    */
   @Nonnull
-  public RequestTag createTag(@Nonnull final ServletRequestDetails requestDetails) {
+  public RequestTag createTag(@Nonnull final ServletRequestDetails requestDetails, @Nullable
+  final Authentication authentication) {
+    // TODO - implement auth correctly in E-Tag
     final Optional<String> currentCacheKey = state.getCacheKey();
     final Map<String, List<String>> salientHeaders = requestDetails.getHeaders().entrySet().stream()
         .filter(entry -> salientHeaderNames.contains(entry.getKey().toLowerCase()))
