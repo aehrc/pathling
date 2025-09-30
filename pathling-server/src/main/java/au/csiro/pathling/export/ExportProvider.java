@@ -7,6 +7,7 @@ import au.csiro.pathling.async.PreAsyncValidation;
 import au.csiro.pathling.async.RequestTag;
 import au.csiro.pathling.async.RequestTagFactory;
 import au.csiro.pathling.errors.AccessDeniedError;
+import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
@@ -58,28 +59,28 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
 
 
   @Operation(name = "export", idempotent = true)
+  @OperationAccess("export")
   @AsyncSupported
   public Binary export(
-      @Nonnull @OperationParam(name = OUTPUT_FORMAT_PARAM_NAME) String outputFormat,
-      @Nonnull @OperationParam(name = SINCE_PARAM_NAME) InstantType since,
+      @Nullable @OperationParam(name = OUTPUT_FORMAT_PARAM_NAME) String outputFormat,
+      @Nullable @OperationParam(name = SINCE_PARAM_NAME) InstantType since,
       @Nullable @OperationParam(name = UNTIL_PARAM_NAME) InstantType until,
       @Nullable @OperationParam(name = TYPE_PARAM_NAME) List<String> type,
       @Nullable @OperationParam(name = ELEMENTS_PARAM_NAME) List<String> elements,
-
       ServletRequestDetails requestDetails
   ) {
 
     // TODO - is it ok to use auth=null to retrieve the job id first? Or should I keep track of this using a custom registry similar to how $extract uses a "resultRegistry"?
-    RequestTag ownTag = requestTagFactory.createTag(requestDetails, null);
+    final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication);
     Job<ExportRequest> ownJob = jobRegistry.get(ownTag);
     if (ownJob == null) {
       throw new InvalidRequestException("Missing 'Prefer: respond-async' header value.");
     }
     // Check that the user requesting the result is the same user that started the job.
-    final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     final Optional<String> currentUserId = getCurrentUserId(authentication);
-    if (!ownJob.getOwnerId().equals(currentUserId)) {
-      throw new AccessDeniedError("The requested result is not owned by the current user");
+    if (currentUserId.isPresent() && !ownJob.getOwnerId().equals(currentUserId)) {
+      throw new AccessDeniedError("The requested result is not owned by the current user '%s'.".formatted(currentUserId.orElse("null")));
     }
     
     ExportRequest exportRequest = ownJob.getPreAsyncValidationResult();

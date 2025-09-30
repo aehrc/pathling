@@ -120,4 +120,5 @@ public class Job<T> {
   public boolean isCancelled() {
     return result.isCancelled();
   }
+
 }

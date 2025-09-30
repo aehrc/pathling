@@ -21,13 +21,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.errors.AccessDeniedError;
+import au.csiro.pathling.util.FhirServerTestConfiguration;
 import jakarta.annotation.Nonnull;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.function.Executable;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Profile;
+import org.springframework.test.context.ActiveProfiles;
 
 @Tag("unit-test")
+@ActiveProfiles("unit-test")
+@Import(FhirServerTestConfiguration.class)
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 abstract class SecurityTest {
 

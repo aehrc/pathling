@@ -1,4 +1,6 @@
 spring:
+  main:
+    allow-bean-definition-overriding: true
   banner:
     location: classpath:banner.txt
 
@@ -190,4 +192,4 @@ debug: false
 logging:
   level:
     root: INFO
-    au.csiro.pathling: DEBUG
+    au.csiro.pathling: INFO

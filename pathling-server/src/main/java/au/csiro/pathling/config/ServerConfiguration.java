@@ -15,6 +15,7 @@ import lombok.Data;
 import lombok.ToString;
 import org.apache.spark.sql.SparkSession;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.validation.annotation.Validated;

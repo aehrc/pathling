@@ -10,7 +10,7 @@ import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
-import au.csiro.pathling.sql.FhirpathUDFRegistrar;
+// import au.csiro.pathling.sql.FhirpathUDFRegistrar;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
@@ -35,12 +35,14 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 public class FhirServerTestConfiguration {
 
   @Primary
+  @ConditionalOnMissingBean
   @Bean
   public JobRegistry jobRegistry() {
     return new JobRegistry();
   }
   
   @Primary
+  @ConditionalOnMissingBean
   @Bean
   public QueryableDataSource deltaLake(PathlingContext pathlingContext) {
     return new DataSourceBuilder(pathlingContext).delta(
@@ -69,11 +71,12 @@ public class FhirServerTestConfiguration {
                 .toString())
         .getOrCreate();
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
-    FhirpathUDFRegistrar.registerUDFs(spark);
+    // FhirpathUDFRegistrar.registerUDFs(spark);
     return spark;
   }
 
   @Primary
+  @ConditionalOnMissingBean
   @Bean
   public PathlingContext pathlingContext(SparkSession sparkSession) {
     return PathlingContext.create(sparkSession);
@@ -93,18 +96,21 @@ public class FhirServerTestConfiguration {
   }
 
   @Primary
+  @ConditionalOnMissingBean
   @Bean
   public StageMap stageMap() {
     return new StageMap();
   }
   
   @Primary
+  @ConditionalOnMissingBean
   @Bean
   public TestDataSetup testDataSetup(PathlingContext pathlingContext) {
     return new TestDataSetup(pathlingContext);
   }
   
   @Primary
+  @ConditionalOnMissingBean
   @Bean(destroyMethod = "shutdown")
   public ThreadPoolTaskExecutor threadPoolTaskExecutor() {
     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
@@ -113,6 +119,7 @@ public class FhirServerTestConfiguration {
   }
   
   @Primary
+  @ConditionalOnMissingBean
   @Bean
   public CacheableDatabase cacheableDatabase(SparkSession sparkSession, @Value("${pathling.storage.warehouseUrl}") String warehouseUrl,
       ThreadPoolTaskExecutor threadPoolTaskExecutor) {
@@ -120,6 +127,7 @@ public class FhirServerTestConfiguration {
   }
   
   @Primary
+  @ConditionalOnMissingBean
   @Bean
   public RequestTagFactory requestTagFactory(ServerConfiguration serverConfiguration,
       CacheableDatabase cacheableDatabase) {
@@ -127,6 +135,7 @@ public class FhirServerTestConfiguration {
   }
   
   @Bean
+  @ConditionalOnMissingBean
   @Primary
   public JobProvider jobProvider(
       ServerConfiguration serverConfiguration,
@@ -144,6 +153,7 @@ public class FhirServerTestConfiguration {
   
   @Bean
   @Primary
+  @ConditionalOnMissingBean
   @ConfigurationProperties("pathling")
   public ServerConfiguration serverConfiguration() {
     return new ServerConfiguration();

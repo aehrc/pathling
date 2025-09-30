@@ -15,17 +15,27 @@ import org.hl7.fhir.r4.model.InstantType;
  * @param until Resources will be included in the response if their state has changed before the supplied time.
  * @param includeResourceTypeFilters When provided, resources will be included in the response if their resource type is listed here.
  * @param elements When provided, the listed FHIR resource elements will be the only ones returned in the resources (alongside mandatory elements).
+ * @param lenient Lenient handling enabled.
  * 
  * @author Felix Naumann
  */
 public record ExportRequest(
         @Nonnull String originalRequest,
-        @Nonnull ExportOutputFormat outputFormat,
+        @Nullable ExportOutputFormat outputFormat,
         @Nullable InstantType since,
         @Nullable InstantType until,
         @Nonnull List<ResourceType> includeResourceTypeFilters,
-        @Nonnull List<FhirElement> elements
+        @Nonnull List<FhirElement> elements,
+        boolean lenient
 ) {
+
+  public ExportRequest(@Nonnull final String originalRequest,
+      @Nullable final ExportOutputFormat outputFormat, @Nullable final InstantType since,
+      @Nullable final InstantType until,
+      @Nonnull final List<ResourceType> includeResourceTypeFilters,
+      @Nonnull final List<FhirElement> elements) {
+    this(originalRequest, outputFormat, since, until, includeResourceTypeFilters, elements, false);
+  }
 
   /**
    * A small container for resource types and their top level elements.

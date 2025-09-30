@@ -7,10 +7,14 @@ import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
+import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.io.sink.NdjsonWriteDetails;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.security.PathlingAuthority;
+import au.csiro.pathling.security.ResourceAccess.AccessType;
+import au.csiro.pathling.security.SecurityAspect;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
@@ -19,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -37,9 +42,11 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.hl7.fhir.r4.model.Enumerations;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
@@ -60,8 +67,9 @@ public class ExportExecutor {
   @Autowired
   public ExportExecutor(PathlingContext pathlingContext, QueryableDataSource deltaLake,
       FhirContext fhirContext,
-      SparkSession sparkSession, 
-      @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") String databasePath) {
+      SparkSession sparkSession,
+      @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
+      String databasePath) {
     this.pathlingContext = pathlingContext;
     this.deltaLake = deltaLake;
     this.fhirContext = fhirContext;
@@ -83,12 +91,16 @@ public class ExportExecutor {
 
   /**
    * Perform the $export request. The input data is already parsed and validated.
+   *
    * @param exportRequest The export request data.
    * @param jobId The job id to which this async request belongs to.
    * @return The export response data.
    */
   public ExportResponse execute(ExportRequest exportRequest, String jobId) {
-    QueryableDataSource mapped = applyResourceTypeFiltering(exportRequest);
+    // filter out resources (silently) due to insufficient permissions
+    QueryableDataSource mapped = checkResourceAccess(AccessType.READ, deltaLake);
+
+    mapped = applyResourceTypeFiltering(exportRequest, mapped);
     mapped = applySinceDateFilter(exportRequest, mapped);
     mapped = applyUntilDateFilter(exportRequest, mapped);
 
@@ -101,7 +113,23 @@ public class ExportExecutor {
     return writeResultToJobDirectory(exportRequest, jobId, mapped);
   }
 
-  private @NotNull ExportResponse writeResultToJobDirectory(ExportRequest exportRequest, String jobId,
+  private @NotNull QueryableDataSource checkResourceAccess(AccessType accessType,
+      QueryableDataSource dataSource) {
+    return dataSource.filterByResourceType(resourceType -> {
+      try {
+        SecurityAspect.checkHasAuthority(
+            PathlingAuthority.resourceAccess(accessType, ResourceType.fromCode(resourceType)));
+        return true;
+      } catch (AccessDeniedError e) {
+        log.debug("Insufficient {} resource access permissions for {}. Hiding resource from user.",
+            accessType.getCode(), resourceType);
+        return false;
+      }
+    });
+  }
+
+  private @NotNull ExportResponse writeResultToJobDirectory(ExportRequest exportRequest,
+      String jobId,
       QueryableDataSource mapped) {
     URI warehouseUri = URI.create(databasePath);
     Path warehousePath = new Path(warehouseUri);
@@ -117,6 +145,7 @@ public class ExportExecutor {
         }
         log.debug("Created dir {}", jobDirPath);
       }
+
       NdjsonWriteDetails writeDetails = new DataSinkBuilder(pathlingContext,
           mapped).saveMode("overwrite").ndjson(jobDirPath.toString());
       return new ExportResponse(exportRequest.originalRequest(), writeDetails);
@@ -204,7 +233,8 @@ public class ExportExecutor {
                   columnsWithNullification(rowDataset, allElementsForThisResourceType));
             }
         ));
-    mapped = mapped.map((resourceType, rowDataset) -> localGlobalCombined.getOrDefault(resourceType, UnaryOperator.identity()).apply(rowDataset));
+    mapped = mapped.map((resourceType, rowDataset) -> localGlobalCombined.getOrDefault(resourceType,
+        UnaryOperator.identity()).apply(rowDataset));
 
     // Apply global elements to all other resource types that don't have specific elements
     if (!globalElements.isEmpty()) {
@@ -231,23 +261,34 @@ public class ExportExecutor {
 
   private static QueryableDataSource applySinceDateFilter(ExportRequest exportRequest,
       QueryableDataSource mapped) {
-    if(exportRequest.since() != null) {
-      mapped = mapped.map(rowDataset -> {
-        rowDataset.printSchema(1);
-        return rowDataset.filter(
-            "meta.lastUpdated IS NULL OR meta.lastUpdated >= '" + exportRequest.since()
-                .getValueAsString() + "'");
-      });
+    if (exportRequest.since() != null) {
+      mapped = mapped.map(rowDataset -> rowDataset.filter(
+          "meta.lastUpdated IS NULL OR meta.lastUpdated >= '" + exportRequest.since()
+              .getValueAsString() + "'"));
     }
     return mapped;
   }
 
-  private @NotNull QueryableDataSource applyResourceTypeFiltering(ExportRequest exportRequest) {
-    return deltaLake.filterByResourceType(resourceType -> {
+  private @NotNull QueryableDataSource applyResourceTypeFiltering(ExportRequest exportRequest,
+      QueryableDataSource mapped) {
+    Map<String, Boolean> perResourceAuth = new HashMap<>();
+    exportRequest.includeResourceTypeFilters().stream()
+        .map(resourceType -> Map.entry(resourceType, PathlingAuthority.resourceAccess(AccessType.READ, resourceType)))
+        .forEach(entry -> {
+          // handling=strict and auth exists -> throw error on wrong auth
+          if(!exportRequest.lenient() && SecurityContextHolder.getContext().getAuthentication() != null) {
+            SecurityAspect.checkHasAuthority(entry.getValue());
+          }
+          else {
+            perResourceAuth.put(entry.getKey().toCode(), SecurityAspect.hasAuthority(entry.getValue()));
+          }
+        });
+
+    return mapped.filterByResourceType(resourceType -> {
       if (exportRequest.includeResourceTypeFilters().isEmpty()) {
         return true;
       }
-      return exportRequest.includeResourceTypeFilters()
+      return perResourceAuth.getOrDefault(resourceType, false) && exportRequest.includeResourceTypeFilters()
           .contains(Enumerations.ResourceType.fromCode(resourceType));
     });
   }

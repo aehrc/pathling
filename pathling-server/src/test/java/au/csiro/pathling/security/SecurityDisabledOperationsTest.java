@@ -17,8 +17,23 @@
 
 package au.csiro.pathling.security;
 
+import au.csiro.pathling.async.Job;
+import au.csiro.pathling.async.Job.JobTag;
+import au.csiro.pathling.export.ExportRequest;
+import au.csiro.pathling.util.TestDataSetup;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.TestPropertySource;
+
+import java.nio.file.Path;
+import java.util.List;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.mockito.Mockito.when;
 
 
 /**
@@ -30,32 +45,24 @@ import org.springframework.test.context.TestPropertySource;
  * Spring Boot Test, how do I map a temporary folder to a configuration property?</a>
  */
 @TestPropertySource(properties = {"pathling.auth.enabled=false"})
-class SecurityDisabledOperationsTest extends SecurityTestForOperations {
+class SecurityDisabledOperationsTest extends SecurityTestForOperations<ExportRequest> {
 
-  // @Test
-  // void testPassIfImportWithNoAuth() {
-  //   assertImportSuccess();
-  // }
-  //
-  // @Test
-  // void testPassIfAggregateWithNoAuth() {
-  //   assertAggregateSuccess();
-  // }
-  //
-  // @Test
-  // void testPassIfSearchWithNoAuth() {
-  //   assertSearchSuccess();
-  //   assertSearchWithFilterSuccess();
-  // }
-  //
-  // @Test
-  // void testPassIfUpdateWithNoAuth() {
-  //   assertUpdateSuccess();
-  // }
-  //
-  // @Test
-  // void testPassIfBatchWithNoAuth() {
-  //   assertBatchSuccess();
-  // }
+  @TempDir
+  private Path tempDir;
+  
+  @BeforeEach
+  void child_setup() {
+    exportProvider = setup_scenario(tempDir, "Patient", "Encounter");
+  }
+  
+  @Test
+  void testPassIfExportWithNoAuth() {
+    assertThatNoException().isThrownBy(this::perform_export);
+  }
+
+  @Test
+  void testPassIfExportWithTypeWithNoAuth() {
+    assertThatNoException().isThrownBy(() -> perform_export(ADMIN_USER, List.of("Patient", "Encounter"), false));
+  }
 
 }

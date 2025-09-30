@@ -18,11 +18,17 @@
 package au.csiro.pathling.security;
 
 import au.csiro.pathling.errors.AccessDeniedError;
+import au.csiro.pathling.security.ResourceAccess.AccessType;
 import jakarta.annotation.Nonnull;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -54,6 +60,23 @@ import org.springframework.stereotype.Component;
 @Order(100)
 public class SecurityAspect {
 
+  // @Around("execution(* au.csiro.pathling.library.io.source.DatasetSource.getResourceMap())")
+  // public Object filterResourceMap(ProceedingJoinPoint joinPoint) throws Throwable {
+  //   Map<String, Dataset<Row>> fullMap = (Map<String, Dataset<Row>>) joinPoint.proceed();
+  //
+  //   return fullMap.entrySet().stream()
+  //       .filter(entry -> {
+  //         try {
+  //           checkHasAuthority(PathlingAuthority.resourceAccess(AccessType.READ, ResourceType.fromCode(entry.getKey())));
+  //           return true;
+  //         } catch (AccessDeniedError e) {
+  //           log.debug("Insufficient resource access permissions for {}. Hiding resource from user.", entry.getKey());
+  //           return false;
+  //         }
+  //       })
+  //       .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+  // }
+  
   /**
    * Checks if the current user is authorised to access the resource.
    *
@@ -80,6 +103,24 @@ public class SecurityAspect {
     checkHasAuthority(PathlingAuthority.operationAccess(operationAccess.value()));
   }
 
+  public static boolean hasAuthority(@Nonnull final PathlingAuthority requiredAuthority) {
+    final Authentication authentication = SecurityContextHolder
+        .getContext().getAuthentication();
+    final AbstractAuthenticationToken authToken = (authentication instanceof AbstractAuthenticationToken)
+                                                  ? (AbstractAuthenticationToken) authentication
+                                                  : null;
+    if (authToken == null) {
+      return false;
+    }
+    final Collection<PathlingAuthority> authorities = authToken.getAuthorities().stream()
+        .map(GrantedAuthority::getAuthority)
+        .filter(authority -> authority.startsWith("pathling"))
+        .map(PathlingAuthority::fromAuthority)
+        .toList();
+    return authToken.getAuthorities() != null && requiredAuthority
+        .subsumedByAny(authorities);
+  }
+  
   /**
    * Checks for the supplied authority and raises an error if it is not present.
    *

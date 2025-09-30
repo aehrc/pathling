@@ -17,97 +17,158 @@
 
 package au.csiro.pathling.security;
 
-import ca.uhn.fhir.parser.IParser;
+import au.csiro.pathling.async.Job;
+import au.csiro.pathling.async.Job.JobTag;
+import au.csiro.pathling.async.JobRegistry;
+import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
+import au.csiro.pathling.async.RequestTag;
+import au.csiro.pathling.async.RequestTagFactory;
+import au.csiro.pathling.export.ExportExecutor;
+import au.csiro.pathling.export.ExportOperationValidator;
+import au.csiro.pathling.export.ExportOutputFormat;
+import au.csiro.pathling.export.ExportProvider;
+import au.csiro.pathling.export.ExportRequest;
+import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.source.DataSourceBuilder;
+import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.util.TestDataSetup;
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.Enumerations;
-import org.hl7.fhir.r4.model.Parameters;
-import org.hl7.fhir.r4.model.ResourceType;
+import org.hl7.fhir.r4.model.Binary;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.InstantType;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
-import static au.csiro.pathling.test.TestResources.getResourceAsString;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.function.Function;
+import java.util.function.UnaryOperator;
+
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ActiveProfiles({"core", "server", "unit-test"})
+@Tag("IntegrationTest")
 @TestPropertySource(properties = {"pathling.async.enabled=false"})
-abstract class SecurityTestForOperations extends SecurityTest {
+abstract class SecurityTestForOperations<T> extends SecurityTest {
 
-  // TODO - figure out if needed (reimplement with new $export operation)
-  //
-  // @Autowired
-  // ImportProvider importProvider;
-  //
-  // @Autowired
-  // ResourceProviderFactory resourceProviderFactory;
-  //
-  // @Autowired
-  // BatchProvider batchProvider;
-  //
-  // @MockBean
-  // CacheableDatabase database;
-  //
-  // @Autowired
-  // SparkSession sparkSession;
-  //
-  // @Autowired
-  // IParser jsonParser;
-  //
-  // @BeforeEach
-  // void setUp() {
-  //   when(database.read(any(Enumerations.ResourceType.class)))
-  //       .thenReturn(new ResourceDatasetBuilder(sparkSession).withIdColumn().build());
-  // }
-  //
-  // void assertImportSuccess() {
-  //   try {
-  //     importProvider.importOperation(new Parameters(), null);
-  //   } catch (final InvalidUserInputError ex) {
-  //     // pass
-  //   }
-  // }
-  //
-  // void assertAggregateSuccess() {
-  //   final AggregateProvider aggregateProvider = (AggregateProvider) resourceProviderFactory
-  //       .createAggregateResourceProvider(ResourceType.Patient);
-  //   try {
-  //     aggregateProvider.aggregate(null, null, null, null);
-  //   } catch (final InvalidUserInputError ex) {
-  //     // pass
-  //   }
-  // }
-  //
-  // void assertSearchSuccess() {
-  //   final SearchProvider searchProvider = resourceProviderFactory
-  //       .createSearchResourceProvider(ResourceType.Patient);
-  //   searchProvider.search(null);
-  // }
-  //
-  // void assertSearchWithFilterSuccess() {
-  //   final SearchProvider searchProvider = resourceProviderFactory
-  //       .createSearchResourceProvider(ResourceType.Patient);
-  //   searchProvider.search(null);
-  // }
-  //
-  // void assertUpdateSuccess() {
-  //   final UpdateProvider updateProvider = resourceProviderFactory.createUpdateResourceProvider(
-  //       ResourceType.Patient);
-  //   try {
-  //     updateProvider.update(null, null);
-  //   } catch (final InvalidUserInputError e) {
-  //     // pass
-  //   }
-  // }
-  //
-  // void assertBatchSuccess() {
-  //   final String json = getResourceAsString(
-  //       "requests/BatchProviderTest/mixedResourceTypes.Bundle.json");
-  //   final Bundle bundle = (Bundle) jsonParser.parseResource(json);
-  //   batchProvider.batch(bundle);
-  // }
+  public static final String ADMIN_USER = "admin";
 
+  public static final UnaryOperator<String> ERROR_MSG = "Missing authority: 'pathling:%s'"::formatted;
+  public static final String PATHLING_READ_MSG = ERROR_MSG.apply("read");
+  public static final String PATHLING_WRITE_MSG = ERROR_MSG.apply("write");
+  
+  protected ExportProvider exportProvider;
+  
+  @MockBean
+  protected ServletRequestDetails requestDetails;
+  
+  @MockBean
+  protected JobRegistry jobRegistry;
+  @Autowired
+  protected RequestTagFactory requestTagFactory;
+
+  @MockBean
+  protected Job<T> job;
+  @Autowired
+  private PathlingContext pathlingContext;
+  @Autowired
+  private FhirContext fhirContext;
+  @Autowired
+  private SparkSession sparkSession;
+  @Autowired
+  private ExportOperationValidator exportOperationValidator;
+
+  @BeforeEach
+  void setup() {
+    when(requestDetails.getCompleteUrl()).thenReturn("test-url");
+    when(requestDetails.getHeaders("Prefer")).thenReturn(List.of("respond-async"));
+    when(requestDetails.getHeader("Prefer")).thenReturn("respond-async");
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    JobTag tag = requestTagFactory.createTag(requestDetails, auth);
+    when(jobRegistry.get(tag)).thenReturn((Job<Object>) job);
+    when(job.getId()).thenReturn(UUID.randomUUID().toString());
+  }
+
+  JsonNode perform_export() {
+    return perform_export(ADMIN_USER, List.of(), false);
+  }
+
+  JsonNode perform_lenient_export() {
+    return perform_export(ADMIN_USER, List.of(), true);
+  }
+
+  JsonNode perform_export(String ownerId) {
+    return perform_export(ownerId, List.of(), false);
+  }
+
+  JsonNode perform_export(String ownerId, List<String> type, boolean lenient) {
+    when(job.getOwnerId()).thenReturn(Optional.ofNullable(ownerId));
+    String lenientHeader = "handling=" + lenient;
+    when(requestDetails.getHeader("Prefer")).thenReturn(lenientHeader + "," + "prefer-async");
+    when(requestDetails.getHeaders("Prefer")).thenReturn(List.of(lenientHeader, "prefer-async"));
+
+    ExportRequest exportRequest = new ExportRequest(
+        "test-req",
+        ExportOutputFormat.ND_JSON,
+        null,
+        null,
+        type.stream().map(ResourceType::fromCode).toList(),
+        List.of(),
+        lenient
+    );
+    when(job.getPreAsyncValidationResult()).thenReturn((T) exportRequest);
+    
+    Binary answer = exportProvider.export(
+        exportRequest.outputFormat().toString(),
+        exportRequest.since(),
+        exportRequest.until(),
+        type,
+        null,
+        requestDetails
+    );
+    try {
+      return new ObjectMapper().readTree(answer.getData());
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  protected ExportProvider setup_scenario(Path tempDir, String... resourceTypes) {
+    TestDataSetup.staticCopyTestDataToTempDir(tempDir, resourceTypes);
+    QueryableDataSource deltaLake = new DataSourceBuilder(pathlingContext)
+        .delta("file://" + tempDir.toString());
+
+    ExportExecutor executor = new ExportExecutor(
+        pathlingContext,
+        deltaLake,
+        fhirContext,
+        sparkSession,
+        tempDir.toString()
+    );
+
+    return new ExportProvider(
+        executor,
+        exportOperationValidator,
+        jobRegistry,
+        requestTagFactory
+    );
+  }
 }

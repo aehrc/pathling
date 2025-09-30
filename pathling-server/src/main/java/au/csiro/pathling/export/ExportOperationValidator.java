@@ -2,6 +2,9 @@ package au.csiro.pathling.export;
 
 import au.csiro.pathling.FhirServer;
 import au.csiro.pathling.async.PreAsyncValidation;
+import au.csiro.pathling.security.PathlingAuthority;
+import au.csiro.pathling.security.ResourceAccess.AccessType;
+import au.csiro.pathling.security.SecurityAspect;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.parser.DataFormatException;
@@ -35,186 +38,226 @@ import org.springframework.stereotype.Component;
 @Component
 public class ExportOperationValidator {
 
-    public static final Set<String> UNSUPPORTED_QUERY_PARAMS = Set.of("patient", "includeAssociatedData", "_typeFilter", "organizeOutputBy");
-    private final FhirContext fhirContext;
+  public static final Set<String> UNSUPPORTED_QUERY_PARAMS = Set.of("patient",
+      "includeAssociatedData", "_typeFilter", "organizeOutputBy");
+  private final FhirContext fhirContext;
 
-    public ExportOperationValidator(FhirContext fhirContext) {
-        this.fhirContext = fhirContext;
+  public ExportOperationValidator(FhirContext fhirContext) {
+    this.fhirContext = fhirContext;
+  }
+
+  public PreAsyncValidation.PreAsyncValidationResult<ExportRequest> validateRequest(
+      @Nonnull RequestDetails requestDetails,
+      @Nonnull String outputFormat,
+      @Nonnull InstantType since,
+      @Nullable InstantType until,
+      @Nullable List<String> type,
+      @Nullable List<String> elements
+  ) {
+    boolean lenient = requestDetails.getHeaders(FhirServer.PREFER_LENIENT_HEADER.headerName())
+        .stream()
+        .anyMatch(FhirServer.PREFER_LENIENT_HEADER::validValue);
+
+    if (type == null) {
+      type = new ArrayList<>();
+    }
+    if (elements == null) {
+      elements = new ArrayList<>();
     }
 
-    public PreAsyncValidation.PreAsyncValidationResult<ExportRequest> validateRequest(
-            @Nonnull RequestDetails requestDetails,
-            @Nonnull String outputFormat,
-            @Nonnull InstantType since,
-            @Nullable InstantType until,
-            @Nullable List<String> type,
-            @Nullable List<String> elements
-    ) {
-        boolean lenient = requestDetails.getHeaders(FhirServer.PREFER_LENIENT_HEADER.headerName()).stream()
-                .anyMatch(FhirServer.PREFER_LENIENT_HEADER::validValue);
+    ExportRequest exportRequest = createExportRequest(requestDetails.getCompleteUrl(), lenient,
+        outputFormat, since, until, type, elements);
+    List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
+            validateAcceptHeader(requestDetails, lenient),
+            validatePreferHeader(requestDetails, lenient),
+            validateUnsupportedQueryParams(requestDetails, lenient))
+        .flatMap(Collection::stream)
+        .toList();
+    return new PreAsyncValidation.PreAsyncValidationResult<>(exportRequest, issues);
+  }
 
-        if(type == null) {
-            type = new ArrayList<>();
-        }
-        if(elements == null) {
-            elements = new ArrayList<>();
-        }
+  private List<OperationOutcome.OperationOutcomeIssueComponent> validateUnsupportedQueryParams(
+      RequestDetails requestDetails, boolean lenient) {
+    Set<String> queryParams = requestDetails.getParameters().keySet();
+    Set<String> unsupportedParams = queryParams.stream()
+        .filter(UNSUPPORTED_QUERY_PARAMS::contains)
+        .collect(Collectors.toSet());
 
-        ExportRequest exportRequest = createExportRequest(requestDetails.getCompleteUrl(), lenient, outputFormat, since, until, type, elements);
-        List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
-                        validateAcceptHeader(requestDetails, lenient),
-                        validatePreferHeader(requestDetails, lenient),
-                        validateUnsupportedQueryParams(requestDetails, lenient))
-                .flatMap(Collection::stream)
-                .toList();
-        return new PreAsyncValidation.PreAsyncValidationResult<>(exportRequest, issues);
+    if (unsupportedParams.isEmpty()) {
+      return List.of();
     }
 
-    private List<OperationOutcome.OperationOutcomeIssueComponent> validateUnsupportedQueryParams(RequestDetails requestDetails, boolean lenient) {
-        Set<String> queryParams = requestDetails.getParameters().keySet();
-        Set<String> unsupportedParams = queryParams.stream()
-                .filter(UNSUPPORTED_QUERY_PARAMS::contains)
-                .collect(Collectors.toSet());
-
-        if (unsupportedParams.isEmpty()) {
-            return List.of();
-        }
-
-        if (!lenient) {
-            String firstUnsupported = unsupportedParams.iterator().next();
-            throw new InvalidRequestException("The query parameter '%s' is not supported. Either remove the query parameter or add %s: %s header."
-                    .formatted(firstUnsupported, FhirServer.PREFER_LENIENT_HEADER.headerName(), FhirServer.PREFER_LENIENT_HEADER.preferred()));
-        } else {
-            return unsupportedParams.stream()
-                    .map(param -> new OperationOutcome.OperationOutcomeIssueComponent()
-                            .setCode(OperationOutcome.IssueType.INFORMATIONAL)
-                            .setSeverity(OperationOutcome.IssueSeverity.INFORMATION)
-                            .setDetails(new CodeableConcept().setText("The query parameter '%s' is not supported. Ignoring because lenient handling is enabled."
-                                    .formatted(param))))
-                    .toList();
-        }
+    if (!lenient) {
+      String firstUnsupported = unsupportedParams.iterator().next();
+      throw new InvalidRequestException(
+          "The query parameter '%s' is not supported. Either remove the query parameter or add %s: %s header."
+              .formatted(firstUnsupported, FhirServer.PREFER_LENIENT_HEADER.headerName(),
+                  FhirServer.PREFER_LENIENT_HEADER.preferred()));
+    } else {
+      return unsupportedParams.stream()
+          .map(param -> new OperationOutcome.OperationOutcomeIssueComponent()
+              .setCode(OperationOutcome.IssueType.INFORMATIONAL)
+              .setSeverity(OperationOutcome.IssueSeverity.INFORMATION)
+              .setDetails(new CodeableConcept().setText(
+                  "The query parameter '%s' is not supported. Ignoring because lenient handling is enabled."
+                      .formatted(param))))
+          .toList();
     }
+  }
 
-    private List<OperationOutcome.OperationOutcomeIssueComponent> validateAcceptHeader(RequestDetails requestDetails, boolean lenient) {
-        String acceptHeader = requestDetails.getHeader(FhirServer.ACCEPT_HEADER.headerName());
-        boolean hasAcceptValue = FhirServer.ACCEPT_HEADER.validValue(acceptHeader);
-        if (!lenient && !hasAcceptValue) {
-            throw new InvalidRequestException(
-                    "Unknown 'Accept' header value '%s'. Only %s are allowed."
-                            .formatted(acceptHeader, FhirServer.ACCEPT_HEADER.acceptedHeaderValues())
-            );
-        }
-        if(!hasAcceptValue) {
-            requestDetails.addHeader(FhirServer.ACCEPT_HEADER.headerName(), FhirServer.ACCEPT_HEADER.preferred());
-            return List.of(new OperationOutcome.OperationOutcomeIssueComponent()
-                    .setCode(OperationOutcome.IssueType.INFORMATIONAL)
-                    .setSeverity(OperationOutcome.IssueSeverity.INFORMATION)
-                    .setDetails(new CodeableConcept().setText("Added missing header: %s %s".formatted(FhirServer.ACCEPT_HEADER.headerName(), FhirServer.ACCEPT_HEADER.preferred())))
-            );
-        }
-        return List.of();
+  private List<OperationOutcome.OperationOutcomeIssueComponent> validateAcceptHeader(
+      RequestDetails requestDetails, boolean lenient) {
+    String acceptHeader = requestDetails.getHeader(FhirServer.ACCEPT_HEADER.headerName());
+    boolean hasAcceptValue = FhirServer.ACCEPT_HEADER.validValue(acceptHeader);
+    if (!lenient && !hasAcceptValue) {
+      throw new InvalidRequestException(
+          "Unknown 'Accept' header value '%s'. Only %s are allowed."
+              .formatted(acceptHeader, FhirServer.ACCEPT_HEADER.acceptedHeaderValues())
+      );
     }
-
-    private List<OperationOutcome.OperationOutcomeIssueComponent> validatePreferHeader(RequestDetails requestDetails, boolean lenient) {
-        List<String> preferHeaders = requestDetails.getHeaders(FhirServer.PREFER_RESPOND_TYPE_HEADER.headerName());
-        boolean hasRespondTypeHeaderValue = preferHeaders.stream().anyMatch(FhirServer.PREFER_RESPOND_TYPE_HEADER::validValue);
-        if (!lenient && !hasRespondTypeHeaderValue) {
-            throw new InvalidRequestException(
-                    "Unknown 'Prefer' header value '%s'. Only %s is allowed."
-                            .formatted(preferHeaders, FhirServer.PREFER_RESPOND_TYPE_HEADER.acceptedHeaderValues())
-            );
-        }
-        if(!hasRespondTypeHeaderValue) {
-            requestDetails.addHeader(FhirServer.PREFER_RESPOND_TYPE_HEADER.headerName(), FhirServer.PREFER_RESPOND_TYPE_HEADER.preferred());
-            return List.of(new OperationOutcome.OperationOutcomeIssueComponent()
-                            .setCode(OperationOutcome.IssueType.INFORMATIONAL)
-                            .setSeverity(OperationOutcome.IssueSeverity.INFORMATION)
-                            .setDetails(new CodeableConcept().setText("Added missing header: %s %s".formatted(FhirServer.PREFER_RESPOND_TYPE_HEADER.headerName(), FhirServer.PREFER_RESPOND_TYPE_HEADER.preferred())))
-            );
-        }
-        return List.of();
+    if (!hasAcceptValue) {
+      requestDetails.addHeader(FhirServer.ACCEPT_HEADER.headerName(),
+          FhirServer.ACCEPT_HEADER.preferred());
+      return List.of(new OperationOutcome.OperationOutcomeIssueComponent()
+          .setCode(OperationOutcome.IssueType.INFORMATIONAL)
+          .setSeverity(OperationOutcome.IssueSeverity.INFORMATION)
+          .setDetails(new CodeableConcept().setText(
+              "Added missing header: %s %s".formatted(FhirServer.ACCEPT_HEADER.headerName(),
+                  FhirServer.ACCEPT_HEADER.preferred())))
+      );
     }
+    return List.of();
+  }
 
-    public ExportRequest createExportRequest(
-            @Nonnull String originalRequest,
-            boolean lenient,
-            String outputFormat,
-            InstantType since,
-            InstantType until,
-            List<String> type,
-            List<String> elements
+  private List<OperationOutcome.OperationOutcomeIssueComponent> validatePreferHeader(
+      RequestDetails requestDetails, boolean lenient) {
+    List<String> preferHeaders = requestDetails.getHeaders(
+        FhirServer.PREFER_RESPOND_TYPE_HEADER.headerName());
+    boolean hasRespondTypeHeaderValue = preferHeaders.stream()
+        .anyMatch(FhirServer.PREFER_RESPOND_TYPE_HEADER::validValue);
+    if (!lenient && !hasRespondTypeHeaderValue) {
+      throw new InvalidRequestException(
+          "Unknown 'Prefer' header value '%s'. Only %s is allowed."
+              .formatted(preferHeaders,
+                  FhirServer.PREFER_RESPOND_TYPE_HEADER.acceptedHeaderValues())
+      );
+    }
+    if (!hasRespondTypeHeaderValue) {
+      requestDetails.addHeader(FhirServer.PREFER_RESPOND_TYPE_HEADER.headerName(),
+          FhirServer.PREFER_RESPOND_TYPE_HEADER.preferred());
+      return List.of(new OperationOutcome.OperationOutcomeIssueComponent()
+          .setCode(OperationOutcome.IssueType.INFORMATIONAL)
+          .setSeverity(OperationOutcome.IssueSeverity.INFORMATION)
+          .setDetails(new CodeableConcept().setText("Added missing header: %s %s".formatted(
+              FhirServer.PREFER_RESPOND_TYPE_HEADER.headerName(),
+              FhirServer.PREFER_RESPOND_TYPE_HEADER.preferred())))
+      );
+    }
+    return List.of();
+  }
 
-    ) {
-        if(outputFormat == null) {
-            log.debug("Missing _outputFormat detected.");
-        }
-        if(outputFormat != null && !FhirServer.OUTPUT_FORMAT.validValue(outputFormat)) {
-            throw new InvalidRequestException("Unknown '%s' value '%s'. Only %s are allowed.".formatted(ExportProvider.OUTPUT_FORMAT_PARAM_NAME, outputFormat, FhirServer.OUTPUT_FORMAT.acceptedHeaderValues()));
-        }
-      List<Enumerations.ResourceType> resourceFilter = type.stream()
-          .map(String::strip)
-          .filter(Predicate.not(String::isEmpty))
-          .flatMap(string -> Arrays.stream(string.split(",")))
-          .map(code -> {
-            try {
-              ResourceType resourceType = Enumerations.ResourceType.fromCode(code);
-              Set<ResourceType> unsupported = FhirServer.unsupportedResourceTypes();
-              if(!lenient && unsupported.contains(resourceType)) {
-                throw new InvalidRequestException("'_type' includes unsupported resource type '%s'. Note that '%s' are all unsupported.".formatted(resourceType.toCode(), unsupported));
-              } else if (lenient && unsupported.contains(resourceType)) {
-                return Optional.<Enumerations.ResourceType>empty();
-              }
-              return Optional.of(resourceType);
-            } catch (FHIRException e) {
-              if (lenient) {
-                log.info("Failed to map '_type' value '{}' to actual FHIR resource type. Skipping.", code);
-              } else {
-                throw new InvalidRequestException("Failed to map '_type' value '%s' to actual FHIR resource types.".formatted(code));
-              }
+  public ExportRequest createExportRequest(
+      @Nonnull String originalRequest,
+      boolean lenient,
+      String outputFormat,
+      InstantType since,
+      InstantType until,
+      List<String> type,
+      List<String> elements
+
+  ) {
+    if (outputFormat == null) {
+      log.debug("Missing _outputFormat detected.");
+    }
+    if (outputFormat != null && !FhirServer.OUTPUT_FORMAT.validValue(outputFormat)) {
+      throw new InvalidRequestException("Unknown '%s' value '%s'. Only %s are allowed.".formatted(
+          ExportProvider.OUTPUT_FORMAT_PARAM_NAME, outputFormat,
+          FhirServer.OUTPUT_FORMAT.acceptedHeaderValues()));
+    }
+    List<Enumerations.ResourceType> resourceFilter = type.stream()
+        .map(String::strip)
+        .filter(Predicate.not(String::isEmpty))
+        .flatMap(string -> Arrays.stream(string.split(",")))
+        .map(code -> {
+          try {
+            ResourceType resourceType = Enumerations.ResourceType.fromCode(code);
+            Set<ResourceType> unsupported = FhirServer.unsupportedResourceTypes();
+            if (!lenient && unsupported.contains(resourceType)) {
+              throw new InvalidRequestException(
+                  "'_type' includes unsupported resource type '%s'. Note that '%s' are all unsupported.".formatted(
+                      resourceType.toCode(), unsupported));
+            } else if (lenient && unsupported.contains(resourceType)) {
               return Optional.<Enumerations.ResourceType>empty();
             }
-          })
-          .filter(Optional::isPresent)
-          .map(Optional::get)
-          .toList();
-        
-        List<ExportRequest.FhirElement> fhirElements = elements.stream()
-                .flatMap(string -> Arrays.stream(string.split(",")))
-                .map(this::mapFhirElement)
-                .toList();
-        return new ExportRequest(
-                originalRequest,
-                ExportOutputFormat.ND_JSON,
-                since,
-                until,
-                resourceFilter,
-                fhirElements
-        );
-    }
-
-    private ExportRequest.FhirElement mapFhirElement(@NotNull String element) {
-        String[] split = element.split("\\.");
-        if(split.length == 1) {
-            // Only [element name] -> apply to all resources
-            return new ExportRequest.FhirElement(null, element);
-        }
-        else if(split.length == 2) {
-            // [resource type].[element name] -> apply to this resource type only
-            validateTopLevelElement(split[0], split[1]);
-            return new ExportRequest.FhirElement(ResourceType.fromCode(split[0]), split[1]);
-        } else {
-            throw new InvalidRequestException("Failed to parse '_elements' parameter with value '%s'".formatted(element));
-        }
-    }
-
-    private void validateTopLevelElement(@NotNull String resourceType, @NotNull String element) throws InvalidRequestException {
-        try {
-            RuntimeResourceDefinition resourceDef = fhirContext.getResourceDefinition(resourceType);
-            if(resourceDef.getChildByName(element) == null) {
-                throw new InvalidRequestException("Failed to parse element '%s' for resource type '%s' in _elements.".formatted(element, resourceType));
+            return Optional.of(resourceType);
+          } catch (FHIRException e) {
+            if (lenient) {
+              log.info("Failed to map '_type' value '{}' to actual FHIR resource type. Skipping.",
+                  code);
+            } else {
+              throw new InvalidRequestException(
+                  "Failed to map '_type' value '%s' to actual FHIR resource types.".formatted(
+                      code));
             }
-        } catch (DataFormatException e) {
-            throw new InvalidRequestException("Failed to parse resource type '%s' in _elements.".formatted(resourceType));
-        }
+            return Optional.<Enumerations.ResourceType>empty();
+          }
+        })
+        .filter(Optional::isPresent)
+        .map(Optional::get)
+        .filter(resourceType -> {
+            /*
+            Check auth for resource types before checking if there are actually resources for that type.
+            Otherwise, this could leak information to unauthorized users (the information 
+            "no Encounter resources exist" should not be available)
+             */
+          SecurityAspect.checkHasAuthority(
+              PathlingAuthority.resourceAccess(AccessType.READ, resourceType));
+          return true; // has auth if no error from above
+        })
+        .toList();
+
+    List<ExportRequest.FhirElement> fhirElements = elements.stream()
+        .flatMap(string -> Arrays.stream(string.split(",")))
+        .map(this::mapFhirElement)
+        .toList();
+    return new ExportRequest(
+        originalRequest,
+        ExportOutputFormat.ND_JSON,
+        since,
+        until,
+        resourceFilter,
+        fhirElements,
+        lenient
+    );
+  }
+
+  private ExportRequest.FhirElement mapFhirElement(@NotNull String element) {
+    String[] split = element.split("\\.");
+    if (split.length == 1) {
+      // Only [element name] -> apply to all resources
+      return new ExportRequest.FhirElement(null, element);
+    } else if (split.length == 2) {
+      // [resource type].[element name] -> apply to this resource type only
+      validateTopLevelElement(split[0], split[1]);
+      return new ExportRequest.FhirElement(ResourceType.fromCode(split[0]), split[1]);
+    } else {
+      throw new InvalidRequestException(
+          "Failed to parse '_elements' parameter with value '%s'".formatted(element));
     }
+  }
+
+  private void validateTopLevelElement(@NotNull String resourceType, @NotNull String element)
+      throws InvalidRequestException {
+    try {
+      RuntimeResourceDefinition resourceDef = fhirContext.getResourceDefinition(resourceType);
+      if (resourceDef.getChildByName(element) == null) {
+        throw new InvalidRequestException(
+            "Failed to parse element '%s' for resource type '%s' in _elements.".formatted(element,
+                resourceType));
+      }
+    } catch (DataFormatException e) {
+      throw new InvalidRequestException(
+          "Failed to parse resource type '%s' in _elements.".formatted(resourceType));
+    }
+  }
 }

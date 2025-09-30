@@ -17,12 +17,21 @@
 
 package au.csiro.pathling.security;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
+import java.util.UUID;
 
 @TestPropertySource(properties = {"pathling.auth.enabled=false"})
 class SecurityDisabledResourcesTest extends SecurityTestForResources {
-
+  
+  @DynamicPropertySource
+  private static void registerProps(DynamicPropertyRegistry registry) {
+    SecurityTestForResources.registerPropertiesFromChildClasses(registry, UUID.randomUUID());
+  }
+  
   @Test
   void testPassIfResourceWriteWithNoAuth() {
     assertWriteSuccess();

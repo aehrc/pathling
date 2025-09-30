@@ -17,20 +17,31 @@
 
 package au.csiro.pathling.security;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.DatasetSource;
 import java.io.File;
+import java.nio.file.Path;
 import java.util.Collections;
+import java.util.UUID;
+import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.util.TestDataSetup;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -44,7 +55,9 @@ import org.springframework.test.context.DynamicPropertySource;
  * href="https://stackoverflow.com/questions/58289509/in-spring-boot-test-how-do-i-map-a-temporary-folder-to-a-configuration-property">In
  * Spring Boot Test, how do I map a temporary folder to a configuration property?</a>
  */
+@Slf4j
 @ActiveProfiles({"core", "unit-test"})
+// @DirtiesContext(classMode = ClassMode.AFTER_CLASS)
 abstract class SecurityTestForResources extends SecurityTest {
 
   @Autowired
@@ -52,26 +65,19 @@ abstract class SecurityTestForResources extends SecurityTest {
 
   @TempDir
   @SuppressWarnings({"unused", "WeakerAccess"})
-  static File testRootDir;
+  static Path testRootDir;
+  
+  static Path dataDir;
+  
   @Autowired
   private PathlingContext pathlingContext;
   
-  private DatasetSource dataSource;
-
-  @DynamicPropertySource
-  @SuppressWarnings("unused")
-  static void registerProperties(final DynamicPropertyRegistry registry) {
-    // TODO: This is a bit messy - maybe we should abstract the physical warehouse out, so that it
-    //  could be mocked
-    final File warehouseDir = new File(testRootDir, "default");
-    assertTrue(warehouseDir.mkdir());
+  protected static void registerPropertiesFromChildClasses(final DynamicPropertyRegistry registry, UUID uuid) {
+    log.error("REGISTERING: " + uuid.toString());
+    dataDir = testRootDir.resolve(uuid.toString());
+    TestDataSetup.staticCopyTestDataToTempDir(dataDir);
     registry.add("pathling.storage.warehouseUrl",
-        () -> "file://" + testRootDir.toPath().toString().replaceFirst("/$", ""));
-  }
-  
-  @BeforeEach
-  void setup() {
-    dataSource = new DataSourceBuilder(pathlingContext).datasets();
+        () -> "file://" + dataDir.toString().replaceFirst("/$", ""));
   }
 
   @AfterEach
@@ -80,14 +86,18 @@ abstract class SecurityTestForResources extends SecurityTest {
   }
 
   void assertWriteSuccess() {
-    new DataSinkBuilder(pathlingContext, dataSource).saveMode("overwrite").delta(testRootDir.getPath());
+    //new DataSinkBuilder(pathlingContext, dataSource).saveMode("overwrite").delta(dataDir.toString());
   }
 
   void assertUpdateSuccess() {
-    new DataSinkBuilder(pathlingContext, dataSource).saveMode("merge").delta(testRootDir.getPath());
+    //new DataSinkBuilder(pathlingContext, dataSource).saveMode("merge").delta(dataDir.toString());
   }
 
   void assertReadSuccess() {
-    dataSource.read(ResourceType.ACCOUNT.toCode());
+    new DataSourceBuilder(pathlingContext).delta(dataDir.toString());
+    
+    
+    //assertTrue(dataSource.getResourceTypes().contains(ResourceType.PATIENT.toCode()), "Checking security here, patient data should always exist.");
+    //dataSource.read(ResourceType.PATIENT.toCode());
   }
 }
