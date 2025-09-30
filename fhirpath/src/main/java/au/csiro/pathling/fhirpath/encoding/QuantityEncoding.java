@@ -18,22 +18,24 @@
 package au.csiro.pathling.fhirpath.encoding;
 
 import static java.util.Objects.nonNull;
+import static java.util.stream.Collectors.toUnmodifiableMap;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
 import au.csiro.pathling.encoders.QuantitySupport;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
+import au.csiro.pathling.fhirpath.CalendarDurationUnit;
 import au.csiro.pathling.fhirpath.FhirpathQuantity;
 import au.csiro.pathling.sql.types.FlexiDecimal;
 import au.csiro.pathling.sql.types.FlexiDecimalSupport;
-import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
@@ -54,6 +56,9 @@ import org.hl7.fhir.r4.model.Quantity.QuantityComparator;
 @Value(staticConstructor = "of")
 public class QuantityEncoding {
 
+  public static final String VALUE_COLUMN = "value";
+  public static final String SYSTEM_COLUMN = "system";
+  public static final String CODE_COLUMN = "code";
   @Nonnull
   Column id;
   @Nonnull
@@ -75,19 +80,17 @@ public class QuantityEncoding {
   @Nonnull
   Column _fid;
 
-  private static final Map<String, String> CALENDAR_DURATION_TO_UCUM = new ImmutableMap.Builder<String, String>()
-      .put("second", "s")
-      .put("seconds", "s")
-      .put("millisecond", "ms")
-      .put("milliseconds", "ms")
-      .build();
+  private static final Map<String, String> CALENDAR_DURATION_TO_UCUM = Stream.of(
+          CalendarDurationUnit.values())
+      .filter(CalendarDurationUnit::isDefinite)
+      .collect(
+          toUnmodifiableMap(CalendarDurationUnit::getUnit, CalendarDurationUnit::getUcumEquivalent));
 
   public static final String CANONICALIZED_VALUE_COLUMN = QuantitySupport
       .VALUE_CANONICALIZED_FIELD_NAME();
   public static final String CANONICALIZED_CODE_COLUMN = QuantitySupport
       .CODE_CANONICALIZED_FIELD_NAME();
-
-
+  
   /**
    * Converts this quantity to a struct column.
    *
@@ -97,51 +100,16 @@ public class QuantityEncoding {
   public Column toStruct() {
     return struct(
         id.as("id"),
-        value.cast(DecimalCustomCoder.decimalType()).as("value"),
+        value.cast(DecimalCustomCoder.decimalType()).as(VALUE_COLUMN),
         value_scale.as("value_scale"),
         comparator.as("comparator"),
         unit.as("unit"),
-        system.as("system"),
-        code.as("code"),
+        system.as(SYSTEM_COLUMN),
+        code.as(CODE_COLUMN),
         canonicalizedValue.as(CANONICALIZED_VALUE_COLUMN),
         canonicalizedCode.as(CANONICALIZED_CODE_COLUMN),
         _fid.as("_fid")
     );
-  }
-
-  /**
-   * Populates the quantity from a struct column.
-   *
-   * @return the {@link QuantityEncoding} object representing the quantity.
-   */
-  @Nonnull
-  public static QuantityEncoding fromStruct(@Nonnull final Column quantityColumn) {
-    return of(
-        quantityColumn.getField("id"),
-        quantityColumn.getField("value"),
-        quantityColumn.getField("value_scale"),
-        quantityColumn.getField("comparator"),
-        quantityColumn.getField("unit"),
-        quantityColumn.getField("system"),
-        quantityColumn.getField("code"),
-        quantityColumn.getField(CANONICALIZED_VALUE_COLUMN),
-        quantityColumn.getField(CANONICALIZED_CODE_COLUMN),
-        quantityColumn.getField("_fid")
-    );
-  }
-
-  /**
-   * Creates a new QuantityEncoding with the specified value and canonicalized value.
-   *
-   * @param value the value column
-   * @param canonicalizedValue the canonicalized value column
-   * @return the new QuantityEncoding
-   */
-  @Nonnull
-  public QuantityEncoding withValue(@Nonnull final Column value,
-      @Nonnull final Column canonicalizedValue) {
-    return of(id, value, value_scale, comparator, unit, system, code, canonicalizedValue,
-        canonicalizedCode, _fid);
   }
 
   /**
@@ -236,15 +204,15 @@ public class QuantityEncoding {
   public static StructType dataType() {
     final Metadata metadata = new MetadataBuilder().build();
     final StructField id = new StructField("id", DataTypes.StringType, true, metadata);
-    final StructField value = new StructField("value", DataTypes.createDecimalType(
+    final StructField value = new StructField(VALUE_COLUMN, DataTypes.createDecimalType(
         DecimalCustomCoder.precision(), DecimalCustomCoder.scale()), true, metadata);
     final StructField valueScale = new StructField("value_scale", DataTypes.IntegerType, true,
         metadata);
     final StructField comparator = new StructField("comparator", DataTypes.StringType, true,
         metadata);
     final StructField unit = new StructField("unit", DataTypes.StringType, true, metadata);
-    final StructField system = new StructField("system", DataTypes.StringType, true, metadata);
-    final StructField code = new StructField("code", DataTypes.StringType, true, metadata);
+    final StructField system = new StructField(SYSTEM_COLUMN, DataTypes.StringType, true, metadata);
+    final StructField code = new StructField(CODE_COLUMN, DataTypes.StringType, true, metadata);
     final StructField canonicalizedValue = new StructField(CANONICALIZED_VALUE_COLUMN,
         FlexiDecimal.DATA_TYPE, true, metadata);
     final StructField canonicalizedCode = new StructField(CANONICALIZED_CODE_COLUMN,

@@ -89,7 +89,7 @@ public class FhirpathQuantity {
     }
     return new FhirpathQuantity(value, unitName,
         FHIRPATH_CALENDAR_DURATION_SYSTEM,
-        unit.getName());
+        unit.getUnit());
   }
 
   /**
@@ -102,7 +102,7 @@ public class FhirpathQuantity {
   @Nonnull
   public static FhirpathQuantity ofCalendar(@Nonnull final BigDecimal value,
       @Nonnull final CalendarDurationUnit unit) {
-    return ofCalendar(value, unit, unit.getName());
+    return ofCalendar(value, unit, unit.getUnit());
   }
 
   /**
