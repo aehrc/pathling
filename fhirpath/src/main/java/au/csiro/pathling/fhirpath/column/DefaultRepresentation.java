@@ -22,7 +22,6 @@ import static org.apache.spark.sql.functions.lit;
 import au.csiro.pathling.encoders.ValueFunctions;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 import lombok.AccessLevel;
@@ -74,10 +73,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
    */
   @Nonnull
   public static ColumnRepresentation literal(@Nonnull final Object value) {
-    if (value instanceof final BigDecimal bd) {
-      // If the literal is a BigDecimal, represent it as a DecimalRepresentation.
-      return new DecimalRepresentation(bd);
-    } else if (value instanceof final byte[] ba) {
+    if (value instanceof final byte[] ba) {
       return fromBinaryColumn(functions.lit(ba));
     } else {
       // Otherwise use the default representation.
@@ -130,24 +126,13 @@ public class DefaultRepresentation extends ColumnRepresentation {
   public ColumnRepresentation traverse(@Nonnull final String fieldName,
       @Nonnull final Optional<FHIRDefinedType> fhirType) {
     @Nullable final FHIRDefinedType resolvedFhirType = fhirType.orElse(null);
-    if (FHIRDefinedType.DECIMAL.equals(resolvedFhirType)) {
-      // If the field is a decimal, represent it using a DecimalRepresentation.
-      return DecimalRepresentation.fromTraversal(this, fieldName);
-    } else if (FHIRDefinedType.BASE64BINARY.equals(resolvedFhirType)) {
+    if (FHIRDefinedType.BASE64BINARY.equals(resolvedFhirType)) {
       // If the field is a base64Binary, represent it using a BinaryRepresentation.
       return DefaultRepresentation.fromBinaryColumn(traverse(fieldName).getValue());
     } else {
       // Otherwise, use the default representation.
       return traverse(fieldName);
     }
-  }
-
-  /**
-   * @param fieldName the name of the field to traverse
-   * @return a new column representing the field
-   */
-  protected Column traverseColumn(@Nonnull final String fieldName) {
-    return ValueFunctions.unnest(value.getField(fieldName));
   }
 
   @Override

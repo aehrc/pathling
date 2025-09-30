@@ -25,7 +25,6 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import au.csiro.pathling.fhirpath.column.DecimalRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
@@ -219,7 +218,7 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
               .elementCast(DecimalCollection.getDecimalType())
               .getValue();
           valueColumn = operation.getSparkFunction().apply(numerator, targetNumeric);
-          return DecimalCollection.build(new DecimalRepresentation(valueColumn));
+          return DecimalCollection.build(new DefaultRepresentation(valueColumn));
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }

@@ -26,10 +26,10 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import au.csiro.pathling.fhirpath.column.DecimalRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import au.csiro.pathling.sql.misc.DecimalToLiteral;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -91,7 +91,7 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
    * @return A new instance of {@link DecimalCollection}
    */
   @Nonnull
-  public static DecimalCollection build(@Nonnull final DecimalRepresentation columnRepresentation) {
+  public static DecimalCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
     return DecimalCollection.build(columnRepresentation, Optional.empty());
   }
 
@@ -106,8 +106,7 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
   public static DecimalCollection fromLiteral(@Nonnull final String literal)
       throws NumberFormatException {
     final BigDecimal value = parseLiteral(literal);
-    return DecimalCollection.build(
-        (DecimalRepresentation) DefaultRepresentation.literal(value));
+    return DecimalCollection.build(DefaultRepresentation.literal(value));
   }
 
   /**
@@ -118,8 +117,7 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
    */
   @Nonnull
   public static DecimalCollection fromValue(@Nonnull final DecimalType value) {
-    return DecimalCollection.build(
-        (DecimalRepresentation) DefaultRepresentation.literal(value.getValue()));
+    return DecimalCollection.build(DefaultRepresentation.literal(value.getValue()));
   }
 
   /**
@@ -170,7 +168,7 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
       return switch (operation) {
         case ADDITION, SUBTRACTION, MULTIPLICATION, DIVISION, MODULUS -> {
           result = result.cast(getDecimalType());
-          yield DecimalCollection.build(new DecimalRepresentation(result));
+          yield DecimalCollection.build(new DefaultRepresentation(result));
         }
       };
     };
@@ -204,6 +202,8 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
   @Override
   @Nonnull
   public Column toExternalValue() {
-    return getColumn().asString().getValue();
+    return getColumn()
+        .transformWithUdf(DecimalToLiteral.FUNCTION_NAME, DefaultRepresentation.empty())
+        .getValue();
   }
 }
