@@ -206,4 +206,21 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
         .transformWithUdf(DecimalToLiteral.FUNCTION_NAME, DefaultRepresentation.empty())
         .getValue();
   }
+
+  @Override
+  public boolean convertibleTo(@Nonnull final Collection other) {
+    return other.getType()
+        .filter(FhirPathType.QUANTITY::equals)
+        .map(t -> true)
+        .orElseGet(() -> super.convertibleTo(other));
+  }
+
+  @Override
+  @Nonnull
+  public Collection castAs(@Nonnull final Collection other) {
+    return other.getType()
+        .filter(FhirPathType.QUANTITY::equals)
+        .map(t -> (Collection) QuantityCollection.fromNumeric(this.getColumn()))
+        .orElseGet(() -> super.castAs(other));
+  }
 }

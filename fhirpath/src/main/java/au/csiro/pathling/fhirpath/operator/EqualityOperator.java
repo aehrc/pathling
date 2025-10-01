@@ -20,9 +20,9 @@ package au.csiro.pathling.fhirpath.operator;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.Equatable.EqualityOperation;
@@ -40,7 +40,7 @@ import org.jetbrains.annotations.Contract;
  * @author Piotr Szul
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#equality">Equality</a>
  */
-public class EqualityOperator implements FhirPathBinaryOperator {
+public class EqualityOperator extends SameTypeBinaryOperator {
 
   @Nonnull
   private final EqualityOperation type;
@@ -82,33 +82,23 @@ public class EqualityOperator implements FhirPathBinaryOperator {
       ).otherwise(functions.lit(defaultNonMatch));
     };
   }
-
-  @Nonnull
+  
   @Override
-  public Collection invoke(@Nonnull final BinaryOperatorInput input) {
-    final Collection leftCollection = input.left();
-    final Collection rightCollection = input.right();
-
-    // If either operand is an EmptyCollection, return an EmptyCollection.
-    if (leftCollection instanceof EmptyCollection || rightCollection instanceof EmptyCollection) {
-      return EmptyCollection.getInstance();
+  @Nonnull
+  protected Collection handleEquivalentTypes(@Nonnull final Collection leftCollection,
+      @Nonnull final Collection rightCollection, @Nonnull final BinaryOperatorInput input) {
+    
+    // currently we only support equality for FHIRPath types
+    if (leftCollection.getType().isEmpty() || rightCollection.getType().isEmpty()) {
+      throw new UnsupportedFhirPathFeatureError("Unsupported equality for complex types");
     }
-
-    final ColumnRepresentation left = leftCollection.getColumn();
-    final ColumnRepresentation right = rightCollection.getColumn();
-
-    if (!leftCollection.isComparableTo(rightCollection)) {
-      // for different types it's either dynamic null if any is null or false otherwise
-      final Column equalityResult = when(
-          left.isEmpty().getValue().or(right.isEmpty().getValue()), lit(null))
-          .otherwise(lit(type == EqualityOperation.NOT_EQUALS));
-      return BooleanCollection.build(new DefaultRepresentation(equalityResult));
-    }
-
+    
     // if types are compatible do element by element application of element comparator
     // We do actually use the equalTo and nonEqualTo methods here, rather than negating the
     // result of equalTo because this may be more efficient in some cases.
     final BinaryOperator<Column> elementComparator = type.bind(leftCollection.getComparator());
+    final ColumnRepresentation left = leftCollection.getColumn();
+    final ColumnRepresentation right = rightCollection.getColumn();
 
     final Column equalityResult =
         when(
@@ -123,6 +113,18 @@ public class EqualityOperator implements FhirPathBinaryOperator {
                 // this works because we know that both sides is plural (count > 1)
                 asArrayComparator(elementComparator, type == EqualityOperation.NOT_EQUALS)
                     .apply(left.plural().getValue(), right.plural().getValue()));
+    return BooleanCollection.build(new DefaultRepresentation(equalityResult));
+  }
+
+  @Override
+  @Nonnull
+  protected Collection handleNonEquivalentTypes(@Nonnull final Collection left,
+      @Nonnull final Collection right, @Nonnull final BinaryOperatorInput input) {
+    // for different types it's either dynamic null if any is null or false otherwise
+    final Column equalityResult = when(
+        left.getColumn().isEmpty().getValue().or(right.getColumn().isEmpty().getValue()),
+        lit(null)
+    ).otherwise(lit(type == EqualityOperation.NOT_EQUALS));
     return BooleanCollection.build(new DefaultRepresentation(equalityResult));
   }
 

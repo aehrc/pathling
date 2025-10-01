@@ -127,6 +127,24 @@ public class QuantityCollection extends Collection implements Comparable, String
     );
   }
 
+
+  /**
+   * Returns a new instance, created from a numeric column representation (such as INTEGER or
+   * DECIMAL). This is used to support implicit conversions from numeric to quantity.
+   *
+   * @param columnRepresentation the numeric column representation
+   * @return A new instance of {@link QuantityCollection}
+   */
+  @Nonnull
+  public static QuantityCollection fromNumeric(
+      @Nonnull final ColumnRepresentation columnRepresentation) {
+    // build the Quantity collection from a numeric (Decimal or Integer) representation
+    // by using UCUM '1' unit.
+    return QuantityCollection.build(
+        columnRepresentation.transform(QuantityEncoding::encodeNumeric),
+        Optional.empty());
+  }
+
   @Nonnull
   @Override
   public StringCollection asStringPath() {

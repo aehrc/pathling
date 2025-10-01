@@ -237,4 +237,19 @@ public class IntegerCollection extends Collection implements Comparable, Numeric
     return Numeric.defaultNegate(this);
   }
 
+  @Override
+  public boolean convertibleTo(@Nonnull final Collection other) {
+    return other.getFhirType()
+        .filter(t -> t == FHIRDefinedType.DECIMAL || t == FHIRDefinedType.QUANTITY)
+        .map(t -> true)
+        .orElseGet(() -> super.convertibleTo(other));
+  }
+
+  @Override
+  public @Nonnull Collection castAs(@Nonnull final Collection other) {
+    return other.getType()
+        .filter(FhirPathType.QUANTITY::equals)
+        .map(t -> (Collection) QuantityCollection.fromNumeric(this.getColumn()))
+        .orElseGet(() -> super.castAs(other));
+  }
 }

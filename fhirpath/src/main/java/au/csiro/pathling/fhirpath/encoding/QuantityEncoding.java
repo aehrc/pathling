@@ -84,13 +84,14 @@ public class QuantityEncoding {
           CalendarDurationUnit.values())
       .filter(CalendarDurationUnit::isDefinite)
       .collect(
-          toUnmodifiableMap(CalendarDurationUnit::getUnit, CalendarDurationUnit::getUcumEquivalent));
+          toUnmodifiableMap(CalendarDurationUnit::getUnit,
+              CalendarDurationUnit::getUcumEquivalent));
 
   public static final String CANONICALIZED_VALUE_COLUMN = QuantitySupport
       .VALUE_CANONICALIZED_FIELD_NAME();
   public static final String CANONICALIZED_CODE_COLUMN = QuantitySupport
       .CODE_CANONICALIZED_FIELD_NAME();
-  
+
   /**
    * Converts this quantity to a struct column.
    *
@@ -297,6 +298,32 @@ public class QuantityEncoding {
         lit(quantity.getCode()),
         FlexiDecimalSupport.toLiteral(canonicalizedValue),
         lit(canonicalizedCode),
+        lit(null));
+  }
+
+  /**
+   * Encodes a numeric column as a quantity with unit "1" in the UCUM system.
+   *
+   * @param numericColumn the numeric column to encode
+   * @return the column with the representation of the quantity.
+   */
+  @Nonnull
+  public static Column encodeNumeric(@Nonnull final Column numericColumn) {
+    return toStruct(
+        lit(null),
+        // The value is cast to a decimal type to ensure that it has the appropriate precision and 
+        // scale.
+        numericColumn.cast(DecimalCustomCoder.decimalType()),
+        // We cannot encode the scale of the results of arithmetic operations.
+        lit(null),
+        lit(null),
+        lit("1"),
+        lit(FhirpathQuantity.UCUM_SYSTEM),
+        lit("1"),
+        // we do not need to normalize this as the unit is always "1" 
+        // so it will be comparable with other quantities with unit "1"
+        lit(null),
+        lit(null),
         lit(null));
   }
 }
