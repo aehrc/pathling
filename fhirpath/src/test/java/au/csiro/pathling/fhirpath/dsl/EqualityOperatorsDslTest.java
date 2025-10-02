@@ -146,6 +146,20 @@ public class EqualityOperatorsDslTest extends FhirPathDslTestBase {
         .testTrue("intArray1 = decArray1", "int array equals decimal array")
         .testFalse("intArray1 != decArray1", "int array not equals decimal array (!=)")
         .testTrue("intArray1 != decArray2", "int array not equals different decimal array (!=)")
+        .group("Numeric equality: numerics vs quantities")
+        .testTrue("5 = 5 '1'", "Integer equals quantity with unit '1'")
+        .testTrue("5.0 = 5 '1'", "Decimal equals quantity with unit '1'")
+        .testFalse("5 != 5 '1'", "Integer not unequal to quantity with unit '1'")
+        .testFalse("3.5 = 5 '1'", "Decimal not equals different quantity with unit '1'")
+        .testTrue("3.5 != 5 '1'", "Decimal not equals different quantity with unit '1' (!=)")
+        .testEmpty("5 = 5 'mg'", "Integer vs quantity with non-'1' unit yields empty")
+        .testEmpty("5.0 = 5 'mg'", "Decimal vs quantity with non-'1' unit yields empty")
+        .testEmpty("5 != 5 'mg'", "Integer inequality vs quantity with non-'1' unit yields empty")
+        .testEmpty("5.0 != 5 'mg'", "Decimal inequality vs quantity with non-'1' unit yields empty")
+        .testEmpty("2 = 2 years", "Integer vs calendar duration yields empty")
+        .testEmpty("2.0 = 2 years", "Decimal vs calendar duration yields empty")
+        .testEmpty("2 != 2 years", "Integer inequality vs calendar duration yields empty")
+        .testEmpty("2.0 != 2 years", "Decimal inequality vs calendar duration yields empty")
         .build();
   }
 

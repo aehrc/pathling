@@ -46,7 +46,7 @@ abstract public class SameTypeBinaryOperator implements FhirPathBinaryOperator {
 
     // if a common type does not exist then we have to options:
     // - either throw an error early
-    // - or allow for implict empty collections return the empty comparator,
+    // - or allow for implicit empty collections return the empty comparator,
     // which returns empty if any of the arguments is empty and trows a runtime error otherwise
 
     final Pair<Collection, Collection> reconciledArguments = FhirPathBinaryOperator.reconcileTypes(
