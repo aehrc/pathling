@@ -103,19 +103,7 @@ class ExportOperationIT {
   
   @AfterEach
   void cleanup() throws IOException {
-    try (var files = Files.list(warehouseDir)) {
-      files.forEach(path -> {
-        try {
-          if (Files.isDirectory(path)) {
-            FileUtils.deleteDirectory(path.toFile());
-          } else {
-            Files.delete(path);
-          }
-        } catch (IOException e) {
-          log.warn("Failed to delete: " + path, e);
-        }
-      });
-    }
+    FileUtils.cleanDirectory(warehouseDir.toFile());
   }
 
   @Test

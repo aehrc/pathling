@@ -2,6 +2,7 @@ package au.csiro.pathling.export;
 
 import au.csiro.pathling.FhirServer;
 import au.csiro.pathling.async.PreAsyncValidation;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
 import au.csiro.pathling.security.SecurityAspect;
@@ -41,9 +42,11 @@ public class ExportOperationValidator {
   public static final Set<String> UNSUPPORTED_QUERY_PARAMS = Set.of("patient",
       "includeAssociatedData", "_typeFilter", "organizeOutputBy");
   private final FhirContext fhirContext;
+  private final ServerConfiguration serverConfiguration;
 
-  public ExportOperationValidator(FhirContext fhirContext) {
+  public ExportOperationValidator(FhirContext fhirContext, ServerConfiguration serverConfiguration) {
     this.fhirContext = fhirContext;
+    this.serverConfiguration = serverConfiguration;
   }
 
   public PreAsyncValidation.PreAsyncValidationResult<ExportRequest> validateRequest(
@@ -210,8 +213,10 @@ public class ExportOperationValidator {
             Otherwise, this could leak information to unauthorized users (the information 
             "no Encounter resources exist" should not be available)
              */
-          SecurityAspect.checkHasAuthority(
-              PathlingAuthority.resourceAccess(AccessType.READ, resourceType));
+          if(serverConfiguration.getAuth().isEnabled()) {
+            SecurityAspect.checkHasAuthority(
+                PathlingAuthority.resourceAccess(AccessType.READ, resourceType));
+          }
           return true; // has auth if no error from above
         })
         .toList();

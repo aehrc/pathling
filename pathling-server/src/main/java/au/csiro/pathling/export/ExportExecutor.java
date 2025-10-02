@@ -7,6 +7,7 @@ import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
@@ -63,18 +64,20 @@ public class ExportExecutor {
   private final FhirContext fhirContext;
   private final SparkSession sparkSession;
   private final String databasePath;
+  private final ServerConfiguration serverConfiguration;
 
   @Autowired
   public ExportExecutor(PathlingContext pathlingContext, QueryableDataSource deltaLake,
       FhirContext fhirContext,
       SparkSession sparkSession,
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-      String databasePath) {
+      String databasePath, ServerConfiguration serverConfiguration) {
     this.pathlingContext = pathlingContext;
     this.deltaLake = deltaLake;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
     this.databasePath = databasePath;
+    this.serverConfiguration = serverConfiguration;
   }
 
   /**
@@ -115,15 +118,17 @@ public class ExportExecutor {
 
   private @NotNull QueryableDataSource checkResourceAccess(AccessType accessType,
       QueryableDataSource dataSource) {
+    if(!serverConfiguration.getAuth().isEnabled()) {
+      return dataSource;
+    }
     return dataSource.filterByResourceType(resourceType -> {
-      try {
-        SecurityAspect.checkHasAuthority(
-            PathlingAuthority.resourceAccess(accessType, ResourceType.fromCode(resourceType)));
-        return true;
-      } catch (AccessDeniedError e) {
+      if(!SecurityAspect.hasAuthority(PathlingAuthority.resourceAccess(accessType, ResourceType.fromCode(resourceType)))) {
         log.debug("Insufficient {} resource access permissions for {}. Hiding resource from user.",
             accessType.getCode(), resourceType);
         return false;
+      }
+      else {
+        return true;
       }
     });
   }
@@ -271,21 +276,28 @@ public class ExportExecutor {
 
   private @NotNull QueryableDataSource applyResourceTypeFiltering(ExportRequest exportRequest,
       QueryableDataSource mapped) {
-    Map<String, Boolean> perResourceAuth = new HashMap<>();
-    exportRequest.includeResourceTypeFilters().stream()
-        .map(resourceType -> Map.entry(resourceType, PathlingAuthority.resourceAccess(AccessType.READ, resourceType)))
-        .forEach(entry -> {
-          // handling=strict and auth exists -> throw error on wrong auth
-          if(!exportRequest.lenient() && SecurityContextHolder.getContext().getAuthentication() != null) {
-            SecurityAspect.checkHasAuthority(entry.getValue());
-          }
-          else {
-            perResourceAuth.put(entry.getKey().toCode(), SecurityAspect.hasAuthority(entry.getValue()));
-          }
-        });
-
+    // Assume that every resource from the _type param is accessible
+    Map<String, Boolean> perResourceAuth = exportRequest.includeResourceTypeFilters().stream()
+        .collect(Collectors.toMap(ResourceType::toCode, resourceType -> true));
+    if(serverConfiguration.getAuth().isEnabled()) {
+      // Provide actual authority access for each resource type
+      exportRequest.includeResourceTypeFilters().stream()
+          .map(resourceType -> Map.entry(resourceType, PathlingAuthority.resourceAccess(AccessType.READ, resourceType)))
+          .forEach(entry -> {
+            // handling=strict and auth exists -> throw error on wrong auth
+            if(!exportRequest.lenient()) {
+              SecurityAspect.checkHasAuthority(entry.getValue());
+            }
+            else {
+              perResourceAuth.put(entry.getKey().toCode(), SecurityAspect.hasAuthority(entry.getValue()));
+            }
+          });
+    }
+    // Apply the perResourceAuth map
     return mapped.filterByResourceType(resourceType -> {
       if (exportRequest.includeResourceTypeFilters().isEmpty()) {
+        // It is ok to just pass the resources on without further auth, because at this stage,
+        // the delta lake only contains resources that the user is allowed to see (it was filtered earlier)
         return true;
       }
       return perResourceAuth.getOrDefault(resourceType, false) && exportRequest.includeResourceTypeFilters()

@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.export.ExportExecutor;
 import au.csiro.pathling.export.ExportOperationValidator;
@@ -73,7 +74,6 @@ import org.springframework.context.annotation.Import;
 @Import({
     ExportOperationValidator.class,
     ExportExecutor.class,
-    PathlingContext.class,
     TestDataSetup.class,
     FhirServerTestConfiguration.class
 })
@@ -107,6 +107,8 @@ class ExportOperationExecutorTest {
   private FhirEncoders fhirEncoders;
 
   private IParser parser;
+  @Autowired
+  private ServerConfiguration serverConfiguration;
 
   @BeforeEach
   void setup() {
@@ -117,7 +119,8 @@ class ExportOperationExecutorTest {
         deltaLake,
         fhirContext,
         sparkSession,
-        "file://" + uniqueTempDir.toAbsolutePath()
+        "file://" + uniqueTempDir.toAbsolutePath(),
+        serverConfiguration
     );
 
     try {
@@ -359,7 +362,7 @@ class ExportOperationExecutorTest {
     CustomObjectDataSource objectDataSource = new CustomObjectDataSource(sparkSession,
         pathlingContext, fhirEncoders, resources);
     exportExecutor = new ExportExecutor(pathlingContext, objectDataSource, fhirContext,
-        sparkSession, "file://" + uniqueTempDir.toAbsolutePath());
+        sparkSession, "file://" + uniqueTempDir.toAbsolutePath(), serverConfiguration);
     return exportExecutor;
   }
 
@@ -376,7 +379,8 @@ class ExportOperationExecutorTest {
         objectDataSource,
         fhirContext,
         sparkSession,
-        "file://" + uniqueTempDir.toAbsolutePath()
+        "file://" + uniqueTempDir.toAbsolutePath(),
+        serverConfiguration
     );
 
     TestExportResponse actualExportResponse = exportExecutor.execute(exportRequest);
@@ -410,7 +414,6 @@ class ExportOperationExecutorTest {
 
   @ParameterizedTest
   @MethodSource("provide_export_executor_values")
-    //@DirtiesContext(methodMode = DirtiesContext.MethodMode.BEFORE_METHOD)
   void test_export_executor(ExportRequest exportRequest, ExportResponse expectedExportResponse) {
     TestExportResponse actualExportResponse = exportExecutor.execute(exportRequest);
     expectedExportResponse = resolveTempDirIn(expectedExportResponse, uniqueTempDir,

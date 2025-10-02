@@ -2,12 +2,15 @@ package au.csiro.pathling;
 
 import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.cache.EntityTagInterceptor;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ErrorReportingInterceptor;
 import au.csiro.pathling.export.ExportProvider;
 import au.csiro.pathling.fhir.ConformanceProvider;
 import au.csiro.pathling.interceptors.BulkExportDeleteInterceptor;
+import au.csiro.pathling.interceptors.SmartConfigurationInterceptor;
+import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.ApacheProxyAddressStrategy;
 import ca.uhn.fhir.rest.server.FifoMemoryPagingProvider;
@@ -31,6 +34,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import scala.collection.JavaConverters;
+
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 /**
  * @author Felix Naumann
@@ -56,6 +61,12 @@ public class FhirServer extends RestfulServer {
   private static final int SEARCH_MAP_SIZE = 10;
 
   @Nonnull
+  private final ServerConfiguration configuration;
+
+  @Nonnull
+  private final Optional<OidcConfiguration> oidcConfiguration;
+  
+  @Nonnull
   private final transient Optional<JobProvider> jobProvider;
 
   @Nonnull
@@ -74,12 +85,15 @@ public class FhirServer extends RestfulServer {
   private final transient ConformanceProvider conformanceProvider;
 
 
-  public FhirServer(@Nonnull Optional<JobProvider> jobProvider,
+  public FhirServer(@Nonnull final ServerConfiguration configuration,
+      @Nonnull final Optional<OidcConfiguration> oidcConfiguration, @Nonnull Optional<JobProvider> jobProvider,
       @Nonnull ExportProvider exportProvider,
       @Nonnull ErrorReportingInterceptor errorReportingInterceptor,
       @Nonnull EntityTagInterceptor entityTagInterceptor, @Nonnull
       BulkExportDeleteInterceptor bulkExportDeleteInterceptor,
       @Nonnull ConformanceProvider conformanceProvider) {
+    this.configuration = configuration;
+    this.oidcConfiguration = oidcConfiguration;
     this.jobProvider = jobProvider;
     this.exportProvider = exportProvider;
     this.errorReportingInterceptor = errorReportingInterceptor;
@@ -106,6 +120,9 @@ public class FhirServer extends RestfulServer {
       jobProvider.ifPresent(this::registerProvider);
 
       registerProvider(exportProvider);
+
+      // Authorization-related configuration.
+      configureAuthorization();
 
       // Configure interceptors.
       configureRequestLogging();
@@ -137,6 +154,15 @@ public class FhirServer extends RestfulServer {
       throw new ServletException("Error initializing AnalyticsServer", e);
     }
 
+  }
+
+  private void configureAuthorization() {
+    if (configuration.getAuth().isEnabled()) {
+      final String issuer = checkPresent(configuration.getAuth().getIssuer());
+      final SmartConfigurationInterceptor smartConfigurationInterceptor =
+          new SmartConfigurationInterceptor(issuer, checkPresent(oidcConfiguration));
+      registerInterceptor(smartConfigurationInterceptor);
+    }
   }
 
 

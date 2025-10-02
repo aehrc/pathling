@@ -17,6 +17,10 @@
 
 package au.csiro.pathling.fhir;
 
+import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.AUTH_URL;
+import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.REVOKE_URL;
+import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.TOKEN_URL;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static java.util.Objects.requireNonNull;
 
@@ -25,6 +29,7 @@ import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.cache.Cacheable;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.ResourceNotFoundError;
+import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.annotation.IdParam;
@@ -56,6 +61,7 @@ import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementKind;
 import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestResourceComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestResourceOperationComponent;
+import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestSecurityComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementSoftwareComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.ResourceInteractionComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.RestfulCapabilityMode;
@@ -63,11 +69,15 @@ import org.hl7.fhir.r4.model.CapabilityStatement.SystemInteractionComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.SystemRestfulInteraction;
 import org.hl7.fhir.r4.model.CapabilityStatement.TypeRestfulInteraction;
 import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRVersion;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.OperationDefinition;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.UriType;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -92,7 +102,11 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
    * All system-level operations available within Pathling.
    */
   protected static final List<String> SYSTEM_LEVEL_OPERATIONS = Arrays.asList("job", "export");
-
+  
+  private static final String RESTFUL_SECURITY_URI = "http://terminology.hl7.org/CodeSystem/restful-security-service";
+  private static final String RESTFUL_SECURITY_CODE = "SMART-on-FHIR";
+  private static final String SMART_OAUTH_URI = "http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris";
+  
   private static final String FHIR_RESOURCE_BASE = "http://hl7.org/fhir/StructureDefinition/";
   private static final String UNKNOWN_VERSION = "UNKNOWN";
 
@@ -114,6 +128,9 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
 
   @Nonnull
   private final ServerConfiguration configuration;
+
+  @Nonnull
+  private final Optional<OidcConfiguration> oidcConfiguration;
 
   @Nonnull
   private Optional<RestfulServer> restfulServer;
@@ -138,9 +155,11 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
    * @param jsonParser a {@link IParser} for parsing JSON OperationDefinitions
    */
   public ConformanceProvider(@Nonnull final ServerConfiguration configuration,
+      @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
                              @Nonnull final PathlingVersion version, @Nonnull final FhirContext fhirContext,
                              @Nonnull final IParser jsonParser) {
     this.configuration = configuration;
+    this.oidcConfiguration = oidcConfiguration;
     this.version = version;
     this.fhirContext = fhirContext;
     this.jsonParser = jsonParser;
@@ -203,11 +222,38 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     final List<CapabilityStatementRestComponent> rest = new ArrayList<>();
     final CapabilityStatementRestComponent server = new CapabilityStatementRestComponent();
     server.setMode(RestfulCapabilityMode.SERVER);
+    server.setSecurity(buildSecurity());
     // server.setResource(buildResources());
     server.setOperation(buildOperations());
     server.setInteraction(buildSystemLevelInteractions());
     rest.add(server);
     return rest;
+  }
+
+  @Nonnull
+  private CapabilityStatementRestSecurityComponent buildSecurity() {
+    final CapabilityStatementRestSecurityComponent security = new CapabilityStatementRestSecurityComponent();
+    security.setCors(true);
+    if (configuration.getAuth().isEnabled()) {
+      final OidcConfiguration checkedConfig = checkPresent(oidcConfiguration);
+
+      final CodeableConcept smart = new CodeableConcept(
+          new Coding(RESTFUL_SECURITY_URI, RESTFUL_SECURITY_CODE, RESTFUL_SECURITY_CODE));
+      smart.setText("OAuth2 using SMART-on-FHIR profile (see http://docs.smarthealthit.org)");
+      security.getService().add(smart);
+
+      final Optional<String> authUrl = checkedConfig.get(AUTH_URL);
+      final Optional<String> tokenUrl = checkedConfig.get(TOKEN_URL);
+      final Optional<String> revokeUrl = checkedConfig.get(REVOKE_URL);
+      if (authUrl.isPresent() || tokenUrl.isPresent() || revokeUrl.isPresent()) {
+        final Extension oauthUris = new Extension(SMART_OAUTH_URI);
+        authUrl.ifPresent(url -> oauthUris.addExtension("authorize", new UriType(url)));
+        tokenUrl.ifPresent(url -> oauthUris.addExtension("token", new UriType(url)));
+        revokeUrl.ifPresent(url -> oauthUris.addExtension("revoke", new UriType(url)));
+        security.addExtension(oauthUris);
+      }
+    }
+    return security;
   }
 
   @Nonnull

@@ -19,7 +19,7 @@
     <pathling.scalaVersion>2.12</pathling.scalaVersion>
     <pathling.deltaVersion>3.3.0</pathling.deltaVersion>
     <pathling.nettyVersion>4.1.114.Final</pathling.nettyVersion>
-    <pathling.testSetup.download>true</pathling.testSetup.download>
+    <pathling.testSetup.skip>true</pathling.testSetup.skip>
     <pathling.jacksonVersion>2.18.1</pathling.jacksonVersion>
 
     <project.majorVersion>8</project.majorVersion>
@@ -210,11 +210,16 @@
       <artifactId>exec-maven-plugin</artifactId>
       <version>3.5.0</version>
     </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents.client5</groupId>
+      <artifactId>httpclient5</artifactId>
+      <version>5.1.3</version>
+      <scope>compile</scope>
+    </dependency>
   </dependencies>
 
   <dependencyManagement>
     <dependencies>
-      <!-- Ensure that consistent and correct versions of Jackson and Jersey are used. -->
       <dependency>
         <groupId>com.fasterxml.jackson</groupId>
         <artifactId>jackson-bom</artifactId>
@@ -267,7 +272,7 @@
                 <argument>-Dspark.master=local[1]</argument>
                 <argument>au.csiro.pathling.util.TestDataImporter</argument>
                 <argument>${project.basedir}/src/test/resources/test-data/fhir</argument>
-                <argument>download=${pathling.testSetup.download}</argument>
+                <argument>download=${pathling.testSetup.skip}</argument>
               </arguments>
               <classpathScope>test</classpathScope>
             </configuration>

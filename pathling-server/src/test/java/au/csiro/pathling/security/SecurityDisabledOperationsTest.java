@@ -26,6 +26,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 
 import java.nio.file.Path;
@@ -48,7 +50,13 @@ import static org.mockito.Mockito.when;
 class SecurityDisabledOperationsTest extends SecurityTestForOperations<ExportRequest> {
 
   @TempDir
-  private Path tempDir;
+  private static Path tempDir;
+
+  @DynamicPropertySource
+  static void configureProperties(DynamicPropertyRegistry registry) {
+    TestDataSetup.staticCopyTestDataToTempDir(tempDir);
+    registry.add("pathling.storage.warehouseUrl", () -> "file://" + tempDir.toAbsolutePath());
+  }
   
   @BeforeEach
   void child_setup() {

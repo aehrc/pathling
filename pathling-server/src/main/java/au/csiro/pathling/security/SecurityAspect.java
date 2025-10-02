@@ -59,23 +59,6 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Order(100)
 public class SecurityAspect {
-
-  // @Around("execution(* au.csiro.pathling.library.io.source.DatasetSource.getResourceMap())")
-  // public Object filterResourceMap(ProceedingJoinPoint joinPoint) throws Throwable {
-  //   Map<String, Dataset<Row>> fullMap = (Map<String, Dataset<Row>>) joinPoint.proceed();
-  //
-  //   return fullMap.entrySet().stream()
-  //       .filter(entry -> {
-  //         try {
-  //           checkHasAuthority(PathlingAuthority.resourceAccess(AccessType.READ, ResourceType.fromCode(entry.getKey())));
-  //           return true;
-  //         } catch (AccessDeniedError e) {
-  //           log.debug("Insufficient resource access permissions for {}. Hiding resource from user.", entry.getKey());
-  //           return false;
-  //         }
-  //       })
-  //       .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-  // }
   
   /**
    * Checks if the current user is authorised to access the resource.

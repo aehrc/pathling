@@ -30,17 +30,21 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.util.TestDataSetup;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import ca.uhn.fhir.context.FhirContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import org.apache.commons.io.FileUtils;
 import org.apache.spark.sql.SparkSession;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.ApplicationContext;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -62,10 +66,12 @@ import org.springframework.test.context.TestPropertySource;
 @MockBean(JwtAuthenticationConverter.class)
 class SecurityEnabledExportOperationTest extends SecurityTestForOperations<ExportRequest> {
 
-  private static final String PATHLING_EXPORT_MSG = ERROR_MSG.apply("pathling:export");
+  private static final String PATHLING_EXPORT_MSG = ERROR_MSG.apply("export");
 
   @TempDir
   private static Path tempDir;
+  @Autowired
+  private ApplicationContext applicationContext;
 
 
   @DynamicPropertySource
@@ -73,17 +79,11 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
     //TestDataSetup.staticCopyTestDataToTempDir(tempDir);
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + tempDir.toAbsolutePath());
   }
-
-  // TODO - this has to be an integration test because I am constructing the exportProvider myself and therefore the aspectJ-spring-stuff does not work
-  // @Test
-  // @WithMockJwt(username = ADMIN_USER)
-  // void test_forbidden_if_export_without_authority() {
-  //   exportProvider = setup_scenario(tempDir, "Patient");
-  //   assertThatException().isThrownBy(this::perform_export)
-  //       .isExactlyInstanceOf(AccessDeniedError.class)
-  //       .withMessage(PATHLING_EXPORT_MSG);
-  //
-  // }
+  
+  @AfterEach
+  void cleanup() throws IOException {
+    FileUtils.cleanDirectory(tempDir.toFile());
+  }
 
   @Test
   @WithMockJwt(username = "admin", authorities = {"pathling:export"})
@@ -113,7 +113,15 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
   @WithMockJwt(username = "admin", authorities = {"pathling:export", "pathling:read"})
   void test_pass_if_export_with_authority_and_read_authority() throws Exception {
     exportProvider = setup_scenario(tempDir, "Patient");
-    assertThatNoException().isThrownBy(this::perform_export);
+    assertThatNoException().isThrownBy(() -> {
+      JsonNode manifest = perform_export();
+      ArrayNode output = (ArrayNode) manifest.get("output");
+      assertThat(output)
+          .hasSize(1)
+          .extracting(node -> node.get("url").asText())
+          .singleElement().asString()
+          .contains("Patient");
+    });
   }
   
   @Test
@@ -164,7 +172,7 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
   void test_lenient_silently_filter_out_if_export_with_type_param_with_authority_and_partial_read_authority() {
     exportProvider = setup_scenario(tempDir, "Patient", "Encounter");
     assertThatNoException().isThrownBy(() -> {
-      JsonNode manifest = perform_lenient_export();
+      JsonNode manifest = perform_export(ADMIN_USER, List.of("Patient", "Encounter"), true);
       ArrayNode output = (ArrayNode) manifest.get("output");
       assertThat(output)
           .hasSize(1)
@@ -173,6 +181,16 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
           .doesNotContain("Encounter")
           .contains("Patient");
     });
+  }
+  
+  @Test
+  @WithMockJwt(username = "admin")
+  void test_forbidden_if_export_without_authority() {
+    ExportProvider beanExportProvider = applicationContext.getBean(ExportProvider.class);
+    assertThatException()
+        .isThrownBy(() -> perform_export(beanExportProvider, ADMIN_USER, List.of(), false))
+        .isExactlyInstanceOf(AccessDeniedError.class)
+        .withMessage(PATHLING_EXPORT_MSG);
   }
 
 }

@@ -23,6 +23,7 @@ import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
 import au.csiro.pathling.async.RequestTag;
 import au.csiro.pathling.async.RequestTagFactory;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.export.ExportExecutor;
 import au.csiro.pathling.export.ExportOperationValidator;
 import au.csiro.pathling.export.ExportOutputFormat;
@@ -95,6 +96,8 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
   private SparkSession sparkSession;
   @Autowired
   private ExportOperationValidator exportOperationValidator;
+  @Autowired
+  private ServerConfiguration serverConfiguration;
 
   @BeforeEach
   void setup() {
@@ -120,6 +123,10 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
   }
 
   JsonNode perform_export(String ownerId, List<String> type, boolean lenient) {
+    return perform_export(exportProvider, ownerId, type, lenient);
+  }
+  
+  JsonNode perform_export(ExportProvider exportProvider, String ownerId, List<String> type, boolean lenient) {
     when(job.getOwnerId()).thenReturn(Optional.ofNullable(ownerId));
     String lenientHeader = "handling=" + lenient;
     when(requestDetails.getHeader("Prefer")).thenReturn(lenientHeader + "," + "prefer-async");
@@ -161,7 +168,8 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
         deltaLake,
         fhirContext,
         sparkSession,
-        tempDir.toString()
+        tempDir.toString(),
+        serverConfiguration
     );
 
     return new ExportProvider(

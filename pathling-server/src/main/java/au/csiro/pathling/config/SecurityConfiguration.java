@@ -127,20 +127,14 @@ public class SecurityConfiguration {
    */
   public CorsConfigurationSource corsConfigurationSource() {
     final CorsConfiguration cors = new CorsConfiguration();
-
-    cors.setAllowedMethods(List.of("GET", "DELETE"));
-    cors.setAllowedOrigins(List.of("*"));
-    cors.setAllowedHeaders(List.of("*"));
-    cors.setExposedHeaders(List.of("*"));
     
-    // todo use proper cors
-    // cors.setAllowedOrigins(configuration.getCors().getAllowedOrigins());
-    // cors.setAllowedOriginPatterns(configuration.getCors().getAllowedOriginPatterns());
-    // cors.setAllowedMethods(configuration.getCors().getAllowedMethods());
-    // cors.setAllowedHeaders(configuration.getCors().getAllowedHeaders());
-    // cors.setExposedHeaders(configuration.getCors().getExposedHeaders());
-    // cors.setMaxAge(configuration.getCors().getMaxAge());
-    // cors.setAllowCredentials(configuration.getAuth().isEnabled());
+    cors.setAllowedOrigins(configuration.getCors().getAllowedOrigins());
+    cors.setAllowedOriginPatterns(configuration.getCors().getAllowedOriginPatterns());
+    cors.setAllowedMethods(configuration.getCors().getAllowedMethods());
+    cors.setAllowedHeaders(configuration.getCors().getAllowedHeaders());
+    cors.setExposedHeaders(configuration.getCors().getExposedHeaders());
+    cors.setMaxAge(configuration.getCors().getMaxAge());
+    cors.setAllowCredentials(configuration.getAuth().isEnabled());
 
     final UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", cors);

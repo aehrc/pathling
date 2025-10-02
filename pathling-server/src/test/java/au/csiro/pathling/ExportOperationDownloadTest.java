@@ -6,9 +6,11 @@ import au.csiro.pathling.test.SpringBootUnitTest;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import au.csiro.pathling.util.FhirServerTestConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 
@@ -16,7 +18,7 @@ import org.springframework.http.ResponseEntity;
  * @author Felix Naumann
  */
 //@WebMvcTest(FileController.class)
-// @Import({FhirServerTestConfiguration.class, UnitTestDependencies.class})
+@Import({FhirServerTestConfiguration.class, UnitTestDependencies.class})
 @SpringBootUnitTest
 class ExportOperationDownloadTest {
 
