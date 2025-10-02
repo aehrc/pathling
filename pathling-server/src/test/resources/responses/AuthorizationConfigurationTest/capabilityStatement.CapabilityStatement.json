@@ -1,0 +1,41 @@
+{
+  "resourceType": "CapabilityStatement",
+  "rest": [
+    {
+      "security": {
+        "extension": [
+          {
+            "url": "http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris",
+            "extension": [
+              {
+                "url": "authorize",
+                "valueUri": "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/auth"
+              },
+              {
+                "url": "token",
+                "valueUri": "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token"
+              },
+              {
+                "url": "revoke",
+                "valueUri": "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/revoke"
+              }
+            ]
+          }
+        ],
+        "cors": true,
+        "service": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/restful-security-service",
+                "code": "SMART-on-FHIR",
+                "display": "SMART-on-FHIR"
+              }
+            ],
+            "text": "OAuth2 using SMART-on-FHIR profile (see http://docs.smarthealthit.org)"
+          }
+        ]
+      }
+    }
+  ]
+}

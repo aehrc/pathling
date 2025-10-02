@@ -108,7 +108,8 @@ final class DeltaSink implements DataSink {
   }
 
   @Override
-  public void write(@Nonnull final DataSource source) {
+  @Nullable
+  public WriteDetails write(@Nonnull final DataSource source) {
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       final String fileName = String.join(".", fileNameMapper.apply(resourceType),
@@ -139,6 +140,7 @@ final class DeltaSink implements DataSink {
         }
       }
     }
+    return null;
   }
 
   /**

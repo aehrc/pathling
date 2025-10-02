@@ -1,0 +1,74 @@
+{
+  "resourceType": "OperationDefinition",
+  "name": "aggregate",
+  "title": "Pathling Aggregate Operation",
+  "status": "active",
+  "kind": "operation",
+  "experimental": false,
+  "publisher": "Australian e-Health Research Centre, CSIRO",
+  "description": "This operation allows a user to perform aggregate queries on data held within the FHIR server by specifying aggregation, grouping and filter expressions.",
+  "affectsState": false,
+  "code": "aggregate",
+  "system": false,
+  "type": true,
+  "instance": false,
+  "parameter": [
+    {
+      "name": "aggregation",
+      "use": "in",
+      "min": 1,
+      "max": "*",
+      "documentation": "A FHIRPath expression that is used to calculate a summary value from each grouping. The context is a collection of resources of the type this operation was invoked against. The expression must evaluate to a primitive value.",
+      "type": "string"
+    },
+    {
+      "name": "grouping",
+      "use": "in",
+      "min": 0,
+      "max": "*",
+      "documentation": "A FHIRPath expression that can be evaluated against each resource in the data set to determine which groupings it should be counted within. The context is an individual resource of the type this operation was invoked against. The expression must evaluate to a primitive value.",
+      "type": "string"
+    },
+    {
+      "name": "filter",
+      "use": "in",
+      "min": 0,
+      "max": "*",
+      "documentation": "A FHIRPath expression that can be evaluated against each resource in the data set to determine whether it is included within the result. The context is an individual resource of the type this operation was invoked against. The expression must evaluate to a singular Boolean value. Multiple filters are combined using AND logic.",
+      "type": "string"
+    },
+    {
+      "name": "grouping",
+      "use": "out",
+      "min": 0,
+      "max": "*",
+      "documentation": "The grouped results of the aggregations requested in the query. There will be one grouping for each distinct combination of values determined by executing the grouping expressions against each of the resources within the filtered set of subject resources.",
+      "part": [
+        {
+          "name": "label",
+          "use": "out",
+          "min": 0,
+          "max": "*",
+          "documentation": "The set of descriptive labels that describe this grouping, corresponding to those requested in the query. There will be one label for each grouping within the query, and the type of each label will correspond to the type returned by the expression of the corresponding grouping. A grouping expression that results in an empty collection will yield a null label, which is represented within FHIR as the absence of a value.",
+          "type": "Type"
+        },
+        {
+          "name": "result",
+          "use": "out",
+          "min": 1,
+          "max": "*",
+          "documentation": "The set of values that resulted from the execution of the aggregations that were requested in the query. There will be one result for each aggregation within the query, and the type of each result will correspond to the type returned by the expression of the corresponding aggregation.",
+          "type": "Type"
+        },
+        {
+          "name": "drillDown",
+          "use": "out",
+          "min": 0,
+          "max": "1",
+          "documentation": "A FHIRPath expression that can be used as a filter to retrieve the set of resources that are members of this grouping. This will be omitted if there were no groupings or filters passed within the query.",
+          "type": "string"
+        }
+      ]
+    }
+  ]
+}
