@@ -19,10 +19,13 @@ package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
+import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.comparison.Comparable;
+import au.csiro.pathling.fhirpath.collection.DateTimeComparable;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
+import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import jakarta.annotation.Nonnull;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -52,22 +55,32 @@ public class MathOperator implements FhirPathBinaryOperator {
   @Override
   public Collection invoke(@Nonnull final BinaryOperatorInput input) {
 
+    final Collection leftValue = input.left();
+    final Collection rightValue = input.right();
+
+    // manual selection of the types
+    if ((leftValue instanceof DateTimeComparable || leftValue instanceof TimeCollection)
+        && rightValue instanceof QuantityCollection qty) {
+      return invokeDateTime(leftValue, qty);
+    }
     final Pair<Collection, Collection> reconciledArguments = FhirPathBinaryOperator.reconcileTypes(
-        input.left(), input.right());
+        leftValue, rightValue);
 
     final Collection left = reconciledArguments.getLeft()
         .asSingular(NON_SINGULAR_ERROR_FORMAT.formatted(type.toString(), "left"));
     final Collection right = reconciledArguments.getRight()
         .asSingular(NON_SINGULAR_ERROR_FORMAT.formatted(type.toString(), "right"));
 
+    if (left instanceof QuantityCollection || right instanceof QuantityCollection) {
+      throw new UnsupportedFhirPathFeatureError(
+          "Quantity arithmetic operations are not yet supported");
+    }
+
     checkUserInput(left instanceof Numeric,
         type + " operator does not support left operand: " + left.getDisplayExpression());
     checkUserInput(right instanceof Numeric,
         type + " operator does not support right operand: " + right.getDisplayExpression());
 
-    checkUserInput(left instanceof Comparable && right instanceof Comparable,
-        "Left and right operands are not comparable: " + left.getDisplayExpression() + " "
-            + type + " " + right.getDisplayExpression());
     checkUserInput(left.isComparableTo(right),
         "Left and right operands are not comparable: " + left.getDisplayExpression() + " "
             + type + " " + right.getDisplayExpression());
@@ -75,6 +88,12 @@ public class MathOperator implements FhirPathBinaryOperator {
     final Numeric leftNumeric = (Numeric) left;
     final Numeric rightNumeric = (Numeric) right;
     return leftNumeric.getMathOperation(type).apply(rightNumeric);
+  }
+
+  @Nonnull
+  private Collection invokeDateTime(@Nonnull final Collection ignoredLeftValue,
+      @Nonnull final QuantityCollection ignoredRightValue) {
+    throw new UnsupportedFhirPathFeatureError("Unsupported dateTime arithmetic");
   }
 
   @Override

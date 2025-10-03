@@ -38,8 +38,7 @@ public class DefaultComparator implements ColumnComparator {
     return INSTANCE;
   }
 
-
-  private DefaultComparator() {
+  protected DefaultComparator() {
   }
 
   @Nonnull

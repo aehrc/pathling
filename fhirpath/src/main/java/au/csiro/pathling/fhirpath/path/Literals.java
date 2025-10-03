@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.path;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
@@ -29,6 +28,7 @@ import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import jakarta.annotation.Nonnull;
@@ -169,7 +169,7 @@ public class Literals {
   @SuppressWarnings({"WeakerAccess", "unused"})
   public static LiteralPath calendarDurationLiteral(
       @Nonnull final String literalValue) {
-    throw new UnsupportedFhirPathFeatureError("Calendar duration literals are not supported");
+    return new QuantityLiteral(literalValue);
   }
 
   /**
@@ -184,7 +184,7 @@ public class Literals {
    */
   @SuppressWarnings({"unused", "WeakerAccess"})
   public static LiteralPath ucumQuantityLiteral(@Nonnull final String literalValue) {
-    throw new UnsupportedFhirPathFeatureError("Quantity literals are not supported");
+    return new QuantityLiteral(literalValue);
   }
 
   /**
@@ -465,6 +465,31 @@ public class Literals {
       } catch (final ParseException e) {
         throw new InvalidUserInputError("Unable to parse date format: " + value);
       }
+    }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return value;
+    }
+  }
+
+  /**
+   * Represents a Quantity literal in FHIRPath.
+   * <p>
+   * This class implements a literal that represents a Quantity value.
+   */
+  @Value
+  @AllArgsConstructor(access = AccessLevel.PRIVATE)
+  public static class QuantityLiteral implements LiteralPath {
+
+    @Nonnull
+    String value;
+
+    @Override
+    public QuantityCollection apply(@Nonnull final Collection input,
+        @Nonnull final EvaluationContext context) {
+      return QuantityCollection.fromLiteral(value);
     }
 
     @Nonnull

@@ -30,7 +30,7 @@ import org.apache.spark.sql.functions;
 public interface ColumnEquality {
 
   /**
-   * Creates an equality comparison between two columns.
+   * Creates an element equality comparison between two columns.
    *
    * @param left the left column
    * @param right the right column
@@ -40,7 +40,7 @@ public interface ColumnEquality {
   Column equalsTo(@Nonnull Column left, @Nonnull Column right);
 
   /**
-   * Creates an inequality comparison between two columns.
+   * Creates an element inequality comparison between two columns.
    *
    * @param left the left column
    * @param right the right column
@@ -49,5 +49,18 @@ public interface ColumnEquality {
   @Nonnull
   default Column notEqual(@Nonnull final Column left, @Nonnull final Column right) {
     return functions.not(equalsTo(left, right));
+  }
+
+  /**
+   * Returns a comparator that can be used to compare arrays of the elements that this comparator
+   * can compare.
+   *
+   * @return a comparator for arrays of comparable elements
+   */
+  @Nonnull
+  default ColumnEquality asArrayComparator() {
+    // by default, the comparator for arrays is the same as for single elements
+    // this should work for SQL primitive types
+    return this;
   }
 }

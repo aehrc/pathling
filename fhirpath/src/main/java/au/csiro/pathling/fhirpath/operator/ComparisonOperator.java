@@ -17,12 +17,8 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.comparison.Comparable.ComparisonOperation;
 import jakarta.annotation.Nonnull;
@@ -35,7 +31,7 @@ import jakarta.annotation.Nonnull;
  * @author Piotr Szul
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#comparison">Comparison</a>
  */
-public class ComparisonOperator implements FhirPathBinaryOperator {
+public class ComparisonOperator extends SameTypeBinaryOperator {
 
   @Nonnull
   private final ComparisonOperation type;
@@ -47,30 +43,15 @@ public class ComparisonOperator implements FhirPathBinaryOperator {
     this.type = type;
   }
 
-  @Nonnull
   @Override
-  public Collection invoke(@Nonnull final BinaryOperatorInput input) {
-    final Collection left = input.left();
-    final Collection right = input.right();
-
-    // If either operand is an EmptyCollection, return an EmptyCollection.
-    if (left instanceof EmptyCollection || right instanceof EmptyCollection) {
-      return EmptyCollection.getInstance();
+  @Nonnull
+  protected Collection handleEquivalentTypes(@Nonnull final Collection left,
+      @Nonnull final Collection right, @Nonnull final BinaryOperatorInput input) {
+    if (!(left instanceof Comparable && right instanceof Comparable)) {
+      return fail(input);
     }
-
-    checkUserInput(left instanceof Comparable,
-        "Left operand to " + type + " operator must be comparable");
-    checkUserInput(right instanceof Comparable,
-        "Right operand to " + type + " operator must be comparable");
-
-    // actual comparison operations require both sides to be comparable with each other
-    checkUserInput(left.isComparableTo(right),
-        "Comparison of paths is not supported: " + left.getDisplayExpression() + ", "
-            + right.getDisplayExpression());
     final Collection leftSingular = left.asSingular(
         "Comparison operator requires singular values");
-
-    check(leftSingular instanceof Comparable);
     return BooleanCollection.build(
         ((Comparable) leftSingular).getComparison(type)
             .apply((Comparable) right));

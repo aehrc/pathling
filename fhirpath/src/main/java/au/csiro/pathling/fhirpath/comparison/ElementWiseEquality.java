@@ -14,26 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package au.csiro.pathling.sql.misc;
 
-import au.csiro.pathling.sql.udf.AbstractUDFRegistrar;
+package au.csiro.pathling.fhirpath.comparison;
+
 import jakarta.annotation.Nonnull;
 
 /**
- * Registration of miscellaneous UDFs.
+ * An extension of {@link ColumnEquality} that indicates the equality comparison is to be performed
+ * element-wise on array columns.
+ *
+ * @author Piotr Szul
  */
-public class PathlingUdfRegistrar extends AbstractUDFRegistrar {
+public interface ElementWiseEquality extends ColumnEquality {
 
   @Override
-  protected void registerUDFs(@Nonnull final UDFRegistrar udfRegistrar) {
-    udfRegistrar
-        .register(new CodingToLiteral())
-        .register(new DecimalToLiteral())
-        .register(new ToNull())
-        .register(new LowBoundaryForDateTime())
-        .register(new HighBoundaryForDateTime())
-        .register(new LowBoundaryForTime())
-        .register(new HighBoundaryForTime())
-        .register(new QuantityToLiteral());
+  @Nonnull
+  default ColumnEquality asArrayComparator() {
+    return new ArrayElementWiseColumnEquality(this);
   }
+
 }

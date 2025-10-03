@@ -33,6 +33,7 @@ public class ComparisonOperatorsDslTest extends FhirPathDslTestBase {
             .boolArray("allTrue", true, true)
             .boolArray("allFalse", false, false)
             .string("str", "abc")
+            .decimalEmpty("emptyDecimal")
             .integer("intVal", 123)
             .date("dateVal", "2020-01-01")
             .bool("boolVal", true)
@@ -70,6 +71,9 @@ public class ComparisonOperatorsDslTest extends FhirPathDslTestBase {
         .testError("codingArray <= strArray", "Coding[] > String[] is not supported")
         .testError("codingArray > dateArray", "Coding[] > Date[] is not supported")
         .testError("codingArray < boolArray", "Coding[] > Boolean[] is not supported")
+        .group("Uncomparable implicit empty collections")
+        .testError("emptyString > 10", "empty String > Integer is not supported")
+        .testError("@2001-10-10 < emptyDecimal", "Date < empty Decimal is not supported")
         .build();
   }
 
@@ -87,11 +91,25 @@ public class ComparisonOperatorsDslTest extends FhirPathDslTestBase {
         .group("Numeric comparisons operations")
         .testTrue("int1 > int2", "Integer greater than with variables")
         .testFalse("dec1 < dec2", "Decimal less than with variables")
-        .testFalse("int2 >= dec1", "Integer greater that or equal with variables false case")
         .testEmpty("{} > int1", "Empty greater than with variable")
         .testError("int1 <= intArray", "Integer less than or equal with array")
-        .group("Numeric equality operations")
-        .testTrue("int1 = 5.0", "Integer equals decimal with variables")
+        .group("Cross numeric comparison operations")
+        .testFalse("3.1 < 3 ", "Decimal less than Integer with literals")
+        .testTrue("5 > 4.0", "Integer greater than Decimal with literals")
+        // New tests for Quantity vs numeric literals
+        .testTrue("5 '1' > 4", "Quantity with unit '1' greater than integer")
+        .testTrue("5 '1' > 4.0", "Quantity with unit '1' greater than decimal")
+        .testFalse("2 '1' < 1.5", "Quantity with unit '1' less than decimal")
+        .testTrue("3.5 > 2 '1'", "Decimal greater than Quantity with unit '1'")
+        .testFalse("2 < 2 '1'", "Integer less than or equal to Quantity with unit '1'")
+        .testEmpty("5 'mg' > 4", "Quantity with non-'1' unit compared to integer yields empty")
+        .testEmpty("5 'mg' > 4.0", "Quantity with non-'1' unit compared to decimal yields empty")
+        .testEmpty("3.5 < 2 'mg'", "Decimal compared to Quantity with non-'1' unit yields empty")
+        .testEmpty("2 < 2 'mg'", "Integer compared to Quantity with non-'1' unit yields empty")
+        .testEmpty("2 years > 1", "Calendar duration compared to integer yields empty")
+        .testEmpty("2 years > 1.0", "Calendar duration compared to decimal yields empty")
+        .testEmpty("3.5 < 2 years", "Decimal compared to calendar duration yields empty")
+        .testEmpty("2 < 2 years", "Integer compared to calendar duration yields empty")
         .build();
   }
 
@@ -185,6 +203,82 @@ public class ComparisonOperatorsDslTest extends FhirPathDslTestBase {
         .testTrue("@T00:00:00 < @T23:59:59.999999999", "Beginning vs end of day comparison")
         .testEmpty("{} < @T12:00", "Empty less than time")
         .testEmpty("@T12:30 > {}", "Time greater than empty")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testQuantityComparison() {
+    return builder()
+        .withSubject(sb -> sb
+            .stringEmpty("strEmpty")
+        )
+        .group("UCUM quantities with same units")
+        .testTrue("10 'mg' > 5 'mg'", "10 mg greater than 5 mg")
+        .testFalse("3 'mg' > 5 'mg'", "3 mg not greater than 5 mg")
+        .testTrue("5 'mg' <= 5 'mg'", "5 mg less than or equal to 5 mg")
+        .testFalse("2 'mg' >= 5 'mg'", "2 mg not greater than or equal to 5 mg")
+        .group("UCUM quantities with compatible units")
+        .testTrue("1000 'mg' = 1 'g'", "1000 mg equals 1 g (compatible units)")
+        .testTrue("2 'g' > 1000 'mg'", "2 g greater than 1000 mg (compatible units)")
+        .testFalse("500 'mg' >= 1 'g'",
+            "500 mg not greater than or equal to 1 g (compatible units)")
+        .testTrue("1 'g' <= 1000 'mg'", "1 g less than or equal to 1000 mg (compatible units)")
+        .group("UCUM quantities with incompatible units")
+        .testEmpty("1 'mg' > 1 'cm'", "mg and cm are incompatible units")
+        .testEmpty("5 'L' < 5 'kg'", "L and kg are incompatible units")
+        .testEmpty("1 'mg' >= 1 'cm'", "mg and cm are incompatible units for >=")
+        .testEmpty("5 'L' <= 5 'kg'", "L and kg are incompatible units for <=")
+        .group("Calendar duration quantities with same units")
+        .testTrue("2 years > 1 year", "2 years greater than 1 year")
+        .testTrue("12 months >= 6 months", "12 months greater than or equal to 6 months")
+        .testTrue("3 weeks < 4 weeks", "3 weeks less than 4 weeks")
+        .testTrue("10 days <= 10 days", "10 days less than or equal to 10 days")
+        .testTrue("5 hours > 2 hours", "5 hours greater than to 2 hours")
+        .testTrue("30 minutes <= 30 minutes", "30 minutes equal to 30 minutes")
+        .testTrue("45 seconds >= 20 seconds", "45 seconds greater than or equal to 20 seconds")
+        .testTrue("1000 milliseconds < 2000 milliseconds",
+            "1000 milliseconds less than 2000 milliseconds")
+        .group("UCUM quantities with incompatible units (> seconds)")
+        .testEmpty("1 year > 1 month", "year and month are not comparable")
+        .testEmpty("1 year < 1 week", "year and week are not comparable")
+        .testEmpty("1 month < 1 week", "month and week are not comparable")
+        .testEmpty("1 year >= 1 day", "year and day are not comparable")
+        .testEmpty("1 month <= 1 hour", "month and hour are not comparable")
+        .testEmpty("1 day < 25 hours", "1 day less than 25 hours")
+        .testEmpty("60 minutes <= 1 hour", "60 minutes less than or equal to 1 hour")
+        .testEmpty("1 week > 6 days", "1 week greater than 6 days")
+        .testEmpty("120 seconds > 3 minute", "120 seconds not greater than 3 minutes")
+        .group("Calendar duration and UCUM cross-comparisons (calendar ≤ seconds)")
+        .testTrue("31557600 's' >= 1 'a'",
+            "31557600 seconds greater or equal to 1 UCUM year (comparable because calendar unit is ≤ seconds)")
+        .testFalse("1000 milliseconds > 1 'wk'",
+            "1000 milliseconds not greater than 1 UCUM week (comparable because calendar unit is ≤ seconds)")
+        .testTrue("1 second <= 1 'mo'",
+            "1 second less than or equal to 1 UCUM month (comparable because calendar unit is ≤ seconds)")
+        .testTrue("500 milliseconds < 1 'min'",
+            "500 milliseconds less than 1 UCUM minute (comparable because calendar unit is ≤ seconds)")
+        .group("Calendar duration and UCUM cross-comparisons (calendar > seconds, not comparable)")
+        .testEmpty("1 year > 1 'a'",
+            "year and UCUM 'a' are not comparable (calendar unit > seconds)")
+        .testEmpty("1 month < 1 'mo'",
+            "month and UCUM 'mo' are not comparable (calendar unit > seconds)")
+        .testEmpty("1 week <= 1 'wk'",
+            "week and UCUM 'wk' are not comparable (calendar unit > seconds)")
+        .testEmpty("1 day >= 1 'd'",
+            "day and UCUM 'd' are not comparable (calendar unit > seconds)")
+        .testEmpty("1 hour < 1 'h'",
+            "hour and UCUM 'h' are not comparable (calendar unit > seconds)")
+        .testEmpty("1 minute > 1 'min'",
+            "minute and UCUM 'min' are not comparable (calendar unit > seconds)")
+        .group("Calendar duration and non-time UCUM cross-comparisons (not comparable)")
+        .testEmpty("1 year > 1 'mg'",
+            "calendar year and UCUM mg are not comparable (non-time UCUM)")
+        .testEmpty("10 hours < 1 'cm'",
+            "calendar hour and UCUM cm are not comparable (non-time UCUM)")
+        .testEmpty("5 seconds >= 1 'kg'",
+            "calendar second and UCUM kg are not comparable (non-time UCUM)")
+        .testEmpty("100 milliseconds <= 1 'L'",
+            "calendar millisecond and UCUM L are not comparable (non-time UCUM)")
         .build();
   }
 }

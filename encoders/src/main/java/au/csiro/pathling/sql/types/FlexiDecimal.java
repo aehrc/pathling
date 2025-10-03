@@ -211,7 +211,7 @@ public final class FlexiDecimal {
    * @return a column containing the comparison result
    */
   @Nonnull
-  public static Column equals(@Nonnull final Column left, @Nonnull final Column right) {
+  public static Column equalTo(@Nonnull final Column left, @Nonnull final Column right) {
     return EQUALS_UDF.apply(left, right);
   }
 
@@ -235,7 +235,7 @@ public final class FlexiDecimal {
    * @return a column containing the comparison result
    */
   @Nonnull
-  public static Column lte(@Nonnull final Column left, @Nonnull final Column right) {
+  public static Column leq(@Nonnull final Column left, @Nonnull final Column right) {
     return LTE_UDF.apply(left, right);
   }
 
@@ -259,7 +259,7 @@ public final class FlexiDecimal {
    * @return a column containing the comparison result
    */
   @Nonnull
-  public static Column gte(@Nonnull final Column left, @Nonnull final Column right) {
+  public static Column geq(@Nonnull final Column left, @Nonnull final Column right) {
     return GTE_UDF.apply(left, right);
   }
 
