@@ -29,8 +29,6 @@ import au.csiro.pathling.fhirpath.comparison.Equatable.EqualityOperation;
 import jakarta.annotation.Nonnull;
 import java.util.function.BinaryOperator;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
-import org.jetbrains.annotations.Contract;
 
 /**
  * Provides the functionality of the family of equality operators within FHIRPath, i.e. {@code =},
@@ -52,51 +50,23 @@ public class EqualityOperator extends SameTypeBinaryOperator {
     this.type = type;
   }
 
-  /**
-   * Wraps a comparator function so that it can be applied to two array columns, producing a
-   * comparison results. The final result is true if all elements in the arrays compare as true
-   * (using the provided comparator), and false if any element compares as false. If the arrays
-   * differ in size, the result is false. This assumes that both arrays non-null .
-   *
-   * @param comparator the comparator function to wrap
-   * @return a comparator function that can be applied to two array columns
-   */
-  @Nonnull
-  @Contract(pure = true)
-  private static BinaryOperator<Column> asArrayComparator(
-      @Nonnull final BinaryOperator<Column> comparator, final boolean defaultNonMatch) {
-    return (left, right) -> {
-      final Column zip = functions.zip_with(left, right, comparator::apply);
-      // Check if all elements in the zipped array are true in case of equality
-      // or any is true in case of inequality
-      final Column arrayResult = defaultNonMatch
-                                 ? functions.exists(zip, c -> c)
-                                 : functions.forall(zip, c -> c);
-      // If the arrays are of different sizes, return false.
-      return functions.when(
-          functions.size(left).equalTo(functions.size(right)),
-          // this is to handle the case where some elements cannot be compared
-          // e.g. temporal values with different precisions
-          // in which case arrayResult may be null
-          functions.coalesce(arrayResult, lit(defaultNonMatch))
-      ).otherwise(functions.lit(defaultNonMatch));
-    };
-  }
-  
   @Override
   @Nonnull
   protected Collection handleEquivalentTypes(@Nonnull final Collection leftCollection,
       @Nonnull final Collection rightCollection, @Nonnull final BinaryOperatorInput input) {
-    
+
     // currently we only support equality for FHIRPath types
     if (leftCollection.getType().isEmpty() || rightCollection.getType().isEmpty()) {
       throw new UnsupportedFhirPathFeatureError("Unsupported equality for complex types");
     }
-    
+
     // if types are compatible do element by element application of element comparator
     // We do actually use the equalTo and nonEqualTo methods here, rather than negating the
     // result of equalTo because this may be more efficient in some cases.
     final BinaryOperator<Column> elementComparator = type.bind(leftCollection.getComparator());
+    final BinaryOperator<Column> arrayComparator = type.bind(
+        leftCollection.getComparator().asArrayComparator());
+
     final ColumnRepresentation left = leftCollection.getColumn();
     final ColumnRepresentation right = rightCollection.getColumn();
 
@@ -111,8 +81,7 @@ public class EqualityOperator extends SameTypeBinaryOperator {
                 elementComparator.apply(left.singular().getValue(), right.singular().getValue()))
             .otherwise(
                 // this works because we know that both sides is plural (count > 1)
-                asArrayComparator(elementComparator, type == EqualityOperation.NOT_EQUALS)
-                    .apply(left.plural().getValue(), right.plural().getValue()));
+                arrayComparator.apply(left.plural().getValue(), right.plural().getValue()));
     return BooleanCollection.build(new DefaultRepresentation(equalityResult));
   }
 

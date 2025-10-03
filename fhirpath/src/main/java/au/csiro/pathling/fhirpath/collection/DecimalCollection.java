@@ -27,7 +27,9 @@ import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
 import au.csiro.pathling.fhirpath.comparison.Comparable;
+import au.csiro.pathling.fhirpath.comparison.DecimalComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.sql.misc.DecimalToLiteral;
 import jakarta.annotation.Nonnull;
@@ -222,5 +224,11 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
         .filter(FhirPathType.QUANTITY::equals)
         .map(t -> (Collection) QuantityCollection.fromNumeric(this.getColumn()))
         .orElseGet(() -> super.castAs(other));
+  }
+
+  @Override
+  @Nonnull
+  public ColumnComparator getComparator() {
+    return DecimalComparator.getInstance();
   }
 }

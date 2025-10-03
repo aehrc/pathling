@@ -35,7 +35,7 @@ import org.apache.spark.sql.functions;
  *
  * @author Piotr Szul
  */
-public class QuantityComparator implements ColumnComparator {
+public class QuantityComparator implements ColumnComparator, ElementWiseEquality {
 
   private final static QuantityComparator INSTANCE = new QuantityComparator();
 
