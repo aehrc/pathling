@@ -9,7 +9,7 @@ on:
       - main
 
 env:
-  # The add-exports and add-opens flags are required for Java 17
+  # The add-exports and add-opens flags are required for Java 21
   MAVEN_OPTS: --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
 
 jobs:
@@ -26,7 +26,7 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          java-version: 17
+          java-version: 21
           distribution: "zulu"
 
       - name: Set up Python 3.8

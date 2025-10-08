@@ -71,11 +71,11 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <pathling.sparkVersion>3.5.6</pathling.sparkVersion>
-    <pathling.scalaVersion>2.12</pathling.scalaVersion>
-    <pathling.scalaFullVersion>2.12.17</pathling.scalaFullVersion>
-    <pathling.deltaVersion>3.3.2</pathling.deltaVersion>
-    <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
+    <pathling.sparkVersion>4.0.1</pathling.sparkVersion>
+    <pathling.scalaVersion>2.13</pathling.scalaVersion>
+    <pathling.scalaFullVersion>2.13.15</pathling.scalaFullVersion>
+    <pathling.deltaVersion>4.0.0</pathling.deltaVersion>
+    <pathling.hadoopVersion>3.4.1</pathling.hadoopVersion>
     <pathling.hadoopMajorVersion>3</pathling.hadoopMajorVersion>
     <pathling.hapiFhirVersion>8.4.0</pathling.hapiFhirVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
@@ -570,8 +570,8 @@
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.13.0</version>
           <configuration>
-            <source>17</source>
-            <target>17</target>
+            <source>21</source>
+            <target>21</target>
             <compilerArgs>
               <arg>-Xlint:all,-processing</arg>
             </compilerArgs>
@@ -599,8 +599,8 @@
             </execution>
           </executions>
           <configuration>
-            <source>17</source>
-            <target>17</target>
+            <source>21</source>
+            <target>21</target>
             <args>
               <arg>-feature</arg>
             </args>
@@ -677,7 +677,7 @@
         <plugin>
           <groupId>org.jacoco</groupId>
           <artifactId>jacoco-maven-plugin</artifactId>
-          <version>0.8.8</version>
+          <version>0.8.12</version>
           <executions>
             <execution>
               <id>prepare-agent</id>
@@ -727,7 +727,7 @@
           </executions>
           <configuration>
             <skip>true</skip>
-            <source>17</source>
+            <source>21</source>
             <links>
               <link>https://spark.apache.org/docs/latest/api/java/</link>
               <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-base/</link>

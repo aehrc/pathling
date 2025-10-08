@@ -40,3 +40,4 @@ spark-warehouse
 *.Rcheck
 .aider*
 dependency-reduced-pom.xml
+/.claude/agents/unit-test-designer.md
