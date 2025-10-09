@@ -633,7 +633,8 @@
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
             <!-- The add-exports and add-opens flags are required for Java 17 -->
-            <argLine>@{argLine} -Xshare:off -Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED</argLine>
+            <!-- -XX:+EnableDynamicAgentLoading suppresses warnings about Mockito's dynamic agent loading -->
+            <argLine>@{argLine} -Xshare:off -Xmx4g -ea -Duser.timezone=UTC -XX:+EnableDynamicAgentLoading --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED</argLine>
             <forkCount>1C</forkCount>
             <failIfNoTests>false</failIfNoTests>
           </configuration>
