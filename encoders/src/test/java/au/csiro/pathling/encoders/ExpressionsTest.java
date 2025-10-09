@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific 
+ * These modifications are copyright 2018-2025 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,6 +58,7 @@ public class ExpressionsTest {
         .appName("testing")
         .config("spark.driver.bindAddress", "localhost")
         .config("spark.driver.host", "localhost")
+        .config("spark.ui.enabled", "false")
         .getOrCreate();
 
 
@@ -106,7 +107,7 @@ public class ExpressionsTest {
     final List<Row> results = resultDs.collectAsList();
     assertEquals(2, results.size());
 
-    final Row firstRow = results.get(0);
+    final Row firstRow = results.getFirst();
     assertEquals(0L, (Long) firstRow.getAs("id"));
     assertEquals(10, (Integer) firstRow.getAs("test_single"));
     assertNotNull(firstRow.getAs("test_array"));
@@ -143,7 +144,7 @@ public class ExpressionsTest {
     final List<Row> results = resultDs.collectAsList();
     assertEquals(2, results.size());
 
-    final Row firstRow = results.get(0);
+    final Row firstRow = results.getFirst();
     assertEquals(0L, (Long) firstRow.getAs("id"));
     assertEquals(0L, (Long) firstRow.getAs("test_unnest_single"));
     assertNotNull(firstRow.getAs("test_unnest_array"));
@@ -229,7 +230,7 @@ public class ExpressionsTest {
     final List<Row> results = resultDs.collectAsList();
     assertEquals(1, results.size());
 
-    final Row row = results.get(0);
+    final Row row = results.getFirst();
     assertEquals(0L, (Long) row.getAs("id"));
     assertNotNull(row.getAs("one_array"));
     assertNotNull(row.getAs("two_arrays"));
@@ -280,7 +281,7 @@ public class ExpressionsTest {
     final List<Row> results = resultDs.collectAsList();
     assertEquals(1, results.size());
 
-    final Row row = results.get(0);
+    final Row row = results.getFirst();
     assertEquals(0L, (Long) row.getAs("id"));
     assertNotNull(row.getAs("null"));
     assertNotNull(row.getAs("emptyArray"));

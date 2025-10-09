@@ -196,7 +196,7 @@ separate files distributed with the Software.
 * (Apache License, Version 2.0) Commons Lang (commons-lang:commons-lang:2.6 - http://commons.apache.org/lang/)
 * (Apache License, Version 2.0) delta-spark (io.delta:delta-spark_2.12:3.3.2 - https://delta.io/)
 * (Apache License, Version 2.0) Jakarta Bean Validation API (jakarta.validation:jakarta.validation-api:3.0.2 - https://beanvalidation.org)
-* (CDDL + GPLv2 with classpath exception) Java Servlet API (javax.servlet:javax.servlet-api:4.0.1 - https://javaee.github.io/servlet-spec/)
+* (CDDL + GPLv2 with classpath exception) Java Servlet API (jakarta.servlet:jakarta.servlet-api:5.0.0 - https://javaee.github.io/servlet-spec/)
 * (Apache License, Version 2.0) Joda-Time (joda-time:joda-time:2.12.7 - https://www.joda.org/joda-time/)
 * (BSD License) ANTLR 4 Tool (org.antlr:antlr4:4.9.3 - http://www.antlr.org)
 * (Apache License, Version 2.0) Apache Commons Lang (org.apache.commons:commons-lang3:3.18.0 - https://commons.apache.org/proper/commons-lang/)
