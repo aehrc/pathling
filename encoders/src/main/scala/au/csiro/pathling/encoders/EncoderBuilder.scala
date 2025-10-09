@@ -26,7 +26,9 @@ package au.csiro.pathling.encoders
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import ca.uhn.fhir.context._
-import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
+import org.apache.spark.sql.catalyst.encoders.{AgnosticEncoder, AgnosticExpressionPathEncoder, ExpressionEncoder}
+import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.types.DataType
 
 import scala.reflect.ClassTag
 
@@ -37,6 +39,22 @@ object EncoderBuilder {
 
   val UNSUPPORTED_RESOURCES: Set[String] = Set("Parameters", "StructureDefinition", "StructureMap",
     "Bundle")
+
+  /**
+   * Custom AgnosticEncoder that wraps serializer and deserializer expressions
+   */
+  private case class FhirAgnosticEncoder[T](
+      schemaDataType: DataType,
+      serializerExpr: Expression,
+      deserializerExpr: Expression,
+      classTag: ClassTag[T]
+  ) extends AgnosticExpressionPathEncoder[T] {
+    override def isPrimitive: Boolean = false
+    override def dataType: DataType = schemaDataType
+    override def toCatalyst(input: Expression): Expression = serializerExpr
+    override def fromCatalyst(inputPath: Expression): Expression = deserializerExpr
+    override def clsTag: ClassTag[T] = classTag
+  }
 
   /**
    * Returns an encoder for the FHIR resource implemented by the given class
@@ -68,9 +86,12 @@ object EncoderBuilder {
       EncoderConfig(maxNestingLevel, openTypes, enableExtensions))
     val serializerBuilder = SerializerBuilder(schemaConverter)
     val deserializerBuilder = DeserializerBuilder(schemaConverter)
-    new ExpressionEncoder(
-      serializerBuilder.buildSerializer(resourceDefinition),
-      deserializerBuilder.buildDeserializer(resourceDefinition),
-      ClassTag(fhirClass))
+
+    val serializerExpr = serializerBuilder.buildSerializer(resourceDefinition)
+    val deserializerExpr = deserializerBuilder.buildDeserializer(resourceDefinition)
+    val schema = serializerExpr.dataType
+
+    val agnosticEncoder = FhirAgnosticEncoder[Any](schema, serializerExpr, deserializerExpr, ClassTag(fhirClass))
+    ExpressionEncoder(agnosticEncoder)
   }
 }

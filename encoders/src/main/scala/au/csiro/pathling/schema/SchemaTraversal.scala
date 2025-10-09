@@ -257,6 +257,7 @@ case class CompositeCtx[DT, SF](compositeDefinition: BaseRuntimeElementComposite
     compositeDefinition
       .getChildren
       .flatMap(toChildCtx(_).accept(visitor))
+      .toSeq
   }
 
   def toChildCtx(childDefinition: BaseRuntimeChildDefinition): ChildCtx[DT, SF] = {
