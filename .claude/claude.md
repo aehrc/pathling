@@ -98,3 +98,23 @@ In Spark 4.0, the `Column` companion object and many utility methods are package
 
 3. **Buffer to Seq conversions**: Add `.toSeq` when needed
    - Scala collections may return Buffer instead of Seq in some operations
+
+## Maven Configuration
+
+### Surefire Plugin Configuration
+
+The Maven Surefire plugin is configured in the top-level `pom.xml` file under `pluginManagement`. All test-related JVM arguments should be added there to ensure consistency across all modules.
+
+**Location**: `/pom.xml` -> `build` -> `pluginManagement` -> `maven-surefire-plugin` -> `configuration` -> `argLine`
+
+**Key JVM arguments**:
+- `-XX:+EnableDynamicAgentLoading` - Suppresses warnings about Mockito's dynamic agent loading
+- `--add-exports` and `--add-opens` - Required for Java 17+ to access internal JDK APIs
+- `-Xmx4g` - Maximum heap size for tests
+- `-ea` - Enable assertions
+- `@{argLine}` - Must be first to include JaCoCo agent arguments
+
+**When modifying test configuration**:
+- Always update the pluginManagement section in the root `pom.xml`
+- Do not override surefire configuration in individual module POMs unless absolutely necessary
+- Test any changes by running: `mvn test -pl <module>`
