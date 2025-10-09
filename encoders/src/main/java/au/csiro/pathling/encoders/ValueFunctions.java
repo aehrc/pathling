@@ -25,24 +25,24 @@
 package au.csiro.pathling.encoders;
 
 import jakarta.annotation.Nonnull;
+import java.util.function.Function;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.catalyst.expressions.Expression;
+import org.apache.spark.sql.classic.ColumnConversions$;
 import org.apache.spark.sql.classic.ExpressionUtils;
 
-import java.util.function.Function;
-
 /**
- * Java-based utility class for value-based Column operations.
- * This class uses Java to access package-private methods in Spark that are not accessible from Scala.
+ * Java-based utility class for value-based Column operations. This class uses Java to access
+ * package-private methods in Spark that are not accessible from Scala.
  */
 public class ValueFunctions {
 
   /**
    * Applies an expression to an array value, or an else expression if the value is not an array.
    *
-   * @param value           The value to check
+   * @param value The value to check
    * @param arrayExpression The expression to apply to the array value
-   * @param elseExpression  The expression to apply if the value is not an array
+   * @param elseExpression The expression to apply if the value is not an array
    * @return A Column with the conditional expression
    */
   @Nonnull
@@ -54,10 +54,14 @@ public class ValueFunctions {
     final Expression valueExpr = ExpressionUtils.expression(value);
 
     final Function<Expression, Expression> arrayExprFunc = e ->
-        ExpressionUtils.expression(arrayExpression.apply(ExpressionUtils.column(e)));
+        // This needs to be user rather than ExpressionUtils.expression() 
+        // to correctly unwrap the underlying expression.
+        ColumnConversions$.MODULE$.toRichColumn(arrayExpression.apply(ExpressionUtils.column(e)))
+            .expr();
 
     final Function<Expression, Expression> elseExprFunc = e ->
-        ExpressionUtils.expression(elseExpression.apply(ExpressionUtils.column(e)));
+        ColumnConversions$.MODULE$.toRichColumn(elseExpression.apply(ExpressionUtils.column(e)))
+            .expr();
 
     final Expression resultExpr = new UnresolvedIfArray(
         valueExpr,
@@ -72,9 +76,9 @@ public class ValueFunctions {
    * Applies an expression to array of arrays value, or an else expression if the value is an array.
    * Throws an exception if the value is not an array.
    *
-   * @param value           The value to check
+   * @param value The value to check
    * @param arrayExpression The expression to apply to the array of arrays value
-   * @param elseExpression  The expression to apply to the arrays of non-array values
+   * @param elseExpression The expression to apply to the arrays of non-array values
    * @return A Column with the conditional expression
    */
   @Nonnull
