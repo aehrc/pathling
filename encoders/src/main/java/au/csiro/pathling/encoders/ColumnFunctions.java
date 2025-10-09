@@ -28,7 +28,6 @@ import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.classic.ExpressionUtils;
-import scala.collection.JavaConverters;
 import scala.collection.immutable.Seq;
 
 import java.util.Arrays;
@@ -56,7 +55,7 @@ public class ColumnFunctions {
         .collect(Collectors.toList());
 
     // Convert Java List to Scala Seq
-    final Seq<Expression> expressions = JavaConverters.asScalaBuffer(expressionList).toSeq();
+    final Seq<Expression> expressions = scala.jdk.javaapi.CollectionConverters.asScala(expressionList).toSeq();
 
     // Create StructProduct expression
     final Expression structProductExpr = new StructProduct(expressions, false);
@@ -82,7 +81,7 @@ public class ColumnFunctions {
         .collect(Collectors.toList());
 
     // Convert Java List to Scala Seq
-    final Seq<Expression> expressions = JavaConverters.asScalaBuffer(expressionList).toSeq();
+    final Seq<Expression> expressions = scala.jdk.javaapi.CollectionConverters.asScala(expressionList).toSeq();
 
     // Create StructProduct expression with outer=true
     final Expression structProductExpr = new StructProduct(expressions, true);

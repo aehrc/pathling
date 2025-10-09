@@ -36,7 +36,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Test;
-import scala.collection.JavaConverters;
+import scala.jdk.javaapi.CollectionConverters;
 
 class R4DataTypeMappingsTest {
 
@@ -108,8 +108,8 @@ class R4DataTypeMappingsTest {
     final RuntimeChildChoiceDefinition openTypeElement = (RuntimeChildChoiceDefinition) extensionChild
         .getChildByName("value[x]");
 
-    final Set<String> actualOpenElementUniqueChildNames = JavaConverters
-        .seqAsJavaList(dataTypeMappings.getValidChoiceTypes(openTypeElement)).stream()
+    final Set<String> actualOpenElementUniqueChildNames = CollectionConverters
+        .asJava(dataTypeMappings.getValidChoiceTypes(openTypeElement)).stream()
         .map(openTypeElement::getChildNameByDatatype)
         .collect(Collectors.toUnmodifiableSet());
 

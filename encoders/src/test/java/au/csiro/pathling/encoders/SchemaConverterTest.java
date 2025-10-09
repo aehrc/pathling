@@ -58,7 +58,7 @@ import org.hl7.fhir.r4.model.Questionnaire;
 import org.hl7.fhir.r4.model.QuestionnaireResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import scala.collection.JavaConverters;
+import scala.jdk.javaapi.CollectionConverters;
 
 public class SchemaConverterTest {
 
@@ -119,7 +119,7 @@ public class SchemaConverterTest {
 
   private SchemaConverter createSchemaConverter(final int maxNestingLevel) {
     return new SchemaConverter(FHIR_CONTEXT, DATA_TYPE_MAPPINGS,
-        EncoderConfig.apply(maxNestingLevel, JavaConverters.asScalaSet(OPEN_TYPES).toSet(), true));
+        EncoderConfig.apply(maxNestingLevel, CollectionConverters.asScala(OPEN_TYPES).toSet(), true));
   }
 
   /**
@@ -437,7 +437,7 @@ public class SchemaConverterTest {
     );
 
     final SchemaConverter schemaConverter = new SchemaConverter(FHIR_CONTEXT, DATA_TYPE_MAPPINGS,
-        EncoderConfig.apply(0, JavaConverters.asScalaSet(limitedOpenTypes).toSet(), true));
+        EncoderConfig.apply(0, CollectionConverters.asScala(limitedOpenTypes).toSet(), true));
 
     final StructType extensionParent = schemaConverter.resourceSchema(Condition.class);
     final MapType extensionsContainerType = (MapType) getField(extensionParent, true,

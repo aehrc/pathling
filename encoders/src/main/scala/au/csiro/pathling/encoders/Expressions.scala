@@ -262,7 +262,7 @@ case class AttachExtensions(targetObject: Expression,
             |if (${obj.value} != null) {
             |// for each of the object in extension maps find the
             |// corresponding object and set the extension
-            | for(java.util.Map.Entry e: scala.collection.JavaConverters.mapAsJavaMap(${
+            | for(java.util.Map.Entry e: scala.jdk.javaapi.CollectionConverters.asJava(${
         extensionMap.value
       }).entrySet()) {
             |   org.hl7.fhir.instance.model.api.IBaseHasExtensions extHolder = (org.hl7.fhir.instance.model.api.IBaseHasExtensions)_fid_mapping.get(e.getKey());
