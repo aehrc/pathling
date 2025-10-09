@@ -78,7 +78,7 @@
     <pathling.hadoopVersion>3.4.1</pathling.hadoopVersion>
     <pathling.hadoopMajorVersion>3</pathling.hadoopMajorVersion>
     <pathling.hapiFhirVersion>8.4.0</pathling.hapiFhirVersion>
-    <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
+    <pathling.antlrVersion>4.13.1</pathling.antlrVersion>
     <pathling.lombokVersion>1.18.38</pathling.lombokVersion>
     <pathling.infinispanVersion>15.0.3.Final</pathling.infinispanVersion>
     <pathling.jacksonVersion>2.16.1</pathling.jacksonVersion>
