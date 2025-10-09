@@ -99,6 +99,51 @@ In Spark 4.0, the `Column` companion object and many utility methods are package
 3. **Buffer to Seq conversions**: Add `.toSeq` when needed
    - Scala collections may return Buffer instead of Seq in some operations
 
+## Git Commit Guidelines
+
+### Commit Message Format
+
+Write commit messages that capture the **objective** of the change, not the specific implementation details that can be obtained from the diff.
+
+**Structure**:
+```
+<type>: <succinct description of the objective>
+
+<optional body explaining the why and context>
+```
+
+**Types**:
+- `fix:` - Bug fixes or resolving warnings/errors
+- `feat:` - New features or enhancements
+- `refactor:` - Code restructuring without changing behavior
+- `docs:` - Documentation updates
+- `test:` - Test-related changes
+- `chore:` - Build, tooling, or dependency updates
+
+**Guidelines**:
+- Focus on **why** the change was needed and **what problem** it solves
+- Avoid mentioning specific files, line numbers, or implementation details
+- Keep the first line concise (under 72 characters when possible)
+- Use the body to provide context if the objective isn't obvious
+
+**Examples**:
+
+Good:
+```
+fix: Suppress Mockito dynamic agent loading warnings in Java 21
+
+Added JVM flag to suppress warnings about Mockito's inline mock maker
+self-attaching. Updated documentation to record Maven test configuration.
+```
+
+Poor:
+```
+fix: Added -XX:+EnableDynamicAgentLoading to pom.xml line 637
+
+Changed the argLine in maven-surefire-plugin configuration.
+Updated CLAUDE.md with new section at lines 102-120.
+```
+
 ## Maven Configuration
 
 ### Surefire Plugin Configuration
