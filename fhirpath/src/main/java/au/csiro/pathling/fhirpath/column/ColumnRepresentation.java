@@ -23,6 +23,7 @@ import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.element_at;
+import static org.apache.spark.sql.functions.exists;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.raise_error;
 import static org.apache.spark.sql.functions.size;
@@ -55,6 +56,19 @@ import scala.Predef;
  * @author John Grimes
  */
 public abstract class ColumnRepresentation {
+
+
+  /**
+   * Wrapper on the Spark SQL functions object to allow easier access to functions in Java.
+   *
+   * @param arrayColumn the array column
+   * @param index the index
+   * @return the column at the specified index
+   */
+  @Nonnull
+  public static Column getAt(@Nonnull final Column arrayColumn, int index) {
+    return functions.get(arrayColumn, lit(index));
+  }
 
   /**
    * Error message used when expecting a singular collection but finding multiple elements.
@@ -179,7 +193,8 @@ public abstract class ColumnRepresentation {
   public Optional<String> asStringValue() {
     return Optional.of(getValue().node())
         .flatMap(maybeCast(Literal.class))
-        .map(Literal::toString);
+        .map(Literal::value)
+        .map(Object::toString);
   }
 
   /**
@@ -229,7 +244,7 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation singular(@Nullable final String errorMessage) {
     return vectorize(
-        c -> when(size(c).leq(1), c.getItem(0))
+        c -> when(size(c).leq(1), getAt(c, 0))
             .otherwise(raise_error(lit(nonNull(errorMessage)
                                        ? errorMessage
                                        : DEF_NOT_SINGULAR_ERROR))),
@@ -323,7 +338,7 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation normaliseNull() {
     return vectorize(
-        c -> functions.when(size(c).equalTo(0), null).otherwise(c),
+        c -> when(size(c).equalTo(0), null).otherwise(c),
         UnaryOperator.identity()
     );
   }
@@ -381,7 +396,7 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation first() {
 
-    return vectorize(c -> c.getItem(0), UnaryOperator.identity());
+    return vectorize(a -> getAt(a, 0), UnaryOperator.identity());
   }
 
   /**
@@ -611,11 +626,11 @@ public abstract class ColumnRepresentation {
   public ColumnRepresentation contains(@Nonnull final ColumnRepresentation element,
       @Nonnull final BinaryOperator<Column> comparator) {
     return vectorize(
-        a -> functions.when(element.getValue().isNotNull(),
-            functions.coalesce(functions.exists(a, e -> comparator.apply(e, element.getValue())),
-                functions.lit(false))),
-        c -> functions.when(element.getValue().isNotNull(),
-            functions.coalesce(comparator.apply(c, element.getValue()), functions.lit(false)))
+        a -> when(element.getValue().isNotNull(),
+            coalesce(exists(a, e -> comparator.apply(e, element.getValue())),
+                lit(false))),
+        c -> when(element.getValue().isNotNull(),
+            coalesce(comparator.apply(c, element.getValue()), lit(false)))
     );
   }
 
@@ -628,7 +643,7 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation traverseChoice(@Nonnull final ElementDefinition... definitions) {
-    return transform(c -> functions.coalesce(Stream.of(definitions)
+    return transform(c -> coalesce(Stream.of(definitions)
         .map(
             ed -> this.copyOf(c)
                 .traverse(ed.getElementName(), ed.getFhirType())

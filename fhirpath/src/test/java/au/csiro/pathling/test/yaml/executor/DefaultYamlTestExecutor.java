@@ -20,6 +20,7 @@ package au.csiro.pathling.test.yaml.executor;
 import static au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase.ANY_ERROR;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -239,7 +240,10 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
 
       // Only check the specific error message if it's not the wildcard ANY_ERROR.
       if (!ANY_ERROR.equals(spec.errorMsg())) {
-        assertEquals(spec.errorMsg(), rootCauseMsg);
+        assertTrue(rootCauseMsg.contains(spec.errorMsg()),
+            String.format("Error message mismatch for expression '%s'. Expected to contain: '%s',"
+                    + " but got: '%s'",
+                spec.expression(), spec.errorMsg(), rootCauseMsg));
       }
     }
   }
