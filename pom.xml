@@ -580,6 +580,7 @@
             <target>21</target>
             <compilerArgs>
               <arg>-Xlint:all,-processing</arg>
+              <arg>-proc:full</arg>
             </compilerArgs>
           </configuration>
         </plugin>
@@ -609,7 +610,11 @@
             <target>21</target>
             <args>
               <arg>-feature</arg>
+              <arg>-deprecation</arg>
             </args>
+            <javacArgs>
+              <javacArg>-proc:full</javacArg>
+            </javacArgs>
             <scalaVersion>${pathling.scalaFullVersion}</scalaVersion>
           </configuration>
         </plugin>
