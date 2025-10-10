@@ -606,7 +606,7 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
     for (i <- 0 until productSize) {
       val productIndexes = calculateProductIndexes(i, inputArrays)
       val currentRowData = buildRowData(zippedArrays, productIndexes)
-      result(i) = InternalRow.apply(currentRowData: _*)
+      result(i) = InternalRow.apply(currentRowData.toIndexedSeq: _*)
     }
     result
   }
