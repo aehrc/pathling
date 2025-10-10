@@ -244,7 +244,7 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation singular(@Nullable final String errorMessage) {
     return vectorize(
-        c -> when(size(c).leq(1), getAt(c, 0))
+        c -> when(c.isNull().or(size(c).leq(1)), getAt(c, 0))
             .otherwise(raise_error(lit(nonNull(errorMessage)
                                        ? errorMessage
                                        : DEF_NOT_SINGULAR_ERROR))),
@@ -338,7 +338,7 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation normaliseNull() {
     return vectorize(
-        c -> when(size(c).equalTo(0), null).otherwise(c),
+        c -> when(c.isNull().or(size(c).equalTo(0)), null).otherwise(c),
         UnaryOperator.identity()
     );
   }
