@@ -64,7 +64,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import scala.collection.mutable.WrappedArray;
+import scala.collection.mutable.ArraySeq;
 
 @Slf4j
 public class PathlingContextTest {
@@ -233,7 +233,7 @@ public class PathlingContextTest {
         .encode(jsonResourcesDF, "Questionnaire")
         .head();
     assertFieldPresent("_extension", defaultRow.schema());
-    final Row defaultItem = (Row) defaultRow.getList(defaultRow.fieldIndex("item")).get(0);
+    final Row defaultItem = (Row) defaultRow.getList(defaultRow.fieldIndex("item")).getFirst();
     assertFieldPresent("item", defaultItem.schema());
 
     // Test explicit options
@@ -247,10 +247,10 @@ public class PathlingContextTest {
     assertFieldNotPresent("_extension", rowWithNesting.schema());
     // Test item nesting
     final Row itemWithNesting = (Row) rowWithNesting
-        .getList(rowWithNesting.fieldIndex("item")).get(0);
+        .getList(rowWithNesting.fieldIndex("item")).getFirst();
     assertFieldPresent("item", itemWithNesting.schema());
     final Row nestedItem = (Row) itemWithNesting
-        .getList(itemWithNesting.fieldIndex("item")).get(0);
+        .getList(itemWithNesting.fieldIndex("item")).getFirst();
     assertFieldNotPresent("item", nestedItem.schema());
 
     // Test explicit options
@@ -263,11 +263,11 @@ public class PathlingContextTest {
         .encode(jsonResourcesDF, "Patient").head();
     assertFieldPresent("_extension", rowWithExtensions.schema());
 
-    final Map<Integer, WrappedArray<Row>> extensions = rowWithExtensions
+    final Map<Integer, ArraySeq<Row>> extensions = rowWithExtensions
         .getJavaMap(rowWithExtensions.fieldIndex("_extension"));
 
     // get the first extension of some extension set
-    final Row extension = (Row) extensions.values().toArray(WrappedArray[]::new)[0].apply(0);
+    final Row extension = (Row) extensions.values().toArray(ArraySeq[]::new)[0].apply(0);
     assertFieldPresent("valueString", extension.schema());
     assertFieldPresent("valueAddress", extension.schema());
     assertFieldPresent("valueBoolean", extension.schema());

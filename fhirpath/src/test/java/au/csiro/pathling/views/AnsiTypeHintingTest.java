@@ -82,8 +82,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import scala.collection.JavaConverters;
-import scala.collection.mutable.WrappedArray;
+import scala.jdk.javaapi.CollectionConverters;
+import scala.collection.mutable.ArraySeq;
 
 @SpringBootUnitTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -214,8 +214,8 @@ class AnsiTypeHintingTest {
 
   @Nonnull
   static String sqlValueToString(@Nonnull final Object value) {
-    if (value instanceof final WrappedArray<?> array) {
-      return "[" + JavaConverters.seqAsJavaList(array).stream()
+    if (value instanceof final ArraySeq<?> array) {
+      return "[" + CollectionConverters.asJava(array).stream()
           .map(AnsiTypeHintingTest::sqlValueToString).collect(
               Collectors.joining(",")) + "]";
     }

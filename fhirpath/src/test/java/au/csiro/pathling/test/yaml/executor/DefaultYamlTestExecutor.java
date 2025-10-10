@@ -57,7 +57,7 @@ import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructType;
 import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
-import scala.collection.mutable.WrappedArray;
+import scala.collection.mutable.ArraySeq;
 
 /**
  * Standard implementation of {@link YamlTestExecutor} that handles the execution and validation of
@@ -116,7 +116,6 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
    * null.
    * @throws AssertionError if the test fails validation, or if an excluded test doesn't behave
    * according to its exclusion configuration
-   * @throws Exception if an unexpected error occurs during test execution
    * @see ExcludeRule
    */
   @Override
@@ -176,7 +175,6 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
    *
    * @param rb the resolver builder used to create the ResourceResolver for the evaluator. Must not
    * be null.
-   * @throws Exception if an error occurs during test execution or result validation
    */
   private void doCheck(@Nonnull final ResolverBuilder rb) {
     // Create the FHIRPath evaluator with the provided resolver.
@@ -328,7 +326,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
 
     // Handle single-item lists by unwrapping them to the contained value.
     final Object resultRepresentation = result instanceof final List<?> list && list.size() == 1
-                                        ? list.get(0)
+                                        ? list.getFirst()
                                         : result;
 
     // Convert the YAML representation to a FHIR element definition.
@@ -414,7 +412,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
                              ? null
                              : row.get(index);
 
-    if (actualRaw instanceof final WrappedArray<?> wrappedArray) {
+    if (actualRaw instanceof final ArraySeq<?> wrappedArray) {
       // Handle Spark WrappedArray - unwrap single-element arrays.
       return (wrappedArray.length() == 1
               ? adjustResultType(wrappedArray.apply(0))
@@ -473,7 +471,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
           continue;
         } else {
           // Single-valued list: extract the single value.
-          singleValue = l.get(0);
+          singleValue = l.getFirst();
         }
       }
 

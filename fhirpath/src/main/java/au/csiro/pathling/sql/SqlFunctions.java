@@ -17,6 +17,9 @@
 
 package au.csiro.pathling.sql;
 
+import static org.apache.spark.sql.classic.ExpressionUtils.column;
+import static org.apache.spark.sql.classic.ExpressionUtils.expression;
+
 import jakarta.annotation.Nonnull;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
@@ -46,7 +49,7 @@ public class SqlFunctions {
    */
   @Nonnull
   public static Column prune_annotations(@Nonnull final Column col) {
-    return new Column(new PruneSyntheticFields(col.expr()));
+    return column(new PruneSyntheticFields(expression(col)));
   }
 
 

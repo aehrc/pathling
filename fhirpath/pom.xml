@@ -48,15 +48,16 @@
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-sql_${pathling.scalaVersion}</artifactId>
       <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-slf4j2-impl</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.delta</groupId>
       <artifactId>delta-spark_${pathling.scalaVersion}</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-aws</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>

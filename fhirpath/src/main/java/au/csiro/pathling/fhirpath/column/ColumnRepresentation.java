@@ -36,12 +36,13 @@ import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.catalyst.expressions.ArrayJoin;
-import org.apache.spark.sql.catalyst.expressions.Literal;
+import org.apache.spark.sql.Column$;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.internal.Literal;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import scala.Predef;
 
 
 /**
@@ -176,7 +177,7 @@ public abstract class ColumnRepresentation {
    * @return An optional string value of the current {@link ColumnRepresentation}
    */
   public Optional<String> asStringValue() {
-    return Optional.of(getValue().expr())
+    return Optional.of(getValue().node())
         .flatMap(maybeCast(Literal.class))
         .map(Literal::toString);
   }
@@ -447,9 +448,15 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public ColumnRepresentation join(@Nonnull final ColumnRepresentation separator) {
-    // This uses ArrayJoin so that we can pass a column as a separator. The functions.array_join
-    // function requires a literal separator.
-    return vectorize(c -> new Column(new ArrayJoin(c.expr(), separator.getValue().expr())),
+    // NOTE: We must call the Scala companion object `Column$.MODULE$.fn` rather than `Column.fn`
+    // because the Scala varargs method `def fn(name: String, cols: Column*)` is not directly
+    // accessible from Java. The Scala compiler normally expands `cols*` into a Seq[Column],
+    // but Java cannot perform that expansion automatically. To replicate it, we use
+    // `Predef.wrapRefArray(...)` to convert the Java array into a Scala `ArraySeq`, then call
+    // `.toSeq()` to obtain the immutable `Seq[Column]` expected by the Scala method.
+    return vectorize(c -> Column$.MODULE$.fn("array_join",
+            Predef.wrapRefArray(
+                new Column[]{getValue(), separator.getValue()}).toSeq()),
         UnaryOperator.identity());
   }
 
