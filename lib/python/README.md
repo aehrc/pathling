@@ -11,7 +11,7 @@ Python applications and data science workflows.
 
 Prerequisites:
 
-- Python 3.8+ with pip
+- Python 3.9+ with pip
 
 To install, run this command:
 

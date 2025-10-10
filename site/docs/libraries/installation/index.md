@@ -9,7 +9,7 @@ description: Instructions for installing the Pathling libraries for Python, R, S
 
 Prerequisites:
 
-- Python 3.8+ with pip
+- Python 3.9+ with pip
 
 To install, run this command:
 

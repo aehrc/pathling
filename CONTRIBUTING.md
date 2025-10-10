@@ -32,7 +32,7 @@ You will need the following software to build the solution:
 
 * Java 17
 * Maven 3.9+
-* Python 3.8+
+* Python 3.9+
 * R 3.5+
 
 To build and install locally, run:
