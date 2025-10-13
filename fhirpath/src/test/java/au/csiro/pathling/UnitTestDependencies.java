@@ -36,7 +36,6 @@ import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 import org.fhir.ucum.UcumService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -46,8 +45,7 @@ import org.springframework.core.env.Environment;
 /**
  * @author John Grimes
  */
-@TestConfiguration
-//@Configuration 
+@Configuration
 @Profile("unit-test")
 public class UnitTestDependencies {
 
@@ -137,7 +135,7 @@ public class UnitTestDependencies {
   static UcumService ucumService() {
     return Ucum.service();
   }
-  
+
   @Bean
   @ConditionalOnMissingBean
   @Nonnull
