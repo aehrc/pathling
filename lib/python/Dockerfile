@@ -6,8 +6,8 @@ RUN echo "spark.jars.packages au.csiro.pathling:library-runtime:8.1.0" >> /usr/l
 USER ${NB_UID}
 
 RUN pip install --quiet --no-cache-dir pathling && \
-    fix-permissions "${CONDA_DIR}" && \
-    fix-permissions "/home/${NB_USER}"
+    fix-permissions "${CONDA_DIR}" || true && \
+    fix-permissions "/home/${NB_USER}" || true
 
 # This caches the download of the dependencies specified earlier.
 RUN source /usr/local/bin/before-notebook.d/spark-config.sh && \
