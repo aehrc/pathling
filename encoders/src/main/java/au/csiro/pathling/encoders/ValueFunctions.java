@@ -24,18 +24,38 @@
 
 package au.csiro.pathling.encoders;
 
+import static org.apache.spark.sql.classic.ExpressionUtils.column;
+import static org.apache.spark.sql.classic.ExpressionUtils.expression;
+
 import jakarta.annotation.Nonnull;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
+import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.classic.ColumnConversions$;
-import org.apache.spark.sql.classic.ExpressionUtils;
 
 /**
  * Java-based utility class for value-based Column operations. This class uses Java to access
  * package-private methods in Spark that are not accessible from Scala.
  */
+@UtilityClass
 public class ValueFunctions {
+
+  /**
+   * Helper method to lift a Column-based operator to an Expression-based operator.
+   *
+   * @param columExpression The Column-based operator
+   * @return The Expression-based operator
+   */
+  @Nonnull
+  private static UnaryOperator<Expression> liftToExpression(
+      @Nonnull UnaryOperator<Column> columExpression) {
+    // This needs to be used rather than ExpressionUtils.expression()
+    // to correctly unwrap the underlying expression.
+    return e -> ColumnConversions$.MODULE$.toRichColumn(
+            columExpression.apply(column(e)))
+        .expr();
+  }
 
   /**
    * Applies an expression to an array value, or an else expression if the value is not an array.
@@ -48,28 +68,15 @@ public class ValueFunctions {
   @Nonnull
   public static Column ifArray(
       @Nonnull final Column value,
-      @Nonnull final Function<Column, Column> arrayExpression,
-      @Nonnull final Function<Column, Column> elseExpression) {
+      @Nonnull final UnaryOperator<Column> arrayExpression,
+      @Nonnull final UnaryOperator<Column> elseExpression) {
 
-    final Expression valueExpr = ExpressionUtils.expression(value);
-
-    final Function<Expression, Expression> arrayExprFunc = e ->
-        // This needs to be used rather than ExpressionUtils.expression() 
-        // to correctly unwrap the underlying expression.
-        ColumnConversions$.MODULE$.toRichColumn(arrayExpression.apply(ExpressionUtils.column(e)))
-            .expr();
-
-    final Function<Expression, Expression> elseExprFunc = e ->
-        ColumnConversions$.MODULE$.toRichColumn(elseExpression.apply(ExpressionUtils.column(e)))
-            .expr();
-
-    final Expression resultExpr = new UnresolvedIfArray(
-        valueExpr,
-        arrayExprFunc::apply,
-        elseExprFunc::apply
-    );
-
-    return ExpressionUtils.column(resultExpr);
+    return column(
+        new UnresolvedIfArray(
+            expression(value),
+            liftToExpression(arrayExpression)::apply,
+            liftToExpression(elseExpression)::apply
+        ));
   }
 
   /**
@@ -84,24 +91,14 @@ public class ValueFunctions {
   @Nonnull
   public static Column ifArray2(
       @Nonnull final Column value,
-      @Nonnull final Function<Column, Column> arrayExpression,
-      @Nonnull final Function<Column, Column> elseExpression) {
-
-    final Expression valueExpr = ExpressionUtils.expression(value);
-
-    final Function<Expression, Expression> arrayExprFunc = e ->
-        ExpressionUtils.expression(arrayExpression.apply(ExpressionUtils.column(e)));
-
-    final Function<Expression, Expression> elseExprFunc = e ->
-        ExpressionUtils.expression(elseExpression.apply(ExpressionUtils.column(e)));
-
-    final Expression resultExpr = new UnresolvedIfArray2(
-        valueExpr,
-        arrayExprFunc::apply,
-        elseExprFunc::apply
-    );
-
-    return ExpressionUtils.column(resultExpr);
+      @Nonnull final UnaryOperator<Column> arrayExpression,
+      @Nonnull final UnaryOperator<Column> elseExpression) {
+    return column(
+        new UnresolvedIfArray2(
+            expression(value),
+            liftToExpression(arrayExpression)::apply,
+            liftToExpression(elseExpression)::apply
+        ));
   }
 
   /**
@@ -112,8 +109,8 @@ public class ValueFunctions {
    */
   @Nonnull
   public static Column unnest(@Nonnull final Column value) {
-    final Expression valueExpr = ExpressionUtils.expression(value);
+    final Expression valueExpr = expression(value);
     final Expression unnestExpr = new UnresolvedUnnest(valueExpr);
-    return ExpressionUtils.column(unnestExpr);
+    return column(unnestExpr);
   }
 }

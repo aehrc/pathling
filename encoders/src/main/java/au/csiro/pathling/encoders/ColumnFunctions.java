@@ -25,24 +25,24 @@
 package au.csiro.pathling.encoders;
 
 import jakarta.annotation.Nonnull;
+import java.util.Arrays;
+import java.util.List;
+import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.classic.ExpressionUtils;
 import scala.collection.immutable.Seq;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-
 /**
- * Java-based utility class for creating Column expressions from Catalyst expressions.
- * This class uses Java to access package-private methods in Spark that are not accessible from Scala.
+ * Java-based utility class for creating Column expressions from Catalyst expressions. This class
+ * uses Java to access package-private methods in Spark that are not accessible from Scala.
  */
+@UtilityClass
 public class ColumnFunctions {
 
   /**
-   * Creates a Column from an array of Columns containing arrays of structs, producing
-   * an array of structs where each element is a product of the elements of the input arrays.
+   * Creates a Column from an array of Columns containing arrays of structs, producing an array of
+   * structs where each element is a product of the elements of the input arrays.
    *
    * @param columns The input columns
    * @return A Column with the struct product
@@ -52,10 +52,11 @@ public class ColumnFunctions {
     // Convert columns to expressions using Java streams
     final List<Expression> expressionList = Arrays.stream(columns)
         .map(ExpressionUtils::expression)
-        .collect(Collectors.toList());
+        .toList();
 
     // Convert Java List to Scala Seq
-    final Seq<Expression> expressions = scala.jdk.javaapi.CollectionConverters.asScala(expressionList).toSeq();
+    final Seq<Expression> expressions = scala.jdk.javaapi.CollectionConverters.asScala(
+        expressionList).toSeq();
 
     // Create StructProduct expression
     final Expression structProductExpr = new StructProduct(expressions, false);
@@ -65,10 +66,10 @@ public class ColumnFunctions {
   }
 
   /**
-   * Creates a Column from an array of Columns containing arrays of structs, producing
-   * an array of structs where each element is a product of the elements of the input arrays.
-   * If the input arrays are of different lengths, the output array will contain nulls for missing
-   * elements in the input.
+   * Creates a Column from an array of Columns containing arrays of structs, producing an array of
+   * structs where each element is a product of the elements of the input arrays. If the input
+   * arrays are of different lengths, the output array will contain nulls for missing elements in
+   * the input.
    *
    * @param columns The input columns
    * @return A Column with the struct product (outer join style)
@@ -78,10 +79,11 @@ public class ColumnFunctions {
     // Convert columns to expressions using Java streams
     final List<Expression> expressionList = Arrays.stream(columns)
         .map(ExpressionUtils::expression)
-        .collect(Collectors.toList());
+        .toList();
 
     // Convert Java List to Scala Seq
-    final Seq<Expression> expressions = scala.jdk.javaapi.CollectionConverters.asScala(expressionList).toSeq();
+    final Seq<Expression> expressions = scala.jdk.javaapi.CollectionConverters.asScala(
+        expressionList).toSeq();
 
     // Create StructProduct expression with outer=true
     final Expression structProductExpr = new StructProduct(expressions, true);
