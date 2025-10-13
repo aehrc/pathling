@@ -397,6 +397,28 @@
           <plugin>
             <groupId>com.google.cloud.tools</groupId>
             <artifactId>jib-maven-plugin</artifactId>
+            <configuration>
+              <from>
+                <image>${pathling.dockerBaseImage}</image>
+                <platforms>
+                  <platform>
+                    <architecture>amd64</architecture>
+                    <os>linux</os>
+                  </platform>
+                  <platform>
+                    <architecture>arm64</architecture>
+                    <os>linux</os>
+                  </platform>
+                </platforms>
+              </from>
+              <container>
+                <jvmFlags>
+                  <jvmFlag>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</jvmFlag>
+                  <jvmFlag>--add-opens=java.base/java.net=ALL-UNNAMED</jvmFlag>
+                  <jvmFlag>--add-opens=java.base/sun.util.calendar=ALL-UNNAMED</jvmFlag>
+                </jvmFlags>
+              </container>
+            </configuration>
             <executions>
               <execution>
                 <id>build</id>
@@ -412,19 +434,6 @@
                   <goal>build</goal>
                 </goals>
                 <configuration>
-                  <from>
-                    <image>${pathling.dockerBaseImage}</image>
-                    <platforms>
-                      <platform>
-                        <architecture>amd64</architecture>
-                        <os>linux</os>
-                      </platform>
-                      <platform>
-                        <architecture>arm64</architecture>
-                        <os>linux</os>
-                      </platform>
-                    </platforms>
-                  </from>
                   <to>
                     <image>${pathling.fhirServerDockerRepo}</image>
                     <tags>
