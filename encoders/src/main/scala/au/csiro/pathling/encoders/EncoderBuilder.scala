@@ -41,8 +41,18 @@ object EncoderBuilder {
     "Bundle")
 
   /**
-   * Custom AgnosticEncoder that wraps serializer and deserializer expressions
+   * Custom AgnosticEncoder that wraps serializer and deserializer expressions.
+   *
+   * Note: This extends AgnosticExpressionPathEncoder which is deprecated and will be removed in
+   * Spark 4.1. This is the appropriate mechanism for custom encoders that build Expression trees
+   * directly. When Spark 4.1 is released, we will need to evaluate the replacement API.
+   *
+   * The deprecation warning is suppressed because:
+   * 1. This is the correct API for our use case (custom expression-based encoding)
+   * 2. The alternative (UserDefinedType) would require major architectural changes
+   * 3. Spark may provide a better alternative in 4.1
    */
+  @annotation.nowarn("cat=deprecation")
   private case class FhirAgnosticEncoder[T](
       schemaDataType: DataType,
       serializerExpr: Expression,
