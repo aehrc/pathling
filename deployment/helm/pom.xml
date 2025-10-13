@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2018-2025 Commonwealth Scientific and Industrial Research
+  ~ Organisation (CSIRO) ABN 41 687 119 230.
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>au.csiro.pathling</groupId>
+  <artifactId>helm</artifactId>
+  <version>1.0.2-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>Pathling Helm Chart</name>
+  <description>A Helm chart for deploying Pathling Server on Kubernetes.</description>
+
+  <properties>
+    <pathling.artifactHub.id>d13033b5-7473-4df3-90fa-f1e0dd8b46e4</pathling.artifactHub.id>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>package</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>helm</executable>
+              <arguments>
+                <argument>package</argument>
+                <argument>--destination</argument>
+                <argument>${project.build.directory}/helm</argument>
+                <argument>pathling</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>index</id>
+            <phase>package</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>helm</executable>
+              <arguments>
+                <argument>repo</argument>
+                <argument>index</argument>
+                <argument>--url</argument>
+                <argument>https://pathling.csiro.au/helm</argument>
+                <argument>${project.build.directory}/helm</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <classesDirectory>${project.build.directory}/helm</classesDirectory>
+          <includes>
+            <include>index.yaml</include>
+            <include>artifacthub-repo.yml</include>
+            <include>*.tgz</include>
+          </includes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>ru.yaal.maven</groupId>
+        <artifactId>write-text-files-maven-plugin</artifactId>
+        <version>1.1</version>
+        <executions>
+          <execution>
+            <id>write-artifacthub-config</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>write-text-files</goal>
+            </goals>
+            <configuration>
+              <charset>UTF-8</charset>
+              <files>
+                <file>
+                  <path>${project.build.directory}/helm/artifacthub-repo.yml</path>
+                  <lines>
+                    <line>repositoryId: ${pathling.artifactHub.id}</line>
+                    <line>owners:</line>
+                    <line xml:space="preserve">  - name: John Grimes</line>
+                    <line xml:space="preserve">    email: John.Grimes@csiro.au</line>
+                  </lines>
+                </file>
+              </files>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
