@@ -54,7 +54,7 @@ public class ValueFunctions {
     final Expression valueExpr = ExpressionUtils.expression(value);
 
     final Function<Expression, Expression> arrayExprFunc = e ->
-        // This needs to be user rather than ExpressionUtils.expression() 
+        // This needs to be used rather than ExpressionUtils.expression() 
         // to correctly unwrap the underlying expression.
         ColumnConversions$.MODULE$.toRichColumn(arrayExpression.apply(ExpressionUtils.column(e)))
             .expr();

@@ -66,7 +66,7 @@ case class PruneSyntheticFields(child: Expression)
             case (name, _) => !isAnnotation(name)
           }
           .map(_._2)
-        InternalRow(normalizedValues.toIndexedSeq: _*)
+        InternalRow(normalizedValues: _*)
       case _ => value
     }
   }
