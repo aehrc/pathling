@@ -17,5 +17,6 @@ pathling:
   imagePullSecrets: [ ]
   tolerations: [ ]
   affinity: ~
+  securityContext: ~
   config: { }
   secretConfig: { }

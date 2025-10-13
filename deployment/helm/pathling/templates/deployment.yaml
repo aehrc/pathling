@@ -72,6 +72,7 @@ spec:
       imagePullSecrets: {{ toJson .Values.pathling.imagePullSecrets }}
       tolerations: {{ toJson .Values.pathling.tolerations }}
       affinity: {{ toJson .Values.pathling.affinity }}
+      securityContext: {{ toJson .Values.pathling.securityContext }}
   strategy:
     type: {{ .Values.pathling.deployment.strategy }}
 {{- if gt (len .Values.pathling.secretConfig) 0 }}
