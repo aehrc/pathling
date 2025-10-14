@@ -136,16 +136,16 @@ public class ExpressionsTest {
             functions.array(functions.array(functions.col("id"), functions.lit(22)),
                 functions.array(functions.col("id"), functions.lit(33))))
         .withColumn("test_single_array",
-            ifArray2(functions.col("id_array"), 
-                x -> functions.array(functions.lit(100)), 
+            ifArray2(functions.col("id_array"),
+                x -> functions.array(functions.lit(100)),
                 x -> functions.array(functions.lit(50))))
         .withColumn("test_array_of_arrays",
-            ifArray2(functions.col("id_array_of_arrays"), 
-                x -> functions.array(functions.lit(200)), 
+            ifArray2(functions.col("id_array_of_arrays"),
+                x -> functions.array(functions.lit(200)),
                 x -> functions.array(functions.lit(50))))
         .withColumn("test_flatten_array_of_arrays",
-            ifArray2(functions.col("id_array_of_arrays"), 
-                functions::flatten, 
+            ifArray2(functions.col("id_array_of_arrays"),
+                functions::flatten,
                 x -> x))
         .withColumn("test_with_filter",
             ifArray2(functions.col("id_array_of_arrays"),
@@ -222,127 +222,122 @@ public class ExpressionsTest {
   @Test
   void testArrayCrossProd() {
     final Dataset<Row> ds = spark.range(1).toDF();
-    final Dataset<Row> resultDs = ds
-        .withColumn("one_array", ColumnFunctions.structProduct(
-                functions.array(functions.struct(
-                    functions.lit("xxx").alias("str"),
-                    functions.lit(10).alias("int")
-                ))
-            )
-        )
-        .withColumn("two_arrays", ColumnFunctions.structProduct(
-                functions.array(
-                    functions.struct(
-                        functions.lit("zzz").alias("str")
-                    ),
-                    functions.struct(
-                        functions.lit("yyy").alias("str")
-                    )
-                ),
-                functions.array(
-                    functions.struct(
-                        functions.lit(13).alias("int")
-                    ),
-                    functions.struct(
-                        functions.lit(17).alias("int")
-                    ),
-                    functions.struct(
-                        functions.lit(1).alias("int")
-                    )
-                )
-            )
-        )
-        .withColumn("three_arrays", ColumnFunctions.structProduct(
-                functions.array(
-                    functions.struct(
-                        functions.lit("zzz").alias("str"),
-                        functions.lit(true).alias("bool")
-                    ),
-                    functions.struct(
-                        functions.lit("yyy").alias("str"),
-                        functions.lit(false).alias("bool")
-                    )
-                ),
-                functions.array(
-                    functions.struct(
-                        functions.lit(13).alias("int")
-                    ),
-                    functions.struct(
-                        functions.lit(17).alias("int")
-                    ),
-                    functions.struct(
-                        functions.lit(1).alias("int")
-                    )
-                ),
-                functions.array(
-                    functions.struct(
-                        functions.lit(13.1).alias("float")
-                    ),
-                    functions.struct(
-                        functions.lit(17.2).alias("float")
-                    )
-                )
-            )
-        );
 
-    final List<Row> results = resultDs.collectAsList();
-    assertEquals(1, results.size());
+    // Create three input array columns
+    final Dataset<Row> inputDs = ds
+        .withColumn("arrayA", functions.array(
+            functions.struct(functions.lit("zzz").alias("str"), functions.lit(true).alias("bool")),
+            functions.struct(functions.lit("yyy").alias("str"), functions.lit(false).alias("bool"))
+        ))
+        .withColumn("arrayB", functions.array(
+            functions.struct(functions.lit(13).alias("int")),
+            functions.struct(functions.lit(17).alias("int")),
+            functions.struct(functions.lit(1).alias("int"))
+        ))
+        .withColumn("arrayC", functions.array(
+            functions.struct(functions.lit(13.1).alias("float")),
+            functions.struct(functions.lit(17.2).alias("float"))
+        ));
 
-    final Row row = results.getFirst();
-    assertEquals(0L, (Long) row.getAs("id"));
-    assertNotNull(row.getAs("one_array"));
-    assertNotNull(row.getAs("two_arrays"));
-    assertNotNull(row.getAs("three_arrays"));
+    // Test structProduct
+    final Dataset<Row> structProductDs = inputDs
+        .withColumn("sp_one", ColumnFunctions.structProduct(inputDs.col("arrayA")))
+        .withColumn("sp_two", ColumnFunctions.structProduct(inputDs.col("arrayA"), inputDs.col("arrayB")))
+        .withColumn("sp_three", ColumnFunctions.structProduct(inputDs.col("arrayA"), inputDs.col("arrayB"), inputDs.col("arrayC")));
+
+    // Test structProductOuter
+    final Dataset<Row> structProductOuterDs = inputDs
+        .withColumn("spo_one", ColumnFunctions.structProductOuter(inputDs.col("arrayA")))
+        .withColumn("spo_two", ColumnFunctions.structProductOuter(inputDs.col("arrayA"), inputDs.col("arrayB")))
+        .withColumn("spo_three", ColumnFunctions.structProductOuter(inputDs.col("arrayA"), inputDs.col("arrayB"), inputDs.col("arrayC")));
+
+    // Collect and assert structProduct results
+    final List<Row> spResults = structProductDs.collectAsList();
+    assertEquals(1, spResults.size());
+    final Row spRow = spResults.getFirst();
+    assertNotNull(spRow.getAs("sp_one"));
+    assertNotNull(spRow.getAs("sp_two"));
+    assertNotNull(spRow.getAs("sp_three"));
+
+    // Collect and assert structProductOuter results
+    final List<Row> spoResults = structProductOuterDs.collectAsList();
+    assertEquals(1, spoResults.size());
+    final Row spoRow = spoResults.getFirst();
+    assertNotNull(spoRow.getAs("spo_one"));
+    assertNotNull(spoRow.getAs("spo_two"));
+    assertNotNull(spoRow.getAs("spo_three"));
+
+    // Assert sizes against expected product
+    final int aSize = 2; // arrayA
+    final int bSize = 3; // arrayB
+    final int cSize = 2; // arrayC
+
+    assertEquals(aSize, ((Seq<?>) spRow.getAs("sp_one")).size());
+    assertEquals(aSize, ((Seq<?>) spoRow.getAs("spo_one")).size());
+
+    assertEquals(aSize * bSize, ((Seq<?>) spRow.getAs("sp_two")).size());
+    assertEquals(aSize * bSize, ((Seq<?>) spoRow.getAs("spo_two")).size());
+
+    assertEquals(aSize * bSize * cSize, ((Seq<?>) spRow.getAs("sp_three")).size());
+    assertEquals(aSize * bSize * cSize, ((Seq<?>) spoRow.getAs("spo_three")).size());
   }
 
 
   @Test
   void testArrayCrossProdWithNullsAndEmptys() {
     final Dataset<Row> ds = spark.range(1).toDF();
-    final Dataset<Row> resultDs = ds
-        .withColumn("null", ColumnFunctions.structProduct(
-                functions.lit(null).cast(DataTypes.createArrayType(DataTypes.createStructType(
-                    Arrays.asList(
-                        DataTypes.createStructField("str", DataTypes.StringType, true),
-                        DataTypes.createStructField("int", DataTypes.IntegerType, true)
-                    )
-                )))
-            )
-        )
-        .withColumn("emptyArray", ColumnFunctions.structProduct(
-                functions.array().cast(DataTypes.createArrayType(DataTypes.createStructType(
-                    Arrays.asList(
-                        DataTypes.createStructField("str", DataTypes.StringType, true),
-                        DataTypes.createStructField("int", DataTypes.IntegerType, true)
-                    )
-                )))
-            )
-        )
-        .withColumn("nonEmptyWithEmpty", ColumnFunctions.structProduct(
-                functions.array(
-                    functions.struct(
-                        functions.lit("zzz").alias("nonEmpty")
-                    ),
-                    functions.struct(
-                        functions.lit("yyy").alias("nonEmpty")
-                    )
-                ),
-                functions.array().cast(DataTypes.createArrayType(DataTypes.createStructType(
-                    Arrays.asList(
-                        DataTypes.createStructField("str", DataTypes.StringType, true),
-                        DataTypes.createStructField("int", DataTypes.IntegerType, true)
-                    )
-                )))
-            )
-        );
 
-    final List<Row> results = resultDs.collectAsList();
-    assertEquals(1, results.size());
+    // Create input array columns
+    final Dataset<Row> inputDs = ds
+        .withColumn("nullArray", functions.lit(null).cast(DataTypes.createArrayType(DataTypes.createStructType(
+            Arrays.asList(
+                DataTypes.createStructField("str", DataTypes.StringType, true),
+                DataTypes.createStructField("int", DataTypes.IntegerType, true)
+            )
+        ))))
+        .withColumn("emptyArray", functions.array().cast(DataTypes.createArrayType(DataTypes.createStructType(
+            Arrays.asList(
+                DataTypes.createStructField("str", DataTypes.StringType, true),
+                DataTypes.createStructField("int", DataTypes.IntegerType, true)
+            )
+        ))))
+        .withColumn("nonEmptyArray", functions.array(
+            functions.struct(functions.lit("zzz").alias("str"), functions.lit(1).alias("int")),
+            functions.struct(functions.lit("yyy").alias("str"), functions.lit(2).alias("int"))
+        ));
 
-    final Row row = results.getFirst();
-    assertEquals(0L, (Long) row.getAs("id"));
-    assertNotNull(row.getAs("null"));
-    assertNotNull(row.getAs("emptyArray"));
-    assertNotNull(row.getAs("nonEmptyWithEmpty"));
+    // Test structProduct
+    final Dataset<Row> structProductDs = inputDs
+        .withColumn("sp_null", ColumnFunctions.structProduct(inputDs.col("nullArray")))
+        .withColumn("sp_empty", ColumnFunctions.structProduct(inputDs.col("emptyArray")))
+        .withColumn("sp_nonEmpty", ColumnFunctions.structProduct(inputDs.col("nonEmptyArray"), inputDs.col("emptyArray")));
+
+    // Test structProductOuter
+    final Dataset<Row> structProductOuterDs = inputDs
+        .withColumn("spo_null", ColumnFunctions.structProductOuter(inputDs.col("nullArray")))
+        .withColumn("spo_empty", ColumnFunctions.structProductOuter(inputDs.col("emptyArray")))
+        .withColumn("spo_nonEmpty", ColumnFunctions.structProductOuter(inputDs.col("nonEmptyArray"), inputDs.col("emptyArray")));
+
+    // Collect and assert structProduct results
+    final List<Row> spResults = structProductDs.collectAsList();
+    assertEquals(1, spResults.size());
+    final Row spRow = spResults.getFirst();
+    assertNotNull(spRow.getAs("sp_null"));
+    assertEquals(0, ((Seq<?>) spRow.getAs("sp_null")).size());
+    assertNotNull(spRow.getAs("sp_empty"));
+    assertEquals(0, ((Seq<?>) spRow.getAs("sp_empty")).size());
+    assertNotNull(spRow.getAs("sp_nonEmpty"));
+    assertEquals(0, ((Seq<?>) spRow.getAs("sp_nonEmpty")).size());
+
+    // Collect and assert structProductOuter results
+    final List<Row> spoResults = structProductOuterDs.collectAsList();
+    assertEquals(1, spoResults.size());
+    final Row spoRow = spoResults.getFirst();
+    assertNotNull(spoRow.getAs("spo_null"));
+    assertEquals(1, ((Seq<?>) spoRow.getAs("spo_null")).size());
+    assertNotNull(spoRow.getAs("spo_empty"));
+    assertEquals(1, ((Seq<?>) spoRow.getAs("spo_empty")).size());
+    assertNotNull(spoRow.getAs("spo_nonEmpty"));
+    assertEquals(1, ((Seq<?>) spoRow.getAs("spo_nonEmpty")).size());
   }
 }
