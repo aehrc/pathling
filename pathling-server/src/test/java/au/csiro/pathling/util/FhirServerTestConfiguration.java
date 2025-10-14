@@ -7,6 +7,7 @@ import au.csiro.pathling.async.SparkJobListener;
 import au.csiro.pathling.async.StageMap;
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.export.ExportResultRegistry;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
@@ -157,5 +158,12 @@ public class FhirServerTestConfiguration {
   @ConfigurationProperties("pathling")
   public ServerConfiguration serverConfiguration() {
     return new ServerConfiguration();
+  }
+  
+  @Bean
+  @Primary
+  @ConditionalOnMissingBean
+  public ExportResultRegistry exportResultRegistry(SparkSession sparkSession, @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}/jobs") String jobsDir) {
+    return new ExportResultRegistry(sparkSession, jobsDir);
   }
 } 

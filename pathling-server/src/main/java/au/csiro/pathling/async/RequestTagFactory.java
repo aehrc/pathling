@@ -22,6 +22,7 @@ import static java.util.function.Predicate.not;
 import au.csiro.pathling.cache.Cacheable;
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import java.util.HashSet;

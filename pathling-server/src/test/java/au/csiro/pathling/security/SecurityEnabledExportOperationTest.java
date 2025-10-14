@@ -26,6 +26,7 @@ import au.csiro.pathling.export.ExportExecutor;
 import au.csiro.pathling.export.ExportOperationValidator;
 import au.csiro.pathling.export.ExportProvider;
 import au.csiro.pathling.export.ExportRequest;
+import au.csiro.pathling.export.ExportResultProvider;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
@@ -33,6 +34,7 @@ import au.csiro.pathling.util.TestDataSetup;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import ca.uhn.fhir.context.FhirContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -45,11 +47,14 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.ApplicationContext;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * @see <a
@@ -72,6 +77,8 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
   private static Path tempDir;
   @Autowired
   private ApplicationContext applicationContext;
+  @Autowired
+  private ExportResultProvider exportResultProvider;
 
 
   @DynamicPropertySource
@@ -191,6 +198,45 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
         .isThrownBy(() -> perform_export(beanExportProvider, ADMIN_USER, List.of(), false))
         .isExactlyInstanceOf(AccessDeniedError.class)
         .withMessage(PATHLING_EXPORT_MSG);
+  }
+  
+  @Test
+  @WithMockJwt(username = "admin", authorities = {"pathling:export", "pathling:read:Patient"})
+  void test_forbidden_download_ndjson_without_authority() {
+    exportProvider = setup_scenario(tempDir, "Patient");
+    JsonNode manifest = perform_export();
+    String url = manifest.get("output").get(0).get("url").asText();
+    Map<String, String> queryParams = UriComponentsBuilder.fromUriString(url).build().getQueryParams().toSingleValueMap();
+
+    switchToUser("newUser");
+    
+    assertThatException().isThrownBy(() -> perform_export_result(queryParams.get("job"), queryParams.get("file"), null))
+        .isExactlyInstanceOf(AccessDeniedError.class)
+        .withMessage(PATHLING_EXPORT_MSG);
+  }
+  
+  @Test
+  @WithMockJwt(username = "admin", authorities = {"pathling:export", "pathling:read:Patient"})
+  void test_forbidden_download_ndjson_if_job_with_different_owner() {
+    exportProvider = setup_scenario(tempDir, "Patient");
+    JsonNode manifest = perform_export();
+    String url = manifest.get("output").get(0).get("url").asText();
+    Map<String, String> queryParams = UriComponentsBuilder.fromUriString(url).build().getQueryParams().toSingleValueMap();
+    
+    assertThatException().isThrownBy(() -> perform_export_result(queryParams.get("job"), queryParams.get("file"), "other-user"))
+        .isExactlyInstanceOf(AccessDeniedError.class)
+        .withMessage("The requested result is not owned by the current user 'admin'.");
+  }
+  
+  @Test
+  @WithMockJwt(username = "admin", authorities = {"pathling:export", "pathling:read:Patient"})
+  void test_pass_if_download_ndjson_with_same_auth() {
+    exportProvider = setup_scenario(tempDir, "Patient");
+    JsonNode manifest = perform_export();
+    String url = manifest.get("output").get(0).get("url").asText();
+    Map<String, String> queryParams = UriComponentsBuilder.fromUriString(url).build().getQueryParams().toSingleValueMap();
+    
+    assertThatNoException().isThrownBy(() -> perform_export_result(queryParams.get("job"), queryParams.get("file"), "admin"));
   }
 
 }

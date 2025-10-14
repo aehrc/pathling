@@ -24,6 +24,7 @@ import au.csiro.pathling.export.ExportOperationValidator;
 import au.csiro.pathling.export.ExportOutputFormat;
 import au.csiro.pathling.export.ExportRequest;
 import au.csiro.pathling.export.ExportResponse;
+import au.csiro.pathling.export.ExportResultRegistry;
 import au.csiro.pathling.export.TestExportResponse;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.FileInfo;
@@ -109,6 +110,8 @@ class ExportOperationExecutorTest {
   private IParser parser;
   @Autowired
   private ServerConfiguration serverConfiguration;
+  @Autowired
+  private ExportResultRegistry exportResultRegistry;
 
   @BeforeEach
   void setup() {
@@ -120,7 +123,8 @@ class ExportOperationExecutorTest {
         fhirContext,
         sparkSession,
         "file://" + uniqueTempDir.toAbsolutePath(),
-        serverConfiguration
+        serverConfiguration,
+        exportResultRegistry
     );
 
     try {
@@ -362,7 +366,7 @@ class ExportOperationExecutorTest {
     CustomObjectDataSource objectDataSource = new CustomObjectDataSource(sparkSession,
         pathlingContext, fhirEncoders, resources);
     exportExecutor = new ExportExecutor(pathlingContext, objectDataSource, fhirContext,
-        sparkSession, "file://" + uniqueTempDir.toAbsolutePath(), serverConfiguration);
+        sparkSession, "file://" + uniqueTempDir.toAbsolutePath(), serverConfiguration, exportResultRegistry);
     return exportExecutor;
   }
 
@@ -380,7 +384,8 @@ class ExportOperationExecutorTest {
         fhirContext,
         sparkSession,
         "file://" + uniqueTempDir.toAbsolutePath(),
-        serverConfiguration
+        serverConfiguration,
+        exportResultRegistry
     );
 
     TestExportResponse actualExportResponse = exportExecutor.execute(exportRequest);

@@ -101,7 +101,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   /**
    * All system-level operations available within Pathling.
    */
-  protected static final List<String> SYSTEM_LEVEL_OPERATIONS = Arrays.asList("job", "export");
+  protected static final List<String> SYSTEM_LEVEL_OPERATIONS = Arrays.asList("job", "result", "export");
   
   private static final String RESTFUL_SECURITY_URI = "http://terminology.hl7.org/CodeSystem/restful-security-service";
   private static final String RESTFUL_SECURITY_CODE = "SMART-on-FHIR";
@@ -223,7 +223,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     final CapabilityStatementRestComponent server = new CapabilityStatementRestComponent();
     server.setMode(RestfulCapabilityMode.SERVER);
     server.setSecurity(buildSecurity());
-    // server.setResource(buildResources());
+    server.setResource(buildResources());
     server.setOperation(buildOperations());
     server.setInteraction(buildSystemLevelInteractions());
     rest.add(server);

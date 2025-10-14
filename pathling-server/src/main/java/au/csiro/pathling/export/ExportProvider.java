@@ -46,15 +46,17 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
   private final ExportOperationValidator exportOperationValidator;
   private final JobRegistry jobRegistry;
   private final RequestTagFactory requestTagFactory;
+  private final ExportResultRegistry exportResultRegistry;
 
   @Autowired
   public ExportProvider(ExportExecutor exportExecutor,
       ExportOperationValidator exportOperationValidator, JobRegistry jobRegistry,
-      RequestTagFactory requestTagFactory) {
+      RequestTagFactory requestTagFactory, ExportResultRegistry exportResultRegistry) {
     this.exportExecutor = exportExecutor;
     this.exportOperationValidator = exportOperationValidator;
     this.jobRegistry = jobRegistry;
     this.requestTagFactory = requestTagFactory;
+    this.exportResultRegistry = exportResultRegistry;
   }
 
 
@@ -87,6 +89,9 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
     if (ownJob.isCancelled()) {
       return null;
     }
+    
+    exportResultRegistry.put(ownJob.getId(), new ExportResult(ownJob.getOwnerId()));
+    
     ExportResponse exportResponse = exportExecutor.execute(exportRequest, ownJob.getId());
 
     // TODO - this is invoked everytime the $job endpoint is called, so the Expires header is "refreshed" everytime

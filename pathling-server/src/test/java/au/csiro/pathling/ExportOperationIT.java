@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import au.csiro.pathling.export.ExportExecutor;
@@ -33,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.StreamSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Encounter;
@@ -53,6 +55,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * @author Felix Naumann
@@ -285,17 +288,14 @@ class ExportOperationIT {
     
     // Also verify that pathling can read in the downloaded ndjson files
     // Usually the user does not have access to the files on the filesystem directly, instead
-    // they can request them through the FileController where the contents of the files are returned
+    // they can request them through the ExportResultProvider where the contents of the files are returned
     // in the request.
     actualFileInfos.forEach(fileInfo -> {
-      try {
-        String fullFilepath = warehouseDir.resolve("delta").resolve(new URL(fileInfo.absoluteUrl()).getPath().substring(1)).toString();
-        assumeTrue(new File(fullFilepath).exists(), "Failed to find %s for pathling ndjson input.".formatted(fullFilepath));
-        String parentPath = Paths.get(fullFilepath).getParent().toString();
-        assertThatCode(() -> new DataSourceBuilder(pathlingContext).ndjson(parentPath).read(fileInfo.fhirResourceType())).doesNotThrowAnyException();
-      } catch (MalformedURLException e) {
-        throw new RuntimeException(e);
-      }
+      Map<String, String> queryParams = UriComponentsBuilder.fromUriString(fileInfo.absoluteUrl()).build().getQueryParams().toSingleValueMap();
+      String fullFilepath = warehouseDir.resolve("delta").resolve("jobs").resolve(queryParams.get("job")).resolve(queryParams.get("file")).toString();
+      assertTrue(new File(fullFilepath).exists(), "Failed to find %s for pathling ndjson input.".formatted(fullFilepath));
+      String parentPath = Paths.get(fullFilepath).getParent().toString();
+      assertThatCode(() -> new DataSourceBuilder(pathlingContext).ndjson(parentPath).read(fileInfo.fhirResourceType())).doesNotThrowAnyException();
 
     });
 

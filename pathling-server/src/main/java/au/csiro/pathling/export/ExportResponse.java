@@ -7,10 +7,13 @@ import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ArrayNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.UnaryOperator;
+import org.apache.http.client.utils.URIBuilder;
 import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.InstantType;
 
@@ -47,8 +50,23 @@ public class ExportResponse implements OperationResponse<Binary> {
     private String buildManifest(String requestUrl, NdjsonWriteDetails writeDetails) throws IOException {
         ObjectNode manifest = mapper.createObjectNode();
 
-        String baseServerUrl = requestUrl.split("fhir")[0];
-        UnaryOperator<String> localUrlToRemoteUrl = localUrl -> baseServerUrl + "jobs" + URI.create(localUrl).getPath().split("jobs")[1];
+        String baseServerUrl = requestUrl.split("\\$export")[0];
+        UnaryOperator<String> localUrlToRemoteUrl = localUrl -> {
+          try {
+            String[] parts = localUrl.split("/jobs/")[1].split("/");
+            String jobUUID = parts[0];
+            String file = parts[1];
+            
+            return new URIBuilder(baseServerUrl + "$result")
+                .addParameter("job", jobUUID)
+                .addParameter("file", file)
+                .build()
+                .toString();
+          } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+          }
+          // baseServerUrl + "$result?job=" + URI.create(localUrl).getPath().split("jobs")[1].substring(1);
+        };
         
         manifest.put("transactionTime", InstantType.now().getValueAsString());
         manifest.put("request", requestUrl);

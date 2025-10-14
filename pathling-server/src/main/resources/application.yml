@@ -68,20 +68,20 @@ pathling:
 
     # Configures the issuing domain for bearer tokens, which will be checked against the claims
     # within incoming bearer tokens.
-    # issuer: [issuer]
+    issuer: https://auth.ontoserver.csiro.au/auth/realms/aehrc
 
     # Configures the audience for bearer tokens, which is the FHIR endpoint that tokens are
     # intended to be authorised for.
-    # audience: [audience]
+    audience: http://localhost:8080/fhir
 
     # Provides the URL which will be advertised as the authorization endpoint.
-    # authorizeUrl: [authorization URL]
+    authorizeUrl: https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/auth
 
     # Provides the URL which will be advertised as the token endpoint.
-    # tokenUrl: [token URL]
+    tokenUrl: https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token
 
     # Provides the URL which will be advertised as the token revocation endpoint.
-    # revokeUrl: [token revocation URL]
+    revokeUrl: https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/revoke
 
   # This section configures HTTP caching response headers.
   httpCaching:
@@ -102,7 +102,7 @@ pathling:
   # This section configures the CORS functionality of the server.
   # For more information, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
   cors:
-    allowedOrigins: [ ]
+    allowedOrigins: [ http://localhost:5173, http://localhost:4173 ]
     allowedOriginPatterns: [ ]
     allowedMethods:
       - OPTIONS

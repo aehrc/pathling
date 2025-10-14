@@ -17,25 +17,20 @@
 
 package au.csiro.pathling.security;
 
-import au.csiro.pathling.async.Job;
-import au.csiro.pathling.async.Job.JobTag;
 import au.csiro.pathling.export.ExportRequest;
 import au.csiro.pathling.util.TestDataSetup;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatNoException;
-import static org.mockito.Mockito.when;
 
 
 /**
@@ -64,13 +59,20 @@ class SecurityDisabledOperationsTest extends SecurityTestForOperations<ExportReq
   }
   
   @Test
-  void testPassIfExportWithNoAuth() {
+  void testPassExportIfExportWithNoAuth() {
     assertThatNoException().isThrownBy(this::perform_export);
   }
 
   @Test
   void testPassIfExportWithTypeWithNoAuth() {
     assertThatNoException().isThrownBy(() -> perform_export(ADMIN_USER, List.of("Patient", "Encounter"), false));
+  }
+  
+  @Order(Order.DEFAULT+100)
+  @Test
+  void testPassExportResultIfExportResultWithNoAuth() {
+    perform_export();
+    assertThatNoException().isThrownBy(() -> perform_export_result(job.getId(), "Patient.00000.ndjson", null));
   }
 
 }

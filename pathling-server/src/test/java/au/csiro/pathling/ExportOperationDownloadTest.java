@@ -1,18 +1,28 @@
 package au.csiro.pathling;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
+import au.csiro.pathling.async.JobRegistry;
+import au.csiro.pathling.async.RequestTagFactory;
+import au.csiro.pathling.errors.ResourceNotFoundError;
+import au.csiro.pathling.export.ExportResult;
+import au.csiro.pathling.export.ExportResultProvider;
+import au.csiro.pathling.export.ExportResultRegistry;
 import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.util.FhirServerTestConfiguration;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import au.csiro.pathling.util.FhirServerTestConfiguration;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
-import org.springframework.core.io.Resource;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.mock.web.MockHttpServletResponse;
 
 /**
  * @author Felix Naumann
@@ -22,21 +32,28 @@ import org.springframework.http.ResponseEntity;
 @SpringBootUnitTest
 class ExportOperationDownloadTest {
 
-  private static final String TEST_JOB_ID = "test-job-123";
+  private static final String TEST_JOB_ID = "95d25c62-2b5a-4eb8-9904-88d8a9c00f2b";
   private static final String TEST_FILENAME = "test-file.ndjson";
   private static final String TEST_CONTENT = """
-            {"resourceType":"Patient","id":"1","active":true}
-            {"resourceType":"Patient","id":"2","active":false}
-            """;
-  
-  private FileController fileController;
-  
+      {"resourceType":"Patient","id":"1","active":true}
+      {"resourceType":"Patient","id":"2","active":false}
+      """;
+
+  private ExportResultProvider exportResultProvider;
+
   @TempDir
   private Path tempDir;
-  
+  @Autowired
+  private RequestTagFactory requestTagFactory;
+  @Autowired
+  private JobRegistry jobRegistry;
+  @Autowired
+  private ExportResultRegistry exportResultRegistry;
+
   @BeforeEach
   void setup() throws IOException {
-    fileController = new FileController("file://" + tempDir.toString());
+    exportResultProvider = new ExportResultProvider(requestTagFactory, jobRegistry,
+        exportResultRegistry, "file://" + tempDir.toString());
 
     // Create the jobs directory structure
     Path jobsDir = tempDir.resolve("jobs");
@@ -50,55 +67,51 @@ class ExportOperationDownloadTest {
     // Create additional test files
     Path anotherFile = jobDir.resolve("patients.ndjson");
     Files.writeString(anotherFile, """
-                {"resourceType":"Patient","id":"patient1","name":[{"family":"Doe","given":["John"]}]}
-                {"resourceType":"Patient","id":"patient2","name":[{"family":"Smith","given":["Jane"]}]}
-                """);
+        {"resourceType":"Patient","id":"patient1","name":[{"family":"Doe","given":["John"]}]}
+        {"resourceType":"Patient","id":"patient2","name":[{"family":"Smith","given":["Jane"]}]}
+        """);
 
     Path observationsFile = jobDir.resolve("observations.ndjson");
     Files.writeString(observationsFile, """
-                {"resourceType":"Observation","id":"obs1","status":"final"}
-                {"resourceType":"Observation","id":"obs2","status":"preliminary"}
-                """);
+        {"resourceType":"Observation","id":"obs1","status":"final"}
+        {"resourceType":"Observation","id":"obs2","status":"preliminary"}
+        """);
 
-    // Create a different job directory
-    Path anotherJobDir = jobsDir.resolve("another-job-456");
-    Files.createDirectories(anotherJobDir);
-    Path anotherJobFile = anotherJobDir.resolve("data.ndjson");
-    Files.writeString(anotherJobFile, """
-                {"resourceType":"Condition","id":"cond1","clinicalStatus":{"coding":[{"code":"active"}]}}
-                """);
+    exportResultRegistry.put(TEST_JOB_ID, new ExportResult(Optional.empty()));
   }
 
   @Test
   void test_file_is_served_correctly() throws Exception {
-    ResponseEntity<Resource> response = fileController.serveFile(TEST_JOB_ID, TEST_FILENAME);
-    assertThat(response)
-        .isNotNull();
-    assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+    MockHttpServletResponse response = new MockHttpServletResponse();
+    exportResultProvider.result(TEST_JOB_ID, TEST_FILENAME, response);
+    assertThat(response.getContentType()).isEqualTo("application/octet-stream");
+    assertThat(response.containsHeader(HttpHeaders.CONTENT_DISPOSITION)).isTrue();
+    assertThat(response.getHeader(HttpHeaders.CONTENT_DISPOSITION))
+        .contains("attachment")
+        .contains("filename=\"" + TEST_FILENAME + "\"");
 
     // Get the resource and read its content
-    Resource resource = response.getBody();
-    assertThat(resource).isNotNull();
-    assertThat(resource.exists()).isTrue();
-
-    // Read file content to string
-    String fileContent = Files.readString(resource.getFile().toPath());
-    assertThat(fileContent).isEqualTo(TEST_CONTENT);
+    String actualContent = response.getContentAsString();
+    assertThat(actualContent)
+        .isNotEmpty()
+        .isEqualTo(TEST_CONTENT);
   }
-  
+
   @Test
   void test_nothing_is_served_if_job_is_unknown() {
-    ResponseEntity<Resource> response = fileController.serveFile("unknown-job-id-1", TEST_FILENAME);
-    assertThat(response)
-        .isNotNull();
-    assertThat(response.getStatusCode().is4xxClientError()).isTrue();
+    MockHttpServletResponse response = new MockHttpServletResponse();
+    assertThatCode(
+        () -> exportResultProvider.result("96f7f71b-f37e-4f1c-8cb4-0571e4b7f37b", TEST_FILENAME,
+            response))
+        .isExactlyInstanceOf(ResourceNotFoundError.class)
+        .hasMessage("Unknown job id.");
   }
-  
+
   @Test
   void test_nothing_is_served_if_filename_is_unknown() {
-    ResponseEntity<Resource> response = fileController.serveFile(TEST_JOB_ID, "unknown-file.ndjson");
-    assertThat(response)
-        .isNotNull();
-    assertThat(response.getStatusCode().is4xxClientError()).isTrue();
+    MockHttpServletResponse response = new MockHttpServletResponse();
+    assertThatCode(() -> exportResultProvider.result(TEST_JOB_ID, "unknown-file.ndjson", response))
+        .isExactlyInstanceOf(ResourceNotFoundError.class)
+        .hasMessageContaining("does not exist or is not a file!");
   }
 }

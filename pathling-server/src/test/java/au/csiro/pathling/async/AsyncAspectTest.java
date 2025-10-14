@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.export.ExportResultRegistry;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
@@ -50,6 +51,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @SpringBootUnitTest
+@MockBean(ExportResultRegistry.class)
 class AsyncAspectTest {
 
   @MockBean

@@ -7,6 +7,8 @@ import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ErrorReportingInterceptor;
 import au.csiro.pathling.export.ExportProvider;
+import au.csiro.pathling.export.ExportResultProvider;
+import au.csiro.pathling.export.ExportResultRegistry;
 import au.csiro.pathling.fhir.ConformanceProvider;
 import au.csiro.pathling.interceptors.BulkExportDeleteInterceptor;
 import au.csiro.pathling.interceptors.SmartConfigurationInterceptor;
@@ -71,6 +73,9 @@ public class FhirServer extends RestfulServer {
 
   @Nonnull
   private final transient ExportProvider exportProvider;
+  
+  @Nonnull
+  private final transient ExportResultProvider exportResultProvider;
 
   @Nonnull
   private final transient ErrorReportingInterceptor errorReportingInterceptor;
@@ -83,23 +88,29 @@ public class FhirServer extends RestfulServer {
 
   @Nonnull
   private final transient ConformanceProvider conformanceProvider;
+  
+  private final transient ExportResultRegistry exportResultRegistry;
 
 
   public FhirServer(@Nonnull final ServerConfiguration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration, @Nonnull Optional<JobProvider> jobProvider,
       @Nonnull ExportProvider exportProvider,
+      @Nonnull ExportResultProvider exportResultProvider,
       @Nonnull ErrorReportingInterceptor errorReportingInterceptor,
       @Nonnull EntityTagInterceptor entityTagInterceptor, @Nonnull
       BulkExportDeleteInterceptor bulkExportDeleteInterceptor,
-      @Nonnull ConformanceProvider conformanceProvider) {
+      @Nonnull ConformanceProvider conformanceProvider,
+      ExportResultRegistry exportResultRegistry) {
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;
     this.jobProvider = jobProvider;
     this.exportProvider = exportProvider;
+    this.exportResultProvider = exportResultProvider;
     this.errorReportingInterceptor = errorReportingInterceptor;
     this.entityTagInterceptor = entityTagInterceptor;
     this.bulkExportDeleteInterceptor = bulkExportDeleteInterceptor;
     this.conformanceProvider = conformanceProvider;
+    this.exportResultRegistry = exportResultRegistry;
   }
 
   @Override
@@ -120,6 +131,7 @@ public class FhirServer extends RestfulServer {
       jobProvider.ifPresent(this::registerProvider);
 
       registerProvider(exportProvider);
+      registerProvider(exportResultProvider);
 
       // Authorization-related configuration.
       configureAuthorization();
@@ -148,7 +160,9 @@ public class FhirServer extends RestfulServer {
 
       // Initialise the capability statement.
       setServerConformanceProvider(conformanceProvider);
-
+      
+      exportResultRegistry.initFromStart();
+      
       log.info("FHIR server initialized");
     } catch (final Exception e) {
       throw new ServletException("Error initializing AnalyticsServer", e);

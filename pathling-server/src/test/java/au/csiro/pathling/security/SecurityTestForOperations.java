@@ -29,6 +29,9 @@ import au.csiro.pathling.export.ExportOperationValidator;
 import au.csiro.pathling.export.ExportOutputFormat;
 import au.csiro.pathling.export.ExportProvider;
 import au.csiro.pathling.export.ExportRequest;
+import au.csiro.pathling.export.ExportResult;
+import au.csiro.pathling.export.ExportResultProvider;
+import au.csiro.pathling.export.ExportResultRegistry;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
@@ -37,6 +40,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.Nullable;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -45,8 +49,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
@@ -98,6 +107,10 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
   private ExportOperationValidator exportOperationValidator;
   @Autowired
   private ServerConfiguration serverConfiguration;
+  @Autowired
+  private ExportResultRegistry exportResultRegistry;
+  @Autowired
+  private ExportResultProvider exportResultProvider;
 
   @BeforeEach
   void setup() {
@@ -108,6 +121,13 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
     JobTag tag = requestTagFactory.createTag(requestDetails, auth);
     when(jobRegistry.get(tag)).thenReturn((Job<Object>) job);
     when(job.getId()).thenReturn(UUID.randomUUID().toString());
+  }
+  
+  MockHttpServletResponse perform_export_result(String jobId, String file, @Nullable String ownerId) {
+    exportResultRegistry.put(jobId, new ExportResult(Optional.ofNullable(ownerId)));
+    MockHttpServletResponse response = new MockHttpServletResponse();
+    exportResultProvider.result(jobId, file, response);
+    return response;
   }
 
   JsonNode perform_export() {
@@ -168,15 +188,32 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
         deltaLake,
         fhirContext,
         sparkSession,
-        tempDir.toString(),
-        serverConfiguration
+        tempDir.resolve("delta").toString(),
+        serverConfiguration,
+        exportResultRegistry
     );
 
     return new ExportProvider(
         executor,
         exportOperationValidator,
         jobRegistry,
-        requestTagFactory
+        requestTagFactory,
+        exportResultRegistry
     );
+  }
+
+  protected void switchToUser(String username, String... authorities) {
+    Jwt jwt = Jwt.withTokenValue("mock-token")
+        .header("alg", "none")
+        .claim("sub", username)
+        .build();
+
+    List<GrantedAuthority> grantedAuthorities =
+        AuthorityUtils.createAuthorityList(authorities);
+
+    JwtAuthenticationToken authentication =
+        new JwtAuthenticationToken(jwt, grantedAuthorities);
+
+    SecurityContextHolder.getContext().setAuthentication(authentication);
   }
 }
