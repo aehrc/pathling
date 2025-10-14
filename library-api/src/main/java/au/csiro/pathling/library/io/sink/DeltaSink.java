@@ -90,6 +90,10 @@ final class DeltaSink implements DataSink {
       @Nonnull final UnaryOperator<String> fileNameMapper,
       @Nonnull final boolean deleteOnMerge
   ) {
+    if (saveMode != SaveMode.MERGE && deleteOnMerge == true) {
+      throw new IllegalArgumentException("Cannot use deleteOnMerge when not using MERGE save mode.");
+    }
+
     this.context = context;
     this.path = path;
     this.saveMode = saveMode;
@@ -115,10 +119,6 @@ final class DeltaSink implements DataSink {
   DeltaSink(@Nonnull final PathlingContext context, @Nonnull final String path,
       @Nonnull final SaveMode saveMode, @Nonnull final boolean deleteOnMerge) {
     // By default, name the files using the resource type alone.
-    if (saveMode != SaveMode.MERGE && deleteOnMerge == true) {
-      throw new IllegalArgumentException("Cannot use deleteOnMerge when not using MERGE save mode.");
-    }
-
     this(context, path, saveMode, UnaryOperator.identity(), deleteOnMerge);
   }
 
