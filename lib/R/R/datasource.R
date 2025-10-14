@@ -324,6 +324,7 @@ ds_write_parquet <- function(ds, path, save_mode = SaveMode$ERROR) {
 #' @param path The URI of the directory to write the files to.
 #' @param save_mode The save mode to use when writing the data - "overwrite" will overwrite any 
 #'      existing data, "merge" will merge the new data with the existing data based on resource ID.
+#' @param delete_on_merge: If merging, whether to delete any resources not found in the source, but found in the destination.
 #'
 #' @return No return value, called for side effects only.
 #' 
@@ -343,8 +344,8 @@ ds_write_parquet <- function(ds, path, save_mode = SaveMode$ERROR) {
 #' @family data sink functions
 #' 
 #' @export
-ds_write_delta <- function(ds, path, save_mode = SaveMode$OVERWRITE) {
-  invoke_datasink(ds, "delta", save_mode, path)
+ds_write_delta <- function(ds, path, save_mode = SaveMode$OVERWRITE, delete_on_merge = FALSE) {
+  invoke_datasink(ds, "delta", save_mode, path, delete_on_merge)
 }
 
 #' Write FHIR data to managed tables

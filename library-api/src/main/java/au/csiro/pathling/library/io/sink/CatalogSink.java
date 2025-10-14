@@ -19,15 +19,17 @@ package au.csiro.pathling.library.io.sink;
 
 import static au.csiro.pathling.library.io.sink.DeltaSink.merge;
 
+import java.util.Optional;
+
+import org.apache.spark.sql.DataFrameWriter;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
-import java.util.Optional;
-import org.apache.spark.sql.DataFrameWriter;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 
 /**
  * A data sink that writes data to a managed table within the Spark catalog.
@@ -128,7 +130,7 @@ class CatalogSink implements DataSink {
           if (deltaTableExists(tableName)) {
             // If the table already exists, merge the data in.
             final DeltaTable table = DeltaTable.forName(tableName);
-            merge(table, dataset);
+            merge(table, dataset, false); // XXX: Don't have enough context here to know whether merging with or without deletes is the way to go. Perhaps this is used somewhere else entirely?
           } else {
             // If the table does not exist, create it.
             writeDataset(dataset, tableName, SaveMode.ERROR_IF_EXISTS);

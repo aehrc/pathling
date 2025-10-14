@@ -19,12 +19,13 @@ package au.csiro.pathling.library.io.sink;
 
 import static au.csiro.pathling.utilities.Preconditions.checkArgumentNotNull;
 
+import java.util.function.UnaryOperator;
+
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.util.function.UnaryOperator;
 
 /**
  * This class knows how to take an @link{EnumerableDataSource} and write it to a variety of
@@ -123,9 +124,10 @@ public class DataSinkBuilder {
    * Writes the data in the data source to a Delta database.
    *
    * @param path the directory to write the files to
+   * @param deleteOnMerge If merging, whether to delete any resources not found in the source, but found in the destination. 
    */
-  public void delta(@Nullable final String path) {
-    new DeltaSink(context, checkArgumentNotNull(path), saveMode).write(source);
+  public void delta(@Nullable final String path, @Nullable final boolean deleteOnMerge) {
+    new DeltaSink(context, checkArgumentNotNull(path), saveMode, deleteOnMerge).write(source);
   }
 
   /**
@@ -133,11 +135,14 @@ public class DataSinkBuilder {
    *
    * @param path the directory to write the files to
    * @param fileNameMapper a function that maps a resource type to a file name
+   * @param deleteOnMerge If merging, whether to delete any resources not found in the source, but found in the destination. 
+   * 
    */
   public void delta(@Nullable final String path,
-      @Nullable final UnaryOperator<String> fileNameMapper) {
+      @Nullable final UnaryOperator<String> fileNameMapper,
+      @Nullable final boolean deleteOnMerge) {
     new DeltaSink(context, checkArgumentNotNull(path), saveMode,
-        checkArgumentNotNull(fileNameMapper)).write(source);
+        checkArgumentNotNull(fileNameMapper), deleteOnMerge).write(source);
   }
 
 

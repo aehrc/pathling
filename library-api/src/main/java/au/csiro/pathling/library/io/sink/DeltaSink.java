@@ -20,6 +20,17 @@ package au.csiro.pathling.library.io.sink;
 import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
 import static java.util.Objects.requireNonNull;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.function.UnaryOperator;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.PersistenceError;
@@ -27,15 +38,6 @@ import au.csiro.pathling.library.io.SaveMode;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.function.UnaryOperator;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 
 /**
  * A data sink that writes data to a Delta Lake table on a filesystem.
@@ -69,22 +71,31 @@ final class DeltaSink implements DataSink {
   private final UnaryOperator<String> fileNameMapper;
 
   /**
+   * If merging, whether to delete any resources not found in the source, but found in the destination. 
+   */
+  @Nonnull
+  private final boolean deleteOnMerge;
+
+  /**
    * @param context the PathlingContext to use
    * @param path the path to write the Delta database to
    * @param saveMode the {@link SaveMode} to use
    * @param fileNameMapper a function that maps resource type to file name
+   * @param deleteOnMerge If merging, whether to delete any resources not found in the source, but found in the destination. 
    *
    */
   DeltaSink(
       @Nonnull final PathlingContext context,
       @Nonnull final String path,
       @Nonnull final SaveMode saveMode,
-      @Nonnull final UnaryOperator<String> fileNameMapper
+      @Nonnull final UnaryOperator<String> fileNameMapper,
+      @Nonnull final boolean deleteOnMerge
   ) {
     this.context = context;
     this.path = path;
     this.saveMode = saveMode;
     this.fileNameMapper = fileNameMapper;
+    this.deleteOnMerge = deleteOnMerge;
   }
 
   /**
@@ -93,18 +104,23 @@ final class DeltaSink implements DataSink {
    */
   DeltaSink(@Nonnull final PathlingContext context, @Nonnull final String path) {
     // By default, name the files using the resource type alone.
-    this(context, path, SaveMode.ERROR_IF_EXISTS, UnaryOperator.identity());
+    this(context, path, SaveMode.ERROR_IF_EXISTS, UnaryOperator.identity(), false);
   }
 
   /**
    * @param context the PathlingContext to use
    * @param path the path to write the Delta database to
    * @param saveMode the {@link SaveMode} to use
+   * @param deleteOnMerge If merging, whether to delete any resources not found in the source, but found in the destination. 
    */
   DeltaSink(@Nonnull final PathlingContext context, @Nonnull final String path,
-      @Nonnull final SaveMode saveMode) {
+      @Nonnull final SaveMode saveMode, @Nonnull final boolean deleteOnMerge) {
     // By default, name the files using the resource type alone.
-    this(context, path, saveMode, UnaryOperator.identity());
+    if (saveMode != SaveMode.MERGE && deleteOnMerge == true) {
+      throw new IllegalArgumentException("Cannot use deleteOnMerge when not using MERGE save mode.");
+    }
+
+    this(context, path, saveMode, UnaryOperator.identity(), deleteOnMerge);
   }
 
   @Override
@@ -130,7 +146,7 @@ final class DeltaSink implements DataSink {
           if (deltaTableExists(tablePath)) {
             // If the table already exists, merge the data in.
             final DeltaTable table = DeltaTable.forPath(tablePath);
-            merge(table, dataset);
+            merge(table, dataset, this.deleteOnMerge);
           } else {
             // If the table does not exist, create it. If an error occurs here, there must be a
             // pre-existing file at the path that is not a Delta table.
@@ -164,16 +180,22 @@ final class DeltaSink implements DataSink {
    *
    * @param table the Delta table to merge into
    * @param dataset the dataset containing updates to be merged
+   * @param deleteOnMerge whether to delete any resources not found in the source, but found in the destination.
    */
-  static void merge(@Nonnull final DeltaTable table, @Nonnull final Dataset<Row> dataset) {
+  static void merge(@Nonnull final DeltaTable table, @Nonnull final Dataset<Row> dataset, @Nonnull final boolean deleteOnMerge) {
     // Perform a merge operation where we match on the 'id' column.
-    table.as("original")
+    var merged = table.as("original")
         .merge(dataset.as("updates"), "original.id = updates.id")
         .whenMatched()
         .updateAll()
         .whenNotMatched()
-        .insertAll()
-        .execute();
+        .insertAll();
+
+    if (deleteOnMerge) {
+      merged = merged.whenNotMatchedBySource().delete();
+    }
+
+    merged.execute();
   }
 
   /**
