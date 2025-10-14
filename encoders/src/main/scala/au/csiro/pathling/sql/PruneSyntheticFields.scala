@@ -40,8 +40,6 @@ case class PruneSyntheticFields(child: Expression)
   extends UnaryExpression with CodegenFallback {
   override def nullable: Boolean = true
 
-  override def nullIntolerant: Boolean = true
-
   @transient
   lazy val inputSchema: DataType = child.dataType
 

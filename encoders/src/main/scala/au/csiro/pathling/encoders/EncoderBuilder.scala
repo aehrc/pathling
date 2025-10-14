@@ -53,17 +53,15 @@ object EncoderBuilder {
    * 3. Spark may provide a better alternative in 4.1
    */
   @annotation.nowarn("cat=deprecation")
-  private case class FhirAgnosticEncoder[T](
-      schemaDataType: DataType,
-      serializerExpr: Expression,
-      deserializerExpr: Expression,
-      classTag: ClassTag[T]
-  ) extends AgnosticExpressionPathEncoder[T] {
+  private class FhirAgnosticEncoder[T](
+                                        override val dataType: DataType,
+                                        serializerExpr: Expression,
+                                        deserializerExpr: Expression,
+                                        override val clsTag: ClassTag[T]
+                                      ) extends AgnosticExpressionPathEncoder[T] {
     override def isPrimitive: Boolean = false
-    override def dataType: DataType = schemaDataType
     override def toCatalyst(input: Expression): Expression = serializerExpr
     override def fromCatalyst(inputPath: Expression): Expression = deserializerExpr
-    override def clsTag: ClassTag[T] = classTag
   }
 
   /**
@@ -101,7 +99,8 @@ object EncoderBuilder {
     val deserializerExpr = deserializerBuilder.buildDeserializer(resourceDefinition)
     val schema = serializerExpr.dataType
 
-    val agnosticEncoder = FhirAgnosticEncoder[Any](schema, serializerExpr, deserializerExpr, ClassTag(fhirClass))
+    val agnosticEncoder = new FhirAgnosticEncoder[Any](schema, serializerExpr, deserializerExpr,
+      ClassTag(fhirClass))
     ExpressionEncoder(agnosticEncoder)
   }
 }

@@ -17,9 +17,6 @@
 
 package au.csiro.pathling.sql;
 
-import static org.apache.spark.sql.classic.ExpressionUtils.column;
-import static org.apache.spark.sql.classic.ExpressionUtils.expression;
-
 import jakarta.annotation.Nonnull;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
@@ -36,23 +33,7 @@ import org.apache.spark.sql.functions;
 public class SqlFunctions {
 
   private static final String FHIR_INSTANT_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
-
-  /**
-   * Removes all fields starting with '_' (underscore) from struct values.
-   * <p>
-   * This function is used to clean up internal/synthetic fields from FHIR resources before
-   * presenting them to users. Fields that don't start with underscore are preserved. Non-struct
-   * values are not affected by this function.
-   *
-   * @param col The column containing struct values to prune
-   * @return A new column with underscore-prefixed fields removed from structs
-   */
-  @Nonnull
-  public static Column prune_annotations(@Nonnull final Column col) {
-    return column(new PruneSyntheticFields(expression(col)));
-  }
-
-
+  
   /**
    * Formats a TIMESTAMP column to a string in FHIR instant format. Always returns UTC time as Spark
    * TIMESTAMP does not preserve the original timezone.
@@ -61,7 +42,7 @@ public class SqlFunctions {
    * @return A new column with TIMESTAMP values formatted as strings in FHIR instant format
    */
   @Nonnull
-  public static Column to_fhir_instant(@Nonnull final Column col) {
+  public static Column toFhirInstant(@Nonnull final Column col) {
     return functions.date_format(functions.to_utc_timestamp(col, functions.current_timezone()),
         FHIR_INSTANT_FORMAT);
   }

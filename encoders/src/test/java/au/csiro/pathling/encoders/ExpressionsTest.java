@@ -31,12 +31,17 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -242,14 +247,20 @@ public class ExpressionsTest {
     // Test structProduct
     final Dataset<Row> structProductDs = inputDs
         .withColumn("sp_one", ColumnFunctions.structProduct(inputDs.col("arrayA")))
-        .withColumn("sp_two", ColumnFunctions.structProduct(inputDs.col("arrayA"), inputDs.col("arrayB")))
-        .withColumn("sp_three", ColumnFunctions.structProduct(inputDs.col("arrayA"), inputDs.col("arrayB"), inputDs.col("arrayC")));
+        .withColumn("sp_two",
+            ColumnFunctions.structProduct(inputDs.col("arrayA"), inputDs.col("arrayB")))
+        .withColumn("sp_three",
+            ColumnFunctions.structProduct(inputDs.col("arrayA"), inputDs.col("arrayB"),
+                inputDs.col("arrayC")));
 
     // Test structProductOuter
     final Dataset<Row> structProductOuterDs = inputDs
         .withColumn("spo_one", ColumnFunctions.structProductOuter(inputDs.col("arrayA")))
-        .withColumn("spo_two", ColumnFunctions.structProductOuter(inputDs.col("arrayA"), inputDs.col("arrayB")))
-        .withColumn("spo_three", ColumnFunctions.structProductOuter(inputDs.col("arrayA"), inputDs.col("arrayB"), inputDs.col("arrayC")));
+        .withColumn("spo_two",
+            ColumnFunctions.structProductOuter(inputDs.col("arrayA"), inputDs.col("arrayB")))
+        .withColumn("spo_three",
+            ColumnFunctions.structProductOuter(inputDs.col("arrayA"), inputDs.col("arrayB"),
+                inputDs.col("arrayC")));
 
     // Collect and assert structProduct results
     final List<Row> spResults = structProductDs.collectAsList();
@@ -289,18 +300,20 @@ public class ExpressionsTest {
 
     // Create input array columns
     final Dataset<Row> inputDs = ds
-        .withColumn("nullArray", functions.lit(null).cast(DataTypes.createArrayType(DataTypes.createStructType(
-            Arrays.asList(
-                DataTypes.createStructField("str", DataTypes.StringType, true),
-                DataTypes.createStructField("int", DataTypes.IntegerType, true)
-            )
-        ))))
-        .withColumn("emptyArray", functions.array().cast(DataTypes.createArrayType(DataTypes.createStructType(
-            Arrays.asList(
-                DataTypes.createStructField("str", DataTypes.StringType, true),
-                DataTypes.createStructField("int", DataTypes.IntegerType, true)
-            )
-        ))))
+        .withColumn("nullArray",
+            functions.lit(null).cast(DataTypes.createArrayType(DataTypes.createStructType(
+                Arrays.asList(
+                    DataTypes.createStructField("str", DataTypes.StringType, true),
+                    DataTypes.createStructField("int", DataTypes.IntegerType, true)
+                )
+            ))))
+        .withColumn("emptyArray",
+            functions.array().cast(DataTypes.createArrayType(DataTypes.createStructType(
+                Arrays.asList(
+                    DataTypes.createStructField("str", DataTypes.StringType, true),
+                    DataTypes.createStructField("int", DataTypes.IntegerType, true)
+                )
+            ))))
         .withColumn("nonEmptyArray", functions.array(
             functions.struct(functions.lit("zzz").alias("str"), functions.lit(1).alias("int")),
             functions.struct(functions.lit("yyy").alias("str"), functions.lit(2).alias("int"))
@@ -310,13 +323,15 @@ public class ExpressionsTest {
     final Dataset<Row> structProductDs = inputDs
         .withColumn("sp_null", ColumnFunctions.structProduct(inputDs.col("nullArray")))
         .withColumn("sp_empty", ColumnFunctions.structProduct(inputDs.col("emptyArray")))
-        .withColumn("sp_nonEmpty", ColumnFunctions.structProduct(inputDs.col("nonEmptyArray"), inputDs.col("emptyArray")));
+        .withColumn("sp_nonEmpty",
+            ColumnFunctions.structProduct(inputDs.col("nonEmptyArray"), inputDs.col("emptyArray")));
 
     // Test structProductOuter
     final Dataset<Row> structProductOuterDs = inputDs
         .withColumn("spo_null", ColumnFunctions.structProductOuter(inputDs.col("nullArray")))
         .withColumn("spo_empty", ColumnFunctions.structProductOuter(inputDs.col("emptyArray")))
-        .withColumn("spo_nonEmpty", ColumnFunctions.structProductOuter(inputDs.col("nonEmptyArray"), inputDs.col("emptyArray")));
+        .withColumn("spo_nonEmpty", ColumnFunctions.structProductOuter(inputDs.col("nonEmptyArray"),
+            inputDs.col("emptyArray")));
 
     // Collect and assert structProduct results
     final List<Row> spResults = structProductDs.collectAsList();
@@ -339,5 +354,126 @@ public class ExpressionsTest {
     assertEquals(1, ((Seq<?>) spoRow.getAs("spo_empty")).size());
     assertNotNull(spoRow.getAs("spo_nonEmpty"));
     assertEquals(1, ((Seq<?>) spoRow.getAs("spo_nonEmpty")).size());
+  }
+
+  @Test
+  void testPruneAnnotations() {
+    final Metadata metadata = Metadata.empty();
+    final StructType valueStructType = DataTypes.createStructType(new StructField[]{
+        new StructField("id", DataTypes.IntegerType, true, metadata),
+        new StructField("name", DataTypes.StringType, true, metadata),
+        new StructField("_fid", DataTypes.StringType, true, metadata)
+    });
+
+    final StructType inputSchema = DataTypes.createStructType(new StructField[]{
+        new StructField("id", DataTypes.StringType, true, metadata),
+        new StructField("active", DataTypes.BooleanType, true, metadata),
+        new StructField("gender", DataTypes.createArrayType(DataTypes.StringType), true, metadata),
+        new StructField("value", valueStructType, true, metadata)
+    });
+
+    final List<Row> inputData = Arrays.asList(
+        RowFactory.create("patient-1", true, new String[]{"array_value-00-00"},
+            RowFactory.create(1, "Test-1", "fid_value-00")),
+        RowFactory.create("patient-2", false,
+            new String[]{"array_value-01-00", "array_value-01-01"},
+            RowFactory.create(2, "Test-2", "fid_value_01")),
+        RowFactory.create("patient-3", null, null, null)
+    );
+
+    final Dataset<Row> dataset = spark.createDataFrame(inputData, inputSchema).repartition(1);
+
+    // Prune all columns
+    final Dataset<Row> prunedDataset = dataset.select(
+        Stream.of(dataset.columns())
+            .map(cn -> ValueFunctions.pruneAnnotations(dataset.col(cn)).alias(cn))
+            .toArray(Column[]::new));
+
+    // Expected result has the _fid field removed from the value struct
+    final StructType expectedValueStructType = DataTypes.createStructType(new StructField[]{
+        new StructField("id", DataTypes.IntegerType, true, metadata),
+        new StructField("name", DataTypes.StringType, true, metadata)
+    });
+
+    final StructType expectedSchema = DataTypes.createStructType(new StructField[]{
+        new StructField("id", DataTypes.StringType, true, metadata),
+        new StructField("active", DataTypes.BooleanType, true, metadata),
+        new StructField("gender", DataTypes.createArrayType(DataTypes.StringType), true, metadata),
+        new StructField("value", expectedValueStructType, true, metadata)
+    });
+
+    final List<Row> expectedData = Arrays.asList(
+        RowFactory.create("patient-1", true, new String[]{"array_value-00-00"},
+            RowFactory.create(1, "Test-1")),
+        RowFactory.create("patient-2", false,
+            new String[]{"array_value-01-00", "array_value-01-01"},
+            RowFactory.create(2, "Test-2")),
+        RowFactory.create("patient-3", null, null, null)
+    );
+
+    final Dataset<Row> expectedResult = spark.createDataFrame(expectedData, expectedSchema)
+        .repartition(1);
+
+    assertEquals(expectedResult.schema(), prunedDataset.schema());
+    assertEquals(expectedResult.collectAsList(), prunedDataset.collectAsList());
+  }
+
+  @Test
+  void testPruneAnnotationsWithGroupBy() {
+    final Metadata metadata = Metadata.empty();
+    final StructType valueStructType = DataTypes.createStructType(new StructField[]{
+        new StructField("id", DataTypes.IntegerType, true, metadata),
+        new StructField("name", DataTypes.StringType, true, metadata),
+        new StructField("_fid", DataTypes.StringType, true, metadata)
+    });
+
+    final StructType inputSchema = DataTypes.createStructType(new StructField[]{
+        new StructField("id", DataTypes.StringType, true, metadata),
+        new StructField("gender", DataTypes.StringType, true, metadata),
+        new StructField("active", DataTypes.BooleanType, true, metadata),
+        new StructField("value", valueStructType, true, metadata)
+    });
+
+    final List<Row> inputData = Arrays.asList(
+        RowFactory.create("patient-1", "male", true, RowFactory.create(1, "Test-1", "fid-00")),
+        RowFactory.create("patient-2", "female", false, RowFactory.create(2, "Test-2", "fid-01")),
+        RowFactory.create("patient-3", "male", true, null),
+        RowFactory.create("patient-4", null, true, null),
+        RowFactory.create("patient-5", "female", false, RowFactory.create(2, "Test-2", "fid-02"))
+    );
+
+    final Dataset<Row> dataset = spark.createDataFrame(inputData, inputSchema).repartition(1);
+
+    // Group by pruned value column and aggregate
+    final Dataset<Row> grouped = dataset.groupBy(
+            ValueFunctions.pruneAnnotations(dataset.col("value")))
+        .agg(functions.count(dataset.col("gender")).alias("count"));
+
+    // Select with proper column names
+    final Dataset<Row> groupedResult = grouped
+        .select(
+            functions.col(grouped.columns()[0]).alias("value"),
+            functions.col("count")).orderBy(functions.col("value.id").asc_nulls_first());
+
+    final StructType expectedValueStructType = DataTypes.createStructType(new StructField[]{
+        new StructField("id", DataTypes.IntegerType, true, metadata),
+        new StructField("name", DataTypes.StringType, true, metadata)
+    });
+
+    final StructType expectedSchema = DataTypes.createStructType(new StructField[]{
+        new StructField("value", expectedValueStructType, true, metadata),
+        new StructField("count", DataTypes.LongType, false, metadata)
+    });
+
+    final List<Row> expectedData = Arrays.asList(
+        RowFactory.create(null, 1L),
+        RowFactory.create(RowFactory.create(1, "Test-1"), 1L),
+        RowFactory.create(RowFactory.create(2, "Test-2"), 2L)
+    );
+
+    final Dataset<Row> expectedResult = spark.createDataFrame(expectedData, expectedSchema);
+
+    assertEquals(expectedResult.schema(), groupedResult.schema());
+    assertEquals(expectedResult.collectAsList(), groupedResult.collectAsList());
   }
 }
