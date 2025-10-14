@@ -19,13 +19,12 @@ package au.csiro.pathling.library.io.sink;
 
 import static au.csiro.pathling.utilities.Preconditions.checkArgumentNotNull;
 
-import java.util.function.UnaryOperator;
-
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.function.UnaryOperator;
 
 /**
  * This class knows how to take an @link{EnumerableDataSource} and write it to a variety of

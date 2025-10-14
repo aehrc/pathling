@@ -19,17 +19,15 @@ package au.csiro.pathling.library.io.sink;
 
 import static au.csiro.pathling.library.io.sink.DeltaSink.merge;
 
-import java.util.Optional;
-
-import org.apache.spark.sql.DataFrameWriter;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
+import java.util.Optional;
+import org.apache.spark.sql.DataFrameWriter;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
 /**
  * A data sink that writes data to a managed table within the Spark catalog.

@@ -20,6 +20,13 @@ package au.csiro.pathling.library.io.sink;
 import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
 import static java.util.Objects.requireNonNull;
 
+import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.PersistenceError;
+import au.csiro.pathling.library.io.SaveMode;
+import io.delta.tables.DeltaTable;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -30,14 +37,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-
-import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.PersistenceError;
-import au.csiro.pathling.library.io.SaveMode;
-import io.delta.tables.DeltaTable;
-import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 
 /**
  * A data sink that writes data to a Delta Lake table on a filesystem.
