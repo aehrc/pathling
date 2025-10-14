@@ -92,7 +92,7 @@ jobs:
           gpg --list-secret-keys --keyid-format LONG
 
       - name: Configure Maven settings
-        uses: s4u/maven-settings-action@v3.1.0
+        uses: s4u/maven-settings-action@64e42c454dbd42ef6370ac8539685755aedd205b # v3.1.0
         with:
           servers: |
             [{
@@ -104,7 +104,7 @@ jobs:
       # Release won't be possible if there are outstanding vulnerabilities of medium severity or
       # higher as reported by Trivy.
       - name: Run security scan
-        uses: aquasecurity/trivy-action@0.32.0
+        uses: aquasecurity/trivy-action@dc5a429b52fcf669ce959baa2c2dd26090d2a6c4 # 0.32.0
         with:
           scan-type: repo
           severity: "MEDIUM,HIGH,CRITICAL"
