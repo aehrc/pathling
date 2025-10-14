@@ -1,0 +1,18 @@
+apiVersion: v2
+name: pathling-jupyter
+description: A Helm chart for Pathling Jupyter Notebook
+icon: https://raw.githubusercontent.com/aehrc/pathling/main/media/logo-icon-colour-detail.svg
+type: application
+version: 1.0.0
+maintainers:
+  - name: John Grimes
+    email: John.Grimes@csiro.au
+sources:
+  - https://github.com/aehrc/pathling
+keywords:
+  - jupyter
+  - notebook
+  - spark
+  - pathling
+  - analytics
+  - fhir

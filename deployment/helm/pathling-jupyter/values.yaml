@@ -1,0 +1,24 @@
+pathlingJupyter:
+  image: aehrc/pathling-notebook:latest
+  resources:
+    requests:
+      cpu: 1
+      memory: 2G
+    limits:
+      memory: 4G
+  deployment:
+    strategy: RollingUpdate
+    imagePullPolicy: IfNotPresent
+  service:
+    type: LoadBalancer
+  volumes: []
+  volumeMounts: []
+  tolerations: []
+  affinity: ~
+  config: {}
+  secretConfig: {}
+  spark: {}
+  persistence:
+    enabled: false
+    size: 10Gi
+    storageClass: ~

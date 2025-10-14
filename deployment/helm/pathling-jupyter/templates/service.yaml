@@ -1,0 +1,25 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: pathling-jupyter
+spec:
+  type: {{ .Values.pathlingJupyter.service.type }}
+  ports:
+    - port: 8888
+      targetPort: 8888
+      name: jupyter
+  selector:
+    app: pathling-jupyter
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: pathling-jupyter-spark-ui
+spec:
+  type: ClusterIP
+  ports:
+    - port: 4040
+      targetPort: 4040
+      name: spark-ui
+  selector:
+    app: pathling-jupyter
