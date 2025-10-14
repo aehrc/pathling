@@ -334,7 +334,7 @@ class DataSourcesTest {
     queryDeltaData(data);
 
     // Write the data back out to a temporary location.
-    data.write().delta(temporaryDirectory.resolve("delta").toString());
+    data.write().delta(temporaryDirectory.resolve("delta").toString(), false);
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read()
@@ -353,7 +353,7 @@ class DataSourcesTest {
 
     // Write the data to Delta with the specified save mode.
     data.write().saveMode(saveMode)
-        .delta(temporaryDirectory.resolve("delta-" + saveMode).toString());
+        .delta(temporaryDirectory.resolve("delta-" + saveMode).toString(), false);
 
     // Read the Delta data back in.
     final QueryableDataSource newData = pathlingContext.read()
@@ -363,8 +363,9 @@ class DataSourcesTest {
     queryNdjsonData(newData);
   }
 
-  @Test
-  void deltaReadWriteWithMerge() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void deltaReadWriteWithMerge(boolean deleteOnMerge) {
     final String sourcePath = TEST_DATA_PATH.resolve("delta").toString();
     final String destinationPath = temporaryDirectory.resolve("delta-rw-merge").toString();
 
@@ -375,7 +376,7 @@ class DataSourcesTest {
     queryDeltaData(data);
 
     // Write the data back out to a temporary location.
-    data.write().saveMode("merge").delta(destinationPath);
+    data.write().saveMode("merge").delta(destinationPath, deleteOnMerge);
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read().delta(destinationPath);
@@ -384,7 +385,7 @@ class DataSourcesTest {
     queryDeltaData(newData);
 
     // Merge the data back into the Delta table.
-    data.write().saveMode("merge").delta(destinationPath);
+    data.write().saveMode("merge").delta(destinationPath, deleteOnMerge);
 
     // Query the data.
     queryDeltaData(newData);
@@ -398,7 +399,7 @@ class DataSourcesTest {
 
     // Write the data to Delta initially.
     final String deltaPath = temporaryDirectory.resolve("delta-overwrite-test").toString();
-    data.write().saveMode("overwrite").delta(deltaPath);
+    data.write().saveMode("overwrite").delta(deltaPath, false);
 
     // Read the data back to verify it was written.
     final QueryableDataSource initialData = pathlingContext.read().delta(deltaPath);
@@ -406,7 +407,7 @@ class DataSourcesTest {
 
     // Write the same data again using overwrite mode - this should succeed.
     // This tests the deltaTableExists method and the delete() workaround in DeltaSink.
-    data.write().saveMode("overwrite").delta(deltaPath);
+    data.write().saveMode("overwrite").delta(deltaPath, false);
 
     // Read the overwritten data back.
     final QueryableDataSource overwrittenData = pathlingContext.read().delta(deltaPath);
@@ -916,7 +917,7 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     final DataSinkBuilder builder = data.write();
     final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.delta(null));
+        () -> builder.delta(null, false));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
@@ -926,7 +927,7 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     final DataSinkBuilder builder = data.write();
     final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.delta("path", null));
+        () -> builder.delta("path", null, false));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
