@@ -24,6 +24,7 @@
 package au.csiro.pathling.encoders;
 
 import static au.csiro.pathling.encoders.ValueFunctions.ifArray;
+import static au.csiro.pathling.encoders.ValueFunctions.ifArray2;
 import static au.csiro.pathling.encoders.ValueFunctions.unnest;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -39,6 +40,8 @@ import org.apache.spark.sql.types.DataTypes;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import scala.collection.Seq;
+import scala.jdk.javaapi.CollectionConverters;
 
 /**
  * Test for FHIR encoders.
@@ -122,6 +125,61 @@ public class ExpressionsTest {
     assertEquals(10, (Integer) secondRow.getAs("test_lit"));
     assertNotNull(secondRow.getAs("test_array_lit"));
     assertEquals(2, (Integer) secondRow.getAs("test_array_size"));
+  }
+
+  @Test
+  void testIfArray2() {
+    final Dataset<Row> ds = spark.range(2).toDF();
+    final Dataset<Row> resultDs = ds
+        .withColumn("id_array", functions.array(functions.col("id"), functions.lit(22)))
+        .withColumn("id_array_of_arrays",
+            functions.array(functions.array(functions.col("id"), functions.lit(22)),
+                functions.array(functions.col("id"), functions.lit(33))))
+        .withColumn("test_single_array",
+            ifArray2(functions.col("id_array"), 
+                x -> functions.array(functions.lit(100)), 
+                x -> functions.array(functions.lit(50))))
+        .withColumn("test_array_of_arrays",
+            ifArray2(functions.col("id_array_of_arrays"), 
+                x -> functions.array(functions.lit(200)), 
+                x -> functions.array(functions.lit(50))))
+        .withColumn("test_flatten_array_of_arrays",
+            ifArray2(functions.col("id_array_of_arrays"), 
+                functions::flatten, 
+                x -> x))
+        .withColumn("test_with_filter",
+            ifArray2(functions.col("id_array_of_arrays"),
+                x -> functions.filter(x, arr -> functions.size(arr).gt(1)),
+                x -> x));
+
+    final List<Row> results = resultDs.collectAsList();
+    assertEquals(2, results.size());
+
+    final Row firstRow = results.getFirst();
+    assertEquals(0L, (Long) firstRow.getAs("id"));
+    // Single array should trigger else branch
+    assertNotNull(firstRow.getAs("test_single_array"));
+    final Seq<?> singleArrayResult = firstRow.getAs("test_single_array");
+    assertEquals(50, CollectionConverters.asJava(singleArrayResult).getFirst());
+    // Array of arrays should trigger array branch
+    assertNotNull(firstRow.getAs("test_array_of_arrays"));
+    final Seq<?> arrayOfArraysResult = firstRow.getAs("test_array_of_arrays");
+    assertEquals(200, CollectionConverters.asJava(arrayOfArraysResult).getFirst());
+    assertNotNull(firstRow.getAs("test_flatten_array_of_arrays"));
+    assertNotNull(firstRow.getAs("test_with_filter"));
+
+    final Row secondRow = results.get(1);
+    assertEquals(1L, (Long) secondRow.getAs("id"));
+    // Single array should trigger else branch
+    assertNotNull(secondRow.getAs("test_single_array"));
+    final Seq<?> singleArrayResult2 = secondRow.getAs("test_single_array");
+    assertEquals(50, CollectionConverters.asJava(singleArrayResult2).getFirst());
+    // Array of arrays should trigger array branch
+    assertNotNull(secondRow.getAs("test_array_of_arrays"));
+    final Seq<?> arrayOfArraysResult2 = secondRow.getAs("test_array_of_arrays");
+    assertEquals(200, CollectionConverters.asJava(arrayOfArraysResult2).getFirst());
+    assertNotNull(secondRow.getAs("test_flatten_array_of_arrays"));
+    assertNotNull(secondRow.getAs("test_with_filter"));
   }
 
   @Test
