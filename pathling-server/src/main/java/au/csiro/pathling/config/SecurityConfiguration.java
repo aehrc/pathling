@@ -21,7 +21,6 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -101,10 +100,10 @@ public class SecurityConfiguration {
               // Anything else needs to be authenticated.
               .anyRequest().authenticated())
           // Enable CORS as per the configuration.
-          .cors((cors) -> cors.configurationSource(corsConfigurationSource()))
+          .cors(cors -> cors.configurationSource(corsConfigurationSource()))
           // Use the provided JWT decoder and authentication converter.
           .oauth2ResourceServer(oauth2 -> oauth2
-              .jwt((jwt) -> jwt
+              .jwt(jwt -> jwt
                   .jwtAuthenticationConverter(authenticationConverter)
                   .decoder(jwtDecoder)
               ));
@@ -112,7 +111,7 @@ public class SecurityConfiguration {
     } else {
       http.authorizeHttpRequests(authz -> authz.anyRequest().permitAll())
           // Enable CORS as per the configuration.
-          .cors((cors) -> cors.configurationSource(corsConfigurationSource()))
+          .cors(cors -> cors.configurationSource(corsConfigurationSource()))
           // Without this POST requests fail with 403 Forbidden.
           .csrf(AbstractHttpConfigurer::disable);
     }

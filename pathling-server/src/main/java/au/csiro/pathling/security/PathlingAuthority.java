@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;

@@ -36,16 +36,17 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.core.Authentication;
 
-public class RequestTagFactoryTest {
+class RequestTagFactoryTest {
 
   private final CacheableDatabase mockDatabase = mock(CacheableDatabase.class);
   private final Cacheable mockCacheable = mock(Cacheable.class);
   private final ServletRequestDetails mockRequestDetails = mock(ServletRequestDetails.class);
-  // private final Authentication mockAuthentication = mock(Authentication.class); // TODO - uncomment (and below in class) when auth is implemented
+  private final Authentication mockAuthentication = mock(Authentication.class);
 
   @Test
-  public void testComputesSalientHeaderNamesCorrectly() {
+  void testComputesSalientHeaderNamesCorrectly() {
 
     final List<String> varyHeaders = List.of("Accept", "Accept-Encoding", "Authorization");
     final List<String> whiteListedHeaders = List.of("Accept", "Accept-Encoding", "X-UserId");
@@ -74,7 +75,7 @@ public class RequestTagFactoryTest {
   }
   
   @Test
-  public void testComputesCorrectTagForAuthenticatedUserAndExisingCacheKey() {
+  void testComputesCorrectTagForAuthenticatedUserAndExisingCacheKey() {
     final Set<String> salientHeaderNames = Set.of("X-Single-Value", "X-Multi-Values",
         "X-Not-Present");
     // RequestDetails.gethHeaders() returns a Map<String, List<String>> where the keys are
@@ -83,7 +84,7 @@ public class RequestTagFactoryTest {
         List.of("singleValue"),
         "x-multi-values", List.of("multiValue1", "multiValue2"), "x-other", List.of("otherValue"));
     final Object principal = new Object();
-    //when(mockAuthentication.getPrincipal()).thenReturn(principal);
+    when(mockAuthentication.getPrincipal()).thenReturn(principal);
 
     when(mockCacheable.getCacheKey()).thenReturn(Optional.of("cacheKey_A"));
     when(mockRequestDetails.getCompleteUrl()).thenReturn("uri:requestUri-A");
@@ -91,9 +92,7 @@ public class RequestTagFactoryTest {
 
     final RequestTagFactory requestTagFactory = new RequestTagFactory(mockCacheable,
         salientHeaderNames);
-    // final RequestTag requestTag = requestTagFactory.createTag(mockRequestDetails,
-    //     mockAuthentication);
-    final RequestTag requestTag = requestTagFactory.createTag(mockRequestDetails, null);
+    final RequestTag requestTag = requestTagFactory.createTag(mockRequestDetails, mockAuthentication);
     assertEquals(new RequestTag("uri:requestUri-A",
             Map.of("x-single-value", List.of("singleValue"),
                 "x-multi-values", List.of("multiValue1", "multiValue2")),
@@ -103,7 +102,7 @@ public class RequestTagFactoryTest {
 
   @Disabled("Copied with an unnoticed bug from v7.2.0")
   @Test
-  public void testComputesCorrectTagFoNoPrincipalAndMissingKey() {
+  void testComputesCorrectTagFoNoPrincipalAndMissingKey() {
     final Set<String> salientHeaderNames = Set.of("Y-SingleValue", "Y-MultiValues", "Y-NotPresent");
     final Map<String, List<String>> requestHeaders = Map.of("Y-SingleValue", List.of("singleValue"),
         "Y-MultiValues", List.of("multiValue1", "multiValue2"), "Y-Other", List.of("otherValue"));
@@ -114,14 +113,8 @@ public class RequestTagFactoryTest {
 
     final RequestTagFactory requestTagFactory = new RequestTagFactory(mockDatabase,
         createServerConfiguration(new ArrayList<>(salientHeaderNames), Collections.emptyList()));
-
-    // final RequestTagFactory requestTagFactory = new RequestTagFactory(mockDatabase,
-    //     createServerConfiguration(List.of("Y-SingleValue", "Y-MultiValues",
-    //         "Y-NotPresent"), Collections.emptyList()));
-
-    // final RequestTag requestTag = requestTagFactory.createTag(mockRequestDetails,
-    //     mockAuthentication);
-    final RequestTag requestTag = requestTagFactory.createTag(mockRequestDetails, null);
+    
+    final RequestTag requestTag = requestTagFactory.createTag(mockRequestDetails, mockAuthentication);
     assertEquals(new RequestTag("uri:requestUri-B",
             Map.of("Y-SingleValue", List.of("singleValue"),
                 "Y-MultiValues", List.of("multiValue1", "multiValue2")),
@@ -138,6 +131,8 @@ public class RequestTagFactoryTest {
 
     final HttpServerCachingConfiguration httpServerCachingConfiguration = new HttpServerCachingConfiguration();
     httpServerCachingConfiguration.setVary(varyHeaders);
+    
+    
 
     final ServerConfiguration serverConfiguration = new ServerConfiguration();
     serverConfiguration.setAsync(asyncConfiguration);

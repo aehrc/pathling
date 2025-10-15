@@ -25,7 +25,6 @@ import au.csiro.pathling.export.ExportOutputFormat;
 import au.csiro.pathling.export.ExportRequest;
 import au.csiro.pathling.export.ExportResponse;
 import au.csiro.pathling.export.ExportResultRegistry;
-import au.csiro.pathling.export.TestExportResponse;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.FileInfo;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
@@ -34,6 +33,7 @@ import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.CustomObjectDataSource;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
 import au.csiro.pathling.util.TestDataSetup;
+import au.csiro.pathling.util.TestExportResponse;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import java.io.File;
@@ -123,8 +123,7 @@ class ExportOperationExecutorTest {
         fhirContext,
         sparkSession,
         "file://" + uniqueTempDir.toAbsolutePath(),
-        serverConfiguration,
-        exportResultRegistry
+        serverConfiguration
     );
 
     try {
@@ -146,7 +145,7 @@ class ExportOperationExecutorTest {
 
     exportExecutor = create_exec(patient);
     ExportRequest req = req(BASE, date("2025-01-04"), date(until));
-    TestExportResponse actualResponse = exportExecutor.execute(req);
+    TestExportResponse actualResponse = execute(req);
     
     assertThat(actualResponse).isNotNull();
     assertThat(actualResponse.exportResponse().getWriteDetails().fileInfos()).hasSize(1);
@@ -175,7 +174,7 @@ class ExportOperationExecutorTest {
     exportExecutor = create_exec(patient);
     ExportRequest req = req(BASE, List.of(ResourceType.PATIENT),
         List.of("identifier", "Observation.status"));
-    TestExportResponse actualResponse = exportExecutor.execute(req);
+    TestExportResponse actualResponse = execute(req);
     Patient actualPatient = read_ndjson(parser, actualResponse.getWriteDetails().fileInfos().get(0),
         Patient.class);
 
@@ -195,7 +194,7 @@ class ExportOperationExecutorTest {
 
     exportExecutor = create_exec(patient);
     ExportRequest req = req(BASE, List.of("Patient.identifier"));
-    TestExportResponse actualResponse = exportExecutor.execute(req);
+    TestExportResponse actualResponse = execute(req);
     Patient actualPatient = read_ndjson(parser, actualResponse.getWriteDetails().fileInfos().get(0),
         Patient.class);
 
@@ -212,7 +211,7 @@ class ExportOperationExecutorTest {
 
     exportExecutor = create_exec(patient, observation);
     ExportRequest req = req(BASE, List.of("identifier"));
-    TestExportResponse actualResponse = exportExecutor.execute(req);
+    TestExportResponse actualResponse = execute(req);
     Patient actualPatient = read_ndjson(parser, actualResponse.getWriteDetails().fileInfos().get(1),
         Patient.class);
     Observation actualObservation = read_ndjson(parser,
@@ -234,7 +233,7 @@ class ExportOperationExecutorTest {
 
     exportExecutor = create_exec(patient, observation);
     ExportRequest req = req(BASE, List.of("Patient.identifier", "active"));
-    TestExportResponse actualResponse = exportExecutor.execute(req);
+    TestExportResponse actualResponse = execute(req);
     Patient actualPatient = read_ndjson(parser, actualResponse.getWriteDetails().fileInfos().get(1),
         Patient.class);
     Observation actualObservation = read_ndjson(parser,
@@ -255,7 +254,7 @@ class ExportOperationExecutorTest {
 
     exportExecutor = create_exec(patient);
     ExportRequest req = req(BASE, List.of("Patient.identifier"));
-    TestExportResponse actualResponse = exportExecutor.execute(req);
+    TestExportResponse actualResponse = execute(req);
     Patient actualPatient = read_ndjson(parser, actualResponse.getWriteDetails().fileInfos().get(0),
         Patient.class);
 
@@ -271,7 +270,7 @@ class ExportOperationExecutorTest {
 
     exportExecutor = create_exec(patient);
     ExportRequest req = req(BASE, List.of("Patient.identifier"));
-    TestExportResponse actualResponse = exportExecutor.execute(req);
+    TestExportResponse actualResponse = execute(req);
     Patient actualPatient = read_ndjson(parser, actualResponse.getWriteDetails().fileInfos().get(0),
         Patient.class);
 
@@ -287,7 +286,7 @@ class ExportOperationExecutorTest {
     patient.addIdentifier().setValue("test");
     exportExecutor = create_exec(patient);
     ExportRequest req = req(BASE, List.of("Patient.identifier"));
-    TestExportResponse actualResponse = exportExecutor.execute(req);
+    TestExportResponse actualResponse = execute(req);
     Patient actualPatient = read_ndjson(parser, actualResponse.getWriteDetails().fileInfos().get(0),
         Patient.class);
 
@@ -307,7 +306,7 @@ class ExportOperationExecutorTest {
     patient.setMeta(meta);
     exportExecutor = create_exec(patient);
     ExportRequest req = req(BASE, List.of());
-    TestExportResponse actualResponse = exportExecutor.execute(req);
+    TestExportResponse actualResponse = execute(req);
     Patient actualPatient = read_ndjson(parser, actualResponse.getWriteDetails().fileInfos().get(0),
         Patient.class);
 
@@ -327,7 +326,7 @@ class ExportOperationExecutorTest {
     patient.setMeta(meta);
     exportExecutor = create_exec(patient);
     ExportRequest req = req(BASE, List.of("Patient.identifier"));
-    TestExportResponse actualResponse = exportExecutor.execute(req);
+    TestExportResponse actualResponse = execute(req);
     Patient actualPatient = read_ndjson(parser, actualResponse.getWriteDetails().fileInfos().get(0),
         Patient.class);
 
@@ -345,7 +344,7 @@ class ExportOperationExecutorTest {
     patient.setMeta(new Meta().setSource("source1"));
     exportExecutor = create_exec(patient);
     ExportRequest req = req(BASE, List.of("Patient.identifier"));
-    TestExportResponse actualResponse = exportExecutor.execute(req);
+    TestExportResponse actualResponse = execute(req);
     Patient actualPatient = read_ndjson(parser, actualResponse.getWriteDetails().fileInfos().get(0),
         Patient.class);
 
@@ -366,7 +365,7 @@ class ExportOperationExecutorTest {
     CustomObjectDataSource objectDataSource = new CustomObjectDataSource(sparkSession,
         pathlingContext, fhirEncoders, resources);
     exportExecutor = new ExportExecutor(pathlingContext, objectDataSource, fhirContext,
-        sparkSession, "file://" + uniqueTempDir.toAbsolutePath(), serverConfiguration, exportResultRegistry);
+        sparkSession, "file://" + uniqueTempDir.toAbsolutePath(), serverConfiguration);
     return exportExecutor;
   }
 
@@ -384,11 +383,10 @@ class ExportOperationExecutorTest {
         fhirContext,
         sparkSession,
         "file://" + uniqueTempDir.toAbsolutePath(),
-        serverConfiguration,
-        exportResultRegistry
+        serverConfiguration
     );
 
-    TestExportResponse actualExportResponse = exportExecutor.execute(exportRequest);
+    TestExportResponse actualExportResponse = execute(exportRequest);
     expectedExportResponse = resolveTempDirIn(expectedExportResponse, uniqueTempDir,
         actualExportResponse.fakeJobId());
     assert_response(actualExportResponse.exportResponse(), expectedExportResponse);
@@ -420,7 +418,7 @@ class ExportOperationExecutorTest {
   @ParameterizedTest
   @MethodSource("provide_export_executor_values")
   void test_export_executor(ExportRequest exportRequest, ExportResponse expectedExportResponse) {
-    TestExportResponse actualExportResponse = exportExecutor.execute(exportRequest);
+    TestExportResponse actualExportResponse = execute(exportRequest);
     expectedExportResponse = resolveTempDirIn(expectedExportResponse, uniqueTempDir,
         actualExportResponse.fakeJobId());
     assert_response(actualExportResponse.exportResponse(), expectedExportResponse);
@@ -469,6 +467,17 @@ class ExportOperationExecutorTest {
             .map(fi -> tuple(fi.fhirResourceType(), fi.absoluteUrl()))
             .toList());
     softly.assertAll();
+  }
+
+  /**
+   * Use for tests only where it does not matter in which subdirectory the ndjson is written to.
+   *
+   * @param exportRequest Information about the export request.
+   * @return Information about the export response.
+   */
+  public TestExportResponse execute(ExportRequest exportRequest) {
+    UUID uuid = UUID.randomUUID();
+    return new TestExportResponse(uuid, exportExecutor.execute(exportRequest, uuid.toString()));
   }
 
 }

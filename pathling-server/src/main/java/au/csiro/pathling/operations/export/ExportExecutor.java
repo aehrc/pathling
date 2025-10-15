@@ -1,4 +1,4 @@
-package au.csiro.pathling.export;
+package au.csiro.pathling.operations.export;
 
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.array_union;
@@ -8,7 +8,6 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.io.sink.NdjsonWriteDetails;
@@ -20,22 +19,16 @@ import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
-import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Files;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Column;
@@ -50,7 +43,6 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
@@ -68,34 +60,19 @@ public class ExportExecutor {
   private final SparkSession sparkSession;
   private final String databasePath;
   private final ServerConfiguration serverConfiguration;
-  private final ExportResultRegistry exportResultRegistry;
 
   @Autowired
   public ExportExecutor(PathlingContext pathlingContext, QueryableDataSource deltaLake,
       FhirContext fhirContext,
       SparkSession sparkSession,
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-      String databasePath, ServerConfiguration serverConfiguration,
-      ExportResultRegistry exportResultRegistry) {
+      String databasePath, ServerConfiguration serverConfiguration) {
     this.pathlingContext = pathlingContext;
     this.deltaLake = deltaLake;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
     this.databasePath = databasePath;
     this.serverConfiguration = serverConfiguration;
-    this.exportResultRegistry = exportResultRegistry;
-  }
-
-  /**
-   * Use for tests only where it does not matter in which subdirectory the ndjson is written to.
-   *
-   * @param exportRequest Information about the export request.
-   * @return Information about the export response.
-   */
-  @VisibleForTesting
-  public TestExportResponse execute(ExportRequest exportRequest) {
-    UUID uuid = UUID.randomUUID();
-    return new TestExportResponse(uuid, execute(exportRequest, uuid.toString()));
   }
 
   /**
@@ -159,10 +136,6 @@ public class ExportExecutor {
 
       NdjsonWriteDetails writeDetails = new DataSinkBuilder(pathlingContext,
           mapped).saveMode("overwrite").ndjson(jobDirPath.toString());
-      Optional<String> ownerId = exportResultRegistry.getOrDefault(jobId, new ExportResult(Optional.empty())).ownerId();
-      try(FSDataOutputStream out = fs.create(new Path(jobDirPath.toString(), "job_metadata.txt"), true)) {
-        out.writeUTF(ownerId.orElse(""));
-      }
       return new ExportResponse(exportRequest.originalRequest(), writeDetails);
     } catch (IOException e) {
       throw new InternalErrorException("Failed to created subdirectory at %s for job %s."

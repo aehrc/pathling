@@ -1,5 +1,7 @@
 package au.csiro.pathling;
 
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
+
 import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.cache.EntityTagInterceptor;
 import au.csiro.pathling.config.ServerConfiguration;
@@ -37,8 +39,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import scala.collection.JavaConverters;
 
-import static au.csiro.pathling.utilities.Preconditions.checkPresent;
-
 /**
  * @author Felix Naumann
  */
@@ -63,10 +63,10 @@ public class FhirServer extends RestfulServer {
   private static final int SEARCH_MAP_SIZE = 10;
 
   @Nonnull
-  private final ServerConfiguration configuration;
+  private final transient ServerConfiguration configuration;
 
   @Nonnull
-  private final Optional<OidcConfiguration> oidcConfiguration;
+  private final transient Optional<OidcConfiguration> oidcConfiguration;
   
   @Nonnull
   private final transient Optional<JobProvider> jobProvider;
@@ -88,8 +88,6 @@ public class FhirServer extends RestfulServer {
 
   @Nonnull
   private final transient ConformanceProvider conformanceProvider;
-  
-  private final transient ExportResultRegistry exportResultRegistry;
 
 
   public FhirServer(@Nonnull final ServerConfiguration configuration,
@@ -99,8 +97,7 @@ public class FhirServer extends RestfulServer {
       @Nonnull ErrorReportingInterceptor errorReportingInterceptor,
       @Nonnull EntityTagInterceptor entityTagInterceptor, @Nonnull
       BulkExportDeleteInterceptor bulkExportDeleteInterceptor,
-      @Nonnull ConformanceProvider conformanceProvider,
-      ExportResultRegistry exportResultRegistry) {
+      @Nonnull ConformanceProvider conformanceProvider) {
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;
     this.jobProvider = jobProvider;
@@ -110,7 +107,6 @@ public class FhirServer extends RestfulServer {
     this.entityTagInterceptor = entityTagInterceptor;
     this.bulkExportDeleteInterceptor = bulkExportDeleteInterceptor;
     this.conformanceProvider = conformanceProvider;
-    this.exportResultRegistry = exportResultRegistry;
   }
 
   @Override
@@ -160,8 +156,6 @@ public class FhirServer extends RestfulServer {
 
       // Initialise the capability statement.
       setServerConformanceProvider(conformanceProvider);
-      
-      exportResultRegistry.initFromStart();
       
       log.info("FHIR server initialized");
     } catch (final Exception e) {

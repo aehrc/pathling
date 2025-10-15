@@ -17,8 +17,12 @@
 
 package au.csiro.pathling.security;
 
+import static org.assertj.core.api.Assertions.assertThatNoException;
+
 import au.csiro.pathling.export.ExportRequest;
 import au.csiro.pathling.util.TestDataSetup;
+import java.nio.file.Path;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -26,11 +30,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
-
-import java.nio.file.Path;
-import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThatNoException;
 
 
 /**

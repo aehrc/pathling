@@ -22,24 +22,15 @@ import static org.assertj.core.api.Assertions.assertThatException;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import au.csiro.pathling.errors.AccessDeniedError;
-import au.csiro.pathling.export.ExportExecutor;
-import au.csiro.pathling.export.ExportOperationValidator;
 import au.csiro.pathling.export.ExportProvider;
 import au.csiro.pathling.export.ExportRequest;
-import au.csiro.pathling.export.ExportResultProvider;
-import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.source.DataSourceBuilder;
-import au.csiro.pathling.library.io.source.QueryableDataSource;
-import au.csiro.pathling.util.TestDataSetup;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import ca.uhn.fhir.context.FhirContext;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.commons.io.FileUtils;
-import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -47,8 +38,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.ApplicationContext;
-import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -77,13 +66,10 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
   private static Path tempDir;
   @Autowired
   private ApplicationContext applicationContext;
-  @Autowired
-  private ExportResultProvider exportResultProvider;
 
 
   @DynamicPropertySource
   static void configureProperties(DynamicPropertyRegistry registry) {
-    //TestDataSetup.staticCopyTestDataToTempDir(tempDir);
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + tempDir.toAbsolutePath());
   }
   
@@ -118,7 +104,7 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
 
   @Test
   @WithMockJwt(username = "admin", authorities = {"pathling:export", "pathling:read"})
-  void test_pass_if_export_with_authority_and_read_authority() throws Exception {
+  void test_pass_if_export_with_authority_and_read_authority() {
     exportProvider = setup_scenario(tempDir, "Patient");
     assertThatNoException().isThrownBy(() -> {
       JsonNode manifest = perform_export();

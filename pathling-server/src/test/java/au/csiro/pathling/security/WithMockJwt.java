@@ -1,8 +1,8 @@
 package au.csiro.pathling.security;
 
-import org.springframework.security.test.context.support.WithSecurityContext;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import org.springframework.security.test.context.support.WithSecurityContext;
 
 /**
  * @author Felix Naumann

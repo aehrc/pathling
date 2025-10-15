@@ -1,4 +1,4 @@
-package au.csiro.pathling.export;
+package au.csiro.pathling.operations.export;
 
 import au.csiro.pathling.FhirServer;
 import au.csiro.pathling.async.PreAsyncValidation;
@@ -44,7 +44,8 @@ public class ExportOperationValidator {
   private final FhirContext fhirContext;
   private final ServerConfiguration serverConfiguration;
 
-  public ExportOperationValidator(FhirContext fhirContext, ServerConfiguration serverConfiguration) {
+  public ExportOperationValidator(FhirContext fhirContext,
+      ServerConfiguration serverConfiguration) {
     this.fhirContext = fhirContext;
     this.serverConfiguration = serverConfiguration;
   }
@@ -181,44 +182,10 @@ public class ExportOperationValidator {
         .map(String::strip)
         .filter(Predicate.not(String::isEmpty))
         .flatMap(string -> Arrays.stream(string.split(",")))
-        .map(code -> {
-          try {
-            ResourceType resourceType = Enumerations.ResourceType.fromCode(code);
-            Set<ResourceType> unsupported = FhirServer.unsupportedResourceTypes();
-            if (!lenient && unsupported.contains(resourceType)) {
-              throw new InvalidRequestException(
-                  "'_type' includes unsupported resource type '%s'. Note that '%s' are all unsupported.".formatted(
-                      resourceType.toCode(), unsupported));
-            } else if (lenient && unsupported.contains(resourceType)) {
-              return Optional.<Enumerations.ResourceType>empty();
-            }
-            return Optional.of(resourceType);
-          } catch (FHIRException e) {
-            if (lenient) {
-              log.info("Failed to map '_type' value '{}' to actual FHIR resource type. Skipping.",
-                  code);
-            } else {
-              throw new InvalidRequestException(
-                  "Failed to map '_type' value '%s' to actual FHIR resource types.".formatted(
-                      code));
-            }
-            return Optional.<Enumerations.ResourceType>empty();
-          }
-        })
+        .map(code -> mapTypeQueryParam(code, lenient))
         .filter(Optional::isPresent)
         .map(Optional::get)
-        .filter(resourceType -> {
-            /*
-            Check auth for resource types before checking if there are actually resources for that type.
-            Otherwise, this could leak information to unauthorized users (the information 
-            "no Encounter resources exist" should not be available)
-             */
-          if(serverConfiguration.getAuth().isEnabled()) {
-            SecurityAspect.checkHasAuthority(
-                PathlingAuthority.resourceAccess(AccessType.READ, resourceType));
-          }
-          return true; // has auth if no error from above
-        })
+        .filter(this::filterUnauthorizedResources)
         .toList();
 
     List<ExportRequest.FhirElement> fhirElements = elements.stream()
@@ -234,6 +201,44 @@ public class ExportOperationValidator {
         fhirElements,
         lenient
     );
+  }
+
+  private boolean filterUnauthorizedResources(ResourceType resourceType) {
+    /*
+    Check auth for resource types before checking if there are actually resources for that type.
+    Otherwise, this could leak information to unauthorized users (the information 
+    "no Encounter resources exist" should not be available)
+     */
+    if (serverConfiguration.getAuth().isEnabled()) {
+      SecurityAspect.checkHasAuthority(
+          PathlingAuthority.resourceAccess(AccessType.READ, resourceType));
+    }
+    return true; // has auth if no error from the stream chain above
+  }
+
+  private Optional<ResourceType> mapTypeQueryParam(String code, boolean lenient) {
+    try {
+      ResourceType resourceType = Enumerations.ResourceType.fromCode(code);
+      Set<ResourceType> unsupported = FhirServer.unsupportedResourceTypes();
+      if (!lenient && unsupported.contains(resourceType)) {
+        throw new InvalidRequestException(
+            "'_type' includes unsupported resource type '%s'. Note that '%s' are all unsupported.".formatted(
+                resourceType.toCode(), unsupported));
+      } else if (lenient && unsupported.contains(resourceType)) {
+        return Optional.<Enumerations.ResourceType>empty();
+      }
+      return Optional.of(resourceType);
+    } catch (FHIRException e) {
+      if (lenient) {
+        log.info("Failed to map '_type' value '{}' to actual FHIR resource type. Skipping.",
+            code);
+      } else {
+        throw new InvalidRequestException(
+            "Failed to map '_type' value '%s' to actual FHIR resource types.".formatted(
+                code));
+      }
+      return Optional.empty();
+    }
   }
 
   private ExportRequest.FhirElement mapFhirElement(@NotNull String element) {

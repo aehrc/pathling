@@ -17,11 +17,11 @@
 
 package au.csiro.pathling.security;
 
+import static org.mockito.Mockito.when;
+
 import au.csiro.pathling.async.Job;
 import au.csiro.pathling.async.Job.JobTag;
 import au.csiro.pathling.async.JobRegistry;
-import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
-import au.csiro.pathling.async.RequestTag;
 import au.csiro.pathling.async.RequestTagFactory;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.export.ExportExecutor;
@@ -41,10 +41,15 @@ import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nullable;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.function.UnaryOperator;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.hl7.fhir.r4.model.InstantType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,21 +63,6 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
-
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.function.Function;
-import java.util.function.UnaryOperator;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 @ActiveProfiles({"core", "server", "unit-test"})
 @Tag("IntegrationTest")
@@ -189,8 +179,7 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
         fhirContext,
         sparkSession,
         tempDir.resolve("delta").toString(),
-        serverConfiguration,
-        exportResultRegistry
+        serverConfiguration
     );
 
     return new ExportProvider(

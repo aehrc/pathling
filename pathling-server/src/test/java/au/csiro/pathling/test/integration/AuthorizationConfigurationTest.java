@@ -26,14 +26,14 @@ import au.csiro.pathling.test.TestResources;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
-import jakarta.annotation.Nonnull;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONException;
@@ -42,7 +42,6 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -89,7 +88,7 @@ class AuthorizationConfigurationTest extends IntegrationTest {
   
   @BeforeEach
   void setup() {
-    restTemplate = new TestRestTemplate(new RestTemplateBuilder().requestFactory(() -> new JdkClientHttpRequestFactory()));
+    restTemplate = new TestRestTemplate(new RestTemplateBuilder().requestFactory(JdkClientHttpRequestFactory.class));
   }
 
   @Test

@@ -18,17 +18,10 @@
 package au.csiro.pathling.security;
 
 import au.csiro.pathling.errors.AccessDeniedError;
-import au.csiro.pathling.security.ResourceAccess.AccessType;
 import jakarta.annotation.Nonnull;
 import java.util.Collection;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -89,8 +82,8 @@ public class SecurityAspect {
   public static boolean hasAuthority(@Nonnull final PathlingAuthority requiredAuthority) {
     final Authentication authentication = SecurityContextHolder
         .getContext().getAuthentication();
-    final AbstractAuthenticationToken authToken = (authentication instanceof AbstractAuthenticationToken)
-                                                  ? (AbstractAuthenticationToken) authentication
+    final AbstractAuthenticationToken authToken = (authentication instanceof AbstractAuthenticationToken abstractAuthenticationToken)
+                                                  ? abstractAuthenticationToken
                                                   : null;
     if (authToken == null) {
       return false;
@@ -112,8 +105,8 @@ public class SecurityAspect {
   public static void checkHasAuthority(@Nonnull final PathlingAuthority requiredAuthority) {
     final Authentication authentication = SecurityContextHolder
         .getContext().getAuthentication();
-    final AbstractAuthenticationToken authToken = (authentication instanceof AbstractAuthenticationToken)
-                                                  ? (AbstractAuthenticationToken) authentication
+    final AbstractAuthenticationToken authToken = (authentication instanceof AbstractAuthenticationToken abstractAuthenticationToken) 
+                                                  ? abstractAuthenticationToken
                                                   : null;
     if (authToken == null) {
       throw new AccessDeniedError("Token not present");

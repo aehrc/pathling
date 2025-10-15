@@ -11,7 +11,6 @@ import au.csiro.pathling.export.ExportResultProvider;
 import au.csiro.pathling.export.ExportResultRegistry;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -52,8 +51,7 @@ class ExportOperationDownloadTest {
 
   @BeforeEach
   void setup() throws IOException {
-    exportResultProvider = new ExportResultProvider(requestTagFactory, jobRegistry,
-        exportResultRegistry, "file://" + tempDir.toString());
+    exportResultProvider = new ExportResultProvider(exportResultRegistry, "file://" + tempDir.toString());
 
     // Create the jobs directory structure
     Path jobsDir = tempDir.resolve("jobs");

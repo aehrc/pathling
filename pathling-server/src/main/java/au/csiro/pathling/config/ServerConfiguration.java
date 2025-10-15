@@ -11,11 +11,13 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import java.util.Optional;
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 import org.apache.spark.sql.SparkSession;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.validation.annotation.Validated;
@@ -91,8 +93,19 @@ public class ServerConfiguration {
   }
 
   @Bean
-  public QueryableDataSource deltaLake(SparkSession sparkSession, PathlingContext pathlingContext) {
+  public QueryableDataSource deltaLake(PathlingContext pathlingContext) {
     return new DataSourceBuilder(pathlingContext).delta(databasePath);
+  }
+
+  // Handle the `import` property outside of Lombok, as import is a Java keyword.
+  @Getter(AccessLevel.NONE)
+  @Setter(AccessLevel.NONE)
+  @NotNull
+  private ImportConfiguration import_;
+
+  @Nonnull
+  public ImportConfiguration getImport() {
+    return import_;
   }
 
   @NotNull

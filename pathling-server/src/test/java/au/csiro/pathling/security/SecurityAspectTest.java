@@ -34,6 +34,7 @@ class SecurityAspectTest extends SecurityTest {
   @ResourceAccess(ResourceAccess.AccessType.READ)
   @SuppressWarnings({"unused", "EmptyMethod"})
   void myOperation() {
+    // method structure needed for annotations, body does not matter here
   }
 
   @Nonnull

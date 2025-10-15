@@ -1,15 +1,14 @@
-package au.csiro.pathling.export;
+package au.csiro.pathling.operations.export;
 
 import au.csiro.pathling.OperationResponse;
 import au.csiro.pathling.library.io.sink.NdjsonWriteDetails;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ArrayNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ObjectNode;
+import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.UnaryOperator;
@@ -63,9 +62,8 @@ public class ExportResponse implements OperationResponse<Binary> {
                 .build()
                 .toString();
           } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
+            throw new InternalErrorException(e);
           }
-          // baseServerUrl + "$result?job=" + URI.create(localUrl).getPath().split("jobs")[1].substring(1);
         };
         
         manifest.put("transactionTime", InstantType.now().getValueAsString());

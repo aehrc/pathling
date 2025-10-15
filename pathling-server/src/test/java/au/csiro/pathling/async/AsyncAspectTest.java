@@ -49,6 +49,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.JwtClaimAccessor;
 
 @SpringBootUnitTest
 @MockBean(ExportResultRegistry.class)
@@ -90,7 +93,7 @@ class AsyncAspectTest {
   @BeforeEach
   void setUp() throws Throwable {
 
-    // Wire the asynAspects and it's dependencied
+    // Wire the asyncAspects and it's dependencies
     final ServerConfiguration serverConfiguration = createServerConfiguration(
         List.of("Accept", "Authorization"),
         List.of("Accept"));
@@ -120,8 +123,8 @@ class AsyncAspectTest {
   }
 
   void setAuthenticationPrincipal(@Nonnull final Object principal) {
-    // SecurityContextHolder.getContext()
-    //     .setAuthentication(new TestingAuthenticationToken(principal, ""));
+    SecurityContextHolder.getContext()
+        .setAuthentication(new TestingAuthenticationToken(principal, ""));
   }
 
   @Nonnull
@@ -157,9 +160,9 @@ class AsyncAspectTest {
         mockFuture);
 
     // setup authentication principal
-    // final JwtClaimAccessor mockJwtPrincipal = mock(JwtClaimAccessor.class);
-    // when(mockJwtPrincipal.getSubject()).thenReturn("subject1");
-    // setAuthenticationPrincipal(mockJwtPrincipal);
+    final JwtClaimAccessor mockJwtPrincipal = mock(JwtClaimAccessor.class);
+    when(mockJwtPrincipal.getSubject()).thenReturn("subject1");
+    setAuthenticationPrincipal(mockJwtPrincipal);
 
     final String jobId = assertExecutedAsync();
     final Job newJob = jobRegistry.get(jobId);
@@ -167,8 +170,7 @@ class AsyncAspectTest {
     assertEquals(jobId, newJob.getId());
     assertEquals(mockFuture, newJob.getResult());
     assertEquals("aggregate", newJob.getOperation());
-    // TODO - this assertion fails because auth not implemented yet
-    // assertEquals(Optional.of("subject1"), newJob.getOwnerId());
+    assertEquals(Optional.of("subject1"), newJob.getOwnerId());
   }
 
   @Test

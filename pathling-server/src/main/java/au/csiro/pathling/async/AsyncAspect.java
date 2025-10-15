@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.async;
 
+import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
+
 import au.csiro.pathling.FhirServer;
 import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
 import au.csiro.pathling.errors.DiagnosticContext;
@@ -53,8 +55,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-
-import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 
 /**
  * Intercepts calls to methods annotated with {@link AsyncSupported} to run them asynchronously,

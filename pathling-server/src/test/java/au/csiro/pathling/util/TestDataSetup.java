@@ -1,5 +1,7 @@
 package au.csiro.pathling.util;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.io.sink.FileInfo;
@@ -13,7 +15,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -24,8 +25,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Felix Naumann
@@ -95,7 +94,6 @@ public class TestDataSetup {
               log.info("Received 2xx but body is empty, try again later");
               return Mono.delay(Duration.ofSeconds(5))
                   .then(pollForCompletion(statusUrl));
-              //return Mono.error(new RuntimeException("Response successful but body is null for %s".formatted(statusUrl)));
             }
             return Mono.just(body);
           } else if (response.getStatusCode().value() == 202) {
@@ -227,7 +225,7 @@ public class TestDataSetup {
       log.info("Directory tree for: {}", directory);
       List<Path> paths = Files.walk(directory)
           .sorted()
-          .collect(Collectors.toList());
+          .toList();
 
       printTree(paths, directory);
     } catch (IOException e) {

@@ -1,21 +1,24 @@
-package au.csiro.pathling.export;
+package au.csiro.pathling.operations.export;
 
-import au.csiro.pathling.async.Job;
-import au.csiro.pathling.async.JobRegistry;
-import au.csiro.pathling.async.RequestTag;
-import au.csiro.pathling.async.RequestTagFactory;
+import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
-import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
-import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URI;
+import java.util.Optional;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.fs.Path;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,21 +27,9 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.URI;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.regex.Pattern;
-
-import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
-import static java.util.Objects.requireNonNull;
 
 /**
  * @author Felix Naumann
@@ -47,18 +38,12 @@ import static java.util.Objects.requireNonNull;
 @Profile("server")
 @Slf4j
 public class ExportResultProvider {
-
-  private static final Pattern ID_PATTERN = Pattern.compile("^\\w{1,50}$");
-  private final RequestTagFactory requestTagFactory;
-  private final JobRegistry jobRegistry;
+  
   private final ExportResultRegistry exportResultRegistry;
   private final String databasePath;
 
   @Autowired
-  public ExportResultProvider(RequestTagFactory requestTagFactory, JobRegistry jobRegistry,
-      ExportResultRegistry exportResultRegistry, @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") String databasePath) {
-    this.requestTagFactory = requestTagFactory;
-    this.jobRegistry = jobRegistry;
+  public ExportResultProvider(ExportResultRegistry exportResultRegistry, @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") String databasePath) {
     this.exportResultRegistry = exportResultRegistry;
     this.databasePath = databasePath;
   }

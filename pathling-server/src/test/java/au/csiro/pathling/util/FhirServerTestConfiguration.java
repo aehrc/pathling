@@ -11,7 +11,6 @@ import au.csiro.pathling.export.ExportResultRegistry;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
-// import au.csiro.pathling.sql.FhirpathUDFRegistrar;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
@@ -72,7 +71,7 @@ public class FhirServerTestConfiguration {
                 .toString())
         .getOrCreate();
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
-    // FhirpathUDFRegistrar.registerUDFs(spark);
+    //FhirpathUDFRegistrar.registerUDFs(spark);
     return spark;
   }
 
@@ -163,7 +162,7 @@ public class FhirServerTestConfiguration {
   @Bean
   @Primary
   @ConditionalOnMissingBean
-  public ExportResultRegistry exportResultRegistry(SparkSession sparkSession, @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}/jobs") String jobsDir) {
-    return new ExportResultRegistry(sparkSession, jobsDir);
+  public ExportResultRegistry exportResultRegistry() {
+    return new ExportResultRegistry();
   }
 } 

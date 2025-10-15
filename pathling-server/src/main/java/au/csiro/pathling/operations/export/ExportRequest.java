@@ -1,4 +1,4 @@
-package au.csiro.pathling.export;
+package au.csiro.pathling.operations.export;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;

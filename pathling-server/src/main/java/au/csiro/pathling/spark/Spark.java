@@ -48,6 +48,9 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class Spark {
 
+
+  private Spark() {}
+
   /**
    * @param configuration a {@link ServerConfiguration} object containing the parameters to use in
    * the creation
@@ -98,7 +101,7 @@ public class Spark {
     final MutablePropertySources propertySources = ((AbstractEnvironment) resolver)
         .getPropertySources();
     propertySources.stream()
-        .filter(propertySource -> propertySource instanceof EnumerablePropertySource)
+        .filter(EnumerablePropertySource.class::isInstance)
         .flatMap(propertySource -> Arrays
             .stream(((EnumerablePropertySource<?>) propertySource).getPropertyNames()))
         .filter(property -> prefixes.stream().anyMatch(property::startsWith))

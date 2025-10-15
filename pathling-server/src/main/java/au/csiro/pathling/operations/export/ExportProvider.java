@@ -1,4 +1,6 @@
-package au.csiro.pathling.export;
+package au.csiro.pathling.operations.export;
+
+import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 
 import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.async.Job;
@@ -12,7 +14,6 @@ import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
-import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -26,8 +27,6 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-
-import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 
 /**
  * @author Felix Naumann
@@ -71,8 +70,7 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
       @Nullable @OperationParam(name = ELEMENTS_PARAM_NAME) List<String> elements,
       ServletRequestDetails requestDetails
   ) {
-
-    // TODO - is it ok to use auth=null to retrieve the job id first? Or should I keep track of this using a custom registry similar to how $extract uses a "resultRegistry"?
+    
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication);
     Job<ExportRequest> ownJob = jobRegistry.get(ownTag);

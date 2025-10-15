@@ -7,7 +7,6 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import au.csiro.pathling.export.ExportExecutor;
 import au.csiro.pathling.library.PathlingContext;
@@ -22,9 +21,6 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -34,7 +30,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.StreamSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
-import org.apache.http.client.utils.URIBuilder;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Encounter;
@@ -65,7 +60,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ResourceLock(value = "wiremock", mode = ResourceAccessMode.READ_WRITE)
 @ActiveProfiles({"core", "server", "integration-test"})
-    //@Execution(ExecutionMode.CONCURRENT)
 class ExportOperationIT {
   
   @LocalServerPort
