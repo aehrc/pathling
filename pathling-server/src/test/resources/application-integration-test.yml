@@ -1,5 +1,5 @@
 debug: true
+logging.level.au.csiro.pathling: debug
 pathling:
   storage:
-    warehouseUrl: file://${user.dir}/src/test/resources/test-data/fhir/delta
-logging.level.au.csiro.pathling: debug
+    databaseName: delta

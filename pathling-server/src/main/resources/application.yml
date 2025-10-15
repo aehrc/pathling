@@ -39,10 +39,10 @@ pathling:
     # The base URL at which Pathling will look for data files, and where it will save data received
     # within import requests. Can be an Amazon S3 (s3://), HDFS (hdfs://) or filesystem (file://)
     # URL.
-    warehouseUrl: file://${user.dir}/src/test/resources/test-data/fhir
+    warehouseUrl: file:///usr/share/warehouse
 
     # The subdirectory within the warehouse path used to read and write data.
-    databaseName: delta
+    databaseName: default
 
     # This controls whether the built-in caching within Spark is used for resource datasets
     # It may be useful to turn this off for large datasets in memory-constrained environments.
@@ -68,20 +68,20 @@ pathling:
 
     # Configures the issuing domain for bearer tokens, which will be checked against the claims
     # within incoming bearer tokens.
-    issuer: https://auth.ontoserver.csiro.au/auth/realms/aehrc
+    # issuer: [issuer]
 
     # Configures the audience for bearer tokens, which is the FHIR endpoint that tokens are
     # intended to be authorised for.
-    audience: http://localhost:8080/fhir
+    # audience: [audience]
 
     # Provides the URL which will be advertised as the authorization endpoint.
-    authorizeUrl: https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/auth
+    # authorizeUrl: [authorization URL]
 
     # Provides the URL which will be advertised as the token endpoint.
-    tokenUrl: https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token
+    # tokenUrl: [token URL]
 
     # Provides the URL which will be advertised as the token revocation endpoint.
-    revokeUrl: https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/revoke
+    # revokeUrl: [token revocation URL]
 
   # This section configures HTTP caching response headers.
   httpCaching:
@@ -102,7 +102,7 @@ pathling:
   # This section configures the CORS functionality of the server.
   # For more information, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
   cors:
-    allowedOrigins: [ http://localhost:5173, http://localhost:4173 ]
+    allowedOrigins: [ ]
     allowedOriginPatterns: [ ]
     allowedMethods:
       - OPTIONS
@@ -181,8 +181,3 @@ fs:
       name: magic
       magic:
         enabled: true
-debug: false
-logging:
-  level:
-    root: INFO
-    au.csiro.pathling: DEBUG
