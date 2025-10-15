@@ -58,6 +58,7 @@ spec:
       {{- end }}
       tolerations: {{ toJson .Values.pathlingJupyter.tolerations }}
       affinity: {{ toJson .Values.pathlingJupyter.affinity }}
+      securityContext: {{ toJson .Values.pathlingJupyter.securityContext }}
   strategy:
     type: {{ .Values.pathlingJupyter.deployment.strategy }}
 {{- if gt (len .Values.pathlingJupyter.secretConfig) 0 }}

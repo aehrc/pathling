@@ -15,6 +15,7 @@ pathlingJupyter:
   volumeMounts: []
   tolerations: []
   affinity: ~
+  securityContext: ~
   config: {}
   secretConfig: {}
   spark: {}
