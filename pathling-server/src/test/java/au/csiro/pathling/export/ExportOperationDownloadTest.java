@@ -1,14 +1,15 @@
-package au.csiro.pathling;
+package au.csiro.pathling.export;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import au.csiro.pathling.UnitTestDependencies;
 import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.async.RequestTagFactory;
 import au.csiro.pathling.errors.ResourceNotFoundError;
-import au.csiro.pathling.export.ExportResult;
-import au.csiro.pathling.export.ExportResultProvider;
-import au.csiro.pathling.export.ExportResultRegistry;
+import au.csiro.pathling.operations.export.ExportResult;
+import au.csiro.pathling.operations.export.ExportResultProvider;
+import au.csiro.pathling.operations.export.ExportResultRegistry;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
 import java.io.IOException;

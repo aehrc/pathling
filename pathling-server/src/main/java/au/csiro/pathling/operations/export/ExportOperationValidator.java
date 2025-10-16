@@ -3,6 +3,7 @@ package au.csiro.pathling.operations.export;
 import au.csiro.pathling.FhirServer;
 import au.csiro.pathling.async.PreAsyncValidation;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.operations.OperationValidatorUtil;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
 import au.csiro.pathling.security.SecurityAspect;
@@ -72,8 +73,8 @@ public class ExportOperationValidator {
     ExportRequest exportRequest = createExportRequest(requestDetails.getCompleteUrl(), lenient,
         outputFormat, since, until, type, elements);
     List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
-            validateAcceptHeader(requestDetails, lenient),
-            validatePreferHeader(requestDetails, lenient),
+            OperationValidatorUtil.validateAcceptHeader(requestDetails, lenient),
+            OperationValidatorUtil.validatePreferHeader(requestDetails, lenient),
             validateUnsupportedQueryParams(requestDetails, lenient))
         .flatMap(Collection::stream)
         .toList();
@@ -107,57 +108,6 @@ public class ExportOperationValidator {
                       .formatted(param))))
           .toList();
     }
-  }
-
-  private List<OperationOutcome.OperationOutcomeIssueComponent> validateAcceptHeader(
-      RequestDetails requestDetails, boolean lenient) {
-    String acceptHeader = requestDetails.getHeader(FhirServer.ACCEPT_HEADER.headerName());
-    boolean hasAcceptValue = FhirServer.ACCEPT_HEADER.validValue(acceptHeader);
-    if (!lenient && !hasAcceptValue) {
-      throw new InvalidRequestException(
-          "Unknown 'Accept' header value '%s'. Only %s are allowed."
-              .formatted(acceptHeader, FhirServer.ACCEPT_HEADER.acceptedHeaderValues())
-      );
-    }
-    if (!hasAcceptValue) {
-      requestDetails.addHeader(FhirServer.ACCEPT_HEADER.headerName(),
-          FhirServer.ACCEPT_HEADER.preferred());
-      return List.of(new OperationOutcome.OperationOutcomeIssueComponent()
-          .setCode(OperationOutcome.IssueType.INFORMATIONAL)
-          .setSeverity(OperationOutcome.IssueSeverity.INFORMATION)
-          .setDetails(new CodeableConcept().setText(
-              "Added missing header: %s %s".formatted(FhirServer.ACCEPT_HEADER.headerName(),
-                  FhirServer.ACCEPT_HEADER.preferred())))
-      );
-    }
-    return List.of();
-  }
-
-  private List<OperationOutcome.OperationOutcomeIssueComponent> validatePreferHeader(
-      RequestDetails requestDetails, boolean lenient) {
-    List<String> preferHeaders = requestDetails.getHeaders(
-        FhirServer.PREFER_RESPOND_TYPE_HEADER.headerName());
-    boolean hasRespondTypeHeaderValue = preferHeaders.stream()
-        .anyMatch(FhirServer.PREFER_RESPOND_TYPE_HEADER::validValue);
-    if (!lenient && !hasRespondTypeHeaderValue) {
-      throw new InvalidRequestException(
-          "Unknown 'Prefer' header value '%s'. Only %s is allowed."
-              .formatted(preferHeaders,
-                  FhirServer.PREFER_RESPOND_TYPE_HEADER.acceptedHeaderValues())
-      );
-    }
-    if (!hasRespondTypeHeaderValue) {
-      requestDetails.addHeader(FhirServer.PREFER_RESPOND_TYPE_HEADER.headerName(),
-          FhirServer.PREFER_RESPOND_TYPE_HEADER.preferred());
-      return List.of(new OperationOutcome.OperationOutcomeIssueComponent()
-          .setCode(OperationOutcome.IssueType.INFORMATIONAL)
-          .setSeverity(OperationOutcome.IssueSeverity.INFORMATION)
-          .setDetails(new CodeableConcept().setText("Added missing header: %s %s".formatted(
-              FhirServer.PREFER_RESPOND_TYPE_HEADER.headerName(),
-              FhirServer.PREFER_RESPOND_TYPE_HEADER.preferred())))
-      );
-    }
-    return List.of();
   }
 
   public ExportRequest createExportRequest(

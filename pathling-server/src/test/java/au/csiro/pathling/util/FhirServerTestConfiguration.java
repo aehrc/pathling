@@ -7,7 +7,7 @@ import au.csiro.pathling.async.SparkJobListener;
 import au.csiro.pathling.async.StageMap;
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.export.ExportResultRegistry;
+import au.csiro.pathling.operations.export.ExportResultRegistry;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;

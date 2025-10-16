@@ -23,6 +23,7 @@ import au.csiro.fhir.export.BulkExportClient;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.Collection;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -52,6 +53,23 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
   @Nonnull
   public QueryableDataSource ndjson(@Nullable final String ndjsonDir) {
     return new NdjsonSource(context, checkArgumentNotNull(ndjsonDir));
+  }
+
+  /**
+   * Creates a new data source from a list of files which are NDJSON encoded FHIR resource data, with
+   * filenames containing the resource type the file contains, e.g. "Patient.ndjson" should contain
+   * only Patient resources.
+   * <p>
+   * The filename can also optionally contain a qualifier after the resource type, to allow for
+   * resources of the same type to be organised into different files, e.g.
+   * "Observation.Chart.ndjson" and "Observation.Lab.ndjson".
+   *
+   * @param files the paths of the NDJSON files
+   * @return the new data source
+   */
+  @Nonnull
+  public QueryableDataSource ndjson(@Nullable final Collection<String> files) {
+    return new NdjsonSource(context, checkArgumentNotNull(files));
   }
 
   /**
@@ -93,6 +111,44 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
       @Nullable final Function<String, Set<String>> fileNameMapper) {
     return new NdjsonSource(context, checkArgumentNotNull(path), checkArgumentNotNull(extension),
         checkArgumentNotNull(fileNameMapper));
+  }
+
+  /**
+   * Creates a new data source from a list of files which are NDJSON encoded FHIR resources, with
+   * filenames containing the resource type the file contains, e.g. "Patient.ndjson" should contain
+   * only Patient resources.
+   * <p>
+   * The filename can also optionally contain a qualifier after the resource type, to allow for
+   * resources of the same type to be organised into different files, e.g.
+   * "Observation.Chart.ndjson" and "Observation.Lab.ndjson".
+   * <p>
+   * A file extension is also provided, which overrides the default ".ndjson" extension and serves
+   * as a filter for the files to be included in the data source.
+   *
+   * @param files the paths of the NDJSON files
+   * @param extension the file extension to expect
+   * @return the new data source
+   */
+  public QueryableDataSource ndjson(@Nullable final Collection<String> files, @Nullable final String extension) {
+    return new NdjsonSource(context, checkArgumentNotNull(files), checkArgumentNotNull(extension));
+  }
+
+  /**
+   * Creates a new data source from a list of files which are NDJSON encoded FHIR resources, with
+   * filenames determined by the provided function.
+   * <p>
+   * A file extension is also provided, which overrides the default ".ndjson" extension and serves
+   * as a filter for the files to be included in the data source.
+   *
+   * @param files the paths of the NDJSON files
+   * @param extension the file extension to expect
+   * @param fileNameMapper a function that maps a filename to a list of resource types
+   * @return the new data source
+   */
+  public QueryableDataSource ndjson(@Nullable final Collection<String> files, 
+      @Nullable final String extension, 
+      @Nullable final Function<String, Set<String>> fileNameMapper) {
+    return new NdjsonSource(context, checkArgumentNotNull(files), checkArgumentNotNull(extension), checkArgumentNotNull(fileNameMapper));
   }
 
   /**

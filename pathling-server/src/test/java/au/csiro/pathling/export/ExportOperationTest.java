@@ -1,7 +1,7 @@
-package au.csiro.pathling;
+package au.csiro.pathling.export;
 
 import static au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
-import static au.csiro.pathling.export.ExportOutputFormat.ND_JSON;
+import static au.csiro.pathling.operations.export.ExportOutputFormat.ND_JSON;
 import static au.csiro.pathling.util.ExportOperationUtil.fi;
 import static au.csiro.pathling.util.ExportOperationUtil.json;
 import static au.csiro.pathling.util.ExportOperationUtil.req;
@@ -20,11 +20,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.encoders.EncoderBuilder;
-import au.csiro.pathling.export.ExportExecutor;
-import au.csiro.pathling.export.ExportOperationValidator;
-import au.csiro.pathling.export.ExportOutputFormat;
-import au.csiro.pathling.export.ExportRequest;
-import au.csiro.pathling.export.ExportResponse;
+import au.csiro.pathling.operations.export.ExportExecutor;
+import au.csiro.pathling.operations.export.ExportOperationValidator;
+import au.csiro.pathling.operations.export.ExportOutputFormat;
+import au.csiro.pathling.operations.export.ExportRequest;
+import au.csiro.pathling.operations.export.ExportResponse;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;

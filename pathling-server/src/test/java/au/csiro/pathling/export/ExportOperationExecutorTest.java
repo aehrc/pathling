@@ -1,4 +1,4 @@
-package au.csiro.pathling;
+package au.csiro.pathling.export;
 
 import static au.csiro.pathling.util.ExportOperationUtil.date;
 import static au.csiro.pathling.util.ExportOperationUtil.fi;
@@ -19,12 +19,12 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.export.ExportExecutor;
-import au.csiro.pathling.export.ExportOperationValidator;
-import au.csiro.pathling.export.ExportOutputFormat;
-import au.csiro.pathling.export.ExportRequest;
-import au.csiro.pathling.export.ExportResponse;
-import au.csiro.pathling.export.ExportResultRegistry;
+import au.csiro.pathling.operations.export.ExportExecutor;
+import au.csiro.pathling.operations.export.ExportOperationValidator;
+import au.csiro.pathling.operations.export.ExportOutputFormat;
+import au.csiro.pathling.operations.export.ExportRequest;
+import au.csiro.pathling.operations.export.ExportResponse;
+import au.csiro.pathling.operations.export.ExportResultRegistry;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.FileInfo;
 import au.csiro.pathling.library.io.source.QueryableDataSource;

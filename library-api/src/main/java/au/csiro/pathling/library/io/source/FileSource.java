@@ -23,6 +23,8 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.PersistenceError;
 import jakarta.annotation.Nonnull;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -94,9 +96,46 @@ public abstract class FileSource extends DatasetSource {
    * @param reader a {@link DataFrameReader} that can be used to read the source files
    * @param transformer a function that transforms a {@link Dataset<Row>} containing raw source data
    * of a specified resource type into a {@link Dataset<Row>} containing the imported data
+   * @param additionalResourceTypeFilter filter to filter out specific resource types if desired
    */
   protected FileSource(@Nonnull final PathlingContext context,
       @Nonnull final String path,
+      @Nonnull final Function<String, Set<String>> fileNameMapper, @Nonnull final String extension,
+      @Nonnull final DataFrameReader reader,
+      @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer,
+      @Nonnull Predicate<ResourceType> additionalResourceTypeFilter) {
+    this(context, retrieveFilesFromPath(path, context), fileNameMapper, extension, reader, transformer, additionalResourceTypeFilter);
+  }
+
+  private static Collection<String> retrieveFilesFromPath(String path, PathlingContext context) {
+    final org.apache.hadoop.conf.Configuration hadoopConfiguration = requireNonNull(
+        context.getSpark().sparkContext().hadoopConfiguration());
+    try {
+      final Path convertedPath = new Path(path);
+      final FileSystem fileSystem = convertedPath.getFileSystem(hadoopConfiguration);
+      final FileStatus[] fileStatuses = fileSystem.globStatus(new Path(path, "*"));
+      return Arrays.stream(fileStatuses)
+          .map(FileStatus::getPath)
+          .map(Path::toString)
+          .toList();
+    } catch (IOException e) {
+      throw new PersistenceError("Problem reading source files from file system", e);
+    }
+  }
+
+
+  /**
+   * @param context the Pathling context
+   * @param files a list of files to load
+   * @param fileNameMapper a function that maps a file name to a set of resource types
+   * @param extension the file extension that this source expects for its source files
+   * @param reader a {@link DataFrameReader} that can be used to read the source files
+   * @param transformer a function that transforms a {@link Dataset<Row>} containing raw source data
+   * of a specified resource type into a {@link Dataset<Row>} containing the imported data
+   * @param additionalResourceTypeFilter filter to filter out specific resource types if desired
+   */
+  protected FileSource(@Nonnull final PathlingContext context,
+      @Nonnull final Collection<String> files,
       @Nonnull final Function<String, Set<String>> fileNameMapper, @Nonnull final String extension,
       @Nonnull final DataFrameReader reader,
       @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer,
@@ -107,16 +146,7 @@ public abstract class FileSource extends DatasetSource {
     this.reader = reader;
     this.transformer = transformer;
     this.additionalResourceTypeFilter = additionalResourceTypeFilter;
-
-    final org.apache.hadoop.conf.Configuration hadoopConfiguration = requireNonNull(
-        context.getSpark().sparkContext().hadoopConfiguration());
-    try {
-      final Path convertedPath = new Path(path);
-      final FileSystem fileSystem = convertedPath.getFileSystem(hadoopConfiguration);
-      resourceMap = buildResourceMap(convertedPath, fileSystem);
-    } catch (final IOException e) {
-      throw new PersistenceError("Problem reading source files from file system", e);
-    }
+    this.resourceMap = buildResourceMap(files);
   }
 
   /**
@@ -151,17 +181,13 @@ public abstract class FileSource extends DatasetSource {
   /**
    * Creates a map of {@link ResourceType} to {@link Dataset} from the given path and file system.
    *
-   * @param path the path to the source files
-   * @param fileSystem the {@link FileSystem} to use
+   * @param files the files to load
    * @return a map of {@link ResourceType} to {@link Dataset}
-   * @throws IOException if an error occurs while listing the files
    */
   @Nonnull
-  private Map<String, Dataset<Row>> buildResourceMap(final @Nonnull Path path,
-      @Nonnull final FileSystem fileSystem) throws IOException {
-    final FileStatus[] fileStatuses = fileSystem.globStatus(new Path(path, "*"));
-    final Map<String, List<String>> fileNamesByResourceType = Stream.of(fileStatuses)
-        .map(FileStatus::getPath)
+  private Map<String, Dataset<Row>> buildResourceMap(final @Nonnull Collection<String> files) {
+    // final FileStatus[] fileStatuses = fileSystem.globStatus(new Path(path, "*"));
+    final Map<String, List<String>> fileNamesByResourceType = files.stream()
         .map(Object::toString)
         // Filter out any paths that do not have the expected extension.
         .filter(this::checkExtension)

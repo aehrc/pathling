@@ -24,6 +24,8 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.UnaryOperator;
 
 /**
@@ -51,6 +53,9 @@ public class DataSinkBuilder {
    */
   @Nonnull
   private SaveMode saveMode = SaveMode.ERROR_IF_EXISTS;
+  
+  @Nonnull
+  private final Map<String, SaveMode> saveModePerResource = new HashMap<>();
 
   /**
    * @param context the Pathling context to use for writing data
@@ -70,6 +75,16 @@ public class DataSinkBuilder {
   @Nonnull
   public DataSinkBuilder saveMode(@Nonnull final String saveMode) {
     this.saveMode = SaveMode.fromCode(saveMode);
+    return this;
+  }
+  
+  public DataSinkBuilder saveMode(@Nonnull String resourceType, @Nonnull final String saveMode) {
+    saveModePerResource.put(resourceType, SaveMode.fromCode(saveMode));
+    return this;
+  }
+  
+  public DataSinkBuilder saveMode(@Nonnull Map<String, String> saveModesPerResource) {
+    saveModesPerResource.forEach(this::saveMode);
     return this;
   }
 
@@ -96,7 +111,7 @@ public class DataSinkBuilder {
    */
   public NdjsonWriteDetails ndjson(@Nullable final String path,
       @Nullable final UnaryOperator<String> fileNameMapper) {
-    return new NdjsonSink(context, checkArgumentNotNull(path), saveMode,
+    return new NdjsonSink(context, checkArgumentNotNull(path), saveMode, saveModePerResource,
         checkArgumentNotNull(fileNameMapper)).write(source);
   }
 

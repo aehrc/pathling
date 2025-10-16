@@ -3,9 +3,9 @@ package au.csiro.pathling.util;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Fail.fail;
 
-import au.csiro.pathling.export.ExportOutputFormat;
-import au.csiro.pathling.export.ExportRequest;
-import au.csiro.pathling.export.ExportResponse;
+import au.csiro.pathling.operations.export.ExportOutputFormat;
+import au.csiro.pathling.operations.export.ExportRequest;
+import au.csiro.pathling.operations.export.ExportResponse;
 import au.csiro.pathling.library.io.sink.FileInfo;
 import au.csiro.pathling.library.io.sink.NdjsonWriteDetails;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;

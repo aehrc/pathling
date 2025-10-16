@@ -799,7 +799,7 @@ class DataSourcesTest {
   void ndjsonWithNullPathShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
     final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.ndjson(null));
+        () -> builder.ndjson((String) null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
@@ -815,7 +815,7 @@ class DataSourcesTest {
   void ndjsonWithNullPathAndExtensionShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
     final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.ndjson(null, "extension"));
+        () -> builder.ndjson((String) null, "extension"));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 

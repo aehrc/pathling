@@ -1,4 +1,4 @@
-package au.csiro.pathling;
+package au.csiro.pathling.export;
 
 import static au.csiro.pathling.util.ExportOperationUtil.doPolling;
 import static au.csiro.pathling.util.ExportOperationUtil.kickOffRequest;
