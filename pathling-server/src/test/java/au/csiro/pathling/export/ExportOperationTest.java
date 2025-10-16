@@ -32,11 +32,11 @@ import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.ExportRequestBuilder;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
+import au.csiro.pathling.util.MockUtil;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -90,7 +90,7 @@ class ExportOperationTest {
     if (valid) {
       assertThatNoException().isThrownBy(() -> {
         PreAsyncValidationResult<ExportRequest> result = exportOperationValidator.validateRequest(
-            mockRequest(acceptHeader, preferHeader, lenient), outputFormat, now, null, null, null);
+            MockUtil.mockRequest(acceptHeader, preferHeader, lenient), outputFormat, now, null, null, null);
         assertThat(result)
             .isNotNull()
             .extracting(PreAsyncValidationResult::warnings, LIST)
@@ -100,7 +100,7 @@ class ExportOperationTest {
       });
     } else {
       assertThatException().isThrownBy(() -> exportOperationValidator.validateRequest(
-              mockRequest(acceptHeader, preferHeader, lenient), outputFormat, now, null, null, null))
+              MockUtil.mockRequest(acceptHeader, preferHeader, lenient), outputFormat, now, null, null, null))
           .isExactlyInstanceOf(InvalidRequestException.class);
     }
   }
@@ -136,7 +136,7 @@ class ExportOperationTest {
   @ParameterizedTest
   @MethodSource("provide_until_param")
   void test_until_param_is_mapped(InstantType until, InstantType expectedUntil) {
-    RequestDetails mockReqDetails = mockRequest("application/fhir+json", "respond-async", false);
+    RequestDetails mockReqDetails = MockUtil.mockRequest("application/fhir+json", "respond-async", false);
     ExportRequest actualExportRequest = exportOperationValidator.validateRequest(mockReqDetails,
         ExportOutputFormat.asParam(ND_JSON), InstantType.now(), until, null, null).result();
     assertThat(actualExportRequest).isNotNull();
@@ -155,7 +155,7 @@ class ExportOperationTest {
   @MethodSource("provide_type_param")
   void test_type_param_is_mapped(List<String> types, boolean lenient,
       List<ResourceType> expectedTypes) {
-    RequestDetails mockReqDetails = mockRequest("application/fhir+json", "respond-async", lenient);
+    RequestDetails mockReqDetails = MockUtil.mockRequest("application/fhir+json", "respond-async", lenient);
     InstantType now = InstantType.now();
     if (expectedTypes != null) {
       ExportRequest actualExportRequest = exportOperationValidator.validateRequest(mockReqDetails,
@@ -195,7 +195,7 @@ class ExportOperationTest {
   @MethodSource("provide_elements_param")
   void test_elements_param_is_mapped(List<String> elements,
       List<ExportRequest.FhirElement> expectedElements) {
-    RequestDetails mockReqDetails = mockRequest("application/fhir+json", "respond-async", false);
+    RequestDetails mockReqDetails = MockUtil.mockRequest("application/fhir+json", "respond-async", false);
     String outputFormat = ExportOutputFormat.asParam(ND_JSON);
     InstantType now = InstantType.now();
     if (expectedElements != null) {
@@ -240,7 +240,7 @@ class ExportOperationTest {
   void test_params_with_lenient(ExportOutputFormat exportOutputFormat, InstantType since,
       List<String> type, Map<String, String[]> unsupportedQueryParams, boolean lenient,
       List<String> messages, boolean valid) {
-    RequestDetails mockReqDetails = mockRequest("application/fhir+json", "respond-async", lenient);
+    RequestDetails mockReqDetails = MockUtil.mockRequest("application/fhir+json", "respond-async", lenient);
     when(mockReqDetails.getParameters()).thenReturn(unsupportedQueryParams);
     String outputFormat = ExportOutputFormat.asParam(exportOutputFormat);
 
@@ -393,28 +393,6 @@ class ExportOperationTest {
         arguments(base + "_outputFormat=ndjson", "ndjson", now, until,
             List.of("not_real1", "not_real2"), null)
     );
-  }
-
-  private static RequestDetails mockRequest(String acceptHeader, String preferHeader,
-      boolean lenient) {
-    RequestDetails details = mock(RequestDetails.class);
-    when(details.getHeader("Accept")).thenReturn(acceptHeader);
-    List<String> accept = new ArrayList<>();
-    if (acceptHeader != null) {
-      accept.add(acceptHeader);
-    }
-    when(details.getHeaders("Accept")).thenReturn(accept);
-    when(details.getHeader("Prefer")).thenReturn(preferHeader);
-    List<String> prefer = new ArrayList<>();
-    if (preferHeader != null) {
-      prefer.add(preferHeader);
-    }
-    if (lenient) {
-      prefer.add("handling=lenient");
-    }
-    when(details.getHeaders("Prefer")).thenReturn(prefer);
-    when(details.getCompleteUrl()).thenReturn("test-url");
-    return details;
   }
 
 }

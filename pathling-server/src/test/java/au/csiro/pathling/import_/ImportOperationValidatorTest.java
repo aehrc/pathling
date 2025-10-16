@@ -1,6 +1,12 @@
 package au.csiro.pathling.import_;
 
+import au.csiro.pathling.async.PreAsyncValidation;
+import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
 import au.csiro.pathling.operations.import_.ImportOperationValidator;
+import au.csiro.pathling.operations.import_.ImportRequest;
+import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.util.MockUtil;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
@@ -15,21 +21,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 /**
  * @author Felix Naumann
  */
-public class ImportOperationValidatorTest {
+@SpringBootUnitTest
+class ImportOperationValidatorTest {
   
   @Autowired
   private ImportOperationValidator importOperationValidator;
   
   @ParameterizedTest
   @MethodSource("provide_import_requests")
-  void test_import_validator(Parameters requestParams, Map<String, String> headers) {
-    MockHttpServletRequest mockHttpServletRequest = new MockHttpServletRequest();
-    headers.
+  void test_import_validator(Parameters requestParams, String acceptHeader, String preferHeader, boolean lenient, ImportRequest expectedResult) {
+    assertThatNoException().isThrownBy(() -> {
+      PreAsyncValidationResult<ImportRequest> result = importOperationValidator.validateRequest(MockUtil.mockRequest(acceptHeader, preferHeader, lenient), requestParams);
+      assertThat(result.result()).isEqualTo(expectedResult);
+    });
   }
   
   private static Stream<Arguments> provide_import_requests() {
