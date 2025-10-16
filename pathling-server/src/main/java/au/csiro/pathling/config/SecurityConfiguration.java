@@ -94,6 +94,7 @@ public class SecurityConfiguration {
       check(jwtDecoder != null, "JWT decoder must be provided when authentication is enabled");
       http.authorizeHttpRequests(authz -> authz
               // The following requests do not require authentication.
+              .requestMatchers("/actuator/**").permitAll()
               .requestMatchers(HttpMethod.GET, "/fhir/metadata").permitAll()
               .requestMatchers(HttpMethod.GET, "/fhir/OperationDefinition/**").permitAll()
               .requestMatchers(HttpMethod.GET, "/fhir/.well-known/**").permitAll()
