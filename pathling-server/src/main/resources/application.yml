@@ -114,6 +114,7 @@ pathling:
       - Prefer
     exposedHeaders:
       - Content-Location
+      - Content-Disposition
       - X-Progress
     maxAge: 600
 
