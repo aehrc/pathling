@@ -19,7 +19,7 @@ package au.csiro.pathling.security;
 
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
-import au.csiro.pathling.export.ExportRequest;
+import au.csiro.pathling.operations.export.ExportRequest;
 import au.csiro.pathling.util.TestDataSetup;
 import java.nio.file.Path;
 import java.util.List;

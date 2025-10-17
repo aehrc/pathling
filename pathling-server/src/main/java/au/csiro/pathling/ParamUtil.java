@@ -44,7 +44,6 @@ public class ParamUtil {
       RuntimeException onError) {
     Collection<T> types = parts.stream()
         .filter(param -> partName.equals(param.getName()))
-        .map(ParametersParameterComponent::getValue)
         .map(typeClazz::cast)
         .toList();
     if(!types.isEmpty()) {
@@ -92,7 +91,19 @@ public class ParamUtil {
         .findFirst()
         .map(ParametersParameterComponent::getValue);
     if(type.isPresent()) {
-      return mapper.apply(typeClazz.cast(type));
+      T casted = typeClazz.cast(type.get());
+      try {
+        return mapper.apply(casted);
+      } catch (IllegalArgumentException e) {
+       if(lenient && useDefaultValue) {
+         return defaultValue;
+       }
+       if(onError != null) {
+         onError.initCause(e);
+         throw onError;
+       }
+       throw e;
+      }
     }
     if(useDefaultValue || lenient) {
       return defaultValue;

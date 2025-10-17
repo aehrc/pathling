@@ -55,13 +55,7 @@ final class NdjsonSink implements DataSink {
    */
   @Nonnull
   private final SaveMode saveMode;
-
-  /**
-   * The save modes to use for each individual resource type when writing data.
-   */
-  @Nonnull
-  private final Map<String, SaveMode> saveModePerResource;
-
+  
   /**
    * A function that maps resource type to file name.
    */
@@ -78,13 +72,11 @@ final class NdjsonSink implements DataSink {
       @Nonnull final PathlingContext context,
       @Nonnull final String path,
       @Nonnull final SaveMode saveMode,
-      @Nonnull final Map<String, SaveMode> saveModePerResource,
       @Nonnull final UnaryOperator<String> fileNameMapper
   ) {
     this.context = context;
     this.path = path;
     this.saveMode = saveMode;
-    this.saveModePerResource = saveModePerResource;
     this.fileNameMapper = fileNameMapper;
   }
 
@@ -96,12 +88,7 @@ final class NdjsonSink implements DataSink {
   NdjsonSink(@Nonnull final PathlingContext context, @Nonnull final String path,
       @Nonnull final SaveMode saveMode) {
     // By default, name the files using the resource type alone.
-    this(context, path, saveMode, Map.of(), UnaryOperator.identity());
-  }
-  
-  NdjsonSink(@Nonnull final PathlingContext context, @Nonnull final String path,
-      @Nonnull final Map<String, SaveMode> saveModePerResource) {
-    
+    this(context, path, saveMode, UnaryOperator.identity());
   }
 
   @Override
@@ -118,7 +105,7 @@ final class NdjsonSink implements DataSink {
           "ndjson");
       final String resultUrl = safelyJoinPaths(path, fileName);
       
-      switch (saveModePerResource.getOrDefault(resourceType, saveMode)) {
+      switch (saveMode) {
         case ERROR_IF_EXISTS, OVERWRITE, APPEND, IGNORE ->
             writeJsonStrings(jsonStrings, resultUrl, saveMode);
         case MERGE -> throw new UnsupportedOperationException(

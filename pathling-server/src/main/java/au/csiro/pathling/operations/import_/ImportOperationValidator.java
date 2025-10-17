@@ -12,6 +12,7 @@ import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.OperationOutcome;
@@ -91,7 +92,8 @@ public class ImportOperationValidator {
         coding -> ImportFormat.fromCode(coding.getCode()),
         true,
         ImportFormat.NDJSON,
-        lenient
+        lenient,
+        new InvalidUserInputError("Unknown format.")
     );
   }
 
@@ -103,7 +105,8 @@ public class ImportOperationValidator {
         coding -> SaveMode.fromCode(coding.getCode()),
         true,
         SaveMode.OVERWRITE,
-        lenient
+        lenient,
+        new InvalidUserInputError("Unknown mode.")
     );
   }
 
@@ -122,7 +125,11 @@ public class ImportOperationValidator {
     if(resourceType == null || url == null) {
       return null;
     }
-    return new InputParams(ResourceType.fromCode(resourceType), url);
+    try {
+      return new InputParams(ResourceType.fromCode(resourceType), url);
+    } catch (FHIRException e) {
+      throw new InvalidUserInputError("Invalid resource type %s".formatted(resourceType), e);
+    }
   }
 
   private static String getUrl(List<ParametersParameterComponent> partContainingResourceTypeAndUrl,

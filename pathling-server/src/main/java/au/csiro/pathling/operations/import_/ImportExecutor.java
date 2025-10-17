@@ -49,6 +49,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -73,13 +74,7 @@ public class ImportExecutor {
   private final SparkSession spark;
 
   @Nonnull
-  private final Database database;
-
-  @Nonnull
   private final FhirEncoders fhirEncoders;
-
-  @Nonnull
-  private final FhirContextFactory fhirContextFactory;
 
   @Nonnull
   private final Optional<AccessRules> accessRules;
@@ -94,39 +89,16 @@ public class ImportExecutor {
    * @param accessRules a {@link AccessRules} for validating access to URLs
    */
   public ImportExecutor(@Nonnull final SparkSession spark,
-                        @Nonnull final Database database,
                         @Nonnull final FhirEncoders fhirEncoders,
-                        @Nonnull final FhirContextFactory fhirContextFactory,
                         @Nonnull final Optional<AccessRules> accessRules,
       PathlingContext pathlingContext) {
     this.spark = spark;
-    this.database = database;
     this.fhirEncoders = fhirEncoders;
-    this.fhirContextFactory = fhirContextFactory;
     this.accessRules = accessRules;
     this.pathlingContext = pathlingContext;
   }
   
   private record ImportSource(String fileUrl, ImportMode importMode) {}
-
-  private Map<ImportFormat, > readImportSourceFromRequestParams(List<ParametersParameterComponent> sourceParams) {
-    return sourceParams.stream()
-        .collect(Collectors.toMap(
-            sourceParam -> extractFromPart(sourceParam.getPart(), "resourceType", Coding.class).getCode(),
-            sourceParam -> new ImportSource(
-                extractFromPart(sourceParam.getPart(), "url", UrlType.class).getValue(),
-                ImportMode.fromCode(extractFromPart(sourceParam.getPart(), "mode", Coding.class, true, new Coding().setCode(ImportMode.OVERWRITE.getCode())).getCode()),
-                ImportFormat.fromCode(extractFromPart(sourceParam.getPart(), "format", Coding.class, true, new Coding().setCode(ImportFormat.NDJSON.getCode())).getCode())
-            )
-        ));
-  }
-  
-  public DataSourceBuilder from(ImportFormat importFormat) {
-    DataSourceBuilder sourceBuilder = new DataSourceBuilder(pathlingContext);
-    return switch (importFormat) {
-      case NDJSON -> sourceBuilder.ndjson()
-    }
-  }
   
   /**
    * Executes an import request.
@@ -152,27 +124,8 @@ public class ImportExecutor {
     mode [0..1] (code) - A value of overwrite will cause all existing resources of the specified type to be deleted and replaced with the contents of the source file. A value of merge will match existing resources with updated resources in the source file based on their ID, and either update the existing resources or add new resources as appropriate. The default value is overwrite.
     format [0..1] (code) - Indicates the format of the source file. Possible values are ndjson, parquet and delta. The default value is ndjson.
      */
-
-    Map<String, ImportSource> importSourceMap = readImportSourceFromRequestParams(sourceParams);
-    importSourceMap.forEach((resourceType, importSource) -> {
-    });
     
-    Map<ImportFormat, Map<String, ImportSource>> map = null;
-    
-    Map<String, String> saveModesPerResources = map.values().stream()
-            .collect(Collectors.toMap(
-                Collectors.flatMapping(map2 -> map2.keySet().stream(), )
-            ));
-    
-    map.forEach((importFormat, stringImportSourceMap) -> {
-      QueryableDataSource dataSource = switch (importFormat) {
-        case NDJSON -> new DataSourceBuilder(pathlingContext).ndjson(stringImportSourceMap.keySet());
-      };
-      new DataSinkBuilder(pathlingContext, dataSource).saveMode().ndjson()
-    });
-    
-    new DataSourceBuilder(pathlingContext).ndjson();
-    new DataSinkBuilder().saveMode()
+    List<ParametersParameterComponent> sourceParams = new ArrayList<>();
     
     // For each input within the request, read the resources of the declared type and create
     // the corresponding table in the warehouse.
@@ -226,15 +179,15 @@ public class ImportExecutor {
 
       log.info("Importing {} resources (mode: {})", resourceType.toCode(), importMode.getCode());
       DataSinkBuilder sinkBuilder = new DataSinkBuilder(pathlingContext, queryableDataSource).saveMode(importMode.getCode());
-      switch (format) {
-        case NDJSON -> sinkBuilder.ndjson()
-      }
-      if (importMode == ImportMode.OVERWRITE) {
-        
-        database.overwrite(resourceType, rows);
-      } else {
-        database.merge(resourceType, rows);
-      }
+      // switch (format) {
+      //   case NDJSON -> sinkBuilder.ndjson()
+      // }
+      // if (importMode == ImportMode.OVERWRITE) {
+      //  
+      //   database.overwrite(resourceType, rows);
+      // } else {
+      //   database.merge(resourceType, rows);
+      // }
     }
 
     // We return 200, as this operation is currently synchronous.
@@ -272,18 +225,6 @@ public class ImportExecutor {
     } catch (final Exception e) {
       throw new InvalidUserInputError("Error reading from URL: " + convertedUrl, e);
     }
-  }
-
-  @Nonnull
-  private MapFunction<String, IBaseResource> jsonToResourceConverter() {
-    final FhirContextFactory localFhirContextFactory = this.fhirContextFactory;
-    return (json) -> {
-      final IBaseResource resource = localFhirContextFactory.build().newJsonParser()
-          .parseResource(json);
-      // All imported resources must have an ID set.
-      checkUserInput(!resource.getIdElement().isEmpty(), "Encountered a resource with no ID");
-      return resource;
-    };
   }
 
 }
