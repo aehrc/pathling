@@ -57,7 +57,7 @@ The complete FHIRPath specification is available at `.local/specs/FHIRPath.md`. 
 
 ### Searching in Large Documentation Files
 
-When you need to find specific information in large documentation or specification files (like `tmp/specs/FHIRPath.md`) that are too large to load entirely into the context window:
+When you need to find specific information in large documentation or specification files (like `.local/specs/FHIRPath.md`) that are too large to load entirely into the context window:
 
 **Use grep or similar search tools to locate relevant sections:**
 - Use the `Grep` tool to search for specific terms, concepts, or patterns
@@ -68,7 +68,7 @@ When you need to find specific information in large documentation or specificati
 **Example:**
 
 To find information about the 'where' operator in FHIRPath:
-1. Use Grep: pattern="where" path="tmp/specs/FHIRPath.md"
+1. Use Grep: pattern="where" path=".local/specs/FHIRPath.md"
 2. Identify line numbers from grep results
 3. Use Read to load just that section with content
 
