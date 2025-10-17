@@ -17,14 +17,14 @@
 
 package au.csiro.pathling.library.io.sink;
 
-import static au.csiro.pathling.library.io.sink.DeltaSink.merge;
-
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
+import io.delta.tables.DeltaMergeBuilder;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -36,41 +36,71 @@ import org.apache.spark.sql.Row;
  */
 class CatalogSink implements DataSink {
 
+  /**
+   * The PathlingContext to use.
+   */
   @Nonnull
   private final PathlingContext context;
 
+  /**
+   * The save mode to use when writing data.
+   */
   @Nonnull
   private final SaveMode saveMode;
 
+  /**
+   * The schema to qualify the table names, if any.
+   */
   @Nonnull
   private final Optional<String> schema;
 
+  /**
+   * The format to use when writing data.
+   */
   @Nonnull
   private final Optional<String> format;
 
   /**
-   * Constructs a CatalogSink with the specified PathlingContext and default import mode.
-   *
-   * @param context the PathlingContext to use
+   * The strategy to use when merging data.
    */
-  CatalogSink(@Nonnull final PathlingContext context) {
-    this.context = context;
-    this.saveMode = SaveMode.ERROR_IF_EXISTS; // Default import mode
-    this.schema = Optional.empty(); // Schema not specified
-    this.format = Optional.empty(); // Format not specified
-  }
+  @Nonnull
+  private final BiFunction<DeltaTable, Dataset<Row>, DeltaMergeBuilder> mergeBuilder;
 
   /**
-   * Constructs a CatalogSink with the specified PathlingContext and import mode.
+   * Constructs a CatalogSink with the specified PathlingContext, import mode, schema, and format.
    *
    * @param context the PathlingContext to use
    * @param saveMode the SaveMode to use when writing data
+   * @param schema the schema to qualify the table names, if any
+   * @param format the format to use when writing data
+   * @param mergeBuilder the strategy to use when merging data
    */
-  CatalogSink(@Nonnull final PathlingContext context, @Nonnull final SaveMode saveMode) {
+  CatalogSink(@Nonnull final PathlingContext context, @Nonnull final SaveMode saveMode,
+      @Nonnull final Optional<String> schema, @Nonnull final Optional<String> format,
+      @Nonnull final BiFunction<DeltaTable, Dataset<Row>, DeltaMergeBuilder> mergeBuilder) {
     this.context = context;
     this.saveMode = saveMode;
-    this.schema = Optional.empty(); // Schema not specified
-    this.format = Optional.empty(); // Format not specified
+    this.schema = schema;
+    this.format = format;
+    this.mergeBuilder = mergeBuilder;
+  }
+
+  /**
+   * Constructs a CatalogSink with the specified PathlingContext, import mode, schema, and format.
+   *
+   * @param context the PathlingContext to use
+   * @param saveMode the SaveMode to use when writing data
+   * @param schema the schema to qualify the table names, if any
+   * @param format the format to use when writing data
+   * @param deleteOnMerge if merging, whether to delete any resources not found in the source, but
+   * found in the destination
+   */
+  CatalogSink(@Nonnull final PathlingContext context, @Nonnull final SaveMode saveMode,
+      @Nonnull final String schema, @Nonnull final String format,
+      final boolean deleteOnMerge) {
+    this(context, saveMode, Optional.of(schema), Optional.of(format), deleteOnMerge
+                                                                      ? DeltaSink::defaultMergeBuilder
+                                                                      : DeltaSink::deleteOnMergeBuilder);
   }
 
   /**
@@ -82,56 +112,57 @@ class CatalogSink implements DataSink {
    */
   CatalogSink(@Nonnull final PathlingContext context, @Nonnull final SaveMode saveMode,
       @Nonnull final String schema) {
-    this.context = context;
-    this.saveMode = saveMode;
-    this.schema = Optional.of(schema);
-    this.format = Optional.empty(); // Format not specified
+    this(context, saveMode, Optional.of(schema),
+        // No format specified.
+        Optional.empty(),
+        // Use default merge builder for Delta tables.
+        DeltaSink::defaultMergeBuilder);
   }
 
   /**
-   * Constructs a CatalogSink with the specified PathlingContext, import mode, schema, and format.
+   * Constructs a CatalogSink with the specified PathlingContext and import mode.
    *
    * @param context the PathlingContext to use
    * @param saveMode the SaveMode to use when writing data
-   * @param schema the schema to qualify the table names, if any
-   * @param format the format to use when writing data
    */
-  CatalogSink(@Nonnull final PathlingContext context, @Nonnull final SaveMode saveMode,
-      @Nonnull final String schema, @Nonnull final String format) {
-    this.context = context;
-    this.saveMode = saveMode;
-    this.schema = Optional.of(schema);
-    this.format = Optional.of(format);
+  CatalogSink(@Nonnull final PathlingContext context, @Nonnull final SaveMode saveMode) {
+    this(context, saveMode,
+        // No schema specified.
+        Optional.empty(),
+        // No format specified.
+        Optional.empty(),
+        // Use default merge builder for Delta tables.
+        DeltaSink::defaultMergeBuilder);
   }
 
   @Override
   public void write(@Nonnull final DataSource source) {
     for (final String resourceType : source.getResourceTypes()) {
-      final Dataset<Row> dataset = source.read(resourceType);
+      final Dataset<Row> updates = source.read(resourceType);
       final String tableName = getTableName(resourceType);
 
       switch (saveMode) {
-        case ERROR_IF_EXISTS, APPEND, IGNORE -> writeDataset(dataset, tableName, saveMode);
+        case ERROR_IF_EXISTS, APPEND, IGNORE -> writeDataset(updates, tableName, saveMode);
         case OVERWRITE -> {
           if (format.isPresent() && "delta".equals(format.get())) {
             // This is to work around a bug relating to Delta tables not being able to be overwritten,
             // due to their inability to handle the truncate operation that Spark performs when
             // overwriting a table.
             context.getSpark().sql("DROP TABLE IF EXISTS " + tableName);
-            writeDataset(dataset, tableName, SaveMode.ERROR_IF_EXISTS);
+            writeDataset(updates, tableName, SaveMode.ERROR_IF_EXISTS);
           } else {
             // Use standard overwrite for non-Delta formats.
-            writeDataset(dataset, tableName, saveMode);
+            writeDataset(updates, tableName, saveMode);
           }
         }
         case MERGE -> {
           if (deltaTableExists(tableName)) {
             // If the table already exists, merge the data in.
-            final DeltaTable table = DeltaTable.forName(tableName);
-            merge(table, dataset, false); // XXX: Don't have enough context here to know whether merging with or without deletes is the way to go. Perhaps this is used somewhere else entirely?
+            final DeltaTable original = DeltaTable.forName(tableName);
+            mergeBuilder.apply(original, updates).execute();
           } else {
             // If the table does not exist, create it.
-            writeDataset(dataset, tableName, SaveMode.ERROR_IF_EXISTS);
+            writeDataset(updates, tableName, SaveMode.ERROR_IF_EXISTS);
           }
         }
       }

@@ -123,9 +123,19 @@ public class DataSinkBuilder {
    * Writes the data in the data source to a Delta database.
    *
    * @param path the directory to write the files to
-   * @param deleteOnMerge If merging, whether to delete any resources not found in the source, but found in the destination. 
    */
-  public void delta(@Nullable final String path, @Nullable final boolean deleteOnMerge) {
+  public void delta(@Nullable final String path) {
+    new DeltaSink(context, checkArgumentNotNull(path)).write(source);
+  }
+
+  /**
+   * Writes the data in the data source to a Delta database, with the option to delete on merge.
+   *
+   * @param path the directory to write the files to
+   * @param deleteOnMerge If merging, whether to delete any resources not found in the source, but
+   * found in the destination.
+   */
+  public void delta(@Nullable final String path, final boolean deleteOnMerge) {
     new DeltaSink(context, checkArgumentNotNull(path), saveMode, deleteOnMerge).write(source);
   }
 
@@ -134,12 +144,12 @@ public class DataSinkBuilder {
    *
    * @param path the directory to write the files to
    * @param fileNameMapper a function that maps a resource type to a file name
-   * @param deleteOnMerge If merging, whether to delete any resources not found in the source, but found in the destination. 
-   * 
+   * @param deleteOnMerge If merging, whether to delete any resources not found in the source, but
+   * found in the destination.
+   *
    */
   public void delta(@Nullable final String path,
-      @Nullable final UnaryOperator<String> fileNameMapper,
-      @Nullable final boolean deleteOnMerge) {
+      @Nullable final UnaryOperator<String> fileNameMapper, final boolean deleteOnMerge) {
     new DeltaSink(context, checkArgumentNotNull(path), saveMode,
         checkArgumentNotNull(fileNameMapper), deleteOnMerge).write(source);
   }
@@ -173,8 +183,22 @@ public class DataSinkBuilder {
    */
   public void tables(@Nullable final String schema, @Nullable final String format) {
     new CatalogSink(context, saveMode, checkArgumentNotNull(schema),
-        checkArgumentNotNull(format)).write(source);
+        checkArgumentNotNull(format), false).write(source);
   }
 
+  /**
+   * Writes the data in the data source to tables within the Spark catalog, named according to the
+   * resource type, using the specified format and delete on merge option.
+   *
+   * @param schema the schema name to write the tables to
+   * @param format the table format to use (e.g., "delta", "parquet")
+   * @param deleteOnMerge if merging, whether to delete any resources not found in the source, but
+   * found in the destination
+   */
+  public void tables(@Nullable final String schema, @Nullable final String format,
+      final boolean deleteOnMerge) {
+    new CatalogSink(context, saveMode, checkArgumentNotNull(schema), checkArgumentNotNull(format),
+        deleteOnMerge).write(source);
+  }
 
 }
