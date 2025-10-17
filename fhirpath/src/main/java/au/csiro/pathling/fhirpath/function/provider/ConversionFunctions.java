@@ -87,32 +87,18 @@ public class ConversionFunctions {
     final Column value = column.getValue();
 
     final Column result = switch (inputType) {
-      case STRING -> {
-        // Convert to lowercase for case-insensitive comparison.
-        final Column lowerValue = lower(value);
-        // String: true values: 'true', 't', 'yes', 'y', '1', '1.0'
-        // String: false values: 'false', 'f', 'no', 'n', '0', '0.0'
-        yield when(lowerValue.equalTo(lit("true"))
-            .or(lowerValue.equalTo(lit("t")))
-            .or(lowerValue.equalTo(lit("yes")))
-            .or(lowerValue.equalTo(lit("y")))
-            .or(lowerValue.equalTo(lit("1")))
-            .or(lowerValue.equalTo(lit("1.0"))), lit(true))
-            .when(lowerValue.equalTo(lit("false"))
-                .or(lowerValue.equalTo(lit("f")))
-                .or(lowerValue.equalTo(lit("no")))
-                .or(lowerValue.equalTo(lit("n")))
-                .or(lowerValue.equalTo(lit("0")))
-                .or(lowerValue.equalTo(lit("0.0"))), lit(false));
-      }
+      case STRING ->
+        // String: Handle '1.0' and '0.0' specially, use SparkSQL cast for other values.
+        // SparkSQL cast handles 'true', 'false', 't', 'f', 'yes', 'no', 'y', 'n', '1', '0' (case-insensitive).
+          when(value.equalTo(lit("1.0")), lit(true))
+              .when(value.equalTo(lit("0.0")), lit(false))
+              .otherwise(value.cast(DataTypes.BooleanType));
       case INTEGER ->
-        // Integer: 1 → true, 0 → false, otherwise null (empty).
-          when(value.equalTo(lit(1)), lit(true))
-              .when(value.equalTo(lit(0)), lit(false));
+        // Integer: cast to boolean (1 → true, 0 → false, otherwise null).
+          value.cast(DataTypes.BooleanType);
       case DECIMAL ->
-        // Decimal: 1.0 → true, 0.0 → false, otherwise null (empty).
-          when(value.equalTo(lit(1.0)), lit(true))
-              .when(value.equalTo(lit(0.0)), lit(false));
+        // Decimal: cast to boolean (1.0 → true, 0.0 → false, otherwise null).
+          value.cast(DataTypes.BooleanType);
       default ->
         // Unsupported type: return empty.
           null;
@@ -153,9 +139,8 @@ public class ConversionFunctions {
 
     final Column result = switch (inputType) {
       case BOOLEAN ->
-        // Boolean: true → 1, false → 0.
-          when(value.equalTo(lit(true)), lit(1))
-              .when(value.equalTo(lit(false)), lit(0));
+        // Boolean: Use SparkSQL cast (true → 1, false → 0).
+          value.cast(DataTypes.IntegerType);
       case STRING ->
         // String: try to cast to integer, returns null if invalid.
           value.cast(DataTypes.IntegerType);
@@ -244,10 +229,8 @@ public class ConversionFunctions {
 
     final Column result = switch (inputType) {
       case BOOLEAN ->
-        // Boolean: true → 1.0, false → 0.0.
-          when(value.equalTo(lit(true)), lit(1.0))
-              .when(value.equalTo(lit(false)), lit(0.0))
-              .cast(DecimalCollection.getDecimalType());
+        // Boolean: Use SparkSQL cast (true → 1.0, false → 0.0).
+          value.cast(DecimalCollection.getDecimalType());
       case INTEGER ->
         // Integer: cast to decimal.
           value.cast(DecimalCollection.getDecimalType());
@@ -428,26 +411,16 @@ public class ConversionFunctions {
 
     final Column canConvert = switch (inputType) {
       case STRING -> {
-        // Check if string is one of the convertible values (case-insensitive).
-        final Column lowerValue = lower(value);
-        yield lowerValue.equalTo(lit("true"))
-            .or(lowerValue.equalTo(lit("t")))
-            .or(lowerValue.equalTo(lit("yes")))
-            .or(lowerValue.equalTo(lit("y")))
-            .or(lowerValue.equalTo(lit("1")))
-            .or(lowerValue.equalTo(lit("1.0")))
-            .or(lowerValue.equalTo(lit("false")))
-            .or(lowerValue.equalTo(lit("f")))
-            .or(lowerValue.equalTo(lit("no")))
-            .or(lowerValue.equalTo(lit("n")))
-            .or(lowerValue.equalTo(lit("0")))
-            .or(lowerValue.equalTo(lit("0.0")));
+        // For strings: check if '1.0'/'0.0' or if cast to boolean succeeds.
+        final Column is10or00 = value.equalTo(lit("1.0")).or(value.equalTo(lit("0.0")));
+        final Column castSucceeds = value.cast(DataTypes.BooleanType).isNotNull();
+        yield value.isNotNull().and(is10or00.or(castSucceeds));
       }
       case INTEGER ->
-        // Check if integer is 0 or 1.
+        // Only 0 and 1 can be converted.
           value.equalTo(lit(0)).or(value.equalTo(lit(1)));
       case DECIMAL ->
-        // Check if decimal is 0.0 or 1.0.
+        // Only 0.0 and 1.0 can be converted.
           value.equalTo(lit(0.0)).or(value.equalTo(lit(1.0)));
       default ->
         // Other types cannot be converted.
@@ -481,9 +454,9 @@ public class ConversionFunctions {
         // Boolean and integer can be converted.
           BooleanCollection.build(new DefaultRepresentation(lit(true)));
       case STRING -> {
-        // For strings, check if casting to integer returns non-null.
+        // Check if value is not null and casting to integer returns non-null.
         final Column value = singular.getColumn().getValue();
-        final Column canConvert = value.cast(DataTypes.IntegerType).isNotNull();
+        final Column canConvert = value.isNotNull().and(value.cast(DataTypes.IntegerType).isNotNull());
         yield BooleanCollection.build(new DefaultRepresentation(canConvert));
       }
       default ->
@@ -516,9 +489,9 @@ public class ConversionFunctions {
         // Boolean, integer, and decimal can be converted.
           BooleanCollection.build(new DefaultRepresentation(lit(true)));
       case STRING -> {
-        // For strings, check if casting to long returns non-null.
+        // Check if value is not null and casting to long returns non-null.
         final Column value = singular.getColumn().getValue();
-        final Column canConvert = value.cast(DataTypes.LongType).isNotNull();
+        final Column canConvert = value.isNotNull().and(value.cast(DataTypes.LongType).isNotNull());
         yield BooleanCollection.build(new DefaultRepresentation(canConvert));
       }
       default ->
@@ -551,9 +524,9 @@ public class ConversionFunctions {
         // Boolean, integer, and decimal can be converted.
           BooleanCollection.build(new DefaultRepresentation(lit(true)));
       case STRING -> {
-        // For strings, check if casting to decimal returns non-null.
+        // Check if value is not null and casting to decimal returns non-null.
         final Column value = singular.getColumn().getValue();
-        final Column canConvert = value.cast(DecimalCollection.getDecimalType()).isNotNull();
+        final Column canConvert = value.isNotNull().and(value.cast(DecimalCollection.getDecimalType()).isNotNull());
         yield BooleanCollection.build(new DefaultRepresentation(canConvert));
       }
       default ->
@@ -610,10 +583,19 @@ public class ConversionFunctions {
     final Collection singular = input.asSingular();
     final FhirPathType inputType = singular.getType().orElse(null);
 
-    // Date is already date, string can be converted (validation is deferred).
     return switch (inputType) {
-      case DATE, STRING ->
+      case DATE ->
+        // Date is already date.
           BooleanCollection.build(new DefaultRepresentation(lit(true)));
+      case STRING -> {
+        // String can be converted only if it matches the date format: YYYY-MM-DD (with optional partial dates).
+        final Column value = singular.getColumn().getValue();
+        // Date format: YYYY or YYYY-MM or YYYY-MM-DD
+        final Column canConvert = value.isNotNull().and(
+            value.rlike("^\\d{4}(-\\d{2}(-\\d{2})?)?$")
+        );
+        yield BooleanCollection.build(new DefaultRepresentation(canConvert));
+      }
       default ->
         // Other types cannot be converted.
           BooleanCollection.build(new DefaultRepresentation(lit(false)));
@@ -639,10 +621,19 @@ public class ConversionFunctions {
     final Collection singular = input.asSingular();
     final FhirPathType inputType = singular.getType().orElse(null);
 
-    // DateTime is already datetime, string can be converted (validation is deferred).
     return switch (inputType) {
-      case DATETIME, STRING ->
+      case DATETIME ->
+        // DateTime is already datetime.
           BooleanCollection.build(new DefaultRepresentation(lit(true)));
+      case STRING -> {
+        // String can be converted only if it matches ISO 8601 datetime format.
+        final Column value = singular.getColumn().getValue();
+        // Simplified check for datetime format: YYYY-MM-DDThh:mm:ss with optional timezone
+        final Column canConvert = value.isNotNull().and(
+            value.rlike("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(Z|[+-]\\d{2}:\\d{2})?$")
+        );
+        yield BooleanCollection.build(new DefaultRepresentation(canConvert));
+      }
       default ->
         // Other types cannot be converted.
           BooleanCollection.build(new DefaultRepresentation(lit(false)));
@@ -668,10 +659,19 @@ public class ConversionFunctions {
     final Collection singular = input.asSingular();
     final FhirPathType inputType = singular.getType().orElse(null);
 
-    // Time is already time, string can be converted (validation is deferred).
     return switch (inputType) {
-      case TIME, STRING ->
+      case TIME ->
+        // Time is already time.
           BooleanCollection.build(new DefaultRepresentation(lit(true)));
+      case STRING -> {
+        // String can be converted only if it matches time format: hh:mm:ss with optional milliseconds.
+        final Column value = singular.getColumn().getValue();
+        // Time format: hh:mm:ss or hh:mm:ss.fff
+        final Column canConvert = value.isNotNull().and(
+            value.rlike("^\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?$")
+        );
+        yield BooleanCollection.build(new DefaultRepresentation(canConvert));
+      }
       default ->
         // Other types cannot be converted.
           BooleanCollection.build(new DefaultRepresentation(lit(false)));

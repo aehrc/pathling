@@ -283,7 +283,7 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .group("toDate() with String and Date literals")
         .testEquals("2023-01-15", "'2023-01-15'.toDate()", "toDate() converts valid date string")
         .testEquals("2023-12-25", "@2023-12-25.toDate()", "toDate() returns date as-is")
-        .testEquals("notADate", "'notADate'.toDate()", "toDate() returns string (validation deferred)")
+        .testEmpty("'notADate'.toDate()", "toDate() returns empty for invalid date string")
 
         .group("toDate() with invalid types")
         .testEmpty("42.toDate()", "toDate() returns empty for non-string")
@@ -310,6 +310,7 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testEquals(true, "@2023-12-25.convertsToDate()", "convertsToDate() returns true for date")
 
         .group("convertsToDate() with non-convertible types")
+        .testEquals(false, "'notADate'.convertsToDate()", "convertsToDate() returns false for invalid date string")
         .testEquals(false, "42.convertsToDate()", "convertsToDate() returns false for integer")
 
         .group("convertsToDate() error cases with arrays")
@@ -332,6 +333,7 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .group("toDateTime() with String and DateTime literals")
         .testEquals("2023-01-15T10:30:00Z", "'2023-01-15T10:30:00Z'.toDateTime()", "toDateTime() converts valid datetime string")
         .testEquals("2023-12-25T12:00:00Z", "@2023-12-25T12:00:00Z.toDateTime()", "toDateTime() returns datetime as-is")
+        .testEmpty("'not-a-datetime'.toDateTime()", "toDateTime() returns empty for invalid datetime string")
 
         .group("toDateTime() with invalid types")
         .testEmpty("42.toDateTime()", "toDateTime() returns empty for non-string")
@@ -358,6 +360,7 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testEquals(true, "@2023-12-25T12:00:00Z.convertsToDateTime()", "convertsToDateTime() returns true for datetime")
 
         .group("convertsToDateTime() with non-convertible types")
+        .testEquals(false, "'not-a-datetime'.convertsToDateTime()", "convertsToDateTime() returns false for invalid datetime string")
         .testEquals(false, "42.convertsToDateTime()", "convertsToDateTime() returns false for integer")
 
         .group("convertsToDateTime() error cases with arrays")
@@ -380,6 +383,7 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .group("toTime() with String and Time literals")
         .testEquals("10:30:00", "'10:30:00'.toTime()", "toTime() converts valid time string")
         .testEquals("12:00:00", "@T12:00:00.toTime()", "toTime() returns time as-is")
+        .testEmpty("'not-a-time'.toTime()", "toTime() returns empty for invalid time string")
 
         .group("toTime() with invalid types")
         .testEmpty("42.toTime()", "toTime() returns empty for non-string")
