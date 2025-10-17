@@ -62,11 +62,12 @@ class ImportOperationValidatorTest {
   void test_headers(String acceptHeader, String preferHeader, boolean lenient,
       List<String> messages, boolean valid) {
     Parameters minimalParams = minimalValidParams();
+    RequestDetails mockRequest = MockUtil.mockRequest(acceptHeader, preferHeader, lenient);
 
     if (valid) {
       assertThatNoException().isThrownBy(() -> {
         PreAsyncValidationResult<ImportRequest> result = importOperationValidator.validateRequest(
-            MockUtil.mockRequest(acceptHeader, preferHeader, lenient), minimalParams);
+            mockRequest, minimalParams);
         assertThat(result)
             .isNotNull()
             .extracting(PreAsyncValidationResult::warnings, LIST)
@@ -75,8 +76,7 @@ class ImportOperationValidatorTest {
             .containsExactlyInAnyOrderElementsOf(messages);
       });
     } else {
-      assertThatCode(() -> importOperationValidator.validateRequest(
-              MockUtil.mockRequest(acceptHeader, preferHeader, lenient), minimalParams))
+      assertThatCode(() -> importOperationValidator.validateRequest(mockRequest, minimalParams))
           .isExactlyInstanceOf(InvalidRequestException.class);
     }
   }
@@ -130,6 +130,7 @@ class ImportOperationValidatorTest {
       assertThatNoException().isThrownBy(() -> {
         PreAsyncValidationResult<ImportRequest> result = importOperationValidator.validateRequest(
             mockRequest, params);
+        assertThat(result.result()).isNotNull();
         assertThat(result.result().input()).isEqualTo(expectedInput);
       });
     } else {
@@ -209,6 +210,7 @@ class ImportOperationValidatorTest {
       assertThatNoException().isThrownBy(() -> {
         PreAsyncValidationResult<ImportRequest> result = importOperationValidator.validateRequest(
             mockRequest, params);
+        assertThat(result.result()).isNotNull();
         assertThat(result.result().saveMode()).isEqualTo(expectedMode);
       });
     } else {
@@ -245,6 +247,7 @@ class ImportOperationValidatorTest {
       assertThatNoException().isThrownBy(() -> {
         PreAsyncValidationResult<ImportRequest> result = importOperationValidator.validateRequest(
             mockRequest, params);
+        assertThat(result.result()).isNotNull();
         assertThat(result.result().importFormat()).isEqualTo(expectedFormat);
       });
     } else {
@@ -284,6 +287,7 @@ class ImportOperationValidatorTest {
       assertThatNoException().isThrownBy(() -> {
         PreAsyncValidationResult<ImportRequest> result = importOperationValidator.validateRequest(
             mockRequest, params);
+        assertThat(result.result()).isNotNull();
         assertThat(result.result().lenient()).isEqualTo(lenient);
       });
     } else {
