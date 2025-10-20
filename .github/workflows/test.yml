@@ -2,13 +2,9 @@
 
 name: Test
 
-# This workflow runs on all pushes to all branches except for main and release branches.
+# This workflow runs on all pull requests except those from release branches.
 on:
-  push:
-    branches-ignore:
-      - gh-pages
-      - main
-      - "release/*"
+  pull_request_target:
 
 env:
   # The add-exports and add-opens flags are required for Java 17
@@ -18,6 +14,8 @@ jobs:
   build-and-test:
     name: Build and test
     runs-on: ubuntu-latest
+    # Skip pull requests from release branches (handled by pre-release workflow).
+    if: "!startsWith(github.head_ref, 'release/')"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
