@@ -37,6 +37,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .integerArray("intArray", 0, 1, 2)
             .stringArray("stringArray", "true", "false", "yes")
             .dateArray("dateArray", "2023-01-15", "2023-12-25")
+            .boolEmpty("emptyBool")
+            .integerEmpty("emptyInt")
+            .dateEmpty("emptyDate")
         )
         .group("toBoolean() with Boolean literals")
         .testEquals(true, "true.toBoolean()", "toBoolean() returns true for true")
@@ -88,6 +91,11 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .group("toBoolean() with non-convertible types")
         .testEmpty("@2023-01-15.toBoolean()", "toBoolean() returns empty for Date")
 
+        .group("toBoolean() with empty values")
+        .testEmpty("emptyBool.toBoolean()", "toBoolean() returns empty for empty Boolean")
+        .testEmpty("emptyInt.toBoolean()", "toBoolean() returns empty for empty Integer")
+        .testEmpty("emptyDate.toBoolean()", "toBoolean() returns empty for empty Date")
+
         .group("toBoolean() error cases with arrays")
         .testEmpty("{}.toBoolean()", "toBoolean() returns empty for empty collection")
         .testError("boolArray.toBoolean()", "toBoolean() errors on array of source type (Boolean)")
@@ -104,6 +112,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .boolArray("boolArray", true, false)
             .decimalArray("decArray", 1.0, 0.0)
             .dateArray("dateArray", "2023-01-15", "2023-12-25")
+            .boolEmpty("emptyBool")
+            .decimalEmpty("emptyDec")
+            .dateEmpty("emptyDate")
         )
         .group("convertsToBoolean() with convertible literals")
         .testEquals(true, "true.convertsToBoolean()", "convertsToBoolean() returns true for Boolean")
@@ -125,6 +136,11 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testEquals(false, "3.14.convertsToBoolean()", "convertsToBoolean() returns false for other decimal")
         .testEquals(false, "@2023-01-15.convertsToBoolean()", "convertsToBoolean() returns false for date")
 
+        .group("convertsToBoolean() with empty values")
+        .testEmpty("emptyBool.convertsToBoolean()", "convertsToBoolean() returns empty for empty Boolean")
+        .testEmpty("emptyDec.convertsToBoolean()", "convertsToBoolean() returns empty for empty Decimal")
+        .testEmpty("emptyDate.convertsToBoolean()", "convertsToBoolean() returns empty for empty Date")
+
         .group("convertsToBoolean() error cases with arrays")
         .testEmpty("{}.convertsToBoolean()", "convertsToBoolean() returns empty for empty collection")
         .testError("boolArray.convertsToBoolean()", "convertsToBoolean() errors on array of source type (Boolean)")
@@ -141,6 +157,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .integerArray("intArray", 1, 2, 3)
             .stringArray("stringArray", "1", "2", "3")
             .dateArray("dateArray", "2023-01-15", "2023-12-25")
+            .integerEmpty("emptyInt")
+            .boolEmpty("emptyBool")
+            .dateEmpty("emptyDate")
         )
         .group("toInteger() with literal values")
         .testEquals(1, "true.toInteger()", "toInteger() converts true to 1")
@@ -153,6 +172,11 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
 
         .group("toInteger() with non-convertible types")
         .testEmpty("@2023-01-15.toInteger()", "toInteger() returns empty for Date")
+
+        .group("toInteger() with empty values")
+        .testEmpty("emptyInt.toInteger()", "toInteger() returns empty for empty Integer")
+        .testEmpty("emptyBool.toInteger()", "toInteger() returns empty for empty Boolean")
+        .testEmpty("emptyDate.toInteger()", "toInteger() returns empty for empty Date")
 
         .group("toInteger() error cases with arrays")
         .testEmpty("{}.toInteger()", "toInteger() returns empty for empty collection")
@@ -170,6 +194,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .integerArray("intArray", 1, 2, 3)
             .boolArray("boolArray", true, false)
             .dateArray("dateArray", "2023-01-15", "2023-12-25")
+            .integerEmpty("emptyInt")
+            .boolEmpty("emptyBool")
+            .dateEmpty("emptyDate")
         )
         .group("convertsToInteger() with convertible literals")
         .testEquals(true, "true.convertsToInteger()", "convertsToInteger() returns true for Boolean")
@@ -180,6 +207,11 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testEquals(false, "'notNumber'.convertsToInteger()", "convertsToInteger() returns false for invalid string")
         .testEquals(false, "3.14.convertsToInteger()", "convertsToInteger() returns false for Decimal")
         .testEquals(false, "@2023-01-15.convertsToInteger()", "convertsToInteger() returns false for Date")
+
+        .group("convertsToInteger() with empty values")
+        .testEmpty("emptyInt.convertsToInteger()", "convertsToInteger() returns empty for empty Integer")
+        .testEmpty("emptyBool.convertsToInteger()", "convertsToInteger() returns empty for empty Boolean")
+        .testEmpty("emptyDate.convertsToInteger()", "convertsToInteger() returns empty for empty Date")
 
         .group("convertsToInteger() error cases with arrays")
         .testEmpty("{}.convertsToInteger()", "convertsToInteger() returns empty for empty collection")
@@ -197,6 +229,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .decimalArray("decArray", 1.1, 2.2, 3.3)
             .integerArray("intArray", 1, 2, 3)
             .dateArray("dateArray", "2023-01-15", "2023-12-25")
+            .decimalEmpty("emptyDec")
+            .integerEmpty("emptyInt")
+            .dateEmpty("emptyDate")
         )
         .group("toDecimal() with literal values")
         .testEquals(1.0, "true.toDecimal()", "toDecimal() converts true to 1.0")
@@ -208,6 +243,11 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
 
         .group("toDecimal() with non-convertible types")
         .testEmpty("@2023-01-15.toDecimal()", "toDecimal() returns empty for Date")
+
+        .group("toDecimal() with empty values")
+        .testEmpty("emptyDec.toDecimal()", "toDecimal() returns empty for empty Decimal")
+        .testEmpty("emptyInt.toDecimal()", "toDecimal() returns empty for empty Integer")
+        .testEmpty("emptyDate.toDecimal()", "toDecimal() returns empty for empty Date")
 
         .group("toDecimal() error cases with arrays")
         .testEmpty("{}.toDecimal()", "toDecimal() returns empty for empty collection")
@@ -225,6 +265,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .stringArray("stringArray", "hello", "world")
             .decimalArray("decArray", 1.1, 2.2)
             .dateArray("dateArray", "2023-01-15", "2023-12-25")
+            .stringEmpty("emptyStr")
+            .decimalEmpty("emptyDec")
+            .dateEmpty("emptyDate")
         )
         .group("toString() with primitive type literals")
         .testEquals("true", "true.toString()", "toString() converts true")
@@ -237,6 +280,11 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testEquals("2023-01-15", "@2023-01-15.toString()", "toString() converts date")
         .testEquals("2023-01-15T10:30:00Z", "@2023-01-15T10:30:00Z.toString()", "toString() converts datetime")
         .testEquals("10:30:00", "@T10:30:00.toString()", "toString() converts time")
+
+        .group("toString() with empty values")
+        .testEmpty("emptyStr.toString()", "toString() returns empty for empty String")
+        .testEmpty("emptyDec.toString()", "toString() returns empty for empty Decimal")
+        .testEmpty("emptyDate.toString()", "toString() returns empty for empty Date")
 
         .group("toString() error cases with arrays")
         .testEmpty("{}.toString()", "toString() returns empty for empty collection")
@@ -254,6 +302,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .stringArray("stringArray", "hello", "world")
             .integerArray("intArray", 1, 2, 3)
             .dateArray("dateArray", "2023-01-15", "2023-12-25")
+            .stringEmpty("emptyStr")
+            .integerEmpty("emptyInt")
+            .dateEmpty("emptyDate")
         )
         .group("convertsToString() with convertible types")
         .testEquals(true, "true.convertsToString()", "convertsToString() returns true for Boolean")
@@ -263,6 +314,11 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testEquals(true, "@2023-01-15.convertsToString()", "convertsToString() returns true for Date")
         .testEquals(true, "@2023-01-15T10:30:00Z.convertsToString()", "convertsToString() returns true for DateTime")
         .testEquals(true, "@T10:30:00.convertsToString()", "convertsToString() returns true for Time")
+
+        .group("convertsToString() with empty values")
+        .testEmpty("emptyStr.convertsToString()", "convertsToString() returns empty for empty String")
+        .testEmpty("emptyInt.convertsToString()", "convertsToString() returns empty for empty Integer")
+        .testEmpty("emptyDate.convertsToString()", "convertsToString() returns empty for empty Date")
 
         .group("convertsToString() error cases with arrays")
         .testEmpty("{}.convertsToString()", "convertsToString() returns empty for empty collection")
@@ -280,6 +336,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .dateArray("dateArray", "2023-01-15", "2023-12-25")
             .stringArray("stringArray", "2023-01-15", "2023-12-25")
             .integerArray("intArray", 1, 2, 3)
+            .dateEmpty("emptyDate")
+            .stringEmpty("emptyStr")
+            .integerEmpty("emptyInt")
         )
         .group("toDate() with String and Date literals")
         .testEquals("2023-01-15", "'2023-01-15'.toDate()", "toDate() converts valid date string")
@@ -288,6 +347,11 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
 
         .group("toDate() with invalid types")
         .testEmpty("42.toDate()", "toDate() returns empty for non-string")
+
+        .group("toDate() with empty values")
+        .testEmpty("emptyDate.toDate()", "toDate() returns empty for empty Date")
+        .testEmpty("emptyStr.toDate()", "toDate() returns empty for empty String")
+        .testEmpty("emptyInt.toDate()", "toDate() returns empty for empty Integer")
 
         .group("toDate() error cases with arrays")
         .testEmpty("{}.toDate()", "toDate() returns empty for empty collection")
@@ -305,6 +369,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .dateArray("dateArray", "2023-01-15", "2023-12-25")
             .stringArray("stringArray", "2023-01-15", "2023-12-25")
             .integerArray("intArray", 1, 2, 3)
+            .dateEmpty("emptyDate")
+            .stringEmpty("emptyStr")
+            .integerEmpty("emptyInt")
         )
         .group("convertsToDate() with convertible types")
         .testEquals(true, "'2023-01-15'.convertsToDate()", "convertsToDate() returns true for string")
@@ -313,6 +380,11 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .group("convertsToDate() with non-convertible types")
         .testEquals(false, "'notADate'.convertsToDate()", "convertsToDate() returns false for invalid date string")
         .testEquals(false, "42.convertsToDate()", "convertsToDate() returns false for integer")
+
+        .group("convertsToDate() with empty values")
+        .testEmpty("emptyDate.convertsToDate()", "convertsToDate() returns empty for empty Date")
+        .testEmpty("emptyStr.convertsToDate()", "convertsToDate() returns empty for empty String")
+        .testEmpty("emptyInt.convertsToDate()", "convertsToDate() returns empty for empty Integer")
 
         .group("convertsToDate() error cases with arrays")
         .testEmpty("{}.convertsToDate()", "convertsToDate() returns empty for empty collection")
@@ -330,6 +402,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .dateTimeArray("dateTimeArray", "2023-01-15T10:30:00Z", "2023-12-25T12:00:00Z")
             .stringArray("stringArray", "2023-01-15T10:30:00Z", "2023-12-25T12:00:00Z")
             .integerArray("intArray", 1, 2, 3)
+            .dateTimeEmpty("emptyDateTime")
+            .stringEmpty("emptyStr")
+            .integerEmpty("emptyInt")
         )
         .group("toDateTime() with String and DateTime literals")
         .testEquals("2023-01-15T10:30:00Z", "'2023-01-15T10:30:00Z'.toDateTime()", "toDateTime() converts valid datetime string")
@@ -338,6 +413,11 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
 
         .group("toDateTime() with invalid types")
         .testEmpty("42.toDateTime()", "toDateTime() returns empty for non-string")
+
+        .group("toDateTime() with empty values")
+        .testEmpty("emptyDateTime.toDateTime()", "toDateTime() returns empty for empty DateTime")
+        .testEmpty("emptyStr.toDateTime()", "toDateTime() returns empty for empty String")
+        .testEmpty("emptyInt.toDateTime()", "toDateTime() returns empty for empty Integer")
 
         .group("toDateTime() error cases with arrays")
         .testEmpty("{}.toDateTime()", "toDateTime() returns empty for empty collection")
@@ -355,6 +435,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .dateTimeArray("dateTimeArray", "2023-01-15T10:30:00Z", "2023-12-25T12:00:00Z")
             .stringArray("stringArray", "2023-01-15T10:30:00Z", "2023-12-25T12:00:00Z")
             .integerArray("intArray", 1, 2, 3)
+            .dateTimeEmpty("emptyDateTime")
+            .stringEmpty("emptyStr")
+            .integerEmpty("emptyInt")
         )
         .group("convertsToDateTime() with convertible types")
         .testEquals(true, "'2023-01-15T10:30:00Z'.convertsToDateTime()", "convertsToDateTime() returns true for string")
@@ -363,6 +446,11 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .group("convertsToDateTime() with non-convertible types")
         .testEquals(false, "'not-a-datetime'.convertsToDateTime()", "convertsToDateTime() returns false for invalid datetime string")
         .testEquals(false, "42.convertsToDateTime()", "convertsToDateTime() returns false for integer")
+
+        .group("convertsToDateTime() with empty values")
+        .testEmpty("emptyDateTime.convertsToDateTime()", "convertsToDateTime() returns empty for empty DateTime")
+        .testEmpty("emptyStr.convertsToDateTime()", "convertsToDateTime() returns empty for empty String")
+        .testEmpty("emptyInt.convertsToDateTime()", "convertsToDateTime() returns empty for empty Integer")
 
         .group("convertsToDateTime() error cases with arrays")
         .testEmpty("{}.convertsToDateTime()", "convertsToDateTime() returns empty for empty collection")
@@ -380,6 +468,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .timeArray("timeArray", "10:30:00", "12:00:00")
             .stringArray("stringArray", "10:30:00", "12:00:00")
             .integerArray("intArray", 1, 2, 3)
+            .timeEmpty("emptyTime")
+            .stringEmpty("emptyStr")
+            .integerEmpty("emptyInt")
         )
         .group("toTime() with String and Time literals")
         .testEquals("10:30:00", "'10:30:00'.toTime()", "toTime() converts valid time string")
@@ -388,6 +479,11 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
 
         .group("toTime() with invalid types")
         .testEmpty("42.toTime()", "toTime() returns empty for non-string")
+
+        .group("toTime() with empty values")
+        .testEmpty("emptyTime.toTime()", "toTime() returns empty for empty Time")
+        .testEmpty("emptyStr.toTime()", "toTime() returns empty for empty String")
+        .testEmpty("emptyInt.toTime()", "toTime() returns empty for empty Integer")
 
         .group("toTime() error cases with arrays")
         .testEmpty("{}.toTime()", "toTime() returns empty for empty collection")
@@ -405,6 +501,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .timeArray("timeArray", "10:30:00", "12:00:00")
             .stringArray("stringArray", "10:30:00", "12:00:00")
             .integerArray("intArray", 1, 2, 3)
+            .timeEmpty("emptyTime")
+            .stringEmpty("emptyStr")
+            .integerEmpty("emptyInt")
         )
         .group("convertsToTime() with convertible types")
         .testEquals(true, "'10:30:00'.convertsToTime()", "convertsToTime() returns true for time string")
@@ -413,6 +512,11 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
 
         .group("convertsToTime() with non-convertible types")
         .testEquals(false, "42.convertsToTime()", "convertsToTime() returns false for integer")
+
+        .group("convertsToTime() with empty values")
+        .testEmpty("emptyTime.convertsToTime()", "convertsToTime() returns empty for empty Time")
+        .testEmpty("emptyStr.convertsToTime()", "convertsToTime() returns empty for empty String")
+        .testEmpty("emptyInt.convertsToTime()", "convertsToTime() returns empty for empty Integer")
 
         .group("convertsToTime() error cases with arrays")
         .testEmpty("{}.convertsToTime()", "convertsToTime() returns empty for empty collection")
@@ -430,6 +534,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .decimalArray("decArray", 1.1, 2.2, 3.3)
             .stringArray("stringArray", "1.1", "2.2")
             .dateArray("dateArray", "2023-01-15", "2023-12-25")
+            .decimalEmpty("emptyDec")
+            .integerEmpty("emptyInt")
+            .dateEmpty("emptyDate")
         )
         .group("convertsToDecimal() with convertible literals")
         .testEquals(true, "true.convertsToDecimal()", "convertsToDecimal() returns true for Boolean")
@@ -439,6 +546,11 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
 
         .group("convertsToDecimal() with non-convertible literals")
         .testEquals(false, "'notNumber'.convertsToDecimal()", "convertsToDecimal() returns false for invalid string")
+
+        .group("convertsToDecimal() with empty values")
+        .testEmpty("emptyDec.convertsToDecimal()", "convertsToDecimal() returns empty for empty Decimal")
+        .testEmpty("emptyInt.convertsToDecimal()", "convertsToDecimal() returns empty for empty Integer")
+        .testEmpty("emptyDate.convertsToDecimal()", "convertsToDecimal() returns empty for empty Date")
 
         .group("convertsToDecimal() error cases with arrays")
         .testEmpty("{}.convertsToDecimal()", "convertsToDecimal() returns empty for empty collection")

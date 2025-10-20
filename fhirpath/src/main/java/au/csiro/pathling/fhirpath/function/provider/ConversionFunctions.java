@@ -388,6 +388,12 @@ public class ConversionFunctions {
 
     // Step 2: Ensure singular (throws if multiple elements)
     final Collection singular = input.asSingular();
+
+    // Step 2a: Check if singular result is empty (for typed empty collections)
+    if (singular instanceof EmptyCollection) {
+      return EmptyCollection.getInstance();
+    }
+
     final FhirPathType sourceType = singular.getType().orElse(null);
 
     // Step 3: Identity conversion - already target type
@@ -432,24 +438,34 @@ public class ConversionFunctions {
 
     // Step 2: Ensure singular
     final Collection singular = input.asSingular();
-    final FhirPathType sourceType = singular.getType().orElse(null);
 
-    // Step 3: Identity check - same type is always convertible
-    if (sourceType == targetType) {
-      // Enforce singularity on the original input (before singularization)
-      // Use coalesce to incorporate the check into the result: returns true if check passes, error if multiple elements
-      final Column checkAndTrue = coalesce(input.getColumn().ensureSingular(), lit(true));
-      return BooleanCollection.build(new DefaultRepresentation(checkAndTrue));
+    // Step 2a: Check if singular result is empty (for typed empty collections)
+    if (singular instanceof EmptyCollection) {
+      return EmptyCollection.getInstance();
     }
 
-    // Step 4: Apply validation logic
+    final FhirPathType sourceType = singular.getType().orElse(null);
+
+    //Step 3: Get the value
     final Column value = singular.getColumn().getValue();
+
+    // Step 4: Identity check - same type is always convertible
+    if (sourceType == targetType) {
+      // Enforce singularity on the original input (before singularization)
+      // Use when to return null for null values (empty collections), otherwise true
+      final Column result = when(value.isNull(), lit(null))
+          .otherwise(coalesce(input.getColumn().ensureSingular(), lit(true)));
+      return BooleanCollection.build(new DefaultRepresentation(result));
+    }
+
+    // Step 5: Apply validation logic
     final Column canConvert = validationLogic.apply(sourceType, value);
 
-    // Step 5: Build boolean result with singularity check
-    // Enforce singularity on the original input - if array, error; if singular, return validation result
-    final Column withCheck = coalesce(input.getColumn().ensureSingular(), canConvert);
-    return BooleanCollection.build(new DefaultRepresentation(withCheck));
+    // Step 6: Build boolean result with singularity check and null handling
+    // If value is null (empty collection), return null; otherwise check singularity and return result
+    final Column result = when(value.isNull(), lit(null))
+        .otherwise(coalesce(input.getColumn().ensureSingular(), canConvert));
+    return BooleanCollection.build(new DefaultRepresentation(result));
   }
 
   // ========== CONVERSION LOGIC METHODS ==========
