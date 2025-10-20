@@ -207,7 +207,7 @@ final class DeltaSink implements DataSink {
   static DeltaMergeBuilder defaultMergeBuilder(@Nonnull final DeltaTable original,
       @Nonnull final Dataset<Row> updates) {
     return original.as("original")
-        .merge(updates, "original.id = updates.id")
+        .merge(updates.as("updates"), "original.id = updates.id")
         .whenMatched()
         .updateAll()
         .whenNotMatched()

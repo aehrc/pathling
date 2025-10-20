@@ -494,6 +494,47 @@ class DataSourcesTest {
     queryNdjsonData(mergedData);
   }
 
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void tablesWriteWithMergeAndDeleteOnMerge(final boolean deleteOnMerge) {
+    // Read the full test NDJSON data (9 patients).
+    final QueryableDataSource fullData = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+
+    // Write the full data to Delta tables initially.
+    fullData.write().saveMode("merge").tables("test", "delta", deleteOnMerge);
+
+    // Verify all 9 patients were written.
+    final QueryableDataSource initialData = pathlingContext.read().tables("test");
+    final Dataset<Row> initialCount = initialData.read("Patient").agg(functions.count("id"));
+    DatasetAssert.of(initialCount).hasRows(RowFactory.create(9));
+
+    // Create a subset containing only 3 specific patients.
+    final Dataset<Row> patientSubset = fullData.read("Patient")
+        .filter("id IN ('8ee183e2-b3c0-4151-be94-b945d6aa8c6d', "
+            + "'beff242e-580b-47c0-9844-c1a68c36c5bf', "
+            + "'e62e52ae-2d75-4070-a0ae-3cc78d35ed08')");
+
+    final QueryableDataSource filteredData = pathlingContext.read().datasets()
+        .dataset("Patient", patientSubset)
+        .dataset("Condition", fullData.read("Condition"));
+
+    // Merge the subset into the existing Delta table.
+    filteredData.write().saveMode("merge").tables("test", "delta", deleteOnMerge);
+
+    // Read the merged data back.
+    final QueryableDataSource mergedData = pathlingContext.read().tables("test");
+    final Dataset<Row> mergedCount = mergedData.read("Patient").agg(functions.count("id"));
+
+    if (deleteOnMerge) {
+      // With deleteOnMerge=true, only the 3 patients in the subset should remain.
+      DatasetAssert.of(mergedCount).hasRows(RowFactory.create(3));
+    } else {
+      // With deleteOnMerge=false, all 9 patients should still be present.
+      DatasetAssert.of(mergedCount).hasRows(RowFactory.create(9));
+    }
+  }
+
   @Test
   void tablesWriteWithParquetFormat() {
     // Read the test NDJSON data.

@@ -99,8 +99,8 @@ class CatalogSink implements DataSink {
       @Nonnull final String schema, @Nonnull final String format,
       final boolean deleteOnMerge) {
     this(context, saveMode, Optional.of(schema), Optional.of(format), deleteOnMerge
-                                                                      ? DeltaSink::defaultMergeBuilder
-                                                                      : DeltaSink::deleteOnMergeBuilder);
+                                                                      ? DeltaSink::deleteOnMergeBuilder
+                                                                      : DeltaSink::defaultMergeBuilder);
   }
 
   /**
