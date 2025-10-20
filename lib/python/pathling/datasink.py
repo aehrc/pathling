@@ -114,16 +114,26 @@ class DataSinks(SparkConversionsMixin):
         self,
         schema: Optional[str] = None,
         save_mode: Optional[str] = SaveMode.OVERWRITE,
+        table_format: Optional[str] = None,
+        delete_on_merge: bool = False,
     ) -> None:
         """
         Writes the data to a set of tables in the Spark catalog.
 
-        :param schema: The name of the schema to write the tables to.
+        :param schema: The name of the schema to write the tables to. Required when table_format is specified.
         :param save_mode: The save mode to use when writing the data - "overwrite" will
         overwrite any existing data, "merge" will merge the new data with the existing data based
         on resource ID.
+        :param table_format: The table format to use (e.g., "delta", "parquet"). When specified, schema must also be provided.
+        If not specified, the default catalog table format will be used.
+        :param delete_on_merge: If merging, whether to delete any resources not found in the source, but found in the destination.
+        Only applies when save_mode is "merge" and table_format is "delta".
         """
-        if schema:
+        if table_format:
+            if not schema:
+                raise ValueError("schema must be provided when table_format is specified")
+            self._datasinks.saveMode(save_mode).tables(schema, table_format, delete_on_merge)
+        elif schema:
             self._datasinks.saveMode(save_mode).tables(schema)
         else:
             self._datasinks.saveMode(save_mode).tables()

@@ -214,7 +214,7 @@ def test_datasource_delta_merge_with_delete(
     delta_test_data_dir, temp_delta_dir, pathling_ctx
 ):
     pathling_ctx.read.delta(delta_test_data_dir).write.delta(
-        temp_delta_dir, save_mode="merge", merge_on_delete=True
+        temp_delta_dir, save_mode="merge", delete_on_merge=True
     )
     data_source = pathling_ctx.read.delta(temp_delta_dir)
 
@@ -226,25 +226,77 @@ def test_datasource_delta_merge_with_delete(
 
 
 def test_datasource_tables(ndjson_test_data_dir, pathling_ctx):
-    pathling_ctx.read.ndjson(ndjson_test_data_dir).write.tables()
+    try:
+        pathling_ctx.read.ndjson(ndjson_test_data_dir).write.tables()
 
-    data_source = pathling_ctx.read.tables()
-    result = ndjson_query(data_source)
-    assert result.columns == list(ResultRow)
-    assert result.collect() == [
-        ResultRow(71),
-    ]
+        data_source = pathling_ctx.read.tables()
+        result = ndjson_query(data_source)
+        assert result.columns == list(ResultRow)
+        assert result.collect() == [
+            ResultRow(71),
+        ]
+    finally:
+        # Clean up tables created by this test.
+        pathling_ctx.spark.sql("DROP TABLE IF EXISTS default.Patient")
+        pathling_ctx.spark.sql("DROP TABLE IF EXISTS default.Condition")
 
 
 def test_datasource_tables_schema(ndjson_test_data_dir, pathling_ctx):
-    pathling_ctx.read.ndjson(ndjson_test_data_dir).write.tables(schema="test")
+    try:
+        pathling_ctx.read.ndjson(ndjson_test_data_dir).write.tables(schema="test")
 
-    data_source = pathling_ctx.read.tables(schema="test")
-    result = ndjson_query(data_source)
-    assert result.columns == list(ResultRow)
-    assert result.collect() == [
-        ResultRow(71),
-    ]
+        data_source = pathling_ctx.read.tables(schema="test")
+        result = ndjson_query(data_source)
+        assert result.columns == list(ResultRow)
+        assert result.collect() == [
+            ResultRow(71),
+        ]
+    finally:
+        # Clean up tables created by this test.
+        pathling_ctx.spark.sql("DROP TABLE IF EXISTS test.Patient")
+        pathling_ctx.spark.sql("DROP TABLE IF EXISTS test.Condition")
+
+
+def test_datasource_tables_merge_with_delete(ndjson_test_data_dir, pathling_ctx):
+    # Read the full test NDJSON data (9 patients).
+    full_data = pathling_ctx.read.ndjson(ndjson_test_data_dir)
+
+    try:
+        # Write the full data to Delta tables initially.
+        full_data.write.tables(schema="test", save_mode="overwrite", table_format="delta", delete_on_merge=False)
+
+        # Verify all 9 patients were written.
+        initial_data = pathling_ctx.read.tables(schema="test")
+        initial_count = initial_data.read("Patient").groupBy().count()
+        assert initial_count.collect()[0][0] == 9
+
+        # Create a subset containing only 3 specific patients.
+        patient_subset = full_data.read("Patient").filter(
+            "id IN ('8ee183e2-b3c0-4151-be94-b945d6aa8c6d', "
+            "'beff242e-580b-47c0-9844-c1a68c36c5bf', "
+            "'e62e52ae-2d75-4070-a0ae-3cc78d35ed08')"
+        )
+
+        filtered_data = pathling_ctx.read.datasets(
+            resources={
+                "Patient": patient_subset,
+                "Condition": full_data.read("Condition"),
+            }
+        )
+
+        # Merge the subset into the existing Delta table with delete_on_merge=True.
+        filtered_data.write.tables(schema="test", save_mode="merge", table_format="delta", delete_on_merge=True)
+
+        # Read the merged data back.
+        merged_data = pathling_ctx.read.tables(schema="test")
+        merged_count = merged_data.read("Patient").groupBy().count()
+
+        # With delete_on_merge=True, only the 3 patients in the subset should remain.
+        assert merged_count.collect()[0][0] == 3
+    finally:
+        # Clean up tables created by this test.
+        pathling_ctx.spark.sql("DROP TABLE IF EXISTS test.Patient")
+        pathling_ctx.spark.sql("DROP TABLE IF EXISTS test.Condition")
 
 
 def test_datasource_bulk_with_temp_dir(pathling_ctx, bulk_server):
