@@ -324,7 +324,7 @@ ds_write_parquet <- function(ds, path, save_mode = SaveMode$ERROR) {
 #' @param path The URI of the directory to write the files to.
 #' @param save_mode The save mode to use when writing the data - "overwrite" will overwrite any 
 #'      existing data, "merge" will merge the new data with the existing data based on resource ID.
-#' @param delete_on_merge: If merging, whether to delete any resources not found in the source, but found in the destination.
+#' @param delete_on_merge If merging, whether to delete any resources not found in the source, but found in the destination.
 #'
 #' @return No return value, called for side effects only.
 #' 
@@ -356,6 +356,10 @@ ds_write_delta <- function(ds, path, save_mode = SaveMode$OVERWRITE, delete_on_m
 #' @param schema The name of the schema to write the tables to.
 #' @param save_mode The save mode to use when writing the data - "overwrite" will overwrite any 
 #'      existing data, "merge" will merge the new data with the existing data based on resource ID.
+#' @param table_format The table format to use (for example, "delta" or "parquet"). When specified, 
+#'      `schema` must also be provided.
+#' @param delete_on_merge If merging, whether to delete any resources not found in the source, but found 
+#'      in the destination. Only applies when `save_mode` is "merge" and `table_format` is "delta".
 #' 
 #' @return No return value, called for side effects only.
 #' 
@@ -385,10 +389,16 @@ ds_write_delta <- function(ds, path, save_mode = SaveMode$OVERWRITE, delete_on_m
 #' unlink(temp_dir_path, recursive = TRUE)
 #' 
 #' @family data sink functions
-#' 
+#'
 #' @export
-ds_write_tables <- function(ds, schema = NULL, save_mode = SaveMode$OVERWRITE) {
-  if (!is.null(schema)) {
+ds_write_tables <- function(ds, schema = NULL, save_mode = SaveMode$OVERWRITE, table_format = NULL,
+                            delete_on_merge = FALSE) {
+  if (!is.null(table_format)) {
+    if (is.null(schema)) {
+      stop("schema must be provided when table_format is specified", call. = FALSE)
+    }
+    invoke_datasink(ds, "tables", save_mode, schema, table_format, delete_on_merge)
+  } else if (!is.null(schema)) {
     invoke_datasink(ds, "tables", save_mode, schema)
   } else {
     invoke_datasink(ds, "tables", save_mode)

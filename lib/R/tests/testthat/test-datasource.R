@@ -161,6 +161,41 @@ test_that("datasource delta merge", {
   expect_equal(collect(result), tibble::tibble(count = 71))
 })
 
+test_that("datasource delta merge with delete", {
+  spark <- def_spark()
+  pc <- def_pathling_context(spark)
+
+  full_data <- pc %>% pathling_read_delta(delta_test_data_dir())
+
+  temp_dir <- tempfile("delta_merge_delete_")
+  withr::defer(unlink(temp_dir, recursive = TRUE, force = TRUE))
+
+  full_data %>% ds_write_delta(temp_dir, save_mode = SaveMode$OVERWRITE)
+
+  subset_patients <- full_data %>%
+      ds_read("Patient") %>%
+      dplyr::filter(id %in% c(
+          "8ee183e2-b3c0-4151-be94-b945d6aa8c6d",
+          "beff242e-580b-47c0-9844-c1a68c36c5bf",
+          "e62e52ae-2d75-4070-a0ae-3cc78d35ed08"
+      ))
+
+  subset_data <- pc %>% pathling_read_datasets(list(
+      "Patient" = subset_patients,
+      "Condition" = full_data %>% ds_read("Condition")
+  ))
+
+  subset_data %>% ds_write_delta(temp_dir, save_mode = SaveMode$MERGE, delete_on_merge = TRUE)
+
+  merged_data <- pc %>% pathling_read_delta(temp_dir)
+  merged_count <- merged_data %>%
+      ds_read("Patient") %>%
+      summarise(count = n()) %>%
+      collect()
+
+  expect_equal(merged_count$count, 3)
+})
+
 test_that("datasource tables", {
   spark <- def_spark()
   pc <- def_pathling_context(spark)
@@ -187,4 +222,64 @@ test_that("datasource tables with schema", {
   result <- ndjson_query(data_source)
   expect_equal(colnames(result), "count")
   expect_equal(collect(result), tibble::tibble(count = 71))
+})
+
+test_that("datasource tables merge with delete", {
+  spark <- def_spark()
+  pc <- def_pathling_context(spark)
+
+  full_data <- pc %>% pathling_read_ndjson(ndjson_test_data_dir())
+
+  withr::defer(spark %>% sdf_sql("DROP TABLE IF EXISTS test.Patient"))
+  withr::defer(spark %>% sdf_sql("DROP TABLE IF EXISTS test.Condition"))
+
+  full_data %>%
+      ds_write_tables(schema = "test", save_mode = SaveMode$OVERWRITE, table_format = "delta")
+
+  initial_count <- pc %>%
+      pathling_read_tables(schema = "test") %>%
+      ds_read("Patient") %>%
+      summarise(count = n()) %>%
+      collect()
+  expect_equal(initial_count$count, 9)
+
+  subset_patients <- full_data %>%
+      ds_read("Patient") %>%
+      dplyr::filter(id %in% c(
+          "8ee183e2-b3c0-4151-be94-b945d6aa8c6d",
+          "beff242e-580b-47c0-9844-c1a68c36c5bf",
+          "e62e52ae-2d75-4070-a0ae-3cc78d35ed08"
+      ))
+
+  subset_data <- pc %>% pathling_read_datasets(list(
+      "Patient" = subset_patients,
+      "Condition" = full_data %>% ds_read("Condition")
+  ))
+
+  subset_data %>% ds_write_tables(
+      schema = "test",
+      save_mode = SaveMode$MERGE,
+      table_format = "delta",
+      delete_on_merge = TRUE
+  )
+
+  merged_count <- pc %>%
+      pathling_read_tables(schema = "test") %>%
+      ds_read("Patient") %>%
+      summarise(count = n()) %>%
+      collect()
+
+  expect_equal(merged_count$count, 3)
+})
+
+test_that("ds_write_tables requires schema when table_format specified", {
+  spark <- def_spark()
+  pc <- def_pathling_context(spark)
+
+  ds <- pc %>% pathling_read_ndjson(ndjson_test_data_dir())
+
+  expect_error(
+      ds %>% ds_write_tables(table_format = "delta"),
+      "schema must be provided when table_format is specified"
+  )
 })
