@@ -35,6 +35,7 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .withSubject(sb -> sb
             .boolArray("boolArray", true, false, true)
             .integerArray("intArray", 0, 1, 2)
+            .stringArray("stringArray", "true", "false", "yes")
             .dateArray("dateArray", "2023-01-15", "2023-12-25")
         )
         .group("toBoolean() with Boolean literals")
@@ -418,58 +419,6 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testError("timeArray.convertsToTime()", "convertsToTime() errors on array of source type (Time)")
         .testError("stringArray.convertsToTime()", "convertsToTime() errors on array of convertible type (String)")
         .testError("intArray.convertsToTime()", "convertsToTime() errors on array of non-convertible type (Integer)")
-
-        .build();
-  }
-
-  @FhirPathTest
-  public Stream<DynamicTest> testToLong() {
-    return builder()
-        .withSubject(sb -> sb
-            .integerArray("intArray", 1, 2, 3)
-            .stringArray("stringArray", "123", "456")
-            .dateArray("dateArray", "2023-01-15", "2023-12-25")
-        )
-        .group("toLong() with literal values")
-        .testEquals(1, "true.toLong()", "toLong() converts true to 1")
-        .testEquals(0, "false.toLong()", "toLong() converts false to 0")
-        .testEquals(42, "42.toLong()", "toLong() returns integer as-is")
-        .testEquals(123456789, "'123456789'.toLong()", "toLong() converts valid string")
-        .testEmpty("'notNumber'.toLong()", "toLong() returns empty for invalid string")
-
-        .group("toLong() with non-convertible types")
-        .testEmpty("@2023-01-15.toLong()", "toLong() returns empty for Date")
-
-        .group("toLong() error cases with arrays")
-        .testEmpty("{}.toLong()", "toLong() returns empty for empty collection")
-        .testError("intArray.toLong()", "toLong() errors on array of source type (Integer)")
-        .testError("stringArray.toLong()", "toLong() errors on array of convertible type (String)")
-        .testError("dateArray.toLong()", "toLong() errors on array of non-convertible type (Date)")
-
-        .build();
-  }
-
-  @FhirPathTest
-  public Stream<DynamicTest> testConvertsToLong() {
-    return builder()
-        .withSubject(sb -> sb
-            .integerArray("intArray", 1, 2, 3)
-            .boolArray("boolArray", true, false)
-            .dateArray("dateArray", "2023-01-15", "2023-12-25")
-        )
-        .group("convertsToLong() with convertible literals")
-        .testEquals(true, "true.convertsToLong()", "convertsToLong() returns true for Boolean")
-        .testEquals(true, "42.convertsToLong()", "convertsToLong() returns true for Integer")
-        .testEquals(true, "'123456789'.convertsToLong()", "convertsToLong() returns true for valid string")
-
-        .group("convertsToLong() with non-convertible literals")
-        .testEquals(false, "'notNumber'.convertsToLong()", "convertsToLong() returns false for invalid string")
-
-        .group("convertsToLong() error cases with arrays")
-        .testEmpty("{}.convertsToLong()", "convertsToLong() returns empty for empty collection")
-        .testError("intArray.convertsToLong()", "convertsToLong() errors on array of source type (Integer)")
-        .testError("boolArray.convertsToLong()", "convertsToLong() errors on array of convertible type (Boolean)")
-        .testError("dateArray.convertsToLong()", "convertsToLong() errors on array of non-convertible type (Date)")
 
         .build();
   }

@@ -237,6 +237,26 @@ public abstract class ColumnRepresentation {
   }
 
   /**
+   * Creates a Column expression that enforces the singularity constraint.
+   * This should be called when a singular value is required but will not be directly used,
+   * to ensure the constraint is checked during evaluation.
+   * <p>
+   * The returned Column evaluates to null if the constraint is satisfied,
+   * or raises an error if the collection has multiple elements.
+   *
+   * @return A Column that enforces singularity and evaluates to null
+   */
+  @Nonnull
+  public Column ensureSingular() {
+    return vectorize(
+        arrayColumn -> when(size(arrayColumn).gt(1),
+            raise_error(lit(DEF_NOT_SINGULAR_ERROR)))
+            .otherwise(lit(null)),
+        singularColumn -> lit(null)
+    ).getValue();
+  }
+
+  /**
    * Converts the current {@link ColumnRepresentation} a plural representation. The values are
    * represented as arrays where an empty collection is represented as an empty array. This is
    * different from the {@link ColumnRepresentation#toArray()} method which represents an empty

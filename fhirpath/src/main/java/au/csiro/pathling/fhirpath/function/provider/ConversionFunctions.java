@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.fhirpath.function.provider;
 
+import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.lower;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
@@ -33,16 +33,28 @@ import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.collection.TimeCollection;
-import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.DataTypes;
 
 /**
  * Contains functions for converting values between types.
+ * <p>
+ * This implementation provides 14 FHIRPath conversion functions:
+ * <ul>
+ *   <li>7 conversion functions: toBoolean, toInteger, toDecimal, toString, toDate, toDateTime, toTime</li>
+ *   <li>7 validation functions: convertsToBoolean, convertsToInteger, convertsToDecimal, convertsToString, convertsToDate, convertsToDateTime, convertsToTime</li>
+ * </ul>
+ * <p>
+ * <b>Note:</b> The toLong() and convertsToLong() functions are not implemented as they are marked
+ * as STU (Standard for Trial Use) in the FHIRPath specification and are not yet finalized.
+ * When these functions are finalized in the FHIRPath specification, they can be added following
+ * the same pattern as the other conversion functions.
  *
  * @author John Grimes
  * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
@@ -53,6 +65,8 @@ public class ConversionFunctions {
 
   private ConversionFunctions() {
   }
+
+  // ========== PUBLIC API - CONVERSION FUNCTIONS ==========
 
   /**
    * Converts the input to a Boolean value. Per FHIRPath specification:
@@ -71,42 +85,12 @@ public class ConversionFunctions {
   @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static Collection toBoolean(@Nonnull final Collection input) {
-    if (input instanceof EmptyCollection) {
-      return EmptyCollection.getInstance();
-    }
-
-    final Collection singular = input.asSingular();
-    final FhirPathType inputType = singular.getType().orElse(null);
-
-    // If already boolean, return as-is.
-    if (inputType == FhirPathType.BOOLEAN) {
-      return singular;
-    }
-
-    final ColumnRepresentation column = singular.getColumn();
-    final Column value = column.getValue();
-
-    final Column result = switch (inputType) {
-      case STRING ->
-        // String: Handle '1.0' and '0.0' specially, use SparkSQL cast for other values.
-        // SparkSQL cast handles 'true', 'false', 't', 'f', 'yes', 'no', 'y', 'n', '1', '0' (case-insensitive).
-          when(value.equalTo(lit("1.0")), lit(true))
-              .when(value.equalTo(lit("0.0")), lit(false))
-              .otherwise(value.cast(DataTypes.BooleanType));
-      case INTEGER ->
-        // Integer: cast to boolean (1 → true, 0 → false, otherwise null).
-          value.cast(DataTypes.BooleanType);
-      case DECIMAL ->
-        // Decimal: cast to boolean (1.0 → true, 0.0 → false, otherwise null).
-          value.cast(DataTypes.BooleanType);
-      default ->
-        // Unsupported type: return empty.
-          null;
-    };
-
-    return result != null
-           ? BooleanCollection.build(new DefaultRepresentation(result))
-           : EmptyCollection.getInstance();
+    return performConversion(
+        input,
+        FhirPathType.BOOLEAN,
+        ConversionFunctions::convertToBoolean,
+        BooleanCollection::build
+    );
   }
 
   /**
@@ -122,81 +106,12 @@ public class ConversionFunctions {
   @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static Collection toInteger(@Nonnull final Collection input) {
-    if (input instanceof EmptyCollection) {
-      return EmptyCollection.getInstance();
-    }
-
-    final Collection singular = input.asSingular();
-    final FhirPathType inputType = singular.getType().orElse(null);
-
-    // If already integer, return as-is.
-    if (inputType == FhirPathType.INTEGER) {
-      return singular;
-    }
-
-    final ColumnRepresentation column = singular.getColumn();
-    final Column value = column.getValue();
-
-    final Column result = switch (inputType) {
-      case BOOLEAN ->
-        // Boolean: Use SparkSQL cast (true → 1, false → 0).
-          value.cast(DataTypes.IntegerType);
-      case STRING ->
-        // String: try to cast to integer, returns null if invalid.
-          value.cast(DataTypes.IntegerType);
-      default -> null;
-    };
-
-    return result != null
-           ? IntegerCollection.build(new DefaultRepresentation(result))
-           : EmptyCollection.getInstance();
-  }
-
-  /**
-   * Converts the input to a Long value. Similar to toInteger but for Long values.
-   *
-   * @param input The input collection
-   * @return An {@link IntegerCollection} containing the converted value or empty
-   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * toLong</a>
-   */
-  @FhirPathFunction
-  @SqlOnFhirConformance(Profile.SHARABLE)
-  @Nonnull
-  public static Collection toLong(@Nonnull final Collection input) {
-    if (input instanceof EmptyCollection) {
-      return EmptyCollection.getInstance();
-    }
-
-    final Collection singular = input.asSingular();
-    final FhirPathType inputType = singular.getType().orElse(null);
-
-    // If already integer (we use integer for long values), return as-is.
-    if (inputType == FhirPathType.INTEGER) {
-      return singular;
-    }
-
-    final ColumnRepresentation column = singular.getColumn();
-    final Column value = column.getValue();
-
-    final Column result = switch (inputType) {
-      case BOOLEAN ->
-        // Boolean: true → 1, false → 0.
-          when(value.equalTo(lit(true)), lit(1L))
-              .when(value.equalTo(lit(false)), lit(0L));
-      case STRING ->
-        // String: try to cast to long, returns null if invalid.
-          value.cast(DataTypes.LongType);
-      case DECIMAL ->
-        // Decimal: cast to long.
-          value.cast(DataTypes.LongType);
-      default -> null;
-    };
-
-    // Note: We return IntegerCollection as Pathling uses Integer for both int and long.
-    return result != null
-           ? IntegerCollection.build(new DefaultRepresentation(result.cast(DataTypes.IntegerType)))
-           : EmptyCollection.getInstance();
+    return performConversion(
+        input,
+        FhirPathType.INTEGER,
+        ConversionFunctions::convertToInteger,
+        IntegerCollection::build
+    );
   }
 
   /**
@@ -212,37 +127,12 @@ public class ConversionFunctions {
   @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static Collection toDecimal(@Nonnull final Collection input) {
-    if (input instanceof EmptyCollection) {
-      return EmptyCollection.getInstance();
-    }
-
-    final Collection singular = input.asSingular();
-    final FhirPathType inputType = singular.getType().orElse(null);
-
-    // If already decimal, return as-is.
-    if (inputType == FhirPathType.DECIMAL) {
-      return singular;
-    }
-
-    final ColumnRepresentation column = singular.getColumn();
-    final Column value = column.getValue();
-
-    final Column result = switch (inputType) {
-      case BOOLEAN ->
-        // Boolean: Use SparkSQL cast (true → 1.0, false → 0.0).
-          value.cast(DecimalCollection.getDecimalType());
-      case INTEGER ->
-        // Integer: cast to decimal.
-          value.cast(DecimalCollection.getDecimalType());
-      case STRING ->
-        // String: try to cast to decimal, returns null if invalid.
-          value.cast(DecimalCollection.getDecimalType());
-      default -> null;
-    };
-
-    return result != null
-           ? DecimalCollection.build(new DefaultRepresentation(result))
-           : EmptyCollection.getInstance();
+    return performConversion(
+        input,
+        FhirPathType.DECIMAL,
+        ConversionFunctions::convertToDecimal,
+        DecimalCollection::build
+    );
   }
 
   /**
@@ -257,26 +147,12 @@ public class ConversionFunctions {
   @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static Collection toString(@Nonnull final Collection input) {
-    if (input instanceof EmptyCollection) {
-      return EmptyCollection.getInstance();
-    }
-
-    final Collection singular = input.asSingular();
-    final FhirPathType inputType = singular.getType().orElse(null);
-
-    // If already string, return as-is.
-    if (inputType == FhirPathType.STRING) {
-      return singular;
-    }
-
-    // All primitive types can be cast to string.
-    return switch (inputType) {
-      case BOOLEAN, INTEGER, DECIMAL, DATE, DATETIME, TIME -> {
-        final Column result = singular.getColumn().getValue().cast(DataTypes.StringType);
-        yield StringCollection.build(new DefaultRepresentation(result));
-      }
-      default -> EmptyCollection.getInstance();
-    };
+    return performConversion(
+        input,
+        FhirPathType.STRING,
+        ConversionFunctions::convertToString,
+        StringCollection::build
+    );
   }
 
   /**
@@ -291,25 +167,12 @@ public class ConversionFunctions {
   @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static Collection toDate(@Nonnull final Collection input) {
-    if (input instanceof EmptyCollection) {
-      return EmptyCollection.getInstance();
-    }
-
-    final Collection singular = input.asSingular();
-    final FhirPathType inputType = singular.getType().orElse(null);
-
-    // If already date, return as-is.
-    if (inputType == FhirPathType.DATE) {
-      return singular;
-    }
-
-    // Only string can be converted to date.
-    return switch (inputType) {
-      case STRING ->
-        // Date values are stored as strings in FHIR, validation happens at parse time.
-          DateCollection.build(singular.getColumn(), Optional.empty());
-      default -> EmptyCollection.getInstance();
-    };
+    return performConversion(
+        input,
+        FhirPathType.DATE,
+        ConversionFunctions::convertToDate,
+        (repr) -> DateCollection.build(repr, Optional.empty())
+    );
   }
 
   /**
@@ -324,25 +187,12 @@ public class ConversionFunctions {
   @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static Collection toDateTime(@Nonnull final Collection input) {
-    if (input instanceof EmptyCollection) {
-      return EmptyCollection.getInstance();
-    }
-
-    final Collection singular = input.asSingular();
-    final FhirPathType inputType = singular.getType().orElse(null);
-
-    // If already datetime, return as-is.
-    if (inputType == FhirPathType.DATETIME) {
-      return singular;
-    }
-
-    // Only string can be converted to datetime.
-    return switch (inputType) {
-      case STRING ->
-        // DateTime values are stored as strings in FHIR, validation happens at parse time.
-          DateTimeCollection.build(singular.getColumn(), Optional.empty());
-      default -> EmptyCollection.getInstance();
-    };
+    return performConversion(
+        input,
+        FhirPathType.DATETIME,
+        ConversionFunctions::convertToDateTime,
+        (repr) -> DateTimeCollection.build(repr, Optional.empty())
+    );
   }
 
   /**
@@ -357,26 +207,15 @@ public class ConversionFunctions {
   @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static Collection toTime(@Nonnull final Collection input) {
-    if (input instanceof EmptyCollection) {
-      return EmptyCollection.getInstance();
-    }
-
-    final Collection singular = input.asSingular();
-    final FhirPathType inputType = singular.getType().orElse(null);
-
-    // If already time, return as-is.
-    if (inputType == FhirPathType.TIME) {
-      return singular;
-    }
-
-    // Only string can be converted to time.
-    return switch (inputType) {
-      case STRING ->
-        // Time values are stored as strings in FHIR, validation happens at parse time.
-          TimeCollection.build(singular.getColumn(), Optional.empty());
-      default -> EmptyCollection.getInstance();
-    };
+    return performConversion(
+        input,
+        FhirPathType.TIME,
+        ConversionFunctions::convertToTime,
+        (repr) -> TimeCollection.build(repr, Optional.empty())
+    );
   }
+
+  // ========== PUBLIC API - VALIDATION FUNCTIONS ==========
 
   /**
    * Returns true if the input can be converted to a Boolean value. Per FHIRPath specification:
@@ -387,7 +226,8 @@ public class ConversionFunctions {
    * - Empty collection: returns empty
    *
    * @param input The input collection
-   * @return A {@link BooleanCollection} containing true if convertible, false otherwise, or empty for empty input
+   * @return A {@link BooleanCollection} containing true if convertible, false otherwise, or empty
+   * for empty input
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
    * convertsToBoolean</a>
    */
@@ -395,21 +235,398 @@ public class ConversionFunctions {
   @SqlOnFhirConformance(Profile.SHARABLE)
   @Nonnull
   public static Collection convertsToBoolean(@Nonnull final Collection input) {
+    return performValidation(
+        input,
+        FhirPathType.BOOLEAN,
+        ConversionFunctions::validateConversionToBoolean
+    );
+  }
+
+  /**
+   * Returns true if the input can be converted to an Integer value.
+   *
+   * @param input The input collection
+   * @return A {@link BooleanCollection} containing true if convertible, false otherwise, or empty
+   * for empty input
+   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
+   * convertsToInteger</a>
+   */
+  @FhirPathFunction
+  @SqlOnFhirConformance(Profile.SHARABLE)
+  @Nonnull
+  public static Collection convertsToInteger(@Nonnull final Collection input) {
+    return performValidation(
+        input,
+        FhirPathType.INTEGER,
+        ConversionFunctions::validateConversionToInteger
+    );
+  }
+
+  /**
+   * Returns true if the input can be converted to a Decimal value.
+   *
+   * @param input The input collection
+   * @return A {@link BooleanCollection} containing true if convertible, false otherwise, or empty
+   * for empty input
+   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
+   * convertsToDecimal</a>
+   */
+  @FhirPathFunction
+  @SqlOnFhirConformance(Profile.SHARABLE)
+  @Nonnull
+  public static Collection convertsToDecimal(@Nonnull final Collection input) {
+    return performValidation(
+        input,
+        FhirPathType.DECIMAL,
+        ConversionFunctions::validateConversionToDecimal
+    );
+  }
+
+  /**
+   * Returns true if the input can be converted to a String value.
+   *
+   * @param input The input collection
+   * @return A {@link BooleanCollection} containing true if convertible, false otherwise, or empty
+   * for empty input
+   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
+   * convertsToString</a>
+   */
+  @FhirPathFunction
+  @SqlOnFhirConformance(Profile.SHARABLE)
+  @Nonnull
+  public static Collection convertsToString(@Nonnull final Collection input) {
+    return performValidation(
+        input,
+        FhirPathType.STRING,
+        ConversionFunctions::validateConversionToString
+    );
+  }
+
+  /**
+   * Returns true if the input can be converted to a Date value.
+   *
+   * @param input The input collection
+   * @return A {@link BooleanCollection} containing true if convertible, false otherwise, or empty
+   * for empty input
+   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
+   * convertsToDate</a>
+   */
+  @FhirPathFunction
+  @SqlOnFhirConformance(Profile.SHARABLE)
+  @Nonnull
+  public static Collection convertsToDate(@Nonnull final Collection input) {
+    return performValidation(
+        input,
+        FhirPathType.DATE,
+        ConversionFunctions::validateConversionToDate
+    );
+  }
+
+  /**
+   * Returns true if the input can be converted to a DateTime value.
+   *
+   * @param input The input collection
+   * @return A {@link BooleanCollection} containing true if convertible, false otherwise, or empty
+   * for empty input
+   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
+   * convertsToDateTime</a>
+   */
+  @FhirPathFunction
+  @SqlOnFhirConformance(Profile.SHARABLE)
+  @Nonnull
+  public static Collection convertsToDateTime(@Nonnull final Collection input) {
+    return performValidation(
+        input,
+        FhirPathType.DATETIME,
+        ConversionFunctions::validateConversionToDateTime
+    );
+  }
+
+  /**
+   * Returns true if the input can be converted to a Time value.
+   *
+   * @param input The input collection
+   * @return A {@link BooleanCollection} containing true if convertible, false otherwise, or empty
+   * for empty input
+   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
+   * convertsToTime</a>
+   */
+  @FhirPathFunction
+  @SqlOnFhirConformance(Profile.SHARABLE)
+  @Nonnull
+  public static Collection convertsToTime(@Nonnull final Collection input) {
+    return performValidation(
+        input,
+        FhirPathType.TIME,
+        ConversionFunctions::validateConversionToTime
+    );
+  }
+
+  // ========== TEMPLATE METHODS (Orchestration) ==========
+
+  /**
+   * Template method for performing type conversions. Handles common orchestration: empty check,
+   * singular check, identity conversion, delegation to conversion logic, and result building.
+   *
+   * @param input The input collection to convert
+   * @param targetType The target FHIRPath type
+   * @param conversionLogic Function that performs the actual type conversion
+   * @param collectionBuilder Function that builds the result collection from a DefaultRepresentation
+   * @param <T> The type of collection to return
+   * @return The converted collection or EmptyCollection if conversion fails
+   */
+  private static <T extends Collection> Collection performConversion(
+      @Nonnull final Collection input,
+      @Nonnull final FhirPathType targetType,
+      @Nonnull final BiFunction<FhirPathType, Column, Column> conversionLogic,
+      @Nonnull final Function<DefaultRepresentation, T> collectionBuilder) {
+
+    // Step 1: Handle empty collection
     if (input instanceof EmptyCollection) {
       return EmptyCollection.getInstance();
     }
 
+    // Step 2: Ensure singular (throws if multiple elements)
     final Collection singular = input.asSingular();
-    final FhirPathType inputType = singular.getType().orElse(null);
+    final FhirPathType sourceType = singular.getType().orElse(null);
 
-    // Boolean is already boolean.
-    if (inputType == FhirPathType.BOOLEAN) {
-      return BooleanCollection.build(new DefaultRepresentation(lit(true)));
+    // Step 3: Identity conversion - already target type
+    if (sourceType == targetType) {
+      return singular;
     }
 
+    // Step 4: Apply conversion logic
     final Column value = singular.getColumn().getValue();
+    final Column result = conversionLogic.apply(sourceType, value);
 
-    final Column canConvert = switch (inputType) {
+    // Step 5: Build result collection or return empty
+    if (result != null) {
+      return collectionBuilder.apply(new DefaultRepresentation(result));
+    } else {
+      // No conversion available - but we must still enforce singularity on the input
+      // Create a check using the original input (before singularization)
+      final Column singularityCheck = input.getColumn().ensureSingular();
+      final Column nullWithCheck = coalesce(singularityCheck, lit(null));
+      return collectionBuilder.apply(new DefaultRepresentation(nullWithCheck));
+    }
+  }
+
+  /**
+   * Template method for performing conversion validation. Handles common orchestration for
+   * convertsToXXX functions.
+   *
+   * @param input The input collection to validate
+   * @param targetType The target FHIRPath type
+   * @param validationLogic Function that checks if conversion is possible
+   * @return BooleanCollection indicating whether conversion is possible
+   */
+  private static Collection performValidation(
+      @Nonnull final Collection input,
+      @Nonnull final FhirPathType targetType,
+      @Nonnull final BiFunction<FhirPathType, Column, Column> validationLogic) {
+
+    // Step 1: Handle empty collection
+    if (input instanceof EmptyCollection) {
+      return EmptyCollection.getInstance();
+    }
+
+    // Step 2: Ensure singular
+    final Collection singular = input.asSingular();
+    final FhirPathType sourceType = singular.getType().orElse(null);
+
+    // Step 3: Identity check - same type is always convertible
+    if (sourceType == targetType) {
+      // Enforce singularity on the original input (before singularization)
+      // Use coalesce to incorporate the check into the result: returns true if check passes, error if multiple elements
+      final Column checkAndTrue = coalesce(input.getColumn().ensureSingular(), lit(true));
+      return BooleanCollection.build(new DefaultRepresentation(checkAndTrue));
+    }
+
+    // Step 4: Apply validation logic
+    final Column value = singular.getColumn().getValue();
+    final Column canConvert = validationLogic.apply(sourceType, value);
+
+    // Step 5: Build boolean result with singularity check
+    // Enforce singularity on the original input - if array, error; if singular, return validation result
+    final Column withCheck = coalesce(input.getColumn().ensureSingular(), canConvert);
+    return BooleanCollection.build(new DefaultRepresentation(withCheck));
+  }
+
+  // ========== CONVERSION LOGIC METHODS ==========
+
+  /**
+   * Converts a value to Boolean based on source type.
+   * <ul>
+   *   <li>STRING: Special handling for "1.0"/"0.0", then cast</li>
+   *   <li>INTEGER: Only 0 or 1</li>
+   *   <li>DECIMAL: Only 0.0 or 1.0</li>
+   * </ul>
+   *
+   * @param sourceType The source FHIRPath type
+   * @param value The source column value
+   * @return The converted column, or null if conversion is not possible
+   */
+  private static Column convertToBoolean(@Nonnull final FhirPathType sourceType,
+      @Nonnull final Column value) {
+    return switch (sourceType) {
+      case STRING ->
+        // String: Handle '1.0' and '0.0' specially, use SparkSQL cast for other values.
+        // SparkSQL cast handles 'true', 'false', 't', 'f', 'yes', 'no', 'y', 'n', '1', '0' (case-insensitive).
+          when(value.equalTo(lit("1.0")), lit(true))
+              .when(value.equalTo(lit("0.0")), lit(false))
+              .otherwise(value.cast(DataTypes.BooleanType));
+      case INTEGER ->
+        // Integer: Only 0 or 1 can be converted (1 → true, 0 → false, otherwise null).
+          when(value.equalTo(lit(1)), lit(true))
+              .when(value.equalTo(lit(0)), lit(false));
+      case DECIMAL ->
+        // Decimal: Only 0.0 or 1.0 can be converted (1.0 → true, 0.0 → false, otherwise null).
+          when(value.equalTo(lit(1.0)), lit(true))
+              .when(value.equalTo(lit(0.0)), lit(false));
+      default -> null;
+    };
+  }
+
+  /**
+   * Converts a value to Integer based on source type.
+   * <ul>
+   *   <li>BOOLEAN/STRING: Direct cast</li>
+   * </ul>
+   *
+   * @param sourceType The source FHIRPath type
+   * @param value The source column value
+   * @return The converted column, or null if conversion is not possible
+   */
+  private static Column convertToInteger(@Nonnull final FhirPathType sourceType,
+      @Nonnull final Column value) {
+    return switch (sourceType) {
+      case BOOLEAN, STRING ->
+        // Boolean/String: Use SparkSQL cast (true → 1, false → 0, string → int or null).
+          value.cast(DataTypes.IntegerType);
+      default -> null;
+    };
+  }
+
+  /**
+   * Converts a value to Decimal based on source type.
+   * <ul>
+   *   <li>BOOLEAN/INTEGER/STRING: Direct cast to Decimal</li>
+   * </ul>
+   *
+   * @param sourceType The source FHIRPath type
+   * @param value The source column value
+   * @return The converted column, or null if conversion is not possible
+   */
+  private static Column convertToDecimal(@Nonnull final FhirPathType sourceType,
+      @Nonnull final Column value) {
+    return switch (sourceType) {
+      case BOOLEAN, INTEGER, STRING ->
+        // Boolean/Integer/String: cast to decimal.
+          value.cast(DecimalCollection.getDecimalType());
+      default -> null;
+    };
+  }
+
+  /**
+   * Converts a value to String based on source type.
+   * <ul>
+   *   <li>All primitive types: Direct cast to String</li>
+   * </ul>
+   *
+   * @param sourceType The source FHIRPath type
+   * @param value The source column value
+   * @return The converted column, or null if conversion is not possible
+   */
+  private static Column convertToString(@Nonnull final FhirPathType sourceType,
+      @Nonnull final Column value) {
+    return switch (sourceType) {
+      case BOOLEAN, INTEGER, DECIMAL, DATE, DATETIME, TIME ->
+        // All primitive types can be cast to string.
+          value.cast(DataTypes.StringType);
+      default -> null;
+    };
+  }
+
+  /**
+   * Converts a value to Date based on source type.
+   * <ul>
+   *   <li>STRING: Validates format (YYYY or YYYY-MM or YYYY-MM-DD) and returns the string value</li>
+   * </ul>
+   *
+   * @param sourceType The source FHIRPath type
+   * @param value The source column value
+   * @return The converted column, or null if conversion is not possible
+   */
+  private static Column convertToDate(@Nonnull final FhirPathType sourceType,
+      @Nonnull final Column value) {
+    return switch (sourceType) {
+      case STRING ->
+        // Date values are stored as strings in FHIR. Validate format before accepting.
+        // Date format: YYYY or YYYY-MM or YYYY-MM-DD
+          when(value.rlike("^\\d{4}(-\\d{2}(-\\d{2})?)?$"), value);
+      default -> null;
+    };
+  }
+
+  /**
+   * Converts a value to DateTime based on source type.
+   * <ul>
+   *   <li>STRING: Validates format (YYYY-MM-DDThh:mm:ss with optional timezone) and returns the string value</li>
+   * </ul>
+   *
+   * @param sourceType The source FHIRPath type
+   * @param value The source column value
+   * @return The converted column, or null if conversion is not possible
+   */
+  private static Column convertToDateTime(@Nonnull final FhirPathType sourceType,
+      @Nonnull final Column value) {
+    return switch (sourceType) {
+      case STRING ->
+        // DateTime values are stored as strings in FHIR. Validate format before accepting.
+        // DateTime format: YYYY-MM-DDThh:mm:ss with optional timezone
+          when(value.rlike("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(Z|[+-]\\d{2}:\\d{2})?$"), value);
+      default -> null;
+    };
+  }
+
+  /**
+   * Converts a value to Time based on source type.
+   * <ul>
+   *   <li>STRING: Validates format (hh:mm:ss with optional milliseconds) and returns the string value</li>
+   * </ul>
+   *
+   * @param sourceType The source FHIRPath type
+   * @param value The source column value
+   * @return The converted column, or null if conversion is not possible
+   */
+  private static Column convertToTime(@Nonnull final FhirPathType sourceType,
+      @Nonnull final Column value) {
+    return switch (sourceType) {
+      case STRING ->
+        // Time values are stored as strings in FHIR. Validate format before accepting.
+        // Time format: hh:mm:ss or hh:mm:ss.fff
+          when(value.rlike("^\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?$"), value);
+      default -> null;
+    };
+  }
+
+  // ========== VALIDATION LOGIC METHODS ==========
+
+  /**
+   * Validates if a value can be converted to Boolean.
+   * <ul>
+   *   <li>STRING: Check for "1.0"/"0.0" or valid boolean cast</li>
+   *   <li>INTEGER: Must be 0 or 1</li>
+   *   <li>DECIMAL: Must be 0.0 or 1.0</li>
+   * </ul>
+   *
+   * @param sourceType The source FHIRPath type
+   * @param value The source column value
+   * @return Column expression evaluating to true if convertible, false otherwise
+   */
+  private static Column validateConversionToBoolean(@Nonnull final FhirPathType sourceType,
+      @Nonnull final Column value) {
+    return switch (sourceType) {
       case STRING -> {
         // For strings: check if '1.0'/'0.0' or if cast to boolean succeeds.
         final Column is10or00 = value.equalTo(lit("1.0")).or(value.equalTo(lit("0.0")));
@@ -426,255 +643,145 @@ public class ConversionFunctions {
         // Other types cannot be converted.
           lit(false);
     };
-
-    return BooleanCollection.build(new DefaultRepresentation(canConvert));
   }
 
   /**
-   * Returns true if the input can be converted to an Integer value.
+   * Validates if a value can be converted to Integer.
+   * <ul>
+   *   <li>BOOLEAN: Always true (any boolean can cast to int)</li>
+   *   <li>STRING: Check if cast succeeds</li>
+   * </ul>
    *
-   * @param input The input collection
-   * @return A {@link BooleanCollection} containing true if convertible, false otherwise, or empty for empty input
-   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * convertsToInteger</a>
+   * @param sourceType The source FHIRPath type
+   * @param value The source column value
+   * @return Column expression evaluating to true if convertible, false otherwise
    */
-  @FhirPathFunction
-  @SqlOnFhirConformance(Profile.SHARABLE)
-  @Nonnull
-  public static Collection convertsToInteger(@Nonnull final Collection input) {
-    if (input instanceof EmptyCollection) {
-      return EmptyCollection.getInstance();
-    }
-
-    final Collection singular = input.asSingular();
-    final FhirPathType inputType = singular.getType().orElse(null);
-
-    return switch (inputType) {
-      case BOOLEAN, INTEGER ->
-        // Boolean and integer can be converted.
-          BooleanCollection.build(new DefaultRepresentation(lit(true)));
-      case STRING -> {
+  private static Column validateConversionToInteger(@Nonnull final FhirPathType sourceType,
+      @Nonnull final Column value) {
+    return switch (sourceType) {
+      case BOOLEAN ->
+        // Boolean can always be converted.
+          lit(true);
+      case STRING ->
         // Check if value is not null and casting to integer returns non-null.
-        final Column value = singular.getColumn().getValue();
-        final Column canConvert = value.isNotNull().and(value.cast(DataTypes.IntegerType).isNotNull());
-        yield BooleanCollection.build(new DefaultRepresentation(canConvert));
-      }
+          value.isNotNull().and(value.cast(DataTypes.IntegerType).isNotNull());
       default ->
         // Other types cannot be converted.
-          BooleanCollection.build(new DefaultRepresentation(lit(false)));
+          lit(false);
     };
   }
 
   /**
-   * Returns true if the input can be converted to a Long value.
+   * Validates if a value can be converted to Decimal.
+   * <ul>
+   *   <li>BOOLEAN/INTEGER: Always true</li>
+   *   <li>STRING: Check if cast succeeds</li>
+   * </ul>
    *
-   * @param input The input collection
-   * @return A {@link BooleanCollection} containing true if convertible, false otherwise, or empty for empty input
-   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * convertsToLong</a>
+   * @param sourceType The source FHIRPath type
+   * @param value The source column value
+   * @return Column expression evaluating to true if convertible, false otherwise
    */
-  @FhirPathFunction
-  @SqlOnFhirConformance(Profile.SHARABLE)
-  @Nonnull
-  public static Collection convertsToLong(@Nonnull final Collection input) {
-    if (input instanceof EmptyCollection) {
-      return EmptyCollection.getInstance();
-    }
-
-    final Collection singular = input.asSingular();
-    final FhirPathType inputType = singular.getType().orElse(null);
-
-    return switch (inputType) {
-      case BOOLEAN, INTEGER, DECIMAL ->
-        // Boolean, integer, and decimal can be converted.
-          BooleanCollection.build(new DefaultRepresentation(lit(true)));
-      case STRING -> {
-        // Check if value is not null and casting to long returns non-null.
-        final Column value = singular.getColumn().getValue();
-        final Column canConvert = value.isNotNull().and(value.cast(DataTypes.LongType).isNotNull());
-        yield BooleanCollection.build(new DefaultRepresentation(canConvert));
-      }
-      default ->
-        // Other types cannot be converted.
-          BooleanCollection.build(new DefaultRepresentation(lit(false)));
-    };
-  }
-
-  /**
-   * Returns true if the input can be converted to a Decimal value.
-   *
-   * @param input The input collection
-   * @return A {@link BooleanCollection} containing true if convertible, false otherwise, or empty for empty input
-   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * convertsToDecimal</a>
-   */
-  @FhirPathFunction
-  @SqlOnFhirConformance(Profile.SHARABLE)
-  @Nonnull
-  public static Collection convertsToDecimal(@Nonnull final Collection input) {
-    if (input instanceof EmptyCollection) {
-      return EmptyCollection.getInstance();
-    }
-
-    final Collection singular = input.asSingular();
-    final FhirPathType inputType = singular.getType().orElse(null);
-
-    return switch (inputType) {
-      case BOOLEAN, INTEGER, DECIMAL ->
-        // Boolean, integer, and decimal can be converted.
-          BooleanCollection.build(new DefaultRepresentation(lit(true)));
-      case STRING -> {
+  private static Column validateConversionToDecimal(@Nonnull final FhirPathType sourceType,
+      @Nonnull final Column value) {
+    return switch (sourceType) {
+      case BOOLEAN, INTEGER ->
+        // Boolean and integer can always be converted.
+          lit(true);
+      case STRING ->
         // Check if value is not null and casting to decimal returns non-null.
-        final Column value = singular.getColumn().getValue();
-        final Column canConvert = value.isNotNull().and(value.cast(DecimalCollection.getDecimalType()).isNotNull());
-        yield BooleanCollection.build(new DefaultRepresentation(canConvert));
-      }
+          value.isNotNull().and(value.cast(DecimalCollection.getDecimalType()).isNotNull());
       default ->
         // Other types cannot be converted.
-          BooleanCollection.build(new DefaultRepresentation(lit(false)));
+          lit(false);
     };
   }
 
   /**
-   * Returns true if the input can be converted to a String value.
+   * Validates if a value can be converted to String. All supported types can convert to String.
    *
-   * @param input The input collection
-   * @return A {@link BooleanCollection} containing true if convertible, false otherwise, or empty for empty input
-   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * convertsToString</a>
+   * @param sourceType The source FHIRPath type
+   * @param value The source column value
+   * @return Column expression evaluating to true if convertible, false otherwise
    */
-  @FhirPathFunction
-  @SqlOnFhirConformance(Profile.SHARABLE)
-  @Nonnull
-  public static Collection convertsToString(@Nonnull final Collection input) {
-    if (input instanceof EmptyCollection) {
-      return EmptyCollection.getInstance();
-    }
-
-    final Collection singular = input.asSingular();
-    final FhirPathType inputType = singular.getType().orElse(null);
-
-    // All primitive types can be converted to string.
-    return switch (inputType) {
-      case STRING, BOOLEAN, INTEGER, DECIMAL, DATE, DATETIME, TIME ->
-          BooleanCollection.build(new DefaultRepresentation(lit(true)));
+  private static Column validateConversionToString(@Nonnull final FhirPathType sourceType,
+      @Nonnull final Column value) {
+    return switch (sourceType) {
+      case BOOLEAN, INTEGER, DECIMAL, DATE, DATETIME, TIME ->
+        // All primitive types can be converted to string.
+          lit(true);
       default ->
         // Other types cannot be converted.
-          BooleanCollection.build(new DefaultRepresentation(lit(false)));
+          lit(false);
     };
   }
 
   /**
-   * Returns true if the input can be converted to a Date value.
+   * Validates if a value can be converted to Date.
+   * <ul>
+   *   <li>STRING: Check if matches date pattern (YYYY or YYYY-MM or YYYY-MM-DD)</li>
+   * </ul>
    *
-   * @param input The input collection
-   * @return A {@link BooleanCollection} containing true if convertible, false otherwise, or empty for empty input
-   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * convertsToDate</a>
+   * @param sourceType The source FHIRPath type
+   * @param value The source column value
+   * @return Column expression evaluating to true if convertible, false otherwise
    */
-  @FhirPathFunction
-  @SqlOnFhirConformance(Profile.SHARABLE)
-  @Nonnull
-  public static Collection convertsToDate(@Nonnull final Collection input) {
-    if (input instanceof EmptyCollection) {
-      return EmptyCollection.getInstance();
-    }
-
-    final Collection singular = input.asSingular();
-    final FhirPathType inputType = singular.getType().orElse(null);
-
-    return switch (inputType) {
-      case DATE ->
-        // Date is already date.
-          BooleanCollection.build(new DefaultRepresentation(lit(true)));
-      case STRING -> {
-        // String can be converted only if it matches the date format: YYYY-MM-DD (with optional partial dates).
-        final Column value = singular.getColumn().getValue();
-        // Date format: YYYY or YYYY-MM or YYYY-MM-DD
-        final Column canConvert = value.isNotNull().and(
-            value.rlike("^\\d{4}(-\\d{2}(-\\d{2})?)?$")
-        );
-        yield BooleanCollection.build(new DefaultRepresentation(canConvert));
-      }
+  private static Column validateConversionToDate(@Nonnull final FhirPathType sourceType,
+      @Nonnull final Column value) {
+    return switch (sourceType) {
+      case STRING ->
+        // String can be converted only if it matches the date format: YYYY or YYYY-MM or YYYY-MM-DD
+          value.isNotNull().and(value.rlike("^\\d{4}(-\\d{2}(-\\d{2})?)?$"));
       default ->
         // Other types cannot be converted.
-          BooleanCollection.build(new DefaultRepresentation(lit(false)));
+          lit(false);
     };
   }
 
   /**
-   * Returns true if the input can be converted to a DateTime value.
+   * Validates if a value can be converted to DateTime.
+   * <ul>
+   *   <li>STRING: Check if matches datetime pattern (YYYY-MM-DDThh:mm:ss with optional timezone)</li>
+   * </ul>
    *
-   * @param input The input collection
-   * @return A {@link BooleanCollection} containing true if convertible, false otherwise, or empty for empty input
-   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * convertsToDateTime</a>
+   * @param sourceType The source FHIRPath type
+   * @param value The source column value
+   * @return Column expression evaluating to true if convertible, false otherwise
    */
-  @FhirPathFunction
-  @SqlOnFhirConformance(Profile.SHARABLE)
-  @Nonnull
-  public static Collection convertsToDateTime(@Nonnull final Collection input) {
-    if (input instanceof EmptyCollection) {
-      return EmptyCollection.getInstance();
-    }
-
-    final Collection singular = input.asSingular();
-    final FhirPathType inputType = singular.getType().orElse(null);
-
-    return switch (inputType) {
-      case DATETIME ->
-        // DateTime is already datetime.
-          BooleanCollection.build(new DefaultRepresentation(lit(true)));
-      case STRING -> {
+  private static Column validateConversionToDateTime(@Nonnull final FhirPathType sourceType,
+      @Nonnull final Column value) {
+    return switch (sourceType) {
+      case STRING ->
         // String can be converted only if it matches ISO 8601 datetime format.
-        final Column value = singular.getColumn().getValue();
-        // Simplified check for datetime format: YYYY-MM-DDThh:mm:ss with optional timezone
-        final Column canConvert = value.isNotNull().and(
-            value.rlike("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(Z|[+-]\\d{2}:\\d{2})?$")
-        );
-        yield BooleanCollection.build(new DefaultRepresentation(canConvert));
-      }
+        // Simplified check: YYYY-MM-DDThh:mm:ss with optional timezone
+          value.isNotNull().and(
+              value.rlike("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(Z|[+-]\\d{2}:\\d{2})?$")
+          );
       default ->
         // Other types cannot be converted.
-          BooleanCollection.build(new DefaultRepresentation(lit(false)));
+          lit(false);
     };
   }
 
   /**
-   * Returns true if the input can be converted to a Time value.
+   * Validates if a value can be converted to Time.
+   * <ul>
+   *   <li>STRING: Check if matches time pattern (hh:mm:ss with optional milliseconds)</li>
+   * </ul>
    *
-   * @param input The input collection
-   * @return A {@link BooleanCollection} containing true if convertible, false otherwise, or empty for empty input
-   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
-   * convertsToTime</a>
+   * @param sourceType The source FHIRPath type
+   * @param value The source column value
+   * @return Column expression evaluating to true if convertible, false otherwise
    */
-  @FhirPathFunction
-  @SqlOnFhirConformance(Profile.SHARABLE)
-  @Nonnull
-  public static Collection convertsToTime(@Nonnull final Collection input) {
-    if (input instanceof EmptyCollection) {
-      return EmptyCollection.getInstance();
-    }
-
-    final Collection singular = input.asSingular();
-    final FhirPathType inputType = singular.getType().orElse(null);
-
-    return switch (inputType) {
-      case TIME ->
-        // Time is already time.
-          BooleanCollection.build(new DefaultRepresentation(lit(true)));
-      case STRING -> {
-        // String can be converted only if it matches time format: hh:mm:ss with optional milliseconds.
-        final Column value = singular.getColumn().getValue();
-        // Time format: hh:mm:ss or hh:mm:ss.fff
-        final Column canConvert = value.isNotNull().and(
-            value.rlike("^\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?$")
-        );
-        yield BooleanCollection.build(new DefaultRepresentation(canConvert));
-      }
+  private static Column validateConversionToTime(@Nonnull final FhirPathType sourceType,
+      @Nonnull final Column value) {
+    return switch (sourceType) {
+      case STRING ->
+        // String can be converted only if it matches time format: hh:mm:ss or hh:mm:ss.fff
+          value.isNotNull().and(value.rlike("^\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?$"));
       default ->
         // Other types cannot be converted.
-          BooleanCollection.build(new DefaultRepresentation(lit(false)));
+          lit(false);
     };
   }
 }
