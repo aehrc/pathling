@@ -16,6 +16,7 @@
 from .coding import Coding
 from .context import PathlingContext, StorageType
 from .core import Expression, VariableExpression
+from .datasink import SaveMode
 from .datasource import DataSources, DataSource
 from .fhir import MimeType, Version
 from .functions import to_coding, to_snomed_coding, to_ecl_value_set
@@ -34,6 +35,7 @@ from .udfs import (
 __all__ = [
     "PathlingContext",
     "StorageType",
+    "SaveMode",
     "MimeType",
     "Version",
     "Coding",

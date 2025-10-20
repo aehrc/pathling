@@ -625,6 +625,14 @@ parameter when initialising the Pathling context.
 The files are named according to their resource
 type (`[resource type].parquet`), e.g. `Patient.parquet`, `Condition.parquet`.
 
+You can use the `save_mode` parameter to control how data is written:
+- `OVERWRITE` - Replaces all existing data
+- `MERGE` - Merges new data with existing data based on resource ID
+
+When using `MERGE` mode, you can optionally specify `delete_on_merge=True` to delete
+resources that exist in the destination but not in the source. This is useful for
+synchronising a subset of data or removing stale records.
+
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
 <TabItem value="python" label="Python">
@@ -672,6 +680,14 @@ e.g. `Patient`, `Condition`.
 This also works with
 the [Unity Catalog](https://docs.databricks.com/data-governance/unity-catalog/index.html)
 feature of Databricks.
+
+You can use the `save_mode` parameter to control how data is written:
+- `OVERWRITE` - Replaces all existing data
+- `MERGE` - Merges new data with existing data based on resource ID (requires `table_format="delta"`)
+
+When using `MERGE` mode with Delta format tables, you can optionally specify
+`delete_on_merge=True` to delete resources that exist in the destination but not
+in the source. This is useful for synchronising a subset of data or removing stale records.
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
