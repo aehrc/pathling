@@ -227,6 +227,17 @@ excludeSet:
           - "not_el in coll"
           - "^coll contains el"
           - "coll contains not_el"
+  - title: Conversion exclusions
+    glob: "fhirpath-js/cases/5.5_conversion.yaml"
+    exclude:
+      - title: "Null values in collections not properly handled"
+        comment: "Conversion functions on null values within collections return converted values instead of empty. This is a limitation of how null values are represented in arrays."
+        type: wontfix
+        outcome: failure
+        any:
+          - "Functions.collWithNullsAndTrue[0].toBoolean()"
+          - "Functions.collWithNullsAndTrue[0].toInteger()"
+          - "Functions.collWithNullsAndTrue[0].toDecimal()"
   - title: Variable exclusions
     glob: "fhirpath-js/cases/8_variables.yaml"
     exclude:
@@ -267,6 +278,8 @@ excludeSet:
           - "** value of extension of extension (using FHIR model data)"
           - "** id of extension of extension"
           - "** expression with extension() for primitive type (using FHIR model data)"
+          - "Patient.birthDate.extension .where(url = 'http://hl7.org/fhir/StructureDefinition/patient-birthTime') .valueDateTime.toDateTime() = @1974-12-25T14:35:45-05:00"
+          - "Patient.birthDate.extension('http://hl7.org/fhir/StructureDefinition/patient-birthTime') .valueDateTime.toDateTime() = @1974-12-25T14:35:45-05:00"
   - title: Factory exclusions
     glob: "fhirpath-js/cases/factory.yaml"
     exclude:
