@@ -365,7 +365,7 @@ class DataSourcesTest {
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
-  void deltaReadWriteWithMerge(boolean deleteOnMerge) {
+  void deltaReadWriteWithMerge(final boolean deleteOnMerge) {
     final String sourcePath = TEST_DATA_PATH.resolve("delta").toString();
     final String destinationPath = temporaryDirectory.resolve("delta-rw-merge").toString();
 

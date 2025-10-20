@@ -86,15 +86,17 @@ def bulk_server(mock_server, ndjson_test_data_dir):
 
     @mock_server.route("/pool", methods=["GET"])
     def pool():
-        return dict(
-            transactionTime="1970-01-01T00:00:00.000Z",
-            output=[
-                dict(
-                    type=resource, url=mock_server.url(f"/download/{resource}"), count=1
-                )
+        return {
+            "transactionTime": "1970-01-01T00:00:00.000Z",
+            "output": [
+                {
+                    "type": resource, 
+                    "url": mock_server.url(f"/download/{resource}"),
+                    "count": 1
+                }
                 for resource in ["Patient", "Condition"]
             ],
-        )
+        }
 
     @mock_server.route("/download/<resource>", methods=["GET"])
     def download(resource):

@@ -39,40 +39,40 @@ full_data %>% ds_write_delta(temp_dir, save_mode = SaveMode$OVERWRITE)
 # Read back the data and count patients.
 initial_data <- pc %>% pathling_read_delta(temp_dir)
 initial_count <- initial_data %>%
-  ds_read("Patient") %>%
-  summarise(count = n()) %>%
-  collect()
+    ds_read("Patient") %>%
+    summarise(count = n()) %>%
+    collect()
 
 cat("Initial patient count:", initial_count$count, "\n")
 
 # Create a subset with only 3 specific patients.
 subset_patients <- full_data %>%
-  ds_read("Patient") %>%
-  filter(id %in% c(
-    "8ee183e2-b3c0-4151-be94-b945d6aa8c6d",
-    "beff242e-580b-47c0-9844-c1a68c36c5bf",
-    "e62e52ae-2d75-4070-a0ae-3cc78d35ed08"
-  ))
+    ds_read("Patient") %>%
+    filter(id %in% c(
+        "8ee183e2-b3c0-4151-be94-b945d6aa8c6d",
+        "beff242e-580b-47c0-9844-c1a68c36c5bf",
+        "e62e52ae-2d75-4070-a0ae-3cc78d35ed08"
+    ))
 
 # Create a new datasource with the subset of patients and all conditions.
 subset_data <- pc %>% pathling_read_datasets(list(
-  Patient = subset_patients,
-  Condition = full_data %>% ds_read("Condition")
+    Patient = subset_patients,
+    Condition = full_data %>% ds_read("Condition")
 ))
 
 # Merge with delete_on_merge=TRUE - this will delete patients not in the subset.
 subset_data %>% ds_write_delta(
-  temp_dir,
-  save_mode = SaveMode$MERGE,
-  delete_on_merge = TRUE
+    temp_dir,
+    save_mode = SaveMode$MERGE,
+    delete_on_merge = TRUE
 )
 
 # Read back the merged data and verify only 3 patients remain.
 merged_data <- pc %>% pathling_read_delta(temp_dir)
 final_count <- merged_data %>%
-  ds_read("Patient") %>%
-  summarise(count = n()) %>%
-  collect()
+    ds_read("Patient") %>%
+    summarise(count = n()) %>%
+    collect()
 
 cat("Final patient count after merge with delete:", final_count$count, "\n")
 cat("Deleted", initial_count$count - final_count$count, "patients\n")
@@ -80,9 +80,9 @@ cat("Deleted", initial_count$count - final_count$count, "patients\n")
 # Show the remaining patient IDs.
 cat("\nRemaining patients:\n")
 merged_data %>%
-  ds_read("Patient") %>%
-  select(id) %>%
-  show()
+    ds_read("Patient") %>%
+    select(id) %>%
+    show()
 
 # Clean up the temporary directory.
 unlink(temp_dir, recursive = TRUE)
