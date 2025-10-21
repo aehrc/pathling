@@ -44,4 +44,9 @@ public class YamlFhirpathTest extends YamlCachedTestBase {
   void testDateTimeComparison(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
+
+  @YamlTest("fhirpath-ptl/cases/repeat_all.yaml")
+  void testRepeatAll(@Nonnull final YamlTestExecutor testCase) {
+    run(testCase);
+  }
 }
