@@ -256,6 +256,13 @@
                 <goals>
                   <goal>doc-jar</goal>
                 </goals>
+                <configuration>
+                  <excludes>
+                    <!-- Exclude Java files that access package-private Spark classes -->
+                    <exclude>**/ValueFunctions.java</exclude>
+                    <exclude>**/ColumnFunctions.java</exclude>
+                  </excludes>
+                </configuration>
               </execution>
             </executions>
           </plugin>
