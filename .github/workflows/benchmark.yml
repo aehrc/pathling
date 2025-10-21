@@ -76,6 +76,7 @@ jobs:
 
           # Install modules in dependency order.
           for MODULE in utilities encoders terminology fhirpath library-api library-runtime; do
+            # Install main JAR.
             mvn install:install-file \
               -Dfile=jars/$MODULE/target/$MODULE-$VERSION.jar \
               -DpomFile=$MODULE/pom.xml \
@@ -83,6 +84,16 @@ jobs:
               -DartifactId=$MODULE \
               -Dversion=$VERSION \
               -Dpackaging=jar
+
+            # Install sources JAR.
+            mvn install:install-file \
+              -Dfile=jars/$MODULE/target/$MODULE-$VERSION-sources.jar \
+              -DpomFile=$MODULE/pom.xml \
+              -DgroupId=au.csiro.pathling \
+              -DartifactId=$MODULE \
+              -Dversion=$VERSION \
+              -Dpackaging=jar \
+              -Dclassifier=sources
           done
 
       - name: Build benchmark JAR
