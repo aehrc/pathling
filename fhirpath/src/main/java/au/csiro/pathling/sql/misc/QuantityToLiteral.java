@@ -59,10 +59,10 @@ public class QuantityToLiteral implements SqlFunction1<Row, String> {
 
       if (UCUM_SYSTEM.equals(system)) {
         // UCUM units are quoted
-        return String.format("%s '%s'", value.toPlainString(), code);
+        return String.format("%s '%s'", value.stripTrailingZeros().toPlainString(), code);
       } else if (FHIRPATH_CALENDAR_DURATION_SYSTEM.equals(system)) {
         // Calendar duration units are not quoted, use the display unit
-        return String.format("%s %s", value.toPlainString(), unit);
+        return String.format("%s %s", value.stripTrailingZeros().toPlainString(), unit);
       } else {
         // For other systems, return null
         return null;

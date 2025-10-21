@@ -659,13 +659,13 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .dateEmpty("emptyDate")
         )
         .group("toQuantity() with Boolean literals")
-        .testEquals("1.000000 '1'", "true.toQuantity()", "toQuantity() converts true to 1.0 '1'")
-        .testEquals("0.000000 '1'", "false.toQuantity()", "toQuantity() converts false to 0.0 '1'")
+        .testEquals("1 '1'", "true.toQuantity()", "toQuantity() converts true to 1.0 '1'")
+        .testEquals("0 '1'", "false.toQuantity()", "toQuantity() converts false to 0.0 '1'")
 
         .group("toQuantity() with numeric literals")
-        .testEquals("42.000000 '1'", "42.toQuantity()",
+        .testEquals("42 '1'", "42.toQuantity()",
             "toQuantity() converts integer to quantity with unit '1'")
-        .testEquals("3.140000 '1'", "3.14.toQuantity()",
+        .testEquals("3.14 '1'", "3.14.toQuantity()",
             "toQuantity() converts decimal to quantity with unit '1'")
 
         .group("toQuantity() with String literals - UCUM units")
