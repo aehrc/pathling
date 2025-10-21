@@ -438,27 +438,82 @@ case class UnresolvedRepeatAll(value: Expression, projection: Expression => Expr
   /**
    * Recursively collects all levels by applying the projection expression.
    *
-   * We use a fixed maximum depth approach: always recurse up to maxDepth levels,
-   * and let empty arrays naturally terminate the recursion at runtime.
+   * Uses schema-based depth detection: inspects the data type at each level to determine
+   * if recursion can continue. This avoids arbitrary depth limits and generates only
+   * the expressions actually needed based on the schema structure.
    *
    * @param currentValue The current level expression
    * @param f            The expression transformation function
-   * @param maxDepth     Maximum recursion depth to prevent infinite loops (default 20)
+   * @param depth        Current depth for safety (prevents infinite loops from circular schemas)
    * @return A sequence of expressions, one for each level
    */
   private def collectLevels(currentValue: Expression, f: Expression => Expression,
-                            maxDepth: Int = 20): Seq[Expression] = {
-    if (maxDepth <= 0) {
-      // Safety limit reached.
+                            depth: Int = 0): Seq[Expression] = {
+    // Safety limit to prevent infinite recursion (e.g., from circular schemas).
+    // This is much higher than typical use cases but prevents stack overflow.
+    if (depth > 1000) {
       return Seq.empty
     }
 
     // Apply the projection to the current level.
     val nextLevel = f(projection(currentValue))
 
-    // Always include this level and recurse up to maxDepth.
-    // Empty arrays will naturally be filtered out at runtime.
-    nextLevel +: collectLevels(nextLevel, f, maxDepth - 1)
+    println(s"[collectLevels] depth=$depth, currentValue=$currentValue")
+    println(s"[collectLevels] nextLevel=$nextLevel")
+    println(s"[collectLevels] nextLevel.resolved=${nextLevel.resolved}")
+    println(s"[collectLevels] nextLevel.dataType=${
+      if (nextLevel.resolved) nextLevel.dataType else "UNRESOLVED"
+    }")
+
+    // Check if this level resolved successfully and if we can continue traversing.
+    if (!nextLevel.resolved) {
+      // If the projection didn't resolve, we've reached the end.
+      println(s"[collectLevels] Not resolved, returning empty")
+      Seq.empty
+    } else if (canContinueTraversal(nextLevel)) {
+      // This level is valid and we can potentially go deeper.
+      println(s"[collectLevels] Can continue, recursing")
+      nextLevel +: collectLevels(nextLevel, f, depth + 1)
+    } else {
+      // This is the last level - include it and stop.
+      println(s"[collectLevels] Cannot continue, this is last level")
+      Seq(nextLevel)
+    }
+  }
+
+  /**
+   * Determines if traversal can continue by inspecting the schema.
+   *
+   * Checks if the current expression is an array type and if applying the projection
+   * again would resolve successfully.
+   *
+   * @param expr The expression to check
+   * @return true if traversal can continue, false otherwise
+   */
+  private def canContinueTraversal(expr: Expression): Boolean = {
+    import org.apache.spark.sql.types.{ArrayType, StructType}
+
+    expr.dataType match {
+      case ArrayType(StructType(fields), _) if fields.nonEmpty =>
+        // It's an array of structs. We can potentially traverse deeper.
+        // To determine if we should continue, we check if the projection would resolve.
+        // We do this by examining if applying the projection again would succeed.
+        //
+        // Note: We can't directly test projection resolution here without side effects,
+        // so we use a heuristic: if the current result is an array of structs with fields,
+        // we assume we can try one more level. The next iteration will determine if that
+        // level actually resolves.
+        true
+
+      case ArrayType(_, _) =>
+        // It's an array of non-structs (primitives, etc.). We can try to continue,
+        // as the projection might work on array elements.
+        true
+
+      case _ =>
+        // Not an array - cannot traverse further.
+        false
+    }
   }
 
   override def dataType: DataType = throw new UnresolvedException("dataType")
