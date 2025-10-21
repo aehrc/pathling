@@ -183,9 +183,12 @@ public class YamlTestArgumentProvider implements ArgumentsProvider {
       final TestConfiguration config,
       final Function<RuntimeContext, ResourceResolver> defaultResolverFactory) {
 
+    // Check for per-test-case subject first, then inputFile, then fall back to suite-level subject.
     final Function<RuntimeContext, ResourceResolver> resolverFactory = Optional.ofNullable(
-            testCase.inputFile())
-        .map(f -> createFileBasedResolver(f, config.resourceBase()))
+            testCase.subject())
+        .map(this::createResolverFactoryFromSubject)
+        .or(() -> Optional.ofNullable(testCase.inputFile())
+            .map(f -> createFileBasedResolver(f, config.resourceBase())))
         .orElse(defaultResolverFactory);
 
     return DefaultYamlTestExecutor.of(

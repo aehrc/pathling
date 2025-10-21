@@ -21,9 +21,12 @@ import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.function.CollectionTransform;
+import au.csiro.pathling.fhirpath.function.ColumnTransform;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
+import org.apache.spark.sql.Column;
 
 /**
  * Contains functions for filtering and projecting elements in a collection.
@@ -82,6 +85,40 @@ public class FilteringAndProjectionFunctions {
   public static Collection ofType(@Nonnull final Collection input,
       @Nonnull final TypeSpecifier typeSpecifier) {
     return input.filterByType(typeSpecifier);
+  }
+
+  /**
+   * Returns a collection that recursively applies the projection expression to traverse
+   * hierarchical structures, preserving all duplicates. This is a variant of {@code repeat} that
+   * permits duplicate items in output collections.
+   * <p>
+   * Unlike {@code repeat()}, which eliminates duplicates through equality comparisons,
+   * {@code repeatAll()} preserves all occurrences and provides better performance. The function
+   * inspects the schema to determine the depth of traversal available and applies the projection at
+   * each level.
+   * <p>
+   * The output order is undefined. Implementations include mechanisms to prevent infinite loops by
+   * limiting iterations based on the schema structure.
+   *
+   * @param input The input collection
+   * @param expression The projection expression to apply recursively
+   * @return A collection containing all elements from all levels of traversal
+   * @see <a
+   * href="https://build.fhir.org/ig/HL7/FHIRPath/#repeatallprojection-expression--collection">
+   * repeatAll</a>
+   */
+  @FhirPathFunction
+  @SqlOnFhirConformance(Profile.SHARABLE)
+  @Nonnull
+  public static Collection repeatAll(@Nonnull final Collection input,
+      @Nonnull final CollectionTransform expression) {
+    final ColumnTransform columnTransform = expression.toColumnTransformation(input);
+    return input.map(cr -> {
+      final Column col = cr.getValue();
+      final Column result = au.csiro.pathling.encoders.ValueFunctions.repeatAll(col,
+          c -> columnTransform.apply(new DefaultRepresentation(c)).getValue());
+      return new DefaultRepresentation(result);
+    });
   }
 
 }

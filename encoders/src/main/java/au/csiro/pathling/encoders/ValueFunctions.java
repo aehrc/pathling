@@ -129,4 +129,27 @@ public class ValueFunctions {
   public static Column pruneAnnotations(@Nonnull final Column col) {
     return column(new PruneSyntheticFields(expression(col)));
   }
+
+  /**
+   * Recursively applies a projection expression to traverse hierarchical structures, preserving all
+   * duplicates. This is the FHIRPath {@code repeatAll} function.
+   * <p>
+   * Unlike {@code repeat}, which eliminates duplicates, {@code repeatAll} preserves all occurrences
+   * of elements in the output. The function inspects the schema to determine the depth of nesting
+   * and applies the projection at each level, combining all results.
+   *
+   * @param value The input column to traverse
+   * @param projectionExpression The projection expression to apply at each level
+   * @return A Column with all levels of traversal combined
+   */
+  @Nonnull
+  public static Column repeatAll(
+      @Nonnull final Column value,
+      @Nonnull final UnaryOperator<Column> projectionExpression) {
+    return column(
+        new UnresolvedRepeatAll(
+            expression(value),
+            liftToExpression(projectionExpression)::apply
+        ));
+  }
 }

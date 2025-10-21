@@ -80,6 +80,8 @@ public record YamlTestDefinition(
    * specification. Disabled tests are skipped during execution.
    * @param variables Optional map of variables that can be referenced within the FHIR Path
    * expression using variable syntax (e.g., %variableName).
+   * @param subject Optional test-specific subject to use instead of the suite-level subject. If
+   * specified, this subject will be used for this test case, overriding the suite-level subject.
    */
   public record TestCase(
       @Nullable String description,
@@ -90,7 +92,8 @@ public record YamlTestDefinition(
       @Nullable String model,
       @Nullable String context,
       boolean disable,
-      @Nullable Map<String, Object> variables
+      @Nullable Map<String, Object> variables,
+      @Nullable Map<Object, Object> subject
   ) {
 
     /**
@@ -201,7 +204,8 @@ public record YamlTestDefinition(
               (String) caseOrGroup.get("context"),        // Optional context
               // Default "disable" to false if not present
               (boolean) caseOrGroup.computeIfAbsent("disable", k -> false),
-              (Map<String, Object>) caseOrGroup.get("variables") // Optional variables
+              (Map<String, Object>) caseOrGroup.get("variables"), // Optional variables
+              (Map<Object, Object>) caseOrGroup.get("subject")   // Optional per-test-case subject
           ));
     }
     // Check if this is a group object (single key-value pair where value is a list).

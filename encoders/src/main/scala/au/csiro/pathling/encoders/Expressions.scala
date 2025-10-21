@@ -25,7 +25,6 @@
 package au.csiro.pathling.encoders
 
 import org.apache.spark.SparkException
-import org.apache.spark.sql.Column
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
 import org.apache.spark.sql.catalyst.analysis.{TypeCheckResult, UnresolvedException}
@@ -389,6 +388,93 @@ case class UnresolvedUnnest(value: Expression)
   }
 }
 
+/**
+ * An unresolved expression for the repeatAll function that recursively applies a projection
+ * expression to traverse hierarchical structures, preserving all duplicates.
+ *
+ * When resolved, this expression inspects the schema to determine the depth of nesting available,
+ * then builds an expression that applies the projection at each level and combines all results.
+ *
+ * @param value      The input expression to traverse
+ * @param projection The projection expression to apply at each level
+ */
+case class UnresolvedRepeatAll(value: Expression, projection: Expression => Expression)
+  extends Expression with Unevaluable with NonSQLExpression {
+
+  override def mapChildren(f: Expression => Expression): Expression = {
+    val newValue = f(value)
+
+    if (newValue.resolved) {
+      // Build the expression that applies the projection recursively based on schema depth.
+      buildRepeatAllExpression(newValue, f)
+    } else {
+      copy(value = newValue)
+    }
+  }
+
+  /**
+   * Builds the resolved expression by inspecting the schema and creating a union of all levels.
+   *
+   * @param resolvedValue The resolved input value
+   * @param f             The expression transformation function
+   * @return The resolved expression that combines all levels
+   */
+  private def buildRepeatAllExpression(resolvedValue: Expression,
+                                       f: Expression => Expression): Expression = {
+    import org.apache.spark.sql.catalyst.expressions.{Concat, CreateArray}
+
+    // Collect all levels by recursively applying the projection.
+    val levels = collectLevels(resolvedValue, f)
+
+    // If we have levels, concatenate them all together; otherwise return empty array.
+    if (levels.nonEmpty) {
+      // Wrap each level in a CreateArray, then concatenate all the arrays.
+      f(Flatten(Concat(levels.map(lvl => CreateArray(Seq(lvl))))))
+    } else {
+      f(CreateArray(Seq.empty))
+    }
+  }
+
+  /**
+   * Recursively collects all levels by applying the projection expression.
+   *
+   * We use a fixed maximum depth approach: always recurse up to maxDepth levels,
+   * and let empty arrays naturally terminate the recursion at runtime.
+   *
+   * @param currentValue The current level expression
+   * @param f            The expression transformation function
+   * @param maxDepth     Maximum recursion depth to prevent infinite loops (default 20)
+   * @return A sequence of expressions, one for each level
+   */
+  private def collectLevels(currentValue: Expression, f: Expression => Expression,
+                            maxDepth: Int = 20): Seq[Expression] = {
+    if (maxDepth <= 0) {
+      // Safety limit reached.
+      return Seq.empty
+    }
+
+    // Apply the projection to the current level.
+    val nextLevel = f(projection(currentValue))
+
+    // Always include this level and recurse up to maxDepth.
+    // Empty arrays will naturally be filtered out at runtime.
+    nextLevel +: collectLevels(nextLevel, f, maxDepth - 1)
+  }
+
+  override def dataType: DataType = throw new UnresolvedException("dataType")
+
+  override def nullable: Boolean = throw new UnresolvedException("nullable")
+
+  override lazy val resolved = false
+
+  override def toString: String = s"repeatAll($value)"
+
+  override def children: Seq[Expression] = value :: Nil
+
+  override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    UnresolvedRepeatAll(newChildren.head, projection)
+  }
+}
 
 // ValueFunctions has been moved to a Java class to access package-private Spark methods
 
@@ -599,10 +685,11 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
    * @param productSize The total number of product combinations to generate
    * @return An array of InternalRow containing all product combinations
    */
-  private def buildProductArray(inputArrays: Seq[ArrayData], productSize: Int): Array[InternalRow] = {
+  private def buildProductArray(inputArrays: Seq[ArrayData],
+                                productSize: Int): Array[InternalRow] = {
     val result = new Array[InternalRow](productSize)
     val zippedArrays: Seq[(ArrayData, Int)] = inputArrays.zipWithIndex
-    
+
     for (i <- 0 until productSize) {
       val productIndexes = calculateProductIndexes(i, inputArrays)
       val currentRowData = buildRowData(zippedArrays, productIndexes)
@@ -615,13 +702,14 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
    * Calculates the array indexes for a specific product combination.
    *
    * @param productIndex The index of the product combination to calculate
-   * @param inputArrays The sequence of input arrays to index into
+   * @param inputArrays  The sequence of input arrays to index into
    * @return An array of indexes, one for each input array
    */
-  private def calculateProductIndexes(productIndex: Int, inputArrays: Seq[ArrayData]): Array[Int] = {
+  private def calculateProductIndexes(productIndex: Int,
+                                      inputArrays: Seq[ArrayData]): Array[Int] = {
     val productIndexes: Array[Int] = new Array[Int](children.length)
     var productBase = productIndex
-    
+
     for (childIndex <- children.indices) {
       val childArity = inputArrays(childIndex).numElements()
       productIndexes(childIndex) = productBase % childArity
@@ -633,13 +721,14 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
   /**
    * Builds the row data for a single product combination by merging struct fields.
    *
-   * @param zippedArrays The input arrays paired with their indexes
+   * @param zippedArrays   The input arrays paired with their indexes
    * @param productIndexes The array indexes for this product combination
    * @return An array containing the merged field values for the output row
    */
-  private def buildRowData(zippedArrays: Seq[(ArrayData, Int)], productIndexes: Array[Int]): Array[Any] = {
+  private def buildRowData(zippedArrays: Seq[(ArrayData, Int)],
+                           productIndexes: Array[Int]): Array[Any] = {
     val currentRowData = new Array[Any](sizeOfOutput)
-    
+
     zippedArrays.foreach { case (arr, index) =>
       if (!arr.isNullAt(productIndexes(index))) {
         copyStructFields(arr, index, productIndexes(index), currentRowData)
@@ -651,14 +740,15 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
   /**
    * Copies struct fields from an array element to the output row data.
    *
-   * @param arr The source array containing struct elements
-   * @param arrayIndex The index of the source array in the children sequence
-   * @param elementIndex The index of the element within the source array
+   * @param arr            The source array containing struct elements
+   * @param arrayIndex     The index of the source array in the children sequence
+   * @param elementIndex   The index of the element within the source array
    * @param currentRowData The output row data array to copy fields into
    */
-  private def copyStructFields(arr: ArrayData, arrayIndex: Int, elementIndex: Int, currentRowData: Array[Any]): Unit = {
+  private def copyStructFields(arr: ArrayData, arrayIndex: Int, elementIndex: Int,
+                               currentRowData: Array[Any]): Unit = {
     val structData = arr.get(elementIndex, arrayElementTypes(arrayIndex)).asInstanceOf[InternalRow]
-    
+
     for (fi <- 0 until structData.numFields) {
       if (!structData.isNullAt(fi)) {
         currentRowData(offsetsScala(arrayIndex) + fi) = structData.get(fi, null)

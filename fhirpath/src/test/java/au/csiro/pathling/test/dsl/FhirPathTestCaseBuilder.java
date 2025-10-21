@@ -96,7 +96,8 @@ public class FhirPathTestCaseBuilder {
             null, // model
             null, // context
             false, // disable
-            null // variables
+            null, // variables
+            null // subject
         );
 
     // Create and return the YamlTestExecutor

@@ -5,6 +5,7 @@ tests:
         expression: "repeatAll(child).id"
         result: ["1", "2", "1.1", "2.1", "1.1.1", "2.1.1", "1.1.1.1", "1.1.1.2"]
         subject:
+          resourceType: Test
           child:
             - id: "1"
               child:
@@ -24,6 +25,7 @@ tests:
         expression: "repeatAll(child).id"
         result: ["1", "2", "2.1", "2.1.1"]
         subject:
+          resourceType: Test
           child:
             - id: "1"
               kid:
@@ -39,6 +41,7 @@ tests:
         expression: "repeatAll(child).val"
         result: ["A", "A", "B", "A", "B"]
         subject:
+          resourceType: Test
           child:
             - val: A
               child:
@@ -54,11 +57,13 @@ tests:
         expression: "empty.repeatAll(child)"
         result: []
         subject:
+          resourceType: Test
           empty: []
       - desc: "** Find non-existent property **"
         expression: "items.repeatAll(nonExistent)"
         result: []
         subject:
+          resourceType: Test
           items:
             - val: 1
             - val: 2
