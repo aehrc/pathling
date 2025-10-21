@@ -61,15 +61,40 @@ jobs:
         id: get_short_sha
         run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-      - name: Install library runtime
+      - name: Install artifacts
         run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+
+          # Install parent POM.
           mvn install:install-file \
-            -Dfile=jars/library-runtime/target/library-runtime-${{ steps.get_version.outputs.version }}.jar \
-            -DpomFile=library-runtime/pom.xml \
+            -Dfile=pom.xml \
+            -DpomFile=pom.xml \
             -DgroupId=au.csiro.pathling \
-            -DartifactId=library-runtime \
-            -Dversion=${{ steps.get_version.outputs.version }} \
-            -Dpackaging=jar
+            -DartifactId=pathling \
+            -Dversion=$VERSION \
+            -Dpackaging=pom
+
+          # Install modules in dependency order.
+          for MODULE in utilities encoders terminology fhirpath library-api library-runtime; do
+            # Install main JAR.
+            mvn install:install-file \
+              -Dfile=jars/$MODULE/target/$MODULE-$VERSION.jar \
+              -DpomFile=$MODULE/pom.xml \
+              -DgroupId=au.csiro.pathling \
+              -DartifactId=$MODULE \
+              -Dversion=$VERSION \
+              -Dpackaging=jar
+
+            # Install sources JAR.
+            mvn install:install-file \
+              -Dfile=jars/$MODULE/target/$MODULE-$VERSION-sources.jar \
+              -DpomFile=$MODULE/pom.xml \
+              -DgroupId=au.csiro.pathling \
+              -DartifactId=$MODULE \
+              -Dversion=$VERSION \
+              -Dpackaging=jar \
+              -Dclassifier=sources
+          done
 
       - name: Build benchmark JAR
         run: mvn --batch-mode package -pl benchmark
