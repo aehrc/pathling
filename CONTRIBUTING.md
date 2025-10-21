@@ -43,7 +43,8 @@ mvn clean install
 
 ## Building and testing
 
-This is a multi-module Maven project with inter-module dependencies. The following
+This is a multi-module Maven project with inter-module dependencies. The
+following
 sections describe how to compile and test specific modules efficiently.
 
 ### Module compilation
@@ -232,9 +233,13 @@ The core of Pathling consists of the following modules, all of which inherit
 from the main `pom.xml` in the root of the repository.
 
 - `utilities` - Utility functions used by different components of Pathling.
-- `encoders` - Encoders for transforming [FHIR](https://hl7.org/fhir/) data into Spark Datasets.
-- `terminology` - Interact with a [FHIR terminology server](https://hl7.org/fhir/terminology-service.html) from Spark.
-- `fhirpath` - A library that can translate [FHIRPath expressions](https://hl7.org/fhirpath/) into Spark
+- `encoders` - Encoders for transforming [FHIR](https://hl7.org/fhir/) data into
+  Spark Datasets.
+- `terminology` - Interact with
+  a [FHIR terminology server](https://hl7.org/fhir/terminology-service.html)
+  from Spark.
+- `fhirpath` - A library that can
+  translate [FHIRPath expressions](https://hl7.org/fhirpath/) into Spark
   queries.
 - `library-api` - An API that exposes Pathling functionality to language
   libraries.
@@ -324,7 +329,8 @@ production environments such as the Pathling website and sandbox instance.
 - Avoid the use of inner classes, records and enums - having each class defined
   in its own file is preferred and avoids any implicit dependencies on code
   within the enclosing scope.
-- Document public classes and methods with [Javadoc comments](https://www.oracle.com/technical-resources/articles/java/javadoc-tool.html).
+- Document public classes and methods
+  with [Javadoc comments](https://www.oracle.com/technical-resources/articles/java/javadoc-tool.html).
 - Handle exceptions appropriately; do not use empty catch blocks.
 - Close resources (e.g., streams, connections) in a `finally` block or use
   try-with-resources.
@@ -347,7 +353,8 @@ production environments such as the Pathling website and sandbox instance.
 
 #### Scala
 
-- Use meaningful and descriptive names following [Scala conventions](https://docs.scala-lang.org/style/).
+- Use meaningful and descriptive names
+  following [Scala conventions](https://docs.scala-lang.org/style/).
 - Follow standard Scala naming conventions:
     - Classes and traits: PascalCase (e.g., `MyClass`)
     - Methods and variables: camelCase (e.g., `myVariable`, `calculateTotal`)
