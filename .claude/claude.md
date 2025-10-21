@@ -93,3 +93,47 @@ You should:
 - Demonstrates proper tool usage to users
 - Works across different versions and branches
 - Avoids wasting time searching local files for external dependencies
+
+## Implementing New FHIRPath Features
+
+This section describes the high-level process for implementing new FHIRPath features (functions, operators, etc.) in the Pathling codebase.
+
+### Implementation Process
+
+**1. Specification & Research**
+- Consult FHIRPath specification (`.local/specs/FHIRPath.md`)
+- Study existing similar features in the codebase
+- Identify required components (UDFs, function logic, encodings)
+
+**2. Core Implementation**
+- Create Spark UDFs if needed (in `au.csiro.pathling.sql.misc.*`)
+- Implement function logic (core computation and type handling)
+- Add public API methods in `au.csiro.pathling.fhirpath.function.provider.*`
+  - Study existing classes in this package to discover patterns
+  - Follow established conventions for function signatures and annotations
+- Follow existing patterns (registry pattern, template method pattern)
+
+**3. Testing**
+- Write comprehensive DSL tests (`*DslTest.java`)
+- Run YAML reference implementation tests (`YamlReferenceImplTest`)
+- Add test exclusions for known limitations (`fhirpath/src/test/resources/fhirpath-js/config.yaml`)
+  - **IMPORTANT**: Always ask the user before adding new exclusions to `config.yaml`
+  - Exclusions should be well-justified with clear comments and issue references
+  - Each exclusion must document the reason (type: feature, bug, wontfix, etc.)
+
+**4. Iteration & Refinement**
+- Fix type mismatches and errors
+- Handle edge cases (nulls, empty collections)
+- Apply consistent patterns across codebase
+- Refactor for code quality
+
+**5. Review & Commit**
+- Code review before commits
+- Incremental, focused commits with clear messages
+- Ensure all tests pass
+
+### Discovery
+
+- Study classes in `au.csiro.pathling.fhirpath.function.provider.*` for API patterns
+- Review similar existing features for implementation guidance
+- Use `Grep` and `Read` tools to explore relevant code sections
