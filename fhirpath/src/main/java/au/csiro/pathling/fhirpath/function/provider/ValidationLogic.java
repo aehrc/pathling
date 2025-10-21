@@ -89,11 +89,11 @@ class ValidationLogic {
     final BiFunction<FhirPathType, Column, Column> validationLogic = VALIDATION_REGISTRY.get(targetType);
 
     final Column singularValue = input.getColumn().singular().getValue();
-    final Column result = input.getType()
-        .map(sourceType -> sourceType == targetType
-                           ? lit(true)
-                           : validationLogic.apply(sourceType, singularValue))
-        .orElse(lit(false));
+    // Use Nothing when the type is not known to enforce default value for a non-convertible type
+    final FhirPathType sourceType = input.getType().orElse(FhirPathType.NOTHING);
+    final Column result = sourceType == targetType
+                          ? lit(true)
+                          : validationLogic.apply(sourceType, singularValue);
 
     return BooleanCollection.build(new DefaultRepresentation(
         // this triggers singularity check if the result is null

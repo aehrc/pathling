@@ -124,11 +124,11 @@ class ConversionLogic {
         (Function<DefaultRepresentation, Collection>) BUILDER_REGISTRY.get(targetType);
 
     final Column singularValue = input.getColumn().singular().getValue();
-    final Column result = input.getType()
-        .map(sourceType -> sourceType == targetType
-                           ? singularValue
-                           : conversionLogic.apply(sourceType, singularValue))
-        .orElse(lit(null));
+    // Use Nothing when the type is not known to enforce default value for a non-convertible type
+    final FhirPathType sourceType = input.getType().orElse(FhirPathType.NOTHING);
+    final Column result = sourceType == targetType
+                          ? singularValue
+                          : conversionLogic.apply(sourceType, singularValue);
 
     return collectionBuilder.apply(new DefaultRepresentation(
         // this triggers singularity check if the result is null

@@ -239,12 +239,13 @@ excludeSet:
           - "Functions.collWithNullsAndTrue[0].toInteger()"
           - "Functions.collWithNullsAndTrue[0].toDecimal()"
           - "Functions.collWithNullsAndTrue[0].toQuantity()"
-      - title: "Unsupported comparison between calendar duration and UCUM quantities"
+      - title: "Unsupported comparison for indefinite and definite time quantities"
         comment: "Comparing quantities from toQuantity() calendar durations with UCUM quantity literals is not supported, similar to direct quantity literal comparison (see Comparison exclusions)."
         type: wontfix
         outcome: failure
         any:
           - "'1 year'.toQuantity() != 1 'a'"
+          - "MedicationRequest.dispenseRequest.expectedSupplyDuration.toQuantity() = 3 days"
   - title: Variable exclusions
     glob: "fhirpath-js/cases/8_variables.yaml"
     exclude:
