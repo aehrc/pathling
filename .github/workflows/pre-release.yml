@@ -89,11 +89,11 @@ jobs:
         env:
           GPG_KEY: ${{ secrets.GPG_KEY }}
         run: |
-          cat <(echo -e "$GPG_KEY") | gpg --batch --import
+          echo "$GPG_KEY" | gpg --batch --import
           gpg --list-secret-keys --keyid-format LONG
 
       - name: Configure Maven settings
-        uses: s4u/maven-settings-action@64e42c454dbd42ef6370ac8539685755aedd205b # v3.1.0
+        uses: s4u/maven-settings-action@v3.1.0
         with:
           servers: |
             [{
@@ -103,7 +103,7 @@ jobs:
             }]
 
       - name: Run security scan
-        uses: aquasecurity/trivy-action@dc5a429b52fcf669ce959baa2c2dd26090d2a6c4 # 0.32.0
+        uses: aquasecurity/trivy-action@0.32.0
         env:
           # We update the database separately within the `update-trivy` workflow.
           TRIVY_SKIP_DB_UPDATE: true
