@@ -1,0 +1,64 @@
+tests:
+  - "Testing repeatAll() function with hierarchical tree navigation":
+      - desc: "** Traverse multi-level hierarchy **"
+        # https://fhirpath-lab.azurewebsites.net/FhirPath?expression=repeat(child).id&engine=fhirpath.js&resourceJson=N4KABGBEDGAWCWAbAJpAXGA2uCZS90nlQ0gEZIAaHAmBFdLGgvZlqYx8gOguvdpwkJJgJb4xLIiJ5leVNpLrDG2SQInr20rnL3zF6gL78tBTWcKdS+uQCZIhyUafsAuq9wv1Hsd5a+XqYQFhA6pA7BhEIMGGoanuFQdvJR2jEi8eqhStbJvAZm-mKB7MW4pWD+HkZAA&terminologyserver=https%3A%2F%2Fsqlonfhir-r4.azurewebsites.net%2Ffhir
+        expression: "repeatAll(child).id"
+        result: ["1", "2", "1.1", "2.1", "1.1.1", "2.1.1", "1.1.1.1", "1.1.1.2"]
+        subject:
+          child:
+            - id: "1"
+              child:
+                - id: "1.1"
+                  child:
+                    - id: "1.1.1"
+                      child:
+                        - id: "1.1.1.1"
+                        - id: "1.1.1.2"
+            - id: "2"
+              child:
+                - id: "2.1"
+                  child:
+                    - id: "2.1.1"
+      - desc: "** Traverse hierarchy with missing intermediate elements **"
+        # https://fhirpath-lab.azurewebsites.net/FhirPath?expression=repeat(child).id&engine=fhirpath.js&resourceJson=N4KABGBEDGAWCWAbAJpAXGA2uCZS90nlQ0gEZIAaHAyAa2PSxoLxdajiROY4-z4ciPcgDoy4yOz4BfaQQC68sHI5KCM6gQG1GpAExVpMBCibZBOvsKaR9krYM6meFpxCvubB8ZOUb-MHVZaWCIVSCQGSA&terminologyserver=https%3A%2F%2Fsqlonfhir-r4.azurewebsites.net%2Ffhir
+        expression: "repeatAll(child).id"
+        result: ["1", "2", "2.1", "2.1.1"]
+        subject:
+          child:
+            - id: "1"
+              kid:
+                - child:
+                    - id: "1.1.1"
+            - id: "2"
+              child:
+                - id: "2.1"
+                  child:
+                    - id: "2.1.1"
+  - "Testing repeatAll() preserves duplicates unlike repeat()":
+      - desc: "** Preserve duplicates in hierarchical structure **"
+        expression: "repeatAll(child).val"
+        result: ["A", "A", "B", "A", "B"]
+        subject:
+          child:
+            - val: A
+              child:
+                - val: A
+            - val: A
+              child:
+                - val: B
+            - val: B
+              child:
+                - val: A
+  - "Testing repeatAll() with empty and null collections":
+      - desc: "** Empty input collection **"
+        expression: "empty.repeatAll(child)"
+        result: []
+        subject:
+          empty: []
+      - desc: "** Find non-existent property **"
+        expression: "items.repeatAll(nonExistent)"
+        result: []
+        subject:
+          items:
+            - val: 1
+            - val: 2
