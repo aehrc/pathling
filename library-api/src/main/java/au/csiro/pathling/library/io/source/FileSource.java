@@ -25,17 +25,17 @@ import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -100,34 +100,17 @@ public abstract class FileSource extends DatasetSource {
    */
   protected FileSource(@Nonnull final PathlingContext context,
       @Nonnull final String path,
-      @Nonnull final Function<String, Set<String>> fileNameMapper, @Nonnull final String extension,
+      @Nullable final Function<String, Set<String>> fileNameMapper, @Nonnull final String extension,
       @Nonnull final DataFrameReader reader,
       @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer,
       @Nonnull Predicate<ResourceType> additionalResourceTypeFilter) {
-    this(context, retrieveFilesFromPath(path, context), fileNameMapper, extension, reader, transformer, additionalResourceTypeFilter);
-  }
-
-  private static Collection<String> retrieveFilesFromPath(String path, PathlingContext context) {
-    final org.apache.hadoop.conf.Configuration hadoopConfiguration = requireNonNull(
-        context.getSpark().sparkContext().hadoopConfiguration());
-    try {
-      final Path convertedPath = new Path(path);
-      final FileSystem fileSystem = convertedPath.getFileSystem(hadoopConfiguration);
-      final FileStatus[] fileStatuses = fileSystem.globStatus(new Path(path, "*"));
-      return Arrays.stream(fileStatuses)
-          .map(FileStatus::getPath)
-          .map(Path::toString)
-          .toList();
-    } catch (IOException e) {
-      throw new PersistenceError("Problem reading source files from file system", e);
-    }
+    this(context, retrieveFilesFromPath(path, context, fileNameMapper), extension, reader, transformer, additionalResourceTypeFilter);
   }
 
 
   /**
    * @param context the Pathling context
-   * @param files a list of files to load
-   * @param fileNameMapper a function that maps a file name to a set of resource types
+   * @param files a map of resource types to file paths
    * @param extension the file extension that this source expects for its source files
    * @param reader a {@link DataFrameReader} that can be used to read the source files
    * @param transformer a function that transforms a {@link Dataset<Row>} containing raw source data
@@ -135,13 +118,11 @@ public abstract class FileSource extends DatasetSource {
    * @param additionalResourceTypeFilter filter to filter out specific resource types if desired
    */
   protected FileSource(@Nonnull final PathlingContext context,
-      @Nonnull final Collection<String> files,
-      @Nonnull final Function<String, Set<String>> fileNameMapper, @Nonnull final String extension,
+      @Nonnull final Map<String, Collection<String>> files, @Nonnull final String extension,
       @Nonnull final DataFrameReader reader,
       @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer,
       @Nonnull Predicate<ResourceType> additionalResourceTypeFilter) {
     super(context);
-    this.fileNameMapper = fileNameMapper;
     this.extension = extension;
     this.reader = reader;
     this.transformer = transformer;
@@ -149,59 +130,97 @@ public abstract class FileSource extends DatasetSource {
     this.resourceMap = buildResourceMap(files);
   }
 
-  /**
-   * Extracts the resource type from the provided base name. Allows for an optional qualifier
-   * string, which is separated from the resource name by a period. For example, "Procedure.ICU"
-   * will return ["Procedure"].
-   * <p>
-   * This method does not validate that the resource type is a valid FHIR resource type.
-   *
-   * @param baseName the base name of the file
-   * @return a single-element set containing the resource type, or an empty set if the base name
-   * does not match the expected format
-   */
-  @Nonnull
-  public static Set<String> resourceNameWithQualifierMapper(@Nonnull final String baseName) {
-    final Matcher matcher = BASE_NAME_WITH_QUALIFIER.matcher(baseName);
-    // If the base name does not match the expected format, return an empty set.
-    if (!matcher.matches()) {
-      return Collections.emptySet();
+  private static Map<String, Collection<String>> retrieveFilesFromPath(String path, PathlingContext context, final Function<String, Set<String>> fileNameMapper) {
+    final org.apache.hadoop.conf.Configuration hadoopConfiguration = requireNonNull(
+        context.getSpark().sparkContext().hadoopConfiguration());
+    try {
+      final Path convertedPath = new Path(path);
+      final FileSystem fileSystem = convertedPath.getFileSystem(hadoopConfiguration);
+      final FileStatus[] fileStatuses = fileSystem.globStatus(new Path(path, "*"));
+      // First group by resource type
+      Map<String, Collection<String>> groupedByDefaultNamingAssumption = Arrays.stream(fileStatuses)
+          .map(FileStatus::getPath)
+          .map(Path::toString)
+          .collect(Collectors.groupingBy(FileSource::retrieveResourceTypeFromFilePath, Collectors.toCollection(HashSet::new)));
+      // The fileNameMapper is made null to avoid the chicken-egg-problem:
+      // Listing all files in the dir is necessary to extract the resource types (which is done with the default naming assumption
+      // of following the <resource_type>.(<part-id>).<extension> assumption). This first step is necessary
+      // because otherwise it's not possible to obtain the list of resource types which is provided as
+      // input for the fileNameMapper in the next step. In theory, it's possible to define a default fileNameMapper
+      // that receives a resource type, checks the files in the path and aggregates all files that match
+      // the default naming assumption for the given resource type. But that is redundant work, the filepaths
+      // are scanned twice and the second scanning is completely redundant as the same work (with the same default assumption)
+      // has been carried out by the initial scan.
+      if(fileNameMapper == null) {
+        return groupedByDefaultNamingAssumption;
+      }
+      return groupedByDefaultNamingAssumption.entrySet().stream()
+          .collect(Collectors.toMap(
+              Map.Entry::getKey,
+              entry -> fileNameMapper.apply(entry.getKey())
+          ));
+
+    } catch (IOException e) {
+      throw new PersistenceError("Problem reading source files from file system", e);
     }
-    // If the base name does not contain a qualifier, return the base name as-is.
-    if (matcher.group(2) == null) {
-      return Collections.singleton(baseName);
+  }
+  
+  private static String retrieveResourceTypeFromFilePath(String filePath) {
+    String fileName = FilenameUtils.getBaseName(filePath);
+    final String[] split = fileName.split("\\.");
+    if(split.length == 2) {
+      // has partition id like '<resource_type>.<partition_id>'
+      fileName = split[0];
     }
-    // If the base name contains a qualifier, remove it and return the base name without the
-    // qualifier.
-    final String qualifierRemoved = new StringBuilder(baseName).replace(matcher.start(2),
-        matcher.end(2), "").toString();
-    return Collections.singleton(qualifierRemoved);
+    return fileName;
   }
 
+  // /**
+  //  * The default file mapper expects two possible file naming conventions:
+  //  * <br>
+  //  * 1. The filename is exactly the resource type (i.e. "Patient.ndjson", "Encounter.parquet")
+  //  * 2. The filename is the resource type with an id (i.e. "Patient.00000.ndjson"). This is mostly relevant
+  //  * for NDJSON files as the bulk export operation may produce files in this structure. 
+  //  * 
+  //  * @param resourceType the resource type for the files to be loaded
+  //  * @return the collection of files associated with the resource type
+  //  */
+  // @Nonnull
+  // public static Set<String> assumeFilenameIsResourceTypeMapper(@Nonnull final String path, @Nonnull final String resourceType, @Nonnull PathlingContext context) {
+  //   final org.apache.hadoop.conf.Configuration hadoopConfiguration = requireNonNull(
+  //       context.getSpark().sparkContext().hadoopConfiguration());
+  //   try {
+  //     final Path convertedPath = new Path(path);
+  //     final FileSystem fileSystem = convertedPath.getFileSystem(hadoopConfiguration);
+  //     final FileStatus[] fileStatuses = fileSystem.globStatus(new Path(path, "*"));
+  //     List<String> filesAtPath = Arrays.stream(fileStatuses)
+  //         .map(FileStatus::getPath)
+  //         .map(Path::toString)
+  //         .toList();
+  //     return filesAtPath.stream()
+  //         .filter(filename -> FilenameUtils.getBaseName(filename).startsWith(resourceType))
+  //         .collect(Collectors.toSet());
+  //   } catch (IOException e) {
+  //     throw new PersistenceError("Problem reading source files from file system", e);
+  //   }
+  //
+  // }
+
   /**
-   * Creates a map of {@link ResourceType} to {@link Dataset} from the given path and file system.
+   * Creates a map of {@link ResourceType} to {@link Dataset} from the given map of resource types to files.
    *
-   * @param files the files to load
+   * @param files a map of resource types to file paths
    * @return a map of {@link ResourceType} to {@link Dataset}
    */
   @Nonnull
-  private Map<String, Dataset<Row>> buildResourceMap(final @Nonnull Collection<String> files) {
-    // final FileStatus[] fileStatuses = fileSystem.globStatus(new Path(path, "*"));
-    final Map<String, List<String>> fileNamesByResourceType = files.stream()
-        .map(Object::toString)
+  private Map<String, Dataset<Row>> buildResourceMap(final @Nonnull Map<String, Collection<String>> files) {
+    return files.entrySet().stream()
         // Filter out any paths that do not have the expected extension.
-        .filter(this::checkExtension)
-        // Extract the resource code from each path using the file name mapper.
-        .flatMap(this::resourceCodeAndPath)
+        .map(entry -> Map.entry(entry.getKey(), checkExtension(entry.getValue())))
         // Filter out any resource codes that are not supported.
-        .filter(p -> context.isResourceTypeSupported(p.getKey()))
+        .filter(entry -> context.isResourceTypeSupported(entry.getKey()))
         // Filter out any resource that should be explicitly ignored
-        .filter(p -> additionalResourceTypeFilter.test(ResourceType.fromCode(p.getKey())))
-        // Group the pairs by resource type, and collect the associated paths into a list.
-        .collect(Collectors.groupingBy(Pair::getKey,
-            Collectors.mapping(Pair::getValue, Collectors.toList())));
-
-    return fileNamesByResourceType.entrySet().stream()
+        .filter(entry -> additionalResourceTypeFilter.test(ResourceType.fromCode(entry.getKey())))
         .collect(Collectors.toMap(Map.Entry::getKey,
             entry -> {
               final String[] paths = entry.getValue().toArray(new String[0]);
@@ -213,11 +232,13 @@ public abstract class FileSource extends DatasetSource {
   /**
    * Check that the extension of the given path matches the expected extension.
    *
-   * @param path the path to check
-   * @return true if the extension matches, false otherwise
+   * @param paths the paths to check
+   * @return a filtered collection with elements where the extension matches
    */
-  private boolean checkExtension(@Nonnull final String path) {
-    return FilenameUtils.isExtension(path, extension);
+  private Collection<String> checkExtension(@Nonnull final Collection<String> paths) {
+    return paths.stream()
+        .filter(path -> FilenameUtils.isExtension(path, extension))
+        .collect(Collectors.toSet());
   }
 
   /**
@@ -237,8 +258,9 @@ public abstract class FileSource extends DatasetSource {
       // has partition id like '<resource_type>.<partition_id>'
       fileName = split[0];
     }
-    return fileNameMapper.apply(fileName).stream()
-        .map(resourceType -> Pair.of(resourceType, path));
+    String finalFileName = fileName;
+    return fileNameMapper.apply(finalFileName).stream()
+        .map(mappedFilename -> Pair.of(finalFileName, mappedFilename));
   }
 
 }

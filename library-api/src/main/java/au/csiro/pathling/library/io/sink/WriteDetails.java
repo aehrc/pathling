@@ -1,13 +1,16 @@
 package au.csiro.pathling.library.io.sink;
 
 import au.csiro.pathling.io.source.DataSource;
+import java.util.List;
 
 /**
- * Encapsulates changes caused by the {@link au.csiro.pathling.library.io.sink.DataSink#write(DataSource)}
- * on the filesystem. Subclasses provide more details.
+ * Capture changes made by the write operation
+ * methods on the filesystem.
+ * 
+ * @param fileInfos A list of files that have been created/modified on the filesystem.
  * 
  * @author Felix Naumann
  */
-public sealed interface WriteDetails permits NdjsonWriteDetails {
+public record WriteDetails(List<FileInfo> fileInfos) {
 
 }

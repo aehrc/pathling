@@ -857,7 +857,7 @@ class DataSourcesTest {
   void parquetWithNullPathShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
     final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.parquet(null));
+        () -> builder.parquet((String) null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
@@ -873,7 +873,7 @@ class DataSourcesTest {
   void deltaWithNullPathShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
     final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.delta(null));
+        () -> builder.delta((String) null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 

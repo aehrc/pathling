@@ -19,6 +19,8 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -43,10 +45,7 @@ public class ParquetSource extends FileSource {
    * @param path the path to the Parquet file or directory
    */
   ParquetSource(@Nonnull final PathlingContext context, @Nonnull final String path, @Nonnull final Predicate<ResourceType> additionalResourceTypeFilter) {
-    super(context, path,
-        // Use the "resource name with qualifier" mapper by default, which takes the resource name
-        // from the file name and is tolerant of an optional qualifier string.
-        FileSource::resourceNameWithQualifierMapper,
+    super(context, path, null,
         // Assume the "parquet" file extension.
         PARQUET_FILE_EXTENSION,
         context.getSpark().read().format(PARQUET_READ_FORMAT),
@@ -67,6 +66,42 @@ public class ParquetSource extends FileSource {
   ParquetSource(@Nonnull final PathlingContext context, @Nonnull final String path,
       @Nonnull final Function<String, Set<String>> fileNameMapper) {
     super(context, path, fileNameMapper, PARQUET_FILE_EXTENSION,
+        context.getSpark().read().format(PARQUET_READ_FORMAT),
+        // Apply no transformations on the data - we assume it has already been processed using the 
+        // Pathling FHIR encoders.
+        (sourceData, resourceType) -> sourceData,
+        resourceType -> true);
+  }
+
+  /**
+   * Constructs a ParquetSource with the specified PathlingContext and map of resource types to files.
+   *
+   * @param context the PathlingContext to use
+   * @param files a map where keys are resource type names and values are collections of file paths
+   */
+  ParquetSource(@Nonnull final PathlingContext context, @Nonnull final Map<String, Collection<String>> files,
+      @Nonnull final Predicate<ResourceType> additionalResourceTypeFilter) {
+    super(context, files, null,
+        // Assume the "parquet" file extension.
+        PARQUET_FILE_EXTENSION,
+        context.getSpark().read().format(PARQUET_READ_FORMAT),
+        // Apply no transformations on the data - we assume it has already been processed using the 
+        // Pathling FHIR encoders.
+        (sourceData, resourceType) -> sourceData,
+        additionalResourceTypeFilter);
+  }
+
+  /**
+   * Constructs a ParquetSource with the specified PathlingContext, map of files, and custom
+   * file name mapper.
+   *
+   * @param context the PathlingContext to use
+   * @param files a map where keys are resource type names and values are collections of file paths
+   * @param fileNameMapper a function that maps a file name to a set of resource types
+   */
+  ParquetSource(@Nonnull final PathlingContext context, @Nonnull final Map<String, Collection<String>> files,
+      @Nonnull final Function<String, Set<String>> fileNameMapper) {
+    super(context, files, fileNameMapper, PARQUET_FILE_EXTENSION,
         context.getSpark().read().format(PARQUET_READ_FORMAT),
         // Apply no transformations on the data - we assume it has already been processed using the 
         // Pathling FHIR encoders.

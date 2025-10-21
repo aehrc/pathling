@@ -1,7 +1,7 @@
 package au.csiro.pathling.operations.export;
 
 import au.csiro.pathling.OperationResponse;
-import au.csiro.pathling.library.io.sink.NdjsonWriteDetails;
+import au.csiro.pathling.library.io.sink.WriteDetails;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ArrayNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ObjectNode;
@@ -24,9 +24,9 @@ public class ExportResponse implements OperationResponse<Binary> {
     private final ObjectMapper mapper = new ObjectMapper();
 
     private final String kickOffRequestUrl;
-    private final NdjsonWriteDetails writeDetails;
+    private final WriteDetails writeDetails;
 
-    public ExportResponse(String kickOffRequestUrl, NdjsonWriteDetails writeDetails) {
+    public ExportResponse(String kickOffRequestUrl, WriteDetails writeDetails) {
         this.kickOffRequestUrl = kickOffRequestUrl;
         this.writeDetails = writeDetails;
     }
@@ -46,7 +46,7 @@ public class ExportResponse implements OperationResponse<Binary> {
         return binary;
     }
 
-    private String buildManifest(String requestUrl, NdjsonWriteDetails writeDetails) throws IOException {
+    private String buildManifest(String requestUrl, WriteDetails writeDetails) throws IOException {
         ObjectNode manifest = mapper.createObjectNode();
 
         String baseServerUrl = requestUrl.split("\\$export")[0];
@@ -91,7 +91,7 @@ public class ExportResponse implements OperationResponse<Binary> {
         return kickOffRequestUrl;
     }
 
-    public NdjsonWriteDetails getWriteDetails() {
+    public WriteDetails getWriteDetails() {
         return writeDetails;
     }
 

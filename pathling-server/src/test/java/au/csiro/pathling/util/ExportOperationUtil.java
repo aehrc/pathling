@@ -7,7 +7,7 @@ import au.csiro.pathling.operations.export.ExportOutputFormat;
 import au.csiro.pathling.operations.export.ExportRequest;
 import au.csiro.pathling.operations.export.ExportResponse;
 import au.csiro.pathling.library.io.sink.FileInfo;
-import au.csiro.pathling.library.io.sink.NdjsonWriteDetails;
+import au.csiro.pathling.library.io.sink.WriteDetails;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ArrayNode;
@@ -46,7 +46,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @Slf4j
 public class ExportOperationUtil {
 
-    public static JsonNode json(ObjectMapper mapper, String request, NdjsonWriteDetails writeDetails) {
+    public static JsonNode json(ObjectMapper mapper, String request, WriteDetails writeDetails) {
         return json(mapper, InstantType.now(), request, false, writeDetails.fileInfos());
     }
 
@@ -69,7 +69,7 @@ public class ExportOperationUtil {
         return node;
     }
 
-    public static ExportResponse res(ExportRequest request, NdjsonWriteDetails writeDetails) {
+    public static ExportResponse res(ExportRequest request, WriteDetails writeDetails) {
         return new ExportResponse(request.originalRequest(), writeDetails);
     }
 
@@ -136,12 +136,12 @@ public class ExportOperationUtil {
       return new ExportRequest(originalRequest, ExportOutputFormat.ND_JSON, since, until, List.of(), fhirElements);
     }
 
-    public static NdjsonWriteDetails write_details(List<FileInfo> fileInfos) {
-        return new NdjsonWriteDetails(fileInfos);
+    public static WriteDetails write_details(List<FileInfo> fileInfos) {
+        return new WriteDetails(fileInfos);
     }
 
-    public static NdjsonWriteDetails write_details(FileInfo... fileInfos) {
-        return new NdjsonWriteDetails(Arrays.asList(fileInfos));
+    public static WriteDetails write_details(FileInfo... fileInfos) {
+        return new WriteDetails(Arrays.asList(fileInfos));
     }
 
     public static FileInfo fi(String fhirResourceType, String absoluteUrl, long count) {

@@ -27,7 +27,6 @@ import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
 
@@ -93,7 +92,7 @@ final class NdjsonSink implements DataSink {
 
   @Override
   @Nonnull
-  public NdjsonWriteDetails write(@Nonnull final DataSource source) {
+  public WriteDetails write(@Nonnull final DataSource source) {
     List<FileInfo> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       // Convert the dataset of structured FHIR data to a dataset of JSON strings.
@@ -116,7 +115,7 @@ final class NdjsonSink implements DataSink {
       Collection<String> renamed = FileSystemPersistence.renamePartitionedFiles(context.getSpark(), resultUrl, resultUrl, "txt");
       renamed.forEach(renamedFilename -> fileInfos.add(new FileInfo(resourceType, renamedFilename, null)));
     }
-    return new NdjsonWriteDetails(fileInfos);
+    return new WriteDetails(fileInfos);
   }
 
   void writeJsonStrings(@Nonnull final Dataset<String> jsonStrings,

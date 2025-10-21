@@ -18,24 +18,26 @@
 package au.csiro.pathling.operations.import_;
 
 import au.csiro.pathling.cache.CacheableDatabase;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.UnsupportedResourceError;
+import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.SecurityError;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
+import au.csiro.pathling.library.io.sink.FileInfo;
+import au.csiro.pathling.library.io.sink.WriteDetails;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
-import au.csiro.pathling.library.io.source.DatasetSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.security.PathlingAuthority;
+import au.csiro.pathling.security.ResourceAccess.AccessType;
+import au.csiro.pathling.security.SecurityAspect;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
-import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.api.java.function.FilterFunction;
-import org.apache.spark.api.java.function.MapFunction;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -45,24 +47,27 @@ import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 /**
  * Encapsulates the execution of an import operation.
  *
- * @author John Grimes
+ * @author  Felix Naumann
  * @see <a href="https://pathling.csiro.au/docs/server/operations/import">Import</a>
  */
 @Component
@@ -71,160 +76,81 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 public class ImportExecutor {
 
   @Nonnull
-  private final SparkSession spark;
-
-  @Nonnull
-  private final FhirEncoders fhirEncoders;
-
-  @Nonnull
   private final Optional<AccessRules> accessRules;
   private final PathlingContext pathlingContext;
+  
+  private final String databasePath;
+  private final ServerConfiguration serverConfiguration;
 
   /**
-   * @param spark a {@link SparkSession} for resolving Spark queries
-   * @param database a {@link Database} for writing resources
-   * @param fhirEncoders a {@link FhirEncoders} object for converting data back into HAPI FHIR
-   * @param fhirContextFactory a {@link FhirContextFactory} for constructing FhirContext objects in
-   * the context of parallel processing
    * @param accessRules a {@link AccessRules} for validating access to URLs
+   * @param databasePath directory to where the data will be imported
    */
-  public ImportExecutor(@Nonnull final SparkSession spark,
-                        @Nonnull final FhirEncoders fhirEncoders,
-                        @Nonnull final Optional<AccessRules> accessRules,
-      PathlingContext pathlingContext) {
-    this.spark = spark;
-    this.fhirEncoders = fhirEncoders;
+  public ImportExecutor(@Nonnull final Optional<AccessRules> accessRules,
+      PathlingContext pathlingContext,
+      @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
+      String databasePath, ServerConfiguration serverConfiguration) {
     this.accessRules = accessRules;
     this.pathlingContext = pathlingContext;
+    this.databasePath = databasePath;
+    this.serverConfiguration = serverConfiguration;
   }
   
-  private record ImportSource(String fileUrl, ImportMode importMode) {}
-  
-  /**
-   * Executes an import request.
-   *
-   * @param inParams a FHIR {@link Parameters} object describing the import request
-   * @return a FHIR {@link OperationOutcome} resource describing the result
-   */
   @Nonnull
-  public OperationOutcome execute(@Nonnull @ResourceParam final Parameters inParams) {
-    // Parse and validate the JSON request.
-    final List<ParametersParameterComponent> inputParams = inParams.getParameter().stream()
-        .filter(param -> "input".equals(param.getName())).toList();
-    if (inputParams.isEmpty()) {
-      throw new InvalidUserInputError("Must provide at least one input parameter");
-    }
+  public ImportResponse execute(@Nonnull final ImportRequest importRequest, String jobId) {
     log.info("Received $import request");
-    
-    /*
-    source [1..*] - A source FHIR NDJSON file containing resources to be included within this import operation. Each file must contain only one type of resource.
-        resourceType [1..1] (code) - The base FHIR resource type contained within this source file. Code must be a member of http://hl7.org/fhir/ValueSet/resource-types.
-        url [1..1] (uri) - A URL that can be used to retrieve this source file.
-
-    mode [0..1] (code) - A value of overwrite will cause all existing resources of the specified type to be deleted and replaced with the contents of the source file. A value of merge will match existing resources with updated resources in the source file based on their ID, and either update the existing resources or add new resources as appropriate. The default value is overwrite.
-    format [0..1] (code) - Indicates the format of the source file. Possible values are ndjson, parquet and delta. The default value is ndjson.
-     */
-    
-    List<ParametersParameterComponent> sourceParams = new ArrayList<>();
-    
-    // For each input within the request, read the resources of the declared type and create
-    // the corresponding table in the warehouse.
-    for (final ParametersParameterComponent sourceParam : sourceParams) {
-      final ParametersParameterComponent resourceTypeParam = sourceParam.getPart().stream()
-          .filter(param -> "resourceType".equals(param.getName()))
-          .findFirst()
-          .orElseThrow(
-              () -> new InvalidUserInputError("Must provide resourceType for each source"));
-      final ParametersParameterComponent urlParam = sourceParam.getPart().stream()
-          .filter(param -> "url".equals(param.getName()))
-          .findFirst()
-          .orElseThrow(
-              () -> new InvalidUserInputError("Must provide url for each source"));
-      // The mode parameter defaults to 'overwrite'.
-      final ImportMode importMode = sourceParam.getPart().stream()
-          .filter(param -> "mode".equals(param.getName()) &&
-              param.getValue() instanceof CodeType)
-          .findFirst()
-          .map(param -> ImportMode.fromCode(
-              ((CodeType) param.getValue()).asStringValue()))
-          .orElse(ImportMode.OVERWRITE);
-
-      // Get the serialized resource type from the source parameter.
-      final ImportFormat format = sourceParam.getPart().stream()
-          .filter(param -> "format".equals(param.getName()))
-          .findFirst()
-          .map(param -> {
-            final String formatCode = ((StringType) param.getValue()).getValue();
-            try {
-              return ImportFormat.fromCode(formatCode);
-            } catch (final IllegalArgumentException e) {
-              throw new InvalidUserInputError("Unsupported format: " + formatCode);
-            }
-          })
-          .orElse(ImportFormat.NDJSON);
-
-      final String resourceCode = ((CodeType) resourceTypeParam.getValue()).getCode();
-      final ResourceType resourceType = ResourceType.fromCode(resourceCode);
-
-      // Get an encoder based on the declared resource type within the source parameter.
-      final ExpressionEncoder<IBaseResource> fhirEncoder;
-      try {
-        fhirEncoder = fhirEncoders.of(resourceType.toCode());
-      } catch (final UnsupportedResourceError e) {
-        throw new InvalidUserInputError("Unsupported resource type: " + resourceCode);
-      }
-
-      // Read the resources from the source URL into a dataset of strings.
-      final QueryableDataSource queryableDataSource = readRowsFromUrl(urlParam, format, fhirEncoder);
-
-      log.info("Importing {} resources (mode: {})", resourceType.toCode(), importMode.getCode());
-      DataSinkBuilder sinkBuilder = new DataSinkBuilder(pathlingContext, queryableDataSource).saveMode(importMode.getCode());
-      // switch (format) {
-      //   case NDJSON -> sinkBuilder.ndjson()
-      // }
-      // if (importMode == ImportMode.OVERWRITE) {
-      //  
-      //   database.overwrite(resourceType, rows);
-      // } else {
-      //   database.merge(resourceType, rows);
-      // }
-    }
-
-    // We return 200, as this operation is currently synchronous.
-    log.info("Import complete");
-
-    // Construct a response.
-    final OperationOutcome opOutcome = new OperationOutcome();
-    final OperationOutcomeIssueComponent issue = new OperationOutcomeIssueComponent();
-    issue.setSeverity(IssueSeverity.INFORMATION);
-    issue.setCode(IssueType.INFORMATIONAL);
-    issue.setDiagnostics("Data import completed successfully");
-    opOutcome.getIssue().add(issue);
-    return opOutcome;
+    WriteDetails writeDetails = readAndWriteFilesFrom(importRequest, jobId);
+    return new ImportResponse(importRequest.originalRequest(), importRequest, writeDetails);
   }
 
-  @Nonnull
-  private QueryableDataSource readRowsFromUrl(@Nonnull final ParametersParameterComponent urlParam,
-      final ImportFormat format, final ExpressionEncoder<IBaseResource> fhirEncoder) {
-    final String url = ((UrlType) urlParam.getValue()).getValueAsString();
-    final String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8);
-    final String convertedUrl = CacheableDatabase.convertS3ToS3aUrl(decodedUrl);
-    try {
-      // Check that the user is authorized to execute the operation.
-      accessRules.ifPresent(ar -> ar.checkCanImportFrom(convertedUrl));
-      final FilterFunction<String> nonBlanks = s -> !s.isBlank();
 
-      DataSourceBuilder sourceBuilder = new DataSourceBuilder(pathlingContext);
-      return switch (format) {
-        case NDJSON -> sourceBuilder.ndjson(convertedUrl);
-        case PARQUET -> sourceBuilder.parquet(convertedUrl);
-        case DELTA -> sourceBuilder.delta(convertedUrl);
-      };
-    } catch (final SecurityError e) {
-      throw new InvalidUserInputError("Not allowed to import from URL: " + convertedUrl, e);
-    } catch (final Exception e) {
-      throw new InvalidUserInputError("Error reading from URL: " + convertedUrl, e);
-    }
+
+  private WriteDetails readAndWriteFilesFrom(ImportRequest request, String jobId) {
+    DataSourceBuilder sourceBuilder = new DataSourceBuilder(pathlingContext);
+
+    Map<String, Collection<String>> resourcesWithAuthority = checkAuthority(request);
+
+    Collection<String> resourceFiles = resourcesWithAuthority.values().stream().flatMap(Collection::stream).toList();
+    Function<DataSource, DataSinkBuilder> sinkBuilderFunc = dataSource -> new DataSinkBuilder(pathlingContext, dataSource).saveMode(request.saveMode().getCode());
+    Function<String, Set<String>> filenameMapper = resourceType -> new HashSet<>(request.input().getOrDefault(resourceType, Set.of()));
+    return switch (request.importFormat()) {
+      case NDJSON -> sinkBuilderFunc.apply(sourceBuilder.ndjson(resourceFiles, "ndjson", filenameMapper)).ndjson(databasePath);
+      case DELTA -> sinkBuilderFunc.apply(sourceBuilder.delta(resourceFiles)).delta(databasePath);
+      case PARQUET -> sinkBuilderFunc.apply(sourceBuilder.parquet(resourceFiles)).parquet(databasePath);
+    };
   }
 
+  private @NotNull Map<String, Collection<String>> checkAuthority(ImportRequest request) {
+    if(serverConfiguration.getAuth().isEnabled() && !SecurityAspect.hasAuthority(PathlingAuthority.fromAuthority("pathling:write"))) {
+      throw new AccessDeniedError("Missing authority 'pathling:write'");
+    }
+    
+    record WriteAuthority(Collection<String> fileToImport, boolean authority) {}
+    
+    Map<String, WriteAuthority> writeAuthorityMap = request.input().entrySet().stream()
+        .collect(Collectors.toMap(
+            Entry::getKey,
+            entry -> new WriteAuthority(entry.getValue(), !serverConfiguration.getAuth().isEnabled() || SecurityAspect.hasAuthority(
+                PathlingAuthority.resourceAccess(AccessType.WRITE, ResourceType.fromCode(entry.getKey()))))
+        ));
+
+    List<String> missingAuthMsg = writeAuthorityMap.entrySet().stream()
+        .filter(entry -> !entry.getValue().authority())
+        .map(entry -> "Missing authority: pathling:write:%s for %s".formatted(entry.getKey(), entry.getValue().fileToImport()))
+        .toList();
+    if(!missingAuthMsg.isEmpty()) {
+      throw new AccessDeniedError("Missing auths: %s".formatted(String.join(",", missingAuthMsg)));
+    }
+    
+    writeAuthorityMap.values().stream()
+        .map(WriteAuthority::fileToImport)
+        .forEach(fileToImport -> accessRules.ifPresent(ar -> fileToImport.forEach(ar::checkCanImportFrom)));
+
+    return writeAuthorityMap.entrySet().stream()
+        .filter(entry -> entry.getValue().authority())
+        .collect(Collectors.toMap(
+            Map.Entry::getKey,
+            entry -> entry.getValue().fileToImport()
+        ));
+  }
 }

@@ -10,7 +10,7 @@ import static org.apache.spark.sql.functions.struct;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
-import au.csiro.pathling.library.io.sink.NdjsonWriteDetails;
+import au.csiro.pathling.library.io.sink.WriteDetails;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
@@ -134,7 +134,7 @@ public class ExportExecutor {
         log.debug("Created dir {}", jobDirPath);
       }
 
-      NdjsonWriteDetails writeDetails = new DataSinkBuilder(pathlingContext,
+      WriteDetails writeDetails = new DataSinkBuilder(pathlingContext,
           mapped).saveMode("overwrite").ndjson(jobDirPath.toString());
       return new ExportResponse(exportRequest.originalRequest(), writeDetails);
     } catch (IOException e) {

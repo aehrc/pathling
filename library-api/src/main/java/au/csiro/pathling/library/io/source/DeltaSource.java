@@ -19,6 +19,8 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
+import java.util.Collection;
+import java.util.Map;
 
 /**
  * A class for making FHIR data in Delta tables on the filesystem available for query. It is assumed
@@ -41,7 +43,27 @@ public class DeltaSource extends FileSource {
     super(context, path,
         // Use the "resource name with qualifier" mapper by default, which takes the resource name
         // from the file name and is tolerant of an optional qualifier string.
-        FileSource::resourceNameWithQualifierMapper,
+        null,
+        // Delta tables store data in parquet format internally, so we use the parquet extension.
+        "parquet",
+        context.getSpark().read().format("delta"),
+        // Apply no transformations on the data - we assume it has already been processed using the 
+        // Pathling FHIR encoders.
+        (sourceData, resourceType) -> sourceData,
+        resourceType -> true);
+  }
+
+  /**
+   * Constructs a DeltaSource with the specified PathlingContext and map of resource types to Delta table paths.
+   *
+   * @param context the PathlingContext to use
+   * @param files a map where keys are resource type names and values are collections of Delta table paths
+   */
+  DeltaSource(@Nonnull final PathlingContext context, @Nonnull final Map<String, Collection<String>> files) {
+    super(context, files,
+        // Use the "resource name with qualifier" mapper by default, which takes the resource name
+        // from the file name and is tolerant of an optional qualifier string.
+        null,
         // Delta tables store data in parquet format internally, so we use the parquet extension.
         "parquet",
         context.getSpark().read().format("delta"),

@@ -18,7 +18,13 @@
 package au.csiro.pathling.operations.import_;
 
 import au.csiro.pathling.async.AsyncSupported;
+import au.csiro.pathling.async.Job;
+import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.async.PreAsyncValidation;
+import au.csiro.pathling.async.RequestTag;
+import au.csiro.pathling.async.RequestTagFactory;
+import au.csiro.pathling.errors.AccessDeniedError;
+import au.csiro.pathling.operations.export.ExportRequest;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
@@ -30,7 +36,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.Parameters;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import java.util.Optional;
+
+import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 
 /**
  * Enables the bulk import of data into the server.
@@ -45,14 +56,21 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
   @Nonnull
   private final ImportExecutor executor;
   private final ImportOperationValidator importOperationValidator;
+  private final RequestTagFactory requestTagFactory;
+  private final JobRegistry jobRegistry;
+  private final ImportResultRegistry importResultRegistry;
 
   /**
    * @param executor An {@link ImportExecutor} to use in executing import requests
    */
   public ImportProvider(@Nonnull final ImportExecutor executor,
-      ImportOperationValidator importOperationValidator) {
+      ImportOperationValidator importOperationValidator, RequestTagFactory requestTagFactory,
+      JobRegistry jobRegistry, ImportResultRegistry importResultRegistry) {
     this.executor = executor;
     this.importOperationValidator = importOperationValidator;
+    this.requestTagFactory = requestTagFactory;
+    this.jobRegistry = jobRegistry;
+    this.importResultRegistry = importResultRegistry;
   }
 
   /**
@@ -72,9 +90,31 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
   @SuppressWarnings("UnusedReturnValue")
   @OperationAccess("import")
   @AsyncSupported
-  public OperationOutcome importOperation(@ResourceParam final Parameters parameters,
+  public Parameters importOperation(@ResourceParam final Parameters parameters,
       @SuppressWarnings("unused") @Nullable final ServletRequestDetails requestDetails) {
-    return executor.execute(parameters);
+
+    final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication);
+    Job<ImportRequest> ownJob = jobRegistry.get(ownTag);
+    if (ownJob == null) {
+      throw new InvalidRequestException("Missing 'Prefer: respond-async' header value.");
+    }
+    // Check that the user requesting the result is the same user that started the job.
+    final Optional<String> currentUserId = getCurrentUserId(authentication);
+    if (currentUserId.isPresent() && !ownJob.getOwnerId().equals(currentUserId)) {
+      throw new AccessDeniedError("The requested result is not owned by the current user '%s'.".formatted(currentUserId.orElse("null")));
+    }
+
+    ImportRequest importRequest = ownJob.getPreAsyncValidationResult();
+    if (ownJob.isCancelled()) {
+      return null;
+    }
+    
+    importResultRegistry.put(ownJob.getId(), new ImportResult(ownJob.getOwnerId()));
+    
+    ImportResponse importResponse = executor.execute(importRequest, ownJob.getId());
+    
+    return importResponse.toOutput();
   }
 
   @Override

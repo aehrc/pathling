@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.import_;
 
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.SecurityError;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
@@ -51,7 +52,7 @@ public class AccessRules {
     this.allowableSources = configuration.getImport().getAllowableSources().stream()
         .filter(StringUtils::isNotBlank)
         .map(CacheableDatabase::convertS3ToS3aUrl)
-        .collect(Collectors.toList());
+        .toList();
 
     if (allowableSources.size() < configuration.getImport().getAllowableSources().size()) {
       log.warn("Some empty or blank allowable sources have been ignored in import configuration.");
@@ -69,7 +70,7 @@ public class AccessRules {
    */
   public void checkCanImportFrom(@Nonnull final String url) {
     if (!canImportFrom(url)) {
-      throw new SecurityError("URL: '" + url + "' is not an allowed source for import.");
+      throw new AccessDeniedError("URL: '" + url + "' is not an allowed source for import.");
     }
   }
 

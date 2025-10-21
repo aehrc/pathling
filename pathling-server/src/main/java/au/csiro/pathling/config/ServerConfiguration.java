@@ -108,6 +108,10 @@ public class ServerConfiguration {
     return import_;
   }
 
+  public void setImport(@Nonnull final ImportConfiguration import_) {
+    this.import_ = import_;
+  }
+
   @NotNull
   private AuthorizationConfiguration auth;
 

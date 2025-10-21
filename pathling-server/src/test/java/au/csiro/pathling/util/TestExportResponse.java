@@ -2,7 +2,7 @@ package au.csiro.pathling.util;
 
 import au.csiro.pathling.operations.export.ExportExecutor;
 import au.csiro.pathling.operations.export.ExportResponse;
-import au.csiro.pathling.library.io.sink.NdjsonWriteDetails;
+import au.csiro.pathling.library.io.sink.WriteDetails;
 import com.google.common.annotations.VisibleForTesting;
 import java.util.UUID;
 import org.hl7.fhir.r4.model.Binary;
@@ -26,7 +26,7 @@ public record TestExportResponse(
     return exportResponse.getKickOffRequestUrl();
   }
 
-  public NdjsonWriteDetails getWriteDetails() {
+  public WriteDetails getWriteDetails() {
     return exportResponse.getWriteDetails();
   }
 

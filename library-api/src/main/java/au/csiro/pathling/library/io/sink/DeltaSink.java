@@ -30,6 +30,8 @@ import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.UnaryOperator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -108,13 +110,16 @@ final class DeltaSink implements DataSink {
   }
 
   @Override
-  @Nullable
+  @Nonnull
   public WriteDetails write(@Nonnull final DataSource source) {
+    List<FileInfo> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       final String fileName = String.join(".", fileNameMapper.apply(resourceType),
           "parquet");
       final String tablePath = safelyJoinPaths(path, fileName);
+      
+      fileInfos.add(new FileInfo(resourceType, tablePath, null));
 
       switch (saveMode) {
         case ERROR_IF_EXISTS, APPEND, IGNORE -> writeDataset(dataset, tablePath, saveMode);
@@ -140,7 +145,7 @@ final class DeltaSink implements DataSink {
         }
       }
     }
-    return null;
+    return new WriteDetails(fileInfos);
   }
 
   /**

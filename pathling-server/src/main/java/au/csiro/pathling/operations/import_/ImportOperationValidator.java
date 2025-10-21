@@ -4,7 +4,9 @@ import au.csiro.pathling.FhirServer;
 import au.csiro.pathling.ParamUtil;
 import au.csiro.pathling.async.PreAsyncValidation;
 import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
+import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.library.io.FileSystemPersistence;
 import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.operations.OperationValidatorUtil;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
@@ -21,6 +23,9 @@ import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.UrlType;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -56,24 +61,18 @@ public class ImportOperationValidator {
     if(lenient && inputParts.isEmpty()) {
       log.debug("There are no inputs provided in the request. Skipping because lenient=true");
     }
-    Map<ResourceType, String> input = inputParts.stream()
+    Map<String, Collection<String>> input = inputParts.stream()
         .map(part -> mapInputFieldsFrom(part, lenient))
         .filter(Objects::nonNull)
-        .filter(inputParams -> {
-          boolean supported = FhirServer.supportedResourceTypes().contains(inputParams.resourceType());
-          if(!supported && !lenient) {
-            throw new UnprocessableEntityException("The resource type '%s' is not supported.".formatted(inputParams.resourceType()));
-          }
-          return supported;
-        })
-        .collect(Collectors.toMap(
+        .filter(inputParams -> filterUnsupportedResourceTypes(inputParams, lenient))
+        .collect(Collectors.groupingBy(
             InputParams::resourceType,
-            InputParams::url
+            Collectors.mapping(InputParams::url, Collectors.toCollection(ArrayList::new))
         ));
     
     SaveMode saveMode = getSaveMode(parameters, lenient);
     ImportFormat importFormat = getImportFormat(parameters, lenient);
-    ImportRequest importRequest = new ImportRequest(input, saveMode, importFormat, lenient);
+    ImportRequest importRequest = new ImportRequest(requestDetails.getCompleteUrl(), input, saveMode, importFormat, lenient);
 
     List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
             OperationValidatorUtil.validateAcceptHeader(requestDetails, lenient),
@@ -82,6 +81,18 @@ public class ImportOperationValidator {
         .toList();
     
     return new PreAsyncValidationResult<>(importRequest, issues);
+  }
+  
+  private boolean filterUnsupportedResourceTypes(InputParams inputParams, boolean lenient) {
+    try {
+      boolean supported = FhirServer.supportedResourceTypes().contains(ResourceType.fromCode(inputParams.resourceType()));
+      if(!supported && !lenient) {
+        throw new InvalidUserInputError("The resource type '%s' is not supported.".formatted(inputParams.resourceType()));
+      }
+      return supported;
+    } catch (FHIRException e) {
+      throw new InvalidUserInputError("Unknown resource type.", e);
+    }
   }
 
   private static ImportFormat getImportFormat(@NotNull Parameters parameters, boolean lenient) {
@@ -110,7 +121,7 @@ public class ImportOperationValidator {
     );
   }
 
-  private record InputParams(ResourceType resourceType, String url) {}
+  private record InputParams(String resourceType, String url) {}
 
   private InputParams mapInputFieldsFrom(ParametersParameterComponent part, boolean lenient) {
     List<ParametersParameterComponent> partContainingResourceTypeAndUrl = part.getPart();
@@ -126,7 +137,9 @@ public class ImportOperationValidator {
       return null;
     }
     try {
-      return new InputParams(ResourceType.fromCode(resourceType), url);
+      String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8);
+      String convertedUrl = CacheableDatabase.convertS3ToS3aUrl(decodedUrl);
+      return new InputParams(ResourceType.fromCode(resourceType).toCode(), convertedUrl);
     } catch (FHIRException e) {
       throw new InvalidUserInputError("Invalid resource type %s".formatted(resourceType), e);
     }

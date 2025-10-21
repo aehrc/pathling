@@ -29,7 +29,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -94,7 +93,7 @@ public class FileSystemPersistence {
 
   /**
    * Rename the partitioned file to follow the pathling naming convention in
-   * {@link au.csiro.pathling.library.io.source.FileSource#resourceNameWithQualifierMapper(String)}.
+   * {@link au.csiro.pathling.library.io.source.FileSource#assumeFilenameIsResourceTypeMapper(String)}.
    * 
    * @param spark the Spark session
    * @param partitionedLocation the location URL containing the partitioned file
@@ -112,7 +111,7 @@ public class FileSystemPersistence {
 
   /**
    * Rename the partitioned file to follow the pathling naming convention in
-   * {@link au.csiro.pathling.library.io.source.FileSource#resourceNameWithQualifierMapper(String)}.
+   * {@link au.csiro.pathling.library.io.source.FileSource#assumeFilenameIsResourceTypeMapper(String)}.
    *
    * @param partitionedLocation a Hadoop {@link FileSystem} representing the location that both the
    * partitioned and departitioned files are located in
