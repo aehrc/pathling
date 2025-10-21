@@ -36,7 +36,7 @@ import org.apache.spark.sql.types.DataType;
  * Returns null if the string cannot be parsed as a valid quantity.
  *
  * @see FhirpathQuantity#parse(String)
- * @see QuantityEncoding#encodeFromFhirpath(FhirpathQuantity)
+ * @see QuantityEncoding#encode(FhirpathQuantity)
  */
 public class StringToQuantity implements SqlFunction1<String, Row> {
 
@@ -66,7 +66,7 @@ public class StringToQuantity implements SqlFunction1<String, Row> {
     }
     try {
       final FhirpathQuantity quantity = FhirpathQuantity.parse(quantityString);
-      return QuantityEncoding.encodeFromFhirpath(quantity);
+      return QuantityEncoding.encode(quantity);
     } catch (final IllegalArgumentException e) {
       // Invalid quantity literal format
       return null;
