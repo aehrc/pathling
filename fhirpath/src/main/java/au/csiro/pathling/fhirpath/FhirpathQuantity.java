@@ -26,9 +26,10 @@ public class FhirpathQuantity {
 
   /**
    * Regex pattern for parsing FHIRPath quantity literals.
+   * Unit is optional per FHIRPath spec - defaults to '1' when omitted.
    */
   private static final Pattern QUANTITY_REGEX = Pattern.compile(
-      "(?<value>[+-]?\\d+(?:\\.\\d+)?)\\s*(?:'(?<unit>[^']+)'|(?<time>[a-zA-Z]+))"
+      "(?<value>[+-]?\\d+(?:\\.\\d+)?)\\s*(?:'(?<unit>[^']+)'|(?<time>[a-zA-Z]+))?"
   );
 
   @Nonnull
@@ -106,8 +107,8 @@ public class FhirpathQuantity {
   }
 
   /**
-   * Parses a FHIRPath quantity literal (e.g. 5.4 'mg', 1 year). Only supports UCUM and calendar
-   * duration units.
+   * Parses a FHIRPath quantity literal (e.g. 5.4 'mg', 1 year, 42). Only supports UCUM and
+   * calendar duration units. When no unit is specified, defaults to '1' in UCUM system.
    *
    * @param literal the FHIRPath quantity literal
    * @return the parsed FhirpathQuantity
@@ -130,8 +131,8 @@ public class FhirpathQuantity {
           matcher.group("time")
       );
     } else {
-      // one of "unit" or "time" groups should have matched
-      throw new IllegalStateException("Unexpected parsing state for literal: " + literal);
+      // No unit specified, default to '1' in UCUM system per FHIRPath spec
+      return ofUCUM(value, "1");
     }
   }
 }

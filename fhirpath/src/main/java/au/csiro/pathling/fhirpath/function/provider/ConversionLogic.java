@@ -30,11 +30,14 @@ import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.misc.DecimalToLiteral;
 import au.csiro.pathling.sql.misc.QuantityToLiteral;
+import au.csiro.pathling.sql.misc.StringToQuantity;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import java.util.Optional;
@@ -47,8 +50,8 @@ import org.apache.spark.sql.types.DataTypes;
 /**
  * Package-private utility class containing type conversion orchestration and logic.
  * <p>
- * This class provides the template method for performing type conversions and all
- * type-specific conversion helper methods used by {@link ConversionFunctions}.
+ * This class provides the template method for performing type conversions and all type-specific
+ * conversion helper methods used by {@link ConversionFunctions}.
  *
  * @author John Grimes
  */
@@ -61,29 +64,37 @@ class ConversionLogic {
   static final String DATETIME_REGEX =
       "^\\d{4}(-\\d{2}(-\\d{2}(T\\d{2}(:\\d{2}(:\\d{2}(\\.\\d+)?)?)?(Z|[+\\-]\\d{2}:\\d{2})?)?)?)?$";
   static final String TIME_REGEX = "^\\d{2}(:\\d{2}(:\\d{2}(\\.\\d+)?)?)?$";
+  // Unit is optional per FHIRPath spec: (?'value'(\+|-)?\d+(\.\d+)?)\s*('(?'unit'[^']+)'|(?'time'[a-zA-Z]+))?
+  // Valid calendar duration units: year(s), month(s), week(s), day(s), hour(s), minute(s), second(s), millisecond(s)
+  // Case-insensitive matching via (?i) flag
+  static final String QUANTITY_REGEX =
+      "^[+-]?\\d+(?:\\.\\d+)?\\s*(?:'[^']+'|(?i:years?|months?|weeks?|days?|hours?|minutes?|seconds?|milliseconds?))?$";
 
   // Registry mapping target types to their conversion functions
   private static final Map<FhirPathType, BiFunction<FhirPathType, Column, Column>> CONVERSION_REGISTRY =
-      Map.of(
-          FhirPathType.BOOLEAN, ConversionLogic::convertToBoolean,
-          FhirPathType.INTEGER, ConversionLogic::convertToInteger,
-          FhirPathType.DECIMAL, ConversionLogic::convertToDecimal,
-          FhirPathType.STRING, ConversionLogic::convertToString,
-          FhirPathType.DATE, ConversionLogic::convertToDate,
-          FhirPathType.DATETIME, ConversionLogic::convertToDateTime,
-          FhirPathType.TIME, ConversionLogic::convertToTime
+      Map.ofEntries(
+          Map.entry(FhirPathType.BOOLEAN, ConversionLogic::convertToBoolean),
+          Map.entry(FhirPathType.INTEGER, ConversionLogic::convertToInteger),
+          Map.entry(FhirPathType.DECIMAL, ConversionLogic::convertToDecimal),
+          Map.entry(FhirPathType.STRING, ConversionLogic::convertToString),
+          Map.entry(FhirPathType.DATE, ConversionLogic::convertToDate),
+          Map.entry(FhirPathType.DATETIME, ConversionLogic::convertToDateTime),
+          Map.entry(FhirPathType.TIME, ConversionLogic::convertToTime),
+          Map.entry(FhirPathType.QUANTITY, ConversionLogic::convertToQuantity)
       );
 
   // Registry mapping target types to their collection builders
   private static final Map<FhirPathType, Function<DefaultRepresentation, ? extends Collection>> BUILDER_REGISTRY =
-      Map.of(
-          FhirPathType.BOOLEAN, BooleanCollection::build,
-          FhirPathType.INTEGER, IntegerCollection::build,
-          FhirPathType.DECIMAL, DecimalCollection::build,
-          FhirPathType.STRING, StringCollection::build,
-          FhirPathType.DATE, repr -> DateCollection.build(repr, Optional.empty()),
-          FhirPathType.DATETIME, repr -> DateTimeCollection.build(repr, Optional.empty()),
-          FhirPathType.TIME, repr -> TimeCollection.build(repr, Optional.empty())
+      Map.ofEntries(
+          Map.entry(FhirPathType.BOOLEAN, BooleanCollection::build),
+          Map.entry(FhirPathType.INTEGER, IntegerCollection::build),
+          Map.entry(FhirPathType.DECIMAL, DecimalCollection::build),
+          Map.entry(FhirPathType.STRING, StringCollection::build),
+          Map.entry(FhirPathType.DATE, repr -> DateCollection.build(repr, Optional.empty())),
+          Map.entry(FhirPathType.DATETIME,
+              repr -> DateTimeCollection.build(repr, Optional.empty())),
+          Map.entry(FhirPathType.TIME, repr -> TimeCollection.build(repr, Optional.empty())),
+          Map.entry(FhirPathType.QUANTITY, QuantityCollection::build)
       );
 
   /**
@@ -106,7 +117,8 @@ class ConversionLogic {
     }
 
     // Look up conversion function and builder from registries
-    final BiFunction<FhirPathType, Column, Column> conversionLogic = CONVERSION_REGISTRY.get(targetType);
+    final BiFunction<FhirPathType, Column, Column> conversionLogic = CONVERSION_REGISTRY.get(
+        targetType);
     @SuppressWarnings("unchecked")
     final Function<DefaultRepresentation, Collection> collectionBuilder =
         (Function<DefaultRepresentation, Collection>) BUILDER_REGISTRY.get(targetType);
@@ -298,5 +310,38 @@ class ConversionLogic {
       return when(value.rlike(TIME_REGEX), value);
     }
     return lit(null);
+  }
+
+  /**
+   * Converts a value to Quantity based on source type.
+   * <ul>
+   *   <li>BOOLEAN: true → 1.0 '1', false → 0.0 '1' (null boolean → null)</li>
+   *   <li>INTEGER/DECIMAL: Encode as quantity with unit '1' (null → null)</li>
+   *   <li>STRING: Parse as FHIRPath quantity literal (validates format then calls StringToQuantity UDF)</li>
+   * </ul>
+   *
+   * @param sourceType The source FHIRPath type
+   * @param value The source column value
+   * @return The converted column
+   */
+  @Nonnull
+  Column convertToQuantity(@Nonnull final FhirPathType sourceType,
+      @Nonnull final Column value) {
+    return switch (sourceType) {
+      case BOOLEAN ->
+        // Boolean: true → 1.0 '1', false → 0.0 '1', null → null
+        // First cast to decimal, then encode as quantity with unit '1'
+        // Use when() to return typed null for null values instead of empty struct
+          QuantityEncoding.encodeNumeric(value);
+      case INTEGER, DECIMAL ->
+        // Integer/Decimal: Encode as quantity with default unit '1', null → null
+        // Use when() to return typed null for null values instead of empty struct
+          QuantityEncoding.encodeNumeric(value);
+      case STRING ->
+        // String: Parse as FHIRPath quantity literal using UDF
+        // UDF returns null if string doesn't match quantity format
+          callUDF(StringToQuantity.FUNCTION_NAME, value);
+      default -> lit(null).cast(QuantityEncoding.dataType());
+    };
   }
 }

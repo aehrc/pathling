@@ -26,19 +26,21 @@ import au.csiro.pathling.fhirpath.collection.DateCollection;
 import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import lombok.experimental.UtilityClass;
 
 /**
  * Contains functions for converting values between types.
  * <p>
- * This implementation provides 14 FHIRPath conversion functions:
+ * This implementation provides 16 FHIRPath conversion functions:
  * <ul>
- *   <li>7 conversion functions: toBoolean, toInteger, toDecimal, toString, toDate, toDateTime, toTime</li>
- *   <li>7 validation functions: convertsToBoolean, convertsToInteger, convertsToDecimal, convertsToString, convertsToDate, convertsToDateTime, convertsToTime</li>
+ *   <li>8 conversion functions: toBoolean, toInteger, toDecimal, toString, toDate, toDateTime, toTime, toQuantity</li>
+ *   <li>8 validation functions: convertsToBoolean, convertsToInteger, convertsToDecimal, convertsToString, convertsToDate, convertsToDateTime, convertsToTime, convertsToQuantity</li>
  * </ul>
  * <p>
  * <b>Note:</b> The toLong() and convertsToLong() functions are not implemented as they are marked
@@ -172,6 +174,34 @@ public class ConversionFunctions {
     return ConversionLogic.performConversion(input, FhirPathType.TIME);
   }
 
+  /**
+   * Converts the input to a Quantity value. Per FHIRPath specification: - Boolean: true → 1.0 '1',
+   * false → 0.0 '1' - Integer/Decimal: Convert to Quantity with default unit '1' - Quantity:
+   * returns as-is - String: Parse as FHIRPath quantity literal (e.g., "10 'mg'", "4 days") - All
+   * other inputs → empty
+   * <p>
+   * The optional {@code unit} parameter specifies a target unit for conversion. This feature is
+   * currently not supported and will throw {@link au.csiro.pathling.errors.UnsupportedFhirPathFeatureError}
+   * if provided.
+   *
+   * @param input The input collection
+   * @param unit Optional target unit for conversion (not currently supported)
+   * @return A {@link QuantityCollection} containing the converted value or empty
+   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
+   * toQuantity</a>
+   */
+  @FhirPathFunction
+  @SqlOnFhirConformance(Profile.SHARABLE)
+  @Nonnull
+  public Collection toQuantity(@Nonnull final Collection input,
+      @Nullable final Collection unit) {
+    if (unit != null) {
+      throw new au.csiro.pathling.errors.UnsupportedFhirPathFeatureError(
+          "toQuantity() with unit parameter is not currently supported");
+    }
+    return ConversionLogic.performConversion(input, FhirPathType.QUANTITY);
+  }
+
   // ========== PUBLIC API - VALIDATION FUNCTIONS ==========
 
   /**
@@ -287,5 +317,31 @@ public class ConversionFunctions {
   @Nonnull
   public Collection convertsToTime(@Nonnull final Collection input) {
     return ValidationLogic.performValidation(input, FhirPathType.TIME);
+  }
+
+  /**
+   * Checks if the input can be converted to a Quantity value.
+   * <p>
+   * The optional {@code unit} parameter specifies a target unit for conversion validation. This
+   * feature is currently not supported and will throw
+   * {@link au.csiro.pathling.errors.UnsupportedFhirPathFeatureError} if provided.
+   *
+   * @param input The input collection
+   * @param unit Optional target unit for conversion validation (not currently supported)
+   * @return A {@link BooleanCollection} containing {@code true} if convertible, {@code false}
+   * otherwise, or empty for empty input
+   * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
+   * convertsToQuantity</a>
+   */
+  @FhirPathFunction
+  @SqlOnFhirConformance(Profile.SHARABLE)
+  @Nonnull
+  public Collection convertsToQuantity(@Nonnull final Collection input,
+      @Nullable final Collection unit) {
+    if (unit != null) {
+      throw new au.csiro.pathling.errors.UnsupportedFhirPathFeatureError(
+          "convertsToQuantity() with unit parameter is not currently supported");
+    }
+    return ValidationLogic.performValidation(input, FhirPathType.QUANTITY);
   }
 }

@@ -34,6 +34,7 @@ public class PathlingUdfRegistrar extends AbstractUDFRegistrar {
         .register(new HighBoundaryForDateTime())
         .register(new LowBoundaryForTime())
         .register(new HighBoundaryForTime())
-        .register(new QuantityToLiteral());
+        .register(new QuantityToLiteral())
+        .register(new StringToQuantity());
   }
 }

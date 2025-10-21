@@ -50,17 +50,19 @@ class ValidationLogic {
   private static final String DATE_REGEX = ConversionLogic.DATE_REGEX;
   private static final String DATETIME_REGEX = ConversionLogic.DATETIME_REGEX;
   private static final String TIME_REGEX = ConversionLogic.TIME_REGEX;
+  private static final String QUANTITY_REGEX = ConversionLogic.QUANTITY_REGEX;
 
   // Registry mapping target types to their validation functions
   private static final Map<FhirPathType, BiFunction<FhirPathType, Column, Column>> VALIDATION_REGISTRY =
-      Map.of(
-          FhirPathType.BOOLEAN, ValidationLogic::validateConversionToBoolean,
-          FhirPathType.INTEGER, ValidationLogic::validateConversionToInteger,
-          FhirPathType.DECIMAL, ValidationLogic::validateConversionToDecimal,
-          FhirPathType.STRING, ValidationLogic::validateConversionToString,
-          FhirPathType.DATE, ValidationLogic::validateConversionToDate,
-          FhirPathType.DATETIME, ValidationLogic::validateConversionToDateTime,
-          FhirPathType.TIME, ValidationLogic::validateConversionToTime
+      Map.ofEntries(
+          Map.entry(FhirPathType.BOOLEAN, ValidationLogic::validateConversionToBoolean),
+          Map.entry(FhirPathType.INTEGER, ValidationLogic::validateConversionToInteger),
+          Map.entry(FhirPathType.DECIMAL, ValidationLogic::validateConversionToDecimal),
+          Map.entry(FhirPathType.STRING, ValidationLogic::validateConversionToString),
+          Map.entry(FhirPathType.DATE, ValidationLogic::validateConversionToDate),
+          Map.entry(FhirPathType.DATETIME, ValidationLogic::validateConversionToDateTime),
+          Map.entry(FhirPathType.TIME, ValidationLogic::validateConversionToTime),
+          Map.entry(FhirPathType.QUANTITY, ValidationLogic::validateConversionToQuantity)
       );
 
   /**
@@ -267,5 +269,32 @@ class ValidationLogic {
     }
     // Other types cannot be converted.
     return lit(false);
+  }
+
+  /**
+   * Validates if a value can be converted to Quantity.
+   * <ul>
+   *   <li>BOOLEAN/INTEGER/DECIMAL: Always {@code true}</li>
+   *   <li>STRING: Check if matches quantity pattern (value + unit)</li>
+   * </ul>
+   *
+   * @param sourceType The source FHIRPath type
+   * @param value The source column value
+   * @return Column expression evaluating to {@code true} if convertible, {@code false} otherwise
+   */
+  Column validateConversionToQuantity(@Nonnull final FhirPathType sourceType,
+      @Nonnull final Column value) {
+    return switch (sourceType) {
+      case BOOLEAN, INTEGER, DECIMAL ->
+        // Boolean, Integer, and Decimal can always be converted to Quantity
+          lit(true);
+      case STRING ->
+        // String can be converted only if it matches the quantity format:
+        // value (optional +/-) + optional whitespace + unit (quoted UCUM or bareword calendar)
+          value.rlike(QUANTITY_REGEX);
+      default ->
+        // Other types cannot be converted.
+          lit(false);
+    };
   }
 }
