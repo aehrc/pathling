@@ -85,8 +85,10 @@ jobs:
           sudo apt-get install -y libcurl4-openssl-dev
 
       - name: Install GPG key
+        env:
+          GPG_KEY: ${{ secrets.GPG_KEY }}
         run: |
-          cat <(echo -e "${{ secrets.GPG_KEY }}") | gpg --batch --import
+          echo "$GPG_KEY" | gpg --batch --import
           gpg --list-secret-keys --keyid-format LONG
 
       - name: Configure Maven settings
