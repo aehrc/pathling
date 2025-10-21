@@ -229,6 +229,13 @@ mvn clean install -pl lib/R -am
 All versioning
 follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
+**Note on major version increments**: In addition to the standard semantic
+versioning rules, Pathling will increment the major version number when moving
+to a new major version of Apache Spark. This is because Spark major version
+changes introduce potential incompatibilities to the environment on which
+Pathling is designed to run, affecting deployment, dependencies, and runtime
+requirements.
+
 The core of Pathling consists of the following modules, all of which inherit
 from the main `pom.xml` in the root of the repository.
 
