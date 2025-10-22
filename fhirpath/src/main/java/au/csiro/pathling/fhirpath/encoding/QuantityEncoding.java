@@ -60,6 +60,7 @@ public class QuantityEncoding {
   public static final String VALUE_COLUMN = "value";
   public static final String SYSTEM_COLUMN = "system";
   public static final String CODE_COLUMN = "code";
+  public static final String UNIT_COLUMN = "unit";
   @Nonnull
   Column id;
   @Nonnull
@@ -105,7 +106,7 @@ public class QuantityEncoding {
         value.cast(DecimalCustomCoder.decimalType()).as(VALUE_COLUMN),
         value_scale.as("value_scale"),
         comparator.as("comparator"),
-        unit.as("unit"),
+        unit.as(UNIT_COLUMN),
         system.as(SYSTEM_COLUMN),
         code.as(CODE_COLUMN),
         canonicalizedValue.as(CANONICALIZED_VALUE_COLUMN),
@@ -163,7 +164,7 @@ public class QuantityEncoding {
         metadata);
     final StructField comparator = new StructField("comparator", DataTypes.StringType, true,
         metadata);
-    final StructField unit = new StructField("unit", DataTypes.StringType, true, metadata);
+    final StructField unit = new StructField(UNIT_COLUMN, DataTypes.StringType, true, metadata);
     final StructField system = new StructField(SYSTEM_COLUMN, DataTypes.StringType, true, metadata);
     final StructField code = new StructField(CODE_COLUMN, DataTypes.StringType, true, metadata);
     final StructField canonicalizedValue = new StructField(CANONICALIZED_VALUE_COLUMN,

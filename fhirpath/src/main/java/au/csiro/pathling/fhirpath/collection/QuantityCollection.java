@@ -17,9 +17,6 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.when;
-
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.FhirpathQuantity;
@@ -36,6 +33,7 @@ import au.csiro.pathling.fhirpath.definition.defaults.DefaultCompositeDefinition
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.misc.QuantityToLiteral;
+import au.csiro.pathling.fhirpath.column.QuantityValue;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
@@ -175,34 +173,21 @@ public class QuantityCollection extends Collection implements Comparable, String
   /**
    * Converts this quantity to the specified unit.
    * <p>
-   * Returns empty if the unit does not match (exact string matching on the 'unit' field).
-   * Full UCUM unit conversion is not yet implemented (see issue #2504).
-   * Calendar duration conversion is not yet implemented (see issue #2505).
+   * Returns empty if the unit does not match (exact string matching on the 'unit' field). Full UCUM
+   * unit conversion is not yet implemented (see issue #2504). Calendar duration conversion is not
+   * yet implemented (see issue #2505).
    * <p>
    * Per FHIRPath specification: "Implementations are not required to support a complete UCUM
-   * implementation, and may return empty when the unit argument is used and it is different
-   * than the input quantity unit."
+   * implementation, and may return empty when the unit argument is used and it is different than
+   * the input quantity unit."
    *
    * @param targetUnit The target unit as a Collection (should be a StringCollection)
    * @return QuantityCollection with matching unit, or EmptyCollection if units don't match
    */
   @Nonnull
   public Collection toUnit(@Nonnull final Collection targetUnit) {
-    // Extract unit Column from collection (as singular string value)
     final Column unitColumn = targetUnit.getColumn().singular().getValue();
-
-    // Compare against 'unit' field (literal as written: "days", "mg")
-    // Note: The 'unit' field contains the literal unit string as written
-    // while 'code' contains the canonical form (e.g., "day" for calendar durations)
-    final Column quantityRow = this.getColumn().getValue();
-    final Column unit = quantityRow.getField("unit");
-
-    // Return quantity if units match, empty otherwise
-    // Note: This is exact string matching. Full UCUM conversion is not yet implemented.
-    final Column result = when(unit.equalTo(unitColumn), quantityRow)
-        .otherwise(lit(null).cast(QuantityEncoding.dataType()));
-
-    return QuantityCollection.build(new DefaultRepresentation(result));
+    return map(q -> new DefaultRepresentation(QuantityValue.of(q).toUnit(unitColumn)));
   }
 
   /**
@@ -210,9 +195,9 @@ public class QuantityCollection extends Collection implements Comparable, String
    * FHIRPath convertibleToXXX functions, returning a BooleanCollection true/false value for
    * non-empty input collections or an empty boolean collection if the input is empty.
    * <p>
-   * Returns true for exact unit match, false otherwise.
-   * Full UCUM unit conversion is not yet implemented (see issue #2504).
-   * Calendar duration conversion is not yet implemented (see issue #2505).
+   * Returns true for exact unit match, false otherwise. Full UCUM unit conversion is not yet
+   * implemented (see issue #2504). Calendar duration conversion is not yet implemented (see issue
+   * #2505).
    * <p>
    * Per FHIRPath specification: "Implementations are not required to support a complete UCUM
    * implementation."
@@ -222,18 +207,8 @@ public class QuantityCollection extends Collection implements Comparable, String
    */
   @Nonnull
   public Collection convertibleToUnit(@Nonnull final Collection targetUnit) {
-    // Extract unit Column from collection (as singular string value)
     final Column unitColumn = targetUnit.getColumn().singular().getValue();
-
-    // Compare against 'unit' field
-    final Column quantityRow = this.getColumn().getValue();
-    final Column unit = quantityRow.getField("unit");
-
-    // Return true if units match, null if quantityRow is null (propagates empty for caller's
-    // coalesce), or false if units don't match.
-    // Note: This is exact string matching. Full UCUM conversion is not yet implemented.
-    final Column result = when(quantityRow.isNotNull(), unit.equalTo(unitColumn));
-
+    final Column result = QuantityValue.of(getColumn()).convertibleToUnit(unitColumn);
     return BooleanCollection.build(new DefaultRepresentation(result));
   }
 }

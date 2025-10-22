@@ -17,15 +17,10 @@
 
 package au.csiro.pathling.fhirpath.comparison;
 
-import static java.util.Objects.nonNull;
-import static java.util.Objects.requireNonNull;
-import static org.apache.spark.sql.functions.when;
-
-import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
+import au.csiro.pathling.fhirpath.column.QuantityValue;
 import au.csiro.pathling.sql.types.FlexiDecimal;
 import jakarta.annotation.Nonnull;
 import java.util.function.BinaryOperator;
-import jakarta.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 
@@ -47,77 +42,16 @@ public class QuantityComparator implements ColumnComparator, ElementWiseEquality
   private QuantityComparator() {
   }
 
-  /**
-   * A helper record to hold a value and a unit column.
-   *
-   * <p>It provides methods to extract normalized and original values from a Quantity column, and
-   * to compare two {@link ValueWithUnit} instances using a provided comparator, ensuring that the
-   * units are the same.
-   */
-  private record ValueWithUnit(
-      @Nonnull Column value,
-      @Nonnull Column unit,
-      @Nullable Column system
-  ) {
-
-    /**
-     * Extracts the normalized (canonicalized) value and unit from a Quantity column.
-     *
-     * @param quantity the Quantity column
-     * @return a ValueWithUnit instance containing the normalized value and unit
-     */
-    @Nonnull
-    static ValueWithUnit normalizedQuantity(@Nonnull Column quantity) {
-      return new ValueWithUnit(
-          quantity.getField(QuantityEncoding.CANONICALIZED_VALUE_COLUMN),
-          quantity.getField(QuantityEncoding.CANONICALIZED_CODE_COLUMN),
-          null
-      );
-    }
-
-    /**
-     * Extracts the original value and unit from a Quantity column.
-     *
-     * @param quantity the Quantity column
-     * @return a ValueWithUnit instance containing the original value and unit
-     */
-    @Nonnull
-    static ValueWithUnit originalQuantity(@Nonnull Column quantity) {
-      return new ValueWithUnit(
-          quantity.getField(QuantityEncoding.VALUE_COLUMN),
-          quantity.getField(QuantityEncoding.CODE_COLUMN),
-          quantity.getField(QuantityEncoding.SYSTEM_COLUMN)
-      );
-    }
-
-
-    @Nonnull
-    Column compare(@Nonnull final ValueWithUnit other, BinaryOperator<Column> comparator) {
-      // assert that both (this and other) systems are either non-null or null
-      // that is we compare either two original or two normalized quantities
-      if ((system == null) != (other.system == null)) {
-        throw new IllegalArgumentException("Both quantities must have system or neither.");
-      }
-      return when(
-          nonNull(system)
-          ? requireNonNull(system).equalTo(requireNonNull(other.system))
-              .and(unit.equalTo(other.unit))
-          : unit.equalTo(other.unit),
-          comparator.apply(value, other.value)
-      );
-    }
-  }
-
   private static BinaryOperator<Column> wrap(
       @Nonnull final BinaryOperator<Column> decimalComparator,
       @Nonnull final BinaryOperator<Column> flexComparator
   ) {
 
     return (left, right) -> functions.coalesce(
-        ValueWithUnit.normalizedQuantity(left)
-            .compare(ValueWithUnit.normalizedQuantity(right), flexComparator),
-        ValueWithUnit.originalQuantity(left)
-            .compare(ValueWithUnit.originalQuantity(right), decimalComparator)
+        QuantityValue.of(left).normalizedValue()
+            .compare(QuantityValue.of(right).normalizedValue(), flexComparator),
+        QuantityValue.of(left).originalValue()
+            .compare(QuantityValue.of(right).originalValue(), decimalComparator)
     );
   }
 
