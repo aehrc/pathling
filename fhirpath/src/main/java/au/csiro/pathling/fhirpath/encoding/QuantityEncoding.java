@@ -173,7 +173,7 @@ public class QuantityEncoding {
 
     Optional.ofNullable(row.getString(0)).ifPresent(quantity::setId);
 
-    // The value gets converted to a BigDecimal, taking into account the scale that has been encoded 
+    // The value gets converted to a BigDecimal, taking into account the scale that has been encoded
     // alongside it.
     @Nullable final Integer scale = !row.isNullAt(2)
                                     ? row.getInt(2)
@@ -276,13 +276,13 @@ public class QuantityEncoding {
       canonicalizedCode = Ucum.getCanonicalCode(value, quantity.getCode());
     } else if (quantity.isCalendarDuration() &&
         CALENDAR_DURATION_TO_UCUM.containsKey(quantity.getCode())) {
-      // If it is a (supported) calendar duration, get the corresponding UCUM unit and then use the 
+      // If it is a (supported) calendar duration, get the corresponding UCUM unit and then use the
       // UCUM library to canonicalize the value and code.
       final String resolvedCode = CALENDAR_DURATION_TO_UCUM.get(quantity.getCode());
       canonicalizedValue = Ucum.getCanonicalValue(value, resolvedCode);
       canonicalizedCode = Ucum.getCanonicalCode(value, resolvedCode);
     } else {
-      // If it is neither a UCUM Quantity nor a calendar duration, it will not have a canonicalized 
+      // If it is neither a UCUM Quantity nor a calendar duration, it will not have a canonicalized
       // form available.
       canonicalizedValue = null;
       canonicalizedCode = null;
@@ -320,7 +320,7 @@ public class QuantityEncoding {
         lit("1"),
         lit(FhirpathQuantity.UCUM_SYSTEM),
         lit("1"),
-        // we do not need to normalize this as the unit is always "1" 
+        // we do not need to normalize this as the unit is always "1"
         // so it will be comparable with other quantities with unit "1"
         lit(null),
         lit(null),

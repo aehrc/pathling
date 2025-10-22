@@ -65,8 +65,10 @@ public class QuantityToLiteral implements SqlFunction1<Row, String> {
       return String.format("%s '%s'", value.toPlainString(), code);
     } else if (FHIRPATH_CALENDAR_DURATION_SYSTEM.equals(system)) {
       // Time duration units are not quoted
-      return String.format("%s %s", value.toPlainString(), 
-          nonNull(unit) ? unit: code);
+      return String.format("%s %s", value.toPlainString(),
+          nonNull(unit)
+          ? unit
+          : code);
     } else {
       // For other systems, return null
       return null;
