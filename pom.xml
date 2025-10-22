@@ -963,7 +963,7 @@
                 </goals>
                 <configuration>
                   <excludedGroups>au.csiro.pathling.*</excludedGroups>
-                  <fileTemplate>${session.executionRootDirectory}/license-template.ftl</fileTemplate>
+                  <fileTemplate>${session.executionRootDirectory}/licenses/license-template.ftl</fileTemplate>
                   <includeTransitiveDependencies>false</includeTransitiveDependencies>
                   <licenseMerges>
                     <licenseMerge>Apache License, Version 2.0|Apache Software License 2.0|The Apache License, Version 2.0|The Apache Software License, Version 2.0|Apache 2.0 License|Apache License 2.0|Apache-2.0|Apache 2.0|Apache Software Licenses|Apache 2</licenseMerge>
