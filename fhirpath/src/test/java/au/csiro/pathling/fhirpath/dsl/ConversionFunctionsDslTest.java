@@ -42,36 +42,36 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .dateEmpty("emptyDate")
         )
         .group("toBoolean() with Boolean literals")
-        .testEquals(true, "true.toBoolean()", "toBoolean() returns true for true")
-        .testEquals(false, "false.toBoolean()", "toBoolean() returns false for false")
+        .testTrue("true.toBoolean()", "toBoolean() returns true for true")
+        .testFalse("false.toBoolean()", "toBoolean() returns false for false")
 
         .group("toBoolean() with String literals - true values")
-        .testEquals(true, "'true'.toBoolean()", "toBoolean() converts 'true'")
-        .testEquals(true, "'True'.toBoolean()", "toBoolean() converts 'True'")
-        .testEquals(true, "'TRUE'.toBoolean()", "toBoolean() converts 'TRUE'")
-        .testEquals(true, "'t'.toBoolean()", "toBoolean() converts 't'")
-        .testEquals(true, "'T'.toBoolean()", "toBoolean() converts 'T'")
-        .testEquals(true, "'yes'.toBoolean()", "toBoolean() converts 'yes'")
-        .testEquals(true, "'Yes'.toBoolean()", "toBoolean() converts 'Yes'")
-        .testEquals(true, "'YES'.toBoolean()", "toBoolean() converts 'YES'")
-        .testEquals(true, "'y'.toBoolean()", "toBoolean() converts 'y'")
-        .testEquals(true, "'Y'.toBoolean()", "toBoolean() converts 'Y'")
-        .testEquals(true, "'1'.toBoolean()", "toBoolean() converts '1'")
-        .testEquals(true, "'1.0'.toBoolean()", "toBoolean() converts '1.0'")
+        .testTrue("'true'.toBoolean()", "toBoolean() converts 'true'")
+        .testTrue("'True'.toBoolean()", "toBoolean() converts 'True'")
+        .testTrue("'TRUE'.toBoolean()", "toBoolean() converts 'TRUE'")
+        .testTrue("'t'.toBoolean()", "toBoolean() converts 't'")
+        .testTrue("'T'.toBoolean()", "toBoolean() converts 'T'")
+        .testTrue("'yes'.toBoolean()", "toBoolean() converts 'yes'")
+        .testTrue("'Yes'.toBoolean()", "toBoolean() converts 'Yes'")
+        .testTrue("'YES'.toBoolean()", "toBoolean() converts 'YES'")
+        .testTrue("'y'.toBoolean()", "toBoolean() converts 'y'")
+        .testTrue("'Y'.toBoolean()", "toBoolean() converts 'Y'")
+        .testTrue("'1'.toBoolean()", "toBoolean() converts '1'")
+        .testTrue("'1.0'.toBoolean()", "toBoolean() converts '1.0'")
 
         .group("toBoolean() with String literals - false values")
-        .testEquals(false, "'false'.toBoolean()", "toBoolean() converts 'false'")
-        .testEquals(false, "'False'.toBoolean()", "toBoolean() converts 'False'")
-        .testEquals(false, "'FALSE'.toBoolean()", "toBoolean() converts 'FALSE'")
-        .testEquals(false, "'f'.toBoolean()", "toBoolean() converts 'f'")
-        .testEquals(false, "'F'.toBoolean()", "toBoolean() converts 'F'")
-        .testEquals(false, "'no'.toBoolean()", "toBoolean() converts 'no'")
-        .testEquals(false, "'No'.toBoolean()", "toBoolean() converts 'No'")
-        .testEquals(false, "'NO'.toBoolean()", "toBoolean() converts 'NO'")
-        .testEquals(false, "'n'.toBoolean()", "toBoolean() converts 'n'")
-        .testEquals(false, "'N'.toBoolean()", "toBoolean() converts 'N'")
-        .testEquals(false, "'0'.toBoolean()", "toBoolean() converts '0'")
-        .testEquals(false, "'0.0'.toBoolean()", "toBoolean() converts '0.0'")
+        .testFalse("'false'.toBoolean()", "toBoolean() converts 'false'")
+        .testFalse("'False'.toBoolean()", "toBoolean() converts 'False'")
+        .testFalse("'FALSE'.toBoolean()", "toBoolean() converts 'FALSE'")
+        .testFalse("'f'.toBoolean()", "toBoolean() converts 'f'")
+        .testFalse("'F'.toBoolean()", "toBoolean() converts 'F'")
+        .testFalse("'no'.toBoolean()", "toBoolean() converts 'no'")
+        .testFalse("'No'.toBoolean()", "toBoolean() converts 'No'")
+        .testFalse("'NO'.toBoolean()", "toBoolean() converts 'NO'")
+        .testFalse("'n'.toBoolean()", "toBoolean() converts 'n'")
+        .testFalse("'N'.toBoolean()", "toBoolean() converts 'N'")
+        .testFalse("'0'.toBoolean()", "toBoolean() converts '0'")
+        .testFalse("'0.0'.toBoolean()", "toBoolean() converts '0.0'")
 
         .group("toBoolean() with String literals - invalid values")
         .testEmpty("'notBoolean'.toBoolean()", "toBoolean() returns empty for invalid string")
@@ -79,13 +79,13 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testEmpty("'maybe'.toBoolean()", "toBoolean() returns empty for 'maybe'")
 
         .group("toBoolean() with Integer literals")
-        .testEquals(true, "1.toBoolean()", "toBoolean() converts 1 to true")
-        .testEquals(false, "0.toBoolean()", "toBoolean() converts 0 to false")
+        .testTrue("1.toBoolean()", "toBoolean() converts 1 to true")
+        .testFalse("0.toBoolean()", "toBoolean() converts 0 to false")
         .testEmpty("42.toBoolean()", "toBoolean() returns empty for other integers")
 
         .group("toBoolean() with Decimal literals")
-        .testEquals(true, "1.0.toBoolean()", "toBoolean() converts 1.0 to true")
-        .testEquals(false, "0.0.toBoolean()", "toBoolean() converts 0.0 to false")
+        .testTrue("1.0.toBoolean()", "toBoolean() converts 1.0 to true")
+        .testFalse("0.0.toBoolean()", "toBoolean() converts 0.0 to false")
         .testEmpty("3.14.toBoolean()", "toBoolean() returns empty for other decimals")
 
         .group("toBoolean() with non-convertible types")
@@ -119,30 +119,30 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .dateEmpty("emptyDate")
         )
         .group("convertsToBoolean() with convertible literals")
-        .testEquals(true, "true.convertsToBoolean()",
+        .testTrue("true.convertsToBoolean()",
             "convertsToBoolean() returns true for Boolean")
-        .testEquals(true, "'true'.convertsToBoolean()",
+        .testTrue("'true'.convertsToBoolean()",
             "convertsToBoolean() returns true for 'true'")
-        .testEquals(true, "'t'.convertsToBoolean()", "convertsToBoolean() returns true for 't'")
-        .testEquals(true, "'yes'.convertsToBoolean()", "convertsToBoolean() returns true for 'yes'")
-        .testEquals(true, "'y'.convertsToBoolean()", "convertsToBoolean() returns true for 'y'")
-        .testEquals(true, "'1'.convertsToBoolean()", "convertsToBoolean() returns true for '1'")
-        .testEquals(true, "'1.0'.convertsToBoolean()", "convertsToBoolean() returns true for '1.0'")
-        .testEquals(true, "'false'.convertsToBoolean()",
+        .testTrue("'t'.convertsToBoolean()", "convertsToBoolean() returns true for 't'")
+        .testTrue("'yes'.convertsToBoolean()", "convertsToBoolean() returns true for 'yes'")
+        .testTrue("'y'.convertsToBoolean()", "convertsToBoolean() returns true for 'y'")
+        .testTrue("'1'.convertsToBoolean()", "convertsToBoolean() returns true for '1'")
+        .testTrue("'1.0'.convertsToBoolean()", "convertsToBoolean() returns true for '1.0'")
+        .testTrue("'false'.convertsToBoolean()",
             "convertsToBoolean() returns true for 'false'")
-        .testEquals(true, "1.convertsToBoolean()", "convertsToBoolean() returns true for 1")
-        .testEquals(true, "0.convertsToBoolean()", "convertsToBoolean() returns true for 0")
-        .testEquals(true, "1.0.convertsToBoolean()", "convertsToBoolean() returns true for 1.0")
-        .testEquals(true, "0.0.convertsToBoolean()", "convertsToBoolean() returns true for 0.0")
+        .testTrue("1.convertsToBoolean()", "convertsToBoolean() returns true for 1")
+        .testTrue("0.convertsToBoolean()", "convertsToBoolean() returns true for 0")
+        .testTrue("1.0.convertsToBoolean()", "convertsToBoolean() returns true for 1.0")
+        .testTrue("0.0.convertsToBoolean()", "convertsToBoolean() returns true for 0.0")
 
         .group("convertsToBoolean() with non-convertible literals")
-        .testEquals(false, "'notBoolean'.convertsToBoolean()",
+        .testFalse("'notBoolean'.convertsToBoolean()",
             "convertsToBoolean() returns false for invalid string")
-        .testEquals(false, "42.convertsToBoolean()",
+        .testFalse("42.convertsToBoolean()",
             "convertsToBoolean() returns false for other integer")
-        .testEquals(false, "3.14.convertsToBoolean()",
+        .testFalse("3.14.convertsToBoolean()",
             "convertsToBoolean() returns false for other decimal")
-        .testEquals(false, "@2023-01-15.convertsToBoolean()",
+        .testFalse("@2023-01-15.convertsToBoolean()",
             "convertsToBoolean() returns false for date")
 
         .group("convertsToBoolean() with empty values")
@@ -217,18 +217,18 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .dateEmpty("emptyDate")
         )
         .group("convertsToInteger() with convertible literals")
-        .testEquals(true, "true.convertsToInteger()",
+        .testTrue("true.convertsToInteger()",
             "convertsToInteger() returns true for Boolean")
-        .testEquals(true, "42.convertsToInteger()", "convertsToInteger() returns true for Integer")
-        .testEquals(true, "'123'.convertsToInteger()",
+        .testTrue("42.convertsToInteger()", "convertsToInteger() returns true for Integer")
+        .testTrue("'123'.convertsToInteger()",
             "convertsToInteger() returns true for valid string")
 
         .group("convertsToInteger() with non-convertible literals")
-        .testEquals(false, "'notNumber'.convertsToInteger()",
+        .testFalse("'notNumber'.convertsToInteger()",
             "convertsToInteger() returns false for invalid string")
-        .testEquals(false, "3.14.convertsToInteger()",
+        .testFalse("3.14.convertsToInteger()",
             "convertsToInteger() returns false for Decimal")
-        .testEquals(false, "@2023-01-15.convertsToInteger()",
+        .testFalse("@2023-01-15.convertsToInteger()",
             "convertsToInteger() returns false for Date")
 
         .group("convertsToInteger() with empty values")
@@ -341,16 +341,16 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .dateEmpty("emptyDate")
         )
         .group("convertsToString() with convertible types")
-        .testEquals(true, "true.convertsToString()", "convertsToString() returns true for Boolean")
-        .testEquals(true, "42.convertsToString()", "convertsToString() returns true for Integer")
-        .testEquals(true, "3.14.convertsToString()", "convertsToString() returns true for Decimal")
-        .testEquals(true, "'hello'.convertsToString()",
+        .testTrue("true.convertsToString()", "convertsToString() returns true for Boolean")
+        .testTrue("42.convertsToString()", "convertsToString() returns true for Integer")
+        .testTrue("3.14.convertsToString()", "convertsToString() returns true for Decimal")
+        .testTrue("'hello'.convertsToString()",
             "convertsToString() returns true for String")
-        .testEquals(true, "@2023-01-15.convertsToString()",
+        .testTrue("@2023-01-15.convertsToString()",
             "convertsToString() returns true for Date")
-        .testEquals(true, "@2023-01-15T10:30:00Z.convertsToString()",
+        .testTrue("@2023-01-15T10:30:00Z.convertsToString()",
             "convertsToString() returns true for DateTime")
-        .testEquals(true, "@T10:30:00.convertsToString()",
+        .testTrue("@T10:30:00.convertsToString()",
             "convertsToString() returns true for Time")
 
         .group("convertsToString() with empty values")
@@ -419,14 +419,14 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .integerEmpty("emptyInt")
         )
         .group("convertsToDate() with convertible types")
-        .testEquals(true, "'2023-01-15'.convertsToDate()",
+        .testTrue("'2023-01-15'.convertsToDate()",
             "convertsToDate() returns true for string")
-        .testEquals(true, "@2023-12-25.convertsToDate()", "convertsToDate() returns true for date")
+        .testTrue("@2023-12-25.convertsToDate()", "convertsToDate() returns true for date")
 
         .group("convertsToDate() with non-convertible types")
-        .testEquals(false, "'notADate'.convertsToDate()",
+        .testFalse("'notADate'.convertsToDate()",
             "convertsToDate() returns false for invalid date string")
-        .testEquals(false, "42.convertsToDate()", "convertsToDate() returns false for integer")
+        .testFalse("42.convertsToDate()", "convertsToDate() returns false for integer")
 
         .group("convertsToDate() with empty values")
         .testEmpty("emptyDate.convertsToDate()", "convertsToDate() returns empty for empty Date")
@@ -496,15 +496,15 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .integerEmpty("emptyInt")
         )
         .group("convertsToDateTime() with convertible types")
-        .testEquals(true, "'2023-01-15T10:30:00Z'.convertsToDateTime()",
+        .testTrue("'2023-01-15T10:30:00Z'.convertsToDateTime()",
             "convertsToDateTime() returns true for string")
-        .testEquals(true, "@2023-12-25T12:00:00Z.convertsToDateTime()",
+        .testTrue("@2023-12-25T12:00:00Z.convertsToDateTime()",
             "convertsToDateTime() returns true for datetime")
 
         .group("convertsToDateTime() with non-convertible types")
-        .testEquals(false, "'not-a-datetime'.convertsToDateTime()",
+        .testFalse("'not-a-datetime'.convertsToDateTime()",
             "convertsToDateTime() returns false for invalid datetime string")
-        .testEquals(false, "42.convertsToDateTime()",
+        .testFalse("42.convertsToDateTime()",
             "convertsToDateTime() returns false for integer")
 
         .group("convertsToDateTime() with empty values")
@@ -574,14 +574,14 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .integerEmpty("emptyInt")
         )
         .group("convertsToTime() with convertible types")
-        .testEquals(true, "'10:30:00'.convertsToTime()",
+        .testTrue("'10:30:00'.convertsToTime()",
             "convertsToTime() returns true for time string")
-        .testEquals(false, "'non-time'.convertsToTime()",
+        .testFalse("'non-time'.convertsToTime()",
             "convertsToTime() returns false for non-time string")
-        .testEquals(true, "@T12:00:00.convertsToTime()", "convertsToTime() returns true for time")
+        .testTrue("@T12:00:00.convertsToTime()", "convertsToTime() returns true for time")
 
         .group("convertsToTime() with non-convertible types")
-        .testEquals(false, "42.convertsToTime()", "convertsToTime() returns false for integer")
+        .testFalse("42.convertsToTime()", "convertsToTime() returns false for integer")
 
         .group("convertsToTime() with empty values")
         .testEmpty("emptyTime.convertsToTime()", "convertsToTime() returns empty for empty Time")
@@ -612,16 +612,16 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .dateEmpty("emptyDate")
         )
         .group("convertsToDecimal() with convertible literals")
-        .testEquals(true, "true.convertsToDecimal()",
+        .testTrue("true.convertsToDecimal()",
             "convertsToDecimal() returns true for Boolean")
-        .testEquals(true, "42.convertsToDecimal()", "convertsToDecimal() returns true for Integer")
-        .testEquals(true, "3.14.convertsToDecimal()",
+        .testTrue("42.convertsToDecimal()", "convertsToDecimal() returns true for Integer")
+        .testTrue("3.14.convertsToDecimal()",
             "convertsToDecimal() returns true for Decimal")
-        .testEquals(true, "'3.14159'.convertsToDecimal()",
+        .testTrue("'3.14159'.convertsToDecimal()",
             "convertsToDecimal() returns true for valid string")
 
         .group("convertsToDecimal() with non-convertible literals")
-        .testEquals(false, "'notNumber'.convertsToDecimal()",
+        .testFalse("'notNumber'.convertsToDecimal()",
             "convertsToDecimal() returns false for invalid string")
 
         .group("convertsToDecimal() with empty values")
@@ -716,6 +716,64 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testError("dateArray.toQuantity()",
             "toQuantity() errors on array of non-convertible type (Date)")
 
+        .group("toQuantity(unit) with matching unit - numeric values")
+        .testEquals("42 '1'", "42.toQuantity('1')",
+            "toQuantity() with matching unit '1' returns quantity")
+        .testEquals("3.14 '1'", "3.14.toQuantity('1')",
+            "toQuantity() with matching unit '1' for decimal returns quantity")
+        .testEquals("1 '1'", "true.toQuantity('1')",
+            "toQuantity() with matching unit '1' for true returns quantity")
+        .testEquals("0 '1'", "false.toQuantity('1')",
+            "toQuantity() with matching unit '1' for false returns quantity")
+
+        .group("toQuantity(unit) with different unit - numeric values")
+        .testEmpty("42.toQuantity('mg')",
+            "toQuantity() with different unit returns empty for integer")
+        .testEmpty("3.14.toQuantity('kg')",
+            "toQuantity() with different unit returns empty for decimal")
+        .testEmpty("true.toQuantity('mg')",
+            "toQuantity() with different unit returns empty for boolean")
+
+        .group("toQuantity(unit) with matching unit - UCUM strings")
+        .testEquals("10 'mg'", "'10 \\'mg\\''.toQuantity('mg')",
+            "toQuantity() with matching UCUM unit returns quantity")
+        .testEquals("1.5 'kg'", "'1.5 \\'kg\\''.toQuantity('kg')",
+            "toQuantity() with matching UCUM unit for decimal returns quantity")
+        .testEquals("-5.2 'cm'", "'-5.2 \\'cm\\''.toQuantity('cm')",
+            "toQuantity() with matching UCUM unit for negative returns quantity")
+
+        .group("toQuantity(unit) with different unit - UCUM strings")
+        .testEmpty("'10 \\'mg\\''.toQuantity('g')",
+            "toQuantity() with different UCUM unit returns empty")
+        .testEmpty("'1.5 \\'kg\\''.toQuantity('mg')",
+            "toQuantity() with different UCUM unit for decimal returns empty")
+
+        .group("toQuantity(unit) with matching unit - calendar durations")
+        .testEquals("4 days", "'4 days'.toQuantity('days')",
+            "toQuantity() with matching calendar unit 'days' returns quantity")
+        .testEquals("1 year", "'1 year'.toQuantity('year')",
+            "toQuantity() with matching calendar unit 'year' returns quantity")
+        .testEquals("3 months", "'3 months'.toQuantity('months')",
+            "toQuantity() with matching calendar unit 'months' returns quantity")
+
+        .group("toQuantity(unit) with different unit - calendar durations")
+        .testEmpty("'4 days'.toQuantity('weeks')",
+            "toQuantity() with different calendar unit returns empty")
+        .testEmpty("'1 year'.toQuantity('months')",
+            "toQuantity() with different calendar unit returns empty for year/months")
+
+        .group("toQuantity(unit) with matching unit - numeric strings")
+        .testEquals("42 '1'", "'42'.toQuantity('1')",
+            "toQuantity() with matching unit '1' for numeric string returns quantity")
+        .testEquals("3.14 '1'", "'3.14'.toQuantity('1')",
+            "toQuantity() with matching unit '1' for decimal string returns quantity")
+
+        .group("toQuantity(unit) with different unit - numeric strings")
+        .testEmpty("'42'.toQuantity('mg')",
+            "toQuantity() with different unit for numeric string returns empty")
+        .testEmpty("'3.14'.toQuantity('kg')",
+            "toQuantity() with different unit for decimal string returns empty")
+
         .build();
   }
 
@@ -733,27 +791,27 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .dateEmpty("emptyDate")
         )
         .group("convertsToQuantity() with convertible literals")
-        .testEquals(true, "true.convertsToQuantity()",
+        .testTrue("true.convertsToQuantity()",
             "convertsToQuantity() returns true for Boolean")
-        .testEquals(true, "42.convertsToQuantity()",
+        .testTrue("42.convertsToQuantity()",
             "convertsToQuantity() returns true for Integer")
-        .testEquals(true, "3.14.convertsToQuantity()",
+        .testTrue("3.14.convertsToQuantity()",
             "convertsToQuantity() returns true for Decimal")
-        .testEquals(true, "'10 \\'mg\\''.convertsToQuantity()",
+        .testTrue("'10 \\'mg\\''.convertsToQuantity()",
             "convertsToQuantity() returns true for UCUM string")
-        .testEquals(true, "'4 days'.convertsToQuantity()",
+        .testTrue("'4 days'.convertsToQuantity()",
             "convertsToQuantity() returns true for calendar duration string")
-        .testEquals(true, "'42'.convertsToQuantity()",
+        .testTrue("'42'.convertsToQuantity()",
             "convertsToQuantity() returns true for integer string without unit")
-        .testEquals(true, "'3.14'.convertsToQuantity()",
+        .testTrue("'3.14'.convertsToQuantity()",
             "convertsToQuantity() returns true for decimal string without unit")
 
         .group("convertsToQuantity() with non-convertible literals")
-        .testEquals(false, "'notQuantity'.convertsToQuantity()",
+        .testFalse("'notQuantity'.convertsToQuantity()",
             "convertsToQuantity() returns false for invalid string")
-        .testEquals(false, "'true'.convertsToQuantity()",
+        .testFalse("'true'.convertsToQuantity()",
             "convertsToQuantity() returns false for sting with boolean content")
-        .testEquals(false, "@2023-01-15.convertsToQuantity()",
+        .testFalse("@2023-01-15.convertsToQuantity()",
             "convertsToQuantity() returns false for Date")
 
         .group("convertsToQuantity() with empty values")
@@ -777,6 +835,66 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             "convertsToQuantity() errors on array of convertible type (String)")
         .testError("dateArray.convertsToQuantity()",
             "convertsToQuantity() errors on array of non-convertible type (Date)")
+
+        .group("convertsToQuantity(unit) with matching unit - numeric values")
+        .testTrue("42.convertsToQuantity('1')",
+            "convertsToQuantity() with matching unit '1' returns true for integer")
+        .testTrue("3.14.convertsToQuantity('1')",
+            "convertsToQuantity() with matching unit '1' returns true for decimal")
+        .testTrue("true.convertsToQuantity('1')",
+            "convertsToQuantity() with matching unit '1' returns true for boolean")
+
+        .group("convertsToQuantity(unit) with different unit - numeric values")
+        .testFalse("42.convertsToQuantity('mg')",
+            "convertsToQuantity() with different unit returns false for integer")
+        .testFalse("3.14.convertsToQuantity('kg')",
+            "convertsToQuantity() with different unit returns false for decimal")
+        .testFalse("true.convertsToQuantity('mg')",
+            "convertsToQuantity() with different unit returns false for boolean")
+
+        .group("convertsToQuantity(unit) with matching unit - UCUM strings")
+        .testTrue("'10 \\'mg\\''.convertsToQuantity('mg')",
+            "convertsToQuantity() with matching UCUM unit returns true")
+        .testTrue("'1.5 \\'kg\\''.convertsToQuantity('kg')",
+            "convertsToQuantity() with matching UCUM unit returns true for decimal")
+
+        .group("convertsToQuantity(unit) with different unit - UCUM strings")
+        .testFalse("'10 \\'mg\\''.convertsToQuantity('g')",
+            "convertsToQuantity() with different UCUM unit returns false")
+        .testFalse("'1.5 \\'kg\\''.convertsToQuantity('mg')",
+            "convertsToQuantity() with different UCUM unit returns false for decimal")
+
+        .group("convertsToQuantity(unit) with matching unit - calendar durations")
+        .testTrue("'4 days'.convertsToQuantity('days')",
+            "convertsToQuantity() with matching calendar unit 'days' returns true")
+        .testTrue("'1 year'.convertsToQuantity('year')",
+            "convertsToQuantity() with matching calendar unit 'year' returns true")
+        .testTrue("'3 months'.convertsToQuantity('months')",
+            "convertsToQuantity() with matching calendar unit 'months' returns true")
+
+        .group("convertsToQuantity(unit) with different unit - calendar durations")
+        .testFalse("'4 days'.convertsToQuantity('weeks')",
+            "convertsToQuantity() with different calendar unit returns false")
+        .testFalse("'1 year'.convertsToQuantity('months')",
+            "convertsToQuantity() with different calendar unit returns false for year/months")
+
+        .group("convertsToQuantity(unit) with matching unit - numeric strings")
+        .testTrue("'42'.convertsToQuantity('1')",
+            "convertsToQuantity() with matching unit '1' returns true for numeric string")
+        .testTrue("'3.14'.convertsToQuantity('1')",
+            "convertsToQuantity() with matching unit '1' returns true for decimal string")
+
+        .group("convertsToQuantity(unit) with different unit - numeric strings")
+        .testFalse("'42'.convertsToQuantity('mg')",
+            "convertsToQuantity() with different unit returns false for numeric string")
+        .testFalse("'3.14'.convertsToQuantity('kg')",
+            "convertsToQuantity() with different unit returns false for decimal string")
+
+        .group("convertsToQuantity(unit) with non-convertible types")
+        .testFalse("@2023-01-15.convertsToQuantity('1')",
+            "convertsToQuantity() with unit returns false for non-convertible Date")
+        .testFalse("'notQuantity'.convertsToQuantity('mg')",
+            "convertsToQuantity() with unit returns false for invalid string")
 
         .build();
   }

@@ -246,6 +246,20 @@ excludeSet:
         any:
           - "'1 year'.toQuantity() != 1 'a'"
           - "MedicationRequest.dispenseRequest.expectedSupplyDuration.toQuantity() = 3 days"
+      - title: "Full UCUM unit conversion not yet implemented for toQuantity(unit)"
+        comment: |
+          The toQuantity(unit) function with unit parameter is implemented with exact string matching
+          only. Full UCUM unit conversion (e.g., converting between 'wk' and 'd', or 'cm' and 'mm')
+          is not yet supported. Per FHIRPath spec: "Implementations are not required to support a
+          complete UCUM implementation, and may return empty when the unit argument is used and it
+          is different than the input quantity unit." This will be addressed in a future sub-issue
+          of #2391.
+        type: feature
+        id: "#2391"
+        outcome: failure
+        any:
+          - "'1 \\'wk\\''.toQuantity('d').toString() = '7 \\'d\\''"
+          - "'1 \\'cm\\''.toQuantity('mm').value = 10"
   - title: Variable exclusions
     glob: "fhirpath-js/cases/8_variables.yaml"
     exclude:
