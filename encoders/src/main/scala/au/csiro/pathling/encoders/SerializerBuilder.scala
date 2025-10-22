@@ -39,7 +39,7 @@ import org.hl7.fhir.instance.model.api.{IBaseDatatype, IBaseHasExtensions, IBase
 import org.hl7.fhir.r4.model.{Base, Extension, Quantity}
 import org.hl7.fhir.utilities.xhtml.XhtmlNode
 
-import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
+import scala.jdk.CollectionConverters._
 
 /**
  * The schema processor for building serializer expressions.
@@ -299,7 +299,7 @@ private[encoders] object SerializerBuilderProcessor {
 
     def flattenBase(obj: Base): List[(Int, java.util.List[Extension])] = {
 
-      val childrenExts = obj.children()
+      val childrenExts = obj.children().asScala
         .map(p => obj.getProperty(p.getName.hashCode, p.getName, false))
         .filter(_ != null)
         .flatMap(_.flatMap(flattenBase))

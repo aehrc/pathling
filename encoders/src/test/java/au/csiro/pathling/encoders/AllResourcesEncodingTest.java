@@ -42,7 +42,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Base;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import scala.collection.JavaConverters;
+import scala.jdk.javaapi.CollectionConverters;
 
 public class AllResourcesEncodingTest {
 
@@ -56,7 +56,7 @@ public class AllResourcesEncodingTest {
 
   private static final SchemaConverter SCHEMA_CONVERTER_L2 = new SchemaConverter(FHIR_CONTEXT,
       new R4DataTypeMappings(),
-      EncoderConfig.apply(2, JavaConverters.asScalaSet(OPEN_TYPES).toSet(), true));
+      EncoderConfig.apply(2, CollectionConverters.asScala(OPEN_TYPES).toSet(), true));
 
 
   static final Set<String> EXCLUDED_RESOURCES = ImmutableSet.of(

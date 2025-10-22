@@ -17,7 +17,8 @@ from typing import Any, Optional, Union, Collection
 
 from py4j.java_gateway import JavaObject
 from pyspark import SparkContext
-from pyspark.sql.column import Column, _to_java_column
+from pyspark.sql.column import Column
+from pyspark.sql.classic.column import _to_java_column
 from pyspark.sql.functions import lit
 
 from pathling.coding import Coding

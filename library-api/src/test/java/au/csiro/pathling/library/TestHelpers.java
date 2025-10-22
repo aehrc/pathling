@@ -34,6 +34,7 @@ public class TestHelpers {
     return SparkSession.builder()
         .master("local[*]")
         .appName("testing")
+        .config("spark.ui.enabled", "false")
         .config("spark.driver.bindAddress", "localhost")
         .config("spark.driver.host", "localhost")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")

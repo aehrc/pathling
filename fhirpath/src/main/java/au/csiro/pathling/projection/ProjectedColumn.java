@@ -55,7 +55,7 @@ public record ProjectedColumn(
                                                              ? collection.asPlural()
                                                              : collection.asSingular());
     return requestedColumn.sqlType()
-        .map(rawResult::cast)
+        .map(rawResult::try_cast)
         .orElse(rawResult)
         .alias(requestedColumn.name());
 

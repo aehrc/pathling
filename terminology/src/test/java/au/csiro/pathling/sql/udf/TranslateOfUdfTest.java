@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static scala.jdk.javaapi.CollectionConverters.asScala;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -42,7 +43,8 @@ import java.util.List;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import scala.collection.mutable.WrappedArray;
+import scala.collection.mutable.ArraySeq;
+import scala.reflect.ClassTag;
 
 class TranslateOfUdfTest extends AbstractTerminologyTestBase {
 
@@ -54,10 +56,10 @@ class TranslateOfUdfTest extends AbstractTerminologyTestBase {
   private TranslateUdf translateUdf;
   private TerminologyService terminologyService;
 
-  private static <T> WrappedArray<T> newWrappedArray(@Nonnull final List<T> args) {
-    return WrappedArray.make(args.toArray());
+  private static <T> ArraySeq<T> newWrappedArray(@Nonnull final List<T> args) {
+    return ArraySeq.from(asScala(args), ClassTag.apply(Object.class));
   }
-
+  
   @BeforeEach
   void setUp() {
     terminologyService = mock(TerminologyService.class);
@@ -116,7 +118,7 @@ class TranslateOfUdfTest extends AbstractTerminologyTestBase {
   @Test
   void testThrowsInputErrorWhenInvalidEquivalence() {
     final Row coding = encode(CODING_AA);
-    final WrappedArray<String> invalid = newWrappedArray(List.of("invalid"));
+    final ArraySeq<String> invalid = newWrappedArray(List.of("invalid"));
     final InvalidUserInputError ex = assertThrows(InvalidUserInputError.class,
         () -> translateUdf.call(coding, CONCEPT_MAP_B, true, invalid, null));
     assertEquals("Unknown ConceptMapEquivalence code 'invalid'", ex.getMessage());

@@ -9,7 +9,7 @@ description: Instructions for installing the Pathling libraries for Python, R, S
 
 Prerequisites:
 
-- Python 3.8+ with pip
+- Python 3.9+ with pip
 
 To install, run this command:
 
@@ -58,11 +58,11 @@ your `pom.xml`:
 
 ### Java Virtual Machine
 
-All variants of the Pathling library require version 17 of a Java Virtual
+All variants of the Pathling library require version 21 of a Java Virtual
 Machine (JVM) to be installed. We recommend using Azul OpenJDK, you can download
 installers for all major operating systems at
-the [Azul OpenJDK](https://www.azul.com/downloads/?version=java-17-lts#zulu)
+the [Azul OpenJDK](https://www.azul.com/downloads/?version=java-21-lts#zulu)
 website.
 
 Ensure that the `JAVA_HOME` environment variable is set to the location of the
-installation of Java 17.
+installation of Java 21.

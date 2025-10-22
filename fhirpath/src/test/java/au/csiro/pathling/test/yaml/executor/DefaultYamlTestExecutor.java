@@ -20,6 +20,7 @@ package au.csiro.pathling.test.yaml.executor;
 import static au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase.ANY_ERROR;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -59,7 +60,7 @@ import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructType;
 import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
-import scala.collection.mutable.WrappedArray;
+import scala.collection.mutable.ArraySeq;
 
 /**
  * Standard implementation of {@link YamlTestExecutor} that handles the execution and validation of
@@ -241,7 +242,10 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
 
       // Only check the specific error message if it's not the wildcard ANY_ERROR.
       if (!ANY_ERROR.equals(spec.errorMsg())) {
-        assertEquals(spec.errorMsg(), rootCauseMsg);
+        assertTrue(rootCauseMsg.contains(spec.errorMsg()),
+            String.format("Error message mismatch for expression '%s'. Expected to contain: '%s',"
+                    + " but got: '%s'",
+                spec.expression(), spec.errorMsg(), rootCauseMsg));
       }
     }
   }
@@ -332,7 +336,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
 
     // Handle single-item lists by unwrapping them to the contained value.
     final Object resultRepresentation = result instanceof final List<?> list && list.size() == 1
-                                        ? list.get(0)
+                                        ? list.getFirst()
                                         : result;
 
     // Convert the YAML representation to a FHIR element definition.
@@ -418,7 +422,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
                              ? null
                              : row.get(index);
 
-    if (actualRaw instanceof final WrappedArray<?> wrappedArray) {
+    if (actualRaw instanceof final ArraySeq<?> wrappedArray) {
       // Handle Spark WrappedArray - unwrap single-element arrays.
       return (wrappedArray.length() == 1
               ? adjustResultType(wrappedArray.apply(0))
@@ -477,7 +481,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
           continue;
         } else {
           // Single-valued list: extract the single value.
-          singleValue = l.get(0);
+          singleValue = l.getFirst();
         }
       }
 

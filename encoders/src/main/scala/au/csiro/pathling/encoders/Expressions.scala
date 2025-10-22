@@ -262,7 +262,7 @@ case class AttachExtensions(targetObject: Expression,
             |if (${obj.value} != null) {
             |// for each of the object in extension maps find the
             |// corresponding object and set the extension
-            | for(java.util.Map.Entry e: scala.collection.JavaConverters.mapAsJavaMap(${
+            | for(java.util.Map.Entry e: scala.jdk.javaapi.CollectionConverters.asJava(${
         extensionMap.value
       }).entrySet()) {
             |   org.hl7.fhir.instance.model.api.IBaseHasExtensions extHolder = (org.hl7.fhir.instance.model.api.IBaseHasExtensions)_fid_mapping.get(e.getKey());
@@ -390,44 +390,7 @@ case class UnresolvedUnnest(value: Expression)
 }
 
 
-object ValueFunctions {
-  /**
-   * Applies an expression to an an array value, or an else expression if the value is not an array.
-   *
-   * @param value           The value to check
-   * @param arrayExpression The expression to apply to the array value
-   * @param elseExpression  The expression to apply if the value is not an array
-   * @return
-   */
-  def ifArray(value: Column, arrayExpression: Column => Column,
-              elseExpression: Column => Column): Column = {
-    val expr = UnresolvedIfArray(value.expr,
-      e => arrayExpression(new Column(e)).expr, e => elseExpression(new Column(e)).expr)
-    new Column(expr)
-  }
-
-  /**
-   * Applies an expression to  array of arrays value, or an else expression if the value is an array.
-   * Throws an exception if the value is not an array.
-   *
-   * @param value           The value to check
-   * @param arrayExpression The expression to apply to the array of arrays value
-   * @param elseExpression  The expression to apply to the arrays of non array values
-   * @return
-   */
-  def ifArray2(value: Column, arrayExpression: Column => Column,
-               elseExpression: Column => Column): Column = {
-    val expr = UnresolvedIfArray2(value.expr,
-      e => arrayExpression(new Column(e)).expr, e => elseExpression(new Column(e)).expr)
-    new Column(expr)
-  }
-
-  def unnest(value: Column): Column = {
-    val expr = UnresolvedUnnest(value.expr)
-    new Column(expr)
-  }
-
-}
+// ValueFunctions has been moved to a Java class to access package-private Spark methods
 
 
 /**
@@ -643,7 +606,7 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
     for (i <- 0 until productSize) {
       val productIndexes = calculateProductIndexes(i, inputArrays)
       val currentRowData = buildRowData(zippedArrays, productIndexes)
-      result(i) = InternalRow.apply(currentRowData: _*)
+      result(i) = InternalRow.apply(currentRowData.toIndexedSeq: _*)
     }
     result
   }
@@ -710,26 +673,4 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
 }
 
 
-object ColumnFunctions {
-  /**
-   * An expression which takes a number of columns that contain arrays of structs and produces
-   * an array of structs where each element is a product of the elements of the input arrays.
-   *
-   * @param e The input columns
-   */
-  @scala.annotation.varargs
-  def structProduct(e: Column*): Column = new Column(StructProduct(e.map(_.expr)))
-
-  /**
-   * An expression which takes a number of columns that contain arrays of structs and produces
-   * an array of structs where each element is a product of the elements of the input arrays.
-   *
-   * If the input arrays are of different lengths, the output array will contain nulls for missing
-   * elements in the input.
-   *
-   * @param e The input columns
-   */
-  @scala.annotation.varargs
-  def structProductOuter(e: Column*): Column = new Column(
-    StructProduct(e.map(_.expr), outer = true))
-}
+// ColumnFunctions has been moved to a Java class to access package-private Spark methods

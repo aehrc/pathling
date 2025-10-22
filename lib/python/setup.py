@@ -56,13 +56,13 @@ setup(
     classifiers=[
         "Development Status :: 3 - Alpha",
         "License :: OSI Approved :: Apache Software License",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
     ],
     license="Apache License, version 2.0",
-    python_requires=">=3.8",
-    install_requires=["pyspark>=3.5.2,<3.6.0", "deprecated>=1.2.13"],
+    python_requires=">=3.9",
+    install_requires=["pyspark>=4.0.0,<4.1.0", "deprecated>=1.2.13"],
     include_package_data=True,
     data_files=[
         ("share/pathling/examples", glob.glob("examples/*.py")),

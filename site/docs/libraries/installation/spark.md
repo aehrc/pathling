@@ -35,7 +35,7 @@ from pyspark.sql import SparkSession
 spark = (
     SparkSession.builder.config(
         "spark.jars.packages",
-        "au.csiro.pathling:library-runtime:8.2.0-SNAPSHOT,"
+        "au.csiro.pathling:library-runtime:9.0.0-SNAPSHOT,"
         "io.delta:delta-spark_2.12:3.3.2,"
     )
     .config(

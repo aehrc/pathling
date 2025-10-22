@@ -38,7 +38,7 @@ import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Type;
 import org.junit.jupiter.params.provider.Arguments;
-import scala.collection.mutable.WrappedArray;
+import scala.collection.mutable.ArraySeq;
 
 public abstract class AbstractTerminologyTestBase {
 
@@ -96,8 +96,8 @@ public abstract class AbstractTerminologyTestBase {
   }
 
   @Nonnull
-  public static WrappedArray<Object> encodeMany(final Coding... codings) {
-    return WrappedArray.make(Stream.of(codings).map(CodingSchema::encode).toArray(Row[]::new));
+  public static ArraySeq<Object> encodeMany(@Nonnull final Coding... codings) {
+    return ArraySeq.make(Stream.of(codings).map(CodingSchema::encode).toArray(Row[]::new));
   }
 
   @Nonnull

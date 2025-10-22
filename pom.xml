@@ -22,7 +22,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>8.2.0-SNAPSHOT</version>
+  <version>9.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -71,18 +71,18 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <pathling.sparkVersion>3.5.6</pathling.sparkVersion>
-    <pathling.scalaVersion>2.12</pathling.scalaVersion>
-    <pathling.scalaFullVersion>2.12.17</pathling.scalaFullVersion>
-    <pathling.deltaVersion>3.3.2</pathling.deltaVersion>
-    <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
+    <pathling.sparkVersion>4.0.1</pathling.sparkVersion>
+    <pathling.scalaVersion>2.13</pathling.scalaVersion>
+    <pathling.scalaFullVersion>2.13.15</pathling.scalaFullVersion>
+    <pathling.deltaVersion>4.0.0</pathling.deltaVersion>
+    <pathling.hadoopVersion>3.4.1</pathling.hadoopVersion>
     <pathling.hadoopMajorVersion>3</pathling.hadoopMajorVersion>
     <pathling.hapiFhirVersion>8.4.0</pathling.hapiFhirVersion>
-    <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
+    <pathling.antlrVersion>4.13.1</pathling.antlrVersion>
     <pathling.lombokVersion>1.18.38</pathling.lombokVersion>
     <pathling.infinispanVersion>15.0.3.Final</pathling.infinispanVersion>
     <pathling.jacksonVersion>2.16.1</pathling.jacksonVersion>
-    <pathling.jerseyVersion>2.40</pathling.jerseyVersion>
+    <pathling.jerseyVersion>3.1.11</pathling.jerseyVersion>
     <pathling.surefireVersion>3.2.5</pathling.surefireVersion>
     <pathling.logbackVersion>1.5.18</pathling.logbackVersion>
     <pathling.slf4jVersion>2.0.17</pathling.slf4jVersion>
@@ -268,6 +268,12 @@
         <groupId>org.apache.spark</groupId>
         <artifactId>spark-sql_${pathling.scalaVersion}</artifactId>
         <version>${pathling.sparkVersion}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j2-impl</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.spark</groupId>
@@ -336,11 +342,11 @@
         <version>${pathling.derbyVersion}</version>
       </dependency>
       <!-- This is required for Spark UI, which still has some expectations that a legacy 
-      javax.servlet API is present -->
+      jakarta.servlet API is present -->
       <dependency>
-        <groupId>javax.servlet</groupId>
-        <artifactId>javax.servlet-api</artifactId>
-        <version>4.0.1</version>
+        <groupId>jakarta.servlet</groupId>
+        <artifactId>jakarta.servlet-api</artifactId>
+        <version>5.0.0</version>
         <scope>runtime</scope>
       </dependency>
 
@@ -570,10 +576,11 @@
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.13.0</version>
           <configuration>
-            <source>17</source>
-            <target>17</target>
+            <source>21</source>
+            <target>21</target>
             <compilerArgs>
               <arg>-Xlint:all,-processing</arg>
+              <arg>-proc:full</arg>
             </compilerArgs>
           </configuration>
         </plugin>
@@ -599,11 +606,15 @@
             </execution>
           </executions>
           <configuration>
-            <source>17</source>
-            <target>17</target>
+            <source>21</source>
+            <target>21</target>
             <args>
               <arg>-feature</arg>
+              <arg>-deprecation</arg>
             </args>
+            <javacArgs>
+              <javacArg>-proc:full</javacArg>
+            </javacArgs>
             <scalaVersion>${pathling.scalaFullVersion}</scalaVersion>
           </configuration>
         </plugin>
@@ -632,8 +643,9 @@
           <configuration>
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
-            <!-- The add-exports and add-opens flags are required for Java 17 -->
-            <argLine>@{argLine} -Xshare:off -Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED</argLine>
+            <!-- The add-exports and add-opens flags are required for Java 21 -->
+            <!-- -XX:+EnableDynamicAgentLoading suppresses warnings about Mockito's dynamic agent loading -->
+            <argLine>@{argLine} -Xshare:off -Xmx4g -ea -Duser.timezone=UTC -XX:+EnableDynamicAgentLoading --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED</argLine>
             <forkCount>1C</forkCount>
             <failIfNoTests>false</failIfNoTests>
           </configuration>
@@ -643,7 +655,7 @@
           <artifactId>maven-failsafe-plugin</artifactId>
           <version>${pathling.surefireVersion}</version>
           <configuration>
-            <!-- The add-exports and add-opens flags are required for Java 17 -->
+            <!-- The add-exports and add-opens flags are required for Java 21 -->
             <argLine>-Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED</argLine>
           </configuration>
         </plugin>
@@ -677,7 +689,7 @@
         <plugin>
           <groupId>org.jacoco</groupId>
           <artifactId>jacoco-maven-plugin</artifactId>
-          <version>0.8.8</version>
+          <version>0.8.12</version>
           <executions>
             <execution>
               <id>prepare-agent</id>
@@ -727,7 +739,7 @@
           </executions>
           <configuration>
             <skip>true</skip>
-            <source>17</source>
+            <source>21</source>
             <links>
               <link>https://spark.apache.org/docs/latest/api/java/</link>
               <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-base/</link>
@@ -951,7 +963,7 @@
                 </goals>
                 <configuration>
                   <excludedGroups>au.csiro.pathling.*</excludedGroups>
-                  <fileTemplate>${session.executionRootDirectory}/license-template.ftl</fileTemplate>
+                  <fileTemplate>${session.executionRootDirectory}/licenses/license-template.ftl</fileTemplate>
                   <includeTransitiveDependencies>false</includeTransitiveDependencies>
                   <licenseMerges>
                     <licenseMerge>Apache License, Version 2.0|Apache Software License 2.0|The Apache License, Version 2.0|The Apache Software License, Version 2.0|Apache 2.0 License|Apache License 2.0|Apache-2.0|Apache 2.0|Apache Software Licenses|Apache 2</licenseMerge>

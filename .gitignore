@@ -1,6 +1,7 @@
 # Maven
 target/
 tmp/
+dependency-reduced-pom.xml
 
 # Eclipse
 .classpath
@@ -11,32 +12,30 @@ tmp/
 .idea
 *.iml
 
+# JavaScript
+node_modules
 
-#Others
-lib/import/node_modules/
-lib/js/node_modules/
-
-#Mac
+# Mac
 .DS_Store
 
-
-#Python
-__pycache__/
+# Python
+__pycache__
 *.egg-info
 _version.py
-.ipynb_checkpoints/
+.ipynb_checkpoints
 
+# Spark
 metastore_db
 derby.log
 spark-warehouse
 .*.crc
 
-
-#R
+# R
 *.Rproj
-
 .Rproj.user
-/lib/R/pathlyr/.Rhistory
+.Rhistory
 *.Rcheck
+
+# AI
 .aider*
-dependency-reduced-pom.xml
+.claude
