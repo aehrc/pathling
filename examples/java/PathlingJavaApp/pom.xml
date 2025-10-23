@@ -35,7 +35,7 @@
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>library-runtime</artifactId>
-      <version>8.1.0</version>
+      <version>8.1.1-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
