@@ -1,7 +1,7 @@
 package au.csiro.pathling.sql.misc;
 
-import static au.csiro.pathling.fhirpath.FhirpathQuantity.FHIRPATH_CALENDAR_DURATION_SYSTEM;
-import static au.csiro.pathling.fhirpath.FhirpathQuantity.UCUM_SYSTEM;
+import static au.csiro.pathling.fhirpath.FhirpathQuantity.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI;
+import static au.csiro.pathling.fhirpath.FhirpathQuantity.UCUM_SYSTEM_URI;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
@@ -60,10 +60,10 @@ public class QuantityToLiteral implements SqlFunction1<Row, String> {
     if (value == null || system == null || code == null) {
       return null;
     }
-    if (UCUM_SYSTEM.equals(system)) {
+    if (UCUM_SYSTEM_URI.equals(system)) {
       // UCUM units are quoted
       return String.format("%s '%s'", value.toPlainString(), code);
-    } else if (FHIRPATH_CALENDAR_DURATION_SYSTEM.equals(system)) {
+    } else if (FHIRPATH_CALENDAR_DURATION_SYSTEM_URI.equals(system)) {
       // Time duration units are not quoted
       return String.format("%s %s", value.toPlainString(),
           nonNull(unit)

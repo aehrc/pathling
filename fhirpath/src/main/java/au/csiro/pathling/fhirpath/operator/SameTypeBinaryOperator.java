@@ -28,7 +28,7 @@ import org.apache.commons.lang3.tuple.Pair;
  *
  * @author Piotr Szul
  */
-abstract public class SameTypeBinaryOperator implements FhirPathBinaryOperator {
+public abstract class SameTypeBinaryOperator implements FhirPathBinaryOperator {
 
   @Nonnull
   @Override

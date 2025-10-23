@@ -20,7 +20,7 @@ import jakarta.annotation.Nonnull;
 
 /**
  * A comparator for decimal values, implementing standard comparison operations. It uses
- * element-wise equality for arrays of decimals to allow for comparions between differenct decimal
+ * element-wise equality for arrays of decimals to allow for comparisons between different decimal
  * precisions.
  *
  * @author Piotr Szul

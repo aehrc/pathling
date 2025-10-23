@@ -129,7 +129,7 @@ public class QuantityEncoding {
     @Nullable final String code = quantity.getCode();
     final BigDecimal canonicalizedValue;
     final String canonicalizedCode;
-    if (quantity.getSystem().equals(FhirpathQuantity.UCUM_SYSTEM)) {
+    if (quantity.getSystem().equals(FhirpathQuantity.UCUM_SYSTEM_URI)) {
       canonicalizedValue = Ucum.getCanonicalValue(value, code);
       canonicalizedCode = Ucum.getCanonicalCode(value, code);
     } else {
@@ -241,7 +241,7 @@ public class QuantityEncoding {
    * @return the SQL struct for the Quantity type.
    */
   @Nonnull
-  public static Column toStruct(
+  private static Column toStruct(
       @Nonnull final Column id,
       @Nonnull final Column value,
       @Nonnull final Column value_scale,
@@ -318,7 +318,7 @@ public class QuantityEncoding {
         lit(null),
         lit(null),
         lit("1"),
-        lit(FhirpathQuantity.UCUM_SYSTEM),
+        lit(FhirpathQuantity.UCUM_SYSTEM_URI),
         lit("1"),
         // we do not need to normalize this as the unit is always "1"
         // so it will be comparable with other quantities with unit "1"
