@@ -75,7 +75,7 @@ pc <- pathling_connect(sc)
 import au.csiro.pathling.library.PathlingContext
 
 val spark = SparkSession.builder
-        .config("spark.jars.packages", "au.csiro.pathling:library-runtime:8.1.0," +
+        .config("spark.jars.packages", "au.csiro.pathling:library-runtime:8.1.1-SNAPSHOT," +
                 "io.delta:delta-spark_2.12:3.1.0")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.sql.catalog.spark_catalog",
@@ -97,7 +97,7 @@ class MyApp {
     public static void main(String[] args) {
         SparkSession spark = SparkSession.builder()
                 .config("spark.jars.packages",
-                        "au.csiro.pathling:library-runtime:8.1.0," +
+                        "au.csiro.pathling:library-runtime:8.1.1-SNAPSHOT" +
                                 "io.delta:delta-spark_2.12:3.1.0")
                 .config("spark.sql.extensions",
                         "io.delta.sql.DeltaSparkSessionExtension")

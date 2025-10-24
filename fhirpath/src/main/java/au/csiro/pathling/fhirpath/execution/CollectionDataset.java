@@ -103,8 +103,9 @@ public class CollectionDataset {
   }
 
   /**
-   * Converts this CollectionDataset to a dataset with id and external value columns. <p This method
-   * is useful for creating an output format that includes:
+   * Converts this CollectionDataset to a dataset with id and external value columns. 
+   * <p>
+   * This method is useful for creating an output format that includes:
    * <ul>
    *   <li>An "id" column identifying the resource</li>
    *   <li>A "value" column containing the external representation of the FHIRPath
