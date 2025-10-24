@@ -30,6 +30,45 @@
           ]
         }
       ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "o1",
+      "component": [
+        {
+          "valueQuantity": {
+            "value": 98.6,
+            "unit": "F"
+          }
+        },
+        {
+          "valueQuantity": {
+            "value": 37,
+            "unit": "C"
+          }
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "o2",
+      "component": [
+        {
+          "valueQuantity": {
+            "value": 33.44,
+            "unit": "C"
+          }
+        }
+      ]
+    },
+    {
+      "resourceType": "Observation",
+      "id": "o3",
+      "component": [
+        {
+          "valueString": "test"
+        }
+      ]
     }
   ],
   "tests": [
@@ -90,6 +129,41 @@
         {
           "id": "p2",
           "given_name": "f2"
+        }
+      ]
+    },
+    {
+      "title": "external value of array of Decimals",
+      "view": {
+        "resource": "Observation",
+        "select": [
+          {
+            "column": [
+              {
+                "path": "id",
+                "name": "id"
+              },
+              {
+                "path": "component.value.ofType(Quantity).value",
+                "name": "component_value", 
+                "collection": true
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "o1",
+          "component_value": ["98.6", "37" ]
+        },
+        {
+          "id": "o2",
+          "component_value": ["33.44"]
+        },
+        {
+          "id": "o3",
+          "component_value": []
         }
       ]
     }
