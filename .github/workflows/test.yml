@@ -4,7 +4,7 @@ name: Test
 
 # This workflow runs on all pull requests except those from release branches.
 on:
-  pull_request_target:
+  pull_request:
 
 env:
   # The add-exports and add-opens flags are required for Java 21

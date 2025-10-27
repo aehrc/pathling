@@ -113,9 +113,9 @@
 
     <!-- UCUM -->
     <dependency>
-      <groupId>au.csiro.pathling</groupId>
-      <artifactId>ucum</artifactId>
-      <version>1.0.4</version>
+      <groupId>io.github.fhnaumann</groupId>
+      <artifactId>ucumate-core</artifactId>
+      <version>1.0.8</version>
     </dependency>
 
     <dependency>
