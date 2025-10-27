@@ -101,8 +101,8 @@ class SingleResourceFhirpathTest {
   }
 
   @Nonnull
-  FhirpathExecutor createEvaluator(@Nonnull final DataSource datasource) {
-    return FhirpathExecutor.of(new Parser(), new SingleEvaluatorProvider(encoders.getContext(),
+  FhirPathExecutor createEvaluator(@Nonnull final DataSource datasource) {
+    return FhirPathExecutor.of(new Parser(), new SingleEvaluatorProvider(encoders.getContext(),
         StaticFunctionRegistry.getInstance(),
         Map.of(),
         datasource));

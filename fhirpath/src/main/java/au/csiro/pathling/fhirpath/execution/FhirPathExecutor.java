@@ -36,7 +36,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * resource types, while maintaining the same parsing and evaluation configuration.
  */
 @Value(staticConstructor = "of")
-public class FhirpathExecutor {
+public class FhirPathExecutor {
 
   /**
    * The parser used to convert string expressions into {@link FhirPath} objects.
