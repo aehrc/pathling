@@ -26,7 +26,7 @@ import au.csiro.pathling.encoders.QuantitySupport;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhirpath.CalendarDurationUnit;
-import au.csiro.pathling.fhirpath.FhirpathQuantity;
+import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import au.csiro.pathling.sql.types.FlexiDecimal;
 import au.csiro.pathling.sql.types.FlexiDecimalSupport;
 import jakarta.annotation.Nonnull;
@@ -129,7 +129,7 @@ public class QuantityEncoding {
     @Nullable final String code = quantity.getCode();
     final BigDecimal canonicalizedValue;
     final String canonicalizedCode;
-    if (quantity.getSystem().equals(FhirpathQuantity.UCUM_SYSTEM_URI)) {
+    if (quantity.getSystem().equals(FhirPathQuantity.UCUM_SYSTEM_URI)) {
       canonicalizedValue = Ucum.getCanonicalValue(value, code);
       canonicalizedCode = Ucum.getCanonicalCode(value, code);
     } else {
@@ -266,7 +266,7 @@ public class QuantityEncoding {
    * @return the column with the literal representation of the quantity.
    */
   @Nonnull
-  public static Column encodeLiteral(@Nonnull final FhirpathQuantity quantity) {
+  public static Column encodeLiteral(@Nonnull final FhirPathQuantity quantity) {
     final BigDecimal value = quantity.getValue();
     final BigDecimal canonicalizedValue;
     final String canonicalizedCode;
@@ -318,7 +318,7 @@ public class QuantityEncoding {
         lit(null),
         lit(null),
         lit("1"),
-        lit(FhirpathQuantity.UCUM_SYSTEM_URI),
+        lit(FhirPathQuantity.UCUM_SYSTEM_URI),
         lit("1"),
         // we do not need to normalize this as the unit is always "1"
         // so it will be comparable with other quantities with unit "1"

@@ -12,7 +12,7 @@ import lombok.Value;
  */
 @Value
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
-public class FhirpathQuantity {
+public class FhirPathQuantity {
 
   /**
    * The system URI for Fhipath calendar duration units (e.g. year, month, day).
@@ -67,9 +67,9 @@ public class FhirpathQuantity {
    * @return UCUM quantity
    */
   @Nonnull
-  public static FhirpathQuantity ofUCUM(@Nonnull final BigDecimal value,
+  public static FhirPathQuantity ofUCUM(@Nonnull final BigDecimal value,
       @Nonnull final String unit) {
-    return new FhirpathQuantity(value, unit, UCUM_SYSTEM_URI, unit);
+    return new FhirPathQuantity(value, unit, UCUM_SYSTEM_URI, unit);
   }
 
   /**
@@ -81,13 +81,13 @@ public class FhirpathQuantity {
    * @return calendar duration quantity
    */
   @Nonnull
-  public static FhirpathQuantity ofCalendar(@Nonnull final BigDecimal value,
+  public static FhirPathQuantity ofCalendar(@Nonnull final BigDecimal value,
       @Nonnull final CalendarDurationUnit unit, @Nonnull final String unitName) {
     if (!CalendarDurationUnit.fromString(unitName).equals(unit)) {
       throw new IllegalArgumentException(
           "Unit name " + unitName + " does not match CalendarDurationUnit " + unit);
     }
-    return new FhirpathQuantity(value, unitName,
+    return new FhirPathQuantity(value, unitName,
         FHIRPATH_CALENDAR_DURATION_SYSTEM_URI,
         unit.getUnit());
   }
@@ -100,7 +100,7 @@ public class FhirpathQuantity {
    * @return calendar duration quantity
    */
   @Nonnull
-  public static FhirpathQuantity ofCalendar(@Nonnull final BigDecimal value,
+  public static FhirPathQuantity ofCalendar(@Nonnull final BigDecimal value,
       @Nonnull final CalendarDurationUnit unit) {
     return ofCalendar(value, unit, unit.getUnit());
   }
@@ -110,11 +110,11 @@ public class FhirpathQuantity {
    * duration units.
    *
    * @param literal the FHIRPath quantity literal
-   * @return the parsed FhirpathQuantity
+   * @return the parsed FhirPathQuantity
    * @throws IllegalArgumentException if the literal is not a valid FHIRPath quantity literal
    */
   @Nonnull
-  public static FhirpathQuantity parse(@Nonnull final String literal) {
+  public static FhirPathQuantity parse(@Nonnull final String literal) {
     // Regex with named groups for value, unit (quoted), and time (bareword calendar/ucum)
     final Matcher matcher = QUANTITY_REGEX.matcher(literal.trim());
     if (!matcher.matches()) {

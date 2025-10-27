@@ -1,7 +1,7 @@
 package au.csiro.pathling.sql.misc;
 
-import static au.csiro.pathling.fhirpath.FhirpathQuantity.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI;
-import static au.csiro.pathling.fhirpath.FhirpathQuantity.UCUM_SYSTEM_URI;
+import static au.csiro.pathling.fhirpath.FhirPathQuantity.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI;
+import static au.csiro.pathling.fhirpath.FhirPathQuantity.UCUM_SYSTEM_URI;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 

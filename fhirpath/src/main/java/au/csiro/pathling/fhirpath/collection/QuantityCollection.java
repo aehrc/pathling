@@ -18,20 +18,20 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
+import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.FhirpathQuantity;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.ColumnComparator;
+import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.fhirpath.comparison.QuantityComparator;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultCompositeDefinition;
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
-import au.csiro.pathling.fhirpath.comparison.Comparable;
 import au.csiro.pathling.sql.misc.QuantityToLiteral;
 import jakarta.annotation.Nonnull;
 import java.util.List;
@@ -122,7 +122,7 @@ public class QuantityCollection extends Collection implements Comparable, String
   @Nonnull
   public static QuantityCollection fromLiteral(@Nonnull final String quantityLiteral) {
     return QuantityCollection.build(new DefaultRepresentation(
-            QuantityEncoding.encodeLiteral(FhirpathQuantity.parse(quantityLiteral))),
+            QuantityEncoding.encodeLiteral(FhirPathQuantity.parse(quantityLiteral))),
         Optional.of(LITERAL_DEFINITION)
     );
   }
