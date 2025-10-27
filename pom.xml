@@ -946,6 +946,9 @@
                 </fileset>
                 <fileset>
                   <directory>${project.basedir}/licenses</directory>
+                  <excludes>
+                    <exclude>license-template.ftl</exclude>
+                  </excludes>
                 </fileset>
               </filesets>
             </configuration>
