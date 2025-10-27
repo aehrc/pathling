@@ -36,6 +36,7 @@ import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
+import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator.FhirPathEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.yaml.YamlSupport;
 import au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase;
@@ -181,7 +182,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
    */
   private void doCheck(@Nonnull final ResolverBuilder rb) {
     // Create the FHIRPath evaluator with the provided resolver.
-    final FhirPathEvaluator.FhirpathEvaluatorBuilder builder = FhirPathEvaluator
+    final FhirPathEvaluatorBuilder builder = FhirPathEvaluator
         .fromResolver(rb.create(resolverFactory));
 
     // If the test specification has variables, convert them to FHIRPath collections

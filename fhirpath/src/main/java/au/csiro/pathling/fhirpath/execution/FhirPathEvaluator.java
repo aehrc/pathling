@@ -65,7 +65,7 @@ public class FhirPathEvaluator {
    *   <li>A map of variables available during evaluation (optional)</li>
    * </ul>
    */
-  public static class FhirpathEvaluatorBuilder {
+  public static class FhirPathEvaluatorBuilder {
 
   }
 
@@ -99,7 +99,7 @@ public class FhirPathEvaluator {
    * @return a builder initialized with the specified resource resolver
    */
   @Nonnull
-  public static FhirpathEvaluatorBuilder fromResolver(
+  public static FhirPathEvaluatorBuilder fromResolver(
       @Nonnull final ResourceResolver resourceResolver) {
     return FhirPathEvaluator.builder().resourceResolver(resourceResolver);
   }
