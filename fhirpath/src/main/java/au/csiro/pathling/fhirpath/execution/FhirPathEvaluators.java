@@ -42,7 +42,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 @UtilityClass
 @Slf4j
-public class FhirpathEvaluators {
+public class FhirPathEvaluators {
 
   /**
    * Creates a single resource evaluator.
@@ -102,7 +102,7 @@ public class FhirpathEvaluators {
     public FhirPathEvaluator create(@Nonnull final ResourceType subjectResource,
         @Nonnull final FunctionRegistry functionRegistry,
         @Nonnull final Map<String, Collection> variables) {
-      return FhirpathEvaluators.createSingle(
+      return FhirPathEvaluators.createSingle(
           subjectResource,
           fhirContext,
           functionRegistry,
@@ -143,7 +143,7 @@ public class FhirpathEvaluators {
     @Override
     public FhirPathEvaluator create(@Nonnull final ResourceType subjectResource,
         @Nonnull final Supplier<List<FhirPath>> contextPathsSupplier) {
-      return FhirpathEvaluators.createSingle(
+      return FhirPathEvaluators.createSingle(
           subjectResource,
           fhirContext,
           functionRegistry,
