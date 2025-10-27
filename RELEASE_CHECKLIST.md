@@ -48,3 +48,9 @@ It only currently supports the publishing of the current version of the chart.
 
 No tagging is required to release the chart, it is built and published upon
 every execution of the "Deploy site" workflow.
+
+## After release
+
+Update the version to one patch version higher than the release, with a 
+`-SNAPSHOT` suffix. For example, following the `9.0.0` release, the version is 
+updated to `9.0.1-SNAPSHOT` for subsequent branching.
