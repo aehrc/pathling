@@ -185,7 +185,10 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
   @Override
   @Nonnull
   public StringCollection asStringPath() {
-    return Collection.defaultAsStringPath(this);
+    // Convert the decimal to a singular string using a UDF to ensure correct formatting.
+    return asSingular().map(
+        cr -> cr.callUdf(DecimalToLiteral.FUNCTION_NAME, DefaultRepresentation.empty()),
+        StringCollection::build);
   }
 
   @Nonnull
