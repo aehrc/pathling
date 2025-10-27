@@ -52,7 +52,7 @@ const config = {
           lastVersion: "current",
           versions: {
             current: {
-              label: "8.2.1-SNAPSHOT",
+              label: "9.0.0-SNAPSHOT",
               path: "/",
             },
             "7.2.0": {
