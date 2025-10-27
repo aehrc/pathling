@@ -123,7 +123,7 @@ class ValidationLogic {
       case STRING -> {
         // For strings: check if '1.0'/'0.0' or if cast to boolean succeeds.
         final Column is10or00 = value.equalTo(lit("1.0")).or(value.equalTo(lit("0.0")));
-        final Column castSucceeds = value.cast(DataTypes.BooleanType).isNotNull();
+        final Column castSucceeds = value.try_cast(DataTypes.BooleanType).isNotNull();
         yield value.isNotNull().and(is10or00.or(castSucceeds));
       }
       case INTEGER ->

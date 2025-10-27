@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.sql.misc;
 
-import au.csiro.pathling.fhirpath.FhirpathQuantity;
+import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.udf.SqlFunction1;
 import jakarta.annotation.Nullable;
@@ -35,8 +35,8 @@ import org.apache.spark.sql.types.DataType;
  * </ul>
  * Returns null if the string cannot be parsed as a valid quantity.
  *
- * @see FhirpathQuantity#parse(String)
- * @see QuantityEncoding#encode(FhirpathQuantity)
+ * @see FhirPathQuantity#parse(String)
+ * @see QuantityEncoding#encode(FhirPathQuantity)
  */
 public class StringToQuantity implements SqlFunction1<String, Row> {
 
@@ -65,7 +65,7 @@ public class StringToQuantity implements SqlFunction1<String, Row> {
       return null;
     }
     try {
-      final FhirpathQuantity quantity = FhirpathQuantity.parse(quantityString);
+      final FhirPathQuantity quantity = FhirPathQuantity.parse(quantityString);
       return QuantityEncoding.encode(quantity);
     } catch (final IllegalArgumentException e) {
       // Invalid quantity literal format

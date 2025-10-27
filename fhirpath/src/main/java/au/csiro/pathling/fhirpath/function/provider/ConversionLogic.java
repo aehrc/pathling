@@ -158,7 +158,7 @@ class ConversionLogic {
         // SparkSQL cast handles 'true', 'false', 't', 'f', 'yes', 'no', 'y', 'n', '1', '0' (case-insensitive).
           when(value.equalTo(lit("1.0")), lit(true))
               .when(value.equalTo(lit("0.0")), lit(false))
-              .otherwise(value.cast(DataTypes.BooleanType));
+              .otherwise(value.try_cast(DataTypes.BooleanType));
       case INTEGER ->
         // Integer: Only 0 or 1 can be converted (1 → true, 0 → false, otherwise null).
           when(value.equalTo(lit(1)), lit(true))
@@ -188,11 +188,11 @@ class ConversionLogic {
     return switch (sourceType) {
       case BOOLEAN ->
         // Boolean: Use SparkSQL cast (true → 1, false → 0).
-          value.cast(DataTypes.IntegerType);
+          value.try_cast(DataTypes.IntegerType);
       case STRING ->
         // String: Only convert if it matches integer format (no decimal point).
         // Per FHIRPath spec, valid integer strings match: (\+|-)?\d+
-          when(value.rlike(INTEGER_REGEX), value.cast(DataTypes.IntegerType));
+          when(value.rlike(INTEGER_REGEX), value.try_cast(DataTypes.IntegerType));
       default -> lit(null);
     };
   }
@@ -213,7 +213,7 @@ class ConversionLogic {
     return switch (sourceType) {
       case BOOLEAN, INTEGER, STRING ->
         // Boolean/Integer/String: cast to decimal.
-          value.cast(DecimalCollection.getDecimalType());
+          value.try_cast(DecimalCollection.getDecimalType());
       default -> lit(null);
     };
   }
@@ -236,7 +236,7 @@ class ConversionLogic {
     return switch (sourceType) {
       case BOOLEAN, INTEGER, DATE, DATETIME, TIME ->
         // Primitive types can be cast to string directly.
-          value.cast(DataTypes.StringType);
+          value.try_cast(DataTypes.StringType);
       case DECIMAL ->
         // Decimal: Use DecimalToLiteral UDF to strip trailing zeros.
         // E.g., 101.990000 -> 101.99, 1.0 -> 1
@@ -341,7 +341,7 @@ class ConversionLogic {
         // String: Parse as FHIRPath quantity literal using UDF
         // UDF returns null if string doesn't match quantity format
           callUDF(StringToQuantity.FUNCTION_NAME, value);
-      default -> lit(null).cast(QuantityEncoding.dataType());
+      default -> lit(null).try_cast(QuantityEncoding.dataType());
     };
   }
 }
