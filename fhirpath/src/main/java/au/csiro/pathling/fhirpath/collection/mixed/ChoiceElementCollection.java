@@ -89,7 +89,7 @@ public class ChoiceElementCollection extends MixedCollection {
   @Nonnull
   private Collection resolveSystemType(@Nonnull final FhirPathType fhirpathType) {
 
-    // find the list of FHIRDefinedTypes that match this FhirpathType
+    // find the list of FHIRDefinedTypes that match this FhirPathType
     final List<FHIRDefinedType> fhirPathTypes = fhirpathType.getFhirTypes();
     // find the element definitions that match the FHIRDefinedTypes in this choice element
     final ElementDefinition[] selectedTypes = fhirPathTypes.stream()

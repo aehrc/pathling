@@ -160,7 +160,7 @@ public class FhirPathTime {
 
 
   /**
-   * Checks if given string represents a valid Fhirpath time value.
+   * Checks if given string represents a valid FHIRPath time value.
    *
    * @param timeValue the time value
    * @return true is the value is a valid time.

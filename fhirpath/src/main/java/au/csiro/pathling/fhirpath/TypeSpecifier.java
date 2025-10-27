@@ -98,9 +98,9 @@ public class TypeSpecifier {
 
 
   /**
-   * Converts this type specifier to a System(Fhirpath) type.
+   * Converts this type specifier to a System FHIRPath type.
    *
-   * @return the System(Fhirpath) type
+   * @return the System FHIRPath type
    * @throws IllegalStateException if this type specifier is not a System type
    */
   @Nonnull
