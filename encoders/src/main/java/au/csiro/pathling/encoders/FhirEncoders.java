@@ -34,7 +34,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.Getter;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import scala.collection.JavaConverters;
 
 /**
  * Spark Encoders for FHIR Resources. This object is thread safe.
@@ -245,7 +244,7 @@ public class FhirEncoders {
             context,
             mappings,
             maxNestingLevel,
-            JavaConverters.asScalaSet(openTypes).toSet(),
+            scala.jdk.javaapi.CollectionConverters.asScala(openTypes).toSet(),
             enableExtensions));
   }
 

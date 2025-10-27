@@ -12,17 +12,17 @@ import lombok.Value;
  */
 @Value
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
-public class FhirpathQuantity {
+public class FhirPathQuantity {
 
   /**
    * The system URI for Fhipath calendar duration units (e.g. year, month, day).
    */
-  public static final String FHIRPATH_CALENDAR_DURATION_SYSTEM = "https://hl7.org/fhirpath/N1/calendar-duration";
+  public static final String FHIRPATH_CALENDAR_DURATION_SYSTEM_URI = "https://hl7.org/fhirpath/N1/calendar-duration";
 
   /**
    * The system URI for UCUM units.
    */
-  public static final String UCUM_SYSTEM = "http://unitsofmeasure.org";
+  public static final String UCUM_SYSTEM_URI = "http://unitsofmeasure.org";
 
   /**
    * Regex pattern for parsing FHIRPath quantity literals.
@@ -47,7 +47,7 @@ public class FhirpathQuantity {
    * @return true if the quantity is a calendar duration, false otherwise
    */
   public boolean isCalendarDuration() {
-    return FHIRPATH_CALENDAR_DURATION_SYSTEM.equals(system);
+    return FHIRPATH_CALENDAR_DURATION_SYSTEM_URI.equals(system);
   }
 
   /**
@@ -57,7 +57,7 @@ public class FhirpathQuantity {
    */
 
   public boolean isUCUM() {
-    return UCUM_SYSTEM.equals(system);
+    return UCUM_SYSTEM_URI.equals(system);
   }
 
   /**
@@ -68,9 +68,9 @@ public class FhirpathQuantity {
    * @return UCUM quantity
    */
   @Nonnull
-  public static FhirpathQuantity ofUCUM(@Nonnull final BigDecimal value,
+  public static FhirPathQuantity ofUCUM(@Nonnull final BigDecimal value,
       @Nonnull final String unit) {
-    return new FhirpathQuantity(value, unit, UCUM_SYSTEM, unit);
+    return new FhirPathQuantity(value, unit, UCUM_SYSTEM_URI, unit);
   }
 
   /**
@@ -82,14 +82,14 @@ public class FhirpathQuantity {
    * @return calendar duration quantity
    */
   @Nonnull
-  public static FhirpathQuantity ofCalendar(@Nonnull final BigDecimal value,
+  public static FhirPathQuantity ofCalendar(@Nonnull final BigDecimal value,
       @Nonnull final CalendarDurationUnit unit, @Nonnull final String unitName) {
     if (!CalendarDurationUnit.fromString(unitName).equals(unit)) {
       throw new IllegalArgumentException(
           "Unit name " + unitName + " does not match CalendarDurationUnit " + unit);
     }
-    return new FhirpathQuantity(value, unitName,
-        FHIRPATH_CALENDAR_DURATION_SYSTEM,
+    return new FhirPathQuantity(value, unitName,
+        FHIRPATH_CALENDAR_DURATION_SYSTEM_URI,
         unit.getUnit());
   }
 
@@ -101,7 +101,7 @@ public class FhirpathQuantity {
    * @return calendar duration quantity
    */
   @Nonnull
-  public static FhirpathQuantity ofCalendar(@Nonnull final BigDecimal value,
+  public static FhirPathQuantity ofCalendar(@Nonnull final BigDecimal value,
       @Nonnull final CalendarDurationUnit unit) {
     return ofCalendar(value, unit, unit.getUnit());
   }
@@ -111,11 +111,11 @@ public class FhirpathQuantity {
    * calendar duration units. When no unit is specified, defaults to '1' in UCUM system.
    *
    * @param literal the FHIRPath quantity literal
-   * @return the parsed FhirpathQuantity
+   * @return the parsed FhirPathQuantity
    * @throws IllegalArgumentException if the literal is not a valid FHIRPath quantity literal
    */
   @Nonnull
-  public static FhirpathQuantity parse(@Nonnull final String literal) {
+  public static FhirPathQuantity parse(@Nonnull final String literal) {
     // Regex with named groups for value, unit (quoted), and time (bareword calendar/ucum)
     final Matcher matcher = QUANTITY_REGEX.matcher(literal.trim());
     if (!matcher.matches()) {

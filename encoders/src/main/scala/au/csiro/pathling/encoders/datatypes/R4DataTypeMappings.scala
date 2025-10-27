@@ -36,7 +36,7 @@ import org.hl7.fhir.instance.model.api.{IBase, IBaseDatatype, IPrimitiveType}
 import org.hl7.fhir.r4.model._
 
 import java.util.TimeZone
-import scala.collection.convert.ImplicitConversions.`iterable AsScalaIterable`
+import scala.jdk.CollectionConverters._
 
 /**
  * Data type mappings for FHIR STU3.
@@ -186,7 +186,7 @@ class R4DataTypeMappings extends DataTypeMappings {
 
   override def getValidChoiceTypes(choice: RuntimeChildChoiceDefinition): Seq[Class[_ <: IBase]] = {
     choice
-      .getValidChildTypes
+      .getValidChildTypes.asScala
       .filter(cls => !choice.isInstanceOf[RuntimeChildAny] || isValidOpenElementType(cls))
       .toList
   }

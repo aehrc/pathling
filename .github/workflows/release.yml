@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  # The add-exports and add-opens flags are required for Java 17
+  # The add-exports and add-opens flags are required for Java 21
   MAVEN_OPTS: --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
 
 permissions:
@@ -31,14 +31,14 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          java-version: 17
+          java-version: 21
           distribution: "zulu"
 
-      - name: Set up Python 3.8
+      - name: Set up Python 3.9
         uses: actions/setup-python@v4
         id: python-install
         with:
-          python-version: 3.8
+          python-version: 3.9
 
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
@@ -85,8 +85,10 @@ jobs:
           sudo apt-get install -y libcurl4-openssl-dev
 
       - name: Install GPG key
+        env:
+          GPG_KEY: ${{ secrets.GPG_KEY }}
         run: |
-          cat <(echo -e "${{ secrets.GPG_KEY }}") | gpg --batch --import
+          echo "$GPG_KEY" | gpg --batch --import
           gpg --list-secret-keys --keyid-format LONG
 
       - name: Configure Maven settings
@@ -223,14 +225,14 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          java-version: 17
+          java-version: 21
           distribution: "zulu"
 
-      - name: Set up Python 3.8
+      - name: Set up Python 3.9
         uses: actions/setup-python@v4
         id: python-install
         with:
-          python-version: 3.8
+          python-version: 3.9
 
       - name: Set up R
         uses: r-lib/actions/setup-r@v2

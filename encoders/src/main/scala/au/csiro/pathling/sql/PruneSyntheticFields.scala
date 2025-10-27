@@ -26,7 +26,7 @@ package au.csiro.pathling.sql
 
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
-import org.apache.spark.sql.catalyst.expressions.{Expression, NullIntolerant, UnaryExpression}
+import org.apache.spark.sql.catalyst.expressions.{Expression, UnaryExpression}
 import org.apache.spark.sql.types.{DataType, StructType}
 
 
@@ -37,7 +37,7 @@ import org.apache.spark.sql.types.{DataType, StructType}
  * @param child the child expression
  */
 case class PruneSyntheticFields(child: Expression)
-  extends UnaryExpression with CodegenFallback with NullIntolerant {
+  extends UnaryExpression with CodegenFallback {
   override def nullable: Boolean = true
 
   @transient

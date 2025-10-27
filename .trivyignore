@@ -17,3 +17,4 @@ CVE-2022-46751
 # Zookeeper is a provided dependency, we do not bundle it into our distribution.
 CVE-2023-44981
 CVE-2024-23944
+CVE-2025-58457

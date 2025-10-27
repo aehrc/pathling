@@ -19,14 +19,15 @@ package au.csiro.pathling.test.helpers;
 
 import javax.annotation.Nonnull;
 import lombok.experimental.UtilityClass;
-import scala.collection.mutable.WrappedArray;
+import scala.collection.mutable.ArraySeq;
+import scala.collection.mutable.ArraySeq.ofRef;
 
 @UtilityClass
 public class SqlHelpers {
 
   @SafeVarargs
   @Nonnull
-  public static <T> WrappedArray<T> sql_array(final T... values) {
-    return WrappedArray.make(values);
+  public static <T> ArraySeq<T> sql_array(final T... values) {
+    return new ofRef<>(values);
   }
 }

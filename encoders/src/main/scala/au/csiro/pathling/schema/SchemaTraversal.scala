@@ -30,7 +30,7 @@ import ca.uhn.fhir.context._
 import org.hl7.fhir.instance.model.api.IBase
 import org.hl7.fhir.r4.model.Patient
 
-import scala.collection.convert.ImplicitConversions._
+import scala.jdk.CollectionConverters._
 
 
 /**
@@ -255,8 +255,9 @@ case class CompositeCtx[DT, SF](compositeDefinition: BaseRuntimeElementComposite
 
   def visitChildren(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
     compositeDefinition
-      .getChildren
+      .getChildren.asScala
       .flatMap(toChildCtx(_).accept(visitor))
+      .toSeq
   }
 
   def toChildCtx(childDefinition: BaseRuntimeChildDefinition): ChildCtx[DT, SF] = {

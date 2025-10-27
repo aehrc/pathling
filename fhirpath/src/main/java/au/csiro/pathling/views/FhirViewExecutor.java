@@ -23,7 +23,7 @@ import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.execution.FhirpathEvaluators.SingleEvaluatorFactory;
+import au.csiro.pathling.fhirpath.execution.FhirPathEvaluators.SingleEvaluatorFactory;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.projection.ColumnSelection;

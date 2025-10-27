@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific 
+ * These modifications are copyright 2018-2025 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,7 +58,7 @@ import org.hl7.fhir.r4.model.PlanDefinition.PlanDefinitionActionComponent;
 import org.hl7.fhir.r4.model.Reference;
 import org.json4s.jackson.JsonMethods;
 import org.junit.jupiter.api.Test;
-import scala.collection.mutable.WrappedArray;
+import scala.collection.mutable.ArraySeq;
 
 public class LightweightFhirEncodersTest implements JsonMethods {
 
@@ -107,7 +107,7 @@ public class LightweightFhirEncodersTest implements JsonMethods {
     assertTrue(actualExtensionRow.isNullAt(actualExtensionRow.fieldIndex("valueInteger")));
 
     final Object nestedFid = actualExtensionRow.get(actualExtensionRow.fieldIndex("_fid"));
-    final WrappedArray<?> nestedExtensions = (WrappedArray<?>) extensionMap.get(nestedFid);
+    final ArraySeq<?> nestedExtensions = (ArraySeq<?>) extensionMap.get(nestedFid);
     assertNotNull(nestedExtensions);
     assertEquals(1, nestedExtensions.length());
 
@@ -263,7 +263,7 @@ public class LightweightFhirEncodersTest implements JsonMethods {
         .getJavaMap(conditionRow.fieldIndex("_extension"));
 
     // Get resource extensions.
-    final WrappedArray<?> resourceExtensions = (WrappedArray<?>) extensionMap
+    final ArraySeq<?> resourceExtensions = (ArraySeq<?>) extensionMap
         .get(conditionRow.get(conditionRow.fieldIndex("_fid")));
 
     assertNotNull(resourceExtensions);
@@ -273,10 +273,10 @@ public class LightweightFhirEncodersTest implements JsonMethods {
         ext -> assertStringExtension("uuid:nested", "nested", ext));
 
     // Get Identifier extensions.
-    final WrappedArray<?> identifiers = (WrappedArray<?>) conditionRow
+    final ArraySeq<?> identifiers = (ArraySeq<?>) conditionRow
         .get(conditionRow.fieldIndex("identifier"));
     final Row identifierRow = (Row) identifiers.apply(0);
-    final WrappedArray<?> identifierExtensions = (WrappedArray<?>) extensionMap
+    final ArraySeq<?> identifierExtensions = (ArraySeq<?>) extensionMap
         .get(identifierRow.get(identifierRow.fieldIndex("_fid")));
 
     assertNotNull(identifierExtensions);
@@ -284,12 +284,12 @@ public class LightweightFhirEncodersTest implements JsonMethods {
     assertIntExtension("uuid:ext11", 11, (Row) identifierExtensions.apply(1));
 
     // Get Stage/Type extensions.
-    final WrappedArray<?> stages = (WrappedArray<?>) conditionRow
+    final ArraySeq<?> stages = (ArraySeq<?>) conditionRow
         .get(conditionRow.fieldIndex("stage"));
     final Row stageRow = (Row) stages.apply(0);
     final Row stageTypeRow = (Row) stageRow.get(stageRow.fieldIndex("type"));
 
-    final WrappedArray<?> stageTypeExtensions = (WrappedArray<?>) extensionMap
+    final ArraySeq<?> stageTypeExtensions = (ArraySeq<?>) extensionMap
         .get(stageTypeRow.get(stageTypeRow.fieldIndex("_fid")));
     assertNotNull(stageTypeExtensions);
     assertStringExtension("uuid:ext12", "ext12", (Row) stageTypeExtensions.apply(0));
@@ -326,10 +326,10 @@ public class LightweightFhirEncodersTest implements JsonMethods {
     final Row deviceRow = rowEncoder.createDeserializer().apply(serializedRow);
 
     final List<Row> properties = deviceRow.getList(deviceRow.fieldIndex("property"));
-    final Row propertyRow = properties.get(0);
+    final Row propertyRow = properties.getFirst();
     final List<Row> quantityArray = propertyRow.getList(propertyRow.fieldIndex("valueQuantity"));
 
-    final Row quantity1 = quantityArray.get(0);
+    final Row quantity1 = quantityArray.getFirst();
     assertQuantity(quantity1, "0.0010", "m");
 
     final Row quantity2 = quantityArray.get(1);

@@ -32,7 +32,7 @@ import org.apache.spark.sql.functions;
  */
 public class QuantityComparator implements ColumnComparator, ElementWiseEquality {
 
-  private final static QuantityComparator INSTANCE = new QuantityComparator();
+  private static final QuantityComparator INSTANCE = new QuantityComparator();
 
   public static QuantityComparator getInstance() {
     return INSTANCE;

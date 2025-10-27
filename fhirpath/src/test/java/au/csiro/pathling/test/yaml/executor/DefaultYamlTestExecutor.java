@@ -20,6 +20,7 @@ package au.csiro.pathling.test.yaml.executor;
 import static au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase.ANY_ERROR;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -34,7 +35,8 @@ import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
-import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
+import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
+import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator.FhirPathEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.yaml.YamlSupport;
 import au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase;
@@ -59,7 +61,7 @@ import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructType;
 import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
-import scala.collection.mutable.WrappedArray;
+import scala.collection.mutable.ArraySeq;
 
 /**
  * Standard implementation of {@link YamlTestExecutor} that handles the execution and validation of
@@ -170,9 +172,9 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
    * <p>
    * The three types of test cases handled are:
    * <ul>
-   *   <li><strong>Error tests</strong> - {@link #verifyError(FhirpathEvaluator)}</li>
-   *   <li><strong>Expression-only tests</strong> - {@link #verifyEvaluation(FhirpathEvaluator)}</li>
-   *   <li><strong>Result comparison tests</strong> - {@link #verifyExpectedResult(FhirpathEvaluator)}</li>
+   *   <li><strong>Error tests</strong> - {@link #verifyError(FhirPathEvaluator)}</li>
+   *   <li><strong>Expression-only tests</strong> - {@link #verifyEvaluation(FhirPathEvaluator)}</li>
+   *   <li><strong>Result comparison tests</strong> - {@link #verifyExpectedResult(FhirPathEvaluator)}</li>
    * </ul>
    *
    * @param rb the resolver builder used to create the ResourceResolver for the evaluator. Must not
@@ -180,7 +182,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
    */
   private void doCheck(@Nonnull final ResolverBuilder rb) {
     // Create the FHIRPath evaluator with the provided resolver.
-    final FhirpathEvaluator.FhirpathEvaluatorBuilder builder = FhirpathEvaluator
+    final FhirPathEvaluatorBuilder builder = FhirPathEvaluator
         .fromResolver(rb.create(resolverFactory));
 
     // If the test specification has variables, convert them to FHIRPath collections
@@ -190,7 +192,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     }
 
     // Build the evaluator and determine which type of test to perform.
-    final FhirpathEvaluator evaluator = builder.build();
+    final FhirPathEvaluator evaluator = builder.build();
     if (spec.isError()) {
       // Test expects an error to be thrown.
       verifyError(evaluator);
@@ -213,7 +215,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
    * @throws AssertionError if no error is thrown when one was expected, or if the error message
    * doesn't match the expected message
    */
-  private void verifyError(@Nonnull final FhirpathEvaluator evaluator) {
+  private void verifyError(@Nonnull final FhirPathEvaluator evaluator) {
     try {
       // Attempt to evaluate the expression - this should throw an exception.
       final Collection evalResult = verifyEvaluation(evaluator);
@@ -241,7 +243,10 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
 
       // Only check the specific error message if it's not the wildcard ANY_ERROR.
       if (!ANY_ERROR.equals(spec.errorMsg())) {
-        assertEquals(spec.errorMsg(), rootCauseMsg);
+        assertTrue(rootCauseMsg.contains(spec.errorMsg()),
+            String.format("Error message mismatch for expression '%s'. Expected to contain: '%s',"
+                    + " but got: '%s'",
+                spec.expression(), spec.errorMsg(), rootCauseMsg));
       }
     }
   }
@@ -261,7 +266,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
    * @return the Collection result of evaluating the FHIRPath expression
    */
   @Nonnull
-  private Collection verifyEvaluation(@Nonnull final FhirpathEvaluator evaluator) {
+  private Collection verifyEvaluation(@Nonnull final FhirPathEvaluator evaluator) {
     // Parse the FHIRPath expression from the test specification.
     final FhirPath fhirPath = PARSER.parse(spec.expression());
     log.trace("FhirPath expression: {}", fhirPath);
@@ -281,7 +286,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
    *
    * @param evaluator the FHIRPath evaluator to use for expression evaluation. Must not be null.
    */
-  private void verifyExpectedResult(@Nonnull final FhirpathEvaluator evaluator) {
+  private void verifyExpectedResult(@Nonnull final FhirPathEvaluator evaluator) {
     // Evaluate the expression to get the actual result.
     final Collection evalResult = verifyEvaluation(evaluator);
 
@@ -332,7 +337,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
 
     // Handle single-item lists by unwrapping them to the contained value.
     final Object resultRepresentation = result instanceof final List<?> list && list.size() == 1
-                                        ? list.get(0)
+                                        ? list.getFirst()
                                         : result;
 
     // Convert the YAML representation to a FHIR element definition.
@@ -418,7 +423,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
                              ? null
                              : row.get(index);
 
-    if (actualRaw instanceof final WrappedArray<?> wrappedArray) {
+    if (actualRaw instanceof final ArraySeq<?> wrappedArray) {
       // Handle Spark WrappedArray - unwrap single-element arrays.
       return (wrappedArray.length() == 1
               ? adjustResultType(wrappedArray.apply(0))
@@ -477,7 +482,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
           continue;
         } else {
           // Single-valued list: extract the single value.
-          singleValue = l.get(0);
+          singleValue = l.getFirst();
         }
       }
 

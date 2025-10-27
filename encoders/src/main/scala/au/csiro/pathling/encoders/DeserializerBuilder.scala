@@ -38,7 +38,7 @@ import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.types.{DataType, ObjectType}
 import org.hl7.fhir.instance.model.api.IBaseResource
 
-import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
+import scala.jdk.CollectionConverters._
 
 /**
  * The schema processor for building deserializer expressions.
@@ -215,7 +215,7 @@ private[encoders] sealed class DeserializerBuilderProcessor(val path: Option[Exp
       val childDefinition = if (definition.getChildByName(name) != null)
         definition.getChildByName(name)
       else
-        definition.getChildren.find(childDef => childDef.getElementName == name).get
+        definition.getChildren.asScala.find(childDef => childDef.getElementName == name).get
 
       (setterFor(childDefinition), expression)
     }

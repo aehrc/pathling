@@ -30,9 +30,9 @@ information.
 ## Environment variables
 
 By default, Databricks uses Java 8 within its clusters, while Pathling requires
-Java 17. To enable Java 17 support within your cluster, navigate to __Advanced
+Java 21. To enable Java 21 support within your cluster, navigate to __Advanced
 Options > Spark > Environment Variables__ and add the following:
 
 ```bash
-JNAME=zulu17-ca-amd64
+JNAME=zulu21-ca-amd64
 ```

@@ -21,9 +21,10 @@ import static au.csiro.pathling.test.helpers.SqlHelpers.sql_array;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.execution.FhirpathEvaluators.SingleEvaluatorProvider;
+import au.csiro.pathling.fhirpath.execution.FhirPathEvaluators.SingleEvaluatorProvider;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
@@ -54,7 +55,9 @@ import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Observation;
+import org.hl7.fhir.r4.model.Observation.ObservationComponentComponent;
 import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.Test;
@@ -69,7 +72,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 @SpringBootUnitTest
 @Slf4j
-class SingleResourceFhirpathTest {
+class SingleResourceFhirPathTest {
 
   @Autowired
   SparkSession spark;
@@ -101,8 +104,8 @@ class SingleResourceFhirpathTest {
   }
 
   @Nonnull
-  FhirpathExecutor createEvaluator(@Nonnull final DataSource datasource) {
-    return FhirpathExecutor.of(new Parser(), new SingleEvaluatorProvider(encoders.getContext(),
+  FhirPathExecutor createEvaluator(@Nonnull final DataSource datasource) {
+    return FhirPathExecutor.of(new Parser(), new SingleEvaluatorProvider(encoders.getContext(),
         StaticFunctionRegistry.getInstance(),
         Map.of(),
         datasource));
@@ -278,6 +281,46 @@ class SingleResourceFhirpathTest {
             RowFactory.create("3", null)
         );
   }
+
+
+  @Test
+  void testOfTypeForComplexChoice() {
+    final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
+        List.of(
+            new Observation()
+                .setValue(new IntegerType("17"))
+                .addComponent(new ObservationComponentComponent().setValue(
+                    new Quantity(10.1).setUnit("kg")
+                ))
+                .addComponent(new ObservationComponentComponent().setValue(
+                    new Quantity(20).setUnit("kg")
+                ))
+                .setId("Observation/1"),
+            new Observation()
+                .setValue(new StringType("value1"))
+                .addComponent(new ObservationComponentComponent().setValue(
+                    new Quantity(10).setUnit("kg")
+                ))
+                .setId("Observation/2"),
+            new Observation()
+                .setId("Observation/3")
+        )
+    );
+
+    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.OBSERVATION,
+        "component.value.ofType(Quantity).value");
+
+    Assertions.assertThat(evalResult)
+        .hasClass(DecimalCollection.class)
+        .toExternalResult()
+        .debugSchema()
+        .hasRowsUnordered(
+            RowFactory.create("1", sql_array("10.1", "20")),
+            RowFactory.create("2", sql_array("10")),
+            RowFactory.create("3", null)
+        );
+  }
+
 
   @Test
   void testFHIRTypeOfIntegerMathOperation() {

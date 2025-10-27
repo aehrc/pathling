@@ -82,8 +82,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import scala.collection.JavaConverters;
-import scala.collection.mutable.WrappedArray;
+import scala.collection.mutable.ArraySeq;
+import scala.jdk.javaapi.CollectionConverters;
 
 @SpringBootUnitTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -214,8 +214,8 @@ class AnsiTypeHintingTest {
 
   @Nonnull
   static String sqlValueToString(@Nonnull final Object value) {
-    if (value instanceof final WrappedArray<?> array) {
-      return "[" + JavaConverters.seqAsJavaList(array).stream()
+    if (value instanceof final ArraySeq<?> array) {
+      return "[" + CollectionConverters.asJava(array).stream()
           .map(AnsiTypeHintingTest::sqlValueToString).collect(
               Collectors.joining(",")) + "]";
     }
@@ -322,7 +322,7 @@ class AnsiTypeHintingTest {
 
   @ParameterizedTest(name = "{0} type maps to {2}")
   @MethodSource("fhirpathDefaultMappings")
-  void defaultSingleFhirpathMappings(final String ignoreDescription, final String literalExpr,
+  void defaultSingleFhirPathMappings(final String ignoreDescription, final String literalExpr,
       final DataType expectedDataType, final String expectedValue) {
     final String actualValue = evalToStrValue(TestView.builder().expression(literalExpr).build(),
         expectedDataType);
@@ -331,7 +331,7 @@ class AnsiTypeHintingTest {
 
   @ParameterizedTest(name = "collection {0} type maps to {2}")
   @MethodSource("fhirpathDefaultMappings")
-  void defaultCollectionFhirpathMappings(final String ignoreDescription, final String literalExpr,
+  void defaultCollectionFhirPathMappings(final String ignoreDescription, final String literalExpr,
       final DataType expectedDataType, final String expectedValue) {
     final String actualValue = evalToStrValue(
         TestView.builder().expression(literalExpr).collection(true).build(),

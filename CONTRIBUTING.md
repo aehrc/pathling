@@ -30,9 +30,9 @@ Your branch should be named `issue/[GitHub issue #]`.
 
 You will need the following software to build the solution:
 
-* Java 17
+* Java 21
 * Maven 3.9+
-* Python 3.8+
+* Python 3.9+
 * R 3.5+
 
 To build and install locally, run:
@@ -41,23 +41,219 @@ To build and install locally, run:
 mvn clean install
 ```
 
+## Building and testing
+
+This is a multi-module Maven project with inter-module dependencies. The
+following
+sections describe how to compile and test specific modules efficiently.
+
+### Module compilation
+
+#### Single module compilation
+
+To compile just a specific module (if dependencies are already compiled):
+
+```bash
+mvn compile -pl <module-name>
+```
+
+Example:
+
+```bash
+mvn compile -pl library-api
+```
+
+#### Compile with dependencies
+
+To compile a module and all its upstream dependencies:
+
+```bash
+mvn compile -pl <module-name> -am
+```
+
+Example:
+
+```bash
+mvn compile -pl library-api -am
+```
+
+This will compile `utilities`, `encoders`, `terminology`, `fhirpath`, and
+`library-api` in the correct dependency order.
+
+#### Clean compilation
+
+For a fresh build from scratch:
+
+```bash
+mvn clean compile -pl <module-name> -am
+```
+
+To compile all modules:
+
+```bash
+mvn clean compile
+```
+
+### Running tests
+
+#### Single module testing
+
+If you are testing changes to a single module and don't need to recompile
+dependencies:
+
+```bash
+mvn test -pl <module-name> -Dtest=<TestClassName>
+```
+
+Example:
+
+```bash
+mvn test -pl library-api -Dtest=DataSourcesTest
+```
+
+#### Testing with dependency compilation
+
+If you know that code from module dependencies needs to be compiled, use the
+`-am` (also make) flag with the failIfNoSpecifiedTests parameter:
+
+```bash
+mvn test -pl <module-name> -am -Dtest=<TestClassName> -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+Example:
+
+```bash
+mvn test -pl library-api -am -Dtest=DataSourcesTest -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+The `-Dsurefire.failIfNoSpecifiedTests=false` parameter prevents the build from
+failing when upstream modules don't contain the specified test class.
+
+#### Test pattern matching
+
+You can also use patterns to run multiple test classes:
+
+```bash
+mvn test -pl library-api -Dtest="*DataSource*"
+```
+
+#### Full module test suite
+
+To run all tests in a specific module:
+
+```bash
+mvn test -pl <module-name>
+```
+
+### Available modules
+
+- `utilities`
+- `encoders`
+- `terminology`
+- `fhirpath`
+- `library-api`
+- `library-runtime`
+- `lib/python`
+- `lib/R`
+- `site`
+- `benchmark`
+
+### Testing Python and R libraries
+
+The Python and R libraries depend on both JARs and generated files created by
+the Maven build process. You **cannot** run tests using language-specific tools
+(such as `pytest` or `devtools::test`), install the libraries in editable mode
+(`pip install -e .`), or use them in any way without first building through
+Maven to generate the required files.
+
+To test the Python library:
+
+```bash
+mvn test -pl lib/python -am
+```
+
+To test the R library:
+
+```bash
+mvn test -pl lib/R -am
+```
+
+The `-am` flag ensures that all upstream dependencies are built before running
+the tests.
+
+#### First-time setup
+
+Before working with the Python or R libraries, you must run a Maven build to
+generate required files (such as `_version.py` for Python). For a complete
+build:
+
+```bash
+mvn clean install -pl lib/python -am
+```
+
+or
+
+```bash
+mvn clean install -pl lib/R -am
+```
+
+After this initial build, you can install the Python library in editable mode
+if needed:
+
+```bash
+cd lib/python
+pip install -e .
+```
+
+#### Clearing the Ivy cache
+
+When rebuilding after making changes to upstream modules, you may need to clear
+the local Ivy cache before the changes will be picked up by the Python and R
+libraries. The Ivy cache is typically located at `~/.ivy2/cache`.
+
+To clear the cache:
+
+```bash
+rm -rf ~/.ivy2/cache
+```
+
+After clearing the cache, rebuild the libraries:
+
+```bash
+mvn clean install -pl lib/python -am
+mvn clean install -pl lib/R -am
+```
+
 ## Versioning and branching
 
 All versioning
 follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
+**Note on major version increments**: In addition to the standard semantic
+versioning rules, Pathling will increment the major version number when moving
+to a new major version of Apache Spark. This is because Spark major version
+changes introduce potential incompatibilities to the environment on which
+Pathling is designed to run, affecting deployment, dependencies, and runtime
+requirements.
+
 The core of Pathling consists of the following modules, all of which inherit
 from the main `pom.xml` in the root of the repository.
 
 - `utilities` - Utility functions used by different components of Pathling.
-- `encoders` - Encoders for transforming [FHIR](https://hl7.org/fhir/) data into Spark Datasets.
-- `terminology` - Interact with a [FHIR terminology server](https://hl7.org/fhir/terminology-service.html) from Spark.
-- `fhirpath` - A library that can translate [FHIRPath expressions](https://hl7.org/fhirpath/) into Spark
+- `encoders` - Encoders for transforming [FHIR](https://hl7.org/fhir/) data into
+  Spark Datasets.
+- `terminology` - Interact with
+  a [FHIR terminology server](https://hl7.org/fhir/terminology-service.html)
+  from Spark.
+- `fhirpath` - A library that can
+  translate [FHIRPath expressions](https://hl7.org/fhirpath/) into Spark
   queries.
 - `library-api` - An API that exposes Pathling functionality to language
   libraries.
 - `library-runtime` - A Spark package that bundles the Pathling Library API and
   its runtime dependencies for cluster deployment.
+- `lib/python` - Python language bindings for Pathling.
+- `lib/R` - R language bindings for Pathling.
 
 ```mermaid
 graph TD
@@ -67,6 +263,8 @@ graph TD
     fhirpath[fhirpath<br/>FHIRPath engine]
     library-api[library-api<br/>Language library API]
     library-runtime[library-runtime<br/>Spark package bundle]
+    python[lib/python<br/>Python bindings]
+    r[lib/R<br/>R bindings]
 
     encoders --> utilities
     terminology --> utilities
@@ -77,6 +275,8 @@ graph TD
     library-api --> terminology
     library-api --> fhirpath
     library-runtime --> library-api
+    python --> library-runtime
+    r --> library-runtime
 ```
 
 The "public API" of Pathling is defined as the public API of the library API
@@ -181,7 +381,8 @@ Updated CLAUDE.md with new section at lines 102-120.
 - Avoid the use of inner classes, records and enums - having each class defined
   in its own file is preferred and avoids any implicit dependencies on code
   within the enclosing scope.
-- Document public classes and methods with [Javadoc comments](https://www.oracle.com/technical-resources/articles/java/javadoc-tool.html).
+- Document public classes and methods
+  with [Javadoc comments](https://www.oracle.com/technical-resources/articles/java/javadoc-tool.html).
 - Handle exceptions appropriately; do not use empty catch blocks.
 - Close resources (e.g., streams, connections) in a `finally` block or use
   try-with-resources.
@@ -204,7 +405,8 @@ Updated CLAUDE.md with new section at lines 102-120.
 
 ### Scala
 
-- Use meaningful and descriptive names following [Scala conventions](https://docs.scala-lang.org/style/).
+- Use meaningful and descriptive names
+  following [Scala conventions](https://docs.scala-lang.org/style/).
 - Follow standard Scala naming conventions:
     - Classes and traits: PascalCase (e.g., `MyClass`)
     - Methods and variables: camelCase (e.g., `myVariable`, `calculateTotal`)

@@ -43,7 +43,7 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
-import scala.collection.mutable.WrappedArray;
+import scala.collection.Seq;
 import scala.reflect.ClassTag;
 
 /**
@@ -51,7 +51,7 @@ import scala.reflect.ClassTag;
  */
 @Slf4j
 public class TranslateUdf implements SqlFunction,
-    SqlFunction5<Object, String, Boolean, WrappedArray<String>, String, Row[]> {
+    SqlFunction5<Object, String, Boolean, Seq<String>, String, Row[]> {
 
   @Serial
   private static final long serialVersionUID = 7605853352299165569L;
@@ -175,7 +175,7 @@ public class TranslateUdf implements SqlFunction,
   @Nullable
   @Override
   public Row[] call(@Nullable final Object codingRowOrArray, @Nullable final String conceptMapUri,
-      @Nullable final Boolean reverse, @Nullable final WrappedArray<String> equivalences,
+      @Nullable final Boolean reverse, @Nullable final Seq<String> equivalences,
       @Nullable final String target) {
 
     //noinspection RedundantCast

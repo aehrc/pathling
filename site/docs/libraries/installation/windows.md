@@ -36,7 +36,7 @@ hadoop
 If this executes successfully, finding the Hadoop executable and printing the 
 help text, then the variables have been set correctly.
 
-As with other operating systems, you also need to have Java 17 installed and
+As with other operating systems, you also need to have Java 21 installed and
 the `JAVA_HOME` environment variable set to its installation location. We
 recommend
-the [Azul Zulu installer for Windows](https://www.azul.com/downloads/?version=java-17-lts&os=windows&package=jdk#zulu).
+the [Azul Zulu installer for Windows](https://www.azul.com/downloads/?version=java-21-lts&os=windows&package=jdk#zulu).

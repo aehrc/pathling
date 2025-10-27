@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
-import static scala.collection.JavaConverters.asScalaBuffer;
+import static scala.jdk.javaapi.CollectionConverters.asScala;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
@@ -227,9 +227,9 @@ abstract class FhirViewTest {
 
       // Select the data with the dynamically created column expressions.
       final Dataset<Row> selectedExpectedResult = expectedResult.select(
-          asScalaBuffer(selectColumns).seq());
+          asScala(selectColumns).toSeq());
       final Dataset<Row> selectedActualResult = rowDataset.select(
-          asScalaBuffer(selectColumns).seq());
+          asScala(selectColumns).toSeq());
 
       // Assert that the rowDataset has rows unordered as in selectedExpectedResult.
       assertThat(selectedActualResult).hasRowsAndColumnsUnordered(selectedExpectedResult);

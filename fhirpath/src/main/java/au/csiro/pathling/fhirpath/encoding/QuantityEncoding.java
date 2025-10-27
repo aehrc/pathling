@@ -27,7 +27,7 @@ import au.csiro.pathling.encoders.QuantitySupport;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhirpath.CalendarDurationUnit;
-import au.csiro.pathling.fhirpath.FhirpathQuantity;
+import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import au.csiro.pathling.sql.types.FlexiDecimal;
 import au.csiro.pathling.sql.types.FlexiDecimalSupport;
 import jakarta.annotation.Nonnull;
@@ -50,7 +50,7 @@ import org.apache.spark.sql.types.StructType;
 /**
  * Object encoders/decoders for FHIRPath Quantity values.
  * <p>
- * Provides conversion between {@link FhirpathQuantity} objects and Spark SQL Row representation.
+ * Provides conversion between {@link FhirPathQuantity} objects and Spark SQL Row representation.
  *
  * @author Piotr Szul
  */
@@ -116,15 +116,17 @@ public class QuantityEncoding {
   }
 
   /**
-   * Decodes a FhirpathQuantity from a Row.
+   * Decodes a FhirPathQuantity from a Row.
    *
    * @param row the row to decode
-   * @return the resulting FhirpathQuantity
+   * @return the resulting FhirPathQuantity
    */
   @Nonnull
-  public static FhirpathQuantity decode(@Nonnull final Row row) {
+  public static FhirPathQuantity decode(@Nonnull final Row row) {
     // Extract value with scale handling
-    @Nullable final Integer scale = !row.isNullAt(2) ? row.getInt(2) : null;
+    @Nullable final Integer scale = !row.isNullAt(2)
+                                    ? row.getInt(2)
+                                    : null;
     final BigDecimal value = Optional.ofNullable(row.getDecimal(1))
         .map(bd -> nonNull(scale) && bd.scale() > scale
                    ? bd.setScale(scale, RoundingMode.HALF_UP)
@@ -140,12 +142,14 @@ public class QuantityEncoding {
     }
 
     // Create FhirpathQuantity based on system
-    if (FhirpathQuantity.UCUM_SYSTEM.equals(system)) {
-      return FhirpathQuantity.ofUCUM(value, code);
-    } else if (FhirpathQuantity.FHIRPATH_CALENDAR_DURATION_SYSTEM.equals(system)) {
-      return FhirpathQuantity.ofCalendar(value,
+    if (FhirPathQuantity.UCUM_SYSTEM_URI.equals(system)) {
+      return FhirPathQuantity.ofUCUM(value, code);
+    } else if (FhirPathQuantity.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI.equals(system)) {
+      return FhirPathQuantity.ofCalendar(value,
           CalendarDurationUnit.fromString(code),
-          unit != null ? unit : code);
+          unit != null
+          ? unit
+          : code);
     } else {
       throw new IllegalArgumentException("Unsupported quantity system: " + system);
     }
@@ -194,7 +198,7 @@ public class QuantityEncoding {
    * @return the SQL struct for the Quantity type.
    */
   @Nonnull
-  public static Column toStruct(
+  private static Column toStruct(
       @Nonnull final Column id,
       @Nonnull final Column value,
       @Nonnull final Column value_scale,
@@ -219,7 +223,7 @@ public class QuantityEncoding {
    * @return the column with the literal representation of the quantity.
    */
   @Nonnull
-  public static Column encodeLiteral(@Nonnull final FhirpathQuantity quantity) {
+  public static Column encodeLiteral(@Nonnull final FhirPathQuantity quantity) {
     final BigDecimal value = quantity.getValue();
     final BigDecimal canonicalizedValue;
     final String canonicalizedCode;
@@ -229,13 +233,13 @@ public class QuantityEncoding {
       canonicalizedCode = Ucum.getCanonicalCode(value, quantity.getCode());
     } else if (quantity.isCalendarDuration() &&
         CALENDAR_DURATION_TO_UCUM.containsKey(quantity.getCode())) {
-      // If it is a (supported) calendar duration, get the corresponding UCUM unit and then use the 
+      // If it is a (supported) calendar duration, get the corresponding UCUM unit and then use the
       // UCUM library to canonicalize the value and code.
       final String resolvedCode = CALENDAR_DURATION_TO_UCUM.get(quantity.getCode());
       canonicalizedValue = Ucum.getCanonicalValue(value, resolvedCode);
       canonicalizedCode = Ucum.getCanonicalCode(value, resolvedCode);
     } else {
-      // If it is neither a UCUM Quantity nor a calendar duration, it will not have a canonicalized 
+      // If it is neither a UCUM Quantity nor a calendar duration, it will not have a canonicalized
       // form available.
       canonicalizedValue = null;
       canonicalizedCode = null;
@@ -276,7 +280,7 @@ public class QuantityEncoding {
             lit(null),
             lit(null),
             lit("1"),
-            lit(FhirpathQuantity.UCUM_SYSTEM),
+            lit(FhirPathQuantity.UCUM_SYSTEM_URI),
             lit("1"),
             // we do not need to normalize this as the unit is always "1"
             // so it will be comparable with other quantities with unit "1"
@@ -296,7 +300,7 @@ public class QuantityEncoding {
    * @return the Row representation of the quantity
    */
   @Nonnull
-  public static Row encode(@Nonnull final FhirpathQuantity quantity) {
+  public static Row encode(@Nonnull final FhirPathQuantity quantity) {
     final BigDecimal value = quantity.getValue();
     final BigDecimal canonicalizedValue;
     final String canonicalizedCode;

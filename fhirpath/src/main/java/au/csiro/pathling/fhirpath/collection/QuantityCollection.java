@@ -18,8 +18,8 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
+import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.FhirpathQuantity;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
@@ -123,7 +123,7 @@ public class QuantityCollection extends Collection implements Comparable, String
   @Nonnull
   public static QuantityCollection fromLiteral(@Nonnull final String quantityLiteral) {
     return QuantityCollection.build(new DefaultRepresentation(
-            QuantityEncoding.encodeLiteral(FhirpathQuantity.parse(quantityLiteral))),
+            QuantityEncoding.encodeLiteral(FhirPathQuantity.parse(quantityLiteral))),
         Optional.of(LITERAL_DEFINITION)
     );
   }
