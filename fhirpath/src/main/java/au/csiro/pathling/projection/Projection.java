@@ -190,8 +190,7 @@ public class Projection {
     // re-alias the column
     return finalResult.getColumn().getValue().alias(name);
   }
-
-
+  
   /**
    * Evaluates the where clause and returns a column that can be used to filter the result.
    *

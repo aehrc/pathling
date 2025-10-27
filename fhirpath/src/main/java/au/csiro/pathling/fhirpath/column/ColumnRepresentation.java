@@ -597,7 +597,7 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation elementCast(@Nonnull final DataType dataType) {
     return vectorize(
-        a -> functions.transform(a, c -> c.cast(dataType)),
+        a -> a.cast(DataTypes.createArrayType(dataType)),
         s -> s.cast(dataType)
     );
   }

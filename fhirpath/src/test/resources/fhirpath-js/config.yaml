@@ -86,6 +86,8 @@ excludeSet:
           - "Observation.value with an STU3 FHIR model"
           - "Observation.value with an DSTU2 FHIR model"
           - "Observation.value without a model"
+          - "Observation.value / 185 'mo'"
+          - "Observation.value / 185 months = 1"
       - title: "Contained resources not supported"
         type: feature
         id: "#2406"
@@ -179,17 +181,41 @@ excludeSet:
         expression:
           - "Ops.coll = Ops.collsame"
           - "Ops.coll = Ops.collother"
+      - title: Unsupported comparison above second calendar durations
+        type: new-feature
+        outcome: failure
+        id: "#2494"
+        any:
+          - "12 months = 1 year"
+          - "1 month = 30 days"
+          - "1 week = 7 day"
+          - "1 day = 24 hours"
+  - title: Math6 exclusions
+    glob: "fhirpath-js/cases/6.6_math.yaml"
+    exclude:
+      - title: Unsupported dateTime arithmetics operator (Quantity + Date)
+        type: wontfix
+        any:
+          - "1 year + @2016-02-29"
   - title: Comparison exclusions
     glob: "fhirpath-js/cases/6.2_comparision.yaml"
     exclude:
-      - title: Unsupported comparison of dates, times and date times
+      - title: Unsupported comparison above second calendar durations
         type: new-feature
-        id: "#2421"
+        outcome: failure
+        id: "#2494"
         any:
           - "1 year > 12 months"
           - "1 year < 12 months"
           - "1 minute > 59 seconds"
           - "1 minute < 61 seconds"
+      - title: Unsupported comparison for indefinite and definite time quantities
+        type: wontfix
+        comment: "This is not supported as per FHIRPath specification."
+        outcome: failure
+        any:
+          - "1 year != 1 'a'"
+          - "1 month != 1 'mo'"
   - title: Collections exclusions
     glob: "fhirpath-js/cases/6.4_collections.yaml"
     exclude:
@@ -359,3 +385,12 @@ excludeSet:
         expression:
           - "name = name"
           - "name != name"
+      - title: Unsupported comparison above second calendar durations
+        type: new-feature
+        outcome: failure
+        id: "#2494"
+        any:
+          - "7 days = 1 week"
+          - "6 days < 1 week"
+          - "8 days > 1 week"
+  

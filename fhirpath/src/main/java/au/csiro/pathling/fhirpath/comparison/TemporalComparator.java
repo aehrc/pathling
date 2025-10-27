@@ -35,7 +35,7 @@ import org.apache.spark.sql.functions;
  * to consider the range of possible values for each DateTime/Time.
  */
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
-public class TemporalComparator implements ColumnComparator {
+public class TemporalComparator implements ColumnComparator, ElementWiseEquality {
 
   private static final TemporalComparator DATE_TIME_COMPARATOR = new TemporalComparator(
       LowBoundaryForDateTime.FUNCTION_NAME,

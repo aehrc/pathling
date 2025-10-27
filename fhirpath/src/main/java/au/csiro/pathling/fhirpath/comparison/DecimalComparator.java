@@ -14,26 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package au.csiro.pathling.sql.misc;
+package au.csiro.pathling.fhirpath.comparison;
 
-import au.csiro.pathling.sql.udf.AbstractUDFRegistrar;
 import jakarta.annotation.Nonnull;
 
 /**
- * Registration of miscellaneous UDFs.
+ * A comparator for decimal values, implementing standard comparison operations. It uses
+ * element-wise equality for arrays of decimals to allow for comparisons between different decimal
+ * precisions.
+ *
+ * @author Piotr Szul
  */
-public class PathlingUdfRegistrar extends AbstractUDFRegistrar {
+public class DecimalComparator extends DefaultComparator implements ElementWiseEquality {
 
-  @Override
-  protected void registerUDFs(@Nonnull final UDFRegistrar udfRegistrar) {
-    udfRegistrar
-        .register(new CodingToLiteral())
-        .register(new DecimalToLiteral())
-        .register(new ToNull())
-        .register(new LowBoundaryForDateTime())
-        .register(new HighBoundaryForDateTime())
-        .register(new LowBoundaryForTime())
-        .register(new HighBoundaryForTime())
-        .register(new QuantityToLiteral());
+  private static final DecimalComparator INSTANCE = new DecimalComparator();
+
+  private DecimalComparator() {
+    super();
+  }
+
+  @Nonnull
+  public static DecimalComparator getInstance() {
+    return INSTANCE;
   }
 }

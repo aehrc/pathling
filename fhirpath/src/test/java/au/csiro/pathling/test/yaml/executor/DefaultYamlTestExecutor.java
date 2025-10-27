@@ -24,10 +24,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
@@ -287,8 +289,12 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     // Evaluate the expression to get the actual result.
     final Collection evalResult = verifyEvaluation(evaluator);
 
+    final Collection flattenedResult = evalResult instanceof QuantityCollection
+                                       ? ((StringCoercible) evalResult).asStringPath()
+                                       : evalResult;
+
     // Get column representations for both actual and expected results.
-    final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
+    final ColumnRepresentation actualRepresentation = flattenedResult.getColumn().asCanonical();
     final ColumnRepresentation expectedRepresentation = getResultRepresentation();
 
     // Create a single row with both actual and expected values for comparison.
