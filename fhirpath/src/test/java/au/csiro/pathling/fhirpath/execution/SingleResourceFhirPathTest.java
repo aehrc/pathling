@@ -69,7 +69,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 @SpringBootUnitTest
 @Slf4j
-class SingleResourceFhirpathTest {
+class SingleResourceFhirPathTest {
 
   @Autowired
   SparkSession spark;
