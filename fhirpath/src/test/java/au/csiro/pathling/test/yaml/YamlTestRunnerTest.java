@@ -35,7 +35,7 @@ import au.csiro.pathling.fhirpath.definition.defaults.DefaultResourceTag;
 import au.csiro.pathling.fhirpath.definition.fhir.FhirDefinitionContext;
 import au.csiro.pathling.fhirpath.definition.fhir.FhirResourceTag;
 import au.csiro.pathling.fhirpath.execution.DefaultResourceResolver;
-import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
+import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -133,7 +133,7 @@ class YamlTestRunnerTest {
     inputDS.show();
 
     final DefinitionContext definitionContext = DefaultDefinitionContext.of(subjectDefinition);
-    final FhirpathEvaluator evaluator = new FhirpathEvaluator(
+    final FhirPathEvaluator evaluator = new FhirPathEvaluator(
         DefaultResourceResolver.of(
             DefaultResourceTag.of("Test"),
             definitionContext,
@@ -252,7 +252,7 @@ class YamlTestRunnerTest {
 
     assertNotNull(resolver);
 
-    final FhirpathEvaluator evaluator = new FhirpathEvaluator(
+    final FhirPathEvaluator evaluator = new FhirPathEvaluator(
         resolver,
         StaticFunctionRegistry.getInstance(),
         Map.of()

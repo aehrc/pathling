@@ -28,12 +28,12 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * Executes FHIRPath expressions by parsing and evaluating them against FHIR resources.
  * <p>
  * This class provides a high-level interface for executing FHIRPath expressions as strings,
- * handling the parsing and evaluation process. It combines a {@link Parser} for converting
- * string expressions into {@link FhirPath} objects and a {@link FhirpathEvaluator.Provider}
- * for creating evaluators that can execute those expressions against resources.
+ * handling the parsing and evaluation process. It combines a {@link Parser} for converting string
+ * expressions into {@link FhirPath} objects and a {@link FhirPathEvaluator.Provider} for creating
+ * evaluators that can execute those expressions against resources.
  * <p>
- * The executor is designed to be reused for multiple evaluations, potentially against
- * different resource types, while maintaining the same parsing and evaluation configuration.
+ * The executor is designed to be reused for multiple evaluations, potentially against different
+ * resource types, while maintaining the same parsing and evaluation configuration.
  */
 @Value(staticConstructor = "of")
 public class FhirpathExecutor {
@@ -45,10 +45,10 @@ public class FhirpathExecutor {
   Parser parser;
 
   /**
-   * The provider used to create {@link FhirpathEvaluator} instances for evaluation.
+   * The provider used to create {@link FhirPathEvaluator} instances for evaluation.
    */
   @Nonnull
-  FhirpathEvaluator.Provider provider;
+  FhirPathEvaluator.Provider provider;
 
   /**
    * Evaluates a FHIRPath expression against a specific resource type.
@@ -70,7 +70,7 @@ public class FhirpathExecutor {
   public CollectionDataset evaluate(@Nonnull final ResourceType subjectResource,
       @Nonnull final String fhirpathExpression) {
     final FhirPath fhirpath = parser.parse(fhirpathExpression);
-    final FhirpathEvaluator evaluator = provider.create(subjectResource, () -> List.of(fhirpath));
+    final FhirPathEvaluator evaluator = provider.create(subjectResource, () -> List.of(fhirpath));
     return CollectionDataset.of(evaluator.createInitialDataset(), evaluator.evaluate(fhirpath));
   }
 }

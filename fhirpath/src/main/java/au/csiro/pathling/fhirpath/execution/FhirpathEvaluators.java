@@ -32,7 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * Utility class for creating FhirpathEvaluator instances.
+ * Utility class for creating FhirPathEvaluator instances.
  * <p>
  * This class provides factory methods and factory classes for creating evaluators that work with
  * single resource types. The {@link #createSingle} method creates an evaluator for working with a
@@ -62,16 +62,16 @@ public class FhirpathEvaluators {
    * @param functionRegistry the registry of FHIRPath functions to use during evaluation
    * @param variables the variables available during FHIRPath evaluation
    * @param dataSource the data source containing the resources to query
-   * @return a new FhirpathEvaluator configured for single resource evaluation
+   * @return a new FhirPathEvaluator configured for single resource evaluation
    */
   @Nonnull
-  public static FhirpathEvaluator createSingle(
+  public static FhirPathEvaluator createSingle(
       @Nonnull final ResourceType subjectResource,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final FunctionRegistry functionRegistry,
       @Nonnull final Map<String, Collection> variables,
       @Nonnull final DataSource dataSource) {
-    return new FhirpathEvaluator(
+    return new FhirPathEvaluator(
         new SingleResourceResolver(subjectResource, fhirContext, dataSource),
         functionRegistry,
         variables
@@ -89,7 +89,7 @@ public class FhirpathEvaluators {
    * resource type, function registry, and variables.
    */
   @Value(staticConstructor = "of")
-  public static class SingleEvaluatorFactory implements FhirpathEvaluator.Factory {
+  public static class SingleEvaluatorFactory implements FhirPathEvaluator.Factory {
 
     @Nonnull
     FhirContext fhirContext;
@@ -99,7 +99,7 @@ public class FhirpathEvaluators {
 
     @Override
     @Nonnull
-    public FhirpathEvaluator create(@Nonnull final ResourceType subjectResource,
+    public FhirPathEvaluator create(@Nonnull final ResourceType subjectResource,
         @Nonnull final FunctionRegistry functionRegistry,
         @Nonnull final Map<String, Collection> variables) {
       return FhirpathEvaluators.createSingle(
@@ -116,7 +116,7 @@ public class FhirpathEvaluators {
   /**
    * A provider for creating single resource evaluators in FHIRPath contexts.
    * <p>
-   * This class implements the FhirpathEvaluator.Provider interface to create FhirPath evaluators
+   * This class implements the FhirPathEvaluator.Provider interface to create FhirPath evaluators
    * configured for evaluating expressions on a single resource type. This approach is suitable for
    * straightforward scenarios involving evaluation against a specific resource type without
    * requiring complex joins across multiple resources.
@@ -131,15 +131,17 @@ public class FhirpathEvaluators {
    * resource and dynamically supplied context paths, which guide the evaluation process for
    * FHIRPath expressions.
    */
-  public record SingleEvaluatorProvider(@Nonnull FhirContext fhirContext,
-                                        @Nonnull FunctionRegistry functionRegistry,
-                                        @Nonnull Map<String, Collection> variables,
-                                        @Nonnull DataSource dataSource) implements
-      FhirpathEvaluator.Provider {
+  public record SingleEvaluatorProvider(
+      @Nonnull FhirContext fhirContext,
+      @Nonnull FunctionRegistry functionRegistry,
+      @Nonnull Map<String, Collection> variables,
+      @Nonnull DataSource dataSource
+  ) implements
+      FhirPathEvaluator.Provider {
 
     @Nonnull
     @Override
-    public FhirpathEvaluator create(@Nonnull final ResourceType subjectResource,
+    public FhirPathEvaluator create(@Nonnull final ResourceType subjectResource,
         @Nonnull final Supplier<List<FhirPath>> contextPathsSupplier) {
       return FhirpathEvaluators.createSingle(
           subjectResource,
