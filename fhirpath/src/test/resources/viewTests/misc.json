@@ -145,7 +145,7 @@
               },
               {
                 "path": "component.value.ofType(Quantity).value",
-                "name": "component_value", 
+                "name": "component_value",
                 "collection": true
               }
             ]
