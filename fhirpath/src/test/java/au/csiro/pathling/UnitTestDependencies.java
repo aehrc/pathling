@@ -34,7 +34,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
-import org.fhir.ucum.UcumService;
+import io.github.fhnaumann.funcs.UCUMService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -130,7 +130,7 @@ public class UnitTestDependencies {
   @Bean
   @ConditionalOnMissingBean
   @Nonnull
-  static UcumService ucumService() {
+  static UCUMService ucumService() {
     return Ucum.service();
   }
 
