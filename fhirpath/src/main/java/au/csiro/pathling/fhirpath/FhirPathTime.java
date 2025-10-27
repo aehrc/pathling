@@ -54,10 +54,10 @@ public class FhirPathTime {
   TemporalPrecision precision;
 
   /**
-   * Parse a FHIR time string into a FhirpathTime object.
+   * Parse a FHIR time string into a FhirPathTime object.
    *
    * @param timeString the FHIR time string to parse (e.g., 12:00)
-   * @return a new FhirpathTime object
+   * @return a new FhirPathTime object
    * @throws DateTimeParseException if the string cannot be parsed
    */
   @Nonnull
@@ -141,17 +141,17 @@ public class FhirPathTime {
   }
 
   /**
-   * Utility method to create a FhirpathTime from a LocalTime and precision.
+   * Utility method to create a FhirPathTime from a LocalTime and precision.
    *
    * @param localTime the LocalTime to convert
    * @param precision the desired precision (must be time-based)
-   * @return a new FhirpathTime
+   * @return a new FhirPathTime
    */
   @Nonnull
   public static FhirPathTime fromLocalTime(@Nonnull final LocalTime localTime,
       @Nonnull final TemporalPrecision precision) {
     if (!precision.isTimeBased()) {
-      throw new IllegalArgumentException("Precision must be time-based for FhirpathTime");
+      throw new IllegalArgumentException("Precision must be time-based for FhirPathTime");
     }
     final Instant instant = localTime.atDate(LocalDate.ofEpochDay(0))
         .toInstant(ZoneOffset.UTC);
