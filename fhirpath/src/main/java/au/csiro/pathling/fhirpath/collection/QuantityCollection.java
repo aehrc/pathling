@@ -110,7 +110,7 @@ public class QuantityCollection extends Collection implements Comparable, String
    */
   @Nonnull
   public static QuantityCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
-    return build(columnRepresentation, Optional.empty());
+    return build(columnRepresentation, Optional.of(LITERAL_DEFINITION));
   }
 
   /**

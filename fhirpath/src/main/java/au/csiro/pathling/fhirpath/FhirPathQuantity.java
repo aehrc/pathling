@@ -1,15 +1,20 @@
 package au.csiro.pathling.fhirpath;
 
+import au.csiro.pathling.encoders.terminology.ucum.Ucum;
+import io.github.fhnaumann.funcs.ConverterService;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Represents a FHIRPath Quantity value.
  */
+@Slf4j
 @Value
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class FhirPathQuantity {
@@ -25,8 +30,8 @@ public class FhirPathQuantity {
   public static final String UCUM_SYSTEM_URI = "http://unitsofmeasure.org";
 
   /**
-   * Regex pattern for parsing FHIRPath quantity literals.
-   * Unit is optional per FHIRPath spec - defaults to '1' when omitted.
+   * Regex pattern for parsing FHIRPath quantity literals. Unit is optional per FHIRPath spec -
+   * defaults to '1' when omitted.
    */
   private static final Pattern QUANTITY_REGEX = Pattern.compile(
       "(?<value>[+-]?\\d+(?:\\.\\d+)?)\\s*(?:'(?<unit>[^']+)'|(?<time>[a-zA-Z]+))?"
@@ -107,8 +112,8 @@ public class FhirPathQuantity {
   }
 
   /**
-   * Parses a FHIRPath quantity literal (e.g. 5.4 'mg', 1 year, 42). Only supports UCUM and
-   * calendar duration units. When no unit is specified, defaults to '1' in UCUM system.
+   * Parses a FHIRPath quantity literal (e.g. 5.4 'mg', 1 year, 42). Only supports UCUM and calendar
+   * duration units. When no unit is specified, defaults to '1' in UCUM system.
    *
    * @param literal the FHIRPath quantity literal
    * @return the parsed FhirPathQuantity
@@ -134,5 +139,43 @@ public class FhirPathQuantity {
       // No unit specified, default to '1' in UCUM system per FHIRPath spec
       return ofUCUM(value, "1");
     }
+  }
+
+  /**
+   * Converts this quantity to a target unit using UCUM conversions.
+   * <p>
+   * This method implements full UCUM unit conversion as specified in the FHIRPath specification for
+   * the {@code toQuantity(unit)} function. It uses the UCUM converter service to convert between
+   * compatible UCUM units.
+   * <p>
+   * Returns null if:
+   * <ul>
+   *   <li>The target unit is null</li>
+   *   <li>This quantity is not a UCUM quantity (e.g., calendar duration)</li>
+   *   <li>The conversion fails (e.g., incompatible units, invalid units)</li>
+   * </ul>
+   *
+   * @param targetUnit the target UCUM unit to convert to (e.g., 'mg', 'kg', 'mL')
+   * @return a new FhirPathQuantity with the converted value and target unit, or null if conversion
+   * sion is not possible
+   */
+  @Nullable
+  public FhirPathQuantity convertToUnit(@Nonnull final String targetUnit) {
+    if (!isUCUM()) {
+      return null; // Conversion only applies to UCUM quantities
+    }
+
+    if (getCode().equals(targetUnit)) {
+      return this; // Return as-is if units match
+    }
+
+    var conversionResult = Ucum.service().convert(getCode(), targetUnit);
+
+    if (conversionResult instanceof ConverterService.Success(var conversionFactor)) {
+      var convertedValue = value.multiply(conversionFactor.getValue());
+      return FhirPathQuantity.ofUCUM(convertedValue, targetUnit);
+    }
+
+    return null; // Return null if conversion fails
   }
 }

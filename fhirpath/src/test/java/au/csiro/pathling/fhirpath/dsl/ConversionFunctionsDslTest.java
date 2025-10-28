@@ -658,17 +658,19 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .stringEmpty("emptyStr")
             .dateEmpty("emptyDate")
         )
-        .group("toQuantity() with Boolean literals")
+        .group("toQuantity() - Boolean sources")
         .testEquals("1 '1'", "true.toQuantity()", "toQuantity() converts true to 1.0 '1'")
         .testEquals("0 '1'", "false.toQuantity()", "toQuantity() converts false to 0.0 '1'")
 
-        .group("toQuantity() with numeric literals")
+        .group("toQuantity() - Integer sources")
         .testEquals("42 '1'", "42.toQuantity()",
             "toQuantity() converts integer to quantity with unit '1'")
+
+        .group("toQuantity() - Decimal sources")
         .testEquals("3.14 '1'", "3.14.toQuantity()",
             "toQuantity() converts decimal to quantity with unit '1'")
 
-        .group("toQuantity() with String literals - UCUM units")
+        .group("toQuantity() - String sources (UCUM literals)")
         .testEquals("10 'mg'", "'10 \\'mg\\''.toQuantity()",
             "toQuantity() parses UCUM quantity string")
         .testEquals("1.5 'kg'", "'1.5 \\'kg\\''.toQuantity()",
@@ -676,7 +678,7 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testEquals("-5.2 'cm'", "'-5.2 \\'cm\\''.toQuantity()",
             "toQuantity() parses negative UCUM quantity")
 
-        .group("toQuantity() with String literals - calendar duration units")
+        .group("toQuantity() - String sources (calendar duration literals)")
         .testEquals("4 days", "'4 days'.toQuantity()",
             "toQuantity() parses calendar duration (days)")
         .testEquals("1 year", "'1 year'.toQuantity()",
@@ -684,28 +686,28 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testEquals("3 months", "'3 months'.toQuantity()",
             "toQuantity() parses calendar duration (months)")
 
-        .group("toQuantity() with String literals - numeric values with no unit")
+        .group("toQuantity() - String sources (numeric literals)")
         .testEquals("42 '1'", "'42'.toQuantity()",
             "toQuantity() converts number string without unit to quantity with unit '1'")
         .testEquals("3.14 '1'", "'3.14'.toQuantity()",
             "toQuantity() converts decimal string without unit to quantity with unit '1'")
 
-        .group("toQuantity() with String literals - invalid values")
+        .group("toQuantity() - String sources (invalid)")
         .testEmpty("'notQuantity'.toQuantity()", "toQuantity() returns empty for invalid string")
         .testEmpty("'true'.toQuantity()",
             "toQuantity() returns empty for non-quantity string with boolean content")
         .testEmpty("'mg'.toQuantity()", "toQuantity() returns empty for unit without value")
 
-        .group("toQuantity() with non-convertible types")
+        .group("toQuantity() - Non-convertible sources")
         .testEmpty("@2023-01-15.toQuantity()", "toQuantity() returns empty for Date")
 
-        .group("toQuantity() with empty values")
+        .group("toQuantity() - Empty values")
         .testEmpty("emptyBool.toQuantity()", "toQuantity() returns empty for empty Boolean")
         .testEmpty("emptyInt.toQuantity()", "toQuantity() returns empty for empty Integer")
         .testEmpty("emptyStr.toQuantity()", "toQuantity() returns empty for empty String")
         .testEmpty("emptyDate.toQuantity()", "toQuantity() returns empty for empty Date")
 
-        .group("toQuantity() error cases with arrays")
+        .group("toQuantity() - Error cases (arrays)")
         .testEmpty("{}.toQuantity()", "toQuantity() returns empty for empty collection")
         .testError("intArray.toQuantity()",
             "toQuantity() errors on array of convertible type (Integer)")
@@ -716,17 +718,27 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testError("dateArray.toQuantity()",
             "toQuantity() errors on array of non-convertible type (Date)")
 
-        .group("toQuantity(unit) with matching unit - numeric values")
-        .testEquals("42 '1'", "42.toQuantity('1')",
-            "toQuantity() with matching unit '1' returns quantity")
-        .testEquals("3.14 '1'", "3.14.toQuantity('1')",
-            "toQuantity() with matching unit '1' for decimal returns quantity")
-        .testEquals("1 '1'", "true.toQuantity('1')",
-            "toQuantity() with matching unit '1' for true returns quantity")
-        .testEquals("0 '1'", "false.toQuantity('1')",
-            "toQuantity() with matching unit '1' for false returns quantity")
+        .build();
+  }
 
-        .group("toQuantity(unit) with different unit - numeric values")
+  @FhirPathTest
+  public Stream<DynamicTest> testToQuantityWithUnit() {
+    return builder()
+        .withSubject(sb -> sb
+            .stringArray("stringArray", "1 'wk'", "1 'cm'", "1000 'g'")
+            .stringEmpty("emptyStr")
+        )
+        .group("toQuantity(unit) - Numeric sources → exact unit match")
+        .testEquals("42 '1'", "42.toQuantity('1')",
+            "toQuantity() with matching unit '1' returns quantity for integer")
+        .testEquals("3.14 '1'", "3.14.toQuantity('1')",
+            "toQuantity() with matching unit '1' returns quantity for decimal")
+        .testEquals("1 '1'", "true.toQuantity('1')",
+            "toQuantity() with matching unit '1' returns quantity for true")
+        .testEquals("0 '1'", "false.toQuantity('1')",
+            "toQuantity() with matching unit '1' returns quantity for false")
+
+        .group("toQuantity(unit) - Numeric sources → different unit (incompatible)")
         .testEmpty("42.toQuantity('mg')",
             "toQuantity() with different unit returns empty for integer")
         .testEmpty("3.14.toQuantity('kg')",
@@ -734,21 +746,55 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testEmpty("true.toQuantity('mg')",
             "toQuantity() with different unit returns empty for boolean")
 
-        .group("toQuantity(unit) with matching unit - UCUM strings")
+        .group("toQuantity(unit) - UCUM string sources → exact unit match")
         .testEquals("10 'mg'", "'10 \\'mg\\''.toQuantity('mg')",
             "toQuantity() with matching UCUM unit returns quantity")
         .testEquals("1.5 'kg'", "'1.5 \\'kg\\''.toQuantity('kg')",
-            "toQuantity() with matching UCUM unit for decimal returns quantity")
+            "toQuantity() with matching UCUM unit returns quantity for decimal")
         .testEquals("-5.2 'cm'", "'-5.2 \\'cm\\''.toQuantity('cm')",
-            "toQuantity() with matching UCUM unit for negative returns quantity")
+            "toQuantity() with matching UCUM unit returns quantity for negative")
 
-        .group("toQuantity(unit) with different unit - UCUM strings")
-        .testEmpty("'10 \\'mg\\''.toQuantity('g')",
-            "toQuantity() with different UCUM unit returns empty")
-        .testEmpty("'1.5 \\'kg\\''.toQuantity('mg')",
-            "toQuantity() with different UCUM unit for decimal returns empty")
+        .group("toQuantity(unit) - UCUM string sources → UCUM conversion (compatible)")
+        .testEquals("0.01 'g'", "'10 \\'mg\\''.toQuantity('g')",
+            "toQuantity() converts mg to g")
+        .testEquals("1500000 'mg'", "'1.5 \\'kg\\''.toQuantity('mg')",
+            "toQuantity() converts kg to mg")
+        .testEquals("7 'd'", "'1 \\'wk\\''.toQuantity('d')",
+            "toQuantity() converts weeks to days")
+        .testEquals("7 'd'", "'1 \\'wk\\''.toQuantity('d').toString()",
+            "toQuantity() converts weeks to days (toString)")
+        .testEquals("10 'mm'", "'1 \\'cm\\''.toQuantity('mm')",
+            "toQuantity() converts cm to mm")
+        .testEquals(10, "'1 \\'cm\\''.toQuantity('mm').value",
+            "toQuantity() converts cm to mm (value check)")
+        .testEquals("0.01 'm'", "'1 \\'cm\\''.toQuantity('m')",
+            "toQuantity() converts cm to m")
+        .testEquals("1 'kg'", "'1000 \\'g\\''.toQuantity('kg')",
+            "toQuantity() converts g to kg")
+        .testEquals(1, "'1000 \\'g\\''.toQuantity('kg').value",
+            "toQuantity() converts g to kg (value check)")
+        .testEquals("1000000 'mg'", "'1 \\'kg\\''.toQuantity('mg')",
+            "toQuantity() converts kg to mg")
+        .testEquals("1000 'mL'", "'1 \\'L\\''.toQuantity('mL')",
+            "toQuantity() converts L to mL")
+        .testEquals("0.001 'L'", "'1 \\'mL\\''.toQuantity('L')",
+            "toQuantity() converts mL to L")
 
-        .group("toQuantity(unit) with matching unit - calendar durations")
+        .group("toQuantity(unit) - UCUM string sources → incompatible units")
+        .testEmpty("'1 \\'kg\\''.toQuantity('m')",
+            "toQuantity() returns empty for incompatible units (mass to length)")
+        .testEmpty("'1 \\'cm\\''.toQuantity('g')",
+            "toQuantity() returns empty for incompatible units (length to mass)")
+        .testEmpty("'10 \\'mg\\''.toQuantity('d')",
+            "toQuantity() returns empty for incompatible units (mass to time)")
+
+        .group("toQuantity(unit) - UCUM string sources → invalid target units")
+        .testEmpty("'1 \\'kg\\''.toQuantity('invalid_unit')",
+            "toQuantity() returns empty for invalid target unit")
+        .testEmpty("'1 \\'cm\\''.toQuantity('notaunit')",
+            "toQuantity() returns empty for non-existent target unit")
+
+        .group("toQuantity(unit) - Calendar duration sources → exact unit match")
         .testEquals("4 days", "'4 days'.toQuantity('days')",
             "toQuantity() with matching calendar unit 'days' returns quantity")
         .testEquals("1 year", "'1 year'.toQuantity('year')",
@@ -756,23 +802,31 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testEquals("3 months", "'3 months'.toQuantity('months')",
             "toQuantity() with matching calendar unit 'months' returns quantity")
 
-        .group("toQuantity(unit) with different unit - calendar durations")
+        .group("toQuantity(unit) - Calendar duration sources → different unit (not supported)")
         .testEmpty("'4 days'.toQuantity('weeks')",
             "toQuantity() with different calendar unit returns empty")
         .testEmpty("'1 year'.toQuantity('months')",
             "toQuantity() with different calendar unit returns empty for year/months")
+        .testEmpty("'4 days'.toQuantity('hours')",
+            "toQuantity() returns empty for calendar duration to UCUM conversion (not yet supported)")
+        .testEmpty("'1 year'.toQuantity('months')",
+            "toQuantity() returns empty for calendar duration conversions (not yet supported)")
 
-        .group("toQuantity(unit) with matching unit - numeric strings")
+        .group("toQuantity(unit) - Numeric string sources → exact unit match")
         .testEquals("42 '1'", "'42'.toQuantity('1')",
-            "toQuantity() with matching unit '1' for numeric string returns quantity")
+            "toQuantity() with matching unit '1' returns quantity for numeric string")
         .testEquals("3.14 '1'", "'3.14'.toQuantity('1')",
-            "toQuantity() with matching unit '1' for decimal string returns quantity")
+            "toQuantity() with matching unit '1' returns quantity for decimal string")
 
-        .group("toQuantity(unit) with different unit - numeric strings")
+        .group("toQuantity(unit) - Numeric string sources → different unit (incompatible)")
         .testEmpty("'42'.toQuantity('mg')",
-            "toQuantity() with different unit for numeric string returns empty")
+            "toQuantity() with different unit returns empty for numeric string")
         .testEmpty("'3.14'.toQuantity('kg')",
-            "toQuantity() with different unit for decimal string returns empty")
+            "toQuantity() with different unit returns empty for decimal string")
+
+        .group("toQuantity(unit) - Empty values")
+        .testEmpty("emptyStr.toQuantity('mg')",
+            "toQuantity() returns empty for empty String with unit parameter")
 
         .build();
   }
@@ -790,31 +844,43 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .stringEmpty("emptyStr")
             .dateEmpty("emptyDate")
         )
-        .group("convertsToQuantity() with convertible literals")
+        .group("convertsToQuantity() - Boolean sources")
         .testTrue("true.convertsToQuantity()",
             "convertsToQuantity() returns true for Boolean")
+
+        .group("convertsToQuantity() - Integer sources")
         .testTrue("42.convertsToQuantity()",
             "convertsToQuantity() returns true for Integer")
+
+        .group("convertsToQuantity() - Decimal sources")
         .testTrue("3.14.convertsToQuantity()",
             "convertsToQuantity() returns true for Decimal")
+
+        .group("convertsToQuantity() - String sources (UCUM literals)")
         .testTrue("'10 \\'mg\\''.convertsToQuantity()",
             "convertsToQuantity() returns true for UCUM string")
+
+        .group("convertsToQuantity() - String sources (calendar duration literals)")
         .testTrue("'4 days'.convertsToQuantity()",
             "convertsToQuantity() returns true for calendar duration string")
+
+        .group("convertsToQuantity() - String sources (numeric literals)")
         .testTrue("'42'.convertsToQuantity()",
             "convertsToQuantity() returns true for integer string without unit")
         .testTrue("'3.14'.convertsToQuantity()",
             "convertsToQuantity() returns true for decimal string without unit")
 
-        .group("convertsToQuantity() with non-convertible literals")
+        .group("convertsToQuantity() - String sources (invalid)")
         .testFalse("'notQuantity'.convertsToQuantity()",
             "convertsToQuantity() returns false for invalid string")
         .testFalse("'true'.convertsToQuantity()",
-            "convertsToQuantity() returns false for sting with boolean content")
+            "convertsToQuantity() returns false for string with boolean content")
+
+        .group("convertsToQuantity() - Non-convertible sources")
         .testFalse("@2023-01-15.convertsToQuantity()",
             "convertsToQuantity() returns false for Date")
 
-        .group("convertsToQuantity() with empty values")
+        .group("convertsToQuantity() - Empty values")
         .testEmpty("emptyBool.convertsToQuantity()",
             "convertsToQuantity() returns empty for empty Boolean")
         .testEmpty("emptyInt.convertsToQuantity()",
@@ -824,7 +890,7 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testEmpty("emptyDate.convertsToQuantity()",
             "convertsToQuantity() returns empty for empty Date")
 
-        .group("convertsToQuantity() error cases with arrays")
+        .group("convertsToQuantity() - Error cases (arrays)")
         .testEmpty("{}.convertsToQuantity()",
             "convertsToQuantity() returns empty for empty collection")
         .testError("boolArray.convertsToQuantity()",
@@ -836,7 +902,17 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testError("dateArray.convertsToQuantity()",
             "convertsToQuantity() errors on array of non-convertible type (Date)")
 
-        .group("convertsToQuantity(unit) with matching unit - numeric values")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testConvertsToQuantityWithUnit() {
+    return builder()
+        .withSubject(sb -> sb
+            .stringArray("stringArray", "1 'wk'", "1 'cm'", "1000 'g'")
+            .stringEmpty("emptyStr")
+        )
+        .group("convertsToQuantity(unit) - Numeric sources → exact unit match")
         .testTrue("42.convertsToQuantity('1')",
             "convertsToQuantity() with matching unit '1' returns true for integer")
         .testTrue("3.14.convertsToQuantity('1')",
@@ -844,7 +920,7 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testTrue("true.convertsToQuantity('1')",
             "convertsToQuantity() with matching unit '1' returns true for boolean")
 
-        .group("convertsToQuantity(unit) with different unit - numeric values")
+        .group("convertsToQuantity(unit) - Numeric sources → different unit (incompatible)")
         .testFalse("42.convertsToQuantity('mg')",
             "convertsToQuantity() with different unit returns false for integer")
         .testFalse("3.14.convertsToQuantity('kg')",
@@ -852,19 +928,53 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testFalse("true.convertsToQuantity('mg')",
             "convertsToQuantity() with different unit returns false for boolean")
 
-        .group("convertsToQuantity(unit) with matching unit - UCUM strings")
+        .group("convertsToQuantity(unit) - UCUM string sources → exact unit match")
         .testTrue("'10 \\'mg\\''.convertsToQuantity('mg')",
             "convertsToQuantity() with matching UCUM unit returns true")
         .testTrue("'1.5 \\'kg\\''.convertsToQuantity('kg')",
             "convertsToQuantity() with matching UCUM unit returns true for decimal")
 
-        .group("convertsToQuantity(unit) with different unit - UCUM strings")
-        .testFalse("'10 \\'mg\\''.convertsToQuantity('g')",
-            "convertsToQuantity() with different UCUM unit returns false")
-        .testFalse("'1.5 \\'kg\\''.convertsToQuantity('mg')",
-            "convertsToQuantity() with different UCUM unit returns false for decimal")
+        .group("convertsToQuantity(unit) - UCUM string sources → UCUM conversion (compatible)")
+        .testTrue("'10 \\'mg\\''.convertsToQuantity('g')",
+            "convertsToQuantity() returns true for mg to g conversion")
+        .testTrue("'1.5 \\'kg\\''.convertsToQuantity('mg')",
+            "convertsToQuantity() returns true for kg to mg conversion")
+        .testTrue("'1 \\'wk\\''.convertsToQuantity('d')",
+            "convertsToQuantity() returns true for weeks to days conversion")
+        .testTrue("'7 \\'d\\''.convertsToQuantity('wk')",
+            "convertsToQuantity() returns true for days to weeks conversion")
+        .testTrue("'1 \\'cm\\''.convertsToQuantity('mm')",
+            "convertsToQuantity() returns true for cm to mm conversion")
+        .testTrue("'10 \\'mm\\''.convertsToQuantity('cm')",
+            "convertsToQuantity() returns true for mm to cm conversion")
+        .testTrue("'1 \\'cm\\''.convertsToQuantity('m')",
+            "convertsToQuantity() returns true for cm to m conversion")
+        .testTrue("'1000 \\'g\\''.convertsToQuantity('kg')",
+            "convertsToQuantity() returns true for g to kg conversion")
+        .testTrue("'1 \\'kg\\''.convertsToQuantity('g')",
+            "convertsToQuantity() returns true for kg to g conversion")
+        .testTrue("'1 \\'kg\\''.convertsToQuantity('mg')",
+            "convertsToQuantity() returns true for kg to mg conversion")
+        .testTrue("'1 \\'L\\''.convertsToQuantity('mL')",
+            "convertsToQuantity() returns true for L to mL conversion")
+        .testTrue("'1 \\'mL\\''.convertsToQuantity('L')",
+            "convertsToQuantity() returns true for mL to L conversion")
 
-        .group("convertsToQuantity(unit) with matching unit - calendar durations")
+        .group("convertsToQuantity(unit) - UCUM string sources → incompatible units")
+        .testFalse("'1 \\'kg\\''.convertsToQuantity('m')",
+            "convertsToQuantity() returns false for incompatible units (mass to length)")
+        .testFalse("'1 \\'cm\\''.convertsToQuantity('g')",
+            "convertsToQuantity() returns false for incompatible units (length to mass)")
+        .testFalse("'10 \\'mg\\''.convertsToQuantity('d')",
+            "convertsToQuantity() returns false for incompatible units (mass to time)")
+
+        .group("convertsToQuantity(unit) - UCUM string sources → invalid target units")
+        .testFalse("'1 \\'kg\\''.convertsToQuantity('invalid_unit')",
+            "convertsToQuantity() returns false for invalid target unit")
+        .testFalse("'1 \\'cm\\''.convertsToQuantity('notaunit')",
+            "convertsToQuantity() returns false for non-existent target unit")
+
+        .group("convertsToQuantity(unit) - Calendar duration sources → exact unit match")
         .testTrue("'4 days'.convertsToQuantity('days')",
             "convertsToQuantity() with matching calendar unit 'days' returns true")
         .testTrue("'1 year'.convertsToQuantity('year')",
@@ -872,29 +982,37 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testTrue("'3 months'.convertsToQuantity('months')",
             "convertsToQuantity() with matching calendar unit 'months' returns true")
 
-        .group("convertsToQuantity(unit) with different unit - calendar durations")
+        .group("convertsToQuantity(unit) - Calendar duration sources → different unit (not supported)")
         .testFalse("'4 days'.convertsToQuantity('weeks')",
             "convertsToQuantity() with different calendar unit returns false")
         .testFalse("'1 year'.convertsToQuantity('months')",
             "convertsToQuantity() with different calendar unit returns false for year/months")
+        .testFalse("'4 days'.convertsToQuantity('hours')",
+            "convertsToQuantity() returns false for calendar duration to UCUM (not yet supported)")
+        .testFalse("'1 year'.convertsToQuantity('months')",
+            "convertsToQuantity() returns false for calendar duration conversions (not yet supported)")
 
-        .group("convertsToQuantity(unit) with matching unit - numeric strings")
+        .group("convertsToQuantity(unit) - Numeric string sources → exact unit match")
         .testTrue("'42'.convertsToQuantity('1')",
             "convertsToQuantity() with matching unit '1' returns true for numeric string")
         .testTrue("'3.14'.convertsToQuantity('1')",
             "convertsToQuantity() with matching unit '1' returns true for decimal string")
 
-        .group("convertsToQuantity(unit) with different unit - numeric strings")
+        .group("convertsToQuantity(unit) - Numeric string sources → different unit (incompatible)")
         .testFalse("'42'.convertsToQuantity('mg')",
             "convertsToQuantity() with different unit returns false for numeric string")
         .testFalse("'3.14'.convertsToQuantity('kg')",
             "convertsToQuantity() with different unit returns false for decimal string")
 
-        .group("convertsToQuantity(unit) with non-convertible types")
+        .group("convertsToQuantity(unit) - Non-convertible sources")
         .testFalse("@2023-01-15.convertsToQuantity('1')",
             "convertsToQuantity() with unit returns false for non-convertible Date")
         .testFalse("'notQuantity'.convertsToQuantity('mg')",
             "convertsToQuantity() with unit returns false for invalid string")
+
+        .group("convertsToQuantity(unit) - Empty values")
+        .testEmpty("emptyStr.convertsToQuantity('mg')",
+            "convertsToQuantity() returns empty for empty String with unit parameter")
 
         .build();
   }

@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.function.provider;
 
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance;
 import au.csiro.pathling.fhirpath.annotations.SqlOnFhirConformance.Profile;
@@ -29,16 +31,11 @@ import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.collection.TimeCollection;
-import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.function.FhirPathFunction;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.functions;
-
-import java.util.Objects;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * Contains functions for converting values between types.
@@ -190,15 +187,19 @@ public class ConversionFunctions {
    *   <li>All other inputs → empty</li>
    * </ul>
    * <p>
-   * The optional {@code unit} parameter specifies a target unit for validation. If provided,
-   * the function returns the converted quantity only if its unit code matches the target unit
-   * (exact string match). If units don't match, returns empty.
+   * The optional {@code unit} parameter specifies a target unit for conversion. If provided, the
+   * function converts the quantity to the target unit using UCUM conversion rules. Returns the
+   * converted quantity if conversion is successful, or empty if units are incompatible or
+   * conversion is not possible.
    * <p>
-   * <b>Note:</b> Full UCUM unit conversion and calendar duration conversions are not yet
-   * supported. Future enhancements will add these capabilities.
+   * <b>UCUM Conversion:</b> Full UCUM unit conversion is supported for compatible units (e.g., 'kg'
+   * to 'g', 'wk' to 'd', 'cm' to 'mm'). Incompatible units (e.g., mass to length) return empty.
+   * <p>
+   * <b>Note:</b> Calendar duration conversions (e.g., days to hours, years to months) are tracked
+   * in issue #2505 and will be added in a future enhancement.
    *
    * @param input The input collection
-   * @param unit Optional target unit for validation (null if not specified)
+   * @param unit Optional target unit for conversion (null if not specified)
    * @return A {@link QuantityCollection} containing the converted value or empty
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
    * toQuantity</a>
@@ -339,12 +340,16 @@ public class ConversionFunctions {
    * Checks if the input can be converted to a Quantity value.
    * <p>
    * The optional {@code unit} parameter specifies a target unit for validation. If provided, the
-   * function returns true only if the input can be converted to a Quantity AND the resulting
-   * quantity's unit code matches the target unit (exact string match). If units don't match,
-   * returns false.
+   * function returns true if the input can be converted to a Quantity AND the quantity can be
+   * converted to the target unit (either via exact match or UCUM conversion). Returns false if
+   * units are incompatible or conversion is not possible.
    * <p>
-   * <b>Note:</b> Full UCUM unit conversion and calendar duration conversions are not yet
-   * supported. Future enhancements will add these capabilities.
+   * <b>UCUM Conversion:</b> Full UCUM unit conversion checking is supported for compatible units
+   * (e.g., 'kg' to 'g', 'wk' to 'd', 'cm' to 'mm'). Incompatible units (e.g., mass to length)
+   * return false.
+   * <p>
+   * <b>Note:</b> Calendar duration conversions (e.g., days to hours, years to months) are tracked
+   * in issue #2505 and will be added in a future enhancement.
    *
    * @param input The input collection
    * @param unit Optional target unit for validation (null if not specified)

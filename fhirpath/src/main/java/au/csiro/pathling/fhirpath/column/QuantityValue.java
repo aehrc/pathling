@@ -19,10 +19,14 @@ package au.csiro.pathling.fhirpath.column;
 
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
+
+import static org.apache.spark.sql.functions.callUDF;
+import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
+import au.csiro.pathling.sql.misc.ConvertQuantityToUnit;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.function.BinaryOperator;
@@ -206,43 +210,106 @@ public class QuantityValue {
   }
 
   /**
-   * Converts this quantity to the specified unit if units match, or returns null otherwise. It
-   * matches the FHIRPath toXXX() conversion semantics returning null when conversion is not
-   * possible.
+   * Checks if this quantity uses the UCUM unit system.
    * <p>
-   * Performs exact string matching on the 'unit' field (literal as written). Returns the original
-   * quantity if the unit matches the target unit, or null (cast to Quantity type) if it doesn't
-   * match.
-   * <p>
-   * This implements the FHIRPath toQuantity(unit) conversion semantics with the allowance that
-   * "Implementations are not required to support a complete UCUM implementation, and may return
-   * empty when the unit argument is used and it is different than the input quantity unit."
+   * Returns a boolean column that evaluates to true if the quantity's system field equals
+   * {@link au.csiro.pathling.fhirpath.FhirPathQuantity#UCUM_SYSTEM_URI}, false otherwise.
    *
-   * @param targetUnit the target unit to match against
-   * @return Column expression that evaluates to the quantity if units match, null otherwise
+   * @return Column of BooleanType indicating if this is a UCUM quantity
+   */
+  @Nonnull
+  public Column isUcum() {
+    return quantityColumn.getField(QuantityEncoding.SYSTEM_COLUMN)
+        .equalTo(lit(au.csiro.pathling.fhirpath.FhirPathQuantity.UCUM_SYSTEM_URI));
+  }
+
+  /**
+   * Checks if this quantity uses the FHIRPath calendar duration system.
+   * <p>
+   * Returns a boolean column that evaluates to true if the quantity's system field equals
+   * {@link au.csiro.pathling.fhirpath.FhirPathQuantity#FHIRPATH_CALENDAR_DURATION_SYSTEM_URI},
+   * false otherwise.
+   *
+   * @return Column of BooleanType indicating if this is a calendar duration quantity
+   */
+  @Nonnull
+  public Column isCalendarDuration() {
+    return quantityColumn.getField(QuantityEncoding.SYSTEM_COLUMN)
+        .equalTo(lit(au.csiro.pathling.fhirpath.FhirPathQuantity.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI));
+  }
+
+  /**
+   * Converts this quantity to the specified unit if units match or are compatible via UCUM
+   * conversion, or returns null otherwise. It matches the FHIRPath toXXX() conversion semantics
+   * returning null when conversion is not possible.
+   * <p>
+   * First checks if this is a UCUM or calendar duration quantity. For exact unit match with valid
+   * system, returns the quantity as-is (fast path). Otherwise, attempts UCUM unit conversion via
+   * the UDF. Returns the converted quantity if conversion is successful, or null if conversion is
+   * not possible.
+   * <p>
+   * Non-UCUM/non-calendar quantities (e.g., Money with system "urn:iso:std:iso:4217") will always
+   * return null, even if the unit string happens to match the target unit.
+   * <p>
+   * This implements the FHIRPath toQuantity(unit) conversion semantics with full UCUM unit
+   * conversion support for compatible units (e.g., 'kg' to 'g', 'wk' to 'd').
+   *
+   * @param targetUnit the target unit to convert to
+   * @return Column expression that evaluates to the converted quantity or null if conversion fails
    */
   @Nonnull
   public Column toUnit(@Nonnull final Column targetUnit) {
     final ValueWithUnit literal = ValueWithUnit.literalValueOf(quantityColumn);
-    return when(literal.unit().equalTo(targetUnit), quantityColumn)
-        .otherwise(lit(null).cast(QuantityEncoding.dataType()));
+
+    // Try UCUM conversion (will return null for non-UCUM/non-calendar quantities)
+    final Column ucumConverted = callUDF(ConvertQuantityToUnit.FUNCTION_NAME,
+        quantityColumn, targetUnit);
+
+    // Short-circuit: exact match only if unit matches AND system is UCUM or calendar duration
+    // For non-UCUM/non-calendar systems (e.g., Money), fall through to UCUM conversion (returns null)
+    final Column hasValidSystem = isUcum().or(isCalendarDuration());
+    final Column exactMatchWithValidSystem = literal.unit().equalTo(targetUnit)
+        .and(hasValidSystem);
+
+    // Return exact match if available (fast path), otherwise UCUM conversion result (or null)
+    return when(exactMatchWithValidSystem, quantityColumn)
+        .otherwise(coalesce(ucumConverted, lit(null).cast(QuantityEncoding.dataType())));
   }
 
   /**
-   * Checks if this quantity can be converted to the specified unit.
+   * Checks if this quantity can be converted to the specified unit via exact match or UCUM
+   * conversion.
    * <p>
-   * Performs exact string matching on the 'unit' field (literal as written). Returns true if the
-   * unit matches the target unit, or null if the quantity row is null (to propagate empty values in
-   * the caller's coalesce logic).
+   * First checks if this is a UCUM or calendar duration quantity with exact unit match. If not,
+   * checks if UCUM unit conversion is possible via the UDF. Returns true if the unit matches (with
+   * valid system) or conversion is possible, false if not convertible, or null if the quantity row
+   * is null (to propagate empty values in the caller's coalesce logic).
    * <p>
-   * This implements the FHIRPath convertsToQuantity(unit) validation semantics.
+   * Non-UCUM/non-calendar quantities (e.g., Money with system "urn:iso:std:iso:4217") will always
+   * return false, even if the unit string happens to match the target unit.
+   * <p>
+   * This implements the FHIRPath convertsToQuantity(unit) validation semantics with full UCUM unit
+   * conversion support.
    *
    * @param targetUnit the target unit to check compatibility with
-   * @return Column expression that evaluates to true if convertible, null for empty propagation
+   * @return Column of BooleanType that evaluates to true if convertible and  null for empty rows
    */
   @Nonnull
   public Column convertibleToUnit(@Nonnull final Column targetUnit) {
     final ValueWithUnit literal = ValueWithUnit.literalValueOf(quantityColumn);
-    return when(quantityColumn.isNotNull(), literal.unit().equalTo(targetUnit));
+
+    // Check exact string match with valid system (UCUM or calendar duration)
+    final Column hasValidSystem = isUcum().or(isCalendarDuration());
+    final Column exactMatchWithValidSystem = literal.unit().equalTo(targetUnit)
+        .and(hasValidSystem);
+
+    // Check UCUM convertibility by attempting conversion and checking if result is non-null
+    final Column ucumConverted = callUDF(ConvertQuantityToUnit.FUNCTION_NAME,
+        quantityColumn, targetUnit);
+    final Column ucumConvertible = ucumConverted.isNotNull();
+
+    // Return true if either exact match (with valid system) or UCUM conversion is possible
+    // Return null if quantity is null (for empty propagation)
+    return when(quantityColumn.isNotNull(), exactMatchWithValidSystem.or(ucumConvertible));
   }
 }
