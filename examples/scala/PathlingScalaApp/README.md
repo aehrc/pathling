@@ -14,7 +14,7 @@ The application demonstrates:
 
 ## Prerequisites
 
-- Java 17
+- Java 21
 - Scala 2.12
 - SBT (Scala Build Tool)
 - NDJSON FHIR data files (for testing)

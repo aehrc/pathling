@@ -82,8 +82,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import scala.collection.JavaConverters;
-import scala.collection.mutable.WrappedArray;
+import scala.collection.mutable.ArraySeq;
+import scala.jdk.javaapi.CollectionConverters;
 
 @SpringBootUnitTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -214,8 +214,8 @@ class AnsiTypeHintingTest {
 
   @Nonnull
   static String sqlValueToString(@Nonnull final Object value) {
-    if (value instanceof final WrappedArray<?> array) {
-      return "[" + JavaConverters.seqAsJavaList(array).stream()
+    if (value instanceof final ArraySeq<?> array) {
+      return "[" + CollectionConverters.asJava(array).stream()
           .map(AnsiTypeHintingTest::sqlValueToString).collect(
               Collectors.joining(",")) + "]";
     }
@@ -257,8 +257,8 @@ class AnsiTypeHintingTest {
    */
   Stream<Arguments> fhirDefaultMappings() {
     return Stream.of(
-        Arguments.of("base64Binary", new Base64BinaryType("SGVsbG8="), DataTypes.BinaryType,
-            "Hello"),
+        Arguments.of("base64Binary", new Base64BinaryType("SGVsbG8="),
+            DataTypes.BinaryType, "Hello"),
         Arguments.of("boolean", new BooleanType(true), DataTypes.BooleanType, "true"),
         Arguments.of("canonical", new CanonicalType("http://example.org/fhir/ValueSet/123"),
             DataTypes.StringType, "http://example.org/fhir/ValueSet/123"),
@@ -266,7 +266,7 @@ class AnsiTypeHintingTest {
         Arguments.of("date", new DateType("2023-01-01"), DataTypes.StringType, "2023-01-01"),
         Arguments.of("dateTime", new DateTimeType("2023-01-01T12:00:00Z"), DataTypes.StringType,
             "2023-01-01T12:00:00Z"),
-        Arguments.of("decimal", new DecimalType("123.450"), DataTypes.StringType, "123.450"),
+        Arguments.of("decimal", new DecimalType("123.450"), DataTypes.StringType, "123.45"),
         Arguments.of("id", new IdType("identifier123"), DataTypes.StringType, "identifier123"),
         Arguments.of("instant", new InstantType("2023-01-01T12:00:00Z"), DataTypes.TimestampType,
             "2023-01-01 12:00:00.0"),
@@ -322,7 +322,7 @@ class AnsiTypeHintingTest {
 
   @ParameterizedTest(name = "{0} type maps to {2}")
   @MethodSource("fhirpathDefaultMappings")
-  void defaultSingleFhirpathMappings(final String ignoreDescription, final String literalExpr,
+  void defaultSingleFhirPathMappings(final String ignoreDescription, final String literalExpr,
       final DataType expectedDataType, final String expectedValue) {
     final String actualValue = evalToStrValue(TestView.builder().expression(literalExpr).build(),
         expectedDataType);
@@ -331,7 +331,7 @@ class AnsiTypeHintingTest {
 
   @ParameterizedTest(name = "collection {0} type maps to {2}")
   @MethodSource("fhirpathDefaultMappings")
-  void defaultCollectionFhirpathMappings(final String ignoreDescription, final String literalExpr,
+  void defaultCollectionFhirPathMappings(final String ignoreDescription, final String literalExpr,
       final DataType expectedDataType, final String expectedValue) {
     final String actualValue = evalToStrValue(
         TestView.builder().expression(literalExpr).collection(true).build(),
@@ -345,9 +345,9 @@ class AnsiTypeHintingTest {
         Arguments.of("empty", "{}", false, DataTypes.NullType, null),
         Arguments.of("empty as collection", "{}", true, DataTypes.NullType, null),
         Arguments.of("decimal", "value.ofType(Quantity).value", false, DataTypes.StringType,
-            "23.40"),
+            "23.4"),
         Arguments.of("decimal literal", "1.00", false, DataTypes.StringType,
-            "1.00"),
+            "1"),
         Arguments.of("decimal addition", "value.ofType(Quantity).value + 1.00", false,
             DataTypes.StringType,
             "24.4"),

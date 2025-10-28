@@ -30,9 +30,9 @@ Your branch should be named `issue/[GitHub issue #]`.
 
 You will need the following software to build the solution:
 
-* Java 17
+* Java 21
 * Maven 3.9+
-* Python 3.8+
+* Python 3.9+
 * R 3.5+
 
 To build and install locally, run:
@@ -228,6 +228,13 @@ mvn clean install -pl lib/R -am
 
 All versioning
 follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
+
+**Note on major version increments**: In addition to the standard semantic
+versioning rules, Pathling will increment the major version number when moving
+to a new major version of Apache Spark. This is because Spark major version
+changes introduce potential incompatibilities to the environment on which
+Pathling is designed to run, affecting deployment, dependencies, and runtime
+requirements.
 
 The core of Pathling consists of the following modules, all of which inherit
 from the main `pom.xml` in the root of the repository.

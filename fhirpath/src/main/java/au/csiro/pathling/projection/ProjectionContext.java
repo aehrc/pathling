@@ -21,7 +21,7 @@ import static java.util.stream.Collectors.toMap;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
+import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.views.ConstantDeclaration;
 import jakarta.annotation.Nonnull;
@@ -39,7 +39,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * @author Piotr Szul
  */
 public record ProjectionContext(
-    @Nonnull FhirpathEvaluator executor,
+    @Nonnull FhirPathEvaluator executor,
     @Nonnull Collection inputContext
 ) {
 
@@ -94,7 +94,7 @@ public record ProjectionContext(
             ProjectionContext::getCollectionForConstantValue));
 
     // Create a new FhirPathExecutor.
-    final FhirpathEvaluator executor = context.fhirpathEvaluatorFactory()
+    final FhirPathEvaluator executor = context.fhirpathEvaluatorFactory()
         .create(subjectResource, StaticFunctionRegistry.getInstance(), variables);
 
     // Return a new ProjectionContext with the executor and the default input context.

@@ -46,7 +46,7 @@ public class SubsettingOperations {
         rep -> rep.vectorize(
             // If the subject is non-singular, use the `element_at` function to extract the element 
             // at the specified index. 
-            c -> functions.element_at(c, index.getColumnValue().plus(1)),
+            c -> functions.try_element_at(c, index.getColumnValue().plus(1)),
             // If the subject is singular, return the subject itself. 
             c -> c
         ));

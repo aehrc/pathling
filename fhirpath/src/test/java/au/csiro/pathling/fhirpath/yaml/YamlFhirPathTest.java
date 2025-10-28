@@ -28,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 @YamlTestConfiguration(
     resourceBase = "fhirpath-ptl/resources"
 )
-public class YamlFhirpathTest extends YamlCachedTestBase {
+public class YamlFhirPathTest extends YamlCachedTestBase {
 
   @YamlTest("fhirpath-ptl/cases/math.yaml")
   void testMath(@Nonnull final YamlTestExecutor testCase) {
@@ -39,7 +39,7 @@ public class YamlFhirpathTest extends YamlCachedTestBase {
   void testSearchParams(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);
   }
-  
+
   @YamlTest("fhirpath-ptl/cases/datetime_comparison.yaml")
   void testDateTimeComparison(@Nonnull final YamlTestExecutor testCase) {
     run(testCase);

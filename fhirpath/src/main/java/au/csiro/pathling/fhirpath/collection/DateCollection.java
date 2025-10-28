@@ -41,7 +41,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @Slf4j
 public class DateCollection extends Collection implements StringCoercible, Materializable,
     DateTimeComparable {
-  
+
   /**
    * Creates a new DateCollection.
    *
@@ -111,6 +111,14 @@ public class DateCollection extends Collection implements StringCoercible, Mater
   @Override
   public StringCollection asStringPath() {
     return Collection.defaultAsStringPath(this);
+  }
+
+  @Override
+  public boolean convertibleTo(@Nonnull final Collection other) {
+    return other.getType()
+        .filter(FhirPathType.DATETIME::equals)
+        .map(t -> true)
+        .orElseGet(() -> super.convertibleTo(other));
   }
 
 }

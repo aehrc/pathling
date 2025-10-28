@@ -5,8 +5,8 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230.
+ * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ import org.hl7.fhir.instance.model.api.{IBase, IBaseDatatype, IPrimitiveType}
 import org.hl7.fhir.r4.model._
 
 import java.util.TimeZone
-import scala.collection.convert.ImplicitConversions.`iterable AsScalaIterable`
+import scala.jdk.CollectionConverters._
 
 /**
  * Data type mappings for FHIR STU3.
@@ -186,7 +186,7 @@ class R4DataTypeMappings extends DataTypeMappings {
 
   override def getValidChoiceTypes(choice: RuntimeChildChoiceDefinition): Seq[Class[_ <: IBase]] = {
     choice
-      .getValidChildTypes
+      .getValidChildTypes.asScala
       .filter(cls => !choice.isInstanceOf[RuntimeChildAny] || isValidOpenElementType(cls))
       .toList
   }

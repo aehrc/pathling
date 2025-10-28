@@ -34,7 +34,7 @@ The version number needs to be changed in the following places:
 - [ ] `examples/java/PathlingJavaApp/pom.xml`
 - [ ] `examples/scala/PathlingScalaApp/build.sbt`
 - [ ] `lib/python/Dockerfile`
-- [ ] `docs/libraries/installation/spark.md`
+- [ ] `site/docs/libraries/installation/spark.md`
 - [ ] `site/docusaurus.config.js` (only change upon release version, not
   snapshot)
 

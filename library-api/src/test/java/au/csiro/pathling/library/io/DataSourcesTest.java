@@ -92,6 +92,7 @@ class DataSourcesTest {
         .config("spark.sql.warehouse.dir", warehouseLocation.toString())
         .config("javax.jdo.option.ConnectionURL",
             "jdbc:derby:" + metastoreLocation + ";create=true")
+        .config("spark.ui.enabled", "false")
         .getOrCreate();
 
     // Create the test schema.

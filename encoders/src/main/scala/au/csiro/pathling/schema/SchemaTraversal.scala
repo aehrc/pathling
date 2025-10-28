@@ -5,8 +5,8 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230.
+ * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import ca.uhn.fhir.context._
 import org.hl7.fhir.instance.model.api.IBase
 import org.hl7.fhir.r4.model.Patient
 
-import scala.collection.convert.ImplicitConversions._
+import scala.jdk.CollectionConverters._
 
 
 /**
@@ -255,8 +255,9 @@ case class CompositeCtx[DT, SF](compositeDefinition: BaseRuntimeElementComposite
 
   def visitChildren(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
     compositeDefinition
-      .getChildren
+      .getChildren.asScala
       .flatMap(toChildCtx(_).accept(visitor))
+      .toSeq
   }
 
   def toChildCtx(childDefinition: BaseRuntimeChildDefinition): ChildCtx[DT, SF] = {

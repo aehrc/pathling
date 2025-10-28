@@ -35,8 +35,8 @@ from pyspark.sql import SparkSession
 spark = (
     SparkSession.builder.config(
         "spark.jars.packages",
-        "au.csiro.pathling:library-runtime:8.1.0,"
-        "io.delta:delta-spark_2.12:3.3.2,"
+        "au.csiro.pathling:library-runtime:9.0.0-SNAPSHOT," +
+        "io.delta:delta-spark_2.12:3.3.2"
     )
     .config(
         "spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension"
@@ -58,7 +58,7 @@ library(sparklyr)
 library(pathling)
 
 sc <- spark_connect(master = "local",
-                    packages = c(paste("au.csiro.pathling:library-runtime:", pathling_version()),
+                    packages = c(paste0("au.csiro.pathling:library-runtime:", pathling_version()),
                                  "io.delta:delta-spark_2.12:3.1.0"),
                     config = list("sparklyr.shell.conf" = c(
                             "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
@@ -75,7 +75,7 @@ pc <- pathling_connect(sc)
 import au.csiro.pathling.library.PathlingContext
 
 val spark = SparkSession.builder
-        .config("spark.jars.packages", "au.csiro.pathling:library-runtime:8.1.0," +
+        .config("spark.jars.packages", "au.csiro.pathling:library-runtime:9.0.0-SNAPSHOT," +
                 "io.delta:delta-spark_2.12:3.1.0")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.sql.catalog.spark_catalog",
@@ -97,7 +97,7 @@ class MyApp {
     public static void main(String[] args) {
         SparkSession spark = SparkSession.builder()
                 .config("spark.jars.packages",
-                        "au.csiro.pathling:library-runtime:8.1.0," +
+                        "au.csiro.pathling:library-runtime:9.0.0-SNAPSHOT," +
                                 "io.delta:delta-spark_2.12:3.1.0")
                 .config("spark.sql.extensions",
                         "io.delta.sql.DeltaSparkSessionExtension")

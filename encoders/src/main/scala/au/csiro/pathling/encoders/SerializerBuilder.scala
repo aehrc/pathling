@@ -5,8 +5,8 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230.
+ * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ import org.hl7.fhir.instance.model.api.{IBaseDatatype, IBaseHasExtensions, IBase
 import org.hl7.fhir.r4.model.{Base, Extension, Quantity}
 import org.hl7.fhir.utilities.xhtml.XhtmlNode
 
-import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
+import scala.jdk.CollectionConverters._
 
 /**
  * The schema processor for building serializer expressions.
@@ -299,7 +299,7 @@ private[encoders] object SerializerBuilderProcessor {
 
     def flattenBase(obj: Base): List[(Int, java.util.List[Extension])] = {
 
-      val childrenExts = obj.children()
+      val childrenExts = obj.children().asScala
         .map(p => obj.getProperty(p.getName.hashCode, p.getName, false))
         .filter(_ != null)
         .flatMap(_.flatMap(flattenBase))

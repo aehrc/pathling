@@ -5,8 +5,8 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230.
+ * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,9 @@ package au.csiro.pathling.encoders
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import ca.uhn.fhir.context._
-import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
+import org.apache.spark.sql.catalyst.encoders.{AgnosticEncoder, AgnosticExpressionPathEncoder, ExpressionEncoder}
+import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.types.DataType
 
 import scala.reflect.ClassTag
 
@@ -37,6 +39,30 @@ object EncoderBuilder {
 
   val UNSUPPORTED_RESOURCES: Set[String] = Set("Parameters", "StructureDefinition", "StructureMap",
     "Bundle")
+
+  /**
+   * Custom AgnosticEncoder that wraps serializer and deserializer expressions.
+   *
+   * Note: This extends AgnosticExpressionPathEncoder which is deprecated and will be removed in
+   * Spark 4.1. This is the appropriate mechanism for custom encoders that build Expression trees
+   * directly. When Spark 4.1 is released, we will need to evaluate the replacement API.
+   *
+   * The deprecation warning is suppressed because:
+   * 1. This is the correct API for our use case (custom expression-based encoding)
+   * 2. The alternative (UserDefinedType) would require major architectural changes
+   * 3. Spark may provide a better alternative in 4.1
+   */
+  @annotation.nowarn("cat=deprecation")
+  private class FhirAgnosticEncoder[T](
+                                        override val dataType: DataType,
+                                        serializerExpr: Expression,
+                                        deserializerExpr: Expression,
+                                        override val clsTag: ClassTag[T]
+                                      ) extends AgnosticExpressionPathEncoder[T] {
+    override def isPrimitive: Boolean = false
+    override def toCatalyst(input: Expression): Expression = serializerExpr
+    override def fromCatalyst(inputPath: Expression): Expression = deserializerExpr
+  }
 
   /**
    * Returns an encoder for the FHIR resource implemented by the given class
@@ -68,9 +94,13 @@ object EncoderBuilder {
       EncoderConfig(maxNestingLevel, openTypes, enableExtensions))
     val serializerBuilder = SerializerBuilder(schemaConverter)
     val deserializerBuilder = DeserializerBuilder(schemaConverter)
-    new ExpressionEncoder(
-      serializerBuilder.buildSerializer(resourceDefinition),
-      deserializerBuilder.buildDeserializer(resourceDefinition),
+
+    val serializerExpr = serializerBuilder.buildSerializer(resourceDefinition)
+    val deserializerExpr = deserializerBuilder.buildDeserializer(resourceDefinition)
+    val schema = serializerExpr.dataType
+
+    val agnosticEncoder = new FhirAgnosticEncoder[Any](schema, serializerExpr, deserializerExpr,
       ClassTag(fhirClass))
+    ExpressionEncoder(agnosticEncoder)
   }
 }

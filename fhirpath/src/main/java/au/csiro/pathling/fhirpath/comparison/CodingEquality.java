@@ -30,9 +30,8 @@ import org.apache.spark.sql.Column;
  *
  * @author Piotr Szul
  */
-public class CodingEquality implements ColumnEquality {
-
-
+public class CodingEquality implements ElementWiseEquality {
+  
   @Nonnull
   private static final CodingEquality INSTANCE = new CodingEquality();
 
