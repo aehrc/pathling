@@ -22,7 +22,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>9.0.0-SNAPSHOT</version>
+    <version>9.0.0</version>
   </parent>
   <artifactId>benchmark</artifactId>
   <packaging>jar</packaging>
