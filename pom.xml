@@ -22,7 +22,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>9.0.0</version>
+  <version>9.0.1-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
