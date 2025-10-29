@@ -24,11 +24,12 @@ import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.udf.SqlFunction2;
 import jakarta.annotation.Nullable;
 import java.io.Serial;
+import java.util.Optional;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataType;
 
 /**
- * Spark UDF to convert a Quantity from its current unit to a target unit using UCUM conversions.
+ * Spark UDF to convert a Quantity from its current unitCode to a target unitCode using UCUM conversions.
  * <p>
  * This UDF wraps {@link FhirPathQuantity#convertToUnit(String)} for use in Spark SQL. It decodes
  * the quantity Row, delegates to the conversion logic, and encodes the result back to a Row.
@@ -69,12 +70,10 @@ public class ConvertQuantityToUnit implements SqlFunction2<Row, String, Row> {
     final FhirPathQuantity quantity = QuantityEncoding.decode(quantityRow);
 
     // Delegate to FhirPathQuantity.convertToUnit() for conversion logic
-    @Nullable final FhirPathQuantity convertedQuantity = quantity.convertToUnit(
+    final Optional<FhirPathQuantity> convertedQuantity = quantity.convertToUnit(
         requireNonNull(targetUnit));
 
     // Encode back to Row (returns null if conversion failed)
-    return convertedQuantity != null
-           ? QuantityEncoding.encode(convertedQuantity)
-           : null;
+    return convertedQuantity.map(QuantityEncoding::encode).orElse(null);
   }
 }

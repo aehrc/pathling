@@ -64,7 +64,7 @@ class ConversionLogic {
   static final String DATETIME_REGEX =
       "^\\d{4}(-\\d{2}(-\\d{2}(T\\d{2}(:\\d{2}(:\\d{2}(\\.\\d+)?)?)?(Z|[+\\-]\\d{2}:\\d{2})?)?)?)?$";
   static final String TIME_REGEX = "^\\d{2}(:\\d{2}(:\\d{2}(\\.\\d+)?)?)?$";
-  // Unit is optional per FHIRPath spec: (?'value'(\+|-)?\d+(\.\d+)?)\s*('(?'unit'[^']+)'|(?'time'[a-zA-Z]+))?
+  // Unit is optional per FHIRPath spec: (?'value'(\+|-)?\d+(\.\d+)?)\s*('(?'unitCode'[^']+)'|(?'time'[a-zA-Z]+))?
   // Valid calendar duration units: year(s), month(s), week(s), day(s), hour(s), minute(s), second(s), millisecond(s)
   // Case-insensitive matching via (?i) flag
   static final String QUANTITY_REGEX =
@@ -243,7 +243,7 @@ class ConversionLogic {
           callUDF(DecimalToLiteral.FUNCTION_NAME, value, lit(null));
       case QUANTITY ->
         // Quantity: Use QuantityToLiteral UDF to format as FHIRPath quantity literal.
-        // E.g., {value: 1, code: "wk", system: "http://unitsofmeasure.org"} -> "1 'wk'"
+        // E.g., {value: 1, unitCode: "wk", system: "http://unitsofmeasure.org"} -> "1 'wk'"
           callUDF(QuantityToLiteral.FUNCTION_NAME, value);
       default -> lit(null);
     };
@@ -316,7 +316,7 @@ class ConversionLogic {
    * Converts a value to Quantity based on source type.
    * <ul>
    *   <li>BOOLEAN: true → 1.0 '1', false → 0.0 '1' (null boolean → null)</li>
-   *   <li>INTEGER/DECIMAL: Encode as quantity with unit '1' (null → null)</li>
+   *   <li>INTEGER/DECIMAL: Encode as quantity with unitCode '1' (null → null)</li>
    *   <li>STRING: Parse as FHIRPath quantity literal (validates format then calls StringToQuantity UDF)</li>
    * </ul>
    *
@@ -330,11 +330,11 @@ class ConversionLogic {
     return switch (sourceType) {
       case BOOLEAN ->
         // Boolean: true → 1.0 '1', false → 0.0 '1', null → null
-        // First cast to decimal, then encode as quantity with unit '1'
+        // First cast to decimal, then encode as quantity with unitCode '1'
         // Use when() to return typed null for null values instead of empty struct
           QuantityEncoding.encodeNumeric(value);
       case INTEGER, DECIMAL ->
-        // Integer/Decimal: Encode as quantity with default unit '1', null → null
+        // Integer/Decimal: Encode as quantity with default unitCode '1', null → null
         // Use when() to return typed null for null values instead of empty struct
           QuantityEncoding.encodeNumeric(value);
       case STRING ->

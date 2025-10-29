@@ -146,7 +146,7 @@ public class QuantityEncoding {
       return FhirPathQuantity.ofUCUM(value, code);
     } else if (FhirPathQuantity.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI.equals(system)) {
       return FhirPathQuantity.ofCalendar(value,
-          CalendarDurationUnit.fromString(code),
+          CalendarDurationUnit.parseString(code),
           unit != null
           ? unit
           : code);

@@ -181,25 +181,25 @@ public class ConversionFunctions {
    * Converts the input to a Quantity value. Per FHIRPath specification:
    * <ul>
    *   <li>Boolean: true → 1.0 '1', false → 0.0 '1'</li>
-   *   <li>Integer/Decimal: Convert to Quantity with default unit '1'</li>
+   *   <li>Integer/Decimal: Convert to Quantity with default unitCode '1'</li>
    *   <li>Quantity: returns as-is</li>
    *   <li>String: Parse as FHIRPath quantity literal (e.g., "10 'mg'", "4 days")</li>
    *   <li>All other inputs → empty</li>
    * </ul>
    * <p>
-   * The optional {@code unit} parameter specifies a target unit for conversion. If provided, the
-   * function converts the quantity to the target unit using UCUM conversion rules. Returns the
+   * The optional {@code unitCode} parameter specifies a target unitCode for conversion. If provided, the
+   * function converts the quantity to the target unitCode using UCUM conversion rules. Returns the
    * converted quantity if conversion is successful, or empty if units are incompatible or
    * conversion is not possible.
    * <p>
-   * <b>UCUM Conversion:</b> Full UCUM unit conversion is supported for compatible units (e.g., 'kg'
+   * <b>UCUM Conversion:</b> Full UCUM unitCode conversion is supported for compatible units (e.g., 'kg'
    * to 'g', 'wk' to 'd', 'cm' to 'mm'). Incompatible units (e.g., mass to length) return empty.
    * <p>
    * <b>Note:</b> Calendar duration conversions (e.g., days to hours, years to months) are tracked
    * in issue #2505 and will be added in a future enhancement.
    *
    * @param input The input collection
-   * @param unit Optional target unit for conversion (null if not specified)
+   * @param unit Optional target unitCode for conversion (null if not specified)
    * @return A {@link QuantityCollection} containing the converted value or empty
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
    * toQuantity</a>
@@ -211,7 +211,7 @@ public class ConversionFunctions {
       @Nullable final Collection unit) {
     // First convert to Quantity using standard conversion
     final Collection converted = ConversionLogic.performConversion(input, FhirPathType.QUANTITY);
-    // If unit provided and result is QuantityCollection, apply unit conversion
+    // If unitCode provided and result is QuantityCollection, apply unitCode conversion
     if (unit != null && converted instanceof QuantityCollection quantityCollection) {
       return quantityCollection.toUnit(requireNonNull(unit));
     } else {
@@ -339,12 +339,12 @@ public class ConversionFunctions {
   /**
    * Checks if the input can be converted to a Quantity value.
    * <p>
-   * The optional {@code unit} parameter specifies a target unit for validation. If provided, the
+   * The optional {@code unitCode} parameter specifies a target unitCode for validation. If provided, the
    * function returns true if the input can be converted to a Quantity AND the quantity can be
-   * converted to the target unit (either via exact match or UCUM conversion). Returns false if
+   * converted to the target unitCode (either via exact match or UCUM conversion). Returns false if
    * units are incompatible or conversion is not possible.
    * <p>
-   * <b>UCUM Conversion:</b> Full UCUM unit conversion checking is supported for compatible units
+   * <b>UCUM Conversion:</b> Full UCUM unitCode conversion checking is supported for compatible units
    * (e.g., 'kg' to 'g', 'wk' to 'd', 'cm' to 'mm'). Incompatible units (e.g., mass to length)
    * return false.
    * <p>
@@ -352,7 +352,7 @@ public class ConversionFunctions {
    * in issue #2505 and will be added in a future enhancement.
    *
    * @param input The input collection
-   * @param unit Optional target unit for validation (null if not specified)
+   * @param unit Optional target unitCode for validation (null if not specified)
    * @return A {@link BooleanCollection} containing {@code true} if convertible, {@code false}
    * otherwise, or empty for empty input
    * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
@@ -366,7 +366,7 @@ public class ConversionFunctions {
     final Collection canConvertToQuantity = ValidationLogic.performValidation(input,
         FhirPathType.QUANTITY);
 
-    // Only evaluate if unit is provided
+    // Only evaluate if unitCode is provided
     @Nullable final Collection converted =
         unit != null
         ? ConversionLogic.performConversion(input, FhirPathType.QUANTITY)
