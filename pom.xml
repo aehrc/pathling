@@ -22,7 +22,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>9.0.0-SNAPSHOT</version>
+  <version>9.0.1-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -946,6 +946,9 @@
                 </fileset>
                 <fileset>
                   <directory>${project.basedir}/licenses</directory>
+                  <excludes>
+                    <exclude>license-template.ftl</exclude>
+                  </excludes>
                 </fileset>
               </filesets>
             </configuration>
