@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +26,7 @@ import static org.apache.spark.sql.functions.when;
 import au.csiro.pathling.encoders.QuantitySupport;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
-import au.csiro.pathling.fhirpath.CalendarDurationUnit;
+import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import au.csiro.pathling.sql.types.FlexiDecimal;
 import au.csiro.pathling.sql.types.FlexiDecimalSupport;
@@ -86,7 +86,7 @@ public class QuantityEncoding {
           CalendarDurationUnit.values())
       .filter(CalendarDurationUnit::isDefinite)
       .collect(
-          toUnmodifiableMap(CalendarDurationUnit::getUnit,
+          toUnmodifiableMap(CalendarDurationUnit::code,
               CalendarDurationUnit::getUcumEquivalent));
 
   public static final String CANONICALIZED_VALUE_COLUMN = QuantitySupport

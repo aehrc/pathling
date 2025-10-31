@@ -17,7 +17,10 @@
 
 package au.csiro.pathling.fhirpath;
 
-import au.csiro.pathling.fhirpath.FhirPathUnit.CalendarDuration;
+import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
+import au.csiro.pathling.fhirpath.unit.CustomUnit;
+import au.csiro.pathling.fhirpath.unit.FhirPathUnit;
+import au.csiro.pathling.fhirpath.unit.UcumUnit;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -111,7 +114,7 @@ public class FhirPathQuantity {
     }
     return new FhirPathQuantity(value, unitName,
         FHIRPATH_CALENDAR_DURATION_SYSTEM_URI,
-        unit.getUnit());
+        unit.code());
   }
 
   /**
@@ -124,12 +127,12 @@ public class FhirPathQuantity {
   @Nonnull
   public static FhirPathQuantity ofCalendar(@Nonnull final BigDecimal value,
       @Nonnull final CalendarDurationUnit unit) {
-    return ofCalendar(value, unit, unit.getUnit());
+    return ofCalendar(value, unit, unit.code());
   }
 
   /**
    * Parses a FHIRPath quantity literal (e.g. 5.4 'mg', 1 year, 42). Only supports UCUM and calendar
-   * duration units. When no unitCode is specified, defaults to '1' in UCUM system.
+   * duration units. When no unit is specified, defaults to '1' in UCUM system.
    *
    * @param literal the FHIRPath quantity literal
    * @return the parsed FhirPathQuantity
@@ -137,14 +140,14 @@ public class FhirPathQuantity {
    */
   @Nonnull
   public static FhirPathQuantity parse(@Nonnull final String literal) {
-    // Regex with named groups for value, unitCode (quoted), and time (bareword calendar/ucum)
+    // Regex with named groups for value, unit (quoted), and time (bareword calendar/ucum)
     final Matcher matcher = QUANTITY_REGEX.matcher(literal.trim());
     if (!matcher.matches()) {
       throw new IllegalArgumentException("Invalid FHIRPath quantity literal: " + literal);
     }
     final BigDecimal value = new BigDecimal(matcher.group("value"));
     if (matcher.group("unit") != null) {
-      // Quoted unitCode, always UCUM
+      // Quoted unit, always UCUM
       return ofUCUM(value, matcher.group("unit"));
     } else if (matcher.group("time") != null) {
       return ofCalendar(value,
@@ -152,7 +155,7 @@ public class FhirPathQuantity {
           matcher.group("time")
       );
     } else {
-      // No unitCode specified, default to '1' in UCUM system per FHIRPath spec
+      // No unit specified, default to '1' in UCUM system per FHIRPath spec
       return ofUCUM(value, "1");
     }
   }
@@ -166,8 +169,8 @@ public class FhirPathQuantity {
    */
   @Nonnull
   public static FhirPathQuantity ofUnit(@Nonnull final BigDecimal value,
-      @Nonnull final FhirPathUnit unit) {
-    return new FhirPathQuantity(value, unit.unit(), unit.system(), unit.code());
+      @Nonnull final FhirPathUnit unit, @Nonnull final String unitName) {
+    return new FhirPathQuantity(value, unitName, unit.system(), unit.code());
   }
 
   /**
@@ -178,10 +181,9 @@ public class FhirPathQuantity {
   @Nonnull
   public FhirPathUnit getFhirpathUnit() {
     return switch (system) {
-      case FHIRPATH_CALENDAR_DURATION_SYSTEM_URI -> new CalendarDuration(
-          CalendarDurationUnit.parseString(code), unit);
-      case UCUM_SYSTEM_URI -> new FhirPathUnit.Ucum(code);
-      default -> new FhirPathUnit.Custom(system, code, unit);
+      case FHIRPATH_CALENDAR_DURATION_SYSTEM_URI -> CalendarDurationUnit.parseString(code);
+      case UCUM_SYSTEM_URI -> new UcumUnit(code);
+      default -> new CustomUnit(system, code);
     };
   }
 
@@ -196,18 +198,18 @@ public class FhirPathQuantity {
    *   <li>Cross-type conversions: calendar duration to UCUM 's' or 'ms', and vice versa</li>
    * </ul>
    *
-   * @param unit the target unit string (e.g., "mg", "second", "s")
+   * @param unitName the target unit string (e.g., "mg", "second", "s")
    * @return an Optional containing the converted quantity, or empty if conversion is not possible
    */
   @Nonnull
-  public Optional<FhirPathQuantity> convertToUnit(@Nonnull final String unit) {
+  public Optional<FhirPathQuantity> convertToUnit(@Nonnull final String unitName) {
     final FhirPathUnit sourceUnit = getFhirpathUnit();
-    final FhirPathUnit targetUnit = FhirPathUnit.fromString(unit);
+    final FhirPathUnit targetUnit = FhirPathUnit.fromString(unitName);
     if (targetUnit.equals(sourceUnit)) {
-      return Optional.of(this);
+      return Optional.of(FhirPathQuantity.ofUnit(getValue(), targetUnit, unitName));
     } else {
       return FhirPathUnit.conversionFactorTo(getFhirpathUnit(), targetUnit)
-          .map(cf -> FhirPathQuantity.ofUnit(getValue().multiply(cf), targetUnit));
+          .map(cf -> FhirPathQuantity.ofUnit(cf.apply(getValue()), targetUnit, unitName));
     }
   }
 }
