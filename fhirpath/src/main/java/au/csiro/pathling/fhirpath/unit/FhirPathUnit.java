@@ -41,7 +41,7 @@ public sealed interface FhirPathUnit permits UcumUnit, CalendarDurationUnit,
   /**
    * The precision (number of decimal places) to use when computing unit conversions.
    */
-  int CONVERSION_PRECISION = 20;
+  int CONVERSION_PRECISION = 15;
 
   /**
    * Gets the system URI for this unit (e.g., UCUM system URI, calendar duration system URI).

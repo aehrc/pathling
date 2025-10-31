@@ -59,7 +59,7 @@ public class ConversionFactor  {
 
 
   /**
-   * Applies this conversion factor to a numeric value.
+   * Applies this conversion factor to a numeric value with the default precision.
    * <p>
    * The conversion is performed as: {@code value * numerator / denominator}
    * <p>
@@ -71,8 +71,30 @@ public class ConversionFactor  {
    */
   @Nonnull
   public BigDecimal apply(@Nonnull final BigDecimal value) {
+    return apply(value, FhirPathUnit.CONVERSION_PRECISION);
+  }
+
+  /**
+   * Applies this conversion factor to a numeric value with the specified precision.
+   * <p>
+   * The conversion is performed as: {@code value * numerator / denominator}
+   * <p>
+   * The result is calculated with the specified number of decimal places of precision using
+   * {@link RoundingMode#HALF_UP}, and trailing zeros are stripped.
+   *
+   * @param value the value to convert
+   * @param precision the number of decimal places to use (must be between 1 and 100)
+   * @return the converted value
+   * @throws IllegalArgumentException if precision is not between 1 and 100
+   */
+  @Nonnull
+  public BigDecimal apply(@Nonnull final BigDecimal value, int precision) {
+    if (precision < 1 || precision > 100) {
+      throw new IllegalArgumentException(
+          "precision must be between 1 and 100, got: " + precision);
+    }
     return value.multiply(numerator)
-        .divide(denominator, FhirPathUnit.CONVERSION_PRECISION, RoundingMode.HALF_UP)
+        .divide(denominator, precision, RoundingMode.HALF_UP)
         .stripTrailingZeros();
   }
 

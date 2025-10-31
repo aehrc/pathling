@@ -203,8 +203,8 @@ public enum CalendarDurationUnit implements FhirPathUnit {
    * <p>
    * This is a cross-type conversion that works by:
    * <ol>
-   *   <li>Converting the UCUM source to the UCUM equivalent of seconds</li>
-   *   <li>Converting seconds to this calendar unit</li>
+   *   <li>Converting the UCUM source to the UCUM equivalent of seconds ('s')</li>
+   *   <li>Converting 'second' (calendar) to this calendar unit</li>
    * </ol>
    *
    * @param ucumUnitSource the source UCUM unit to convert from
@@ -213,7 +213,7 @@ public enum CalendarDurationUnit implements FhirPathUnit {
    */
   @Nonnull
   Optional<ConversionFactor> conversionFactorFrom(@Nonnull UcumUnit ucumUnitSource) {
-    return SECOND.asUcum().conversionFactorTo(ucumUnitSource)
+    return ucumUnitSource.conversionFactorTo(SECOND.asUcum())
         .flatMap(ucumFactor ->
             SECOND.conversionFactorTo(this)
                 .map(ucumFactor::apply)
