@@ -33,6 +33,7 @@ You will need the following software to build the solution:
 * Java 21
 * Maven 3.9+
 * Python 3.9+
+* uv (Python package manager)
 * R 3.5+
 
 To build and install locally, run:

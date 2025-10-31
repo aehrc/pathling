@@ -40,6 +40,9 @@ jobs:
         id: python-install
         with:
           python-version: 3.9
+          
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
 
       - name: Cache local Maven repository
         uses: actions/cache@v4
