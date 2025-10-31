@@ -24,8 +24,10 @@ The Helm chart includes the following features:
   the [Spark Kubernetes cluster manager](https://spark.apache.org/docs/latest/running-on-kubernetes.html),
   including a service account, role and role binding to allow it to manage
   executor pods
-- Customisation of [resource requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
-- Configuration of [volumes and volume mounts](https://kubernetes.io/docs/concepts/storage/volumes/)
+- Customisation
+  of [resource requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
+- Configuration
+  of [volumes and volume mounts](https://kubernetes.io/docs/concepts/storage/volumes/)
 - [Image pull secrets](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
   for private Docker registries
 - [Tolerations and affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/)
@@ -70,7 +72,7 @@ their default values.
 | `pathling.imagePullSecrets`           | `[ ]`                   | A list of [image pull secrets](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) to use                                                |
 | `pathling.tolerations`                | `[ ]`                   | A list of [tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) to apply to the pod                                                  |
 | `pathling.affinity`                   | `~`                     | [Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) to apply to the pod                                         |
-| `pathling.config`                     | `{ }`                   | A map of [configuration values](/docs/server/configuration) to pass to Pathling                                                                                             |
+| `pathling.config`                     | `{ }`                   | A map of [configuration values](/docs/7.2.0/server/configuration) to pass to Pathling                                                                                       |
 | `pathling.secretConfig`               | `{ }`                   | A map of secret configuration values to pass to Pathling, these values will be stored using [Kubernetes secrets](https://kubernetes.io/docs/concepts/configuration/secret/) |
 
 ## Example configuration

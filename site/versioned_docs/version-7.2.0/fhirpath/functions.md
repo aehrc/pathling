@@ -19,7 +19,9 @@ The notation used to describe the type signature of each function is as follows:
 collection -> allFalse() : Boolean
 ```
 
-Takes a collection of Boolean values and returns `true` if all the items are `false`. If any items are `true`, the result is `false`. If the input is empty (`{ }`), the result is `true`.
+Takes a collection of Boolean values and returns `true` if all the items are
+`false`. If any items are `true`, the result is `false`. If the input is empty (
+`{ }`), the result is `true`.
 
 Example:
 
@@ -35,7 +37,9 @@ See also: [allFalse](https://hl7.org/fhirpath/#allfalse-boolean)
 collection -> allTrue() : Boolean
 ```
 
-Takes a collection of Boolean values and returns `true` if all the items are `true`. If any items are `false`, the result is `false`. If the input is empty (`{ }`), the result is `true`.
+Takes a collection of Boolean values and returns `true` if all the items are
+`true`. If any items are `false`, the result is `false`. If the input is empty (
+`{ }`), the result is `true`.
 
 Example:
 
@@ -51,7 +55,9 @@ See also: [allTrue](https://hl7.org/fhirpath/#alltrue-boolean)
 collection -> anyFalse() : Boolean
 ```
 
-Takes a collection of Boolean values and returns `true` if any of the items are `false`. If all the items are `true`, or if the input is empty (`{ }`), the result is `false`.
+Takes a collection of Boolean values and returns `true` if any of the items are
+`false`. If all the items are `true`, or if the input is empty (`{ }`), the
+result is `false`.
 
 Example:
 
@@ -67,7 +73,9 @@ See also: [anyFalse](https://hl7.org/fhirpath/#anyfalse-boolean)
 collection -> anyTrue() : Boolean
 ```
 
-Takes a collection of Boolean values and returns `true` if any of the items are `true`. If all the items are `false`, or if the input is empty (`{ }`), the result is `false`.
+Takes a collection of Boolean values and returns `true` if any of the items are
+`true`. If all the items are `false`, or if the input is empty (`{ }`), the
+result is `false`.
 
 Example:
 
@@ -103,7 +111,7 @@ collection<Coding -> designation(use: Coding, language: String) : collection<Str
 When invoked on a collection of [Coding](./data-types#coding) elements, returns
 a collection of designation values from
 the [lookup](https://www.hl7.org/fhir/codesystem-operation-lookup.html)
-operation. This can be used to retrieve synonyms, language translations and more 
+operation. This can be used to retrieve synonyms, language translations and more
 from the underlying terminology.
 
 If the `use` parameter is specified, designation values are filtered to only
@@ -125,7 +133,7 @@ Condition.code.coding.designation(http://snomed.info/sct|900000000000013009)
 The `designation` function is a terminology function, which means that it
 requires a
 configured [terminology service](https://hl7.org/fhir/R4/terminology-service.html).
-See [Configuration](/docs/server/configuration#terminology-service) for
+See [Configuration](/docs/7.2.0/server/configuration#terminology-service) for
 details.
 :::
 
@@ -140,13 +148,13 @@ currently unique to the Pathling implementation.
 collection<Coding> -> display(language?: String) : collection<String>
 ```
 
-When invoked on a [Coding](./data-types#coding), returns the preferred display 
+When invoked on a [Coding](./data-types#coding), returns the preferred display
 term, according to the terminology server.
 
-The optional `language` parameter can be used to specify the preferred language 
-for the display name. It overrides the default value set in the configuration. 
-See `pathling.terminology.acceptLanguage` in 
-[Terminology Configuration](/docs/server/configuration#terminology-service) 
+The optional `language` parameter can be used to specify the preferred language
+for the display name. It overrides the default value set in the configuration.
+See `pathling.terminology.acceptLanguage` in
+[Terminology Configuration](/docs/7.2.0/server/configuration#terminology-service)
 for details.
 
 Example:
@@ -158,11 +166,13 @@ Condition.code.display()
 // Prefer German language.
 Condition.code.display("de")
 ```
+
 :::note
 The `display` function is a terminology function, which means that it requires
 a configured
 [terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
-[Configuration](/docs/server/configuration#terminology-service) for details.
+[Configuration](/docs/7.2.0/server/configuration#terminology-service) for
+details.
 :::
 
 :::note
@@ -193,7 +203,7 @@ collection -> exists() : Boolean
 collection -> exists(criteria: [any]) : Boolean
 ```
 
-Tests whether the input collection is empty. When invoked without arguments, 
+Tests whether the input collection is empty. When invoked without arguments,
 `exists()` is equivalent to `empty().not()`.
 
 This function can also optionally accept an argument which can filter the input
@@ -217,7 +227,8 @@ empty or the url is empty.
 Your extension content will only be encoded upon import if your encoding
 configuration has specified that it should be. Data types and maximum depth of
 encoding are both configurable.
-See [Configuration](/docs/server/configuration#encoding) for more information.
+See [Configuration](/docs/7.2.0/server/configuration#encoding) for more
+information.
 :::
 
 See
@@ -283,7 +294,8 @@ the codings are members of the value set.
 The `memberOf` function is a terminology function, which means that it requires
 a configured
 [terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
-[Configuration](/docs/server/configuration#terminology-service) for details.
+[Configuration](/docs/7.2.0/server/configuration#terminology-service) for
+details.
 :::
 
 See also:
@@ -348,15 +360,15 @@ The `type` parameter has these possible values:
 - `boolean`
 - `DateTime`
 
-Both the `code` and the `type` of the property must be present within a 
-[lookup](https://www.hl7.org/fhir/codesystem-operation-lookup.html) response in 
-order for it to be returned by this function. If there are no matches, the 
+Both the `code` and the `type` of the property must be present within a
+[lookup](https://www.hl7.org/fhir/codesystem-operation-lookup.html) response in
+order for it to be returned by this function. If there are no matches, the
 function will return an empty collection.
 
 The optional `language` parameter can be used to specify the preferred language
-for the returned property values. It overrides the default value set in the 
+for the returned property values. It overrides the default value set in the
 configuration. See `pathling.terminology.acceptLanguage` in
-[Terminology Configuration](/docs/server/configuration#terminology-service)
+[Terminology Configuration](/docs/7.2.0/server/configuration#terminology-service)
 for details.
 
 See [Properties](https://www.hl7.org/fhir/codesystem.html#properties)
@@ -376,7 +388,8 @@ Condition.code.coding.property('parent', 'code', 'de')
 The `property` function is a terminology function, which means that it requires
 a configured
 [terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
-[Configuration](/docs/server/configuration#terminology-service) for details.
+[Configuration](/docs/7.2.0/server/configuration#terminology-service) for
+details.
 :::
 
 :::note
@@ -408,7 +421,7 @@ The following types of references are not currently supported:
 - Logical references (via <code>identifier</code>)
 - References to contained resources
 - Absolute literal references
-:::
+  :::
 
 See also:
 [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
@@ -466,7 +479,8 @@ Patient.reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|7
 The `subsumes` function is a terminology function, which means that it requires
 a configured
 [terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
-[Configuration](/docs/server/configuration#terminology-service) for details.
+[Configuration](/docs/7.2.0/server/configuration#terminology-service) for
+details.
 :::
 
 See also:
@@ -492,7 +506,8 @@ Patient.reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct
 The `subsumedBy` function is a terminology function, which means that it
 requires a configured
 [terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
-[Configuration](/docs/server/configuration#terminology-service) for details.
+[Configuration](/docs/7.2.0/server/configuration#terminology-service) for
+details.
 :::
 
 See also:
@@ -536,7 +551,7 @@ the [ConceptMapEquivalence](https://www.hl7.org/fhir/R4/valueset-concept-map-equ
 ValueSet, and is used to filter the mappings returned to only those that have an
 equivalence value in this list.
 
-The `target` parameter identifies the value set in which a translation is 
+The `target` parameter identifies the value set in which a translation is
 sought &mdash; a scope for the translation.
 
 Example:
@@ -549,7 +564,8 @@ Condition.code.coding.translate('https://csiro.au/fhir/ConceptMap/some-map', tru
 The `translate` function is a terminology function, which means that it requires
 a configured
 [terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
-[Configuration](/docs/server/configuration#terminology-service) for details.
+[Configuration](/docs/7.2.0/server/configuration#terminology-service) for
+details.
 :::
 
 :::note
@@ -586,10 +602,10 @@ collection -> where(criteria: [any]) : collection
 
 Returns a collection containing only those elements in the input collection for
 which the `criteria` expression evaluates to `true`. Elements for which the
-expression evaluates to `false` or an empty collection will return an empty 
+expression evaluates to `false` or an empty collection will return an empty
 collection.
 
-The `$this` keyword can be used within the criteria expression to refer to the 
+The `$this` keyword can be used within the criteria expression to refer to the
 item from the input collection currently under evaluation. The context inside
 the arguments is also set to the current item, so paths from the root are
 assumed to be path traversals from the current element.

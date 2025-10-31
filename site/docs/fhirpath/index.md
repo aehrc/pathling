@@ -8,7 +8,10 @@ Pathling leverages the [FHIRPath](https://hl7.org/fhirpath/)
 language in order to abstract away some of the complexity of navigating and
 interacting with FHIR data structures.
 
-Pathling implements the minimal FHIRPath subset within the [Sharable View Definition](https://sql-on-fhir.org/ig/latest/StructureDefinition-ShareableViewDefinition.html#required-fhirpath-expressionsfunctions) profile of the [SQL on FHIR view definition](https://sql-on-fhir.org/ig/latest/StructureDefinition-ViewDefinition.html).
+Pathling implements the minimal FHIRPath subset within
+the [Sharable View Definition](https://sql-on-fhir.org/ig/latest/StructureDefinition-ShareableViewDefinition.html#required-fhirpath-expressionsfunctions)
+profile of
+the [SQL on FHIR view definition](https://sql-on-fhir.org/ig/latest/StructureDefinition-ViewDefinition.html).
 
 ## Functions
 
@@ -21,14 +24,13 @@ The notation used to describe the type signature of each function is as follows:
 [input type] -> [function name]([argument name]: [argument type], ...): [return type]
 ```
 
-
 ### designation
 
 ```
 collection<Coding -> designation(use: Coding, language: String) : collection<String>
 ```
 
-When invoked on a collection of [Coding](./data-types#coding) elements, returns
+When invoked on a collection of [Coding](#coding) elements, returns
 a collection of designation values from
 the [lookup](https://www.hl7.org/fhir/codesystem-operation-lookup.html)
 operation. This can be used to retrieve synonyms, language translations and more
@@ -53,7 +55,7 @@ Condition.code.coding.designation(http://snomed.info/sct|900000000000013009)
 The `designation` function is a terminology function, which means that it
 requires a
 configured [terminology service](https://hl7.org/fhir/R4/terminology-service.html).
-See [Configuration](/docs/server/configuration#terminology-service) for
+See [Terminology functions](/docs/libraries/terminology) for
 details.
 :::
 
@@ -68,13 +70,12 @@ currently unique to the Pathling implementation.
 collection<Coding> -> display(language?: String) : collection<String>
 ```
 
-When invoked on a [Coding](./data-types#coding), returns the preferred display
+When invoked on a [Coding](#coding), returns the preferred display
 term, according to the terminology server.
 
 The optional `language` parameter can be used to specify the preferred language
 for the display name. It overrides the default value set in the configuration.
-See `pathling.terminology.acceptLanguage` in
-[Terminology Configuration](/docs/server/configuration#terminology-service)
+See [Multi-language support](/docs/libraries/terminology#multi-language-support)
 for details.
 
 Example:
@@ -86,11 +87,12 @@ Condition.code.display()
 // Prefer German language.
 Condition.code.display("de")
 ```
+
 :::note
 The `display` function is a terminology function, which means that it requires
 a configured
 [terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
-[Configuration](/docs/server/configuration#terminology-service) for details.
+[Terminology functions](/docs/libraries/terminology) for details.
 :::
 
 :::note
@@ -105,9 +107,9 @@ collection<Coding|CodeableConcept> -> memberOf() : collection<Boolean>
 ```
 
 The `memberOf` function can be invoked on a collection of
-[Coding](./data-types#coding) or
+[Coding](#coding) or
 [CodeableConcept](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept)
-values, returning a collection of [Boolean](./data-types#boolean) values
+values, returning a collection of Boolean values
 based on whether each concept is a member of the
 [ValueSet](https://hl7.org/fhir/R4/valueset.html) with the specified
 [url](https://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.url).
@@ -119,7 +121,7 @@ the codings are members of the value set.
 The `memberOf` function is a terminology function, which means that it requires
 a configured
 [terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
-[Configuration](/docs/server/configuration#terminology-service) for details.
+[Terminology functions](/docs/libraries/terminology) for details.
 :::
 
 See also:
@@ -131,7 +133,7 @@ See also:
 collection<Coding> -> property(code: String, type: String = 'string', language?: String) : collection<String|Integer|DateTime|Decimal|Coding>
 ```
 
-When invoked on a [Coding](./data-types#coding), returns any matching property
+When invoked on a [Coding](#coding), returns any matching property
 values, using the specified `name` and `type` parameters.
 
 The `type` parameter has these possible values:
@@ -150,8 +152,8 @@ function will return an empty collection.
 
 The optional `language` parameter can be used to specify the preferred language
 for the returned property values. It overrides the default value set in the
-configuration. See `pathling.terminology.acceptLanguage` in
-[Terminology Configuration](/docs/server/configuration#terminology-service)
+configuration. See
+[Multi-language support](/docs/libraries/terminology#multi-language-support)
 for details.
 
 See [Properties](https://www.hl7.org/fhir/codesystem.html#properties)
@@ -171,7 +173,7 @@ Condition.code.coding.property('parent', 'code', 'de')
 The `property` function is a terminology function, which means that it requires
 a configured
 [terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
-[Configuration](/docs/server/configuration#terminology-service) for details.
+[Terminology functions](/docs/libraries/terminology) for details.
 :::
 
 :::note
@@ -185,7 +187,7 @@ currently unique to the Pathling implementation.
 collection<Coding|CodeableConcept> -> subsumes(code: Coding|CodeableConcept) : collection<Boolean>
 ```
 
-This function takes a collection of [Coding](./data-types#coding) or
+This function takes a collection of [Coding](#coding) or
 [CodeableConcept](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept)
 elements as input, and another collection as the argument. The result is a
 collection with a Boolean value for each source concept, each value being true
@@ -202,7 +204,7 @@ Patient.reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|7
 The `subsumes` function is a terminology function, which means that it requires
 a configured
 [terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
-[Configuration](/docs/server/configuration#terminology-service) for details.
+[Terminology functions](/docs/libraries/terminology) for details.
 :::
 
 See also:
@@ -228,7 +230,7 @@ Patient.reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct
 The `subsumedBy` function is a terminology function, which means that it
 requires a configured
 [terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
-[Configuration](/docs/server/configuration#terminology-service) for details.
+[Terminology functions](/docs/libraries/terminology) for details.
 :::
 
 See also:
@@ -240,7 +242,7 @@ See also:
 collection<Coding|CodeableConcept> -> translate(conceptMapUrl: String, reverse: Boolean = false, equivalence: String = 'equivalent', target?: String) : collection<Coding>
 ```
 
-When invoked on a [Coding](./data-types#coding), returns any
+When invoked on a [Coding](#coding), returns any
 matching concepts using the ConceptMap specified using `conceptMapUrl`.
 
 The `reverse` parameter controls the direction to traverse the map - `false`
@@ -265,7 +267,7 @@ Condition.code.coding.translate('https://csiro.au/fhir/ConceptMap/some-map', tru
 The `translate` function is a terminology function, which means that it requires
 a configured
 [terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
-[Configuration](/docs/server/configuration#terminology-service) for details.
+[Terminology functions](/docs/libraries/terminology) for details.
 :::
 
 :::note
