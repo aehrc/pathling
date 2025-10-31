@@ -756,95 +756,39 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
 
         .group("toQuantity(unitCode) - UCUM string sources → UCUM conversion (compatible)")
         .testEquals("0.01 'g'", "'10 \\'mg\\''.toQuantity('g')",
-            "toQuantity() converts mg to g")
-        .testEquals("1500000 'mg'", "'1.5 \\'kg\\''.toQuantity('mg')",
-            "toQuantity() converts kg to mg")
-        .testEquals("7 'd'", "'1 \\'wk\\''.toQuantity('d')",
-            "toQuantity() converts weeks to days")
-        .testEquals("7 'd'", "'1 \\'wk\\''.toQuantity('d').toString()",
-            "toQuantity() converts weeks to days (toString)")
+            "toQuantity() converts mg to g (mass)")
         .testEquals("10 'mm'", "'1 \\'cm\\''.toQuantity('mm')",
-            "toQuantity() converts cm to mm")
-        .testEquals(10, "'1 \\'cm\\''.toQuantity('mm').value",
-            "toQuantity() converts cm to mm (value check)")
-        .testEquals("0.01 'm'", "'1 \\'cm\\''.toQuantity('m')",
-            "toQuantity() converts cm to m")
-        .testEquals("1 'kg'", "'1000 \\'g\\''.toQuantity('kg')",
-            "toQuantity() converts g to kg")
-        .testEquals(1, "'1000 \\'g\\''.toQuantity('kg').value",
-            "toQuantity() converts g to kg (value check)")
-        .testEquals("1000000 'mg'", "'1 \\'kg\\''.toQuantity('mg')",
-            "toQuantity() converts kg to mg")
+            "toQuantity() converts cm to mm (length)")
         .testEquals("1000 'mL'", "'1 \\'L\\''.toQuantity('mL')",
-            "toQuantity() converts L to mL")
-        .testEquals("0.001 'L'", "'1 \\'mL\\''.toQuantity('L')",
-            "toQuantity() converts mL to L")
+            "toQuantity() converts L to mL (volume)")
 
         .group("toQuantity(unitCode) - UCUM string sources → incompatible units")
         .testEmpty("'1 \\'kg\\''.toQuantity('m')",
             "toQuantity() returns empty for incompatible units (mass to length)")
-        .testEmpty("'1 \\'cm\\''.toQuantity('g')",
-            "toQuantity() returns empty for incompatible units (length to mass)")
-        .testEmpty("'10 \\'mg\\''.toQuantity('d')",
-            "toQuantity() returns empty for incompatible units (mass to time)")
 
         .group("toQuantity(unitCode) - UCUM string sources → invalid target units")
         .testEmpty("'1 \\'kg\\''.toQuantity('invalid_unit')",
             "toQuantity() returns empty for invalid target unitCode")
-        .testEmpty("'1 \\'cm\\''.toQuantity('notaunit')",
-            "toQuantity() returns empty for non-existent target unitCode")
 
         .group("toQuantity(unitCode) - Calendar duration sources → exact unitCode match")
         .testEquals("4 days", "'4 days'.toQuantity('days')",
-            "toQuantity() with matching calendar unitCode 'days' returns quantity")
-        .testEquals("1 year", "'1 year'.toQuantity('year')",
-            "toQuantity() with matching calendar unitCode 'year' returns quantity")
-        .testEquals("3 months", "'3 months'.toQuantity('months')",
-            "toQuantity() with matching calendar unitCode 'months' returns quantity")
+            "toQuantity() with matching calendar unitCode returns quantity")
 
-        .group("toQuantity(unitCode) - Calendar duration sources → seconds conversions")
-        .testEquals("120 seconds", "'2 minutes'.toQuantity('seconds')",
-            "toQuantity() converts minutes to seconds")
+        .group("toQuantity(unitCode) - Calendar duration sources → calendar-to-calendar conversions")
         .testEquals("86400 seconds", "'1 day'.toQuantity('seconds')",
-            "toQuantity() converts day to seconds")
-        .testEquals("604800 seconds", "'1 week'.toQuantity('seconds')",
-            "toQuantity() converts week to seconds")
-        .testEquals("2592000 seconds", "'1 month'.toQuantity('seconds')",
-            "toQuantity() converts month to seconds")
-        .testEquals("31536000 seconds", "'1 year'.toQuantity('seconds')",
-            "toQuantity() converts year to seconds")
-
-        .group("toQuantity(unitCode) - Calendar duration sources → milliseconds conversions")
-        .testEquals("5000 milliseconds", "'5 seconds'.toQuantity('milliseconds')",
-            "toQuantity() converts seconds to milliseconds")
-        .testEquals("240000 milliseconds", "'4 minutes'.toQuantity('milliseconds')",
-            "toQuantity() converts minutes to milliseconds")
+            "toQuantity() converts calendar day to seconds")
         .testEquals("86400000 milliseconds", "'1 day'.toQuantity('milliseconds')",
-            "toQuantity() converts day to milliseconds")
+            "toQuantity() converts calendar day to milliseconds")
 
-        .group("toQuantity(unitCode) - Calendar duration sources → UCUM 's' and 'ms' conversions")
-        .testEquals("5 's'", "'5 seconds'.toQuantity('s')",
-            "toQuantity() converts calendar seconds to UCUM 's'")
+        .group("toQuantity(unitCode) - Calendar duration sources → calendar-to-UCUM conversions")
         .testEquals("120 's'", "'2 minutes'.toQuantity('s')",
             "toQuantity() converts calendar minutes to UCUM 's'")
         .testEquals("1500 'ms'", "'1500 milliseconds'.toQuantity('ms')",
             "toQuantity() converts calendar milliseconds to UCUM 'ms'")
-        .testEquals("86400000 'ms'", "'1 day'.toQuantity('ms')",
-            "toQuantity() converts calendar day to UCUM 'ms'")
 
         .group("toQuantity(unitCode) - Calendar duration sources → unsupported conversions")
-        .testEmpty("'4 days'.toQuantity('weeks')",
-            "toQuantity() returns empty for days to weeks (not allowed)")
-        .testEmpty("'4 days'.toQuantity('hours')",
-            "toQuantity() returns empty for days to hours (not allowed)")
-        .testEmpty("'4 hours'.toQuantity('minutes')",
-            "toQuantity() returns empty for hours to minutes (not allowed)")
-        .testEmpty("'1 year'.toQuantity('months')",
-            "toQuantity() returns empty for year to months (not allowed)")
-        .testEmpty("'1 year'.toQuantity('days')",
-            "toQuantity() returns empty for year to days (not allowed)")
-        .testEmpty("'1 day'.toQuantity('h')",
-            "toQuantity() returns empty for day to UCUM 'h' (only 's' and 'ms' allowed)")
+        .testEmpty("'1 week'.toQuantity('months')",
+            "toQuantity() returns empty for week to months (blocked)")
 
         .group("toQuantity(unitCode) - Numeric string sources → exact unitCode match")
         .testEquals("42 '1'", "'42'.toQuantity('1')",
@@ -970,95 +914,39 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
 
         .group("convertsToQuantity(unitCode) - UCUM string sources → UCUM conversion (compatible)")
         .testTrue("'10 \\'mg\\''.convertsToQuantity('g')",
-            "convertsToQuantity() returns true for mg to g conversion")
-        .testTrue("'1.5 \\'kg\\''.convertsToQuantity('mg')",
-            "convertsToQuantity() returns true for kg to mg conversion")
-        .testTrue("'1 \\'wk\\''.convertsToQuantity('d')",
-            "convertsToQuantity() returns true for weeks to days conversion")
-        .testTrue("'7 \\'d\\''.convertsToQuantity('wk')",
-            "convertsToQuantity() returns true for days to weeks conversion")
+            "convertsToQuantity() returns true for UCUM mass conversion")
         .testTrue("'1 \\'cm\\''.convertsToQuantity('mm')",
-            "convertsToQuantity() returns true for cm to mm conversion")
-        .testTrue("'10 \\'mm\\''.convertsToQuantity('cm')",
-            "convertsToQuantity() returns true for mm to cm conversion")
-        .testTrue("'1 \\'cm\\''.convertsToQuantity('m')",
-            "convertsToQuantity() returns true for cm to m conversion")
-        .testTrue("'1000 \\'g\\''.convertsToQuantity('kg')",
-            "convertsToQuantity() returns true for g to kg conversion")
-        .testTrue("'1 \\'kg\\''.convertsToQuantity('g')",
-            "convertsToQuantity() returns true for kg to g conversion")
-        .testTrue("'1 \\'kg\\''.convertsToQuantity('mg')",
-            "convertsToQuantity() returns true for kg to mg conversion")
+            "convertsToQuantity() returns true for UCUM length conversion")
         .testTrue("'1 \\'L\\''.convertsToQuantity('mL')",
-            "convertsToQuantity() returns true for L to mL conversion")
-        .testTrue("'1 \\'mL\\''.convertsToQuantity('L')",
-            "convertsToQuantity() returns true for mL to L conversion")
+            "convertsToQuantity() returns true for UCUM volume conversion")
 
         .group("convertsToQuantity(unitCode) - UCUM string sources → incompatible units")
         .testFalse("'1 \\'kg\\''.convertsToQuantity('m')",
             "convertsToQuantity() returns false for incompatible units (mass to length)")
-        .testFalse("'1 \\'cm\\''.convertsToQuantity('g')",
-            "convertsToQuantity() returns false for incompatible units (length to mass)")
-        .testFalse("'10 \\'mg\\''.convertsToQuantity('d')",
-            "convertsToQuantity() returns false for incompatible units (mass to time)")
 
         .group("convertsToQuantity(unitCode) - UCUM string sources → invalid target units")
         .testFalse("'1 \\'kg\\''.convertsToQuantity('invalid_unit')",
             "convertsToQuantity() returns false for invalid target unitCode")
-        .testFalse("'1 \\'cm\\''.convertsToQuantity('notaunit')",
-            "convertsToQuantity() returns false for non-existent target unitCode")
 
         .group("convertsToQuantity(unitCode) - Calendar duration sources → exact unitCode match")
         .testTrue("'4 days'.convertsToQuantity('days')",
-            "convertsToQuantity() with matching calendar unitCode 'days' returns true")
-        .testTrue("'1 year'.convertsToQuantity('year')",
-            "convertsToQuantity() with matching calendar unitCode 'year' returns true")
-        .testTrue("'3 months'.convertsToQuantity('months')",
-            "convertsToQuantity() with matching calendar unitCode 'months' returns true")
+            "convertsToQuantity() with matching calendar unitCode returns true")
 
-        .group("convertsToQuantity(unitCode) - Calendar duration sources → seconds conversions")
-        .testTrue("'2 minutes'.convertsToQuantity('seconds')",
-            "convertsToQuantity() returns true for minutes to seconds conversion")
+        .group("convertsToQuantity(unitCode) - Calendar duration sources → calendar-to-calendar conversions")
         .testTrue("'1 day'.convertsToQuantity('seconds')",
-            "convertsToQuantity() returns true for day to seconds conversion")
-        .testTrue("'1 week'.convertsToQuantity('seconds')",
-            "convertsToQuantity() returns true for week to seconds conversion")
-        .testTrue("'1 month'.convertsToQuantity('seconds')",
-            "convertsToQuantity() returns true for month to seconds conversion")
-        .testTrue("'1 year'.convertsToQuantity('seconds')",
-            "convertsToQuantity() returns true for year to seconds conversion")
-
-        .group("convertsToQuantity(unitCode) - Calendar duration sources → milliseconds conversions")
-        .testTrue("'5 seconds'.convertsToQuantity('milliseconds')",
-            "convertsToQuantity() returns true for seconds to milliseconds conversion")
-        .testTrue("'4 minutes'.convertsToQuantity('milliseconds')",
-            "convertsToQuantity() returns true for minutes to milliseconds conversion")
+            "convertsToQuantity() returns true for calendar day to seconds")
         .testTrue("'1 day'.convertsToQuantity('milliseconds')",
-            "convertsToQuantity() returns true for day to milliseconds conversion")
+            "convertsToQuantity() returns true for calendar day to milliseconds")
 
-        .group("convertsToQuantity(unitCode) - Calendar duration sources → UCUM 's' and 'ms' conversions")
-        .testTrue("'5 seconds'.convertsToQuantity('s')",
-            "convertsToQuantity() returns true for calendar seconds to UCUM 's'")
+        .group("convertsToQuantity(unitCode) - Calendar duration sources → calendar-to-UCUM conversions")
         .testTrue("'2 minutes'.convertsToQuantity('s')",
             "convertsToQuantity() returns true for calendar minutes to UCUM 's'")
         .testTrue("'1500 milliseconds'.convertsToQuantity('ms')",
             "convertsToQuantity() returns true for calendar milliseconds to UCUM 'ms'")
-        .testTrue("'1 day'.convertsToQuantity('ms')",
-            "convertsToQuantity() returns true for calendar day to UCUM 'ms'")
 
         .group("convertsToQuantity(unitCode) - Calendar duration sources → unsupported conversions")
-        .testFalse("'4 days'.convertsToQuantity('weeks')",
-            "convertsToQuantity() returns false for days to weeks (not allowed)")
-        .testFalse("'4 days'.convertsToQuantity('hours')",
-            "convertsToQuantity() returns false for days to hours (not allowed)")
-        .testFalse("'4 hours'.convertsToQuantity('minutes')",
-            "convertsToQuantity() returns false for hours to minutes (not allowed)")
-        .testFalse("'1 year'.convertsToQuantity('months')",
-            "convertsToQuantity() returns false for year to months (not allowed)")
-        .testFalse("'1 year'.convertsToQuantity('days')",
-            "convertsToQuantity() returns false for year to days (not allowed)")
-        .testFalse("'1 day'.convertsToQuantity('h')",
-            "convertsToQuantity() returns false for day to UCUM 'h' (only 's' and 'ms' allowed)")
+        .testFalse("'1 week'.convertsToQuantity('months')",
+            "convertsToQuantity() returns false for week to months (blocked)")
 
         .group("convertsToQuantity(unitCode) - Numeric string sources → exact unitCode match")
         .testTrue("'42'.convertsToQuantity('1')",

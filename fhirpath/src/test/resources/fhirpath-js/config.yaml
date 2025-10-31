@@ -246,6 +246,13 @@ excludeSet:
         any:
           - "'1 year'.toQuantity() != 1 'a'"
           - "MedicationRequest.dispenseRequest.expectedSupplyDuration.toQuantity() = 3 days"
+      - title: "UCUM to calendar duration conversions now supported"
+        comment: "Full UCUM unit conversion support has been implemented, including conversions between UCUM time units and calendar duration units (e.g., 'wk' to 'days', 'd' to 'days'). Test expectations were based on limited conversion support."
+        type: feature
+        id: "#2391"
+        outcome: failure
+        any:
+          - '''1 \''wk\''''.toQuantity(''days'')'
   - title: Variable exclusions
     glob: "fhirpath-js/cases/8_variables.yaml"
     exclude:
