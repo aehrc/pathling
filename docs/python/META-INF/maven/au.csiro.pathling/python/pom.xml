@@ -80,17 +80,32 @@
         <executions>
           <!-- Install dependencies -->
           <execution>
-            <id>install-dependencies</id>
+            <id>ensure-venv</id>
             <phase>initialize</phase>
             <goals>
               <goal>exec</goal>
             </goals>
             <configuration>
-              <executable>pip</executable>
+              <executable>uv</executable>
               <arguments>
-                <argument>install</argument>
-                <argument>-r</argument>
-                <argument>requirements/dev.txt</argument>
+                <argument>venv</argument>
+                <argument>-p 3.9</argument>
+                <argument>.venv</argument>
+              </arguments>
+            </configuration>
+          </execution>
+
+          <!-- Install dependencies -->
+          <execution>
+            <id>install-dependencies</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>uv</executable>
+              <arguments>
+                <argument>sync</argument>
               </arguments>
             </configuration>
           </execution>
@@ -103,8 +118,10 @@
               <goal>exec</goal>
             </goals>
             <configuration>
-              <executable>python</executable>
+              <executable>uv</executable>
               <arguments>
+                <argument>run</argument>
+                <argument>python</argument>
                 <argument>-m</argument>
                 <argument>build</argument>
                 <argument>--outdir</argument>
@@ -121,8 +138,9 @@
               <goal>exec</goal>
             </goals>
             <configuration>
-              <executable>pip</executable>
+              <executable>uv</executable>
               <arguments>
+                <argument>pip</argument>
                 <argument>install</argument>
                 <argument>.</argument>
               </arguments>
@@ -195,9 +213,11 @@
                   <goal>exec</goal>
                 </goals>
                 <configuration>
-                  <executable>pytest</executable>
+                  <executable>uv</executable>
                   <workingDirectory>${project.basedir}</workingDirectory>
                   <arguments>
+                    <argument>run</argument>
+                    <argument>pytest</argument>
                     <argument>-x</argument>
                     <argument>tests</argument>
                     <argument>--cov=pathling</argument>
@@ -208,6 +228,7 @@
                   </arguments>
                   <environmentVariables>
                     <PYTHONPATH>${project.basedir}</PYTHONPATH>
+                    <PYSPARK_PYTHON>${project.basedir}/.venv/bin/python</PYSPARK_PYTHON>
                   </environmentVariables>
                 </configuration>
               </execution>
@@ -220,8 +241,10 @@
                   <goal>exec</goal>
                 </goals>
                 <configuration>
-                  <executable>spark-submit</executable>
+                  <executable>uv</executable>
                   <arguments>
+                    <argument>run</argument>
+                    <argument>spark-submit</argument>
                     <argument>--packages</argument>
                     <argument>au.csiro.pathling:library-runtime:${project.version},io.delta:delta-spark_${pathling.scalaVersion}:${pathling.deltaVersion}</argument>
                     <argument>--conf</argument>
@@ -232,6 +255,9 @@
                     <argument>spark.sql.mapKeyDedupPolicy=LAST_WIN</argument>
                     <argument>${project.basedir}/examples/fhir_view.py</argument>
                   </arguments>
+                  <environmentVariables>
+                    <PYSPARK_PYTHON>${project.basedir}/.venv/bin/python</PYSPARK_PYTHON>
+                  </environmentVariables>
                 </configuration>
               </execution>
             </executions>
@@ -255,8 +281,10 @@
                   <goal>exec</goal>
                 </goals>
                 <configuration>
-                  <executable>sphinx-apidoc</executable>
+                  <executable>uv</executable>
                   <arguments>
+                    <argument>run</argument>
+                    <argument>sphinx-apidoc</argument>
                     <argument>--force</argument>
                     <argument>--full</argument>
                     <argument>-o</argument>
@@ -281,6 +309,9 @@
                     <argument>clean</argument>
                     <argument>html</argument>
                   </arguments>
+                  <environmentVariables>
+                    <SPHINXBUILD>uv run sphinx-build</SPHINXBUILD>
+                  </environmentVariables>
                 </configuration>
               </execution>
             </executions>
@@ -326,9 +357,9 @@
                   <goal>exec</goal>
                 </goals>
                 <configuration>
-                  <executable>python</executable>
+                  <executable>uv</executable>
                   <arguments>
-                    <argument>-m</argument>
+                    <argument>run</argument>
                     <argument>twine</argument>
                     <argument>upload</argument>
                     <argument>--verbose</argument>
@@ -360,9 +391,9 @@
                   <goal>exec</goal>
                 </goals>
                 <configuration>
-                  <executable>python</executable>
+                  <executable>uv</executable>
                   <arguments>
-                    <argument>-m</argument>
+                    <argument>run</argument>
                     <argument>twine</argument>
                     <argument>upload</argument>
                     <argument>--verbose</argument>
