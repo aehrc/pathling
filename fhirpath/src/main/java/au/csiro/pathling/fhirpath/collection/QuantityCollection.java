@@ -33,6 +33,7 @@ import au.csiro.pathling.fhirpath.definition.defaults.DefaultCompositeDefinition
 import au.csiro.pathling.fhirpath.definition.defaults.DefaultPrimitiveDefinition;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.misc.QuantityToLiteral;
+import au.csiro.pathling.fhirpath.column.QuantityValue;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
@@ -109,7 +110,7 @@ public class QuantityCollection extends Collection implements Comparable, String
    */
   @Nonnull
   public static QuantityCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
-    return build(columnRepresentation, Optional.empty());
+    return build(columnRepresentation, Optional.of(LITERAL_DEFINITION));
   }
 
   /**
@@ -167,5 +168,47 @@ public class QuantityCollection extends Collection implements Comparable, String
   @Nonnull
   public ColumnComparator getComparator() {
     return QuantityComparator.getInstance();
+  }
+
+  /**
+   * Converts this quantity to the specified unit.
+   * <p>
+   * Returns empty if the unit does not match (exact string matching on the 'unit' field). Full UCUM
+   * unit conversion is not yet implemented (see issue #2504). Calendar duration conversion is not
+   * yet implemented (see issue #2505).
+   * <p>
+   * Per FHIRPath specification: "Implementations are not required to support a complete UCUM
+   * implementation, and may return empty when the unit argument is used and it is different than
+   * the input quantity unit."
+   *
+   * @param targetUnit The target unit as a Collection (should be a StringCollection)
+   * @return QuantityCollection with matching unit, or EmptyCollection if units don't match
+   */
+  @Nonnull
+  public Collection toUnit(@Nonnull final Collection targetUnit) {
+    final Column unitColumn = targetUnit.getColumn().singular().getValue();
+    return map(q -> new DefaultRepresentation(QuantityValue.of(q).toUnit(unitColumn)));
+  }
+
+  /**
+   * Checks if this quantity can be converted to the specified unit. Follows the same rules as
+   * FHIRPath convertibleToXXX functions, returning a BooleanCollection true/false value for
+   * non-empty input collections or an empty boolean collection if the input is empty.
+   * <p>
+   * Returns true for exact unit match, false otherwise. Full UCUM unit conversion is not yet
+   * implemented (see issue #2504). Calendar duration conversion is not yet implemented (see issue
+   * #2505).
+   * <p>
+   * Per FHIRPath specification: "Implementations are not required to support a complete UCUM
+   * implementation."
+   *
+   * @param targetUnit The target unit as a Collection (should be a StringCollection)
+   * @return BooleanCollection indicating if conversion is possible
+   */
+  @Nonnull
+  public Collection convertibleToUnit(@Nonnull final Collection targetUnit) {
+    final Column unitColumn = targetUnit.getColumn().singular().getValue();
+    final Column result = QuantityValue.of(getColumn()).convertibleToUnit(unitColumn);
+    return BooleanCollection.build(new DefaultRepresentation(result));
   }
 }

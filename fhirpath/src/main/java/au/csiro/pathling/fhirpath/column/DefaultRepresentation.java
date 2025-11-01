@@ -62,7 +62,9 @@ public class DefaultRepresentation extends ColumnRepresentation {
   /**
    * The column value represented by this object.
    */
+
   @Setter(AccessLevel.PROTECTED)
+  @Nonnull
   private Column value;
 
   /**
@@ -96,6 +98,7 @@ public class DefaultRepresentation extends ColumnRepresentation {
   }
 
   @Override
+  @Nonnull
   protected DefaultRepresentation copyOf(@Nonnull final Column newValue) {
     return new DefaultRepresentation(newValue);
   }

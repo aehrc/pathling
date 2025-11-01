@@ -17,16 +17,23 @@
 
 package au.csiro.pathling.fhirpath;
 
+import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
+import au.csiro.pathling.fhirpath.unit.CustomUnit;
+import au.csiro.pathling.fhirpath.unit.FhirPathUnit;
+import au.csiro.pathling.fhirpath.unit.UcumUnit;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Represents a FHIRPath Quantity value.
  */
+@Slf4j
 @Value
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class FhirPathQuantity {
@@ -42,10 +49,11 @@ public class FhirPathQuantity {
   public static final String UCUM_SYSTEM_URI = "http://unitsofmeasure.org";
 
   /**
-   * Regex pattern for parsing FHIRPath quantity literals.
+   * Regex pattern for parsing FHIRPath quantity literals. Unit is optional per FHIRPath spec -
+   * defaults to '1' when omitted.
    */
   private static final Pattern QUANTITY_REGEX = Pattern.compile(
-      "(?<value>[+-]?\\d+(?:\\.\\d+)?)\\s*(?:'(?<unit>[^']+)'|(?<time>[a-zA-Z]+))"
+      "(?<value>[+-]?\\d+(?:\\.\\d+)?)\\s*(?:'(?<unit>[^']+)'|(?<time>[a-zA-Z]+))?"
   );
 
   @Nonnull
@@ -79,8 +87,8 @@ public class FhirPathQuantity {
   /**
    * Factory method for UCUM quantities.
    *
-   * @param unit the UCUM unit string (e.g. 'mg', 'kg', 'mL')
    * @param value the numeric value
+   * @param unit the UCUM unit string (e.g. 'mg', 'kg', 'mL')
    * @return UCUM quantity
    */
   @Nonnull
@@ -92,39 +100,39 @@ public class FhirPathQuantity {
   /**
    * Factory method for calendar duration quantities.
    *
-   * @param unitName the name of the calendar duration unit (e.g. 'year', 'month', 'day')
-   * @param unit the CalendarDurationUnit enum value
    * @param value the numeric value
+   * @param unit the CalendarDurationUnit enum value
+   * @param unitName the name of the calendar duration unit (e.g. 'year', 'month', 'day')
    * @return calendar duration quantity
    */
   @Nonnull
   public static FhirPathQuantity ofCalendar(@Nonnull final BigDecimal value,
       @Nonnull final CalendarDurationUnit unit, @Nonnull final String unitName) {
-    if (!CalendarDurationUnit.fromString(unitName).equals(unit)) {
+    if (!CalendarDurationUnit.parseString(unitName).equals(unit)) {
       throw new IllegalArgumentException(
           "Unit name " + unitName + " does not match CalendarDurationUnit " + unit);
     }
     return new FhirPathQuantity(value, unitName,
         FHIRPATH_CALENDAR_DURATION_SYSTEM_URI,
-        unit.getUnit());
+        unit.code());
   }
 
   /**
-   * Factory method for calendar duration quantities.
+   * Factory method for calendar duration quantities with canonical unit name.
    *
-   * @param unit the CalendarDurationUnit enum value
    * @param value the numeric value
+   * @param unit the CalendarDurationUnit enum value
    * @return calendar duration quantity
    */
   @Nonnull
   public static FhirPathQuantity ofCalendar(@Nonnull final BigDecimal value,
       @Nonnull final CalendarDurationUnit unit) {
-    return ofCalendar(value, unit, unit.getUnit());
+    return ofCalendar(value, unit, unit.code());
   }
 
   /**
-   * Parses a FHIRPath quantity literal (e.g. 5.4 'mg', 1 year). Only supports UCUM and calendar
-   * duration units.
+   * Parses a FHIRPath quantity literal (e.g. 5.4 'mg', 1 year, 42). Only supports UCUM and calendar
+   * duration units. When no unit is specified, defaults to '1' in UCUM system.
    *
    * @param literal the FHIRPath quantity literal
    * @return the parsed FhirPathQuantity
@@ -143,12 +151,90 @@ public class FhirPathQuantity {
       return ofUCUM(value, matcher.group("unit"));
     } else if (matcher.group("time") != null) {
       return ofCalendar(value,
-          CalendarDurationUnit.fromString(matcher.group("time")),
+          CalendarDurationUnit.parseString(matcher.group("time")),
           matcher.group("time")
       );
     } else {
-      // one of "unit" or "time" groups should have matched
-      throw new IllegalStateException("Unexpected parsing state for literal: " + literal);
+      // No unit specified, default to '1' in UCUM system per FHIRPath spec
+      return ofUCUM(value, "1");
+    }
+  }
+
+  /**
+   * Factory method for creating a quantity from a FhirPathUnit.
+   *
+   * @param value the numeric value
+   * @param unit the FhirPathUnit (UCUM, calendar duration, or custom)
+   * @return quantity with the specified value and unit
+   */
+  @Nonnull
+  public static FhirPathQuantity ofUnit(@Nonnull final BigDecimal value,
+      @Nonnull final FhirPathUnit unit, @Nonnull final String unitName) {
+    return new FhirPathQuantity(value, unitName, unit.system(), unit.code());
+  }
+
+  /**
+   * Gets the FhirPathUnit representation of this quantity's unit.
+   *
+   * @return the FhirPathUnit (Ucum, CalendarDuration, or Custom)
+   */
+  @Nonnull
+  public FhirPathUnit getFhirpathUnit() {
+    return switch (system) {
+      case FHIRPATH_CALENDAR_DURATION_SYSTEM_URI -> CalendarDurationUnit.parseString(code);
+      case UCUM_SYSTEM_URI -> new UcumUnit(code);
+      default -> new CustomUnit(system, code);
+    };
+  }
+
+  /**
+   * Converts this quantity to the specified target unit if a conversion is possible, using the
+   * default precision.
+   * <p>
+   * Supports:
+   * <ul>
+   *   <li>UCUM to UCUM conversions (e.g., 'mg' to 'kg')</li>
+   *   <li>Calendar duration to calendar duration conversions (only to definite units: second,
+   *       millisecond)</li>
+   *   <li>Cross-type conversions: calendar duration to UCUM 's' or 'ms', and vice versa</li>
+   * </ul>
+   *
+   * @param unitName the target unit string (e.g., "mg", "second", "s")
+   * @return an Optional containing the converted quantity, or empty if conversion is not possible
+   */
+  @Nonnull
+  public Optional<FhirPathQuantity> convertToUnit(@Nonnull final String unitName) {
+    return convertToUnit(unitName, FhirPathUnit.CONVERSION_PRECISION);
+  }
+
+  /**
+   * Converts this quantity to the specified target unit if a conversion is possible, using the
+   * specified precision.
+   * <p>
+   * Supports:
+   * <ul>
+   *   <li>UCUM to UCUM conversions (e.g., 'mg' to 'kg')</li>
+   *   <li>Calendar duration to calendar duration conversions (only to definite units: second,
+   *       millisecond)</li>
+   *   <li>Cross-type conversions: calendar duration to UCUM 's' or 'ms', and vice versa</li>
+   * </ul>
+   *
+   * @param unitName the target unit string (e.g., "mg", "second", "s")
+   * @param precision the number of decimal places to use in the conversion (must be between 1 and
+   * 100)
+   * @return an Optional containing the converted quantity, or empty if conversion is not possible
+   * @throws IllegalArgumentException if precision is not between 1 and 100
+   */
+  @Nonnull
+  public Optional<FhirPathQuantity> convertToUnit(@Nonnull final String unitName, int precision) {
+    final FhirPathUnit sourceUnit = getFhirpathUnit();
+    final FhirPathUnit targetUnit = FhirPathUnit.fromString(unitName);
+    if (targetUnit.equals(sourceUnit)) {
+      return Optional.of(FhirPathQuantity.ofUnit(getValue(), targetUnit, unitName));
+    } else {
+      return FhirPathUnit.conversionFactorTo(getFhirpathUnit(), targetUnit)
+          .map(cf -> FhirPathQuantity.ofUnit(cf.apply(getValue(), precision), targetUnit,
+              unitName));
     }
   }
 }

@@ -108,6 +108,7 @@ public abstract class ColumnRepresentation {
    *
    * @return The underlying {@link Column}
    */
+  @Nonnull
   public abstract Column getValue();
 
   /**
@@ -116,6 +117,7 @@ public abstract class ColumnRepresentation {
    * @param newValue The new {@link Column} to represent
    * @return A new {@link ColumnRepresentation} representing the new column
    */
+  @Nonnull
   protected abstract ColumnRepresentation copyOf(@Nonnull final Column newValue);
 
 
@@ -250,6 +252,26 @@ public abstract class ColumnRepresentation {
                                        : DEF_NOT_SINGULAR_ERROR))),
         UnaryOperator.identity()
     );
+  }
+
+  /**
+   * Creates a Column expression that enforces the singularity constraint. This should be called
+   * when a singular value is required but will not be directly used, to ensure the constraint is
+   * checked during evaluation.
+   * <p>
+   * The returned Column evaluates to null if the constraint is satisfied, or raises an error if the
+   * collection has multiple elements.
+   *
+   * @return A Column that enforces singularity and evaluates to null
+   */
+  @Nonnull
+  public Column ensureSingular() {
+    return vectorize(
+        arrayColumn -> when(size(arrayColumn).gt(1),
+            raise_error(lit(DEF_NOT_SINGULAR_ERROR)))
+            .otherwise(lit(null)),
+        singularColumn -> lit(null)
+    ).getValue();
   }
 
   /**

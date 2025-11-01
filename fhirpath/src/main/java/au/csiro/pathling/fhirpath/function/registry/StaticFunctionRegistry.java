@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.function.registry;
 import au.csiro.pathling.fhirpath.function.MethodDefinedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.provider.BooleanLogicFunctions;
+import au.csiro.pathling.fhirpath.function.provider.ConversionFunctions;
 import au.csiro.pathling.fhirpath.function.provider.ExistenceFunctions;
 import au.csiro.pathling.fhirpath.function.provider.FhirFunctions;
 import au.csiro.pathling.fhirpath.function.provider.FilteringAndProjectionFunctions;
@@ -46,6 +47,7 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry {
   public StaticFunctionRegistry() {
     super(new Builder<String, NamedFunction>()
         .putAll(MethodDefinedFunction.mapOf(BooleanLogicFunctions.class))
+        .putAll(MethodDefinedFunction.mapOf(ConversionFunctions.class))
         .putAll(MethodDefinedFunction.mapOf(ExistenceFunctions.class))
         .putAll(MethodDefinedFunction.mapOf(FhirFunctions.class))
         .putAll(MethodDefinedFunction.mapOf(FilteringAndProjectionFunctions.class))

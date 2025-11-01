@@ -43,12 +43,14 @@ public class UnsupportedRepresentation extends ColumnRepresentation {
   private final String description;
 
   @Override
+  @Nonnull
   public Column getValue() {
     throw new UnsupportedFhirPathFeatureError(
         "Representation of this path is not supported: " + description);
   }
 
   @Override
+  @Nonnull
   protected ColumnRepresentation copyOf(@Nonnull final Column newValue) {
     return new UnsupportedRepresentation(description);
   }
