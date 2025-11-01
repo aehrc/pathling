@@ -160,39 +160,31 @@ public abstract class FileSource extends DatasetSource {
     this.resourceMap = buildResourceMap(files);
   }
 
-  private static Map<String, Collection<String>> retrieveFilesFromPath(String path,
-      PathlingContext context, final Function<String, Set<String>> fileNameMapper) {
+  @Nonnull
+  private static Map<String, Collection<String>> retrieveFilesFromPath(@Nonnull final String path,
+      @Nonnull final PathlingContext context,
+      @Nonnull final Function<String, Set<String>> fileNameMapper) {
     final org.apache.hadoop.conf.Configuration hadoopConfiguration = requireNonNull(
         context.getSpark().sparkContext().hadoopConfiguration());
     try {
       final Path convertedPath = new Path(path);
       final FileSystem fileSystem = convertedPath.getFileSystem(hadoopConfiguration);
       final FileStatus[] fileStatuses = fileSystem.globStatus(new Path(path, "*"));
-      // First group by resource type
-      Map<String, Collection<String>> groupedByDefaultNamingAssumption = Arrays.stream(fileStatuses)
+      // First group by resource type.
+      final Map<String, Collection<String>> groupedByDefaultNamingAssumption = Arrays.stream(
+              fileStatuses)
           .map(FileStatus::getPath)
           .map(Path::toString)
           .collect(Collectors.groupingBy(FileSource::retrieveResourceTypeFromFilePath,
               Collectors.toCollection(HashSet::new)));
-      // The fileNameMapper is made null to avoid the chicken-egg-problem:
-      // Listing all files in the dir is necessary to extract the resource types (which is done with the default naming assumption
-      // of following the <resource_type>.(<part-id>).<extension> assumption). This first step is necessary
-      // because otherwise it's not possible to obtain the list of resource types which is provided as
-      // input for the fileNameMapper in the next step. In theory, it's possible to define a default fileNameMapper
-      // that receives a resource type, checks the files in the path and aggregates all files that match
-      // the default naming assumption for the given resource type. But that is redundant work, the filepaths
-      // are scanned twice and the second scanning is completely redundant as the same work (with the same default assumption)
-      // has been carried out by the initial scan.
-      if (fileNameMapper == null) {
-        return groupedByDefaultNamingAssumption;
-      }
+      // Apply the file name mapper.
       return groupedByDefaultNamingAssumption.entrySet().stream()
           .collect(Collectors.toMap(
               Map.Entry::getKey,
               entry -> fileNameMapper.apply(entry.getKey())
           ));
 
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new PersistenceError("Problem reading source files from file system", e);
     }
   }
