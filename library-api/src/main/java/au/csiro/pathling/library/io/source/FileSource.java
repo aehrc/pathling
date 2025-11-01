@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -34,11 +33,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -79,7 +75,7 @@ public abstract class FileSource extends DatasetSource {
    */
   @Nonnull
   protected final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer;
-  
+
   @Nonnull
   protected final Predicate<ResourceType> additionalResourceTypeFilter;
 
@@ -87,19 +83,19 @@ public abstract class FileSource extends DatasetSource {
    * Path-based constructor that scans a directory to discover FHIR data files.
    * <p>
    * Use this constructor when you have a directory containing FHIR files and want Pathling to
-   * automatically discover and group them by resource type based on file names. This is the
-   * typical approach for reading from a file system directory where files follow a naming
-   * convention (e.g., {@code Patient.ndjson}, {@code Observation.parquet}).
+   * automatically discover and group them by resource type based on file names. This is the typical
+   * approach for reading from a file system directory where files follow a naming convention (e.g.,
+   * {@code Patient.ndjson}, {@code Observation.parquet}).
    * <p>
    * The constructor will scan the specified path and use either the provided {@code fileNameMapper}
-   * or the default naming convention ({@code <resource_type>.<extension>}) to determine which
-   * files contain which resource types. Files may also include a partition identifier (e.g.,
+   * or the default naming convention ({@code <resource_type>.<extension>}) to determine which files
+   * contain which resource types. Files may also include a partition identifier (e.g.,
    * {@code Patient.00000.ndjson}) which will be handled automatically.
    *
    * @param context the Pathling context
    * @param path the path to the source files, which may be a directory or a glob pattern
-   * @param fileNameMapper a function that maps a file name to a set of resource types, or null
-   *        to use the default naming convention
+   * @param fileNameMapper a function that maps a file name to a set of resource types, or null to
+   * use the default naming convention
    * @param extension the file extension that this source expects for its source files
    * @param reader a {@link DataFrameReader} that can be used to read the source files
    * @param transformer a function that transforms a {@link Dataset<Row>} containing raw source data
@@ -108,16 +104,18 @@ public abstract class FileSource extends DatasetSource {
    */
   protected FileSource(@Nonnull final PathlingContext context,
       @Nonnull final String path,
-      @Nullable final Function<String, Set<String>> fileNameMapper, @Nonnull final String extension,
+      @Nonnull final Function<String, Set<String>> fileNameMapper, @Nonnull final String extension,
       @Nonnull final DataFrameReader reader,
       @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer,
-      @Nonnull Predicate<ResourceType> additionalResourceTypeFilter) {
-    this(context, retrieveFilesFromPath(path, context, fileNameMapper), extension, reader, transformer, additionalResourceTypeFilter);
+      @Nonnull final Predicate<ResourceType> additionalResourceTypeFilter) {
+    this(context, retrieveFilesFromPath(path, context, fileNameMapper), extension, reader,
+        transformer, additionalResourceTypeFilter);
   }
 
 
   /**
-   * Map-based constructor for programmatically specifying which files contain which resource types.
+   * Map-based constructor for programmatically specifying which files contain which resource
+   * types.
    * <p>
    * Use this constructor when you already know the mapping between resource types and file paths,
    * and want to provide this information explicitly rather than relying on file name conventions.
@@ -136,7 +134,7 @@ public abstract class FileSource extends DatasetSource {
    *
    * @param context the Pathling context
    * @param files a map where keys are resource type codes (e.g., "Patient", "Observation") and
-   *        values are collections of file paths containing data for that resource type
+   * values are collections of file paths containing data for that resource type
    * @param extension the file extension that this source expects for its source files
    * @param reader a {@link DataFrameReader} that can be used to read the source files
    * @param transformer a function that transforms a {@link Dataset<Row>} containing raw source data
@@ -147,7 +145,7 @@ public abstract class FileSource extends DatasetSource {
       @Nonnull final Map<String, Collection<String>> files, @Nonnull final String extension,
       @Nonnull final DataFrameReader reader,
       @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer,
-      @Nonnull Predicate<ResourceType> additionalResourceTypeFilter) {
+      @Nonnull final Predicate<ResourceType> additionalResourceTypeFilter) {
     super(context);
     this.extension = extension;
     this.reader = reader;
@@ -156,7 +154,8 @@ public abstract class FileSource extends DatasetSource {
     this.resourceMap = buildResourceMap(files);
   }
 
-  private static Map<String, Collection<String>> retrieveFilesFromPath(String path, PathlingContext context, final Function<String, Set<String>> fileNameMapper) {
+  private static Map<String, Collection<String>> retrieveFilesFromPath(String path,
+      PathlingContext context, final Function<String, Set<String>> fileNameMapper) {
     final org.apache.hadoop.conf.Configuration hadoopConfiguration = requireNonNull(
         context.getSpark().sparkContext().hadoopConfiguration());
     try {
@@ -167,7 +166,8 @@ public abstract class FileSource extends DatasetSource {
       Map<String, Collection<String>> groupedByDefaultNamingAssumption = Arrays.stream(fileStatuses)
           .map(FileStatus::getPath)
           .map(Path::toString)
-          .collect(Collectors.groupingBy(FileSource::retrieveResourceTypeFromFilePath, Collectors.toCollection(HashSet::new)));
+          .collect(Collectors.groupingBy(FileSource::retrieveResourceTypeFromFilePath,
+              Collectors.toCollection(HashSet::new)));
       // The fileNameMapper is made null to avoid the chicken-egg-problem:
       // Listing all files in the dir is necessary to extract the resource types (which is done with the default naming assumption
       // of following the <resource_type>.(<part-id>).<extension> assumption). This first step is necessary
@@ -177,7 +177,7 @@ public abstract class FileSource extends DatasetSource {
       // the default naming assumption for the given resource type. But that is redundant work, the filepaths
       // are scanned twice and the second scanning is completely redundant as the same work (with the same default assumption)
       // has been carried out by the initial scan.
-      if(fileNameMapper == null) {
+      if (fileNameMapper == null) {
         return groupedByDefaultNamingAssumption;
       }
       return groupedByDefaultNamingAssumption.entrySet().stream()
@@ -190,11 +190,11 @@ public abstract class FileSource extends DatasetSource {
       throw new PersistenceError("Problem reading source files from file system", e);
     }
   }
-  
+
   private static String retrieveResourceTypeFromFilePath(String filePath) {
     String fileName = FilenameUtils.getBaseName(filePath);
     final String[] split = fileName.split("\\.");
-    if(split.length == 2) {
+    if (split.length == 2) {
       // has partition id like '<resource_type>.<partition_id>'
       fileName = split[0];
     }
@@ -233,13 +233,15 @@ public abstract class FileSource extends DatasetSource {
   // }
 
   /**
-   * Creates a map of {@link ResourceType} to {@link Dataset} from the given map of resource types to files.
+   * Creates a map of {@link ResourceType} to {@link Dataset} from the given map of resource types
+   * to files.
    *
    * @param files a map of resource types to file paths
    * @return a map of {@link ResourceType} to {@link Dataset}
    */
   @Nonnull
-  private Map<String, Dataset<Row>> buildResourceMap(final @Nonnull Map<String, Collection<String>> files) {
+  private Map<String, Dataset<Row>> buildResourceMap(
+      final @Nonnull Map<String, Collection<String>> files) {
     return files.entrySet().stream()
         // Filter out any paths that do not have the expected extension.
         .map(entry -> Map.entry(entry.getKey(), checkExtension(entry.getValue())))
