@@ -89,9 +89,22 @@ public abstract class FileSource extends DatasetSource {
   protected final Predicate<ResourceType> additionalResourceTypeFilter;
 
   /**
+   * Path-based constructor that scans a directory to discover FHIR data files.
+   * <p>
+   * Use this constructor when you have a directory containing FHIR files and want Pathling to
+   * automatically discover and group them by resource type based on file names. This is the
+   * typical approach for reading from a file system directory where files follow a naming
+   * convention (e.g., {@code Patient.ndjson}, {@code Observation.parquet}).
+   * <p>
+   * The constructor will scan the specified path and use either the provided {@code fileNameMapper}
+   * or the default naming convention ({@code <resource_type>.<extension>}) to determine which
+   * files contain which resource types. Files may also include a partition identifier (e.g.,
+   * {@code Patient.00000.ndjson}) which will be handled automatically.
+   *
    * @param context the Pathling context
    * @param path the path to the source files, which may be a directory or a glob pattern
-   * @param fileNameMapper a function that maps a file name to a set of resource types
+   * @param fileNameMapper a function that maps a file name to a set of resource types, or null
+   *        to use the default naming convention
    * @param extension the file extension that this source expects for its source files
    * @param reader a {@link DataFrameReader} that can be used to read the source files
    * @param transformer a function that transforms a {@link Dataset<Row>} containing raw source data
@@ -109,8 +122,26 @@ public abstract class FileSource extends DatasetSource {
 
 
   /**
+   * Map-based constructor for programmatically specifying which files contain which resource types.
+   * <p>
+   * Use this constructor when you already know the mapping between resource types and file paths,
+   * and want to provide this information explicitly rather than relying on file name conventions.
+   * This is particularly useful for:
+   * <ul>
+   *   <li>FHIR Bulk Data operations where file lists are provided via manifests</li>
+   *   <li>Custom file organisation schemes that don't follow standard naming conventions</li>
+   *   <li>Programmatic data source construction where file-to-resource mappings are computed</li>
+   *   <li>Reading from multiple partitioned files (e.g., {@code Patient.00000.ndjson},
+   *       {@code Patient.00001.ndjson}) for a single resource type</li>
+   * </ul>
+   * <p>
+   * Unlike the path-based constructor, this does not scan directories or infer resource types from
+   * file names. All file-to-resource-type mappings must be provided explicitly in the
+   * {@code files} parameter.
+   *
    * @param context the Pathling context
-   * @param files a map of resource types to file paths
+   * @param files a map where keys are resource type codes (e.g., "Patient", "Observation") and
+   *        values are collections of file paths containing data for that resource type
    * @param extension the file extension that this source expects for its source files
    * @param reader a {@link DataFrameReader} that can be used to read the source files
    * @param transformer a function that transforms a {@link Dataset<Row>} containing raw source data
