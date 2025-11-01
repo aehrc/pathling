@@ -183,19 +183,29 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
     return new DatasetSource(context);
   }
 
+  /**
+   * Creates a new data source from a directory containing Parquet-encoded FHIR resource data.
+   * <p>
+   * The default filenameMapper assumes {@code <resource_type>.<extension>} structure. For example,
+   * 'Patient.parquet' should contain Patient resources.
+   *
+   * @param path the URI of the directory containing the Parquet files/directories
+   * @return the new data source
+   */
   @Nonnull
   public QueryableDataSource parquet(@Nullable final String path) {
     return parquet(path, (Predicate<ResourceType>) ignored -> true);
   }
-  
+
   /**
-   * Creates a new data source form a directory containing Parquet-encoded FHIR resource data.
+   * Creates a new data source from a directory containing Parquet-encoded FHIR resource data.
    * <p>
    * The default filenameMapper assumes {@code <resource_type>.<extension>} structure. For example,
    * 'Patient.parquet' should contain Patient resources. If the files in the path have a different
    * structure, a custom filenameMapper must be supplied.
    *
    * @param path the URI of the directory containing the Parquet files/directories
+   * @param additionalResourceTypeFilter predicate to filter resource types to be loaded
    * @return the new data source
    */
   @Nonnull
