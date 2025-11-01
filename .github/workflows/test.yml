@@ -29,11 +29,8 @@ jobs:
           java-version: 21
           distribution: "zulu"
 
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v4
-        id: python-install
-        with:
-          python-version: 3.9
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
 
       - name: Set up R
         uses: r-lib/actions/setup-r@v2

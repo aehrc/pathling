@@ -211,23 +211,25 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>add-dependency-sources-to-jar</id>
+            <id>create-sources-jar</id>
             <phase>package</phase>
             <goals>
-              <goal>run</goal>
+              <goal>exec</goal>
             </goals>
             <configuration>
-              <target>
-                <jar destfile="${project.build.directory}/${project.build.finalName}-sources.jar"
-                  update="true">
-                  <fileset dir="${project.build.directory}/dependency-sources"
-                    includes="**/*.java"/>
-                </jar>
-              </target>
+              <executable>jar</executable>
+              <workingDirectory>${project.build.directory}</workingDirectory>
+              <arguments>
+                <argument>cf</argument>
+                <argument>${project.build.finalName}-sources.jar</argument>
+                <argument>-C</argument>
+                <argument>dependency-sources</argument>
+                <argument>.</argument>
+              </arguments>
             </configuration>
           </execution>
         </executions>

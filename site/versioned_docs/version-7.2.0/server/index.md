@@ -16,22 +16,28 @@ health data analytics.
 
 The operations available within Pathling are:
 
-1. [import](/docs/server/operations/import) - Import FHIR data in bulk into the
+1. [import](/docs/7.2.0/server/operations/import) - Import FHIR data in bulk
+   into the
    server,
    making it available for query using the other operations.
-2. [search](/docs/server/operations/search) - Retrieve a set of individual FHIR
+2. [search](/docs/7.2.0/server/operations/search) - Retrieve a set of individual
+   FHIR
    resources
    that match a set of criteria.
-3. [aggregate](/docs/server/operations/aggregate) - Aggregate, group and filter
+3. [aggregate](/docs/7.2.0/server/operations/aggregate) - Aggregate, group and
+   filter
    data - a
    "pivot table as an API".
-5. [extract](/docs/server/operations/extract) - Prepare a custom tabular extract
+5. [extract](/docs/7.2.0/server/operations/extract) - Prepare a custom tabular
+   extract
    of FHIR
    data, and retrieve it in bulk.
-6. [update](/docs/server/operations/update) - Create or update an individual
+6. [update](/docs/7.2.0/server/operations/update) - Create or update an
+   individual
    resource
    within the server.
-7. [batch](/docs/server/operations/update) - Create or update a collection of
+7. [batch](/docs/7.2.0/server/operations/update) - Create or update a collection
+   of
    resources
    within the server.
 
