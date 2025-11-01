@@ -51,23 +51,26 @@ public class ImportResponse implements OperationResponse<Parameters> {
   }
   
   private WriteDetails remapFilesIn(ImportRequest importRequest, WriteDetails writeDetails) {
-    // the import request response should not list the file url for the imported files in pathling.
-    // Rather, it should map to the input file url provided in the request.
-    // Furthermore, spark may create several files for the same resource type, aggregate them back together.
-    
-    // Spark may create multiple files for the same resource type, so we need to aggregate them
+    // The import request response should not list the file URL for the imported files in Pathling.
+    // Rather, it should map to the input file URL provided in the request.
+    // Furthermore, Spark may create several files for the same resource type, aggregate them back together.
+
+    // Aggregate counts by resource type.
     Map<String, Long> aggregatedCounts = writeDetails.fileInfos().stream()
         .collect(Collectors.groupingBy(
             FileInfo::fhirResourceType,
             Collectors.summingLong(fi -> fi.count() != null ? fi.count() : 0L)
         ));
 
+    // Create FileInfo entries for each input file URL, with aggregated count per resource type.
     List<FileInfo> mappedFileInfos = aggregatedCounts.entrySet().stream()
-        .map(entry -> new FileInfo(
-            entry.getKey(),
-            importRequest.input().get(entry.getKey()),
-            entry.getValue()
-        ))
+        .flatMap(entry -> {
+          String resourceType = entry.getKey();
+          Long totalCount = entry.getValue();
+          // Get the collection of input URLs for this resource type.
+          return importRequest.input().getOrDefault(resourceType, List.of()).stream()
+              .map(inputUrl -> new FileInfo(resourceType, inputUrl, totalCount));
+        })
         .toList();
 
     return new WriteDetails(mappedFileInfos);
