@@ -46,12 +46,14 @@ public class NdjsonSource extends FileSource {
   }
 
   /**
-   * Constructs an NdjsonSource with the specified PathlingContext and map of resource types to NDJSON files.
+   * Constructs an NdjsonSource with the specified PathlingContext and map of resource types to
+   * NDJSON files.
    *
    * @param context the PathlingContext to use
    * @param files a map where keys are resource type names and values are collections of file paths
    */
-  NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final Map<String, Collection<String>> files) {
+  NdjsonSource(@Nonnull final PathlingContext context,
+      @Nonnull final Map<String, Collection<String>> files) {
     // Recognize files with the extension ".ndjson" as NDJSON files, by default.
     this(context, files, "ndjson");
   }
@@ -75,7 +77,8 @@ public class NdjsonSource extends FileSource {
    * @param files a map where keys are resource type names and values are collections of file paths
    * @param extension the file extension to recognize as NDJSON files
    */
-  NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final Map<String, Collection<String>> files,
+  NdjsonSource(@Nonnull final PathlingContext context,
+      @Nonnull final Map<String, Collection<String>> files,
       @Nonnull final String extension) {
     this(context, files, extension, null);
   }
@@ -99,8 +102,9 @@ public class NdjsonSource extends FileSource {
         (sourceData, resourceType) -> context.encode(sourceData, resourceType,
             PathlingContext.FHIR_JSON), resourceType -> true);
   }
-  
-  NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final Map<String, Collection<String>> files,
+
+  NdjsonSource(@Nonnull final PathlingContext context,
+      @Nonnull final Map<String, Collection<String>> files,
       @Nonnull final String extension,
       @Nonnull final Function<String, Set<String>> fileNameMapper) {
     super(context, files, extension,
