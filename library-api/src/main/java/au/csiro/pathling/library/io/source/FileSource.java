@@ -60,11 +60,6 @@ public abstract class FileSource extends DatasetSource {
   // contain the qualifier string (if present).
   static final Pattern BASE_NAME_WITH_QUALIFIER = Pattern.compile(
       "^([A-Za-z]+)(\\.[^.]+)?$");
-  /**
-   * A function that maps a resource type code to a set of file names that contain data for that
-   * resource type.
-   */
-  protected final Function<String, Set<String>> fileNameMapper;
 
   /**
    * The file extension that this source expects for its source files.
@@ -270,28 +265,6 @@ public abstract class FileSource extends DatasetSource {
     return paths.stream()
         .filter(path -> FilenameUtils.isExtension(path, extension))
         .collect(Collectors.toSet());
-  }
-
-  /**
-   * Converts a path to a stream of pairs of resource codes and paths.
-   * The file represented as part of the path may have a partition id in the name.
-   * I.e. the path may be 'path/to/resource/Patient.00000.ndjson'. The partition id will be discarded
-   * and 'Patient' will be returned as the key.
-   *
-   * @param path the path to convert
-   * @return a stream of pairs of resource codes and paths
-   */
-  @Nonnull
-  private Stream<Pair<String, String>> resourceCodeAndPath(@Nonnull final String path) {
-    String fileName = FilenameUtils.getBaseName(path);
-    final String[] split = fileName.split("\\.");
-    if(split.length == 2) {
-      // has partition id like '<resource_type>.<partition_id>'
-      fileName = split[0];
-    }
-    String finalFileName = fileName;
-    return fileNameMapper.apply(finalFileName).stream()
-        .map(mappedFilename -> Pair.of(finalFileName, mappedFilename));
   }
 
 }
