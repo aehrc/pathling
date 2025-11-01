@@ -25,12 +25,14 @@ import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -199,37 +201,6 @@ public abstract class FileSource extends DatasetSource {
     return fileName;
   }
 
-  // /**
-  //  * The default file mapper expects two possible file naming conventions:
-  //  * <br>
-  //  * 1. The filename is exactly the resource type (i.e. "Patient.ndjson", "Encounter.parquet")
-  //  * 2. The filename is the resource type with an id (i.e. "Patient.00000.ndjson"). This is mostly relevant
-  //  * for NDJSON files as the bulk export operation may produce files in this structure. 
-  //  * 
-  //  * @param resourceType the resource type for the files to be loaded
-  //  * @return the collection of files associated with the resource type
-  //  */
-  // @Nonnull
-  // public static Set<String> assumeFilenameIsResourceTypeMapper(@Nonnull final String path, @Nonnull final String resourceType, @Nonnull PathlingContext context) {
-  //   final org.apache.hadoop.conf.Configuration hadoopConfiguration = requireNonNull(
-  //       context.getSpark().sparkContext().hadoopConfiguration());
-  //   try {
-  //     final Path convertedPath = new Path(path);
-  //     final FileSystem fileSystem = convertedPath.getFileSystem(hadoopConfiguration);
-  //     final FileStatus[] fileStatuses = fileSystem.globStatus(new Path(path, "*"));
-  //     List<String> filesAtPath = Arrays.stream(fileStatuses)
-  //         .map(FileStatus::getPath)
-  //         .map(Path::toString)
-  //         .toList();
-  //     return filesAtPath.stream()
-  //         .filter(filename -> FilenameUtils.getBaseName(filename).startsWith(resourceType))
-  //         .collect(Collectors.toSet());
-  //   } catch (IOException e) {
-  //     throw new PersistenceError("Problem reading source files from file system", e);
-  //   }
-  //
-  // }
-
   /**
    * Creates a map of {@link ResourceType} to {@link Dataset} from the given map of resource types
    * to files.
@@ -265,6 +236,35 @@ public abstract class FileSource extends DatasetSource {
     return paths.stream()
         .filter(path -> FilenameUtils.isExtension(path, extension))
         .collect(Collectors.toSet());
+  }
+
+  /**
+   * Extracts the resource type from the provided base name. Allows for an optional qualifier
+   * string, which is separated from the resource name by a period. For example, "Procedure.ICU"
+   * will return ["Procedure"].
+   * <p>
+   * This method does not validate that the resource type is a valid FHIR resource type.
+   *
+   * @param baseName the base name of the file
+   * @return a single-element set containing the resource type, or an empty set if the base name
+   * does not match the expected format
+   */
+  @Nonnull
+  static Set<String> resourceNameWithQualifierMapper(@Nonnull final String baseName) {
+    final Matcher matcher = BASE_NAME_WITH_QUALIFIER.matcher(baseName);
+    // If the base name does not match the expected format, return an empty set.
+    if (!matcher.matches()) {
+      return Collections.emptySet();
+    }
+    // If the base name does not contain a qualifier, return the base name as-is.
+    if (matcher.group(2) == null) {
+      return Collections.singleton(baseName);
+    }
+    // If the base name contains a qualifier, remove it and return the base name without the
+    // qualifier.
+    final String qualifierRemoved = new StringBuilder(baseName).replace(matcher.start(2),
+        matcher.end(2), "").toString();
+    return Collections.singleton(qualifierRemoved);
   }
 
 }

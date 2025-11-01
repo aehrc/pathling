@@ -80,7 +80,7 @@ final class ParquetSink implements DataSink {
   @Override
   @Nonnull
   public WriteDetails write(@Nonnull final DataSource source) {
-    List<FileInformation> fileInfos = new ArrayList<>();
+    final List<FileInformation> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       final String fileName = String.join(".", fileNameMapper.apply(resourceType),

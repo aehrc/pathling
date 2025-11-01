@@ -43,7 +43,7 @@ public class DeltaSource extends FileSource {
     super(context, path,
         // Use the "resource name with qualifier" mapper by default, which takes the resource name
         // from the file name and is tolerant of an optional qualifier string.
-        null,
+        FileSource::resourceNameWithQualifierMapper,
         // Delta tables store data in parquet format internally, so we use the parquet extension.
         "parquet",
         context.getSpark().read().format("delta"),
@@ -54,12 +54,15 @@ public class DeltaSource extends FileSource {
   }
 
   /**
-   * Constructs a DeltaSource with the specified PathlingContext and map of resource types to Delta table paths.
+   * Constructs a DeltaSource with the specified PathlingContext and map of resource types to Delta
+   * table paths.
    *
    * @param context the PathlingContext to use
-   * @param files a map where keys are resource type names and values are collections of Delta table paths
+   * @param files a map where keys are resource type names and values are collections of Delta table
+   * paths
    */
-  DeltaSource(@Nonnull final PathlingContext context, @Nonnull final Map<String, Collection<String>> files) {
+  DeltaSource(@Nonnull final PathlingContext context,
+      @Nonnull final Map<String, Collection<String>> files) {
     super(context, files,
         // Delta tables store data in parquet format internally, so we use the parquet extension.
         "parquet",
