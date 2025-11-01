@@ -92,15 +92,6 @@ final class DeltaSink implements DataSink {
   /**
    * @param context the PathlingContext to use
    * @param path the path to write the Delta database to
-   */
-  DeltaSink(@Nonnull final PathlingContext context, @Nonnull final String path) {
-    // By default, name the files using the resource type alone.
-    this(context, path, SaveMode.ERROR_IF_EXISTS, UnaryOperator.identity());
-  }
-
-  /**
-   * @param context the PathlingContext to use
-   * @param path the path to write the Delta database to
    * @param saveMode the {@link SaveMode} to use
    */
   DeltaSink(@Nonnull final PathlingContext context, @Nonnull final String path,
@@ -112,7 +103,7 @@ final class DeltaSink implements DataSink {
   @Override
   @Nonnull
   public WriteDetails write(@Nonnull final DataSource source) {
-    List<FileInfo> fileInfos = new ArrayList<>();
+    final List<FileInfo> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       final String fileName = String.join(".", fileNameMapper.apply(resourceType),
