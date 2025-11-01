@@ -335,7 +335,7 @@ class DataSourcesTest {
     queryDeltaData(data);
 
     // Write the data back out to a temporary location.
-    data.write().delta(temporaryDirectory.resolve("delta").toString());
+    data.write().delta(temporaryDirectory.resolve("delta").toString(), false);
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read()
@@ -354,7 +354,7 @@ class DataSourcesTest {
 
     // Write the data to Delta with the specified save mode.
     data.write().saveMode(saveMode)
-        .delta(temporaryDirectory.resolve("delta-" + saveMode).toString());
+        .delta(temporaryDirectory.resolve("delta-" + saveMode).toString(), false);
 
     // Read the Delta data back in.
     final QueryableDataSource newData = pathlingContext.read()
@@ -364,8 +364,9 @@ class DataSourcesTest {
     queryNdjsonData(newData);
   }
 
-  @Test
-  void deltaReadWriteWithMerge() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void deltaReadWriteWithMerge(final boolean deleteOnMerge) {
     final String sourcePath = TEST_DATA_PATH.resolve("delta").toString();
     final String destinationPath = temporaryDirectory.resolve("delta-rw-merge").toString();
 
@@ -376,7 +377,7 @@ class DataSourcesTest {
     queryDeltaData(data);
 
     // Write the data back out to a temporary location.
-    data.write().saveMode("merge").delta(destinationPath);
+    data.write().saveMode("merge").delta(destinationPath, deleteOnMerge);
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read().delta(destinationPath);
@@ -385,10 +386,52 @@ class DataSourcesTest {
     queryDeltaData(newData);
 
     // Merge the data back into the Delta table.
-    data.write().saveMode("merge").delta(destinationPath);
+    data.write().saveMode("merge").delta(destinationPath, deleteOnMerge);
 
     // Query the data.
     queryDeltaData(newData);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void deltaWriteWithMergeAndDeleteOnMerge(final boolean deleteOnMerge) {
+    // Read the full test NDJSON data (9 patients).
+    final QueryableDataSource fullData = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+
+    // Write the full data to Delta initially.
+    final String destinationPath = temporaryDirectory.resolve("delta-merge-delete-test").toString();
+    fullData.write().saveMode("merge").delta(destinationPath, deleteOnMerge);
+
+    // Verify all 9 patients were written.
+    final QueryableDataSource initialData = pathlingContext.read().delta(destinationPath);
+    final Dataset<Row> initialCount = initialData.read("Patient").agg(functions.count("id"));
+    DatasetAssert.of(initialCount).hasRows(RowFactory.create(9));
+
+    // Create a subset containing only 3 specific patients.
+    final Dataset<Row> patientSubset = fullData.read("Patient")
+        .filter("id IN ('8ee183e2-b3c0-4151-be94-b945d6aa8c6d', "
+            + "'beff242e-580b-47c0-9844-c1a68c36c5bf', "
+            + "'e62e52ae-2d75-4070-a0ae-3cc78d35ed08')");
+
+    final QueryableDataSource filteredData = pathlingContext.read().datasets()
+        .dataset("Patient", patientSubset)
+        .dataset("Condition", fullData.read("Condition"));
+
+    // Merge the subset into the existing Delta table.
+    filteredData.write().saveMode("merge").delta(destinationPath, deleteOnMerge);
+
+    // Read the merged data back.
+    final QueryableDataSource mergedData = pathlingContext.read().delta(destinationPath);
+    final Dataset<Row> mergedCount = mergedData.read("Patient").agg(functions.count("id"));
+
+    if (deleteOnMerge) {
+      // With deleteOnMerge=true, only the 3 patients in the subset should remain.
+      DatasetAssert.of(mergedCount).hasRows(RowFactory.create(3));
+    } else {
+      // With deleteOnMerge=false, all 9 patients should still be present.
+      DatasetAssert.of(mergedCount).hasRows(RowFactory.create(9));
+    }
   }
 
   @Test
@@ -399,7 +442,7 @@ class DataSourcesTest {
 
     // Write the data to Delta initially.
     final String deltaPath = temporaryDirectory.resolve("delta-overwrite-test").toString();
-    data.write().saveMode("overwrite").delta(deltaPath);
+    data.write().saveMode("overwrite").delta(deltaPath, false);
 
     // Read the data back to verify it was written.
     final QueryableDataSource initialData = pathlingContext.read().delta(deltaPath);
@@ -407,7 +450,7 @@ class DataSourcesTest {
 
     // Write the same data again using overwrite mode - this should succeed.
     // This tests the deltaTableExists method and the delete() workaround in DeltaSink.
-    data.write().saveMode("overwrite").delta(deltaPath);
+    data.write().saveMode("overwrite").delta(deltaPath, false);
 
     // Read the overwritten data back.
     final QueryableDataSource overwrittenData = pathlingContext.read().delta(deltaPath);
@@ -492,6 +535,47 @@ class DataSourcesTest {
 
     // Query the merged data.
     queryNdjsonData(mergedData);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void tablesWriteWithMergeAndDeleteOnMerge(final boolean deleteOnMerge) {
+    // Read the full test NDJSON data (9 patients).
+    final QueryableDataSource fullData = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+
+    // Write the full data to Delta tables initially.
+    fullData.write().saveMode("merge").tables("test", "delta", deleteOnMerge);
+
+    // Verify all 9 patients were written.
+    final QueryableDataSource initialData = pathlingContext.read().tables("test");
+    final Dataset<Row> initialCount = initialData.read("Patient").agg(functions.count("id"));
+    DatasetAssert.of(initialCount).hasRows(RowFactory.create(9));
+
+    // Create a subset containing only 3 specific patients.
+    final Dataset<Row> patientSubset = fullData.read("Patient")
+        .filter("id IN ('8ee183e2-b3c0-4151-be94-b945d6aa8c6d', "
+            + "'beff242e-580b-47c0-9844-c1a68c36c5bf', "
+            + "'e62e52ae-2d75-4070-a0ae-3cc78d35ed08')");
+
+    final QueryableDataSource filteredData = pathlingContext.read().datasets()
+        .dataset("Patient", patientSubset)
+        .dataset("Condition", fullData.read("Condition"));
+
+    // Merge the subset into the existing Delta table.
+    filteredData.write().saveMode("merge").tables("test", "delta", deleteOnMerge);
+
+    // Read the merged data back.
+    final QueryableDataSource mergedData = pathlingContext.read().tables("test");
+    final Dataset<Row> mergedCount = mergedData.read("Patient").agg(functions.count("id"));
+
+    if (deleteOnMerge) {
+      // With deleteOnMerge=true, only the 3 patients in the subset should remain.
+      DatasetAssert.of(mergedCount).hasRows(RowFactory.create(3));
+    } else {
+      // With deleteOnMerge=false, all 9 patients should still be present.
+      DatasetAssert.of(mergedCount).hasRows(RowFactory.create(9));
+    }
   }
 
   @Test
@@ -917,7 +1001,7 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     final DataSinkBuilder builder = data.write();
     final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.delta(null));
+        () -> builder.delta(null, false));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
@@ -927,7 +1011,7 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
     final DataSinkBuilder builder = data.write();
     final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.delta("path", null));
+        () -> builder.delta("path", null, false));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
