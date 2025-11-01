@@ -137,6 +137,17 @@ public class FhirEncoders {
     this.enableExtensions = enableExtensions;
   }
 
+  /**
+   * Returns a cached FhirEncoders instance for the specified configuration, creating one if it
+   * does not already exist. This method is thread-safe and ensures that encoders with identical
+   * configurations are shared across the application.
+   *
+   * @param fhirVersion the FHIR version to use for encoding
+   * @param maxNestingLevel the maximum nesting level for encoding complex resources
+   * @param openTypes the set of open types to encode with extension values
+   * @param enableExtensions whether to enable extension encoding
+   * @return a FhirEncoders instance configured with the specified parameters
+   */
   public static FhirEncoders getOrCreate(@Nonnull final FhirVersionEnum fhirVersion,
       final int maxNestingLevel,
       @Nonnull final Set<String> openTypes, final boolean enableExtensions) {
