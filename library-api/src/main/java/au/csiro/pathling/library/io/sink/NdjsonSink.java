@@ -94,7 +94,7 @@ final class NdjsonSink implements DataSink {
   @Override
   @Nonnull
   public WriteDetails write(@Nonnull final DataSource source) {
-    List<FileInformation> fileInfos = new ArrayList<>();
+    final List<FileInformation> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       // Convert the dataset of structured FHIR data to a dataset of JSON strings.
       final Dataset<String> jsonStrings = context.decode(source.read(resourceType),
@@ -113,7 +113,7 @@ final class NdjsonSink implements DataSink {
       }
       // Remove the partitioned directory and replace it with the renamed partitioned files
       // <resource_type>.<partId>.ndjson, i.e. Patient.00000.ndjson
-      Collection<String> renamed = FileSystemPersistence.renamePartitionedFiles(context.getSpark(),
+      final Collection<String> renamed = FileSystemPersistence.renamePartitionedFiles(context.getSpark(),
           resultUrl, resultUrl, "txt");
       renamed.forEach(renamedFilename -> fileInfos.add(
           new FileInformation(resourceType, renamedFilename, null)));
