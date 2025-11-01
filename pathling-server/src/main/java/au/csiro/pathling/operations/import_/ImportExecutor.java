@@ -53,14 +53,11 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -110,13 +107,11 @@ public class ImportExecutor {
 
     Map<String, Collection<String>> resourcesWithAuthority = checkAuthority(request);
 
-    Collection<String> resourceFiles = resourcesWithAuthority.values().stream().flatMap(Collection::stream).toList();
     Function<DataSource, DataSinkBuilder> sinkBuilderFunc = dataSource -> new DataSinkBuilder(pathlingContext, dataSource).saveMode(request.saveMode().getCode());
-    Function<String, Set<String>> filenameMapper = resourceType -> new HashSet<>(request.input().getOrDefault(resourceType, Set.of()));
     return switch (request.importFormat()) {
-      case NDJSON -> sinkBuilderFunc.apply(sourceBuilder.ndjson(resourceFiles, "ndjson", filenameMapper)).ndjson(databasePath);
-      case DELTA -> sinkBuilderFunc.apply(sourceBuilder.delta(resourceFiles)).delta(databasePath);
-      case PARQUET -> sinkBuilderFunc.apply(sourceBuilder.parquet(resourceFiles)).parquet(databasePath);
+      case NDJSON -> sinkBuilderFunc.apply(sourceBuilder.ndjson(resourcesWithAuthority, "ndjson")).ndjson(databasePath);
+      case DELTA -> sinkBuilderFunc.apply(sourceBuilder.delta(resourcesWithAuthority)).delta(databasePath);
+      case PARQUET -> sinkBuilderFunc.apply(sourceBuilder.parquet(resourcesWithAuthority)).parquet(databasePath);
     };
   }
 
