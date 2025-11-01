@@ -228,6 +228,7 @@
                   </arguments>
                   <environmentVariables>
                     <PYTHONPATH>${project.basedir}</PYTHONPATH>
+                    <PYSPARK_PYTHON>${project.basedir}/.venv/bin/python</PYSPARK_PYTHON>
                   </environmentVariables>
                 </configuration>
               </execution>
