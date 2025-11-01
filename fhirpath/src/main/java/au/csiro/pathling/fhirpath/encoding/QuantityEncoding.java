@@ -141,7 +141,7 @@ public class QuantityEncoding {
       throw new IllegalArgumentException("Cannot decode quantity with null value, system, or code");
     }
 
-    // Create FhirpathQuantity based on system
+    // Create FhirPathQuantity based on system
     if (FhirPathQuantity.UCUM_SYSTEM_URI.equals(system)) {
       return FhirPathQuantity.ofUCUM(value, code);
     } else if (FhirPathQuantity.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI.equals(system)) {
@@ -291,9 +291,9 @@ public class QuantityEncoding {
   }
 
   /**
-   * Encodes a FhirpathQuantity to a Row representation.
+   * Encodes a FhirPathQuantity to a Row representation.
    * <p>
-   * This method converts a FhirpathQuantity into the Row representation used by Spark. It handles
+   * This method converts a FhirPathQuantity into the Row representation used by Spark. It handles
    * canonicalization for both UCUM units and calendar duration units.
    *
    * @param quantity the FhirpathQuantity to encode
