@@ -2,13 +2,12 @@ package au.csiro.pathling.import_;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
-import au.csiro.pathling.library.io.sink.FileInfo;
+import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.sink.WriteDetails;
 import au.csiro.pathling.operations.import_.AccessRules;
 import au.csiro.pathling.operations.import_.ImportExecutor;
@@ -25,17 +24,11 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Stream;
-import au.csiro.pathling.util.TestDataSetup;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 
@@ -116,10 +109,14 @@ class ImportExecutorTest {
     ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
         Map.of(
-            "Patient", List.of("file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath()),
-            "Condition", List.of("file://" + TEST_DATA_PATH.resolve("Condition.ndjson").toAbsolutePath()),
-            "Encounter", List.of("file://" + TEST_DATA_PATH.resolve("Encounter.ndjson").toAbsolutePath()),
-            "Observation", List.of("file://" + TEST_DATA_PATH.resolve("Observation.ndjson").toAbsolutePath())
+            "Patient",
+            List.of("file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath()),
+            "Condition",
+            List.of("file://" + TEST_DATA_PATH.resolve("Condition.ndjson").toAbsolutePath()),
+            "Encounter",
+            List.of("file://" + TEST_DATA_PATH.resolve("Encounter.ndjson").toAbsolutePath()),
+            "Observation",
+            List.of("file://" + TEST_DATA_PATH.resolve("Observation.ndjson").toAbsolutePath())
         ),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON,
@@ -134,7 +131,7 @@ class ImportExecutorTest {
     WriteDetails writeDetails = getWriteDetails(response);
     assertThat(writeDetails.fileInfos())
         .hasSize(4)
-        .extracting(FileInfo::fhirResourceType)
+        .extracting(FileInformation::fhirResourceType)
         .containsExactlyInAnyOrder("Patient", "Condition", "Encounter", "Observation");
   }
 
@@ -157,7 +154,8 @@ class ImportExecutorTest {
 
     // When - first import
     ImportResponse response1 = importExecutor.execute(request, JOB_ID);
-    Path patientFile = Paths.get(URI.create(response1.getOriginalInternalWriteDetails().fileInfos().get(0).absoluteUrl()));
+    Path patientFile = Paths.get(
+        URI.create(response1.getOriginalInternalWriteDetails().fileInfos().get(0).absoluteUrl()));
     long firstImportCount = Files.lines(patientFile).count();
 
     // Then - second import with OVERWRITE should replace the file
@@ -169,7 +167,7 @@ class ImportExecutorTest {
         ImportFormat.NDJSON,
         false
     );
-    
+
     ImportResponse response2 = importExecutor.execute(request2, JOB_ID);
     long secondImportCount = Files.lines(patientFile).count();
 
@@ -207,7 +205,8 @@ class ImportExecutorTest {
     assertThat(response2).isNotNull();
     assertThat(patientFile).exists();
     assertThat(firstImportSize).isGreaterThan(0L);
-    assertThat(secondImportSize).isGreaterThan((long) (firstImportSize * 1.9)); // Approximately doubled after append
+    assertThat(secondImportSize).isGreaterThan(
+        (long) (firstImportSize * 1.9)); // Approximately doubled after append
   }
 
   @Test
@@ -285,9 +284,10 @@ class ImportExecutorTest {
     // Then - URLs in response should be the original input URLs, not database paths
     WriteDetails writeDetails = getWriteDetails(response);
     assertThat(writeDetails.fileInfos())
-        .extracting(FileInfo::absoluteUrl)
+        .extracting(FileInformation::absoluteUrl)
         .containsExactlyInAnyOrder(patientUrl, conditionUrl)
-        .noneMatch(url -> url.contains(uniqueTempDir.toString())); // Database path should not appear
+        .noneMatch(
+            url -> url.contains(uniqueTempDir.toString())); // Database path should not appear
   }
 
   @Test
@@ -313,7 +313,7 @@ class ImportExecutorTest {
     // Then
     WriteDetails writeDetails = getWriteDetails(response);
     assertThat(writeDetails.fileInfos())
-        .extracting(FileInfo::fhirResourceType)
+        .extracting(FileInformation::fhirResourceType)
         .containsExactlyInAnyOrder("Patient", "Condition");
   }
 
@@ -555,9 +555,9 @@ class ImportExecutorTest {
       // When
       ImportResponse response = importExecutor.execute(request, JOB_ID);
 
-      // Then - even though Spark creates multiple files, the response should have one FileInfo with aggregated count
+      // Then - even though Spark creates multiple files, the response should have one FileInformation with aggregated count
       WriteDetails writeDetails = getWriteDetails(response);
-      List<FileInfo> observationInfos = writeDetails.fileInfos().stream()
+      List<FileInformation> observationInfos = writeDetails.fileInfos().stream()
           .filter(fi -> "Observation".equals(fi.fhirResourceType()))
           .toList();
 

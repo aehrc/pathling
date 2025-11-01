@@ -19,15 +19,15 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.sink.FileInformation;
+import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.export.ExportExecutor;
 import au.csiro.pathling.operations.export.ExportOperationValidator;
 import au.csiro.pathling.operations.export.ExportOutputFormat;
 import au.csiro.pathling.operations.export.ExportRequest;
 import au.csiro.pathling.operations.export.ExportResponse;
 import au.csiro.pathling.operations.export.ExportResultRegistry;
-import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.sink.FileInfo;
-import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.CustomObjectDataSource;
@@ -146,7 +146,7 @@ class ExportOperationExecutorTest {
     exportExecutor = create_exec(patient);
     ExportRequest req = req(BASE, date("2025-01-04"), date(until));
     TestExportResponse actualResponse = execute(req);
-    
+
     assertThat(actualResponse).isNotNull();
     assertThat(actualResponse.exportResponse().getWriteDetails().fileInfos()).hasSize(1);
 
@@ -462,7 +462,7 @@ class ExportOperationExecutorTest {
     softly.assertThat(actual.getKickOffRequestUrl()).isEqualTo(expected.getKickOffRequestUrl());
     softly.assertThat(actual.getWriteDetails()).isNotNull();
     softly.assertThat(actual.getWriteDetails().fileInfos())
-        .extracting(FileInfo::fhirResourceType, FileInfo::absoluteUrl)
+        .extracting(FileInformation::fhirResourceType, FileInformation::absoluteUrl)
         .containsAnyElementsOf(expected.getWriteDetails().fileInfos().stream()
             .map(fi -> tuple(fi.fhirResourceType(), fi.absoluteUrl()))
             .toList());

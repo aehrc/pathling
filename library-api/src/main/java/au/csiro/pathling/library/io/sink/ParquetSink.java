@@ -22,7 +22,6 @@ import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.SaveMode;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.UnaryOperator;
@@ -81,15 +80,15 @@ final class ParquetSink implements DataSink {
   @Override
   @Nonnull
   public WriteDetails write(@Nonnull final DataSource source) {
-    List<FileInfo> fileInfos = new ArrayList<>();
+    List<FileInformation> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       final String fileName = String.join(".", fileNameMapper.apply(resourceType),
           "parquet");
       final String tablePath = safelyJoinPaths(path, fileName);
 
-      fileInfos.add(new FileInfo(resourceType, tablePath, null));
-      
+      fileInfos.add(new FileInformation(resourceType, tablePath, null));
+
       switch (saveMode) {
         case ERROR_IF_EXISTS, OVERWRITE, APPEND, IGNORE ->
             writeDataset(dataset, tablePath, saveMode);
@@ -103,10 +102,10 @@ final class ParquetSink implements DataSink {
   void writeDataset(@Nonnull final Dataset<Row> dataset,
       @Nonnull final String tablePath, @Nonnull final SaveMode saveMode) {
     final var writer = dataset.write();
-    
+
     // Apply save mode if it has a Spark equivalent
     saveMode.getSparkSaveMode().ifPresent(writer::mode);
-    
+
     writer.parquet(tablePath);
   }
 

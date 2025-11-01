@@ -3,11 +3,11 @@ package au.csiro.pathling.util;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Fail.fail;
 
+import au.csiro.pathling.library.io.sink.FileInformation;
+import au.csiro.pathling.library.io.sink.WriteDetails;
 import au.csiro.pathling.operations.export.ExportOutputFormat;
 import au.csiro.pathling.operations.export.ExportRequest;
 import au.csiro.pathling.operations.export.ExportResponse;
-import au.csiro.pathling.library.io.sink.FileInfo;
-import au.csiro.pathling.library.io.sink.WriteDetails;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ArrayNode;
@@ -46,113 +46,126 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @Slf4j
 public class ExportOperationUtil {
 
-    public static JsonNode json(ObjectMapper mapper, String request, WriteDetails writeDetails) {
-        return json(mapper, InstantType.now(), request, false, writeDetails.fileInfos());
+  public static JsonNode json(ObjectMapper mapper, String request, WriteDetails writeDetails) {
+    return json(mapper, InstantType.now(), request, false, writeDetails.fileInfos());
+  }
+
+  public static JsonNode json(ObjectMapper mapper, InstantType transactionTime, String request,
+      boolean requiresAccessToken, List<FileInformation> output) {
+    ObjectNode node = mapper.createObjectNode();
+    node.put("transactionTime", transactionTime.toString());
+    node.put("request", request);
+    node.put("requiresAccessToken", requiresAccessToken);
+    List<ObjectNode> outputList = output.stream()
+        .map(fileInfo -> mapper.createObjectNode()
+            .put("type", fileInfo.fhirResourceType())
+            .put("url", fileInfo.absoluteUrl())
+            .put("count", fileInfo.count())
+        )
+        .toList();
+    ArrayNode arrayNode = mapper.createArrayNode().addAll(outputList);
+    node.set("output", arrayNode);
+    node.set("deleted", mapper.createArrayNode());
+    node.set("error", mapper.createArrayNode());
+    return node;
+  }
+
+  public static ExportResponse res(ExportRequest request, WriteDetails writeDetails) {
+    return new ExportResponse(request.originalRequest(), writeDetails);
+  }
+
+  public static ExportRequest req(String base,
+      ExportOutputFormat outputFormat,
+      InstantType since,
+      List<Enumerations.ResourceType> includeResourceTypeFilters) {
+    String originalRequest =
+        base + "_outputFormat=" + ExportOutputFormat.asParam(outputFormat) + "&_since="
+            + since.toString();
+    if (!includeResourceTypeFilters.isEmpty()) {
+      originalRequest +=
+          "&_type=" + includeResourceTypeFilters.stream().map(Enumerations.ResourceType::toCode)
+              .collect(Collectors.joining(","));
+    }
+    return new ExportRequest(originalRequest, outputFormat, since, null, includeResourceTypeFilters,
+        List.of());
+  }
+
+  public static ExportRequest req(@Nonnull String base, @Nullable List<String> elements) {
+    return req(base, List.of(), elements);
+  }
+
+  public static ExportRequest req(@Nonnull String base, @Nullable InstantType since,
+      @Nullable InstantType until) {
+    return req(base, since, until, null, null);
+  }
+
+  public static ExportRequest req(@Nonnull String base,
+      @Nullable List<Enumerations.ResourceType> includeResourceTypeFilters,
+      @Nullable List<String> elements) {
+    return req(base, null, null, includeResourceTypeFilters, elements);
+  }
+
+  public static ExportRequest req(
+      @Nonnull String base,
+      @Nullable InstantType since,
+      @Nullable InstantType until,
+      @Nullable List<Enumerations.ResourceType> includeResourceTypeFilters,
+      @Nullable List<String> elements) {
+    if (since == null) {
+      since = InstantType.now();
+    }
+    String originalRequest =
+        base + "_outputFormat=" + ExportOutputFormat.asParam(ExportOutputFormat.ND_JSON)
+            + "&_since=" + since;
+
+    if (until != null) {
+      originalRequest += "&_until=" + until;
+    }
+    if (includeResourceTypeFilters != null && !includeResourceTypeFilters.isEmpty()) {
+      originalRequest +=
+          "&_type=" + includeResourceTypeFilters.stream().map(Enumerations.ResourceType::toCode)
+              .collect(Collectors.joining(","));
     }
 
-    public static JsonNode json(ObjectMapper mapper, InstantType transactionTime, String request, boolean requiresAccessToken, List<FileInfo> output) {
-        ObjectNode node = mapper.createObjectNode();
-        node.put("transactionTime", transactionTime.toString());
-        node.put("request", request);
-        node.put("requiresAccessToken", requiresAccessToken);
-        List<ObjectNode> outputList = output.stream()
-                .map(fileInfo -> mapper.createObjectNode()
-                        .put("type", fileInfo.fhirResourceType())
-                        .put("url", fileInfo.absoluteUrl())
-                        .put("count", fileInfo.count())
-                )
-                .toList();
-        ArrayNode arrayNode = mapper.createArrayNode().addAll(outputList);
-        node.set("output", arrayNode);
-        node.set("deleted", mapper.createArrayNode());
-        node.set("error", mapper.createArrayNode());
-        return node;
-    }
-
-    public static ExportResponse res(ExportRequest request, WriteDetails writeDetails) {
-        return new ExportResponse(request.originalRequest(), writeDetails);
-    }
-
-    public static ExportRequest req(String base,
-                                    ExportOutputFormat outputFormat,
-                                    InstantType since,
-                                    List<Enumerations.ResourceType> includeResourceTypeFilters) {
-        String originalRequest = base + "_outputFormat=" + ExportOutputFormat.asParam(outputFormat) + "&_since=" + since.toString();
-        if(!includeResourceTypeFilters.isEmpty()) {
-            originalRequest += "&_type=" + includeResourceTypeFilters.stream().map(Enumerations.ResourceType::toCode).collect(Collectors.joining(","));
+    List<ExportRequest.FhirElement> fhirElements = new ArrayList<>();
+    if (elements != null && !elements.isEmpty()) {
+      originalRequest += "&_elements=" + String.join(",", elements);
+      for (String el : elements) {
+        String[] split = el.split("\\.");
+        if (split.length == 1) {
+          fhirElements.add(new ExportRequest.FhirElement(null, split[0]));
         }
-        return new ExportRequest(originalRequest, outputFormat, since, null, includeResourceTypeFilters, List.of());
-    }
-
-    public static ExportRequest req(@Nonnull String base, @Nullable List<String> elements) {
-        return req(base, List.of(), elements);
-    }
-    
-    public static ExportRequest req(@Nonnull String base, @Nullable InstantType since,@Nullable InstantType until) {
-      return req(base, since, until, null, null);
-    }
-
-    public static ExportRequest req(@Nonnull String base, @Nullable List<Enumerations.ResourceType> includeResourceTypeFilters, @Nullable List<String> elements) {
-      return req(base, null, null, includeResourceTypeFilters, elements);
-    }
-    
-    public static ExportRequest req(
-        @Nonnull String base, 
-        @Nullable InstantType since,
-        @Nullable InstantType until,
-        @Nullable List<Enumerations.ResourceType> includeResourceTypeFilters,
-        @Nullable List<String> elements) {
-      if (since == null) {
-        since = InstantType.now();
-      }
-      String originalRequest =
-          base + "_outputFormat=" + ExportOutputFormat.asParam(ExportOutputFormat.ND_JSON)
-              + "&_since=" + since;
-
-      if (until != null) {
-        originalRequest += "&_until=" + until;
-      }
-      if (includeResourceTypeFilters != null && !includeResourceTypeFilters.isEmpty()) {
-        originalRequest +=
-            "&_type=" + includeResourceTypeFilters.stream().map(Enumerations.ResourceType::toCode)
-                .collect(Collectors.joining(","));
-      }
-
-      List<ExportRequest.FhirElement> fhirElements = new ArrayList<>();
-      if (elements != null && !elements.isEmpty()) {
-        originalRequest += "&_elements=" + String.join(",", elements);
-        for (String el : elements) {
-          String[] split = el.split("\\.");
-          if (split.length == 1) {
-            fhirElements.add(new ExportRequest.FhirElement(null, split[0]));
-          }
-          if (split.length == 2) {
-            fhirElements.add(
-                new ExportRequest.FhirElement(Enumerations.ResourceType.fromCode(split[0]),
-                    split[1]));
-          }
+        if (split.length == 2) {
+          fhirElements.add(
+              new ExportRequest.FhirElement(Enumerations.ResourceType.fromCode(split[0]),
+                  split[1]));
         }
       }
-      return new ExportRequest(originalRequest, ExportOutputFormat.ND_JSON, since, until, List.of(), fhirElements);
     }
+    return new ExportRequest(originalRequest, ExportOutputFormat.ND_JSON, since, until, List.of(),
+        fhirElements);
+  }
 
-    public static WriteDetails write_details(List<FileInfo> fileInfos) {
-        return new WriteDetails(fileInfos);
-    }
+  public static WriteDetails write_details(List<FileInformation> fileInfos) {
+    return new WriteDetails(fileInfos);
+  }
 
-    public static WriteDetails write_details(FileInfo... fileInfos) {
-        return new WriteDetails(Arrays.asList(fileInfos));
-    }
+  public static WriteDetails write_details(FileInformation... fileInfos) {
+    return new WriteDetails(Arrays.asList(fileInfos));
+  }
 
-    public static FileInfo fi(String fhirResourceType, String absoluteUrl, long count) {
-        return new FileInfo(fhirResourceType, absoluteUrl, count);
-    }
+  public static FileInformation fi(String fhirResourceType, String absoluteUrl, long count) {
+    return new FileInformation(fhirResourceType, absoluteUrl, count);
+  }
 
-    public static InstantType date(String date) {
-        return date != null ? new InstantType(date + "T00:00:00Z") : null;
-    }
+  public static InstantType date(String date) {
+    return date != null
+           ? new InstantType(date + "T00:00:00Z")
+           : null;
+  }
 
-  public static List<Resource> parseNDJSON(IParser parser, String jsonContent, String expectedType) {
+  public static List<Resource> parseNDJSON(IParser parser, String jsonContent,
+      String expectedType) {
     return jsonContent.lines()
         .filter(line -> !line.trim().isEmpty()) // Skip empty lines
         .map(line -> {
@@ -170,53 +183,61 @@ public class ExportOperationUtil {
         .toList();
   }
 
-    public static <T extends IBaseResource> T read_first_from_multiple_lines_ndjson(IParser parser, FileInfo fileInfo, Class<T> clazz) {
-        try (BufferedReader reader = Files.newBufferedReader(Paths.get(URI.create(fileInfo.absoluteUrl())))) {
-            String firstLine = reader.readLine();
-            if (firstLine != null && !firstLine.trim().isEmpty()) {
-                // Parse firstLine as JSON
-                return parser.parseResource(clazz, firstLine);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        throw new RuntimeException();
+  public static <T extends IBaseResource> T read_first_from_multiple_lines_ndjson(IParser parser,
+      FileInformation fileInfo, Class<T> clazz) {
+    try (BufferedReader reader = Files.newBufferedReader(
+        Paths.get(URI.create(fileInfo.absoluteUrl())))) {
+      String firstLine = reader.readLine();
+      if (firstLine != null && !firstLine.trim().isEmpty()) {
+        // Parse firstLine as JSON
+        return parser.parseResource(clazz, firstLine);
+      }
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
-
-    public static <T extends IBaseResource> T read_ndjson(IParser parser, FileInfo fileInfo, Class<T> clazz) throws IOException {
-        return parser.parseResource(clazz, Files.readString(Paths.get(URI.create(fileInfo.absoluteUrl()))));
-    }
-
-  public static ExportResponse resolveTempDirIn(ExportResponse exportResponse, Path tempDir, UUID fakeJobId) {
-      List<FileInfo> newFileInfos = exportResponse.getWriteDetails().fileInfos().stream()
-              .map(
-                      fileInfo -> fi(fileInfo.fhirResourceType(),
-                              fileInfo.absoluteUrl().replace("WAREHOUSE_PATH", "file:" + tempDir.toAbsolutePath().toString() + "/jobs/" + fakeJobId.toString()),
-                              fileInfo.count()))
-              .toList();
-      return new ExportResponse(
-              exportResponse.getKickOffRequestUrl(),
-              write_details(newFileInfos)
-      );
+    throw new RuntimeException();
   }
 
-    public static @NotNull String kickOffRequest(WebTestClient webTestClient, String uri) {
-      String pollUrl = webTestClient.get()
-          .uri(uri)
-          .header("Accept", "application/fhir+json")
-          .header("Prefer", "respond-async")
-          .exchange()
-          .expectStatus().is2xxSuccessful()
-          .expectHeader().exists("Content-Location")
-          .returnResult(String.class)
-          .getResponseHeaders()
-          .getFirst("Content-Location");
-  
-      assertThat(pollUrl).isNotNull();
-      return pollUrl;
-    }
+  public static <T extends IBaseResource> T read_ndjson(IParser parser, FileInformation fileInfo,
+      Class<T> clazz) throws IOException {
+    return parser.parseResource(clazz,
+        Files.readString(Paths.get(URI.create(fileInfo.absoluteUrl()))));
+  }
 
-  public static boolean doPolling(WebTestClient webTestClient, String pollUrl, Consumer<EntityExchangeResult<String>> consumer) {
+  public static ExportResponse resolveTempDirIn(ExportResponse exportResponse, Path tempDir,
+      UUID fakeJobId) {
+    List<FileInformation> newFileInfos = exportResponse.getWriteDetails().fileInfos().stream()
+        .map(
+            fileInfo -> fi(fileInfo.fhirResourceType(),
+                fileInfo.absoluteUrl().replace("WAREHOUSE_PATH",
+                    "file:" + tempDir.toAbsolutePath().toString() + "/jobs/"
+                        + fakeJobId.toString()),
+                fileInfo.count()))
+        .toList();
+    return new ExportResponse(
+        exportResponse.getKickOffRequestUrl(),
+        write_details(newFileInfos)
+    );
+  }
+
+  public static @NotNull String kickOffRequest(WebTestClient webTestClient, String uri) {
+    String pollUrl = webTestClient.get()
+        .uri(uri)
+        .header("Accept", "application/fhir+json")
+        .header("Prefer", "respond-async")
+        .exchange()
+        .expectStatus().is2xxSuccessful()
+        .expectHeader().exists("Content-Location")
+        .returnResult(String.class)
+        .getResponseHeaders()
+        .getFirst("Content-Location");
+
+    assertThat(pollUrl).isNotNull();
+    return pollUrl;
+  }
+
+  public static boolean doPolling(WebTestClient webTestClient, String pollUrl,
+      Consumer<EntityExchangeResult<String>> consumer) {
     EntityExchangeResult<String> pollResult = webTestClient.get()
         .uri(pollUrl)
         .exchange()

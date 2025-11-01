@@ -50,11 +50,12 @@ final class NdjsonSink implements DataSink {
   private final String path;
 
   /**
-   * The (fallback) save mode to use when writing data when there is no entry in the perResource map.
+   * The (fallback) save mode to use when writing data when there is no entry in the perResource
+   * map.
    */
   @Nonnull
   private final SaveMode saveMode;
-  
+
   /**
    * A function that maps resource type to file name.
    */
@@ -93,17 +94,17 @@ final class NdjsonSink implements DataSink {
   @Override
   @Nonnull
   public WriteDetails write(@Nonnull final DataSource source) {
-    List<FileInfo> fileInfos = new ArrayList<>();
+    List<FileInformation> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       // Convert the dataset of structured FHIR data to a dataset of JSON strings.
       final Dataset<String> jsonStrings = context.decode(source.read(resourceType),
           resourceType, PathlingContext.FHIR_JSON);
-      
+
       // Write the JSON strings to the file system. Each partition will have their id added to the name later
       final String fileName = String.join(".", fileNameMapper.apply(resourceType),
           "ndjson");
       final String resultUrl = safelyJoinPaths(path, fileName);
-      
+
       switch (saveMode) {
         case ERROR_IF_EXISTS, OVERWRITE, APPEND, IGNORE ->
             writeJsonStrings(jsonStrings, resultUrl, saveMode);
@@ -112,8 +113,10 @@ final class NdjsonSink implements DataSink {
       }
       // Remove the partitioned directory and replace it with the renamed partitioned files
       // <resource_type>.<partId>.ndjson, i.e. Patient.00000.ndjson
-      Collection<String> renamed = FileSystemPersistence.renamePartitionedFiles(context.getSpark(), resultUrl, resultUrl, "txt");
-      renamed.forEach(renamedFilename -> fileInfos.add(new FileInfo(resourceType, renamedFilename, null)));
+      Collection<String> renamed = FileSystemPersistence.renamePartitionedFiles(context.getSpark(),
+          resultUrl, resultUrl, "txt");
+      renamed.forEach(renamedFilename -> fileInfos.add(
+          new FileInformation(resourceType, renamedFilename, null)));
     }
     return new WriteDetails(fileInfos);
   }
@@ -125,7 +128,7 @@ final class NdjsonSink implements DataSink {
     final var writer = jsonStrings.write();
     // Apply save mode if it has a Spark equivalent
     saveMode.getSparkSaveMode().ifPresent(writer::mode);
-    
+
     writer.text(resultUrlPartitioned);
   }
 

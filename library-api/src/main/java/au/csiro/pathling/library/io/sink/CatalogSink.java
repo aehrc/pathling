@@ -97,13 +97,13 @@ class CatalogSink implements DataSink {
   @Override
   @Nonnull
   public WriteDetails write(@Nonnull final DataSource source) {
-    final List<FileInfo> fileInfos = new ArrayList<>();
+    final List<FileInformation> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       final String tableName = getTableName(resourceType);
 
-      fileInfos.add(new FileInfo(resourceType, tableName, null));
-      
+      fileInfos.add(new FileInformation(resourceType, tableName, null));
+
       switch (saveMode) {
         case ERROR_IF_EXISTS, APPEND, IGNORE -> writeDataset(dataset, tableName, saveMode);
         case OVERWRITE -> {

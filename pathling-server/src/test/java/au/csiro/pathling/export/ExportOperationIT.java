@@ -8,11 +8,11 @@ import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.operations.export.ExportExecutor;
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.sink.FileInfo;
+import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.operations.export.ExportExecutor;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import au.csiro.pathling.util.ExportOperationUtil;
@@ -61,7 +61,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 @ResourceLock(value = "wiremock", mode = ResourceAccessMode.READ_WRITE)
 @ActiveProfiles({"core", "server", "integration-test"})
 class ExportOperationIT {
-  
+
   @LocalServerPort
   int port;
 
@@ -93,11 +93,12 @@ class ExportOperationIT {
   @BeforeEach
   void setup() {
     parser = fhirContext.newJsonParser();
-    
+
     webTestClient = webTestClient.mutate()
-        .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024)).build(); // 100 MB
+        .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
+        .build(); // 100 MB
   }
-  
+
   @AfterEach
   void cleanup() throws IOException {
     FileUtils.cleanDirectory(warehouseDir.toFile());
@@ -229,14 +230,14 @@ class ExportOperationIT {
         .isNotNull()
         .hasSize(2);
 
-    List<FileInfo> actualFileInfos = StreamSupport.stream(output.spliterator(), false)
-        .map(jsonNode -> new FileInfo(
+    List<FileInformation> actualFileInfos = StreamSupport.stream(output.spliterator(), false)
+        .map(jsonNode -> new FileInformation(
             jsonNode.get("type").asText(),
             jsonNode.get("url").asText(),
             jsonNode.get("count").asLong()
         ))
         .toList();
-    
+
     assertThat(actualFileInfos).isNotEmpty();
 
     Map<String, List<? extends IBaseResource>> downloadedResources = new HashMap<>();
@@ -249,7 +250,8 @@ class ExportOperationIT {
           .returnResult()
           .getResponseBody();
       assertThat(fileContent).isNotNull();
-      List<Resource> resources = ExportOperationUtil.parseNDJSON(parser, fileContent, fileInfo.fhirResourceType());
+      List<Resource> resources = ExportOperationUtil.parseNDJSON(parser, fileContent,
+          fileInfo.fhirResourceType());
       downloadedResources.put(fileInfo.fhirResourceType(), resources);
     });
     assertThat(downloadedResources).isNotEmpty();
@@ -257,7 +259,7 @@ class ExportOperationIT {
     // It's hard to assert that all other columns are not returned. I carefully checked that the test-data (Patient.ndjson and Encounter.ndjson)
     // have a Patient.active, Encounter.reasonCode, Encounter.serviceProvider values. Now it is checked that they
     // are not present in the returned ndjson
-    
+
     downloadedResources.forEach((string, iBaseResources) -> {
       switch (string) {
         case "Patient" -> {
@@ -279,17 +281,21 @@ class ExportOperationIT {
         default -> fail("Unexpected resource type %s".formatted(string));
       }
     });
-    
+
     // Also verify that pathling can read in the downloaded ndjson files
     // Usually the user does not have access to the files on the filesystem directly, instead
     // they can request them through the ExportResultProvider where the contents of the files are returned
     // in the request.
     actualFileInfos.forEach(fileInfo -> {
-      Map<String, String> queryParams = UriComponentsBuilder.fromUriString(fileInfo.absoluteUrl()).build().getQueryParams().toSingleValueMap();
-      String fullFilepath = warehouseDir.resolve("delta").resolve("jobs").resolve(queryParams.get("job")).resolve(queryParams.get("file")).toString();
-      assertTrue(new File(fullFilepath).exists(), "Failed to find %s for pathling ndjson input.".formatted(fullFilepath));
+      Map<String, String> queryParams = UriComponentsBuilder.fromUriString(fileInfo.absoluteUrl())
+          .build().getQueryParams().toSingleValueMap();
+      String fullFilepath = warehouseDir.resolve("delta").resolve("jobs")
+          .resolve(queryParams.get("job")).resolve(queryParams.get("file")).toString();
+      assertTrue(new File(fullFilepath).exists(),
+          "Failed to find %s for pathling ndjson input.".formatted(fullFilepath));
       String parentPath = Paths.get(fullFilepath).getParent().toString();
-      assertThatCode(() -> new DataSourceBuilder(pathlingContext).ndjson(parentPath).read(fileInfo.fhirResourceType())).doesNotThrowAnyException();
+      assertThatCode(() -> new DataSourceBuilder(pathlingContext).ndjson(parentPath)
+          .read(fileInfo.fhirResourceType())).doesNotThrowAnyException();
 
     });
 

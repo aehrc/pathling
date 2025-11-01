@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
-import au.csiro.pathling.library.io.sink.FileInfo;
+import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
@@ -16,7 +16,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -117,13 +116,13 @@ public class TestDataSetup {
 
   private Mono<Void> downloadFiles(String responseBody, Path downloadDir) {
     log.info("Downloading files");
-    List<FileInfo> files = parseFileUrls(responseBody);
+    List<FileInformation> files = parseFileUrls(responseBody);
     return Flux.fromIterable(files)
         .flatMap(fileInfo -> downloadFile(fileInfo, downloadDir))
         .then();
   }
 
-  private Mono<Void> downloadFile(FileInfo fileInfo, Path downloadDir) {
+  private Mono<Void> downloadFile(FileInformation fileInfo, Path downloadDir) {
     String filename = fileInfo.fhirResourceType() + ".ndjson";
     Path filePath = downloadDir.resolve(filename);
     log.info("Downloading {} to {}", filename, filePath.toAbsolutePath());
@@ -148,15 +147,15 @@ public class TestDataSetup {
         });
   }
 
-  private List<FileInfo> parseFileUrls(String responseBody) {
+  private List<FileInformation> parseFileUrls(String responseBody) {
     ObjectMapper mapper = new ObjectMapper();
     try {
       JsonNode root = mapper.readTree(responseBody);
       JsonNode outputArray = root.get("output");
 
-      List<FileInfo> files = new ArrayList<>();
+      List<FileInformation> files = new ArrayList<>();
       for (JsonNode item : outputArray) {
-        files.add(new FileInfo(
+        files.add(new FileInformation(
             item.get("type").asText(),
             item.get("url").asText(),
             item.get("count").asLong()
@@ -167,7 +166,7 @@ public class TestDataSetup {
       throw new RuntimeException("Failed to parse response", e);
     }
   }
-  
+
   public static void staticCopyTestDataToTempDir(Path tempDir, String... resourceTypes) {
     try {
       Path deltaPath = Path.of("src/test/resources/test-data/fhir/delta");
@@ -175,8 +174,9 @@ public class TestDataSetup {
         File deltaTestData = deltaPath.toFile();
         FileUtils.copyDirectoryToDirectory(deltaTestData, tempDir.toFile());
       } else {
-        for(String resourceType : resourceTypes) {
-          File deltaSpecificTestResourceData = deltaPath.resolve(resourceType + ".parquet").toFile();
+        for (String resourceType : resourceTypes) {
+          File deltaSpecificTestResourceData = deltaPath.resolve(resourceType + ".parquet")
+              .toFile();
           FileUtils.copyDirectoryToDirectory(deltaSpecificTestResourceData, tempDir.toFile());
           assert_file_was_copied_correctly(tempDir, resourceType);
         }
@@ -192,7 +192,7 @@ public class TestDataSetup {
     assertThat(tempDir.resolve(resourceType + ".parquet")).exists()
         .isDirectoryContaining(path -> path.toString().endsWith(".parquet"));
   }
-  
+
   /**
    * Copies the generated parquet data from src/test/resources/test-data/fhir/delta/** to the
    * tempdir, preserving the directory structure. I.e. delta/Encounter.parquet/* is copied with the
