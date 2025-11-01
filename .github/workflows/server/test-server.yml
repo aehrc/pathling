@@ -1,12 +1,12 @@
 # This workflow builds and tests the pathling-server module.
 
-name: Test Server
+name: Test server
 
 # This workflow runs on pull requests that modify server-related files.
 on:
   pull_request:
     paths:
-      - 'pathling-server/**'
+      - "pathling-server/**"
 
 env:
   # The add-exports and add-opens flags are required for Java 21.
