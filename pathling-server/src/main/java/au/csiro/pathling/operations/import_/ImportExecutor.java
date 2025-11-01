@@ -17,46 +17,27 @@
 
 package au.csiro.pathling.operations.import_;
 
-import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.encoders.UnsupportedResourceError;
-import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.errors.SecurityError;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
-import au.csiro.pathling.library.io.sink.FileInfo;
 import au.csiro.pathling.library.io.sink.WriteDetails;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
-import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
 import au.csiro.pathling.security.SecurityAspect;
-import ca.uhn.fhir.rest.annotation.ResourceParam;
 import jakarta.annotation.Nonnull;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.api.java.function.FilterFunction;
-import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
-import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.*;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
-import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
-import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
-import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Function;
+import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
 
 /**
  * Encapsulates the execution of an import operation.
@@ -78,33 +59,43 @@ public class ImportExecutor {
 
   /**
    * @param accessRules a {@link AccessRules} for validating access to URLs
+   * @param pathlingContext the Pathling context for Spark and FHIR operations
    * @param databasePath directory to where the data will be imported
+   * @param serverConfiguration the server configuration including authentication settings
    */
   public ImportExecutor(@Nonnull final Optional<AccessRules> accessRules,
-      PathlingContext pathlingContext,
+      final PathlingContext pathlingContext,
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-      String databasePath, ServerConfiguration serverConfiguration) {
+      final String databasePath, final ServerConfiguration serverConfiguration) {
     this.accessRules = accessRules;
     this.pathlingContext = pathlingContext;
     this.databasePath = databasePath;
     this.serverConfiguration = serverConfiguration;
   }
   
+  /**
+   * Executes the import operation.
+   *
+   * @param importRequest the import request containing the source files and configuration
+   * @param jobId the job identifier for tracking this import operation
+   * @return the import response containing details of the imported data
+   */
   @Nonnull
-  public ImportResponse execute(@Nonnull final ImportRequest importRequest, String jobId) {
+  public ImportResponse execute(@Nonnull final ImportRequest importRequest,
+      @SuppressWarnings("unused") final String jobId) {
     log.info("Received $import request");
-    WriteDetails writeDetails = readAndWriteFilesFrom(importRequest, jobId);
+    final WriteDetails writeDetails = readAndWriteFilesFrom(importRequest);
     return new ImportResponse(importRequest.originalRequest(), importRequest, writeDetails);
   }
 
 
 
-  private WriteDetails readAndWriteFilesFrom(ImportRequest request, String jobId) {
-    DataSourceBuilder sourceBuilder = new DataSourceBuilder(pathlingContext);
+  private WriteDetails readAndWriteFilesFrom(final ImportRequest request) {
+    final DataSourceBuilder sourceBuilder = new DataSourceBuilder(pathlingContext);
 
-    Map<String, Collection<String>> resourcesWithAuthority = checkAuthority(request);
+    final Map<String, Collection<String>> resourcesWithAuthority = checkAuthority(request);
 
-    Function<DataSource, DataSinkBuilder> sinkBuilderFunc = dataSource -> new DataSinkBuilder(pathlingContext, dataSource).saveMode(request.saveMode().getCode());
+    final Function<DataSource, DataSinkBuilder> sinkBuilderFunc = dataSource -> new DataSinkBuilder(pathlingContext, dataSource).saveMode(request.saveMode().getCode());
     return switch (request.importFormat()) {
       case NDJSON -> sinkBuilderFunc.apply(sourceBuilder.ndjson(resourcesWithAuthority, "ndjson")).ndjson(databasePath);
       case DELTA -> sinkBuilderFunc.apply(sourceBuilder.delta(resourcesWithAuthority)).delta(databasePath);
