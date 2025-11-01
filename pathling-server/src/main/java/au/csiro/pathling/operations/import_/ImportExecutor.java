@@ -21,7 +21,6 @@ import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.UnsupportedResourceError;
-import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.SecurityError;
 import au.csiro.pathling.io.source.DataSource;
@@ -54,12 +53,10 @@ import org.springframework.stereotype.Component;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Encapsulates the execution of an import operation.
@@ -115,37 +112,24 @@ public class ImportExecutor {
     };
   }
 
-  private @NotNull Map<String, Collection<String>> checkAuthority(ImportRequest request) {
-    if(serverConfiguration.getAuth().isEnabled() && !SecurityAspect.hasAuthority(PathlingAuthority.fromAuthority("pathling:write"))) {
-      throw new AccessDeniedError("Missing authority 'pathling:write'");
-    }
-    
-    record WriteAuthority(Collection<String> fileToImport, boolean authority) {}
-    
-    Map<String, WriteAuthority> writeAuthorityMap = request.input().entrySet().stream()
-        .collect(Collectors.toMap(
-            Entry::getKey,
-            entry -> new WriteAuthority(entry.getValue(), !serverConfiguration.getAuth().isEnabled() || SecurityAspect.hasAuthority(
-                PathlingAuthority.resourceAccess(AccessType.WRITE, ResourceType.fromCode(entry.getKey()))))
-        ));
+  private @NotNull Map<String, Collection<String>> checkAuthority(final ImportRequest request) {
+    if (serverConfiguration.getAuth().isEnabled()) {
+      // Check global write authority.
+      SecurityAspect.checkHasAuthority(PathlingAuthority.fromAuthority("pathling:write"));
 
-    List<String> missingAuthMsg = writeAuthorityMap.entrySet().stream()
-        .filter(entry -> !entry.getValue().authority())
-        .map(entry -> "Missing authority: pathling:write:%s for %s".formatted(entry.getKey(), entry.getValue().fileToImport()))
-        .toList();
-    if(!missingAuthMsg.isEmpty()) {
-      throw new AccessDeniedError("Missing auths: %s".formatted(String.join(",", missingAuthMsg)));
+      // Check per-resource-type write authority.
+      for (final Entry<String, Collection<String>> entry : request.input().entrySet()) {
+        SecurityAspect.checkHasAuthority(
+            PathlingAuthority.resourceAccess(AccessType.WRITE,
+                ResourceType.fromCode(entry.getKey())));
+      }
     }
-    
-    writeAuthorityMap.values().stream()
-        .map(WriteAuthority::fileToImport)
-        .forEach(fileToImport -> accessRules.ifPresent(ar -> fileToImport.forEach(ar::checkCanImportFrom)));
 
-    return writeAuthorityMap.entrySet().stream()
-        .filter(entry -> entry.getValue().authority())
-        .collect(Collectors.toMap(
-            Map.Entry::getKey,
-            entry -> entry.getValue().fileToImport()
-        ));
+    // Validate file access rules.
+    request.input().values().stream()
+        .flatMap(Collection::stream)
+        .forEach(file -> accessRules.ifPresent(ar -> ar.checkCanImportFrom(file)));
+
+    return request.input();
   }
 }
