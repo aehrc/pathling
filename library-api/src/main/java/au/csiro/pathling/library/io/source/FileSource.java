@@ -76,6 +76,12 @@ public abstract class FileSource extends DatasetSource {
   @Nonnull
   protected final BiFunction<Dataset<Row>, String, Dataset<Row>> transformer;
 
+  /**
+   * An additional filter to exclude specific resource types from being processed. This filter is
+   * applied after standard resource type validation and extension checking. Use this to selectively
+   * exclude resource types that should not be loaded, even if they are present in the source files
+   * and would otherwise be valid.
+   */
   @Nonnull
   protected final Predicate<ResourceType> additionalResourceTypeFilter;
 
