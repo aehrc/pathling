@@ -26,9 +26,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.UnaryOperator;
+import java.util.function.BiFunction;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A class for making FHIR data with Spark datasets available for query.
@@ -50,7 +53,7 @@ public class DatasetSource extends AbstractSource {
    *
    * @param context the PathlingContext to use
    */
-  DatasetSource(@Nonnull final PathlingContext context) {
+  public DatasetSource(@Nonnull final PathlingContext context) {
     super(context);
   }
 
@@ -90,14 +93,26 @@ public class DatasetSource extends AbstractSource {
 
   @Nonnull
   @Override
-  public QueryableDataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
+  public QueryableDataSource map(@Nonnull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
     final Map<String, Dataset<Row>> transformedMap = new HashMap<>();
     for (final Map.Entry<String, Dataset<Row>> entry : resourceMap.entrySet()) {
       final String resourceType = entry.getKey();
       final Dataset<Row> dataset = entry.getValue();
-      transformedMap.put(resourceType, operator.apply(dataset));
+      transformedMap.put(resourceType, operator.apply(entry.getKey(), dataset));
     }
     return new DatasetSource(context, transformedMap);
+  }
+
+  @Override
+  public @NotNull QueryableDataSource filterByResourceType(
+      @NotNull final Predicate<String> resourceTypePredicate) {
+    Map<String, Dataset<Row>> filteredMap = resourceMap.entrySet().stream()
+        .filter(entry -> resourceTypePredicate.test(entry.getKey()))
+        .collect(Collectors.toMap(
+            Map.Entry::getKey,
+            Map.Entry::getValue
+        ));
+    return new DatasetSource(context, filteredMap);
   }
 
   @Override

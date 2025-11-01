@@ -1,0 +1,5 @@
+debug: true
+logging.level.au.csiro.pathling: debug
+pathling:
+  storage:
+    databaseName: delta

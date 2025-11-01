@@ -22,6 +22,9 @@ import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.SaveMode;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -76,13 +79,17 @@ final class ParquetSink implements DataSink {
   }
 
   @Override
-  public void write(@Nonnull final DataSource source) {
+  @Nonnull
+  public WriteDetails write(@Nonnull final DataSource source) {
+    List<FileInfo> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       final String fileName = String.join(".", fileNameMapper.apply(resourceType),
           "parquet");
       final String tablePath = safelyJoinPaths(path, fileName);
 
+      fileInfos.add(new FileInfo(resourceType, tablePath, null));
+      
       switch (saveMode) {
         case ERROR_IF_EXISTS, OVERWRITE, APPEND, IGNORE ->
             writeDataset(dataset, tablePath, saveMode);
@@ -90,6 +97,7 @@ final class ParquetSink implements DataSink {
             "Merge operation is not supported for Parquet - use Delta if merging is required");
       }
     }
+    return new WriteDetails(fileInfos);
   }
 
   void writeDataset(@Nonnull final Dataset<Row> dataset,

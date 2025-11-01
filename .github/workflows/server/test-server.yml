@@ -1,0 +1,59 @@
+# This workflow builds and tests the pathling-server module.
+
+name: Test Server
+
+# This workflow runs on pull requests that modify server-related files.
+on:
+  pull_request:
+    paths:
+      - 'pathling-server/**'
+
+env:
+  # The add-exports and add-opens flags are required for Java 21.
+  MAVEN_OPTS: --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
+
+jobs:
+  test-server:
+    name: Build and test pathling-server
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: "zulu"
+
+      - name: Cache local Maven repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |-
+            ${{ runner.os }}-maven-
+
+      - name: Build and test server module
+        run: |
+          mvn --batch-mode clean install \
+            -pl pathling-server -am
+        timeout-minutes: 20
+
+      - name: Save test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-surefire-reports
+          path: "pathling-server/**/surefire-reports/"
+
+      - name: Save built JAR
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-jar
+          path: pathling-server/target/pathling-server-*.jar

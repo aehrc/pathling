@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.withSettings;
 
@@ -613,6 +614,18 @@ class DataSourcesTest {
     assertTrue(data.getResourceTypes().contains("Patient"));
     assertTrue(data.getResourceTypes().contains("Condition"));
   }
+  
+  @Test
+  void ndjsonSourceFilterByResourceType() {
+    final QueryableDataSource data = pathlingContext.read()
+        .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
+    assumeTrue(data.getResourceTypes().contains("Patient"), "Attempting to filter by 'Patient' but this resource type is not present in the test data setup.");
+    assumeTrue(data.getResourceTypes().contains("Condition"), "Attempting to filter by 'Condition' but this resource type is not present in the test data setup.");
+    
+    final QueryableDataSource filteredData = data.filterByResourceType(resourceType -> resourceType.equals("Patient"));
+    assertEquals(1, filteredData.getResourceTypes().size());
+    assertTrue(filteredData.getResourceTypes().contains("Patient"));
+  }
 
   @Test
   void parquetSourceCache() {
@@ -643,6 +656,17 @@ class DataSourcesTest {
     assertTrue(data.getResourceTypes().contains("Condition"));
   }
 
+  @Test
+  void parquetFilterByResourceType() {
+    final QueryableDataSource data = pathlingContext.read()
+        .parquet(TEST_DATA_PATH.resolve("parquet").toString());
+    assumeTrue(data.getResourceTypes().contains("Patient"), "Attempting to filter by 'Patient' but this resource type is not present in the test data setup.");
+    assumeTrue(data.getResourceTypes().contains("Condition"), "Attempting to filter by 'Condition' but this resource type is not present in the test data setup.");
+
+    final QueryableDataSource filteredData = data.filterByResourceType(resourceType -> resourceType.equals("Patient"));
+    assertEquals(1, filteredData.getResourceTypes().size());
+    assertTrue(filteredData.getResourceTypes().contains("Patient"));
+  }
 
   private static final String PATIENT_VIEW_JSON = """
         {
@@ -776,7 +800,7 @@ class DataSourcesTest {
   void ndjsonWithNullPathShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
     final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.ndjson(null));
+        () -> builder.ndjson((String) null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
@@ -792,7 +816,7 @@ class DataSourcesTest {
   void ndjsonWithNullPathAndExtensionShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
     final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.ndjson(null, "extension"));
+        () -> builder.ndjson((String) null, "extension"));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
@@ -834,7 +858,7 @@ class DataSourcesTest {
   void parquetWithNullPathShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
     final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.parquet(null));
+        () -> builder.parquet((String) null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
@@ -842,7 +866,7 @@ class DataSourcesTest {
   void parquetWithNullFileNameMapperShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
     final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.parquet("path", null));
+        () -> builder.parquet("path", (Function<String, Set<String>>) null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 
@@ -850,7 +874,7 @@ class DataSourcesTest {
   void deltaWithNullPathShouldThrowIllegalArgumentException() {
     final DataSourceBuilder builder = pathlingContext.read();
     final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-        () -> builder.delta(null));
+        () -> builder.delta((String) null));
     assertEquals("Argument must not be null", exception.getMessage());
   }
 

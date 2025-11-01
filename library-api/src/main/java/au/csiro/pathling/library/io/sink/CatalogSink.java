@@ -24,6 +24,9 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
@@ -105,11 +108,15 @@ class CatalogSink implements DataSink {
   }
 
   @Override
-  public void write(@Nonnull final DataSource source) {
+  @Nonnull
+  public WriteDetails write(@Nonnull final DataSource source) {
+    List<FileInfo> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       final String tableName = getTableName(resourceType);
 
+      fileInfos.add(new FileInfo(resourceType, tableName, null));
+      
       switch (saveMode) {
         case ERROR_IF_EXISTS, APPEND, IGNORE -> writeDataset(dataset, tableName, saveMode);
         case OVERWRITE -> {
@@ -136,6 +143,7 @@ class CatalogSink implements DataSink {
         }
       }
     }
+    return new WriteDetails(fileInfos);
   }
 
   private void writeDataset(@Nonnull final Dataset<Row> dataset,
