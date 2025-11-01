@@ -9,8 +9,8 @@
   <version>1.0-SNAPSHOT</version>
 
   <properties>
-    <maven.compiler.source>17</maven.compiler.source>
-    <maven.compiler.target>17</maven.compiler.target>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <pathling.version>9.0.1-SNAPSHOT</pathling.version>
     <pathling.hapiFhirVersion>8.4.0</pathling.hapiFhirVersion>
@@ -22,7 +22,7 @@
     <pathling.testSetup.skip>true</pathling.testSetup.skip>
     <pathling.jacksonVersion>2.18.1</pathling.jacksonVersion>
 
-    <project.majorVersion>8</project.majorVersion>
+    <project.majorVersion>9</project.majorVersion>
 
     <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
     <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
@@ -32,44 +32,17 @@
   </properties>
 
   <dependencies>
+    <!-- Pathling -->
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>library-runtime</artifactId>
+      <version>${pathling.version}</version>
+    </dependency>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>utilities</artifactId>
       <version>${pathling.version}</version>
       <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.security</groupId>
-      <artifactId>spring-security-test</artifactId>
-      <version>6.5.5</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-security</artifactId>
-      <version>${pathling.springBootVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.security</groupId>
-      <artifactId>spring-security-oauth2-resource-server</artifactId>
-      <version>6.5.3</version>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.security</groupId>
-      <artifactId>spring-security-oauth2-jose</artifactId>
-      <version>6.5.3</version>
-    </dependency>
-    <dependency>
-      <groupId>org.awaitility</groupId>
-      <artifactId>awaitility</artifactId>
-      <version>4.3.0</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>au.csiro.pathling</groupId>
-      <artifactId>test-data</artifactId>
-      <version>1.0.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -80,39 +53,13 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.assertj</groupId>
-      <artifactId>assertj-core</artifactId>
-      <version>3.27.4</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-test</artifactId>
-      <scope>test</scope>
-      <version>${pathling.springBootVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <version>5.13.4</version>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>test-data</artifactId>
+      <version>1.0.0</version>
       <scope>test</scope>
     </dependency>
 
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-structures-r4</artifactId>
-      <version>${pathling.hapiFhirVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>au.csiro.pathling</groupId>
-      <artifactId>library-runtime</artifactId>
-      <version>8.1.1-SNAPSHOT</version>
-    </dependency>
-    <dependency>
-      <groupId>io.sentry</groupId>
-      <artifactId>sentry</artifactId>
-      <version>6.6.0</version>
-    </dependency>
+    <!-- Apache Spark -->
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-core_${pathling.scalaVersion}</artifactId>
@@ -138,6 +85,35 @@
       <artifactId>spark-hive_${pathling.scalaVersion}</artifactId>
       <version>${pathling.sparkVersion}</version>
       <scope>test</scope>
+    </dependency>
+
+    <!-- Spring -->
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-test</artifactId>
+      <version>6.5.5</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+      <version>${pathling.springBootVersion}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-oauth2-resource-server</artifactId>
+      <version>6.5.3</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-oauth2-jose</artifactId>
+      <version>6.5.3</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+      <version>${pathling.springBootVersion}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -172,6 +148,8 @@
         </exclusion>
       </exclusions>
     </dependency>
+
+    <!-- HAPI -->
     <dependency>
       <groupId>ca.uhn.hapi.fhir</groupId>
       <artifactId>hapi-fhir-base</artifactId>
@@ -192,28 +170,35 @@
       <artifactId>hapi-fhir-client</artifactId>
       <version>${pathling.hapiFhirVersion}</version>
     </dependency>
+
+    <dependency>
+      <groupId>org.awaitility</groupId>
+      <artifactId>awaitility</artifactId>
+      <version>4.3.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <version>3.27.4</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.13.4</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.sentry</groupId>
+      <artifactId>sentry</artifactId>
+      <version>6.6.0</version>
+    </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <version>1.18.34</version>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.maven.plugins</groupId>
-      <artifactId>maven-surefire-plugin</artifactId>
-      <version>3.5.3</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.maven.plugins</groupId>
-      <artifactId>maven-failsafe-plugin</artifactId>
-      <version>3.5.3</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.mojo</groupId>
-      <artifactId>exec-maven-plugin</artifactId>
-      <version>3.5.0</version>
     </dependency>
     <dependency>
       <groupId>org.apache.httpcomponents.client5</groupId>
