@@ -53,10 +53,10 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value
 @AllArgsConstructor(access = AccessLevel.PUBLIC)
 @Builder
-public class FhirpathEvaluator {
+public class FhirPathEvaluator {
 
   /**
-   * Builder for creating {@link FhirpathEvaluator} instances with customized configuration.
+   * Builder for creating {@link FhirPathEvaluator} instances with customized configuration.
    * <p>
    * This builder allows setting:
    * <ul>
@@ -65,7 +65,7 @@ public class FhirpathEvaluator {
    *   <li>A map of variables available during evaluation (optional)</li>
    * </ul>
    */
-  public static class FhirpathEvaluatorBuilder {
+  public static class FhirPathEvaluatorBuilder {
 
   }
 
@@ -99,9 +99,9 @@ public class FhirpathEvaluator {
    * @return a builder initialized with the specified resource resolver
    */
   @Nonnull
-  public static FhirpathEvaluatorBuilder fromResolver(
+  public static FhirPathEvaluatorBuilder fromResolver(
       @Nonnull final ResourceResolver resourceResolver) {
-    return FhirpathEvaluator.builder().resourceResolver(resourceResolver);
+    return FhirPathEvaluator.builder().resourceResolver(resourceResolver);
   }
 
   /**
@@ -169,7 +169,7 @@ public class FhirpathEvaluator {
   }
 
   /**
-   * Factory interface for creating FhirpathEvaluator instances.
+   * Factory interface for creating FhirPathEvaluator instances.
    * <p>
    * This interface provides methods for creating evaluators with different configurations, allowing
    * for dependency injection and easier testing.
@@ -177,7 +177,7 @@ public class FhirpathEvaluator {
   public interface Factory {
 
     /**
-     * Creates a FhirpathEvaluator with the given parameters.
+     * Creates a FhirPathEvaluator with the given parameters.
      * <p>
      * This method creates a fully configured evaluator with the specified subject resource type,
      * function registry, and variables.
@@ -185,31 +185,31 @@ public class FhirpathEvaluator {
      * @param subjectResource the subject resource type to evaluate against
      * @param functionRegistry the registry of FHIRPath functions to use
      * @param variables the variables available during evaluation
-     * @return a new FhirpathEvaluator configured with the specified parameters
+     * @return a new FhirPathEvaluator configured with the specified parameters
      */
     @Nonnull
-    FhirpathEvaluator create(@Nonnull final ResourceType subjectResource,
+    FhirPathEvaluator create(@Nonnull final ResourceType subjectResource,
         @Nonnull final FunctionRegistry functionRegistry,
         @Nonnull final Map<String, Collection> variables);
 
     /**
-     * Creates a FhirpathEvaluator with the given subject resource and default parameters.
+     * Creates a FhirPathEvaluator with the given subject resource and default parameters.
      * <p>
      * This method creates an evaluator with the specified subject resource type and default values
      * for the function registry (StaticFunctionRegistry) and variables (empty map).
      *
      * @param subjectResource the subject resource type to evaluate against
-     * @return a new FhirpathEvaluator configured with the specified subject resource and default
+     * @return a new FhirPathEvaluator configured with the specified subject resource and default
      * parameters
      */
     @Nonnull
-    default FhirpathEvaluator create(@Nonnull final ResourceType subjectResource) {
+    default FhirPathEvaluator create(@Nonnull final ResourceType subjectResource) {
       return create(subjectResource, StaticFunctionRegistry.getInstance(), Map.of());
     }
   }
 
   /**
-   * Provider interface for creating FhirpathEvaluator instances with context paths.
+   * Provider interface for creating FhirPathEvaluator instances with context paths.
    * <p>
    * This interface is similar to Factory but allows for dynamic creation of evaluators based on
    * context paths that are supplied at runtime.
@@ -217,17 +217,17 @@ public class FhirpathEvaluator {
   public interface Provider {
 
     /**
-     * Creates a FhirpathEvaluator with the given parameters.
+     * Creates a FhirPathEvaluator with the given parameters.
      * <p>
      * This method creates an evaluator that can handle context paths that are supplied dynamically
      * at runtime through the contextPathsSupplier.
      *
      * @param subjectResource the subject resource type to evaluate against
      * @param contextPathsSupplier a supplier that provides the context paths when needed
-     * @return a new FhirpathEvaluator configured with the specified parameters
+     * @return a new FhirPathEvaluator configured with the specified parameters
      */
     @Nonnull
-    FhirpathEvaluator create(@Nonnull final ResourceType subjectResource,
+    FhirPathEvaluator create(@Nonnull final ResourceType subjectResource,
         @Nonnull final Supplier<List<FhirPath>> contextPathsSupplier);
   }
 }

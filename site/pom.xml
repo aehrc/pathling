@@ -24,7 +24,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>8.1.1-SNAPSHOT</version>
+    <version>9.0.1-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>site</artifactId>
@@ -46,7 +46,7 @@
               <goal>exec</goal>
             </goals>
             <configuration>
-              <executable>npm</executable>
+              <executable>bun</executable>
               <arguments>
                 <argument>install</argument>
               </arguments>
@@ -59,7 +59,7 @@
               <goal>exec</goal>
             </goals>
             <configuration>
-              <executable>npm</executable>
+              <executable>bun</executable>
               <arguments>
                 <argument>run</argument>
                 <argument>build</argument>

@@ -2,22 +2,20 @@
 
 name: Test
 
-# This workflow runs on all pushes to all branches except for main and release branches.
+# This workflow runs on all pull requests except those from release branches.
 on:
-  push:
-    branches-ignore:
-      - gh-pages
-      - main
-      - "release/*"
+  pull_request:
 
 env:
-  # The add-exports and add-opens flags are required for Java 17
+  # The add-exports and add-opens flags are required for Java 21
   MAVEN_OPTS: --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
 
 jobs:
   build-and-test:
     name: Build and test
     runs-on: ubuntu-latest
+    # Skip pull requests from release branches (handled by pre-release workflow).
+    if: "!startsWith(github.head_ref, 'release/')"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,14 +26,11 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          java-version: 17
+          java-version: 21
           distribution: "zulu"
 
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v4
-        id: python-install
-        with:
-          python-version: 3.8
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
 
       - name: Set up R
         uses: r-lib/actions/setup-r@v2

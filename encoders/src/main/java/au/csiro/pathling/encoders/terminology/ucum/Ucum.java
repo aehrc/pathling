@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific 
+ * These modifications are copyright 2018-2025 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,47 +19,41 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package au.csiro.pathling.encoders.terminology.ucum;
 
 import au.csiro.pathling.annotations.UsedByReflection;
+import io.github.fhnaumann.funcs.CanonicalizerService;
+import io.github.fhnaumann.funcs.UCUMService;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.io.InputStream;
 import java.math.BigDecimal;
-import org.fhir.ucum.Decimal;
-import org.fhir.ucum.Pair;
-import org.fhir.ucum.UcumEssenceService;
-import org.fhir.ucum.UcumException;
-import org.fhir.ucum.UcumService;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Makes UCUM services available to the rest of the application.
  *
  * @author John Grimes
  */
+@Slf4j
 public class Ucum {
 
   public static final String NO_UNIT_CODE = "1";
 
-  private static final UcumService service;
+  private static final UCUMService service;
 
   static {
-    final InputStream essenceStream = Ucum.class.getClassLoader()
-        .getResourceAsStream("tx/ucum-essence.xml");
-    try {
-      service = new UcumEssenceService(essenceStream);
-    } catch (final UcumException e) {
-      throw new RuntimeException(e);
-    }
+    // ucumate handles UCUM essence loading internally, using UCUM version 2.2 by default.
+    service = new UCUMService();
   }
 
   private Ucum() {
   }
 
   @Nonnull
-  public static UcumService service() {
+  public static UCUMService service() {
     return service;
   }
 
@@ -67,21 +61,30 @@ public class Ucum {
   @Nullable
   public static BigDecimal getCanonicalValue(@Nullable final BigDecimal value,
       @Nullable final String code) {
+    if (value == null || code == null) {
+      return null;
+    }
+
     try {
-      @Nullable final Pair result = getCanonicalForm(value, code);
-      if (result == null) {
+      final CanonicalizerService.CanonicalizationResult result = service.canonicalize(code);
+
+      // Check if the result is a Success instance.
+      if (!(result instanceof CanonicalizerService.Success success)) {
+        log.warn("Failed to canonicalise UCUM code '{}': {}", code, result);
         return null;
       }
-      @Nullable final Decimal decimalValue = result.getValue();
-      if (decimalValue == null) {
+
+      // Get the magnitude (conversion factor) from the success result.
+      @Nullable final BigDecimal conversionFactor = success.magnitude().getValue();
+      if (conversionFactor == null) {
+        log.warn("No conversion factor available for UCUM code '{}'", code);
         return null;
       }
-      @Nullable final String stringValue = decimalValue.asDecimal();
-      if (stringValue == null) {
-        return null;
-      }
-      return new BigDecimal(stringValue);
-    } catch (final UcumException e) {
+
+      // Apply the conversion factor to the value to get the canonical value.
+      return value.multiply(conversionFactor);
+    } catch (final Exception e) {
+      log.warn("Error canonicalising UCUM code '{}': {}", code, e.getMessage());
       return null;
     }
   }
@@ -90,36 +93,36 @@ public class Ucum {
   @Nullable
   public static String getCanonicalCode(@Nullable final BigDecimal value,
       @Nullable final String code) {
-    try {
-      @Nullable final Pair result = getCanonicalForm(value, code);
-      if (result == null) {
-        return null;
-      }
-      return result.getCode();
-    } catch (final UcumException e) {
-      return null;
-    }
-  }
-
-  @Nullable
-  private static Pair getCanonicalForm(final @Nullable BigDecimal value,
-      final @Nullable String code)
-      throws UcumException {
     if (value == null || code == null) {
       return null;
     }
-    final Decimal decimalValue = new Decimal(value.toPlainString());
-    return adjustNoUnitCode(service.getCanonicalForm(new Pair(decimalValue, code)));
+
+    try {
+      final CanonicalizerService.CanonicalizationResult result = service.canonicalize(code);
+
+      // Check if the result is a Success instance.
+      if (!(result instanceof CanonicalizerService.Success success)) {
+        log.warn("Failed to canonicalise UCUM code '{}': {}", code, result);
+        return null;
+      }
+
+      // Get the canonical unit code by printing the canonical term.
+      @Nullable final String canonicalCode = service.print(success.canonicalTerm());
+
+      // Apply the NO_UNIT_CODE adjustment for empty codes.
+      return adjustNoUnitCode(canonicalCode);
+    } catch (final Exception e) {
+      log.warn("Error canonicalising UCUM code '{}': {}", code, e.getMessage());
+      return null;
+    }
   }
 
   @Nullable
-  private static Pair adjustNoUnitCode(@Nullable Pair pair) {
-    if (pair == null) {
+  private static String adjustNoUnitCode(@Nullable final String code) {
+    if (code == null) {
       return null;
     }
-    return (pair.getCode() != null && pair.getCode().isEmpty())
-           ? new Pair(pair.getValue(), NO_UNIT_CODE)
-           : pair;
+    return code.isEmpty() ? NO_UNIT_CODE : code;
   }
 
 }

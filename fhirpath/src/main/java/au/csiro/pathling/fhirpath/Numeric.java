@@ -25,6 +25,7 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -97,11 +98,11 @@ public interface Numeric {
     /**
      * Division operator.
      */
-    DIVISION("/", Column::divide),
+    DIVISION("/", functions::try_divide),
     /**
      * Modulus operator.
      */
-    MODULUS("mod", Column::mod);
+    MODULUS("mod", functions::try_mod);
 
     @Nonnull
     private final String fhirPath;

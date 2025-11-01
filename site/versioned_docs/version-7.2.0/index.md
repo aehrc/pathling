@@ -9,12 +9,13 @@ use [FHIR&reg;](https://hl7.org/fhir) and clinical terminology within health
 data analytics. It is built on [Apache Spark](https://spark.apache.org), and
 includes both language libraries and a server implementation.
 
-<iframe class="yt-embed" 
-    src="https://www.youtube.com/embed/ZSv2qMGPquU?si=daZ2jgNFpNc3luQx" 
-    title="YouTube video player" 
-    frameborder="0" 
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-    allowfullscreen />
+<iframe class="yt-embed"
+src="https://www.youtube.com/embed/ZSv2qMGPquU?si=daZ2jgNFpNc3luQx"
+title="YouTube video player"
+frameborder="0"
+allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope;
+picture-in-picture; web-share"
+allowfullscreen />
 
 ## What can it do?
 
@@ -24,21 +25,21 @@ includes both language libraries and a server implementation.
 data. It comes in both [JSON](https://hl7.org/fhir/json.html)
 or [XML](https://hl7.org/fhir/xml.html) formats, and can contain over 140
 different types of resources, such
-as [Patient](https://hl7.org/fhir/patient.html), 
-[Observation](https://hl7.org/fhir/observation.html), 
-[Condition](https://hl7.org/fhir/condition.html), 
+as [Patient](https://hl7.org/fhir/patient.html),
+[Observation](https://hl7.org/fhir/observation.html),
+[Condition](https://hl7.org/fhir/condition.html),
 [Procedure](https://hl7.org/fhir/procedure.html), and many more.
 
 Pathling is capable of reading all the different types of FHIR resources into a
 format suitable for data analysis tasks. This makes the following things
 possible:
 
-- Querying FHIR data using SQL and [FHIRPath](/docs/fhirpath)
+- Querying FHIR data using SQL and [FHIRPath](/docs/7.2.0/fhirpath)
 - Transforming data into other formats, such as CSV
   or [Parquet](https://parquet.apache.org/)
 - Performing terminology queries against coded fields within the FHIR data
 
-See [Encoders](/docs/libraries/encoders) for more information.
+See [Encoders](/docs/7.2.0/libraries/encoders) for more information.
 
 ### Terminology queries
 
@@ -61,7 +62,8 @@ Examples of the types of questions that can be answered include:
 - Is this ICD-10 code within the pre-defined list of codes within my cohort
   definition?
 
-See [Terminology functions](/docs/libraries/terminology) for more information.
+See [Terminology functions](/docs/7.2.0/libraries/terminology) for more
+information.
 
 ### FHIR analytics API
 
@@ -70,15 +72,22 @@ can be used to perform analytic queries over FHIR data. This is useful for
 powering interactive web and mobile applications that need to be able to
 aggregate, group and transform FHIR data.
 
-See [Server](/docs/server) for more information.
+See [Server](/docs/7.2.0/server) for more information.
 
 import Components from '@site/src/images/components.png';
 import Components2x from '@site/src/images/components@2x.png';
 import ComponentsDark from '@site/src/images/components-dark.png';
 import ComponentsDark2x from '@site/src/images/components-dark@2x.png';
 
-<img src={Components} srcset={`${Components2x} 2x, ${Components} 1x`} title="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" className="light-mode-only" width="800" />
-<img src={ComponentsDark} srcset={`${ComponentsDark2x} 2x, ${ComponentsDark} 1x`} title="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" className="dark-mode-only" width="800" />
+<img src={Components} srcset={`${Components2x} 2x, ${Components} 1x`} title="
+Components of Pathling (i.e. language libraries and server) and the associated
+use cases, including data prep, ETL, apps and data extract services" className="
+light-mode-only" width="800" />
+<img src={ComponentsDark} srcset={
+`${ComponentsDark2x} 2x, ${ComponentsDark} 1x`} title="Components of Pathling (
+i.e. language libraries and server) and the associated use cases, including data
+prep, ETL, apps and data extract services" className="dark-mode-only" width="
+800" />
 
 ## Licensing and attribution
 

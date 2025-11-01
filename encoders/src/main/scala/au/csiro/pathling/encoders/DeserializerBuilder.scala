@@ -5,8 +5,8 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230.
+ * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.types.{DataType, ObjectType}
 import org.hl7.fhir.instance.model.api.IBaseResource
 
-import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
+import scala.jdk.CollectionConverters._
 
 /**
  * The schema processor for building deserializer expressions.
@@ -215,7 +215,7 @@ private[encoders] sealed class DeserializerBuilderProcessor(val path: Option[Exp
       val childDefinition = if (definition.getChildByName(name) != null)
         definition.getChildByName(name)
       else
-        definition.getChildren.find(childDef => childDef.getElementName == name).get
+        definition.getChildren.asScala.find(childDef => childDef.getElementName == name).get
 
       (setterFor(childDefinition), expression)
     }

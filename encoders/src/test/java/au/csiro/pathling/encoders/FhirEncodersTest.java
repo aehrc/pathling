@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific 
+ * These modifications are copyright 2018-2025 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package au.csiro.pathling.encoders;
@@ -121,6 +122,7 @@ class FhirEncodersTest {
         .appName("testing")
         .config("spark.driver.bindAddress", "localhost")
         .config("spark.driver.host", "localhost")
+        .config("spark.ui.enabled", "false")
         .getOrCreate();
 
     patientDataset = spark.createDataset(List.of(patient), ENCODERS_L0.of(Patient.class));
@@ -199,7 +201,7 @@ class FhirEncodersTest {
 
     final GenericRowWithSchema coding = (GenericRowWithSchema) verificationStatus
         .getList(verificationStatus.fieldIndex("coding"))
-        .get(0);
+        .getFirst();
 
     assertEquals(1, condition.getVerificationStatus().getCoding().size());
     assertEquals(coding.getString(coding.fieldIndex("system")),
@@ -337,10 +339,10 @@ class FhirEncodersTest {
         ).head());
 
     // the assigner should be pruned from the reference identifier.
-    assertTrue(conditionWithIdentifiers.getIdentifier().get(0).getAssigner().getIdentifier()
+    assertTrue(conditionWithIdentifiers.getIdentifier().getFirst().getAssigner().getIdentifier()
         .hasAssigner());
     assertFalse(
-        decodedL3Condition.getIdentifier().get(0).getAssigner().getIdentifier().hasAssigner());
+        decodedL3Condition.getIdentifier().getFirst().getAssigner().getIdentifier().hasAssigner());
   }
 
 
@@ -374,11 +376,11 @@ class FhirEncodersTest {
 
     // Test can represent without loss 18 + 6 decimal places
     assertEquals(TestData.TEST_VERY_BIG_DECIMAL,
-        decodedObservation.getReferenceRange().get(0).getHigh().getValue());
+        decodedObservation.getReferenceRange().getFirst().getHigh().getValue());
 
     // Test rounding of decimals with scale larger than 6
     assertEquals(TestData.TEST_VERY_SMALL_DECIMAL_SCALE_6,
-        decodedObservation.getReferenceRange().get(0).getLow().getValue());
+        decodedObservation.getReferenceRange().getFirst().getLow().getValue());
   }
 
 
@@ -560,7 +562,7 @@ class FhirEncodersTest {
         .mapToObj(i -> TestData.newNestedQuestionnaire(i, 4))
         .toList();
 
-    final Questionnaire questionnaireL0 = questionnaires.get(0);
+    final Questionnaire questionnaireL0 = questionnaires.getFirst();
 
     // Encode with level 0
     final Dataset<Questionnaire> questionnaireDatasetL0 = spark

@@ -5,8 +5,8 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230.
+ * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,11 +29,12 @@ import org.apache.spark.sql.Column
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
 import org.apache.spark.sql.catalyst.analysis.{TypeCheckResult, UnresolvedException}
-import org.apache.spark.sql.catalyst.expressions._
+import org.apache.spark.sql.catalyst.expressions.{FoldableUnevaluable, _}
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext, ExprCode, FalseLiteral}
 import org.apache.spark.sql.catalyst.trees.TreePattern.{ARRAYS_ZIP, TreePattern}
 import org.apache.spark.sql.catalyst.util.{ArrayData, GenericArrayData}
+import org.apache.spark.sql.errors.QueryExecutionErrors
 import org.apache.spark.sql.types._
 
 import scala.language.existentials
@@ -260,19 +261,20 @@ case class AttachExtensions(targetObject: Expression,
             |$javaType ${ev.value} = null;
             |boolean ${ev.isNull} = true;
             |if (${obj.value} != null) {
-            |// Check if extensionMap is not null before converting
-            | if (${extensionMap.value} != null) {
-            |   for(java.util.Map.Entry e: scala.collection.JavaConverters.mapAsJavaMap(${extensionMap.value}).entrySet()) {
-            |     org.hl7.fhir.instance.model.api.IBaseHasExtensions extHolder = (org.hl7.fhir.instance.model.api.IBaseHasExtensions)_fid_mapping.get(e.getKey());
-            |     if (extHolder != null) {
-            |       ((java.util.List)extHolder.getExtension()).addAll((java.util.List)e.getValue());
-            |     }
+            |// for each of the object in extension maps find the
+            |// corresponding object and set the extension
+            | for(java.util.Map.Entry e: scala.jdk.javaapi.CollectionConverters.asJava(${
+        extensionMap.value
+      }).entrySet()) {
+            |   org.hl7.fhir.instance.model.api.IBaseHasExtensions extHolder = (org.hl7.fhir.instance.model.api.IBaseHasExtensions)_fid_mapping.get(e.getKey());
+            |   if (extHolder != null) {
+            |     ((java.util.List)extHolder.getExtension()).addAll((java.util.List)e.getValue());
             |   }
             | }
             | ${ev.value} = ${obj.value};
             | ${ev.isNull} = false;
             |}
-   """.stripMargin)
+       """.stripMargin)
   }
 
   override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
@@ -281,9 +283,32 @@ case class AttachExtensions(targetObject: Expression,
 }
 
 
+/**
+ * This a mirror of the Spark `Unevaluable`, which is 
+ * needed as a workaround to allow the expression like UnresolvedIfArray to work 
+ * in both Spark 4.0.1 and Spark 4.1.0-rc1 (where FoldableUnevaluable has been removed) 
+ * and which is deployed in Databrics Runtime 17.3 LTS.
+ * <p>
+ * An expression that cannot be evaluated and is not foldable. These expressions 
+ * on't live past analysis or optimization time (e.g. Star)
+ * and should not be evaluated during query planning and execution.
+ */
+trait UnevaluableCopy extends Expression {
+
+  final override def foldable: Boolean = false
+
+  override def eval(input: InternalRow = null): Any =
+    throw SparkException.internalError(s"Cannot evaluate expression: $this")
+
+
+  override protected def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode =
+    throw SparkException.internalError(s"Cannot generate code for expression: $this")
+
+}
+
 case class UnresolvedIfArray(value: Expression, arrayExpressions: Expression => Expression,
                              elseExpression: Expression => Expression)
-  extends Expression with Unevaluable with NonSQLExpression {
+  extends Expression with UnevaluableCopy with NonSQLExpression {
 
   override def mapChildren(f: Expression => Expression): Expression = {
 
@@ -317,7 +342,7 @@ case class UnresolvedIfArray(value: Expression, arrayExpressions: Expression => 
 
 case class UnresolvedIfArray2(value: Expression, arrayExpressions: Expression => Expression,
                               elseExpression: Expression => Expression)
-  extends Expression with Unevaluable with NonSQLExpression {
+  extends Expression with UnevaluableCopy with NonSQLExpression {
 
   override def mapChildren(f: Expression => Expression): Expression = {
 
@@ -356,7 +381,7 @@ case class UnresolvedIfArray2(value: Expression, arrayExpressions: Expression =>
 
 
 case class UnresolvedUnnest(value: Expression)
-  extends Expression with Unevaluable with NonSQLExpression {
+  extends Expression with UnevaluableCopy with NonSQLExpression {
 
   override def mapChildren(f: Expression => Expression): Expression = {
 
@@ -389,44 +414,7 @@ case class UnresolvedUnnest(value: Expression)
 }
 
 
-object ValueFunctions {
-  /**
-   * Applies an expression to an an array value, or an else expression if the value is not an array.
-   *
-   * @param value           The value to check
-   * @param arrayExpression The expression to apply to the array value
-   * @param elseExpression  The expression to apply if the value is not an array
-   * @return
-   */
-  def ifArray(value: Column, arrayExpression: Column => Column,
-              elseExpression: Column => Column): Column = {
-    val expr = UnresolvedIfArray(value.expr,
-      e => arrayExpression(new Column(e)).expr, e => elseExpression(new Column(e)).expr)
-    new Column(expr)
-  }
-
-  /**
-   * Applies an expression to  array of arrays value, or an else expression if the value is an array.
-   * Throws an exception if the value is not an array.
-   *
-   * @param value           The value to check
-   * @param arrayExpression The expression to apply to the array of arrays value
-   * @param elseExpression  The expression to apply to the arrays of non array values
-   * @return
-   */
-  def ifArray2(value: Column, arrayExpression: Column => Column,
-               elseExpression: Column => Column): Column = {
-    val expr = UnresolvedIfArray2(value.expr,
-      e => arrayExpression(new Column(e)).expr, e => elseExpression(new Column(e)).expr)
-    new Column(expr)
-  }
-
-  def unnest(value: Column): Column = {
-    val expr = UnresolvedUnnest(value.expr)
-    new Column(expr)
-  }
-
-}
+// ValueFunctions has been moved to a Java class to access package-private Spark methods
 
 
 /**
@@ -635,14 +623,15 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
    * @param productSize The total number of product combinations to generate
    * @return An array of InternalRow containing all product combinations
    */
-  private def buildProductArray(inputArrays: Seq[ArrayData], productSize: Int): Array[InternalRow] = {
+  private def buildProductArray(inputArrays: Seq[ArrayData],
+                                productSize: Int): Array[InternalRow] = {
     val result = new Array[InternalRow](productSize)
     val zippedArrays: Seq[(ArrayData, Int)] = inputArrays.zipWithIndex
-    
+
     for (i <- 0 until productSize) {
       val productIndexes = calculateProductIndexes(i, inputArrays)
       val currentRowData = buildRowData(zippedArrays, productIndexes)
-      result(i) = InternalRow.apply(currentRowData: _*)
+      result(i) = InternalRow.apply(currentRowData.toIndexedSeq: _*)
     }
     result
   }
@@ -651,13 +640,14 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
    * Calculates the array indexes for a specific product combination.
    *
    * @param productIndex The index of the product combination to calculate
-   * @param inputArrays The sequence of input arrays to index into
+   * @param inputArrays  The sequence of input arrays to index into
    * @return An array of indexes, one for each input array
    */
-  private def calculateProductIndexes(productIndex: Int, inputArrays: Seq[ArrayData]): Array[Int] = {
+  private def calculateProductIndexes(productIndex: Int,
+                                      inputArrays: Seq[ArrayData]): Array[Int] = {
     val productIndexes: Array[Int] = new Array[Int](children.length)
     var productBase = productIndex
-    
+
     for (childIndex <- children.indices) {
       val childArity = inputArrays(childIndex).numElements()
       productIndexes(childIndex) = productBase % childArity
@@ -669,13 +659,14 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
   /**
    * Builds the row data for a single product combination by merging struct fields.
    *
-   * @param zippedArrays The input arrays paired with their indexes
+   * @param zippedArrays   The input arrays paired with their indexes
    * @param productIndexes The array indexes for this product combination
    * @return An array containing the merged field values for the output row
    */
-  private def buildRowData(zippedArrays: Seq[(ArrayData, Int)], productIndexes: Array[Int]): Array[Any] = {
+  private def buildRowData(zippedArrays: Seq[(ArrayData, Int)],
+                           productIndexes: Array[Int]): Array[Any] = {
     val currentRowData = new Array[Any](sizeOfOutput)
-    
+
     zippedArrays.foreach { case (arr, index) =>
       if (!arr.isNullAt(productIndexes(index))) {
         copyStructFields(arr, index, productIndexes(index), currentRowData)
@@ -687,14 +678,15 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
   /**
    * Copies struct fields from an array element to the output row data.
    *
-   * @param arr The source array containing struct elements
-   * @param arrayIndex The index of the source array in the children sequence
-   * @param elementIndex The index of the element within the source array
+   * @param arr            The source array containing struct elements
+   * @param arrayIndex     The index of the source array in the children sequence
+   * @param elementIndex   The index of the element within the source array
    * @param currentRowData The output row data array to copy fields into
    */
-  private def copyStructFields(arr: ArrayData, arrayIndex: Int, elementIndex: Int, currentRowData: Array[Any]): Unit = {
+  private def copyStructFields(arr: ArrayData, arrayIndex: Int, elementIndex: Int,
+                               currentRowData: Array[Any]): Unit = {
     val structData = arr.get(elementIndex, arrayElementTypes(arrayIndex)).asInstanceOf[InternalRow]
-    
+
     for (fi <- 0 until structData.numFields) {
       if (!structData.isNullAt(fi)) {
         currentRowData(offsetsScala(arrayIndex) + fi) = structData.get(fi, null)
@@ -709,26 +701,4 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
 }
 
 
-object ColumnFunctions {
-  /**
-   * An expression which takes a number of columns that contain arrays of structs and produces
-   * an array of structs where each element is a product of the elements of the input arrays.
-   *
-   * @param e The input columns
-   */
-  @scala.annotation.varargs
-  def structProduct(e: Column*): Column = new Column(StructProduct(e.map(_.expr)))
-
-  /**
-   * An expression which takes a number of columns that contain arrays of structs and produces
-   * an array of structs where each element is a product of the elements of the input arrays.
-   *
-   * If the input arrays are of different lengths, the output array will contain nulls for missing
-   * elements in the input.
-   *
-   * @param e The input columns
-   */
-  @scala.annotation.varargs
-  def structProductOuter(e: Column*): Column = new Column(
-    StructProduct(e.map(_.expr), outer = true))
-}
+// ColumnFunctions has been moved to a Java class to access package-private Spark methods

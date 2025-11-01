@@ -47,6 +47,12 @@ public class CollectionAssert {
     return DatasetAssert.of(datasetResult.toCanonical().toIdValueDataset());
   }
 
+  @Nonnull
+  public DatasetAssert toExternalResult() {
+    return DatasetAssert.of(datasetResult.toIdExternalValueDataset());
+  }
+
+
   public CollectionAssert hasClass(final Class<? extends Collection> ofType) {
     assertTrue(ofType.isAssignableFrom(result.getClass()),
         ofType.getName() + " is not assignable from " + result.getClass().getName());

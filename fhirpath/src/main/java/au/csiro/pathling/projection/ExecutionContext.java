@@ -17,19 +17,19 @@
 
 package au.csiro.pathling.projection;
 
-import au.csiro.pathling.fhirpath.execution.FhirpathEvaluator;
+import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
 import org.apache.spark.sql.SparkSession;
 
 /**
  * Dependencies for the execution of a FHIR view.
  *
  * @param spark The {@link SparkSession} for building and executing Spark queries.
- * @param fhirpathEvaluatorFactory The {@link FhirpathEvaluator.Factory} for producing FHIRPath
+ * @param fhirpathEvaluatorFactory The {@link FhirPathEvaluator.Factory} for producing FHIRPath
  * evaluators.
  */
 public record ExecutionContext(
     SparkSession spark,
-    FhirpathEvaluator.Factory fhirpathEvaluatorFactory
+    FhirPathEvaluator.Factory fhirpathEvaluatorFactory
 ) {
 
 }

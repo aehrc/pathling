@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific 
+ * These modifications are copyright 2018-2025 Commonwealth Scientific
  * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package au.csiro.pathling.encoders;
@@ -42,7 +43,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Base;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import scala.collection.JavaConverters;
+import scala.jdk.javaapi.CollectionConverters;
 
 public class AllResourcesEncodingTest {
 
@@ -56,7 +57,7 @@ public class AllResourcesEncodingTest {
 
   private static final SchemaConverter SCHEMA_CONVERTER_L2 = new SchemaConverter(FHIR_CONTEXT,
       new R4DataTypeMappings(),
-      EncoderConfig.apply(2, JavaConverters.asScalaSet(OPEN_TYPES).toSet(), true));
+      EncoderConfig.apply(2, CollectionConverters.asScala(OPEN_TYPES).toSet(), true));
 
 
   static final Set<String> EXCLUDED_RESOURCES = ImmutableSet.of(

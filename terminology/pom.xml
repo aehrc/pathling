@@ -25,7 +25,7 @@
   <parent>
     <artifactId>pathling</artifactId>
     <groupId>au.csiro.pathling</groupId>
-    <version>8.1.1-SNAPSHOT</version>
+    <version>9.0.1-SNAPSHOT</version>
   </parent>
   <artifactId>terminology</artifactId>
   <packaging>jar</packaging>
@@ -154,10 +154,7 @@
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
       </plugin>
-      <plugin>
-        <groupId>pl.project13.maven</groupId>
-        <artifactId>git-commit-id-plugin</artifactId>
-      </plugin>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>

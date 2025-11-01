@@ -5,8 +5,8 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2018-2025 Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230.
+ * These modifications are copyright 2018-2025 Commonwealth Scientific
+ * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ package au.csiro.pathling.sql
 
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
-import org.apache.spark.sql.catalyst.expressions.{Expression, NullIntolerant, UnaryExpression}
+import org.apache.spark.sql.catalyst.expressions.{Expression, UnaryExpression}
 import org.apache.spark.sql.types.{DataType, StructType}
 
 
@@ -37,7 +37,7 @@ import org.apache.spark.sql.types.{DataType, StructType}
  * @param child the child expression
  */
 case class PruneSyntheticFields(child: Expression)
-  extends UnaryExpression with CodegenFallback with NullIntolerant {
+  extends UnaryExpression with CodegenFallback {
   override def nullable: Boolean = true
 
   @transient

@@ -6,8 +6,8 @@
   ~ Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
   ~ the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
   ~
-  ~ These modifications are copyright 2018-2025 Commonwealth Scientific and Industrial Research
-  ~ Organisation (CSIRO) ABN 41 687 119 230.
+  ~ These modifications are copyright 2018-2025 Commonwealth Scientific
+  ~ and Industrial Research Organisation (CSIRO) ABN 41 687 119 230.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>8.1.1-SNAPSHOT</version>
+    <version>9.0.1-SNAPSHOT</version>
   </parent>
   <artifactId>encoders</artifactId>
   <packaging>jar</packaging>
@@ -91,11 +91,6 @@
       <artifactId>spark-unsafe_${pathling.scalaVersion}</artifactId>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>javax.servlet</groupId>
-      <artifactId>javax.servlet-api</artifactId>
-    </dependency>
-
     <!-- HAPI FHIR -->
     <dependency>
       <groupId>ca.uhn.hapi.fhir</groupId>
@@ -118,9 +113,9 @@
 
     <!-- UCUM -->
     <dependency>
-      <groupId>au.csiro.pathling</groupId>
-      <artifactId>ucum</artifactId>
-      <version>1.0.4</version>
+      <groupId>io.github.fhnaumann</groupId>
+      <artifactId>ucumate-core</artifactId>
+      <version>1.0.8</version>
     </dependency>
 
     <dependency>
@@ -261,6 +256,13 @@
                 <goals>
                   <goal>doc-jar</goal>
                 </goals>
+                <configuration>
+                  <excludes>
+                    <!-- Exclude Java files that access package-private Spark classes -->
+                    <exclude>**/ValueFunctions.java</exclude>
+                    <exclude>**/ColumnFunctions.java</exclude>
+                  </excludes>
+                </configuration>
               </execution>
             </executions>
           </plugin>
