@@ -81,11 +81,11 @@ public class ParquetSource extends FileSource {
    */
   ParquetSource(@Nonnull final PathlingContext context, @Nonnull final Map<String, Collection<String>> files,
       @Nonnull final Predicate<ResourceType> additionalResourceTypeFilter) {
-    super(context, files, null,
+    super(context, files,
         // Assume the "parquet" file extension.
         PARQUET_FILE_EXTENSION,
         context.getSpark().read().format(PARQUET_READ_FORMAT),
-        // Apply no transformations on the data - we assume it has already been processed using the 
+        // Apply no transformations on the data - we assume it has already been processed using the
         // Pathling FHIR encoders.
         (sourceData, resourceType) -> sourceData,
         additionalResourceTypeFilter);
@@ -101,9 +101,9 @@ public class ParquetSource extends FileSource {
    */
   ParquetSource(@Nonnull final PathlingContext context, @Nonnull final Map<String, Collection<String>> files,
       @Nonnull final Function<String, Set<String>> fileNameMapper) {
-    super(context, files, fileNameMapper, PARQUET_FILE_EXTENSION,
+    super(context, files, PARQUET_FILE_EXTENSION,
         context.getSpark().read().format(PARQUET_READ_FORMAT),
-        // Apply no transformations on the data - we assume it has already been processed using the 
+        // Apply no transformations on the data - we assume it has already been processed using the
         // Pathling FHIR encoders.
         (sourceData, resourceType) -> sourceData,
         resourceType -> true);

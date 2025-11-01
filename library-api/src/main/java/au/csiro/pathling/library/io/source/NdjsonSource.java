@@ -103,7 +103,7 @@ public class NdjsonSource extends FileSource {
   NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final Map<String, Collection<String>> files,
       @Nonnull final String extension,
       @Nonnull final Function<String, Set<String>> fileNameMapper) {
-    super(context, files, fileNameMapper, extension,
+    super(context, files, extension,
         // Read each line of input separately.
         context.getSpark().read().format("text"),
         // Encode each line of input as a JSON FHIR resource.
