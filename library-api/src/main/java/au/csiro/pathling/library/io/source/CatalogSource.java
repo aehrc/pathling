@@ -52,7 +52,7 @@ public class CatalogSource extends AbstractSource {
   @Nonnull
   private final Optional<UnaryOperator<Dataset<Row>>> transformation;
   private final Optional<BiFunction<String, Dataset<Row>, Dataset<Row>>> universalOperator;
-  
+
   private final Optional<Predicate<String>> filterResourcePredicate;
 
   /**
@@ -60,7 +60,7 @@ public class CatalogSource extends AbstractSource {
    *
    * @param context the PathlingContext to use
    */
-  CatalogSource(@Nonnull final PathlingContext context) {
+  public CatalogSource(@Nonnull final PathlingContext context) {
     super(context);
     this.schema = Optional.empty(); // Default schema is empty
     this.transformation = Optional.empty(); // No transformation by default
@@ -74,7 +74,7 @@ public class CatalogSource extends AbstractSource {
    * @param context the PathlingContext to use
    * @param schema the schema to use for the catalog tables
    */
-  CatalogSource(@Nonnull final PathlingContext context, @Nonnull final String schema) {
+  public CatalogSource(@Nonnull final PathlingContext context, @Nonnull final String schema) {
     super(context);
     this.schema = Optional.of(schema);
     this.transformation = Optional.empty(); // No transformation by default
@@ -101,11 +101,11 @@ public class CatalogSource extends AbstractSource {
     Dataset<Row> table = context.getSpark().table(getTableName(resourceCode));
     // If a transformation is provided, apply it to the table. 
     // Otherwise, return the table as is.
-    if(filterResourcePredicate.isPresent() && !filterResourcePredicate.get().test(resourceCode)) {
+    if (filterResourcePredicate.isPresent() && !filterResourcePredicate.get().test(resourceCode)) {
       // The resourceCode is meant to be excluded, no more mapping required
       return table.limit(0);
     }
-    if(universalOperator.isPresent()) {
+    if (universalOperator.isPresent()) {
       table = universalOperator.get().apply(resourceCode, table);
     }
     final Dataset<Row> finalTable = table;
@@ -163,13 +163,15 @@ public class CatalogSource extends AbstractSource {
   @Override
   public CatalogSource map(
       @NotNull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
-    return new CatalogSource(context, schema, transformation, Optional.of(operator), filterResourcePredicate);
+    return new CatalogSource(context, schema, transformation, Optional.of(operator),
+        filterResourcePredicate);
   }
 
   @Override
   public @NotNull QueryableDataSource filterByResourceType(
       @NotNull final Predicate<String> resourceTypePredicate) {
-    return new CatalogSource(context, schema, transformation, universalOperator, Optional.of(resourceTypePredicate));
+    return new CatalogSource(context, schema, transformation, universalOperator,
+        Optional.of(resourceTypePredicate));
   }
 
   @Override

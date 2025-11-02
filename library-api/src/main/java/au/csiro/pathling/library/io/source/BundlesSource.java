@@ -48,7 +48,7 @@ public class BundlesSource extends FileSource {
    * @param mimeType the MIME type of the FHIR data (e.g., "application/fhir+json")
    * @param resourceTypes the set of FHIR resource types that are expected in the bundles
    */
-  BundlesSource(@Nonnull final PathlingContext context, @Nonnull final String path,
+  public BundlesSource(@Nonnull final PathlingContext context, @Nonnull final String path,
       @Nonnull final String mimeType, @Nonnull final Set<String> resourceTypes) {
     super(context, path,
         // Map to the fixed set of resource types for all files.

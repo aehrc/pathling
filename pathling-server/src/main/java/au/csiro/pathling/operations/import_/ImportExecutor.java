@@ -22,7 +22,9 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.io.sink.WriteDetails;
-import au.csiro.pathling.library.io.source.DataSourceBuilder;
+import au.csiro.pathling.library.io.source.DeltaSource;
+import au.csiro.pathling.library.io.source.NdjsonSource;
+import au.csiro.pathling.library.io.source.ParquetSource;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
 import au.csiro.pathling.security.SecurityAspect;
@@ -42,7 +44,7 @@ import org.springframework.stereotype.Component;
 /**
  * Encapsulates the execution of an import operation.
  *
- * @author  Felix Naumann
+ * @author Felix Naumann
  * @see <a href="https://pathling.csiro.au/docs/server/operations/import">Import</a>
  */
 @Component
@@ -53,7 +55,7 @@ public class ImportExecutor {
   @Nonnull
   private final Optional<AccessRules> accessRules;
   private final PathlingContext pathlingContext;
-  
+
   private final String databasePath;
   private final ServerConfiguration serverConfiguration;
 
@@ -72,7 +74,7 @@ public class ImportExecutor {
     this.databasePath = databasePath;
     this.serverConfiguration = serverConfiguration;
   }
-  
+
   /**
    * Executes the import operation.
    *
@@ -89,17 +91,20 @@ public class ImportExecutor {
   }
 
 
-
   private WriteDetails readAndWriteFilesFrom(final ImportRequest request) {
-    final DataSourceBuilder sourceBuilder = new DataSourceBuilder(pathlingContext);
-
     final Map<String, Collection<String>> resourcesWithAuthority = checkAuthority(request);
 
-    final Function<DataSource, DataSinkBuilder> sinkBuilderFunc = dataSource -> new DataSinkBuilder(pathlingContext, dataSource).saveMode(request.saveMode().getCode());
+    final Function<DataSource, DataSinkBuilder> sinkBuilderFunc = dataSource -> new DataSinkBuilder(
+        pathlingContext, dataSource).saveMode(request.saveMode().getCode());
     return switch (request.importFormat()) {
-      case NDJSON -> sinkBuilderFunc.apply(sourceBuilder.ndjson(resourcesWithAuthority, "ndjson")).ndjson(databasePath);
-      case DELTA -> sinkBuilderFunc.apply(sourceBuilder.delta(resourcesWithAuthority)).delta(databasePath);
-      case PARQUET -> sinkBuilderFunc.apply(sourceBuilder.parquet(resourcesWithAuthority)).parquet(databasePath);
+      case NDJSON ->
+          sinkBuilderFunc.apply(new NdjsonSource(pathlingContext, resourcesWithAuthority, "ndjson"))
+              .ndjson(databasePath);
+      case DELTA -> sinkBuilderFunc.apply(new DeltaSource(pathlingContext, resourcesWithAuthority))
+          .delta(databasePath);
+      case PARQUET -> sinkBuilderFunc.apply(
+              new ParquetSource(pathlingContext, resourcesWithAuthority, ignored -> true))
+          .parquet(databasePath);
     };
   }
 

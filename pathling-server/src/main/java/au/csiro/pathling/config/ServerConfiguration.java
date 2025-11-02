@@ -3,7 +3,7 @@ package au.csiro.pathling.config;
 import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.source.DataSourceBuilder;
+import au.csiro.pathling.library.io.source.DeltaSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -16,7 +16,6 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
-import org.apache.spark.sql.SparkSession;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -56,7 +55,7 @@ public class ServerConfiguration {
   @Nullable
   private String sentryEnvironment;
 
-  @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") 
+  @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
   private String databasePath;
 
   @Nonnull
@@ -94,7 +93,7 @@ public class ServerConfiguration {
 
   @Bean
   public QueryableDataSource deltaLake(PathlingContext pathlingContext) {
-    return new DataSourceBuilder(pathlingContext).delta(databasePath);
+    return new DeltaSource(pathlingContext, databasePath);
   }
 
   // Handle the `import` property outside of Lombok, as import is a Java keyword.

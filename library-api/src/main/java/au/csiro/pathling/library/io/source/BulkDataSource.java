@@ -52,7 +52,7 @@ public class BulkDataSource extends AbstractSource {
    * parameters
    * @throws RuntimeException if the export fails or the source cannot be initialized
    */
-  BulkDataSource(@Nonnull final PathlingContext context,
+  public BulkDataSource(@Nonnull final PathlingContext context,
       @Nonnull final BulkExportClient client) {
     super(context);
 
@@ -83,14 +83,16 @@ public class BulkDataSource extends AbstractSource {
   }
 
   @Override
-  public QueryableDataSource map(@NotNull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
+  public QueryableDataSource map(
+      @NotNull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
     return new BulkDataSource(context, (NdjsonSource) ndjsonSource.map(operator));
   }
 
   @Override
   public @NotNull QueryableDataSource filterByResourceType(
       @NotNull final Predicate<String> resourceTypePredicate) {
-    return new BulkDataSource(context, (NdjsonSource) ndjsonSource.filterByResourceType(resourceTypePredicate));
+    return new BulkDataSource(context,
+        (NdjsonSource) ndjsonSource.filterByResourceType(resourceTypePredicate));
   }
 
   @Override

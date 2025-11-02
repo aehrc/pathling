@@ -23,12 +23,8 @@ import au.csiro.fhir.export.BulkExportClient;
 import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.util.Collection;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.function.Predicate;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A factory for creating various different data sources capable of preparing FHIR data for query.
@@ -40,11 +36,9 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public record DataSourceBuilder(@Nonnull PathlingContext context) {
 
   /**
-   * Creates a new data source from a directory containing NDJSON encoded FHIR resource data.
-   * <p>
-   * The default filenameMapper assumes {@code <resource_type>.<extension>} structure. For example,
-   * "Patient.ndjson" should contain only Patient resources. If the files in the path have a 
-   * different structure, a custom filenameMapper must be supplied.
+   * Creates a new data source from a directory containing NDJSON encoded FHIR resource data, with
+   * filenames containing the resource type the file contains, e.g. "Patient.ndjson" should contain
+   * only Patient resources.
    * <p>
    * The filename can also optionally contain a qualifier after the resource type, to allow for
    * resources of the same type to be organised into different files, e.g.
@@ -59,23 +53,9 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
   }
 
   /**
-   * Creates a new data source from a map of resource types to NDJSON file paths.
-   *
-   * @param files a map where keys are resource type names and values are collections of file paths
-   *              containing data for that resource type
-   * @return the new data source
-   */
-  @Nonnull
-  public QueryableDataSource ndjson(@Nullable final Map<String, Collection<String>> files) {
-    return new NdjsonSource(context, checkArgumentNotNull(files));
-  }
-
-  /**
-   * Creates a new data source from a directory containing NDJSON encoded FHIR resource data.
-   * <p>
-   * The default filenameMapper assumes {@code <resource_type>.<extension>} structure. For example,
-   * "Patient.ndjson" should contain only Patient resources. If the files in the path have a 
-   * different structure, a custom filenameMapper must be supplied.
+   * Creates a new data source from a directory containing NDJSON encoded FHIR resource data, with
+   * filenames containing the resource type the file contains, e.g. "Patient.ndjson" should contain
+   * only Patient resources.
    * <p>
    * The filename can also optionally contain a qualifier after the resource type, to allow for
    * resources of the same type to be organised into different files, e.g.
@@ -97,9 +77,6 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
    * Creates a new data source from a directory containing NDJSON encoded FHIR resource data, with
    * filenames determined by the provided function.
    * <p>
-   * The default filenameMapper assumes {@code <resource_type>.<extension>} structure. Use this
-   * method to provide a custom filenameMapper if the files in the path have a different structure.
-   * <p>
    * A file extension is also provided, which overrides the default ".ndjson" extension and serves
    * as a filter for the files to be included in the data source.
    *
@@ -114,40 +91,6 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
       @Nullable final Function<String, Set<String>> fileNameMapper) {
     return new NdjsonSource(context, checkArgumentNotNull(path), checkArgumentNotNull(extension),
         checkArgumentNotNull(fileNameMapper));
-  }
-
-  /**
-   * Creates a new data source from a map of resource types to NDJSON file paths.
-   * <p>
-   * A file extension is also provided, which overrides the default ".ndjson" extension and serves
-   * as a filter for the files to be included in the data source.
-   *
-   * @param files a map where keys are resource type names and values are collections of file paths
-   *              containing data for that resource type
-   * @param extension the file extension to expect
-   * @return the new data source
-   */
-  public QueryableDataSource ndjson(@Nullable final Map<String, Collection<String>> files, @Nullable final String extension) {
-    return new NdjsonSource(context, checkArgumentNotNull(files), checkArgumentNotNull(extension));
-  }
-
-  /**
-   * Creates a new data source from a map of resource types to NDJSON file paths, with
-   * filenames determined by the provided function.
-   * <p>
-   * A file extension is also provided, which overrides the default ".ndjson" extension and serves
-   * as a filter for the files to be included in the data source.
-   *
-   * @param files a map where keys are resource type names and values are collections of file paths
-   *              containing data for that resource type
-   * @param extension the file extension to expect
-   * @param fileNameMapper a function that maps a filename to a list of resource types
-   * @return the new data source
-   */
-  public QueryableDataSource ndjson(@Nullable final Map<String, Collection<String>> files, 
-      @Nullable final String extension, 
-      @Nullable final Function<String, Set<String>> fileNameMapper) {
-    return new NdjsonSource(context, checkArgumentNotNull(files), checkArgumentNotNull(extension), checkArgumentNotNull(fileNameMapper));
   }
 
   /**
@@ -184,41 +127,21 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
   }
 
   /**
-   * Creates a new data source from a directory containing Parquet-encoded FHIR resource data.
-   * <p>
-   * The default filenameMapper assumes {@code <resource_type>.<extension>} structure. For example,
-   * 'Patient.parquet' should contain Patient resources.
+   * Creates a new data source form a directory containing Parquet-encoded FHIR resource data, with
+   * filenames representing the resource type the file/directory contains, e.g. 'Patient.parquet'
+   * should contain Patient resources.
    *
    * @param path the URI of the directory containing the Parquet files/directories
    * @return the new data source
    */
   @Nonnull
   public QueryableDataSource parquet(@Nullable final String path) {
-    return parquet(path, (Predicate<ResourceType>) ignored -> true);
-  }
-
-  /**
-   * Creates a new data source from a directory containing Parquet-encoded FHIR resource data.
-   * <p>
-   * The default filenameMapper assumes {@code <resource_type>.<extension>} structure. For example,
-   * 'Patient.parquet' should contain Patient resources. If the files in the path have a different
-   * structure, a custom filenameMapper must be supplied.
-   *
-   * @param path the URI of the directory containing the Parquet files/directories
-   * @param additionalResourceTypeFilter predicate to filter resource types to be loaded
-   * @return the new data source
-   */
-  @Nonnull
-  public QueryableDataSource parquet(@Nullable final String path, @Nonnull final Predicate<ResourceType> additionalResourceTypeFilter) {
-    return new ParquetSource(context, checkArgumentNotNull(path), checkArgumentNotNull(additionalResourceTypeFilter));
+    return new ParquetSource(context, checkArgumentNotNull(path));
   }
 
   /**
    * Creates a new data source from a directory containing Parquet-encoded FHIR resource data, with
    * filenames determined by the provided function.
-   * <p>
-   * The default filenameMapper assumes {@code <resource_type>.<extension>} structure. Use this
-   * method to provide a custom filenameMapper if the files in the path have a different structure.
    *
    * @param path the URI of the directory containing the Parquet files/directories
    * @param fileNameMapper a function that maps a filename to a set of resource types
@@ -232,54 +155,7 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
   }
 
   /**
-   * Creates a new data source from a map of resource types to Parquet file paths.
-   *
-   * @param files a map where keys are resource type names and values are collections of file paths
-   *              containing data for that resource type
-   * @return the new data source
-   */
-  @Nonnull
-  public QueryableDataSource parquet(@Nullable final Map<String, Collection<String>> files) {
-    return parquet(files, (Predicate<ResourceType>) ignored -> true);
-  }
-
-  /**
-   * Creates a new data source from a map of resource types to Parquet file paths.
-   *
-   * @param files a map where keys are resource type names and values are collections of file paths
-   *              containing data for that resource type
-   * @param additionalResourceTypeFilter a predicate to filter resource types
-   * @return the new data source
-   */
-  @Nonnull
-  public QueryableDataSource parquet(@Nullable final Map<String, Collection<String>> files,
-      @Nonnull final Predicate<ResourceType> additionalResourceTypeFilter) {
-    return new ParquetSource(context, checkArgumentNotNull(files),
-        checkArgumentNotNull(additionalResourceTypeFilter));
-  }
-
-  /**
-   * Creates a new data source from a map of resource types to Parquet file paths, with
-   * filenames determined by the provided function.
-   *
-   * @param files a map where keys are resource type names and values are collections of file paths
-   *              containing data for that resource type
-   * @param fileNameMapper a function that maps a filename to a set of resource types
-   * @return the new data source
-   */
-  @Nonnull
-  public QueryableDataSource parquet(@Nullable final Map<String, Collection<String>> files,
-      @Nullable final Function<String, Set<String>> fileNameMapper) {
-    return new ParquetSource(context, checkArgumentNotNull(files),
-        checkArgumentNotNull(fileNameMapper));
-  }
-
-  /**
    * Creates a new data source from a Delta warehouse.
-   * <p>
-   * The default filenameMapper assumes {@code <resource_type>.<extension>} structure. For example,
-   * 'Patient.parquet' should contain Patient resources. If the files in the path have a different
-   * structure, a custom filenameMapper must be supplied.
    *
    * @param path the location of the Delta warehouse
    * @return the new data source
@@ -287,18 +163,6 @@ public record DataSourceBuilder(@Nonnull PathlingContext context) {
   @Nonnull
   public QueryableDataSource delta(@Nullable final String path) {
     return new DeltaSource(context, checkArgumentNotNull(path));
-  }
-
-  /**
-   * Creates a new data source from a map of resource types to Delta table paths.
-   *
-   * @param files a map where keys are resource type names and values are collections of Delta
-   *              table paths containing data for that resource type
-   * @return the new data source
-   */
-  @Nonnull
-  public QueryableDataSource delta(@Nullable final Map<String, Collection<String>> files) {
-    return new DeltaSource(context, checkArgumentNotNull(files));
   }
 
   /**
