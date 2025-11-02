@@ -18,7 +18,7 @@
 package au.csiro.pathling.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import au.csiro.pathling.errors.AccessDeniedError;
@@ -97,9 +97,9 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
     // Test Scenario:
     // Another user 'other-user' has submitted a job. The 'admin' user with 'pathling:export'
     // authority attempts to read the job submitted by 'other-user' (it should fail).
-    assertThatException().isThrownBy(() -> perform_export("other-user"))
+    assertThatThrownBy(() -> perform_export("other-user"))
         .isExactlyInstanceOf(AccessDeniedError.class)
-        .withMessage("The requested result is not owned by the current user 'admin'.");
+        .hasMessage("The requested result is not owned by the current user 'admin'.");
   }
 
   @Test
@@ -154,9 +154,9 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
   @WithMockJwt(username = "admin", authorities = {"pathling:export", "pathling:read:Patient"})
   void test_forbidden_if_export_with_type_param_with_authority_and_partial_read_authority() {
     exportProvider = setup_scenario(tempDir, "Patient", "Encounter");
-    assertThatException().isThrownBy(() -> perform_export(ADMIN_USER, List.of("Patient", "Encounter"), false))
+    assertThatThrownBy(() -> perform_export(ADMIN_USER, List.of("Patient", "Encounter"), false))
         .isExactlyInstanceOf(AccessDeniedError.class)
-        .withMessage(ERROR_MSG.apply("read:Encounter"));
+        .hasMessage(ERROR_MSG.apply("read:Encounter"));
   }
 
   @Test
@@ -180,10 +180,9 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
   @WithMockJwt(username = "admin")
   void test_forbidden_if_export_without_authority() {
     ExportProvider beanExportProvider = applicationContext.getBean(ExportProvider.class);
-    assertThatException()
-        .isThrownBy(() -> perform_export(beanExportProvider, ADMIN_USER, List.of(), false))
+    assertThatThrownBy(() -> perform_export(beanExportProvider, ADMIN_USER, List.of(), false))
         .isExactlyInstanceOf(AccessDeniedError.class)
-        .withMessage(PATHLING_EXPORT_MSG);
+        .hasMessage(PATHLING_EXPORT_MSG);
   }
   
   @Test
@@ -195,10 +194,10 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
     Map<String, String> queryParams = UriComponentsBuilder.fromUriString(url).build().getQueryParams().toSingleValueMap();
 
     switchToUser("newUser");
-    
-    assertThatException().isThrownBy(() -> perform_export_result(queryParams.get("job"), queryParams.get("file"), null))
+
+    assertThatThrownBy(() -> perform_export_result(queryParams.get("job"), queryParams.get("file"), null))
         .isExactlyInstanceOf(AccessDeniedError.class)
-        .withMessage(PATHLING_EXPORT_MSG);
+        .hasMessage(PATHLING_EXPORT_MSG);
   }
   
   @Test
@@ -208,10 +207,10 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
     JsonNode manifest = perform_export();
     String url = manifest.get("output").get(0).get("url").asText();
     Map<String, String> queryParams = UriComponentsBuilder.fromUriString(url).build().getQueryParams().toSingleValueMap();
-    
-    assertThatException().isThrownBy(() -> perform_export_result(queryParams.get("job"), queryParams.get("file"), "other-user"))
+
+    assertThatThrownBy(() -> perform_export_result(queryParams.get("job"), queryParams.get("file"), "other-user"))
         .isExactlyInstanceOf(AccessDeniedError.class)
-        .withMessage("The requested result is not owned by the current user 'admin'.");
+        .hasMessage("The requested result is not owned by the current user 'admin'.");
   }
   
   @Test

@@ -13,7 +13,7 @@ import static au.csiro.pathling.util.TestConstants.WAREHOUSE_PLACEHOLDER;
 import static org.assertj.core.api.Assertions.LIST;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.mock;
@@ -99,7 +99,7 @@ class ExportOperationTest {
             .containsExactlyInAnyOrderElementsOf(messages);
       });
     } else {
-      assertThatException().isThrownBy(() -> exportOperationValidator.validateRequest(
+      assertThatThrownBy(() -> exportOperationValidator.validateRequest(
               MockUtil.mockRequest(acceptHeader, preferHeader, lenient), outputFormat, now, null, null, null))
           .isExactlyInstanceOf(InvalidRequestException.class);
     }
@@ -256,7 +256,7 @@ class ExportOperationTest {
             .containsExactlyInAnyOrderElementsOf(messages);
       });
     } else {
-      assertThatException().isThrownBy(
+      assertThatThrownBy(
               () -> exportOperationValidator.validateRequest(mockReqDetails, outputFormat, since, null,
                   type, List.of()))
           .isExactlyInstanceOf(InvalidRequestException.class);
@@ -326,7 +326,7 @@ class ExportOperationTest {
   void test_input_model_mapping(String originalRequest, String outputFormat, InstantType since,
       InstantType until, List<String> type, ExportRequest expectedMappedRequest) {
     if (expectedMappedRequest == null) {
-      assertThatException().isThrownBy(
+      assertThatThrownBy(
               () -> exportOperationValidator.createExportRequest(originalRequest, false, outputFormat,
                   since, until, type, List.of()))
           .isExactlyInstanceOf(InvalidRequestException.class);
