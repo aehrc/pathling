@@ -15,9 +15,9 @@
     <pathling.version>9.0.1-SNAPSHOT</pathling.version>
     <pathling.hapiFhirVersion>8.4.0</pathling.hapiFhirVersion>
     <pathling.springBootVersion>3.3.5</pathling.springBootVersion>
-    <pathling.sparkVersion>3.5.5</pathling.sparkVersion>
-    <pathling.scalaVersion>2.12</pathling.scalaVersion>
-    <pathling.deltaVersion>3.3.0</pathling.deltaVersion>
+    <pathling.sparkVersion>4.0.1</pathling.sparkVersion>
+    <pathling.scalaVersion>2.13</pathling.scalaVersion>
+    <pathling.deltaVersion>4.0.0</pathling.deltaVersion>
     <pathling.nettyVersion>4.1.114.Final</pathling.nettyVersion>
     <pathling.testSetup.skip>true</pathling.testSetup.skip>
     <pathling.jacksonVersion>2.18.1</pathling.jacksonVersion>
