@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.jetbrains.annotations.NotNull;
@@ -103,7 +104,8 @@ public class ImportExecutor {
       case DELTA -> sinkBuilderFunc.apply(new DeltaSource(pathlingContext, resourcesWithAuthority))
           .delta(databasePath);
       case PARQUET -> sinkBuilderFunc.apply(
-              new ParquetSource(pathlingContext, resourcesWithAuthority, ignored -> true))
+              new ParquetSource(pathlingContext, resourcesWithAuthority,
+                  (Predicate<ResourceType>) ignored -> true))
           .parquet(databasePath);
     };
   }
