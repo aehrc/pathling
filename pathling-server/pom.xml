@@ -300,7 +300,7 @@
                 <argument>-Dpathling.storage.databaseName=parquet</argument>
                 <argument>-Dspark.master=local[1]</argument>
                 <argument>au.csiro.pathling.util.TestDataImporter</argument>
-                <argument>${project.basedir}/src/test/resources/test-data/fhir</argument>
+                <argument>${project.basedir}/src/test/resources/test-data/bulk/fhir</argument>
                 <argument>download=${pathling.testSetup.skip}</argument>
               </arguments>
               <classpathScope>test</classpathScope>

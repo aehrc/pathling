@@ -5,8 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.io.sink.FileInformation;
-import au.csiro.pathling.library.io.source.DataSourceBuilder;
-import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.library.io.source.NdjsonSource;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
@@ -208,9 +207,9 @@ public class TestDataSetup {
     try {
       Path deltaPath = ndjsonTestDataDir.resolve("delta");
       Files.createDirectories(deltaPath);
-      QueryableDataSource dataSource = new DataSourceBuilder(pathlingContext).ndjson(
+      NdjsonSource ndjsonSource = new NdjsonSource(pathlingContext,
           ndjsonTestDataDir.toAbsolutePath().toString());
-      new DataSinkBuilder(pathlingContext, dataSource).saveMode("overwrite")
+      new DataSinkBuilder(pathlingContext, ndjsonSource).saveMode("overwrite")
           .delta(deltaPath.toAbsolutePath().toString());
     } catch (Exception e) {
       throw new RuntimeException("Failed to setup warehouse test data", e);
