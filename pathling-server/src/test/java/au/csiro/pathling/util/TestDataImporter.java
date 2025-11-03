@@ -14,8 +14,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
 
 /**
- * Converts the test fhir data in `src/test/resources/test-data/fhir` to their parquet version in
- * `src/test/resources/test-data/parquet`.
+ * Converts the test FHIR data from NDJSON format (unpacked from the test-data JAR) to Delta format
+ * for use in tests. The source data is in `src/test/resources/test-data/bulk/fhir/*.ndjson` and the
+ * Delta tables are written to `src/test/resources/test-data/bulk/fhir/delta/`.
  */
 @SpringBootApplication
 @ComponentScan(basePackages = "au.csiro.pathling")
@@ -51,7 +52,6 @@ public class TestDataImporter implements CommandLineRunner {
       return;
     }
     log.info("Setting up test data at: {}", sourcePath);
-    testDataSetup.downloadFromSmartHealthBlocking();
     testDataSetup.setupTestData(Path.of(sourcePath));
   }
 

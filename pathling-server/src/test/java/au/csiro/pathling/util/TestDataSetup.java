@@ -4,25 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
-import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.source.NdjsonSource;
-import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
-import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 /**
  * @author Felix Naumann
@@ -32,138 +23,11 @@ import reactor.core.publisher.Mono;
 public class TestDataSetup {
 
 
-  private final WebClient webClient;
   private final PathlingContext pathlingContext;
 
   @Autowired
   public TestDataSetup(PathlingContext pathlingContext) {
     this.pathlingContext = pathlingContext;
-    this.webClient = WebClient.builder()
-        .baseUrl("https://bulk-data.smarthealthit.org")
-        .codecs(clientCodecConfigurer -> clientCodecConfigurer
-            .defaultCodecs()
-            .maxInMemorySize(50 * 1024 * 1024))
-        .build();
-  }
-
-  /**
-   * Download the test data from https://bulk-data.smarthealthit.org/fhir/$export A 202 is returned
-   * and polled (blocking) until the result is returned from the server. The data is then written
-   * into src/test/resources/test-data/fhir/*.ndjson for each FHIR resources
-   */
-  public void downloadFromSmartHealthBlocking() {
-    Path downloadDir = Path.of("src/test/resources/test-data/fhir");
-    try {
-      Files.createDirectories(downloadDir);
-    } catch (IOException e) {
-      throw new RuntimeException("Failed to create download directory", e);
-    }
-    initiateExport()
-        .flatMap(this::pollForCompletion)
-        .flatMap(responseBody -> downloadFiles(responseBody, downloadDir))
-        .block();
-  }
-
-  private Mono<String> initiateExport() {
-    log.info("Calling to remote server");
-    return webClient.get()
-        .uri("/fhir/$export")
-        .header("Accept", "application/fhir+json")
-        .header("Prefer", "respond-async")
-        .retrieve()
-        .toEntity(String.class)
-        .map(response -> {
-          log.info("Fetching Content-Location");
-          String statusUrl = response.getHeaders().getFirst("Content-Location");
-          if (statusUrl == null) {
-            throw new RuntimeException("No Content-Location header in response");
-          }
-          return statusUrl;
-        });
-  }
-
-  private Mono<String> pollForCompletion(String statusUrl) {
-    return Mono.defer(() -> checkStatus(statusUrl))
-        .flatMap(response -> {
-          if (response.getStatusCode().is2xxSuccessful()) {
-            log.info("Fetched data");
-            String body = response.getBody();
-            if (body == null) {
-              log.info("Received 2xx but body is empty, try again later");
-              return Mono.delay(Duration.ofSeconds(5))
-                  .then(pollForCompletion(statusUrl));
-            }
-            return Mono.just(body);
-          } else if (response.getStatusCode().value() == 202) {
-            log.info("Still processing, try again later");
-            // Still processing, wait and retry
-            return Mono.delay(Duration.ofSeconds(5))
-                .then(pollForCompletion(statusUrl));
-          } else {
-            return Mono.error(new RuntimeException("Export failed: " + response.getStatusCode()));
-          }
-        })
-        .retry(50); // Max 50 retries (about 4 minutes)
-  }
-
-  private Mono<ResponseEntity<String>> checkStatus(String statusUrl) {
-    return webClient.get()
-        .uri(statusUrl)
-        .retrieve()
-        .toEntity(String.class);
-  }
-
-  private Mono<Void> downloadFiles(String responseBody, Path downloadDir) {
-    log.info("Downloading files");
-    List<FileInformation> files = parseFileUrls(responseBody);
-    return Flux.fromIterable(files)
-        .flatMap(fileInfo -> downloadFile(fileInfo, downloadDir))
-        .then();
-  }
-
-  private Mono<Void> downloadFile(FileInformation fileInfo, Path downloadDir) {
-    String filename = fileInfo.fhirResourceType() + ".ndjson";
-    Path filePath = downloadDir.resolve(filename);
-    log.info("Downloading {} to {}", filename, filePath.toAbsolutePath());
-    File file = filePath.toFile();
-    if (file.exists() && file.isFile()) {
-      log.info("Skipping downloading {} because a file already exists at {}", filename,
-          filePath.toAbsolutePath());
-      return Mono.empty();
-    }
-
-    return webClient.get()
-        .uri(fileInfo.absoluteUrl())
-        .retrieve()
-        .bodyToMono(byte[].class)
-        .flatMap(bytes -> {
-          try {
-            Files.write(filePath, bytes);
-            return Mono.empty();
-          } catch (IOException e) {
-            return Mono.error(new RuntimeException("Failed to write file: " + filename, e));
-          }
-        });
-  }
-
-  private List<FileInformation> parseFileUrls(String responseBody) {
-    ObjectMapper mapper = new ObjectMapper();
-    try {
-      JsonNode root = mapper.readTree(responseBody);
-      JsonNode outputArray = root.get("output");
-
-      List<FileInformation> files = new ArrayList<>();
-      for (JsonNode item : outputArray) {
-        files.add(new FileInformation(
-            item.get("type").asText(),
-            item.get("url").asText(),
-            item.get("count").asLong()
-        ));
-      }
-      return files;
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to parse response", e);
-    }
   }
 
   public static void staticCopyTestDataToTempDir(Path tempDir, String... resourceTypes) {
