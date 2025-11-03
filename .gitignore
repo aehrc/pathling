@@ -44,7 +44,7 @@ spark-warehouse
 pathling-server/.idea
 pathling-server/.mvn
 pathling-server/warehouse
-pathling-server/src/test/resources/test-data/fhir
+pathling-server/src/test/resources/test-data
 pathling-server/client-tests
 
 *-local.yml

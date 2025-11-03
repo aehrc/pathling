@@ -21,6 +21,7 @@
     <pathling.nettyVersion>4.1.114.Final</pathling.nettyVersion>
     <pathling.testSetup.skip>true</pathling.testSetup.skip>
     <pathling.jacksonVersion>2.18.1</pathling.jacksonVersion>
+    <pathling.testDataVersion>1.0.0</pathling.testDataVersion>
 
     <project.majorVersion>9</project.majorVersion>
 
@@ -55,7 +56,7 @@
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>test-data</artifactId>
-      <version>1.0.0</version>
+      <version>${pathling.testDataVersion}</version>
       <scope>test</scope>
     </dependency>
 
@@ -252,6 +253,25 @@
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>unpack-test-data</id>
+            <phase>generate-test-resources</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <includeGroupIds>au.csiro.pathling</includeGroupIds>
+              <includeArtifactIds>test-data</includeArtifactIds>
+              <excludeTransitive>true</excludeTransitive>
+              <outputDirectory>${project.basedir}/src/test/resources/test-data</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
