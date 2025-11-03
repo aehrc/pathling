@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.operations.import_;
 
+import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
+
 import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.async.Job;
 import au.csiro.pathling.async.JobRegistry;
@@ -24,27 +26,28 @@ import au.csiro.pathling.async.PreAsyncValidation;
 import au.csiro.pathling.async.RequestTag;
 import au.csiro.pathling.async.RequestTagFactory;
 import au.csiro.pathling.errors.AccessDeniedError;
-import au.csiro.pathling.operations.export.ExportRequest;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import jakarta.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.Parameters;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-import java.util.Optional;
-
-import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 
 /**
- * Enables the bulk import of data into the server.
+ * Enables the bulk import of data into the server, supporting both FHIR Parameters and JSON (SMART
+ * Bulk Data Import) request formats.
  *
  * @author John Grimes
  */
@@ -59,32 +62,36 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
   private final RequestTagFactory requestTagFactory;
   private final JobRegistry jobRegistry;
   private final ImportResultRegistry importResultRegistry;
+  private final ObjectMapper objectMapper;
 
   /**
    * @param executor An {@link ImportExecutor} to use in executing import requests
+   * @param importOperationValidator validator for import requests
+   * @param requestTagFactory factory for creating request tags
+   * @param jobRegistry registry for async jobs
+   * @param importResultRegistry registry for import results
    */
   public ImportProvider(@Nonnull final ImportExecutor executor,
-      ImportOperationValidator importOperationValidator, RequestTagFactory requestTagFactory,
-      JobRegistry jobRegistry, ImportResultRegistry importResultRegistry) {
+      final ImportOperationValidator importOperationValidator,
+      final RequestTagFactory requestTagFactory,
+      final JobRegistry jobRegistry,
+      final ImportResultRegistry importResultRegistry) {
     this.executor = executor;
     this.importOperationValidator = importOperationValidator;
     this.requestTagFactory = requestTagFactory;
     this.jobRegistry = jobRegistry;
     this.importResultRegistry = importResultRegistry;
+    this.objectMapper = new ObjectMapper();
   }
 
   /**
-   * Accepts a request of type `application/fhir+ndjson` and overwrites the warehouse tables with
-   * the contents. Does not currently support any sort of incremental update or appending to the
-   * warehouse tables.
-   * <p>
-   * Each input will be treated as a file containing only one type of resource type. Bundles are not
-   * currently given any special treatment. Each resource type is assumed to appear in the list only
-   * once - multiple occurrences will result in the last input overwriting the previous ones.
+   * Bulk import operation supporting both FHIR Parameters (application/fhir+json) and JSON
+   * (application/json) request formats aligned with the SMART Bulk Data Import specification.
    *
-   * @param parameters A FHIR {@link Parameters} object describing the import request
+   * @param parameters A FHIR {@link Parameters} object describing the import request (when using
+   * application/fhir+json)
    * @param requestDetails the {@link ServletRequestDetails} containing HAPI inferred info
-   * @return A FHIR {@link OperationOutcome} resource describing the result
+   * @return A FHIR {@link Parameters} resource describing the result
    */
   @Operation(name = "$import")
   @SuppressWarnings("UnusedReturnValue")
@@ -94,26 +101,28 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
       @SuppressWarnings("unused") @Nullable final ServletRequestDetails requestDetails) {
 
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication);
-    Job<ImportRequest> ownJob = jobRegistry.get(ownTag);
+    final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication);
+    final Job<ImportRequest> ownJob = jobRegistry.get(ownTag);
     if (ownJob == null) {
       throw new InvalidRequestException("Missing 'Prefer: respond-async' header value.");
     }
     // Check that the user requesting the result is the same user that started the job.
     final Optional<String> currentUserId = getCurrentUserId(authentication);
     if (currentUserId.isPresent() && !ownJob.getOwnerId().equals(currentUserId)) {
-      throw new AccessDeniedError("The requested result is not owned by the current user '%s'.".formatted(currentUserId.orElse("null")));
+      throw new AccessDeniedError(
+          "The requested result is not owned by the current user '%s'.".formatted(
+              currentUserId.orElse("null")));
     }
 
-    ImportRequest importRequest = ownJob.getPreAsyncValidationResult();
+    final ImportRequest importRequest = ownJob.getPreAsyncValidationResult();
     if (ownJob.isCancelled()) {
       return null;
     }
-    
+
     importResultRegistry.put(ownJob.getId(), new ImportResult(ownJob.getOwnerId()));
-    
-    ImportResponse importResponse = executor.execute(importRequest, ownJob.getId());
-    
+
+    final ImportResponse importResponse = executor.execute(importRequest, ownJob.getId());
+
     return importResponse.toOutput();
   }
 
@@ -121,9 +130,54 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
   public PreAsyncValidationResult<ImportRequest> preAsyncValidate(
       final ServletRequestDetails servletRequestDetails, final Object[] params)
       throws InvalidRequestException {
-    return importOperationValidator.validateRequest(
-        servletRequestDetails,
-        (Parameters) params[0]
-    );
+    // Detect content type to determine which validator to use.
+    final String contentType = getContentType(servletRequestDetails);
+
+    if (contentType != null && contentType.toLowerCase().contains("application/json")) {
+      // Handle JSON (SMART Bulk Data Import) format.
+      return validateJsonRequest(servletRequestDetails);
+    } else {
+      // Handle FHIR Parameters (application/fhir+json) format.
+      return importOperationValidator.validateParametersRequest(
+          servletRequestDetails,
+          (Parameters) params[0]
+      );
+    }
+  }
+
+  /**
+   * Validates a JSON import request (SMART Bulk Data Import format).
+   *
+   * @param servletRequestDetails the servlet request details
+   * @return the validation result
+   */
+  private PreAsyncValidationResult<ImportRequest> validateJsonRequest(
+      final ServletRequestDetails servletRequestDetails) {
+    try {
+      // Read the raw request body.
+      final HttpServletRequest httpRequest = servletRequestDetails.getServletRequest();
+      final ImportManifest manifest = objectMapper.readValue(
+          httpRequest.getInputStream(),
+          ImportManifest.class
+      );
+      return importOperationValidator.validateJsonRequest(servletRequestDetails, manifest);
+    } catch (final IOException e) {
+      throw new InvalidUserInputError("Failed to parse JSON request body: " + e.getMessage(), e);
+    }
+  }
+
+  /**
+   * Extracts the Content-Type header from the request.
+   *
+   * @param servletRequestDetails the servlet request details
+   * @return the content type, or null if not present
+   */
+  @Nullable
+  private String getContentType(final ServletRequestDetails servletRequestDetails) {
+    final HttpServletRequest httpRequest = servletRequestDetails.getServletRequest();
+    if (httpRequest != null) {
+      return httpRequest.getContentType();
+    }
+    return null;
   }
 }

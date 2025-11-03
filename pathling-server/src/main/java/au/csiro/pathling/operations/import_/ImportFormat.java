@@ -20,20 +20,21 @@ package au.csiro.pathling.operations.import_;
 import lombok.Getter;
 
 /**
- * Represents the supported formats for resource import.
+ * Represents the supported formats for resource import. MIME type variants (e.g.,
+ * "application/fhir+ndjson") are mapped to these codes by the ImportOperationValidator.
  */
 @Getter
 public enum ImportFormat {
   /**
-   * Newline-delimited JSON (NDJSON) format.
+   * Newline-delimited JSON (NDJSON) format. MIME type: application/fhir+ndjson.
    */
   NDJSON("ndjson"),
   /**
-   * Parquet format.
+   * Parquet format (Pathling extension). MIME type: application/parquet.
    */
   PARQUET("parquet"),
   /**
-   * Delta Lake format.
+   * Delta Lake format (Pathling extension). MIME type: application/delta.
    */
   DELTA("delta");
 
@@ -44,9 +45,10 @@ public enum ImportFormat {
   }
 
   /**
-   * Resolve an ImportFormat enum from its string code.
+   * Resolve an ImportFormat enum from its string code. Note: MIME type variants (e.g.,
+   * "application/fhir+ndjson") should be mapped by the validator before calling this method.
    *
-   * @param code The string code to resolve.
+   * @param code The string code to resolve (simple format codes only).
    * @return An ImportFormat if a match is found.
    * @throws IllegalArgumentException if no match can be found.
    */
@@ -58,5 +60,5 @@ public enum ImportFormat {
     }
     throw new IllegalArgumentException("Unsupported format: " + code);
   }
-  
+
 }

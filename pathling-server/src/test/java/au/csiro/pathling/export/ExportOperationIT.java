@@ -49,6 +49,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -242,14 +243,15 @@ class ExportOperationIT {
 
     Map<String, List<? extends IBaseResource>> downloadedResources = new HashMap<>();
     actualFileInfos.forEach(fileInfo -> {
-      String fileContent = webTestClient.get()
+      EntityExchangeResult<byte[]> result = webTestClient.get()
           .uri(fileInfo.absoluteUrl())
           .exchange()
           .expectStatus().isOk()
-          .expectBody(String.class)
-          .returnResult()
-          .getResponseBody();
-      assertThat(fileContent).isNotNull();
+          .expectBody()
+          .returnResult();
+      byte[] responseBytes = result.getResponseBodyContent();
+      assertThat(responseBytes).isNotNull();
+      String fileContent = new String(responseBytes, java.nio.charset.StandardCharsets.UTF_8);
       List<Resource> resources = ExportOperationUtil.parseNDJSON(parser, fileContent,
           fileInfo.fhirResourceType());
       downloadedResources.put(fileInfo.fhirResourceType(), resources);
