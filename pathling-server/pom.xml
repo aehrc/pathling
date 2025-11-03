@@ -30,7 +30,7 @@
     <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
     <pathling.dockerArchitecture>arm64</pathling.dockerArchitecture>
     <jmh.version>1.37</jmh.version>
-    <pathling.dockerBaseImage>amazoncorretto:17</pathling.dockerBaseImage>
+    <pathling.dockerBaseImage>amazoncorretto:21</pathling.dockerBaseImage>
   </properties>
 
   <dependencies>
@@ -504,6 +504,14 @@
                   </platform>
                 </platforms>
               </from>
+              <to>
+                <image>${pathling.fhirServerDockerRepo}</image>
+                <tags>
+                  <tag>${pathling.fhirServerDockerTag}</tag>
+                  <tag>${project.version}</tag>
+                  <tag>${project.majorVersion}</tag>
+                </tags>
+              </to>
               <container>
                 <jvmFlags>
                   <jvmFlag>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</jvmFlag>
@@ -526,16 +534,6 @@
                 <goals>
                   <goal>build</goal>
                 </goals>
-                <configuration>
-                  <to>
-                    <image>${pathling.fhirServerDockerRepo}</image>
-                    <tags>
-                      <tag>${pathling.fhirServerDockerTag}</tag>
-                      <tag>${project.version}</tag>
-                      <tag>${project.majorVersion}</tag>
-                    </tags>
-                  </to>
-                </configuration>
               </execution>
             </executions>
           </plugin>
