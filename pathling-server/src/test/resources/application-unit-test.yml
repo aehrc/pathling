@@ -1,8 +1,7 @@
 spring:
   main:
     allow-bean-definition-overriding: true
-  banner:
-    location: classpath:banner.txt
+    banner-mode: off
 
 # Actuator endpoints let you monitor and interact with your application.
 # <https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html#actuator.endpoints>
@@ -88,7 +87,7 @@ pathling:
 
       # When GA4GH passport authentication is enabled, this option configures the list of endpoints
       # that are allowed to issue visas.
-      allowedVisaIssuers: [ ]
+      allowedVisaIssuers: []
 
   # This section configures HTTP caching response headers.
   httpCaching:
@@ -109,8 +108,8 @@ pathling:
   # This section configures the CORS functionality of the server.
   # For more information, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
   cors:
-    allowedOrigins: [ ]
-    allowedOriginPatterns: [ ]
+    allowedOrigins: []
+    allowedOriginPatterns: []
     allowedMethods:
       - OPTIONS
       - GET
@@ -133,8 +132,8 @@ pathling:
     # Enables asynchronous processing for those operations that support it,
     # when explicitly requested by an HTTP client.
     enabled: true
-    
-    #  A subset of `pathling.httpCaching.vary` HTTP headers, which should 
+
+    #  A subset of `pathling.httpCaching.vary` HTTP headers, which should
     #  be  excluded from determining that asynchronous requests are the equivalent
     #  and can be routed to the same asynchronous job.
     varyHeadersExcludedFromCacheKey:
@@ -188,8 +187,7 @@ fs:
       name: magic
       magic:
         enabled: true
-debug: false
+
 logging:
   level:
-    root: INFO
-    au.csiro.pathling: INFO
+    au.csiro.pathling: WARN

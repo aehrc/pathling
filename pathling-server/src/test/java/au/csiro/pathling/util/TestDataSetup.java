@@ -85,7 +85,7 @@ public class TestDataSetup {
 
   public static void logDirectoryContents(Path directory) {
     try {
-      log.info("Directory tree for: {}", directory);
+      log.debug("Directory tree for: {}", directory);
       List<Path> paths = Files.walk(directory)
           .sorted()
           .toList();
@@ -131,7 +131,7 @@ public class TestDataSetup {
         tree.append("/");
       }
 
-      log.info(tree.toString());
+      log.debug(tree.toString());
     }
   }
 

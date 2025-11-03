@@ -1,7 +1,3 @@
-debug: true
-pathling:
-  storage:
-    databaseName: delta
 spring:
   main:
     banner-mode: off

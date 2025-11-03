@@ -38,6 +38,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.spark.sql.SparkSession;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -55,6 +58,7 @@ import org.springframework.security.oauth2.jwt.JwtClaimAccessor;
 
 @SpringBootUnitTest
 @MockBean(ExportResultRegistry.class)
+@Slf4j
 class AsyncAspectTest {
 
   @MockBean
@@ -68,7 +72,7 @@ class AsyncAspectTest {
 
   @MockBean
   ProceedingJoinPoint proceedingJoinPoint;
-  
+
   @MockBean
   JobProvider jobProvider;
 
@@ -92,6 +96,18 @@ class AsyncAspectTest {
 
   @BeforeEach
   void setUp() throws Throwable {
+    LoggerContext context = (LoggerContext) LogManager.getContext(false);
+
+    // Print the configuration location
+    log.warn("Configuration file: " + context.getConfigLocation());
+
+    // Print the configuration source
+    log.warn("Configuration: " + context.getConfiguration());
+
+    // If you want to see all loggers and their levels
+    context.getConfiguration().getLoggers().forEach((name, config) -> {
+      log.warn("Logger: " + name + " -> " + config.getLevel());
+    });
 
     // Wire the asyncAspects and it's dependencies
     final ServerConfiguration serverConfiguration = createServerConfiguration(
