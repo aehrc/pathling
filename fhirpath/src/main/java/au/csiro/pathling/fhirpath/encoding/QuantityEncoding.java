@@ -284,7 +284,7 @@ public class QuantityEncoding {
    * This method converts a FhirPathQuantity into the Row representation used by Spark. It handles
    * canonicalization for both UCUM units and calendar duration units.
    *
-   * @param quantity the FhirpathQuantity to encode
+   * @param quantity the FhirPathQuantity to encode
    * @return the Row representation of the quantity
    */
   @Nonnull

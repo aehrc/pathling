@@ -61,7 +61,7 @@ public enum CalendarDurationUnit implements FhirPathUnit {
   /**
    * APPROXIMATION: Calendar years are assumed to be 365 days for conversion purposes.
    */
-  YEAR("year", false, "a", new BigDecimal("31536000000")),      // 365 * 24 * 60 * 60 * 1000
+  YEAR("year", false, "a", new BigDecimal("31536000000")),      // 365 * 24 * 60 * 60 * 1000 (assumes 365 days/year, does NOT account for leap years; approximation per FHIRPath spec)
   /**
    * APPROXIMATION: Calendar months are assumed to be 30 days for conversion purposes.
    */

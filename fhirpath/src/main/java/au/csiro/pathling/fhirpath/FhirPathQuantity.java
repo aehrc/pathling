@@ -282,8 +282,8 @@ public class FhirPathQuantity {
   public String toString() {
     final String formattedValue = getValue().stripTrailingZeros().toPlainString();
     return switch (unit) {
-      case UcumUnit ignored -> formattedValue + " '" + unitName + "'";
-      case CalendarDurationUnit ignored -> formattedValue + " " + unitName;
+      case UcumUnit ignore -> formattedValue + " '" + unitName + "'";
+      case CalendarDurationUnit ignore -> formattedValue + " " + unitName;
     };
   }
 }

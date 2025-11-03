@@ -172,17 +172,10 @@ public class QuantityCollection extends Collection implements Comparable, String
 
   /**
    * Converts this quantity to the specified unit.
-   * <p>
-   * Returns empty if the unit does not match (exact string matching on the 'unit' field). Full UCUM
-   * unit conversion is not yet implemented (see issue #2504). Calendar duration conversion is not
-   * yet implemented (see issue #2505).
-   * <p>
-   * Per FHIRPath specification: "Implementations are not required to support a complete UCUM
-   * implementation, and may return empty when the unit argument is used and it is different than
-   * the input quantity unit."
    *
    * @param targetUnit The target unit as a Collection (should be a StringCollection)
-   * @return QuantityCollection with matching unit, or EmptyCollection if units don't match
+   * @return QuantityCollection with matching unit, or EmptyCollection if the conversion is not
+   * possible.
    */
   @Nonnull
   public Collection toUnit(@Nonnull final Collection targetUnit) {
@@ -194,13 +187,6 @@ public class QuantityCollection extends Collection implements Comparable, String
    * Checks if this quantity can be converted to the specified unit. Follows the same rules as
    * FHIRPath convertibleToXXX functions, returning a BooleanCollection true/false value for
    * non-empty input collections or an empty boolean collection if the input is empty.
-   * <p>
-   * Returns true for exact unit match, false otherwise. Full UCUM unit conversion is not yet
-   * implemented (see issue #2504). Calendar duration conversion is not yet implemented (see issue
-   * #2505).
-   * <p>
-   * Per FHIRPath specification: "Implementations are not required to support a complete UCUM
-   * implementation."
    *
    * @param targetUnit The target unit as a Collection (should be a StringCollection)
    * @return BooleanCollection indicating if conversion is possible

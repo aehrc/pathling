@@ -195,8 +195,8 @@ public class ConversionFunctions {
    * <b>UCUM Conversion:</b> Full UCUM unitCode conversion is supported for compatible units (e.g., 'kg'
    * to 'g', 'wk' to 'd', 'cm' to 'mm'). Incompatible units (e.g., mass to length) return empty.
    * <p>
-   * <b>Note:</b> Calendar duration conversions (e.g., days to hours, years to months) are tracked
-   * in issue #2505 and will be added in a future enhancement.
+   * <b>Note:</b> Calendar duration conversions (e.g., days to hours, years to months) are supported
+   * via {@code CalendarDurationUnit.conversionFactorTo}. If any specific enhancements remain, see issue #2505.
    *
    * @param input The input collection
    * @param unit Optional target unitCode for conversion (null if not specified)
@@ -348,8 +348,7 @@ public class ConversionFunctions {
    * (e.g., 'kg' to 'g', 'wk' to 'd', 'cm' to 'mm'). Incompatible units (e.g., mass to length)
    * return false.
    * <p>
-   * <b>Note:</b> Calendar duration conversions (e.g., days to hours, years to months) are tracked
-   * in issue #2505 and will be added in a future enhancement.
+   * <b>Note:</b> Calendar duration conversions (e.g., days to hours, years to months) are supported.
    *
    * @param input The input collection
    * @param unit Optional target unitCode for validation (null if not specified)
