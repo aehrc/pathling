@@ -32,7 +32,7 @@ public class TestDataSetup {
 
   public static void staticCopyTestDataToTempDir(Path tempDir, String... resourceTypes) {
     try {
-      Path deltaPath = Path.of("src/test/resources/test-data/fhir/delta");
+      Path deltaPath = Path.of("src/test/resources/test-data/bulk/fhir/delta");
       if (resourceTypes == null || resourceTypes.length == 0) {
         File deltaTestData = deltaPath.toFile();
         FileUtils.copyDirectoryToDirectory(deltaTestData, tempDir.toFile());
