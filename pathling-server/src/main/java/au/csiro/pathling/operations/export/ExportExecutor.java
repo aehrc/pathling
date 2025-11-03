@@ -5,6 +5,7 @@ import static org.apache.spark.sql.functions.array_union;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.map;
 import static org.apache.spark.sql.functions.struct;
 
 import au.csiro.pathling.config.ServerConfiguration;
@@ -37,6 +38,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.MapType;
 import org.apache.spark.sql.types.StructField;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -101,16 +103,16 @@ public class ExportExecutor {
 
   private @NotNull QueryableDataSource checkResourceAccess(AccessType accessType,
       QueryableDataSource dataSource) {
-    if(!serverConfiguration.getAuth().isEnabled()) {
+    if (!serverConfiguration.getAuth().isEnabled()) {
       return dataSource;
     }
     return dataSource.filterByResourceType(resourceType -> {
-      if(!SecurityAspect.hasAuthority(PathlingAuthority.resourceAccess(accessType, ResourceType.fromCode(resourceType)))) {
+      if (!SecurityAspect.hasAuthority(
+          PathlingAuthority.resourceAccess(accessType, ResourceType.fromCode(resourceType)))) {
         log.debug("Insufficient {} resource access permissions for {}. Hiding resource from user.",
             accessType.getCode(), resourceType);
         return false;
-      }
-      else {
+      } else {
         return true;
       }
     });
@@ -262,17 +264,18 @@ public class ExportExecutor {
     // Assume that every resource from the _type param is accessible
     Map<String, Boolean> perResourceAuth = exportRequest.includeResourceTypeFilters().stream()
         .collect(Collectors.toMap(ResourceType::toCode, resourceType -> true));
-    if(serverConfiguration.getAuth().isEnabled()) {
+    if (serverConfiguration.getAuth().isEnabled()) {
       // Provide actual authority access for each resource type
       exportRequest.includeResourceTypeFilters().stream()
-          .map(resourceType -> Map.entry(resourceType, PathlingAuthority.resourceAccess(AccessType.READ, resourceType)))
+          .map(resourceType -> Map.entry(resourceType,
+              PathlingAuthority.resourceAccess(AccessType.READ, resourceType)))
           .forEach(entry -> {
             // handling=strict and auth exists -> throw error on wrong auth
-            if(!exportRequest.lenient()) {
+            if (!exportRequest.lenient()) {
               SecurityAspect.checkHasAuthority(entry.getValue());
-            }
-            else {
-              perResourceAuth.put(entry.getKey().toCode(), SecurityAspect.hasAuthority(entry.getValue()));
+            } else {
+              perResourceAuth.put(entry.getKey().toCode(),
+                  SecurityAspect.hasAuthority(entry.getValue()));
             }
           });
     }
@@ -283,7 +286,8 @@ public class ExportExecutor {
         // the delta lake only contains resources that the user is allowed to see (it was filtered earlier)
         return true;
       }
-      return perResourceAuth.getOrDefault(resourceType, false) && exportRequest.includeResourceTypeFilters()
+      return perResourceAuth.getOrDefault(resourceType, false)
+          && exportRequest.includeResourceTypeFilters()
           .contains(Enumerations.ResourceType.fromCode(resourceType));
     });
   }
@@ -295,7 +299,13 @@ public class ExportExecutor {
             return col(colName);
           } else {
             DataType expectedType = dataset.schema().apply(colName).dataType();
-            return lit(null).cast(expectedType).as(colName);
+            // For MapType, create an empty map instead of null to avoid NullPointerException
+            // when Spark tries to convert null Scala Maps to Java Maps.
+            if (expectedType instanceof MapType) {
+              return map().cast(expectedType).as(colName);
+            } else {
+              return lit(null).cast(expectedType).as(colName);
+            }
           }
         })
         .toArray(Column[]::new);

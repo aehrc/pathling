@@ -7,10 +7,10 @@ import au.csiro.pathling.async.SparkJobListener;
 import au.csiro.pathling.async.StageMap;
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.operations.export.ExportResultRegistry;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.operations.export.ExportResultRegistry;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
@@ -40,13 +40,13 @@ public class FhirServerTestConfiguration {
   public JobRegistry jobRegistry() {
     return new JobRegistry();
   }
-  
+
   @Primary
   @ConditionalOnMissingBean
   @Bean
   public QueryableDataSource deltaLake(PathlingContext pathlingContext) {
     return new DataSourceBuilder(pathlingContext).delta(
-        Path.of("src/test/resources/test-data/fhir/delta").toAbsolutePath().toString());
+        Path.of("src/test/resources/test-data/bulk/fhir/delta").toAbsolutePath().toString());
   }
 
   @Bean
@@ -101,14 +101,14 @@ public class FhirServerTestConfiguration {
   public StageMap stageMap() {
     return new StageMap();
   }
-  
+
   @Primary
   @ConditionalOnMissingBean
   @Bean
   public TestDataSetup testDataSetup(PathlingContext pathlingContext) {
     return new TestDataSetup(pathlingContext);
   }
-  
+
   @Primary
   @ConditionalOnMissingBean
   @Bean(destroyMethod = "shutdown")
@@ -117,15 +117,16 @@ public class FhirServerTestConfiguration {
     executor.initialize();
     return executor;
   }
-  
+
   @Primary
   @ConditionalOnMissingBean
   @Bean
-  public CacheableDatabase cacheableDatabase(SparkSession sparkSession, @Value("${pathling.storage.warehouseUrl}") String warehouseUrl,
+  public CacheableDatabase cacheableDatabase(SparkSession sparkSession,
+      @Value("${pathling.storage.warehouseUrl}") String warehouseUrl,
       ThreadPoolTaskExecutor threadPoolTaskExecutor) {
     return new CacheableDatabase(sparkSession, warehouseUrl, threadPoolTaskExecutor);
   }
-  
+
   @Primary
   @ConditionalOnMissingBean
   @Bean
@@ -133,7 +134,7 @@ public class FhirServerTestConfiguration {
       CacheableDatabase cacheableDatabase) {
     return new RequestTagFactory(cacheableDatabase, serverConfiguration);
   }
-  
+
   @Bean
   @ConditionalOnMissingBean
   @Primary
@@ -150,7 +151,7 @@ public class FhirServerTestConfiguration {
         warehouseUrl
     );
   }
-  
+
   @Bean
   @Primary
   @ConditionalOnMissingBean
@@ -158,7 +159,7 @@ public class FhirServerTestConfiguration {
   public ServerConfiguration serverConfiguration() {
     return new ServerConfiguration();
   }
-  
+
   @Bean
   @Primary
   @ConditionalOnMissingBean

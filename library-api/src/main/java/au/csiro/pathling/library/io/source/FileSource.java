@@ -183,7 +183,7 @@ public abstract class FileSource extends DatasetSource {
       return groupedByDefaultNamingAssumption.entrySet().stream()
           .collect(Collectors.toMap(
               Map.Entry::getKey,
-              entry -> fileNameMapper.apply(entry.getKey())
+              Map.Entry::getValue
           ));
 
     } catch (final IOException e) {
