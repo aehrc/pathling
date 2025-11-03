@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
-import au.csiro.pathling.fhirpath.unit.CustomUnit;
 import au.csiro.pathling.fhirpath.unit.FhirPathUnit;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
 import jakarta.annotation.Nonnull;
@@ -26,9 +25,13 @@ import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import jakarta.annotation.Nullable;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
+
+import static java.util.Objects.isNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Represents a FHIRPath Quantity value.
@@ -174,16 +177,42 @@ public class FhirPathQuantity {
   }
 
   /**
+   * Factory method for creating a quantity from a FhirPathUnit.
+   *
+   * @param value the numeric value
+   * @param unit the FhirPathUnit (UCUM, calendar duration, or custom)
+   * @return quantity with the specified value and unit
+   */
+  @Nullable
+  public static FhirPathQuantity of(@Nullable BigDecimal value, @Nullable final String system,
+      @Nullable String code, @Nullable String unit) {
+
+    if (isNull(value) || isNull(system) || isNull(code)) {
+      return null;
+    }
+    return switch (requireNonNull(system)) {
+      case UCUM_SYSTEM_URI -> ofUCUM(requireNonNull(value), requireNonNull(code));
+      case FHIRPATH_CALENDAR_DURATION_SYSTEM_URI ->
+          ofCalendar(value, CalendarDurationUnit.parseString(code),
+              unit != null
+              ? unit
+              : code);
+      default -> null;
+    };
+  }
+
+
+  /**
    * Gets the FhirPathUnit representation of this quantity's unit.
    *
    * @return the FhirPathUnit (Ucum, CalendarDuration, or Custom)
    */
   @Nonnull
-  public FhirPathUnit getFhirpathUnit() {
+  public FhirPathUnit getFhirPathUnit() {
     return switch (system) {
       case FHIRPATH_CALENDAR_DURATION_SYSTEM_URI -> CalendarDurationUnit.parseString(code);
       case UCUM_SYSTEM_URI -> new UcumUnit(code);
-      default -> new CustomUnit(system, code);
+      default -> throw new IllegalStateException("Unknown system: " + system);
     };
   }
 
@@ -227,14 +256,27 @@ public class FhirPathQuantity {
    */
   @Nonnull
   public Optional<FhirPathQuantity> convertToUnit(@Nonnull final String unitName, int precision) {
-    final FhirPathUnit sourceUnit = getFhirpathUnit();
+    final FhirPathUnit sourceUnit = getFhirPathUnit();
     final FhirPathUnit targetUnit = FhirPathUnit.fromString(unitName);
     if (targetUnit.equals(sourceUnit)) {
       return Optional.of(FhirPathQuantity.ofUnit(getValue(), targetUnit, unitName));
     } else {
-      return FhirPathUnit.conversionFactorTo(getFhirpathUnit(), targetUnit)
+      return FhirPathUnit.conversionFactorTo(getFhirPathUnit(), targetUnit)
           .map(cf -> FhirPathQuantity.ofUnit(cf.apply(getValue(), precision), targetUnit,
               unitName));
+    }
+  }
+
+  @Override
+  @Nonnull
+  public String toString() {
+    final String formattedValue = getValue().stripTrailingZeros().toPlainString();
+    if (UCUM_SYSTEM_URI.equals(system)) {
+      return formattedValue + " '" + code + "'";
+    } else if (FHIRPATH_CALENDAR_DURATION_SYSTEM_URI.equals(system)) {
+      return formattedValue + " " + unit;
+    } else {
+      throw new IllegalArgumentException("Unknown system: " + system);
     }
   }
 }

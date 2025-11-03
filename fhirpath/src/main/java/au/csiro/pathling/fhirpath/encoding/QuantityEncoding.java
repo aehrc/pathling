@@ -121,13 +121,16 @@ public class QuantityEncoding {
    * @param row the row to decode
    * @return the resulting FhirPathQuantity
    */
-  @Nonnull
-  public static FhirPathQuantity decode(@Nonnull final Row row) {
+  @Nullable
+  public static FhirPathQuantity decode(@Nullable final Row row) {
+    if (row == null) {
+      return null;
+    }
     // Extract value with scale handling
     @Nullable final Integer scale = !row.isNullAt(2)
                                     ? row.getInt(2)
                                     : null;
-    final BigDecimal value = Optional.ofNullable(row.getDecimal(1))
+    @Nullable final BigDecimal value = Optional.ofNullable(row.getDecimal(1))
         .map(bd -> nonNull(scale) && bd.scale() > scale
                    ? bd.setScale(scale, RoundingMode.HALF_UP)
                    : bd)
@@ -136,23 +139,7 @@ public class QuantityEncoding {
     @Nullable final String unit = row.getString(4);
     @Nullable final String system = row.getString(5);
     @Nullable final String code = row.getString(6);
-
-    if (value == null || system == null || code == null) {
-      throw new IllegalArgumentException("Cannot decode quantity with null value, system, or code");
-    }
-
-    // Create FhirPathQuantity based on system
-    if (FhirPathQuantity.UCUM_SYSTEM_URI.equals(system)) {
-      return FhirPathQuantity.ofUCUM(value, code);
-    } else if (FhirPathQuantity.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI.equals(system)) {
-      return FhirPathQuantity.ofCalendar(value,
-          CalendarDurationUnit.parseString(code),
-          unit != null
-          ? unit
-          : code);
-    } else {
-      throw new IllegalArgumentException("Unsupported quantity system: " + system);
-    }
+    return FhirPathQuantity.of(value, system, code, unit);
   }
 
   /**

@@ -28,15 +28,13 @@ import java.util.Optional;
  * <ul>
  *   <li>{@link UcumUnit} - UCUM (Unified Code for Units of Measure) units</li>
  *   <li>{@link CalendarDurationUnit} - FHIRPath calendar duration units (year, month, week, etc.)</li>
- *   <li>{@link CustomUnit} - Custom units from other systems</li>
  * </ul>
  * <p>
  * Units can be converted between compatible types using the {@link #conversionFactorTo} method,
  * which computes conversion factors for both same-type conversions (UCUM-to-UCUM, calendar-to-calendar)
  * and cross-type conversions (calendar-to-UCUM, UCUM-to-calendar) where applicable.
  */
-public sealed interface FhirPathUnit permits UcumUnit, CalendarDurationUnit,
-    CustomUnit {
+public sealed interface FhirPathUnit permits UcumUnit, CalendarDurationUnit {
 
   /**
    * The precision (number of decimal places) to use when computing unit conversions.
@@ -82,7 +80,6 @@ public sealed interface FhirPathUnit permits UcumUnit, CalendarDurationUnit,
    * <p>
    * Conversions return empty when:
    * <ul>
-   *   <li>Either unit is a {@link CustomUnit}</li>
    *   <li>Units measure incompatible dimensions (e.g., mass vs volume)</li>
    *   <li>Non-definite calendar units are involved in certain conversions</li>
    * </ul>
@@ -100,14 +97,11 @@ public sealed interface FhirPathUnit permits UcumUnit, CalendarDurationUnit,
       case CalendarDurationUnit cdUnitSource -> switch (targetUnit) {
         case CalendarDurationUnit cdUnitTarget -> cdUnitSource.conversionFactorTo(cdUnitTarget);
         case UcumUnit ucumUnitTarget -> cdUnitSource.conversionFactorTo(ucumUnitTarget);
-        default -> Optional.empty();
       };
       case UcumUnit ucumUnitSource -> switch (targetUnit) {
         case UcumUnit ucumUnitTarget -> ucumUnitSource.conversionFactorTo(ucumUnitTarget);
         case CalendarDurationUnit cdUnitTarget -> cdUnitTarget.conversionFactorFrom(ucumUnitSource);
-        default -> Optional.empty();
       };
-      default -> Optional.empty();
     };
   }
 
@@ -121,7 +115,6 @@ public sealed interface FhirPathUnit permits UcumUnit, CalendarDurationUnit,
    *   <li>If not recognized as a calendar duration, assumes it's a UCUM unit code</li>
    * </ol>
    * <p>
-   * This method never returns a {@link CustomUnit} - custom units must be created explicitly
    * using their constructor with both system and code parameters.
    * <p>
    * Examples:

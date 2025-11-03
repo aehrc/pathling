@@ -31,8 +31,8 @@ import java.util.Set;
 /**
  * Enumeration of valid FHIRPath calendar duration units from year to millisecond.
  * <p>
- * Calendar duration units represent time periods as defined in the FHIRPath specification.
- * These units are divided into two categories:
+ * Calendar duration units represent time periods as defined in the FHIRPath specification. These
+ * units are divided into two categories:
  * <ul>
  *   <li><b>Definite duration units</b>: second, millisecond - have fixed lengths and can be
  *       converted to UCUM equivalents</li>
@@ -46,19 +46,34 @@ import java.util.Set;
  *   <li>A canonical code (e.g., "year", "second")</li>
  *   <li>A UCUM equivalent code (e.g., "a" for year, "s" for second)</li>
  *   <li>A definite/non-definite classification</li>
+ *   <li>A millisecond conversion factor for unit conversions</li>
  * </ul>
  * <p>
  * Calendar duration units support both singular and plural forms (e.g., "year" and "years").
+ * <p>
+ * <b>IMPORTANT:</b> For non-definite duration units (year, month), the millisecond values are
+ * <b>approximations</b> as specified by the FHIRPath specification:
+ * <ul>
+ *   <li>1 year = 365 days (does not account for leap years)</li>
+ *   <li>1 month = 30 days (does not account for varying month lengths)</li>
+ * </ul>
+ * These approximations are used for conversion purposes only, not for calendar-aware arithmetic.
  */
 public enum CalendarDurationUnit implements FhirPathUnit {
-  YEAR("year", false, "a"),
-  MONTH("month", false, "mo"),
-  WEEK("week", false, "wk"),
-  DAY("day", false, "d"),
-  HOUR("hour", false, "h"),
-  MINUTE("minute", false, "min"),
-  SECOND("second", true, "s"),
-  MILLISECOND("millisecond", true, "ms");
+  /**
+   * APPROXIMATION: Calendar years are assumed to be 365 days for conversion purposes.
+   */
+  YEAR("year", false, "a", new BigDecimal("31536000000")),      // 365 * 24 * 60 * 60 * 1000
+  /**
+   * APPROXIMATION: Calendar months are assumed to be 30 days for conversion purposes.
+   */
+  MONTH("month", false, "mo", new BigDecimal("2592000000")),    // 30 * 24 * 60 * 60 * 1000
+  WEEK("week", false, "wk", new BigDecimal("604800000")),       // 7 * 24 * 60 * 60 * 1000
+  DAY("day", false, "d", new BigDecimal("86400000")),           // 24 * 60 * 60 * 1000
+  HOUR("hour", false, "h", new BigDecimal("3600000")),          // 60 * 60 * 1000
+  MINUTE("minute", false, "min", new BigDecimal("60000")),      // 60 * 1000
+  SECOND("second", true, "s", new BigDecimal("1000")),          // 1000 ms
+  MILLISECOND("millisecond", true, "ms", BigDecimal.ONE);       // 1 ms
 
   @Nonnull
   private final String unit;
@@ -78,6 +93,15 @@ public enum CalendarDurationUnit implements FhirPathUnit {
   @Nonnull
   private final String ucumEquivalent;
 
+  /**
+   * The number of milliseconds equivalent to one unit of this calendar duration. For non-definite
+   * units (year, month), this is an approximation as specified by the FHIRPath specification (1
+   * year = 365 days, 1 month = 30 days).
+   */
+  @Getter
+  @Nonnull
+  private final BigDecimal millisecondsEquivalent;
+
   private static final Map<String, CalendarDurationUnit> NAME_MAP = new HashMap<>();
 
   static {
@@ -88,10 +112,12 @@ public enum CalendarDurationUnit implements FhirPathUnit {
   }
 
 
-  CalendarDurationUnit(@Nonnull String code, boolean definite, @Nonnull String ucumEquivalent) {
+  CalendarDurationUnit(@Nonnull String code, boolean definite, @Nonnull String ucumEquivalent,
+      @Nonnull BigDecimal millisecondsEquivalent) {
     this.unit = code;
     this.definite = definite;
     this.ucumEquivalent = ucumEquivalent;
+    this.millisecondsEquivalent = millisecondsEquivalent;
   }
 
   /**
@@ -167,8 +193,8 @@ public enum CalendarDurationUnit implements FhirPathUnit {
         .or(() ->
             // Fall back to milliseconds-based conversion for compatible units
             Optional.of(ConversionFactor.ofFraction(
-                convertToMilliseconds(this),
-                convertToMilliseconds(targetUnit)
+                getMillisecondsEquivalent(),
+                targetUnit.getMillisecondsEquivalent()
             ))
         );
   }
@@ -224,12 +250,12 @@ public enum CalendarDurationUnit implements FhirPathUnit {
    * Attempts to convert this calendar duration to its UCUM equivalent, if one exists.
    * <p>
    * Only definite duration units (second, millisecond) have UCUM equivalents because they have
-   * fixed lengths. Non-definite units (year, month, week, day, hour, minute) have variable
-   * lengths and cannot be represented as UCUM units.
+   * fixed lengths. Non-definite units (year, month, week, day, hour, minute) have variable lengths
+   * and cannot be represented as UCUM units.
    *
    * @return the equivalent UCUM unit
-   * @throws IllegalArgumentException if this calendar duration unit has no UCUM equivalent
-   * (i.e., it is not a definite duration)
+   * @throws IllegalArgumentException if this calendar duration unit has no UCUM equivalent (i.e.,
+   * it is not a definite duration)
    */
   public UcumUnit asUcum() {
     return Optional.of(this)
@@ -239,49 +265,13 @@ public enum CalendarDurationUnit implements FhirPathUnit {
   }
 
 
-  private static final BigDecimal MILLISECONDS_IN_MS = BigDecimal.ONE;
-  private static final BigDecimal SECONDS_IN_MS = MILLISECONDS_IN_MS.multiply(
-      new BigDecimal(1000));
-  private static final BigDecimal MINUTES_IN_MS = SECONDS_IN_MS.multiply(new BigDecimal(60));
-  private static final BigDecimal HOURS_IN_MS = MINUTES_IN_MS.multiply(new BigDecimal(60));
-  private static final BigDecimal DAY_IN_MS = HOURS_IN_MS.multiply(new BigDecimal(24));
-  private static final BigDecimal WEEK_IN_MS = DAY_IN_MS.multiply(new BigDecimal(7));
-  private static final BigDecimal MONTH_IN_MS = DAY_IN_MS.multiply(new BigDecimal(30));
-  private static final BigDecimal YEAR_IN_MS = DAY_IN_MS.multiply(new BigDecimal(365));
-
-  /**
-   * Converts a calendar duration unit to its equivalent in milliseconds.
-   * <ul>
-   *   <li>1 second = 1000 milliseconds</li>
-   *   <li>1 minute = 60 seconds = 60,000 milliseconds</li>
-   *   <li>1 hour = 60 minutes = 3,600,000 milliseconds</li>
-   *   <li>1 day = 24 hours = 86,400,000 milliseconds</li>
-   *   <li>1 week = 7 days = 604,800,000 milliseconds</li>
-   * </ul>
-   *
-   * @param unit the calendar duration unit
-   * @return the value in milliseconds
-   */
-  @Nonnull
-  private static BigDecimal convertToMilliseconds(@Nonnull final CalendarDurationUnit unit) {
-    return switch (unit) {
-      case MILLISECOND -> MILLISECONDS_IN_MS;
-      case SECOND -> SECONDS_IN_MS;
-      case MINUTE -> MINUTES_IN_MS;
-      case HOUR -> HOURS_IN_MS;
-      case DAY -> DAY_IN_MS;
-      case WEEK -> WEEK_IN_MS;
-      case MONTH -> MONTH_IN_MS;
-      case YEAR -> YEAR_IN_MS;
-    };
-  }
-
   private static final BigDecimal MONTHS_IN_YEAR = new BigDecimal(12);
 
   /**
    * Conversions that are incompatible and have no defined conversion factor. These conversions
    * cannot use the milliseconds-based calculation because they involve non-definite duration units
-   * with no meaningful relationship (e.g., weeks to months - a month isn't a whole number of weeks).
+   * with no meaningful relationship (e.g., weeks to months - a month isn't a whole number of
+   * weeks).
    */
   private static final Set<Pair<CalendarDurationUnit, CalendarDurationUnit>> INCOMPATIBLE_CONVERSIONS =
       Set.of(
@@ -291,7 +281,8 @@ public enum CalendarDurationUnit implements FhirPathUnit {
 
   /**
    * Special case conversions that have defined relationships different from the standard
-   * milliseconds-based calculation (e.g., year to month uses 12, not the millisecond approximation).
+   * milliseconds-based calculation (e.g., year to month uses 12, not the millisecond
+   * approximation).
    */
   private static final Map<Pair<CalendarDurationUnit, CalendarDurationUnit>, ConversionFactor> SPECIAL_CASES =
       Map.ofEntries(
