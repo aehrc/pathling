@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import java.math.BigDecimal;
 import java.util.stream.Stream;
 import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
+import au.csiro.pathling.fhirpath.unit.UcumUnit;
 import jakarta.annotation.Nullable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -33,44 +34,44 @@ class FhirPathQuantityTest {
   static Stream<Arguments> quantityLiterals() {
     return Stream.of(
         // UCUM cases
-        Arguments.of("5.4 'mg'", FhirPathQuantity.ofUCUM(new BigDecimal("5.4"), "mg")),
-        Arguments.of("-2 'kg'", FhirPathQuantity.ofUCUM(new BigDecimal("-2"), "kg")),
-        Arguments.of("1.0 'mL'", FhirPathQuantity.ofUCUM(new BigDecimal("1.0"), "mL")),
+        Arguments.of("5.4 'mg'", FhirPathQuantity.ofUcum(new BigDecimal("5.4"), "mg")),
+        Arguments.of("-2 'kg'", FhirPathQuantity.ofUcum(new BigDecimal("-2"), "kg")),
+        Arguments.of("1.0 'mL'", FhirPathQuantity.ofUcum(new BigDecimal("1.0"), "mL")),
         // Calendar duration cases (singular and plural)
         Arguments.of("1 year",
-            FhirPathQuantity.ofCalendar(new BigDecimal("1"), CalendarDurationUnit.YEAR)),
+            FhirPathQuantity.ofUnit(new BigDecimal("1"), CalendarDurationUnit.YEAR)),
         Arguments.of("2 years",
-            FhirPathQuantity.ofCalendar(new BigDecimal("2"), CalendarDurationUnit.YEAR, "years")),
+            FhirPathQuantity.ofUnit(new BigDecimal("2"), CalendarDurationUnit.YEAR, "years")),
         Arguments.of("3 month",
-            FhirPathQuantity.ofCalendar(new BigDecimal("3"), CalendarDurationUnit.MONTH)),
+            FhirPathQuantity.ofUnit(new BigDecimal("3"), CalendarDurationUnit.MONTH)),
         Arguments.of("4 months",
-            FhirPathQuantity.ofCalendar(new BigDecimal("4"), CalendarDurationUnit.MONTH, "months")),
+            FhirPathQuantity.ofUnit(new BigDecimal("4"), CalendarDurationUnit.MONTH, "months")),
         Arguments.of("1 week",
-            FhirPathQuantity.ofCalendar(new BigDecimal("1"), CalendarDurationUnit.WEEK)),
+            FhirPathQuantity.ofUnit(new BigDecimal("1"), CalendarDurationUnit.WEEK)),
         Arguments.of("2 weeks",
-            FhirPathQuantity.ofCalendar(new BigDecimal("2"), CalendarDurationUnit.WEEK, "weeks")),
+            FhirPathQuantity.ofUnit(new BigDecimal("2"), CalendarDurationUnit.WEEK, "weeks")),
         Arguments.of("5 day",
-            FhirPathQuantity.ofCalendar(new BigDecimal("5"), CalendarDurationUnit.DAY)),
+            FhirPathQuantity.ofUnit(new BigDecimal("5"), CalendarDurationUnit.DAY)),
         Arguments.of("6 days",
-            FhirPathQuantity.ofCalendar(new BigDecimal("6"), CalendarDurationUnit.DAY, "days")),
+            FhirPathQuantity.ofUnit(new BigDecimal("6"), CalendarDurationUnit.DAY, "days")),
         Arguments.of("7 hour",
-            FhirPathQuantity.ofCalendar(new BigDecimal("7"), CalendarDurationUnit.HOUR)),
+            FhirPathQuantity.ofUnit(new BigDecimal("7"), CalendarDurationUnit.HOUR)),
         Arguments.of("8 hours",
-            FhirPathQuantity.ofCalendar(new BigDecimal("8"), CalendarDurationUnit.HOUR, "hours")),
+            FhirPathQuantity.ofUnit(new BigDecimal("8"), CalendarDurationUnit.HOUR, "hours")),
         Arguments.of("9 minute",
-            FhirPathQuantity.ofCalendar(new BigDecimal("9"), CalendarDurationUnit.MINUTE)),
+            FhirPathQuantity.ofUnit(new BigDecimal("9"), CalendarDurationUnit.MINUTE)),
         Arguments.of("10 minutes",
-            FhirPathQuantity.ofCalendar(new BigDecimal("10"), CalendarDurationUnit.MINUTE,
+            FhirPathQuantity.ofUnit(new BigDecimal("10"), CalendarDurationUnit.MINUTE,
                 "minutes")),
         Arguments.of("11 second",
-            FhirPathQuantity.ofCalendar(new BigDecimal("11"), CalendarDurationUnit.SECOND)),
+            FhirPathQuantity.ofUnit(new BigDecimal("11"), CalendarDurationUnit.SECOND)),
         Arguments.of("12 seconds",
-            FhirPathQuantity.ofCalendar(new BigDecimal("12"), CalendarDurationUnit.SECOND,
+            FhirPathQuantity.ofUnit(new BigDecimal("12"), CalendarDurationUnit.SECOND,
                 "seconds")),
         Arguments.of("13 millisecond",
-            FhirPathQuantity.ofCalendar(new BigDecimal("13"), CalendarDurationUnit.MILLISECOND)),
+            FhirPathQuantity.ofUnit(new BigDecimal("13"), CalendarDurationUnit.MILLISECOND)),
         Arguments.of("14 milliseconds",
-            FhirPathQuantity.ofCalendar(new BigDecimal("14"), CalendarDurationUnit.MILLISECOND,
+            FhirPathQuantity.ofUnit(new BigDecimal("14"), CalendarDurationUnit.MILLISECOND,
                 "milliseconds"))
     );
   }
@@ -213,7 +214,7 @@ class FhirPathQuantityTest {
   @MethodSource("calendarDurationConversions")
   void testCalendarDurationConversion(CalendarDurationUnit sourceUnit, String targetUnit,
       BigDecimal sourceValue, BigDecimal expectedValue) {
-    FhirPathQuantity source = FhirPathQuantity.ofCalendar(sourceValue, sourceUnit);
+    FhirPathQuantity source = FhirPathQuantity.ofUnit(sourceValue, sourceUnit);
     FhirPathQuantity result = source.convertToUnit(targetUnit).orElse(null);
 
     // Compare values with compareTo for proper BigDecimal equality (ignoring scale)
@@ -226,14 +227,14 @@ class FhirPathQuantityTest {
     boolean isCalendarDuration = CalendarDurationUnit.fromString(targetUnit).isPresent();
     if (isCalendarDuration) {
       // Calendar duration conversion
-      assertEquals(FhirPathQuantity.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI, result.getSystem(),
+      assertEquals(CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI, result.getSystem(),
           "Result should be calendar duration system");
-      assertEquals(targetUnit, result.getUnit(), "Result unit should be " + targetUnit);
+      assertEquals(targetUnit, result.getUnitName(), "Result unit should be " + targetUnit);
     } else {
       // UCUM conversion (includes 's', 'ms', 'min', 'h', 'd', 'wk', 'mo', 'a', etc.)
-      assertEquals(FhirPathQuantity.UCUM_SYSTEM_URI, result.getSystem(),
+      assertEquals(UcumUnit.UCUM_SYSTEM_URI, result.getSystem(),
           "Result should be UCUM system");
-      assertEquals(targetUnit, result.getUnit(), "Result unit should be " + targetUnit);
+      assertEquals(targetUnit, result.getUnitName(), "Result unit should be " + targetUnit);
     }
   }
 
@@ -326,7 +327,7 @@ class FhirPathQuantityTest {
   @MethodSource("ucumToCalendarDurationConversions")
   void testUcumToCalendarDurationConversion(String sourceUcumUnit, String targetCalendarUnit,
       BigDecimal sourceValue, BigDecimal expectedValue) {
-    FhirPathQuantity source = FhirPathQuantity.ofUCUM(sourceValue, sourceUcumUnit);
+    FhirPathQuantity source = FhirPathQuantity.ofUcum(sourceValue, sourceUcumUnit);
     FhirPathQuantity result = source.convertToUnit(targetCalendarUnit).orElse(null);
 
     // Compare values with compareTo for proper BigDecimal equality (ignoring scale)
@@ -335,9 +336,9 @@ class FhirPathQuantityTest {
             sourceValue, sourceUcumUnit, targetCalendarUnit, expectedValue, result.getValue()));
 
     // Check that result has correct system and unit
-    assertEquals(FhirPathQuantity.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI, result.getSystem(),
+    assertEquals(CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI, result.getSystem(),
         "Result should be calendar duration system");
-    assertEquals(targetCalendarUnit, result.getUnit(),
+    assertEquals(targetCalendarUnit, result.getUnitName(),
         "Result unit should be " + targetCalendarUnit);
   }
 
@@ -362,7 +363,7 @@ class FhirPathQuantityTest {
   @MethodSource("unsupportedCalendarDurationConversions")
   void testUnsupportedCalendarDurationConversion(CalendarDurationUnit sourceUnit,
       String targetUnit) {
-    FhirPathQuantity source = FhirPathQuantity.ofCalendar(new BigDecimal("1"), sourceUnit);
+    FhirPathQuantity source = FhirPathQuantity.ofUnit(new BigDecimal("1"), sourceUnit);
     @Nullable
     FhirPathQuantity result = source.convertToUnit(targetUnit).orElse(null);
 
@@ -388,7 +389,7 @@ class FhirPathQuantityTest {
   @ParameterizedTest
   @MethodSource("unsupportedUcumToCalendarConversions")
   void testUnsupportedUcumToCalendarConversion(String sourceUcumUnit, String targetCalendarUnit) {
-    FhirPathQuantity source = FhirPathQuantity.ofUCUM(new BigDecimal("1"), sourceUcumUnit);
+    FhirPathQuantity source = FhirPathQuantity.ofUcum(new BigDecimal("1"), sourceUcumUnit);
     @Nullable
     FhirPathQuantity result = source.convertToUnit(targetCalendarUnit).orElse(null);
 

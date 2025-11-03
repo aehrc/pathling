@@ -17,13 +17,11 @@
 
 package au.csiro.pathling.fhirpath.unit;
 
-import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import jakarta.annotation.Nonnull;
 import lombok.Getter;
 import org.apache.commons.lang3.tuple.Pair;
 import java.math.BigDecimal;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -75,6 +73,10 @@ public enum CalendarDurationUnit implements FhirPathUnit {
   SECOND("second", true, "s", new BigDecimal("1000")),          // 1000 ms
   MILLISECOND("millisecond", true, "ms", BigDecimal.ONE);       // 1 ms
 
+  /**
+   * The system URI for Fhipath calendar duration units (e.g. year, month, day).
+   */
+  public static final String FHIRPATH_CALENDAR_DURATION_SYSTEM_URI = "https://hl7.org/fhirpath/N1/calendar-duration";
   @Nonnull
   private final String unit;
 
@@ -124,12 +126,12 @@ public enum CalendarDurationUnit implements FhirPathUnit {
    * Returns the FHIRPath calendar duration system URI.
    *
    * @return the calendar duration system URI
-   * ({@value FhirPathQuantity#FHIRPATH_CALENDAR_DURATION_SYSTEM_URI})
+   * ({@value CalendarDurationUnit#FHIRPATH_CALENDAR_DURATION_SYSTEM_URI})
    */
   @Override
   @Nonnull
   public String system() {
-    return FhirPathQuantity.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI;
+    return FHIRPATH_CALENDAR_DURATION_SYSTEM_URI;
   }
 
   /**
@@ -143,6 +145,20 @@ public enum CalendarDurationUnit implements FhirPathUnit {
     return unit;
   }
 
+  /**
+   * Checks if the given unit name is a valid representation of this calendar duration unit.
+   * Validates that the unit name resolves to this specific enum value (case-sensitive, supports
+   * both singular and plural forms).
+   *
+   * @param unitName the unit name to validate (e.g., "year", "years")
+   * @return true if unitName is valid for this calendar duration unit, false otherwise
+   */
+  @Override
+  public boolean isValidName(@Nonnull final String unitName) {
+    return fromString(unitName)
+        .map(this::equals)
+        .orElse(false);
+  }
 
   /**
    * Gets the CalendarDurationUnit from its string representation (case-insensitive, singular or
@@ -167,7 +183,7 @@ public enum CalendarDurationUnit implements FhirPathUnit {
    */
   @Nonnull
   public static Optional<CalendarDurationUnit> fromString(@Nonnull String name) {
-    return Optional.ofNullable(NAME_MAP.get(name.toLowerCase(Locale.ROOT)));
+    return Optional.ofNullable(NAME_MAP.get(name));
   }
 
   /**

@@ -17,10 +17,8 @@
 
 package au.csiro.pathling.fhirpath.unit;
 
-import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import io.github.fhnaumann.funcs.ConverterService;
 import jakarta.annotation.Nonnull;
-
 import java.util.Optional;
 
 /**
@@ -44,14 +42,24 @@ import java.util.Optional;
 public record UcumUnit(@Nonnull String code) implements FhirPathUnit {
 
   /**
+   * The UCUM unit representing dimensionless unity ("1"). This is used as the default unit when no
+   * unit is specified in FHIRPath quantity literals.
+   */
+  public static final UcumUnit ONE = new UcumUnit("1");
+  /**
+   * The system URI for UCUM units.
+   */
+  public static final String UCUM_SYSTEM_URI = "http://unitsofmeasure.org";
+
+  /**
    * Returns the UCUM system URI.
    *
-   * @return the UCUM system URI ({@value FhirPathQuantity#UCUM_SYSTEM_URI})
+   * @return the UCUM system URI ({@value UcumUnit#UCUM_SYSTEM_URI})
    */
   @Override
   @Nonnull
   public String system() {
-    return FhirPathQuantity.UCUM_SYSTEM_URI;
+    return UCUM_SYSTEM_URI;
   }
 
   /**
@@ -89,4 +97,15 @@ public record UcumUnit(@Nonnull String code) implements FhirPathUnit {
     return Optional.empty(); // Return empty if conversion fails.
   }
 
+  /**
+   * Checks if the given unit name is valid for this UCUM unit. For UCUM units, the name must
+   * exactly match the code.
+   *
+   * @param unitName the unit name to validate
+   * @return true if unitName equals this unit's code, false otherwise
+   */
+  @Override
+  public boolean isValidName(@Nonnull final String unitName) {
+    return this.code.equals(unitName);
+  }
 }

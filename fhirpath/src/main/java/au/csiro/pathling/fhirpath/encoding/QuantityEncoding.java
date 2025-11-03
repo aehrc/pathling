@@ -28,6 +28,7 @@ import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
+import au.csiro.pathling.fhirpath.unit.UcumUnit;
 import au.csiro.pathling.sql.types.FlexiDecimal;
 import au.csiro.pathling.sql.types.FlexiDecimalSupport;
 import jakarta.annotation.Nonnull;
@@ -214,7 +215,7 @@ public class QuantityEncoding {
     final BigDecimal value = quantity.getValue();
     final BigDecimal canonicalizedValue;
     final String canonicalizedCode;
-    if (quantity.isUCUM()) {
+    if (quantity.isUcum()) {
       // If it is a UCUM Quantity, use the UCUM library to canonicalize the value and code.
       canonicalizedValue = Ucum.getCanonicalValue(value, quantity.getCode());
       canonicalizedCode = Ucum.getCanonicalCode(value, quantity.getCode());
@@ -237,7 +238,7 @@ public class QuantityEncoding {
         lit(value),
         lit(value.scale()),
         lit(null),
-        lit(quantity.getUnit()),
+        lit(quantity.getUnitName()),
         lit(quantity.getSystem()),
         lit(quantity.getCode()),
         FlexiDecimalSupport.toLiteral(canonicalizedValue),
@@ -267,7 +268,7 @@ public class QuantityEncoding {
             lit(null),
             lit(null),
             lit("1"),
-            lit(FhirPathQuantity.UCUM_SYSTEM_URI),
+            lit(UcumUnit.UCUM_SYSTEM_URI),
             lit("1"),
             // we do not need to normalize this as the unit is always "1"
             // so it will be comparable with other quantities with unit "1"
@@ -292,7 +293,7 @@ public class QuantityEncoding {
     final BigDecimal canonicalizedValue;
     final String canonicalizedCode;
 
-    if (quantity.isUCUM()) {
+    if (quantity.isUcum()) {
       // If it is a UCUM Quantity, use the UCUM library to canonicalize the value and code.
       canonicalizedValue = Ucum.getCanonicalValue(value, quantity.getCode());
       canonicalizedCode = Ucum.getCanonicalCode(value, quantity.getCode());
@@ -318,7 +319,7 @@ public class QuantityEncoding {
         value,                                   // value
         value.scale(),                           // value_scale
         null,                                    // comparator
-        quantity.getUnit(),                      // unit
+        quantity.getUnitName(),                      // unit
         quantity.getSystem(),                    // system
         quantity.getCode(),                      // code
         FlexiDecimal.toValue(canonicalizedValue), // canonicalized_value (as FlexiDecimal Row)

@@ -58,6 +58,20 @@ public sealed interface FhirPathUnit permits UcumUnit, CalendarDurationUnit {
   String code();
 
   /**
+   * Validates if the given unit name is a valid representation for this unit. The validation rules
+   * depend on the unit type:
+   * <ul>
+   *   <li>For {@link UcumUnit}: the name must exactly match the code</li>
+   *   <li>For {@link CalendarDurationUnit}: the name must match either the singular or plural form
+   *       (e.g., "year" or "years" for YEAR)</li>
+   * </ul>
+   *
+   * @param unitName the unit name to validate
+   * @return true if unitName is valid for this unit, false otherwise
+   */
+  boolean isValidName(@Nonnull final String unitName);
+
+  /**
    * Computes the conversion factor between two units, supporting same-type conversions
    * (UCUM-to-UCUM, calendar-to-calendar) and cross-type conversions (calendar-to-UCUM,
    * UCUM-to-calendar) where applicable.

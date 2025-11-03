@@ -26,6 +26,8 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
+import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
+import au.csiro.pathling.fhirpath.unit.UcumUnit;
 import au.csiro.pathling.sql.misc.ConvertQuantityToUnit;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -213,21 +215,21 @@ public class QuantityValue {
    * Checks if this quantity uses the UCUM unit system.
    * <p>
    * Returns a boolean column that evaluates to true if the quantity's system field equals
-   * {@link au.csiro.pathling.fhirpath.FhirPathQuantity#UCUM_SYSTEM_URI}, false otherwise.
+   * {@link UcumUnit#UCUM_SYSTEM_URI}, false otherwise.
    *
    * @return Column of BooleanType indicating if this is a UCUM quantity
    */
   @Nonnull
   public Column isUcum() {
     return quantityColumn.getField(QuantityEncoding.SYSTEM_COLUMN)
-        .equalTo(lit(au.csiro.pathling.fhirpath.FhirPathQuantity.UCUM_SYSTEM_URI));
+        .equalTo(lit(UcumUnit.UCUM_SYSTEM_URI));
   }
 
   /**
    * Checks if this quantity uses the FHIRPath calendar duration system.
    * <p>
    * Returns a boolean column that evaluates to true if the quantity's system field equals
-   * {@link au.csiro.pathling.fhirpath.FhirPathQuantity#FHIRPATH_CALENDAR_DURATION_SYSTEM_URI},
+   * {@link CalendarDurationUnit#FHIRPATH_CALENDAR_DURATION_SYSTEM_URI},
    * false otherwise.
    *
    * @return Column of BooleanType indicating if this is a calendar duration quantity
@@ -235,7 +237,7 @@ public class QuantityValue {
   @Nonnull
   public Column isCalendarDuration() {
     return quantityColumn.getField(QuantityEncoding.SYSTEM_COLUMN)
-        .equalTo(lit(au.csiro.pathling.fhirpath.FhirPathQuantity.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI));
+        .equalTo(lit(CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI));
   }
 
   /**
