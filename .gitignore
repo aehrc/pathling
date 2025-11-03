@@ -40,12 +40,12 @@ spark-warehouse
 .aider*
 .claude
 
-#pathling-server
-pathling-server/.idea
-pathling-server/.mvn
-pathling-server/warehouse
-pathling-server/src/test/resources/test-data
-pathling-server/client-tests
+#server
+server/.idea
+server/.mvn
+server/warehouse
+server/src/test/resources/test-data
+server/client-tests
 
 *-local.yml
 *-local.properties

@@ -1,4 +1,4 @@
-# This workflow builds and tests the pathling-server module.
+# This workflow builds and tests the server module.
 
 name: Test server
 
@@ -6,7 +6,7 @@ name: Test server
 on:
   pull_request:
     paths:
-      - "pathling-server/**"
+      - "server/**"
 
 env:
   # The add-exports and add-opens flags are required for Java 21.
@@ -14,7 +14,7 @@ env:
 
 jobs:
   test-server:
-    name: Build and test pathling-server
+    name: Build and test server
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -41,7 +41,7 @@ jobs:
       - name: Build and test server module
         run: |
           mvn --batch-mode clean install \
-            -pl pathling-server -am
+            -pl server -am
         timeout-minutes: 20
 
       - name: Save test reports
@@ -49,11 +49,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: server-surefire-reports
-          path: "pathling-server/**/surefire-reports/"
+          path: "server/**/surefire-reports/"
 
       - name: Save built JAR
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: server-jar
-          path: pathling-server/target/pathling-server-*.jar
+          path: server/target/server-*.jar
