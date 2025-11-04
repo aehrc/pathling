@@ -26,6 +26,7 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.StreamSupport;
 import lombok.extern.slf4j.Slf4j;
@@ -230,7 +231,7 @@ class ExportOperationIT {
     JsonNode output = node.get("output");
     assertThat(output)
         .isNotNull()
-        .hasSize(2);
+        .isNotEmpty();
 
     List<FileInformation> actualFileInfos = StreamSupport.stream(output.spliterator(), false)
         .map(jsonNode -> new FileInformation(
@@ -241,6 +242,12 @@ class ExportOperationIT {
         .toList();
 
     assertThat(actualFileInfos).isNotEmpty();
+
+    // Check that both Patient and Encounter resource types are present.
+    Set<String> resourceTypes = actualFileInfos.stream()
+        .map(FileInformation::fhirResourceType)
+        .collect(java.util.stream.Collectors.toSet());
+    assertThat(resourceTypes).containsExactlyInAnyOrder("Patient", "Encounter");
 
     Map<String, List<? extends IBaseResource>> downloadedResources = new HashMap<>();
     actualFileInfos.forEach(fileInfo -> {
