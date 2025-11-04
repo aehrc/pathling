@@ -214,6 +214,8 @@ public abstract class FileSource extends DatasetSource {
     return files.entrySet().stream()
         // Filter out any paths that do not have the expected extension.
         .map(entry -> Map.entry(entry.getKey(), checkExtension(entry.getValue())))
+        // Filter out resource types with no files after extension filtering.
+        .filter(entry -> !entry.getValue().isEmpty())
         // Filter out any resource codes that are not supported.
         .filter(entry -> context.isResourceTypeSupported(entry.getKey()))
         // Filter out any resource that should be explicitly ignored
