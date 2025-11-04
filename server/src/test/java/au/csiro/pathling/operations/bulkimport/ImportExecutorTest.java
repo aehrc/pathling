@@ -71,7 +71,7 @@ class ImportExecutorTest {
   // ========================================
 
   @Test
-  void test_import_single_resource_type() {
+  void testImportSingleResourceType() {
     // Given
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
 
@@ -102,7 +102,7 @@ class ImportExecutorTest {
   }
 
   @Test
-  void test_import_all_test_resources() {
+  void testImportAllTestResources() {
     // Given
     final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
@@ -140,7 +140,7 @@ class ImportExecutorTest {
   // ========================================
 
   @Test
-  void test_save_mode_overwrite() throws IOException {
+  void testSaveModeOverwrite() throws IOException {
     // Given - import data once
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final ImportRequest request = new ImportRequest(
@@ -193,7 +193,7 @@ class ImportExecutorTest {
   }
 
   @Test
-  void test_save_mode_append() throws IOException {
+  void testSaveModeAppend() throws IOException {
     // Given - import data once
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final ImportRequest request = new ImportRequest(
@@ -232,7 +232,7 @@ class ImportExecutorTest {
   }
 
   @Test
-  void test_save_mode_error_if_exists_throws_when_file_exists() {
+  void testSaveModeErrorIfExistsThrowsWhenFileExists() {
     // Given - import data once with OVERWRITE
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final ImportRequest initialRequest = new ImportRequest(
@@ -272,7 +272,7 @@ class ImportExecutorTest {
   }
 
   @Test
-  void test_save_mode_error_if_exists_succeeds_when_file_does_not_exist() throws IOException {
+  void testSaveModeErrorIfExistsSucceedsWhenFileDoesNotExist() throws IOException {
     // Given - fresh database with no existing data
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final ImportRequest request = new ImportRequest(
@@ -303,7 +303,7 @@ class ImportExecutorTest {
   // ========================================
 
   @Test
-  void test_file_remapping_preserves_original_urls() {
+  void testFileRemappingPreservesOriginalUrls() {
     // Given
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final String conditionUrl =
@@ -337,7 +337,7 @@ class ImportExecutorTest {
   }
 
   @Test
-  void test_file_remapping_preserves_resource_types() {
+  void testFileRemappingPreservesResourceTypes() {
     // Given
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final String conditionUrl =
@@ -368,7 +368,7 @@ class ImportExecutorTest {
   }
 
   @Test
-  void test_file_remapping_preserves_counts() {
+  void testFileRemappingPreservesCounts() {
     // Given
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
 
@@ -405,7 +405,7 @@ class ImportExecutorTest {
   // ========================================
 
   @Test
-  void test_access_rules_validation_success() {
+  void testAccessRulesValidationSuccess() {
     // Given - configure to allow file:// URLs
     serverConfiguration.getImport().setAllowableSources(List.of("file://"));
 
@@ -433,7 +433,7 @@ class ImportExecutorTest {
   }
 
   @Test
-  void test_access_rules_validation_failure() {
+  void testAccessRulesValidationFailure() {
     // Given - configure to only allow s3:// URLs
     serverConfiguration.getImport().setAllowableSources(List.of("s3://allowed-bucket/"));
 
@@ -461,7 +461,7 @@ class ImportExecutorTest {
   }
 
   @Test
-  void test_access_rules_skipped_when_absent() {
+  void testAccessRulesSkippedWhenAbsent() {
     // Given - executor with no AccessRules
     final String anyUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
 
@@ -481,7 +481,7 @@ class ImportExecutorTest {
   }
 
   @Test
-  void test_access_rules_partial_failure() {
+  void testAccessRulesPartialFailure() {
     // Given - allow file:// but one URL uses s3://
     serverConfiguration.getImport().setAllowableSources(List.of("file://"));
 
@@ -517,7 +517,7 @@ class ImportExecutorTest {
   // ========================================
 
   @Test
-  void test_original_request_url_preserved_in_response() {
+  void testOriginalRequestUrlPreservedInResponse() {
     // Given
     final String originalRequestUrl = "http://example.com/fhir/$import?mode=overwrite&format=ndjson";
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
@@ -540,7 +540,7 @@ class ImportExecutorTest {
 
 
   @Test
-  void test_import_verifies_data_written_to_database() throws IOException {
+  void testImportVerifiesDataWrittenToDatabase() throws IOException {
     // Given
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
 
@@ -574,7 +574,7 @@ class ImportExecutorTest {
   }
 
   @Test
-  void test_file_remapping_aggregates_counts_for_same_resource_type() throws IOException {
+  void testFileRemappingAggregatesCountsForSameResourceType() throws IOException {
     // Given - verify test data has enough records to guarantee splitting
     final Path observationFile = TEST_DATA_PATH.resolve("Observation.ndjson");
     final long lineCount;
