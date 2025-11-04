@@ -6,13 +6,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
-import au.csiro.pathling.operations.bulkexport.ExportExecutor;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import au.csiro.pathling.util.ExportOperationUtil;
@@ -72,22 +72,32 @@ class ExportOperationIT {
 
   @TempDir
   private static Path warehouseDir;
+
   @Autowired
   private TestDataSetup testDataSetup;
+
   @Autowired
   private FhirContext fhirContext;
+
   @Autowired
   private PathlingContext pathlingContext;
+
   private IParser parser;
+
+  @SuppressWarnings("unused")
   @Autowired
   private QueryableDataSource deltaLake;
+
+  @SuppressWarnings("unused")
   @Autowired
   private SparkSession sparkSession;
+
+  @SuppressWarnings("unused")
   @Autowired
   private ExportExecutor exportExecutor;
 
   @DynamicPropertySource
-  static void configureProperties(DynamicPropertyRegistry registry) {
+  static void configureProperties(final DynamicPropertyRegistry registry) {
     TestDataSetup.staticCopyTestDataToTempDir(warehouseDir);
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.toAbsolutePath());
   }
@@ -107,9 +117,9 @@ class ExportOperationIT {
   }
 
   @Test
-  void test_missing_respond_async_header_lenient_runs() {
+  void testMissingRespondAsyncHeaderLenientRuns() {
     testDataSetup.copyTestDataToTempDir(warehouseDir);
-    String uri = "http://localhost:" + port
+    final String uri = "http://localhost:" + port
         + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-01T00:00:00Z";
     webTestClient.get()
         .uri(uri)
@@ -120,10 +130,10 @@ class ExportOperationIT {
   }
 
   @Test
-  void test_missing_respond_async_header_strict_returns_error() {
+  void testMissingRespondAsyncHeaderStrictReturnsError() {
     testDataSetup.copyTestDataToTempDir(warehouseDir);
 
-    String uri = "http://localhost:" + port
+    final String uri = "http://localhost:" + port
         + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-01T00:00:00Z";
     webTestClient.get()
         .uri(uri)
@@ -133,12 +143,12 @@ class ExportOperationIT {
   }
 
   @Test
-  void test_cancelling_request_returns_202() {
+  void testCancellingRequestReturns202() {
     testDataSetup.copyTestDataToTempDir(warehouseDir);
 
-    String uri = "http://localhost:" + port
+    final String uri = "http://localhost:" + port
         + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-01T00:00:00Z";
-    String pollUrl = kickOffRequest(webTestClient, uri);
+    final String pollUrl = kickOffRequest(webTestClient, uri);
 
     // send a DELETE request after 3 seconds
     await().pollDelay(3, TimeUnit.SECONDS)
@@ -152,12 +162,12 @@ class ExportOperationIT {
   }
 
   @Test
-  void test_polling_cancelled_request_returns_404() {
+  void testPollingCancelledRequestReturns404() {
     testDataSetup.copyTestDataToTempDir(warehouseDir);
 
-    String uri = "http://localhost:" + port
+    final String uri = "http://localhost:" + port
         + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-02T00:00:00Z";
-    String pollUrl = kickOffRequest(webTestClient, uri);
+    final String pollUrl = kickOffRequest(webTestClient, uri);
 
     // Send DELETE after 2 seconds
     await().pollDelay(2, TimeUnit.SECONDS)
@@ -170,20 +180,18 @@ class ExportOperationIT {
     await()
         .atMost(10, TimeUnit.SECONDS)
         .pollInterval(500, TimeUnit.MILLISECONDS)
-        .untilAsserted(() -> {
-          webTestClient.get()
-              .uri(pollUrl)
-              .exchange()
-              .expectStatus().isEqualTo(404);
-        });
+        .untilAsserted(() -> webTestClient.get()
+            .uri(pollUrl)
+            .exchange()
+            .expectStatus().isEqualTo(404));
   }
 
 
   @Test
-  void test_invalid_kickoff_request() {
+  void testInvalidKickoffRequest() {
     testDataSetup.copyTestDataToTempDir(warehouseDir);
 
-    String uri = "http://localhost:" + port
+    final String uri = "http://localhost:" + port
         + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-01T00:00:00Z&_type=Patient,Encounter";
     webTestClient.get()
         .uri(uri)
@@ -194,29 +202,30 @@ class ExportOperationIT {
   }
 
   @Test
-  void export_valid() {
+  void testExportValid() {
     testDataSetup.copyTestDataToTempDir(warehouseDir);
 
-    String uri = "http://localhost:" + port
+    final String uri = "http://localhost:" + port
         + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-01T00:00:00Z&_type=Patient,Encounter&_elements=identifier,Patient.name,Encounter.subject";
-    String pollUrl = kickOffRequest(webTestClient, uri);
+    final String pollUrl = kickOffRequest(webTestClient, uri);
     await()
         .atMost(30, TimeUnit.SECONDS)
         .pollInterval(3, TimeUnit.SECONDS)
         .until(() -> doPolling(webTestClient, pollUrl, result -> {
           try {
-            assert_complete_result(uri, result.getResponseBody(), result.getResponseHeaders());
-          } catch (IOException e) {
+            assertNotNull(result.getResponseBody());
+            assertCompleteResult(uri, result.getResponseBody(), result.getResponseHeaders());
+          } catch (final IOException e) {
             throw new RuntimeException(e);
           }
         }));
   }
 
   @SuppressWarnings("unchecked")
-  private void assert_complete_result(String originalRequestUri, String responseBody,
-      HttpHeaders headers) throws IOException {
-    ObjectMapper objectMapper = new ObjectMapper();
-    JsonNode node = objectMapper.readTree(responseBody);
+  private void assertCompleteResult(final String originalRequestUri, final String responseBody,
+      final HttpHeaders headers) throws IOException {
+    final ObjectMapper objectMapper = new ObjectMapper();
+    final JsonNode node = objectMapper.readTree(responseBody);
 
     assertThat(headers).containsKey("Expires");
     assertThat(headers.getFirst("Content-Type"))
@@ -228,12 +237,12 @@ class ExportOperationIT {
     assertThat(node.get("requiresAccessToken").asBoolean()).isFalse();
     assertThat(node.has("deleted")).isTrue();
     assertThat(node.has("error")).isTrue();
-    JsonNode output = node.get("output");
+    final JsonNode output = node.get("output");
     assertThat(output)
         .isNotNull()
         .isNotEmpty();
 
-    List<FileInformation> actualFileInfos = StreamSupport.stream(output.spliterator(), false)
+    final List<FileInformation> actualFileInfos = StreamSupport.stream(output.spliterator(), false)
         .map(jsonNode -> new FileInformation(
             jsonNode.get("type").asText(),
             jsonNode.get("url").asText(),
@@ -244,23 +253,23 @@ class ExportOperationIT {
     assertThat(actualFileInfos).isNotEmpty();
 
     // Check that both Patient and Encounter resource types are present.
-    Set<String> resourceTypes = actualFileInfos.stream()
+    final Set<String> resourceTypes = actualFileInfos.stream()
         .map(FileInformation::fhirResourceType)
         .collect(java.util.stream.Collectors.toSet());
     assertThat(resourceTypes).containsExactlyInAnyOrder("Patient", "Encounter");
 
-    Map<String, List<? extends IBaseResource>> downloadedResources = new HashMap<>();
+    final Map<String, List<? extends IBaseResource>> downloadedResources = new HashMap<>();
     actualFileInfos.forEach(fileInfo -> {
-      EntityExchangeResult<byte[]> result = webTestClient.get()
+      final EntityExchangeResult<byte[]> result = webTestClient.get()
           .uri(fileInfo.absoluteUrl())
           .exchange()
           .expectStatus().isOk()
           .expectBody()
           .returnResult();
-      byte[] responseBytes = result.getResponseBodyContent();
+      final byte[] responseBytes = result.getResponseBodyContent();
       assertThat(responseBytes).isNotNull();
-      String fileContent = new String(responseBytes, java.nio.charset.StandardCharsets.UTF_8);
-      List<Resource> resources = ExportOperationUtil.parseNDJSON(parser, fileContent,
+      final String fileContent = new String(responseBytes, java.nio.charset.StandardCharsets.UTF_8);
+      final List<Resource> resources = ExportOperationUtil.parseNDJSON(parser, fileContent,
           fileInfo.fhirResourceType());
       downloadedResources.put(fileInfo.fhirResourceType(), resources);
     });
@@ -273,7 +282,7 @@ class ExportOperationIT {
     downloadedResources.forEach((string, iBaseResources) -> {
       switch (string) {
         case "Patient" -> {
-          List<Patient> patients = (List<Patient>) iBaseResources;
+          final List<Patient> patients = (List<Patient>) iBaseResources;
           patients.forEach(patient -> {
             assertThat(patient.hasIdentifier()).isTrue();
             assertThat(patient.hasName()).isTrue();
@@ -281,14 +290,15 @@ class ExportOperationIT {
           });
         }
         case "Encounter" -> {
-          List<Encounter> encounters = (List<Encounter>) iBaseResources;
+          final List<Encounter> encounters = (List<Encounter>) iBaseResources;
           encounters.forEach(encounter -> {
             assertThat(encounter.hasSubject()).isTrue();
             assertThat(encounter.hasReasonCode()).isFalse();
             assertThat(encounter.hasServiceProvider()).isFalse();
           });
         }
-        default -> fail("Unexpected resource type %s".formatted(string));
+        default -> //noinspection ResultOfMethodCallIgnored
+            fail("Unexpected resource type %s".formatted(string));
       }
     });
 
@@ -297,13 +307,14 @@ class ExportOperationIT {
     // they can request them through the ExportResultProvider where the contents of the files are returned
     // in the request.
     actualFileInfos.forEach(fileInfo -> {
-      Map<String, String> queryParams = UriComponentsBuilder.fromUriString(fileInfo.absoluteUrl())
+      final Map<String, String> queryParams = UriComponentsBuilder.fromUriString(
+              fileInfo.absoluteUrl())
           .build().getQueryParams().toSingleValueMap();
-      String fullFilepath = warehouseDir.resolve("delta").resolve("jobs")
+      final String fullFilepath = warehouseDir.resolve("delta").resolve("jobs")
           .resolve(queryParams.get("job")).resolve(queryParams.get("file")).toString();
       assertTrue(new File(fullFilepath).exists(),
           "Failed to find %s for pathling ndjson input.".formatted(fullFilepath));
-      String parentPath = Paths.get(fullFilepath).getParent().toString();
+      final String parentPath = Paths.get(fullFilepath).getParent().toString();
       assertThatCode(() -> new DataSourceBuilder(pathlingContext).ndjson(parentPath)
           .read(fileInfo.fhirResourceType())).doesNotThrowAnyException();
 

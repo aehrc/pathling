@@ -67,6 +67,7 @@ class ExportOperationTest {
 
   private ObjectMapper objectMapper;
 
+  @SuppressWarnings("unused")
   @MockBean
   private QueryableDataSource queryableDataSource; // NO-SONAR the mock is needed
 
