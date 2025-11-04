@@ -80,7 +80,12 @@ public class NdjsonSource extends FileSource {
   public NdjsonSource(@Nonnull final PathlingContext context,
       @Nonnull final Map<String, Collection<String>> files,
       @Nonnull final String extension) {
-    this(context, files, extension, FileSource::resourceNameWithQualifierMapper);
+    super(context, files, extension,
+        // Read each line of input separately.
+        context.getSpark().read().format("text"),
+        // Encode each line of input as a JSON FHIR resource.
+        (sourceData, resourceType) -> context.encode(sourceData, resourceType,
+            PathlingContext.FHIR_JSON), resourceType -> true);
   }
 
   /**
@@ -96,18 +101,6 @@ public class NdjsonSource extends FileSource {
       @Nonnull final String extension,
       @Nonnull final Function<String, Set<String>> fileNameMapper) {
     super(context, path, fileNameMapper, extension,
-        // Read each line of input separately.
-        context.getSpark().read().format("text"),
-        // Encode each line of input as a JSON FHIR resource.
-        (sourceData, resourceType) -> context.encode(sourceData, resourceType,
-            PathlingContext.FHIR_JSON), resourceType -> true);
-  }
-
-  public NdjsonSource(@Nonnull final PathlingContext context,
-      @Nonnull final Map<String, Collection<String>> files,
-      @Nonnull final String extension,
-      @Nonnull final Function<String, Set<String>> fileNameMapper) {
-    super(context, files, extension,
         // Read each line of input separately.
         context.getSpark().read().format("text"),
         // Encode each line of input as a JSON FHIR resource.
