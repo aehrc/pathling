@@ -172,18 +172,35 @@ public abstract class FileSource extends DatasetSource {
       final Path convertedPath = new Path(path);
       final FileSystem fileSystem = convertedPath.getFileSystem(hadoopConfiguration);
       final FileStatus[] fileStatuses = fileSystem.globStatus(new Path(path, "*"));
-      // First group by resource type.
-      final Map<String, Collection<String>> groupedByDefaultNamingAssumption = Arrays.stream(
-              fileStatuses)
+      // Get all file paths.
+      final Collection<String> filePaths = Arrays.stream(fileStatuses)
           .map(FileStatus::getPath)
           .map(Path::toString)
-          .collect(Collectors.groupingBy(FileSource::retrieveResourceTypeFromFilePath,
-              Collectors.toCollection(HashSet::new)));
-      // Apply the file name mapper.
-      return groupedByDefaultNamingAssumption.entrySet().stream()
+          .collect(Collectors.toList());
+
+      // Apply the file name mapper to map each file to its resource types.
+      return filePaths.stream()
+          .collect(Collectors.toMap(
+              filePath -> {
+                final String baseName = FilenameUtils.getBaseName(filePath);
+                return fileNameMapper.apply(baseName);
+              },
+              filePath -> new HashSet<>(Collections.singletonList(filePath)),
+              (existing, replacement) -> {
+                existing.addAll(replacement);
+                return existing;
+              }
+          ))
+          .entrySet().stream()
+          .flatMap(entry -> entry.getKey().stream()
+              .map(resourceType -> Map.entry(resourceType, entry.getValue())))
           .collect(Collectors.toMap(
               Map.Entry::getKey,
-              Map.Entry::getValue
+              entry -> new HashSet<>(entry.getValue()),
+              (existing, replacement) -> {
+                existing.addAll(replacement);
+                return existing;
+              }
           ));
 
     } catch (final IOException e) {
