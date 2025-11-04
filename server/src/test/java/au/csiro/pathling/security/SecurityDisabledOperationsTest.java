@@ -24,8 +24,10 @@ import au.csiro.pathling.util.TestDataSetup;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -41,6 +43,7 @@ import org.springframework.test.context.TestPropertySource;
  * Spring Boot Test, how do I map a temporary folder to a configuration property?</a>
  */
 @TestPropertySource(properties = {"pathling.auth.enabled=false"})
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class SecurityDisabledOperationsTest extends SecurityTestForOperations<ExportRequest> {
 
   @TempDir
@@ -51,12 +54,12 @@ class SecurityDisabledOperationsTest extends SecurityTestForOperations<ExportReq
     TestDataSetup.staticCopyTestDataToTempDir(tempDir);
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + tempDir.toAbsolutePath());
   }
-  
+
   @BeforeEach
   void child_setup() {
     exportProvider = setup_scenario(tempDir, "Patient", "Encounter");
   }
-  
+
   @Test
   void testPassExportIfExportWithNoAuth() {
     assertThatNoException().isThrownBy(this::perform_export);
@@ -64,14 +67,16 @@ class SecurityDisabledOperationsTest extends SecurityTestForOperations<ExportReq
 
   @Test
   void testPassIfExportWithTypeWithNoAuth() {
-    assertThatNoException().isThrownBy(() -> perform_export(ADMIN_USER, List.of("Patient", "Encounter"), false));
+    assertThatNoException().isThrownBy(
+        () -> perform_export(ADMIN_USER, List.of("Patient", "Encounter"), false));
   }
-  
-  @Order(Order.DEFAULT+100)
+
+  @Order(Order.DEFAULT + 100)
   @Test
   void testPassExportResultIfExportResultWithNoAuth() {
     perform_export();
-    assertThatNoException().isThrownBy(() -> perform_export_result(job.getId(), "Patient.00000.ndjson", null));
+    assertThatNoException().isThrownBy(
+        () -> perform_export_result(job.getId(), "Patient.00000.ndjson", null));
   }
 
 }

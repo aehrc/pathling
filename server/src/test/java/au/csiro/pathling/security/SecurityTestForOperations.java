@@ -24,6 +24,9 @@ import au.csiro.pathling.async.Job.JobTag;
 import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.async.RequestTagFactory;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.io.source.DataSourceBuilder;
+import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.bulkexport.ExportExecutor;
 import au.csiro.pathling.operations.bulkexport.ExportOperationValidator;
 import au.csiro.pathling.operations.bulkexport.ExportOutputFormat;
@@ -32,9 +35,6 @@ import au.csiro.pathling.operations.bulkexport.ExportRequest;
 import au.csiro.pathling.operations.bulkexport.ExportResult;
 import au.csiro.pathling.operations.bulkexport.ExportResultProvider;
 import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
-import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.source.DataSourceBuilder;
-import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.util.TestDataSetup;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
@@ -74,12 +74,12 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
   public static final UnaryOperator<String> ERROR_MSG = "Missing authority: 'pathling:%s'"::formatted;
   public static final String PATHLING_READ_MSG = ERROR_MSG.apply("read");
   public static final String PATHLING_WRITE_MSG = ERROR_MSG.apply("write");
-  
+
   protected ExportProvider exportProvider;
-  
+
   @MockBean
   protected ServletRequestDetails requestDetails;
-  
+
   @MockBean
   protected JobRegistry jobRegistry;
   @Autowired
@@ -103,6 +103,7 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
   private ExportResultProvider exportResultProvider;
 
   @BeforeEach
+  @SuppressWarnings("unchecked")
   void setup() {
     when(requestDetails.getCompleteUrl()).thenReturn("test-url");
     when(requestDetails.getHeaders("Prefer")).thenReturn(List.of("respond-async"));
@@ -112,8 +113,9 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
     when(jobRegistry.get(tag)).thenReturn((Job<Object>) job);
     when(job.getId()).thenReturn(UUID.randomUUID().toString());
   }
-  
-  MockHttpServletResponse perform_export_result(String jobId, String file, @Nullable String ownerId) {
+
+  MockHttpServletResponse perform_export_result(String jobId, String file,
+      @Nullable String ownerId) {
     exportResultRegistry.put(jobId, new ExportResult(Optional.ofNullable(ownerId)));
     MockHttpServletResponse response = new MockHttpServletResponse();
     exportResultProvider.result(jobId, file, response);
@@ -135,8 +137,10 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
   JsonNode perform_export(String ownerId, List<String> type, boolean lenient) {
     return perform_export(exportProvider, ownerId, type, lenient);
   }
-  
-  JsonNode perform_export(ExportProvider exportProvider, String ownerId, List<String> type, boolean lenient) {
+
+  @SuppressWarnings("unchecked")
+  JsonNode perform_export(ExportProvider exportProvider, String ownerId, List<String> type,
+      boolean lenient) {
     when(job.getOwnerId()).thenReturn(Optional.ofNullable(ownerId));
     String lenientHeader = "handling=" + lenient;
     when(requestDetails.getHeader("Prefer")).thenReturn(lenientHeader + "," + "prefer-async");
@@ -152,7 +156,7 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
         lenient
     );
     when(job.getPreAsyncValidationResult()).thenReturn((T) exportRequest);
-    
+
     Binary answer = exportProvider.export(
         exportRequest.outputFormat().toString(),
         exportRequest.since(),

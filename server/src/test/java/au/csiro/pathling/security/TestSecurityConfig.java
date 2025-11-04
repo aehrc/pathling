@@ -1,13 +1,13 @@
 package au.csiro.pathling.security;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.task.SyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
-import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
@@ -34,7 +34,7 @@ public class TestSecurityConfig {
       @Override
       public <T> Future<T> submit(Callable<T> task) {
         try {
-          return new AsyncResult<>(task.call());
+          return CompletableFuture.completedFuture(task.call());
         } catch (Exception e) {
           throw new RuntimeException(e);
         }
@@ -43,7 +43,7 @@ public class TestSecurityConfig {
       @Override
       public Future<?> submit(Runnable task) {
         sync.execute(task);
-        return new AsyncResult<>(null);
+        return CompletableFuture.completedFuture(null);
       }
 
       @Override

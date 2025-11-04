@@ -43,6 +43,7 @@ import com.nimbusds.jwt.proc.JWTProcessor;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URL;
 import java.security.Key;
 import java.util.ArrayList;
@@ -121,8 +122,9 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
     final String jwksUri = getJwksUri(claimsSet);
 
     try {
+      @SuppressWarnings("deprecation")
       final JWKSource<SecurityContext> jwkSource = new RemoteJWKSet<>(
-          new URL(jwksUri), new JwksRetriever(restOperations));
+          URI.create(jwksUri).toURL(), new JwksRetriever(restOperations));
       final JWSKeySelector<SecurityContext> keySelector = new JWSVerificationKeySelector<>(
           JWSAlgorithm.RS256, jwkSource);
       return keySelector.selectJWSKeys(header, context);

@@ -13,18 +13,12 @@ import static au.csiro.pathling.util.TestConstants.WAREHOUSE_PLACEHOLDER;
 import static org.assertj.core.api.Assertions.LIST;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.encoders.EncoderBuilder;
-import au.csiro.pathling.operations.bulkexport.ExportExecutor;
-import au.csiro.pathling.operations.bulkexport.ExportOperationValidator;
-import au.csiro.pathling.operations.bulkexport.ExportOutputFormat;
-import au.csiro.pathling.operations.bulkexport.ExportRequest;
-import au.csiro.pathling.operations.bulkexport.ExportResponse;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
@@ -53,7 +47,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
-import scala.collection.JavaConverters;
+import scala.jdk.javaapi.CollectionConverters;
 
 /**
  * @author Felix Naumann
@@ -90,7 +84,8 @@ class ExportOperationTest {
     if (valid) {
       assertThatNoException().isThrownBy(() -> {
         PreAsyncValidationResult<ExportRequest> result = exportOperationValidator.validateRequest(
-            MockUtil.mockRequest(acceptHeader, preferHeader, lenient), outputFormat, now, null, null, null);
+            MockUtil.mockRequest(acceptHeader, preferHeader, lenient), outputFormat, now, null,
+            null, null);
         assertThat(result)
             .isNotNull()
             .extracting(PreAsyncValidationResult::warnings, LIST)
@@ -100,7 +95,8 @@ class ExportOperationTest {
       });
     } else {
       assertThatThrownBy(() -> exportOperationValidator.validateRequest(
-              MockUtil.mockRequest(acceptHeader, preferHeader, lenient), outputFormat, now, null, null, null))
+          MockUtil.mockRequest(acceptHeader, preferHeader, lenient), outputFormat, now, null, null,
+          null))
           .isExactlyInstanceOf(InvalidRequestException.class);
     }
   }
@@ -136,7 +132,8 @@ class ExportOperationTest {
   @ParameterizedTest
   @MethodSource("provide_until_param")
   void test_until_param_is_mapped(InstantType until, InstantType expectedUntil) {
-    RequestDetails mockReqDetails = MockUtil.mockRequest("application/fhir+json", "respond-async", false);
+    RequestDetails mockReqDetails = MockUtil.mockRequest("application/fhir+json", "respond-async",
+        false);
     ExportRequest actualExportRequest = exportOperationValidator.validateRequest(mockReqDetails,
         ExportOutputFormat.asParam(ND_JSON), InstantType.now(), until, null, null).result();
     assertThat(actualExportRequest).isNotNull();
@@ -155,7 +152,8 @@ class ExportOperationTest {
   @MethodSource("provide_type_param")
   void test_type_param_is_mapped(List<String> types, boolean lenient,
       List<ResourceType> expectedTypes) {
-    RequestDetails mockReqDetails = MockUtil.mockRequest("application/fhir+json", "respond-async", lenient);
+    RequestDetails mockReqDetails = MockUtil.mockRequest("application/fhir+json", "respond-async",
+        lenient);
     InstantType now = InstantType.now();
     if (expectedTypes != null) {
       ExportRequest actualExportRequest = exportOperationValidator.validateRequest(mockReqDetails,
@@ -174,7 +172,7 @@ class ExportOperationTest {
   }
 
   private static Stream<Arguments> provide_type_param() {
-    String unsupportedResource = JavaConverters.setAsJavaSet(EncoderBuilder.UNSUPPORTED_RESOURCES())
+    String unsupportedResource = CollectionConverters.asJava(EncoderBuilder.UNSUPPORTED_RESOURCES())
         .stream().findFirst().orElseThrow();
     return Stream.of(
         arguments(List.of("Patient"), false, List.of(ResourceType.PATIENT)),
@@ -195,7 +193,8 @@ class ExportOperationTest {
   @MethodSource("provide_elements_param")
   void test_elements_param_is_mapped(List<String> elements,
       List<ExportRequest.FhirElement> expectedElements) {
-    RequestDetails mockReqDetails = MockUtil.mockRequest("application/fhir+json", "respond-async", false);
+    RequestDetails mockReqDetails = MockUtil.mockRequest("application/fhir+json", "respond-async",
+        false);
     String outputFormat = ExportOutputFormat.asParam(ND_JSON);
     InstantType now = InstantType.now();
     if (expectedElements != null) {
@@ -240,7 +239,8 @@ class ExportOperationTest {
   void test_params_with_lenient(ExportOutputFormat exportOutputFormat, InstantType since,
       List<String> type, Map<String, String[]> unsupportedQueryParams, boolean lenient,
       List<String> messages, boolean valid) {
-    RequestDetails mockReqDetails = MockUtil.mockRequest("application/fhir+json", "respond-async", lenient);
+    RequestDetails mockReqDetails = MockUtil.mockRequest("application/fhir+json", "respond-async",
+        lenient);
     when(mockReqDetails.getParameters()).thenReturn(unsupportedQueryParams);
     String outputFormat = ExportOutputFormat.asParam(exportOutputFormat);
 
@@ -257,8 +257,8 @@ class ExportOperationTest {
       });
     } else {
       assertThatThrownBy(
-              () -> exportOperationValidator.validateRequest(mockReqDetails, outputFormat, since, null,
-                  type, List.of()))
+          () -> exportOperationValidator.validateRequest(mockReqDetails, outputFormat, since, null,
+              type, List.of()))
           .isExactlyInstanceOf(InvalidRequestException.class);
     }
   }
@@ -327,8 +327,8 @@ class ExportOperationTest {
       InstantType until, List<String> type, ExportRequest expectedMappedRequest) {
     if (expectedMappedRequest == null) {
       assertThatThrownBy(
-              () -> exportOperationValidator.createExportRequest(originalRequest, false, outputFormat,
-                  since, until, type, List.of()))
+          () -> exportOperationValidator.createExportRequest(originalRequest, false, outputFormat,
+              since, until, type, List.of()))
           .isExactlyInstanceOf(InvalidRequestException.class);
     } else {
       ExportRequest expectedRequest = exportOperationValidator.createExportRequest(originalRequest,

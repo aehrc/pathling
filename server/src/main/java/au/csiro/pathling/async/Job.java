@@ -64,10 +64,10 @@ public class Job<T> {
 
   @Setter
   private Consumer<HttpServletResponse> responseModification;
-  
+
   @Setter
   private boolean markedAsDeleted;
-  
+
   /*
   When a job is at 100% that does not always indicate that the job is actually finished. Most of the time,
   this indicates that a new stage has not been submitted while the current stage is already completed.
@@ -88,7 +88,8 @@ public class Job<T> {
     this.operation = operation;
     this.result = result;
     this.ownerId = ownerId;
-    this.responseModification = httpServletResponse -> {};
+    this.responseModification = httpServletResponse -> {
+    };
   }
 
   /**
@@ -109,6 +110,7 @@ public class Job<T> {
     return (completedStages * 100) / totalStages;
   }
 
+  @SuppressWarnings("unchecked")
   public void setPreAsyncValidationResult(Object preAsyncValidationResult) {
     try {
       this.preAsyncValidationResult = (T) preAsyncValidationResult;
@@ -116,7 +118,7 @@ public class Job<T> {
       throw new InternalError("PreAsyncValidationResult casting failed.", e);
     }
   }
-  
+
   public boolean isCancelled() {
     return result.isCancelled();
   }

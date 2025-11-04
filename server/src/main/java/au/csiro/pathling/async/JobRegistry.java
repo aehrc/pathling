@@ -45,7 +45,7 @@ public class JobRegistry {
 
   private final Map<String, Job<?>> jobsById = new HashMap<>();
   private final Map<JobTag, Job<?>> jobsByTags = new HashMap<>();
-  
+
   private final Set<String> removedFromRegistryButStillWithSparkJob = new HashSet<>();
 
   /**
@@ -57,6 +57,7 @@ public class JobRegistry {
    * @return the job.
    */
   @Nonnull
+  @SuppressWarnings("unchecked")
   public synchronized <T> Job<T> getOrCreate(@Nonnull final JobTag tag,
       @Nonnull final Function<String, Job<T>> jobFactory) {
 
@@ -76,6 +77,7 @@ public class JobRegistry {
     }
   }
 
+  @SuppressWarnings("unchecked")
   public synchronized <T> Job<T> get(JobTag jobTag) {
     return (Job<T>) jobsByTags.get(jobTag);
   }
@@ -87,28 +89,31 @@ public class JobRegistry {
    * @return the job or null
    */
   @Nullable
+  @SuppressWarnings("unchecked")
   public synchronized <T> Job<T> get(@Nonnull final String id) {
     return (Job<T>) jobsById.get(id);
   }
-  
+
   public synchronized <T> boolean remove(@Nonnull Job<T> job) {
     boolean removed = jobsById.remove(job.getId(), job);
-    if(!removed) {
+    if (!removed) {
       log.warn("Failed to remove job {} from registry.", job.getId());
       return false;
     }
     boolean removedFromTags = jobsByTags.values().removeIf(otherJob -> otherJob.equals(job));
-    if(!removedFromTags) {
-      throw new InternalErrorException("Removed job %s from id map but failed to remove it from tag map.".formatted(job.getId()));
+    if (!removedFromTags) {
+      throw new InternalErrorException(
+          "Removed job %s from id map but failed to remove it from tag map.".formatted(
+              job.getId()));
     }
     removedFromRegistryButStillWithSparkJob.add(job.getId());
-    return  true;
+    return true;
   }
 
   public boolean removedFromRegistryButStillWithSparkJobContains(String jobId) {
     return removedFromRegistryButStillWithSparkJob.contains(jobId);
   }
-  
+
   public boolean removeCompletelyAfterSparkCleanup(String jobId) {
     return removedFromRegistryButStillWithSparkJob.remove(jobId);
   }

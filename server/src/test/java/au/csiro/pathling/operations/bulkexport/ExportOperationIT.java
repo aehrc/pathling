@@ -211,6 +211,7 @@ class ExportOperationIT {
         }));
   }
 
+  @SuppressWarnings("unchecked")
   private void assert_complete_result(String originalRequestUri, String responseBody,
       HttpHeaders headers) throws IOException {
     ObjectMapper objectMapper = new ObjectMapper();
