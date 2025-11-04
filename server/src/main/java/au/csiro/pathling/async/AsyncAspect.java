@@ -179,9 +179,10 @@ public class AsyncAspect {
         }
       });
       Optional<String> ownerId = getCurrentUserId(authentication);
-      return new Job<>(jobId, operation, result, ownerId);
+      final Job<IBaseResource> newJob = new Job<>(jobId, operation, result, ownerId);
+      newJob.setPreAsyncValidationResult(preAsyncValidationResult.result());
+      return newJob;
     });
-    job.setPreAsyncValidationResult(preAsyncValidationResult.result());
     final HttpServletResponse response = requestDetails.getServletResponse();
     response.setHeader("Content-Location",
         requestDetails.getFhirServerBase() + "/$job?id=" + job.getId());
