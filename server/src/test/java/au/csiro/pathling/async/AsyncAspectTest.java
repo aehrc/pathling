@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.operations.export.ExportResultRegistry;
+import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;

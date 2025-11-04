@@ -22,8 +22,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import au.csiro.pathling.errors.AccessDeniedError;
-import au.csiro.pathling.operations.export.ExportProvider;
-import au.csiro.pathling.operations.export.ExportRequest;
+import au.csiro.pathling.operations.bulkexport.ExportProvider;
+import au.csiro.pathling.operations.bulkexport.ExportRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import java.io.IOException;

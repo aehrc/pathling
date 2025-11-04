@@ -2,8 +2,8 @@ package au.csiro.pathling.util;
 
 import static org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
-import au.csiro.pathling.operations.export.ExportOutputFormat;
-import au.csiro.pathling.operations.export.ExportRequest;
+import au.csiro.pathling.operations.bulkexport.ExportOutputFormat;
+import au.csiro.pathling.operations.bulkexport.ExportRequest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;

@@ -1,7 +1,7 @@
 package au.csiro.pathling.util;
 
-import au.csiro.pathling.operations.export.ExportExecutor;
-import au.csiro.pathling.operations.export.ExportResponse;
+import au.csiro.pathling.operations.bulkexport.ExportExecutor;
+import au.csiro.pathling.operations.bulkexport.ExportResponse;
 import au.csiro.pathling.library.io.sink.WriteDetails;
 import com.google.common.annotations.VisibleForTesting;
 import java.util.UUID;

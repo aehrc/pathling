@@ -5,9 +5,9 @@ import static org.assertj.core.api.Fail.fail;
 
 import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.sink.WriteDetails;
-import au.csiro.pathling.operations.export.ExportOutputFormat;
-import au.csiro.pathling.operations.export.ExportRequest;
-import au.csiro.pathling.operations.export.ExportResponse;
+import au.csiro.pathling.operations.bulkexport.ExportOutputFormat;
+import au.csiro.pathling.operations.bulkexport.ExportRequest;
+import au.csiro.pathling.operations.bulkexport.ExportResponse;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ArrayNode;

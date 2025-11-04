@@ -10,7 +10,7 @@ import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
-import au.csiro.pathling.operations.export.ExportResultRegistry;
+import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
