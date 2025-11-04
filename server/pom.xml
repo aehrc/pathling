@@ -30,6 +30,7 @@
     <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
     <pathling.dockerArchitecture>arm64</pathling.dockerArchitecture>
     <jmh.version>1.37</jmh.version>
+    <jib.version>3.4.6</jib.version>
     <pathling.dockerBaseImage>amazoncorretto:21</pathling.dockerBaseImage>
   </properties>
 
@@ -317,6 +318,20 @@
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.14.1</version>
+        <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>1.18.34</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
@@ -490,6 +505,7 @@
           <plugin>
             <groupId>com.google.cloud.tools</groupId>
             <artifactId>jib-maven-plugin</artifactId>
+            <version>${jib.version}</version>
             <configuration>
               <from>
                 <image>${pathling.dockerBaseImage}</image>
@@ -547,6 +563,7 @@
           <plugin>
             <groupId>com.google.cloud.tools</groupId>
             <artifactId>jib-maven-plugin</artifactId>
+            <version>${jib.version}</version>
             <configuration>
               <from>
                 <image>${pathling.dockerBaseImage}</image>
