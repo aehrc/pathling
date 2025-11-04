@@ -176,14 +176,19 @@ public abstract class FileSource extends DatasetSource {
       final Collection<String> filePaths = Arrays.stream(fileStatuses)
           .map(FileStatus::getPath)
           .map(Path::toString)
-          .collect(Collectors.toList());
+          .toList();
+
+      log.debug("Found {} files in path: {}", filePaths.size(), path);
 
       // Apply the file name mapper to map each file to its resource types.
-      return filePaths.stream()
+      final Map<String, Collection<String>> result = filePaths.stream()
           .collect(Collectors.toMap(
               filePath -> {
-                final String baseName = FilenameUtils.getBaseName(filePath);
-                return fileNameMapper.apply(baseName);
+                final String baseName = retrieveResourceTypeFromFilePath(filePath);
+                final Set<String> resourceTypes = fileNameMapper.apply(baseName);
+                log.debug("File '{}' with baseName '{}' mapped to resource types: {}",
+                    filePath, baseName, resourceTypes);
+                return resourceTypes;
               },
               filePath -> new HashSet<>(Collections.singletonList(filePath)),
               (existing, replacement) -> {
@@ -203,12 +208,15 @@ public abstract class FileSource extends DatasetSource {
               }
           ));
 
+      log.debug("Final resource map has {} resource types: {}", result.size(), result.keySet());
+      return result;
+
     } catch (final IOException e) {
       throw new PersistenceError("Problem reading source files from file system", e);
     }
   }
 
-  private static String retrieveResourceTypeFromFilePath(String filePath) {
+  private static String retrieveResourceTypeFromFilePath(final String filePath) {
     String fileName = FilenameUtils.getBaseName(filePath);
     final String[] split = fileName.split("\\.");
     if (split.length == 2) {
