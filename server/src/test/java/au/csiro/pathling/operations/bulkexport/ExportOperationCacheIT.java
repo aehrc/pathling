@@ -45,7 +45,7 @@ class ExportOperationCacheIT {
   private static Path warehouseDir;
 
   @DynamicPropertySource
-  static void configureProperties(DynamicPropertyRegistry registry) {
+  static void configureProperties(final DynamicPropertyRegistry registry) {
     TestDataSetup.staticCopyTestDataToTempDir(warehouseDir);
     registry.add("pathling.storage.warehouseUrl",
         () -> "file://" + warehouseDir.resolve("delta").toAbsolutePath());
@@ -53,7 +53,7 @@ class ExportOperationCacheIT {
 
   @AfterEach
   void cleanup() throws IOException {
-    try (var files = Files.list(warehouseDir)) {
+    try (final var files = Files.list(warehouseDir)) {
       files.forEach(path -> {
         try {
           if (Files.isDirectory(path)) {
@@ -61,23 +61,23 @@ class ExportOperationCacheIT {
           } else {
             Files.delete(path);
           }
-        } catch (IOException e) {
-          log.warn("Failed to delete: " + path, e);
+        } catch (final IOException e) {
+          log.warn("Failed to delete: {}", path, e);
         }
       });
     }
   }
-  
+
   @Test
   void test() {
-    String uri = "http://localhost:" + port
+    final String uri = "http://localhost:" + port
         + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-01T00:00:00Z&_type=Patient,Encounter&_elements=identifier,Patient.name,Encounter.subject";
-    String pollUrl = kickOffRequest(webTestClient, uri);
+    final String pollUrl = kickOffRequest(webTestClient, uri);
     await()
         .atMost(30, TimeUnit.SECONDS)
         .pollInterval(3, TimeUnit.SECONDS)
         .until(() -> doPolling(webTestClient, pollUrl, result -> {
-          
+
         }));
   }
 }
