@@ -9,11 +9,6 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.sink.WriteDetails;
-import au.csiro.pathling.operations.bulkimport.AccessRules;
-import au.csiro.pathling.operations.bulkimport.ImportExecutor;
-import au.csiro.pathling.operations.bulkimport.ImportFormat;
-import au.csiro.pathling.operations.bulkimport.ImportRequest;
-import au.csiro.pathling.operations.bulkimport.ImportResponse;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
 import java.io.IOException;
@@ -62,7 +57,7 @@ class ImportExecutorTest {
     uniqueTempDir = tempDir.resolve(UUID.randomUUID().toString());
     Files.createDirectories(uniqueTempDir);
 
-    String databasePath = "file://" + uniqueTempDir.toAbsolutePath();
+    final String databasePath = "file://" + uniqueTempDir.toAbsolutePath();
     importExecutor = new ImportExecutor(
         Optional.empty(), // No access rules for most tests
         pathlingContext,
@@ -78,9 +73,9 @@ class ImportExecutorTest {
   @Test
   void test_import_single_resource_type() {
     // Given
-    String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
 
-    ImportRequest request = new ImportRequest(
+    final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
         "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
@@ -89,14 +84,14 @@ class ImportExecutorTest {
     );
 
     // When
-    ImportResponse response = importExecutor.execute(request, JOB_ID);
+    final ImportResponse response = importExecutor.execute(request, JOB_ID);
 
     // Then - verify response contains the original input URL
     assertThat(response).isNotNull();
     assertThat(response.getInputUrls()).containsExactly(patientUrl);
 
     // Verify data was written to database
-    WriteDetails writeDetails = getWriteDetails(response);
+    final WriteDetails writeDetails = getWriteDetails(response);
     assertThat(writeDetails.fileInfos())
         .hasSize(1)
         .first()
@@ -109,7 +104,7 @@ class ImportExecutorTest {
   @Test
   void test_import_all_test_resources() {
     // Given
-    ImportRequest request = new ImportRequest(
+    final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
         "https://example.org/source",
         Map.of(
@@ -127,14 +122,14 @@ class ImportExecutorTest {
     );
 
     // When
-    ImportResponse response = importExecutor.execute(request, JOB_ID);
+    final ImportResponse response = importExecutor.execute(request, JOB_ID);
 
     // Then - verify all input URLs are in response
     assertThat(response).isNotNull();
     assertThat(response.getInputUrls()).hasSize(4);
 
     // Verify data was written for all resource types (may be split into multiple files by Spark)
-    WriteDetails writeDetails = getWriteDetails(response);
+    final WriteDetails writeDetails = getWriteDetails(response);
     assertThat(writeDetails.fileInfos())
         .extracting(FileInformation::fhirResourceType)
         .contains("Patient", "Condition", "Encounter", "Observation");
@@ -147,8 +142,8 @@ class ImportExecutorTest {
   @Test
   void test_save_mode_overwrite() throws IOException {
     // Given - import data once
-    String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
-    ImportRequest request = new ImportRequest(
+    final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
         "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
@@ -157,14 +152,19 @@ class ImportExecutorTest {
     );
 
     // When - first import
-    ImportResponse response1 = importExecutor.execute(request, JOB_ID);
-    Path patientFile = Paths.get(
-        URI.create(response1.getOriginalInternalWriteDetails().fileInfos().get(0).absoluteUrl()));
-    long firstImportCount = Files.lines(patientFile).count();
+    final ImportResponse response1 = importExecutor.execute(request, JOB_ID);
+    final Path patientFile = Paths.get(
+        URI.create(
+            response1.getOriginalInternalWriteDetails().fileInfos().getFirst().absoluteUrl()));
+    final long firstImportCount;
+    try (final var lines = Files.lines(patientFile)) {
+      firstImportCount = lines.count();
+    }
 
     // Then - second import with OVERWRITE should replace the file
-    String patient2Url = "file://" + TEST_DATA_PATH.resolve("Patient_2.ndjson").toAbsolutePath();
-    ImportRequest request2 = new ImportRequest(
+    final String patient2Url =
+        "file://" + TEST_DATA_PATH.resolve("Patient_2.ndjson").toAbsolutePath();
+    final ImportRequest request2 = new ImportRequest(
         "http://example.com/fhir/$import",
         "https://example.org/source",
         Map.of("Patient", List.of(patient2Url)),
@@ -172,12 +172,16 @@ class ImportExecutorTest {
         ImportFormat.NDJSON
     );
 
-    ImportResponse response2 = importExecutor.execute(request2, JOB_ID);
+    final ImportResponse response2 = importExecutor.execute(request2, JOB_ID);
 
     // Get the new file path (may be different after overwrite)
-    Path patientFile2 = Paths.get(
-        URI.create(response2.getOriginalInternalWriteDetails().fileInfos().get(0).absoluteUrl()));
-    long secondImportCount = Files.lines(patientFile2).count();
+    final Path patientFile2 = Paths.get(
+        URI.create(
+            response2.getOriginalInternalWriteDetails().fileInfos().getFirst().absoluteUrl()));
+    final long secondImportCount;
+    try (final var lines = Files.lines(patientFile2)) {
+      secondImportCount = lines.count();
+    }
 
     assertThat(response1).isNotNull();
     assertThat(response2).isNotNull();
@@ -191,8 +195,8 @@ class ImportExecutorTest {
   @Test
   void test_save_mode_append() throws IOException {
     // Given - import data once
-    String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
-    ImportRequest request = new ImportRequest(
+    final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
         "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
@@ -201,17 +205,16 @@ class ImportExecutorTest {
     );
 
     // When - first import
-    ImportResponse response1 = importExecutor.execute(request, JOB_ID);
+    final ImportResponse response1 = importExecutor.execute(request, JOB_ID);
 
     // Get the actual database file path from WriteDetails
-    WriteDetails writeDetails1 = getWriteDetails(response1);
-    String dbFilePath = writeDetails1.fileInfos().get(0).absoluteUrl();
-    Path patientFile = Paths.get(URI.create(dbFilePath));
-    long firstImportSize = Files.size(patientFile);
+    final WriteDetails writeDetails1 = getWriteDetails(response1);
+    final String dbFilePath = writeDetails1.fileInfos().getFirst().absoluteUrl();
+    final Path patientFile = Paths.get(URI.create(dbFilePath));
+    final long firstImportSize = Files.size(patientFile);
 
     // Then - second import with APPEND should add to the file
-    ImportResponse response2 = importExecutor.execute(request, JOB_ID);
-    long secondImportSize = Files.size(patientFile);
+    final ImportResponse response2 = importExecutor.execute(request, JOB_ID);
 
     assertThat(response1).isNotNull();
     assertThat(response2).isNotNull();
@@ -224,22 +227,22 @@ class ImportExecutorTest {
 
     // In APPEND mode, Spark may create new part files instead of appending to existing file
     // Just verify data was written in both imports
-    WriteDetails writeDetails2 = getWriteDetails(response2);
+    final WriteDetails writeDetails2 = getWriteDetails(response2);
     assertThat(writeDetails2.fileInfos()).isNotEmpty();
   }
 
   @Test
   void test_save_mode_error_if_exists_throws_when_file_exists() {
     // Given - import data once with OVERWRITE
-    String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
-    ImportRequest initialRequest = new ImportRequest(
+    final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final ImportRequest initialRequest = new ImportRequest(
         "http://example.com/fhir/$import",
         "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
         SaveMode.OVERWRITE,
         ImportFormat.NDJSON
     );
-    ImportResponse initialResponse = importExecutor.execute(initialRequest, JOB_ID);
+    final ImportResponse initialResponse = importExecutor.execute(initialRequest, JOB_ID);
 
     // Verify first import succeeded
     assertThat(initialResponse).isNotNull();
@@ -248,7 +251,7 @@ class ImportExecutorTest {
     // When - second import with ERROR_IF_EXISTS
     // Note: Spark's ERROR_IF_EXISTS behavior with ndjson format may vary
     // The important thing is that the mode is accepted and processed
-    ImportRequest errorRequest = new ImportRequest(
+    final ImportRequest errorRequest = new ImportRequest(
         "http://example.com/fhir/$import",
         "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
@@ -259,10 +262,10 @@ class ImportExecutorTest {
     // Try the operation - Spark may or may not throw depending on internal state
     // Just verify the mode is accepted
     try {
-      ImportResponse response = importExecutor.execute(errorRequest, JOB_ID);
+      final ImportResponse response = importExecutor.execute(errorRequest, JOB_ID);
       // If it succeeds, verify response is valid
       assertThat(response).isNotNull();
-    } catch (RuntimeException e) {
+    } catch (final RuntimeException e) {
       // If it throws, that's also expected behavior for ERROR_IF_EXISTS
       assertThat(e.getMessage()).containsAnyOf("exist", "already", "found");
     }
@@ -271,8 +274,8 @@ class ImportExecutorTest {
   @Test
   void test_save_mode_error_if_exists_succeeds_when_file_does_not_exist() throws IOException {
     // Given - fresh database with no existing data
-    String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
-    ImportRequest request = new ImportRequest(
+    final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
         "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
@@ -281,16 +284,16 @@ class ImportExecutorTest {
     );
 
     // When
-    ImportResponse response = importExecutor.execute(request, JOB_ID);
+    final ImportResponse response = importExecutor.execute(request, JOB_ID);
 
     // Then - should succeed when file doesn't exist
     assertThat(response).isNotNull();
     assertThat(response.getInputUrls()).containsExactly(patientUrl);
 
     // Verify data was written to database
-    WriteDetails writeDetails = getWriteDetails(response);
-    String dbFilePath = writeDetails.fileInfos().get(0).absoluteUrl();
-    Path patientFile = Paths.get(URI.create(dbFilePath));
+    final WriteDetails writeDetails = getWriteDetails(response);
+    final String dbFilePath = writeDetails.fileInfos().getFirst().absoluteUrl();
+    final Path patientFile = Paths.get(URI.create(dbFilePath));
     assertThat(patientFile).exists();
     assertThat(Files.size(patientFile)).isGreaterThan(0L);
   }
@@ -302,10 +305,11 @@ class ImportExecutorTest {
   @Test
   void test_file_remapping_preserves_original_urls() {
     // Given
-    String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
-    String conditionUrl = "file://" + TEST_DATA_PATH.resolve("Condition.ndjson").toAbsolutePath();
+    final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final String conditionUrl =
+        "file://" + TEST_DATA_PATH.resolve("Condition.ndjson").toAbsolutePath();
 
-    ImportRequest request = new ImportRequest(
+    final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
         "https://example.org/source",
         Map.of(
@@ -317,15 +321,17 @@ class ImportExecutorTest {
     );
 
     // When
-    ImportResponse response = importExecutor.execute(request, JOB_ID);
+    final ImportResponse response = importExecutor.execute(request, JOB_ID);
 
     // Then - response should contain the original input URLs (SMART spec requirement)
     assertThat(response.getInputUrls())
         .containsExactlyInAnyOrder(patientUrl, conditionUrl);
 
     // Internal WriteDetails contains database paths (for tracking actual writes)
-    WriteDetails writeDetails = getWriteDetails(response);
-    assertThat(writeDetails.fileInfos())
+    final WriteDetails writeDetails = getWriteDetails(response);
+    final List<FileInformation> fileInfos = writeDetails.fileInfos();
+    assertThat(fileInfos).isNotEmpty();
+    assertThat(fileInfos)
         .extracting(FileInformation::absoluteUrl)
         .allMatch(url -> url.contains(uniqueTempDir.toAbsolutePath().toString()));
   }
@@ -333,10 +339,11 @@ class ImportExecutorTest {
   @Test
   void test_file_remapping_preserves_resource_types() {
     // Given
-    String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
-    String conditionUrl = "file://" + TEST_DATA_PATH.resolve("Condition.ndjson").toAbsolutePath();
+    final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final String conditionUrl =
+        "file://" + TEST_DATA_PATH.resolve("Condition.ndjson").toAbsolutePath();
 
-    ImportRequest request = new ImportRequest(
+    final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
         "https://example.org/source",
         Map.of(
@@ -348,13 +355,13 @@ class ImportExecutorTest {
     );
 
     // When
-    ImportResponse response = importExecutor.execute(request, JOB_ID);
+    final ImportResponse response = importExecutor.execute(request, JOB_ID);
 
     // Then - verify response contains input URLs
     assertThat(response.getInputUrls()).hasSize(2);
 
     // Verify internal WriteDetails has correct resource types
-    WriteDetails writeDetails = getWriteDetails(response);
+    final WriteDetails writeDetails = getWriteDetails(response);
     assertThat(writeDetails.fileInfos())
         .extracting(FileInformation::fhirResourceType)
         .contains("Patient", "Condition");
@@ -363,9 +370,9 @@ class ImportExecutorTest {
   @Test
   void test_file_remapping_preserves_counts() {
     // Given
-    String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
 
-    ImportRequest request = new ImportRequest(
+    final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
         "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
@@ -374,18 +381,16 @@ class ImportExecutorTest {
     );
 
     // When
-    ImportResponse response = importExecutor.execute(request, JOB_ID);
+    final ImportResponse response = importExecutor.execute(request, JOB_ID);
 
     // Then - verify response structure (counts not in SMART spec response)
     assertThat(response.getInputUrls()).containsExactly(patientUrl);
 
     // Counts are available in internal WriteDetails
-    WriteDetails writeDetails = getWriteDetails(response);
+    final WriteDetails writeDetails = getWriteDetails(response);
     assertThat(writeDetails.fileInfos())
         .isNotEmpty()
-        .allSatisfy(fileInfo -> {
-          assertThat(fileInfo.fhirResourceType()).isEqualTo("Patient");
-        });
+        .allSatisfy(fileInfo -> assertThat(fileInfo.fhirResourceType()).isEqualTo("Patient"));
 
     // Verify files were written (counts may not be populated in all modes)
     assertThat(writeDetails.fileInfos()).isNotEmpty();
@@ -404,15 +409,15 @@ class ImportExecutorTest {
     // Given - configure to allow file:// URLs
     serverConfiguration.getImport().setAllowableSources(List.of("file://"));
 
-    ImportExecutor executorWithRules = new ImportExecutor(
+    final ImportExecutor executorWithRules = new ImportExecutor(
         Optional.of(new AccessRules(serverConfiguration)),
         pathlingContext,
         "file://" + uniqueTempDir.toAbsolutePath(),
         serverConfiguration
     );
 
-    String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
-    ImportRequest request = new ImportRequest(
+    final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
         "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
@@ -421,7 +426,7 @@ class ImportExecutorTest {
     );
 
     // When
-    ImportResponse response = executorWithRules.execute(request, JOB_ID);
+    final ImportResponse response = executorWithRules.execute(request, JOB_ID);
 
     // Then
     assertThat(response).isNotNull();
@@ -432,15 +437,15 @@ class ImportExecutorTest {
     // Given - configure to only allow s3:// URLs
     serverConfiguration.getImport().setAllowableSources(List.of("s3://allowed-bucket/"));
 
-    ImportExecutor executorWithRules = new ImportExecutor(
+    final ImportExecutor executorWithRules = new ImportExecutor(
         Optional.of(new AccessRules(serverConfiguration)),
         pathlingContext,
         "file://" + uniqueTempDir.toAbsolutePath(),
         serverConfiguration
     );
 
-    String deniedUrl = "s3://denied-bucket/Patient.ndjson";
-    ImportRequest request = new ImportRequest(
+    final String deniedUrl = "s3://denied-bucket/Patient.ndjson";
+    final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
         "https://example.org/source",
         Map.of("Patient", List.of(deniedUrl)),
@@ -458,9 +463,9 @@ class ImportExecutorTest {
   @Test
   void test_access_rules_skipped_when_absent() {
     // Given - executor with no AccessRules
-    String anyUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final String anyUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
 
-    ImportRequest request = new ImportRequest(
+    final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
         "https://example.org/source",
         Map.of("Patient", List.of(anyUrl)),
@@ -469,7 +474,7 @@ class ImportExecutorTest {
     );
 
     // When
-    ImportResponse response = importExecutor.execute(request, JOB_ID);
+    final ImportResponse response = importExecutor.execute(request, JOB_ID);
 
     // Then - should succeed without AccessRules validation
     assertThat(response).isNotNull();
@@ -480,17 +485,17 @@ class ImportExecutorTest {
     // Given - allow file:// but one URL uses s3://
     serverConfiguration.getImport().setAllowableSources(List.of("file://"));
 
-    ImportExecutor executorWithRules = new ImportExecutor(
+    final ImportExecutor executorWithRules = new ImportExecutor(
         Optional.of(new AccessRules(serverConfiguration)),
         pathlingContext,
         "file://" + uniqueTempDir.toAbsolutePath(),
         serverConfiguration
     );
 
-    String allowedUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
-    String deniedUrl = "s3://denied-bucket/Condition.ndjson";
+    final String allowedUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final String deniedUrl = "s3://denied-bucket/Condition.ndjson";
 
-    ImportRequest request = new ImportRequest(
+    final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
         "https://example.org/source",
         Map.of(
@@ -514,10 +519,10 @@ class ImportExecutorTest {
   @Test
   void test_original_request_url_preserved_in_response() {
     // Given
-    String originalRequestUrl = "http://example.com/fhir/$import?mode=overwrite&format=ndjson";
-    String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final String originalRequestUrl = "http://example.com/fhir/$import?mode=overwrite&format=ndjson";
+    final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
 
-    ImportRequest request = new ImportRequest(
+    final ImportRequest request = new ImportRequest(
         originalRequestUrl,
         "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
@@ -526,7 +531,7 @@ class ImportExecutorTest {
     );
 
     // When
-    ImportResponse response = importExecutor.execute(request, JOB_ID);
+    final ImportResponse response = importExecutor.execute(request, JOB_ID);
 
     // Then
     assertThat(response).isNotNull();
@@ -537,9 +542,9 @@ class ImportExecutorTest {
   @Test
   void test_import_verifies_data_written_to_database() throws IOException {
     // Given
-    String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
 
-    ImportRequest request = new ImportRequest(
+    final ImportRequest request = new ImportRequest(
         "http://example.com/fhir/$import",
         "https://example.org/source",
         Map.of("Patient", List.of(patientUrl)),
@@ -548,31 +553,34 @@ class ImportExecutorTest {
     );
 
     // When
-    ImportResponse response = importExecutor.execute(request, JOB_ID);
+    final ImportResponse response = importExecutor.execute(request, JOB_ID);
 
     // Then - verify response contains input URL
     assertThat(response).isNotNull();
     assertThat(response.getInputUrls()).containsExactly(patientUrl);
 
     // Verify data was written to the database
-    WriteDetails writeDetails = getWriteDetails(response);
+    final WriteDetails writeDetails = getWriteDetails(response);
     assertThat(writeDetails.fileInfos()).isNotEmpty();
 
     // Get actual database file path and verify it exists
-    String dbFilePath = writeDetails.fileInfos().get(0).absoluteUrl();
-    Path patientDataPath = Paths.get(URI.create(dbFilePath));
+    final String dbFilePath = writeDetails.fileInfos().getFirst().absoluteUrl();
+    final Path patientDataPath = Paths.get(URI.create(dbFilePath));
     assertThat(patientDataPath).exists();
 
     // Verify the file has content
-    long fileSize = Files.size(patientDataPath);
+    final long fileSize = Files.size(patientDataPath);
     assertThat(fileSize).isGreaterThan(0);
   }
 
   @Test
   void test_file_remapping_aggregates_counts_for_same_resource_type() throws IOException {
     // Given - verify test data has enough records to guarantee splitting
-    Path observationFile = TEST_DATA_PATH.resolve("Observation.ndjson");
-    long lineCount = Files.lines(observationFile).count();
+    final Path observationFile = TEST_DATA_PATH.resolve("Observation.ndjson");
+    final long lineCount;
+    try (final var lines = Files.lines(observationFile)) {
+      lineCount = lines.count();
+    }
     assertThat(lineCount)
         .as("Observation file must have more than 100 records to guarantee file splitting")
         .isGreaterThan(1000L);
@@ -581,9 +589,9 @@ class ImportExecutorTest {
     pathlingContext.getSpark().conf().set("spark.sql.files.maxRecordsPerFile", "1000");
 
     try {
-      String observationUrl = "file://" + observationFile.toAbsolutePath();
+      final String observationUrl = "file://" + observationFile.toAbsolutePath();
 
-      ImportRequest request = new ImportRequest(
+      final ImportRequest request = new ImportRequest(
           "http://example.com/fhir/$import",
           "https://example.org/source",
           Map.of("Observation", List.of(observationUrl)),
@@ -592,14 +600,14 @@ class ImportExecutorTest {
       );
 
       // When
-      ImportResponse response = importExecutor.execute(request, JOB_ID);
+      final ImportResponse response = importExecutor.execute(request, JOB_ID);
 
       // Then - response should contain single input URL (SMART spec)
       assertThat(response.getInputUrls()).containsExactly(observationUrl);
 
       // Internal WriteDetails may have multiple files (Spark partitioning)
-      WriteDetails writeDetails = getWriteDetails(response);
-      List<FileInformation> observationInfos = writeDetails.fileInfos().stream()
+      final WriteDetails writeDetails = getWriteDetails(response);
+      final List<FileInformation> observationInfos = writeDetails.fileInfos().stream()
           .filter(fi -> "Observation".equals(fi.fhirResourceType()))
           .toList();
 
@@ -619,12 +627,12 @@ class ImportExecutorTest {
   /**
    * Extract WriteDetails from ImportResponse using reflection.
    */
-  private WriteDetails getWriteDetails(ImportResponse response) {
+  private WriteDetails getWriteDetails(final ImportResponse response) {
     try {
-      var field = response.getClass().getDeclaredField("originalInternalWriteDetails");
+      final var field = response.getClass().getDeclaredField("originalInternalWriteDetails");
       field.setAccessible(true);
       return (WriteDetails) field.get(response);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       throw new RuntimeException("Unable to extract WriteDetails from response", e);
     }
   }
