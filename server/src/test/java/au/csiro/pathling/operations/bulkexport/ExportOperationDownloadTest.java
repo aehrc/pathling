@@ -7,9 +7,6 @@ import au.csiro.pathling.UnitTestDependencies;
 import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.async.RequestTagFactory;
 import au.csiro.pathling.errors.ResourceNotFoundError;
-import au.csiro.pathling.operations.bulkexport.ExportResult;
-import au.csiro.pathling.operations.bulkexport.ExportResultProvider;
-import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
 import java.io.IOException;
@@ -27,7 +24,6 @@ import org.springframework.mock.web.MockHttpServletResponse;
 /**
  * @author Felix Naumann
  */
-//@WebMvcTest(FileController.class)
 @Import({FhirServerTestConfiguration.class, UnitTestDependencies.class})
 @SpringBootUnitTest
 class ExportOperationDownloadTest {
@@ -43,34 +39,39 @@ class ExportOperationDownloadTest {
 
   @TempDir
   private Path tempDir;
+
+  @SuppressWarnings("unused")
   @Autowired
   private RequestTagFactory requestTagFactory;
+
+  @SuppressWarnings("unused")
   @Autowired
   private JobRegistry jobRegistry;
+
   @Autowired
   private ExportResultRegistry exportResultRegistry;
 
   @BeforeEach
   void setup() throws IOException {
-    exportResultProvider = new ExportResultProvider(exportResultRegistry, "file://" + tempDir.toString());
+    exportResultProvider = new ExportResultProvider(exportResultRegistry, "file://" + tempDir);
 
     // Create the jobs directory structure
-    Path jobsDir = tempDir.resolve("jobs");
-    Path jobDir = jobsDir.resolve(TEST_JOB_ID);
+    final Path jobsDir = tempDir.resolve("jobs");
+    final Path jobDir = jobsDir.resolve(TEST_JOB_ID);
     Files.createDirectories(jobDir);
 
     // Create test files
-    Path testFile = jobDir.resolve(TEST_FILENAME);
+    final Path testFile = jobDir.resolve(TEST_FILENAME);
     Files.writeString(testFile, TEST_CONTENT);
 
     // Create additional test files
-    Path anotherFile = jobDir.resolve("patients.ndjson");
+    final Path anotherFile = jobDir.resolve("patients.ndjson");
     Files.writeString(anotherFile, """
         {"resourceType":"Patient","id":"patient1","name":[{"family":"Doe","given":["John"]}]}
         {"resourceType":"Patient","id":"patient2","name":[{"family":"Smith","given":["Jane"]}]}
         """);
 
-    Path observationsFile = jobDir.resolve("observations.ndjson");
+    final Path observationsFile = jobDir.resolve("observations.ndjson");
     Files.writeString(observationsFile, """
         {"resourceType":"Observation","id":"obs1","status":"final"}
         {"resourceType":"Observation","id":"obs2","status":"preliminary"}
@@ -80,8 +81,8 @@ class ExportOperationDownloadTest {
   }
 
   @Test
-  void test_file_is_served_correctly() throws Exception {
-    MockHttpServletResponse response = new MockHttpServletResponse();
+  void testFileIsServedCorrectly() throws Exception {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
     exportResultProvider.result(TEST_JOB_ID, TEST_FILENAME, response);
     assertThat(response.getContentType()).isEqualTo("application/octet-stream");
     assertThat(response.containsHeader(HttpHeaders.CONTENT_DISPOSITION)).isTrue();
@@ -90,15 +91,15 @@ class ExportOperationDownloadTest {
         .contains("filename=\"" + TEST_FILENAME + "\"");
 
     // Get the resource and read its content
-    String actualContent = response.getContentAsString();
+    final String actualContent = response.getContentAsString();
     assertThat(actualContent)
         .isNotEmpty()
         .isEqualTo(TEST_CONTENT);
   }
 
   @Test
-  void test_nothing_is_served_if_job_is_unknown() {
-    MockHttpServletResponse response = new MockHttpServletResponse();
+  void testNothingIsServedIfJobIsUnknown() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
     assertThatCode(
         () -> exportResultProvider.result("96f7f71b-f37e-4f1c-8cb4-0571e4b7f37b", TEST_FILENAME,
             response))
@@ -107,8 +108,8 @@ class ExportOperationDownloadTest {
   }
 
   @Test
-  void test_nothing_is_served_if_filename_is_unknown() {
-    MockHttpServletResponse response = new MockHttpServletResponse();
+  void testNothingIsServedIfFilenameIsUnknown() {
+    final MockHttpServletResponse response = new MockHttpServletResponse();
     assertThatCode(() -> exportResultProvider.result(TEST_JOB_ID, "unknown-file.ndjson", response))
         .isExactlyInstanceOf(ResourceNotFoundError.class)
         .hasMessageContaining("does not exist or is not a file!");
