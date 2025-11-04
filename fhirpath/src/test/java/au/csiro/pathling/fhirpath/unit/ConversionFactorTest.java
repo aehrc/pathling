@@ -9,7 +9,13 @@ class ConversionFactorTest {
 
   
   @Test
-  void testConversionFactor() {
+  void testInverseProducesExactResult() {
     assertEquals(BigDecimal.ONE, ConversionFactor.inverseOf(new BigDecimal(12)).apply(new BigDecimal(12)));
+  }
+
+
+  @Test
+  void testFractionProducesExactResult() {
+    assertEquals(new BigDecimal(4), ConversionFactor.ofFraction(new BigDecimal(2), new BigDecimal(3)).apply(new BigDecimal(6)));
   }
 }

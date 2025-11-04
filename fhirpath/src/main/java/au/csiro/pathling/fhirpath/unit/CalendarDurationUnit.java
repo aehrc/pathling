@@ -169,7 +169,7 @@ public enum CalendarDurationUnit implements FhirPathUnit {
    * @throws IllegalArgumentException if the name is not valid
    */
   @Nonnull
-  public static CalendarDurationUnit parseString(@Nonnull String name) {
+  public static CalendarDurationUnit parseString(@Nonnull final String name) {
     return fromString(name).orElseThrow(
         () -> new IllegalArgumentException("Unknown calendar duration unit: " + name));
   }
@@ -182,7 +182,7 @@ public enum CalendarDurationUnit implements FhirPathUnit {
    * @return an Optional containing the corresponding CalendarDurationUnit, or empty if not found
    */
   @Nonnull
-  public static Optional<CalendarDurationUnit> fromString(@Nonnull String name) {
+  public static Optional<CalendarDurationUnit> fromString(@Nonnull final String name) {
     return Optional.ofNullable(NAME_MAP.get(name));
   }
 
@@ -254,7 +254,7 @@ public enum CalendarDurationUnit implements FhirPathUnit {
    * otherwise
    */
   @Nonnull
-  Optional<ConversionFactor> conversionFactorFrom(@Nonnull UcumUnit ucumUnitSource) {
+  Optional<ConversionFactor> conversionFactorFrom(@Nonnull final UcumUnit ucumUnitSource) {
     return ucumUnitSource.conversionFactorTo(SECOND.asUcum())
         .flatMap(ucumFactor ->
             SECOND.conversionFactorTo(this)
@@ -273,6 +273,7 @@ public enum CalendarDurationUnit implements FhirPathUnit {
    * @throws IllegalArgumentException if this calendar duration unit has no UCUM equivalent (i.e.,
    * it is not a definite duration)
    */
+  @Nonnull
   public UcumUnit asUcum() {
     return Optional.of(this)
         .filter(CalendarDurationUnit::isDefinite)
