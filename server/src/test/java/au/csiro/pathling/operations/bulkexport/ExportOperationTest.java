@@ -71,14 +71,14 @@ class ExportOperationTest {
   private QueryableDataSource queryableDataSource; // NO-SONAR the mock is needed
 
   @BeforeEach
-  void init() {
+  void initialize() {
     SharedMocks.resetAll();
     objectMapper = new ObjectMapper();
   }
 
   @ParameterizedTest
-  @MethodSource("provide_headers")
-  void test_headers(final String acceptHeader, final String preferHeader, final boolean lenient,
+  @MethodSource("provideHeaders")
+  void testHeaders(final String acceptHeader, final String preferHeader, final boolean lenient,
       final List<String> messages, final boolean valid) {
     final String outputFormat = ExportOutputFormat.asParam(ND_JSON);
     final InstantType now = InstantType.now();
@@ -101,7 +101,7 @@ class ExportOperationTest {
     }
   }
 
-  private static Stream<Arguments> provide_headers() {
+  private static Stream<Arguments> provideHeaders() {
     return Stream.of(
         // strict
         arguments("application/fhir+json", "respond-async", false, List.of(), true),
@@ -130,8 +130,8 @@ class ExportOperationTest {
   }
 
   @ParameterizedTest
-  @MethodSource("provide_until_param")
-  void test_until_param_is_mapped(final InstantType until, final InstantType expectedUntil) {
+  @MethodSource("provideUntilParameter")
+  void testUntilParameterIsMapped(final InstantType until, final InstantType expectedUntil) {
     final RequestDetails mockReqDetails = MockUtil.mockRequest("application/fhir+json",
         "respond-async",
         false);
@@ -142,7 +142,7 @@ class ExportOperationTest {
     assertThat(actualExportRequest.until()).isEqualTo(expectedUntil);
   }
 
-  private static Stream<Arguments> provide_until_param() {
+  private static Stream<Arguments> provideUntilParameter() {
     final InstantType now = InstantType.now();
     return Stream.of(
         arguments(now, now),
@@ -151,8 +151,8 @@ class ExportOperationTest {
   }
 
   @ParameterizedTest
-  @MethodSource("provide_type_param")
-  void test_type_param_is_mapped(final List<String> types, final boolean lenient,
+  @MethodSource("provideTypeParameter")
+  void testTypeParameterIsMapped(final List<String> types, final boolean lenient,
       final List<ResourceType> expectedTypes) {
     final RequestDetails mockReqDetails = MockUtil.mockRequest("application/fhir+json",
         "respond-async",
@@ -175,7 +175,7 @@ class ExportOperationTest {
     }
   }
 
-  private static Stream<Arguments> provide_type_param() {
+  private static Stream<Arguments> provideTypeParameter() {
     final String unsupportedResource = CollectionConverters.asJava(
             EncoderBuilder.UNSUPPORTED_RESOURCES())
         .stream().findFirst().orElseThrow();
@@ -195,8 +195,8 @@ class ExportOperationTest {
   }
 
   @ParameterizedTest
-  @MethodSource("provide_elements_param")
-  void test_elements_param_is_mapped(final List<String> elements,
+  @MethodSource("provideElementsParameter")
+  void testElementsParameterIsMapped(final List<String> elements,
       final List<ExportRequest.FhirElement> expectedElements) {
     final RequestDetails mockReqDetails = MockUtil.mockRequest("application/fhir+json",
         "respond-async",
@@ -218,7 +218,7 @@ class ExportOperationTest {
     }
   }
 
-  private static Stream<Arguments> provide_elements_param() {
+  private static Stream<Arguments> provideElementsParameter() {
     return Stream.of(
         arguments(List.of("Patient.identifier"), List.of(fhirElement("Patient", "identifier"))),
         arguments(List.of("identifier"), List.of(fhirElement(null, "identifier"))),
@@ -244,11 +244,10 @@ class ExportOperationTest {
   }
 
   @ParameterizedTest
-  @MethodSource("provide_params")
-  void test_params_with_lenient(final ExportOutputFormat exportOutputFormat,
-      final InstantType since,
-      final List<String> type, final Map<String, String[]> unsupportedQueryParams,
-      final boolean lenient,
+  @MethodSource("provideParameters")
+  void testParametersWithLenient(final ExportOutputFormat exportOutputFormat,
+      final InstantType since, final List<String> type,
+      final Map<String, String[]> unsupportedQueryParams, final boolean lenient,
       final List<String> messages, final boolean valid) {
     final RequestDetails mockReqDetails = MockUtil.mockRequest("application/fhir+json",
         "respond-async",
@@ -276,7 +275,7 @@ class ExportOperationTest {
     }
   }
 
-  private static Stream<Arguments> provide_params() {
+  private static Stream<Arguments> provideParameters() {
     final InstantType now = InstantType.now();
     return Stream.of(
         arguments(ND_JSON, now, List.<String>of(), Map.of(), false, List.of(), true),
@@ -284,24 +283,26 @@ class ExportOperationTest {
         arguments(ND_JSON, now, List.of("Patient"), Map.of(), false, List.of(), true),
         arguments(ND_JSON, now, List.of("Patient123"), Map.of(), false, List.of(), false),
         arguments(ND_JSON, now, List.of("Patient123"), Map.of(), true, List.of(), true),
-        arguments(ND_JSON, now, List.<String>of(), query_p("_typeFilter", "test"), false, List.of(),
+        arguments(ND_JSON, now, List.<String>of(), queryParameter("_typeFilter", "test"), false,
+            List.of(),
             false),
-        arguments(ND_JSON, now, List.<String>of(), query_p("_typeFilter", "test"), true, List.of(
+        arguments(ND_JSON, now, List.<String>of(), queryParameter("_typeFilter", "test"), true,
+            List.of(
                 "The query parameter '_typeFilter' is not supported. Ignoring because lenient handling is enabled."),
             true)
     );
   }
 
   @SuppressWarnings("SameParameterValue")
-  private static Map<String, String[]> query_p(final String key1, final String val1) {
+  private static Map<String, String[]> queryParameter(final String key1, final String val1) {
     return Map.of(
         key1, new String[]{val1}
     );
   }
 
   @ParameterizedTest
-  @MethodSource("provide_output_mappings")
-  void test_output_model_mapping(final ExportResponse exportResponse, final JsonNode expectedJSON)
+  @MethodSource("provideOutputMappings")
+  void testOutputModelMapping(final ExportResponse exportResponse, final JsonNode expectedJSON)
       throws IOException {
     final Binary actualBinary = resolveTempDirIn(exportResponse, Paths.get("test"),
         UUID.randomUUID()).toOutput();
@@ -312,7 +313,7 @@ class ExportOperationTest {
         .isEqualTo(expectedJSON);
   }
 
-  private static Stream<Arguments> provide_output_mappings() {
+  private static Stream<Arguments> provideOutputMappings() {
     final ObjectMapper mapper = new ObjectMapper();
     final String base = "http://localhost:8080/fhir/$export?";
     final InstantType now = InstantType.now();
@@ -337,10 +338,10 @@ class ExportOperationTest {
   }
 
   @ParameterizedTest
-  @MethodSource("provide_mappings")
-  void test_input_model_mapping(final String originalRequest, final String outputFormat,
-      final InstantType since,
-      final InstantType until, final List<String> type, final ExportRequest expectedMappedRequest) {
+  @MethodSource("provideMappings")
+  void testInputModelMapping(final String originalRequest, final String outputFormat,
+      final InstantType since, final InstantType until, final List<String> type,
+      final ExportRequest expectedMappedRequest) {
     final List<String> emptyList = List.of();
     if (expectedMappedRequest == null) {
       assertThatThrownBy(
@@ -354,7 +355,7 @@ class ExportOperationTest {
     }
   }
 
-  private static Stream<Arguments> provide_mappings() {
+  private static Stream<Arguments> provideMappings() {
     final String base = "http://localhost:8080/fhir/$export?";
     final InstantType now = InstantType.now();
     final InstantType until = InstantType.now();
