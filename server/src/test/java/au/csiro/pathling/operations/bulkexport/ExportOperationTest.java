@@ -326,7 +326,8 @@ class ExportOperationTest {
     final var res2 = res(req2,
         write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER), 0)));
     final var json2 = json(mapper, res2.getKickOffRequestUrl(), write_details(
-        res2.getWriteDetails().fileInfos().stream().filter(fileInfo -> fileInfo.count() > 0)
+        res2.getWriteDetails().fileInfos().stream()
+            .filter(fileInfo -> fileInfo.count() != null && fileInfo.count() > 0)
             .toList()));
 
     return Stream.of(

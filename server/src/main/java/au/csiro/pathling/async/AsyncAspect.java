@@ -117,9 +117,10 @@ public class AsyncAspect {
     // Run some validation in sync before (and let validation modify headers if desired)
     Object target = joinPoint.getTarget();
     PreAsyncValidationResult<?> result = null;
-    if(target instanceof PreAsyncValidation<?> preAsyncValidation) {
+    if (target instanceof PreAsyncValidation<?> preAsyncValidation) {
       try {
-        result = preAsyncValidation.preAsyncValidate(requestDetails, Arrays.copyOf(args, args.length - 1));
+        result = preAsyncValidation.preAsyncValidate(requestDetails,
+            Arrays.copyOf(args, args.length - 1));
       } catch (InvalidRequestException preValidationException) {
         throw ErrorHandlingInterceptor.convertError(preValidationException);
       }
@@ -127,8 +128,7 @@ public class AsyncAspect {
     if (FhirServer.PREFER_RESPOND_TYPE_HEADER.validValue(requestDetails)) {
       log.info("Asynchronous processing requested");
 
-
-      if(result == null) {
+      if (result == null) {
         // the class containing the async annotation on a method does not implement PreAsyncValidation
         // set some values to prevent NPEs
         result = new PreAsyncValidationResult<>(new Object(), List.of());
@@ -141,9 +141,9 @@ public class AsyncAspect {
   }
 
   private void processRequestAsynchronously(@Nonnull final ProceedingJoinPoint joinPoint,
-                                            @Nonnull final ServletRequestDetails requestDetails,
-                                            @Nonnull PreAsyncValidationResult<?> preAsyncValidationResult,
-                                            @Nonnull final SparkSession spark
+      @Nonnull final ServletRequestDetails requestDetails,
+      @Nonnull PreAsyncValidationResult<?> preAsyncValidationResult,
+      @Nonnull final SparkSession spark
   ) {
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     final RequestTag requestTag = requestTagFactory.createTag(requestDetails, authentication);
@@ -232,7 +232,7 @@ public class AsyncAspect {
     issue.setCode(IssueType.INFORMATIONAL);
     issue.setSeverity(IssueSeverity.INFORMATION);
     issue.setDiagnostics("Job accepted for processing, see the Content-Location header for the "
-            + "URL at which status can be queried");
+        + "URL at which status can be queried");
     opOutcome.addIssue(issue);
 
     result.warnings().forEach(opOutcome::addIssue);
