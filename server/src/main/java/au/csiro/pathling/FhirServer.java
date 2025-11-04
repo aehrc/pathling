@@ -36,7 +36,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
-import scala.collection.JavaConverters;
+import scala.jdk.javaapi.CollectionConverters;
 
 /**
  * @author Felix Naumann
@@ -204,7 +204,7 @@ public class FhirServer extends RestfulServer {
   @Nonnull
   public static Set<ResourceType> unsupportedResourceTypes() {
     final Set<Enumerations.ResourceType> unsupportedResourceTypes =
-        JavaConverters.setAsJavaSet(EncoderBuilder.UNSUPPORTED_RESOURCES()).stream()
+        CollectionConverters.asJava(EncoderBuilder.UNSUPPORTED_RESOURCES()).stream()
             .map(Enumerations.ResourceType::fromCode)
             .collect(Collectors.toCollection(HashSet::new));
     unsupportedResourceTypes.add(ResourceType.NULL);
