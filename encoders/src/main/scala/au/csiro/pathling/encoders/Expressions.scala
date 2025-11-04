@@ -25,7 +25,7 @@
 package au.csiro.pathling.encoders
 
 import org.apache.spark.SparkException
-import org.apache.spark.sql.Column
+import org.apache.spark.sql.{AnalysisException, Column}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
 import org.apache.spark.sql.catalyst.analysis.{TypeCheckResult, UnresolvedException}
@@ -289,8 +289,8 @@ case class AttachExtensions(targetObject: Expression,
  * in both Spark 4.0.1 and Spark 4.1.0-rc1 (where FoldableUnevaluable has been removed) 
  * and which is deployed in Databrics Runtime 17.3 LTS.
  * <p>
- * An expression that cannot be evaluated and is not foldable. These expressions 
- * on't live past analysis or optimization time (e.g. Star)
+ * An expression that cannot be evaluated and is not foldable. These expressions
+ * don't live past analysis or optimization time (e.g. Star)
  * and should not be evaluated during query planning and execution.
  */
 trait UnevaluableCopy extends Expression {
@@ -410,6 +410,46 @@ case class UnresolvedUnnest(value: Expression)
 
   override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
     UnresolvedUnnest(newChildren.head)
+  }
+}
+
+/**
+ * An expression that resolves to null if the field is not found during resolution.
+ * This is useful for handling optional fields in nested structures where the field
+ * may not exist in all instances.
+ *
+ * @param value the expression to resolve
+ */
+case class UnresolvedNullIfUnresolved(value: Expression)
+  extends Expression with UnevaluableCopy with NonSQLExpression {
+
+  override def mapChildren(f: Expression => Expression): Expression = {
+    try {
+      val newValue = f(value)
+      if (newValue.resolved) {
+        newValue
+      } else {
+        copy(value = newValue)
+      }
+    } catch {
+      case e: AnalysisException if e.errorClass.contains("FIELD_NOT_FOUND") =>
+        // If field is not found, return null instead of throwing an error
+        Literal(null)
+    }
+  }
+
+  override def dataType: DataType = throw new UnresolvedException("dataType")
+
+  override def nullable: Boolean = throw new UnresolvedException("nullable")
+
+  override lazy val resolved = false
+
+  override def toString: String = s"$value"
+
+  override def children: Seq[Expression] = value :: Nil
+
+  override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    UnresolvedNullIfUnresolved(newChildren.head)
   }
 }
 

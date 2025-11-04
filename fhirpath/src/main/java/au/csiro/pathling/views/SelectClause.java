@@ -42,7 +42,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor()
 @NoArgsConstructor()
-@AtMostOneNonNull({"forEach", "forEachOrNull"})
+@AtMostOneNonNull({"forEach", "forEachOrNull", "repeat"})
 public class SelectClause implements SelectionElement {
 
   /**
@@ -99,6 +99,18 @@ public class SelectClause implements SelectionElement {
    */
   @Nullable
   String forEachOrNull;
+
+  /**
+   * An array of FHIRPath expressions that define paths to recursively traverse. The view runner
+   * will start at the current context node, evaluate each path expression, and for each result,
+   * recursively apply the same path patterns. This continues until no more matches are found at
+   * any depth. All results from all levels and all paths are unioned together.
+   *
+   * @see <a
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.repeat">ViewDefinition.select.repeat</a>
+   */
+  @Nullable
+  List<String> repeat;
 
   /**
    * A `unionAll` combines the results of multiple selection structures. Each structure under the

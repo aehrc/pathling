@@ -31,6 +31,7 @@ import au.csiro.pathling.projection.ExecutionContext;
 import au.csiro.pathling.projection.GroupingSelection;
 import au.csiro.pathling.projection.Projection;
 import au.csiro.pathling.projection.ProjectionClause;
+import au.csiro.pathling.projection.RepeatSelection;
 import au.csiro.pathling.projection.RequestedColumn;
 import au.csiro.pathling.projection.UnionSelection;
 import au.csiro.pathling.projection.UnnestingSelection;
@@ -142,26 +143,35 @@ public class FhirViewExecutor {
    */
   @Nonnull
   private ProjectionClause parseSelection(@Nonnull final SelectClause select) {
-    // There are three types of select:
+    // There are four types of select:
     // (1) A direct column selection
     // (2) A "for each" selection, which unnests a set of sub-select based on a parent path
     // (3) A "for each or null" selection, which is the same as (2) but creates a null row if
     //     the parent path evaluates to an empty collection
+    // (4) A "repeat" selection, which recursively traverses nested structures
 
-    if (isNull(select.getForEach()) && isNull(select.getForEachOrNull())) {
-      // If this is a direct column selection, we use a FromSelection. This will produce the 
+    if (isNull(select.getForEach()) && isNull(select.getForEachOrNull())
+        && isNull(select.getRepeat())) {
+      // If this is a direct column selection, we use a GroupingSelection. This will produce the
       // cartesian product of the collections that are produced by the FHIRPath expressions.
       return new GroupingSelection(parseSubSelection(select));
+    } else if (nonNull(select.getRepeat())) {
+      // If this is a "repeat" selection, we use a RepeatSelection. This will recursively traverse
+      // the nested structures defined by the repeat paths, unioning all results from all levels.
+      final List<FhirPath> repeatPaths = select.getRepeat().stream()
+          .map(parser::parse)
+          .toList();
+      return new RepeatSelection(repeatPaths, parseSubSelection(select));
     } else if (nonNull(select.getForEach()) && nonNull(select.getForEachOrNull())) {
       throw new IllegalStateException(
           "Both forEach and forEachOrNull are set in the select clause");
     } else if (nonNull(select.getForEach())) {
-      // If this is a "for each" selection, we use a ForEachSelectionX. This will produce a row for
-      // each item in the collection produced by the parent path.
+      // If this is a "for each" selection, we use an UnnestingSelection. This will produce a row
+      // for each item in the collection produced by the parent path.
       return new UnnestingSelection(parser.parse(requireNonNull(select.getForEach())),
           parseSubSelection(select), false);
     } else { // this implies that forEachOrNull is non-null
-      // If this is a "for each or null" selection, we use a ForEachSelectionX with a flag set to
+      // If this is a "for each or null" selection, we use an UnnestingSelection with a flag set to
       // true. This will produce a row for each item in the collection produced by the parent path,
       // or a single null row if the parent path evaluates to an empty collection.
       return new UnnestingSelection(parser.parse(requireNonNull(select.getForEachOrNull())),

@@ -39,6 +39,9 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.utilities.Streams;
 import ca.uhn.fhir.context.FhirContext;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
@@ -99,7 +102,32 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 @SpringBootUnitTest
 @TestInstance(Lifecycle.PER_CLASS)
 @Slf4j
+@Import(FhirViewTest.CustomEncoderConfiguration.class)
 abstract class FhirViewTest {
+
+  /**
+   * Custom configuration for FhirViewTest to provide FhirEncoders with increased maxNestingLevel.
+   * This is necessary to support the repeat directive which can create deeply nested structures.
+   */
+  @TestConfiguration
+  static class CustomEncoderConfiguration {
+
+    /**
+     * Provides FhirEncoders configured with maxNestingLevel=3 to handle nested structures
+     * created by the repeat directive.
+     *
+     * @return configured FhirEncoders instance
+     */
+    @Bean
+    @Nonnull
+    FhirEncoders fhirEncoders() {
+      return FhirEncoders.forR4()
+          .withMaxNestingLevel(3)
+          .withExtensionsEnabled(true)
+          .withAllOpenTypes()
+          .getOrCreate();
+    }
+  }
 
   private static final DateTimeFormatter FHIR_DATE_PARSER = new DateTimeFormatterBuilder()
       .appendPattern("yyyy[-MM[-dd]]")

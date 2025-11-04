@@ -116,6 +116,23 @@ public class ValueFunctions {
   }
 
   /**
+   * Wraps a column expression to resolve to null if the field is not found during resolution.
+   * <p>
+   * This is useful for handling optional fields in nested structures where the field may not exist
+   * in all instances. Instead of throwing an error when a field is not found, this function will
+   * return null.
+   *
+   * @param value The column expression to wrap
+   * @return A new column that resolves to null if the field is not found
+   */
+  @Nonnull
+  public static Column nullIfUnresolved(@Nonnull final Column value) {
+    final Expression valueExpr = expression(value);
+    final Expression nullOrExpr = new UnresolvedNullIfUnresolved(valueExpr);
+    return column(nullOrExpr);
+  }
+
+  /**
    * Removes all fields starting with '_' (underscore) from struct values.
    * <p>
    * This function is used to clean up internal/synthetic fields from FHIR resources before
