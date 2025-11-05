@@ -83,15 +83,11 @@ public final class SchemaUtils {
    */
   private static int computeMaxNestingLevel(@Nonnull final DataType dataType,
       @Nonnull final List<String> currentPath) {
-    if (dataType instanceof StructType structType) {
-      return computeMaxNestingLevelInStruct(structType, currentPath);
-    } else if (dataType instanceof ArrayType arrayType) {
-      // Arrays of structs should be descended into
-      return computeMaxNestingLevel(arrayType.elementType(), currentPath);
-    } else {
-      // Leaf node - compute the max count of any field name in the current path
-      return computeMaxCountInPath(currentPath);
-    }
+    return switch (dataType) {
+      case StructType structType -> computeMaxNestingLevelInStruct(structType, currentPath);
+      case ArrayType arrayType -> computeMaxNestingLevel(arrayType.elementType(), currentPath);
+      default -> computeMaxCountInPath(currentPath);
+    };
   }
 
   /**
