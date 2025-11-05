@@ -17,6 +17,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.validation.annotation.Validated;
@@ -72,26 +73,31 @@ public class ServerConfiguration {
   private SparkConfiguration spark = SparkConfiguration.builder().build();
 
   @Bean
+  @ConditionalOnMissingBean
   public PathlingVersion pathlingVersion() {
     return new PathlingVersion();
   }
 
   @Bean
+  @ConditionalOnMissingBean
   public FhirContext fhirContext() {
     return FhirEncoders.forR4().getOrCreate().getContext();
   }
 
   @Bean
+  @ConditionalOnMissingBean
   public IParser jsonParser() {
     return fhirContext().newJsonParser();
   }
 
   @Bean
+  @ConditionalOnMissingBean
   public PathlingContext pathlingContext() {
     return PathlingContext.create();
   }
 
   @Bean
+  @ConditionalOnMissingBean
   public QueryableDataSource deltaLake(PathlingContext pathlingContext) {
     return new DeltaSource(pathlingContext, databasePath);
   }

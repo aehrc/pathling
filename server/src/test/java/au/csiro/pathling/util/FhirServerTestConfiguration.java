@@ -152,10 +152,12 @@ public class FhirServerTestConfiguration {
     );
   }
 
+  // NOTE: Removed @ConfigurationProperties to avoid duplicate bean registration
+  // from @Bean methods inside ServerConfiguration class.
+  // Tests should set required properties directly or use @TestPropertySource.
   @Bean
   @Primary
   @ConditionalOnMissingBean
-  @ConfigurationProperties("pathling")
   public ServerConfiguration serverConfiguration() {
     return new ServerConfiguration();
   }
@@ -165,5 +167,12 @@ public class FhirServerTestConfiguration {
   @ConditionalOnMissingBean
   public ExportResultRegistry exportResultRegistry() {
     return new ExportResultRegistry();
+  }
+
+  @Bean("pathlingVersion")
+  @Primary
+  @ConditionalOnMissingBean
+  public au.csiro.pathling.PathlingVersion pathlingVersion() {
+    return new au.csiro.pathling.PathlingVersion();
   }
 } 
