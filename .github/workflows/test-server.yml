@@ -69,6 +69,7 @@ jobs:
         with:
           name: server-coverage-reports
           path: |
+            **/jacoco.exec
             server/**/jacoco.xml
             server/**/target/site/jacoco
 

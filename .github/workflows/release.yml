@@ -140,6 +140,7 @@ jobs:
         with:
           name: coverage-reports
           path: |
+            **/jacoco.exec
             **/jacoco.xml
             **/target/site/jacoco
             **/target/site/jacoco-aggregate
