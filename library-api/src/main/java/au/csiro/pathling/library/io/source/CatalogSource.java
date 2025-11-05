@@ -82,7 +82,16 @@ public class CatalogSource extends AbstractSource {
     this.filterResourcePredicate = Optional.empty();
   }
 
-  private CatalogSource(@Nonnull final PathlingContext context,
+  /**
+   * Constructs a CatalogSource with full control over all optional parameters.
+   *
+   * @param context the PathlingContext to use
+   * @param schema optional schema name for the catalog tables
+   * @param transformation optional transformation to apply to each dataset
+   * @param universalOperator optional operator to apply to each resource with its type
+   * @param filterResourcePredicate optional predicate to filter resource types
+   */
+  public CatalogSource(@Nonnull final PathlingContext context,
       @Nonnull final Optional<String> schema,
       @Nonnull final Optional<UnaryOperator<Dataset<Row>>> transformation,
       @Nonnull final Optional<BiFunction<String, Dataset<Row>, Dataset<Row>>> universalOperator,

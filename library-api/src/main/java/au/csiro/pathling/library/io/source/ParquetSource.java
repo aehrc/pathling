@@ -33,6 +33,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * @author John Grimes
  * @author Piotr Szul
  */
+@SuppressWarnings("unused")
 public class ParquetSource extends FileSource {
 
   private static final String PARQUET_FILE_EXTENSION = "parquet";
@@ -95,6 +96,7 @@ public class ParquetSource extends FileSource {
    *
    * @param context the PathlingContext to use
    * @param files a map where keys are resource type names and values are collections of file paths
+   * @param additionalResourceTypeFilter predicate to filter resource types to be loaded
    */
   public ParquetSource(@Nonnull final PathlingContext context,
       @Nonnull final Map<String, Collection<String>> files,
