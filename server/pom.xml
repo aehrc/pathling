@@ -405,7 +405,7 @@
         <version>3.5.3</version>
         <configuration>
           <groups>IntegrationTest</groups>
-          <argLine>
+          <argLine>@{argLine}
             --add-opens java.base/java.lang=ALL-UNNAMED
             --add-opens java.base/java.lang.invoke=ALL-UNNAMED
             --add-opens java.base/java.lang.reflect=ALL-UNNAMED
@@ -443,7 +443,7 @@
               junit.jupiter.execution.parallel.enabled=true
             </configurationParameters>
           </properties>
-          <argLine>
+          <argLine>@{argLine}
             --add-opens java.base/java.lang=ALL-UNNAMED
             --add-opens java.base/java.lang.invoke=ALL-UNNAMED
             --add-opens java.base/java.lang.reflect=ALL-UNNAMED
@@ -460,6 +460,25 @@
             --add-exports java.base/sun.nio.ch=ALL-UNNAMED
           </argLine>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.12</version>
+        <executions>
+          <execution>
+            <id>prepare-agent</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
