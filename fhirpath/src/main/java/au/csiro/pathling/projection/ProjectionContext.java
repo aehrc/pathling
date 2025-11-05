@@ -40,7 +40,8 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public record ProjectionContext(
     @Nonnull FhirPathEvaluator executor,
-    @Nonnull Collection inputContext
+    @Nonnull Collection inputContext,
+    int maxNestingLevel
 ) {
 
   /**
@@ -61,7 +62,7 @@ public record ProjectionContext(
    */
   @Nonnull
   public ProjectionContext withInputContext(@Nonnull final Collection inputContext) {
-    return new ProjectionContext(executor, inputContext);
+    return new ProjectionContext(executor, inputContext, maxNestingLevel);
   }
 
   /**
@@ -98,7 +99,9 @@ public record ProjectionContext(
         .create(subjectResource, StaticFunctionRegistry.getInstance(), variables);
 
     // Return a new ProjectionContext with the executor and the default input context.
-    return new ProjectionContext(executor, executor.createDefaultInputContext());
+    return new ProjectionContext(executor,
+        executor.createDefaultInputContext(),
+        SchemaUtils.computeMaxNestingLevel(executor.createInitialDataset().schema()));
   }
 
   @Nonnull

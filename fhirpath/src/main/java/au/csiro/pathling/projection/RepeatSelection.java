@@ -42,12 +42,7 @@ public record RepeatSelection(
     @Nonnull List<FhirPath> paths,
     @Nonnull List<ProjectionClause> components
 ) implements ProjectionClause {
-
-  /**
-   * Maximum recursion depth to prevent infinite loops.
-   */
-  private static final int MAX_DEPTH = 3;
-
+  
   @Nonnull
   @Override
   public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
@@ -70,7 +65,7 @@ public record RepeatSelection(
                     .map(path -> context.withInputContext(col).evalExpression(path)))
                 .toList()
         )
-        .limit(MAX_DEPTH + 1L)  // Limit depth to prevent infinite recursion
+        .limit(context.maxNestingLevel())  // Limit depth to prevent infinite recursion
         .flatMap(List::stream)  // Flatten the list of collections
         .filter(c -> c != inputContext)  // Exclude the root context from results
         .toList();
@@ -102,7 +97,7 @@ public record RepeatSelection(
    * Evaluates the components on a single node from the recursively collected results.
    *
    * @param inputContext the collection representing a node from the recursive traversal
-   * @param context      the projection context
+   * @param context the projection context
    * @return a column representing the evaluated components as a flattened array of structs
    */
   @Nonnull
@@ -118,9 +113,9 @@ public record RepeatSelection(
   /**
    * Evaluates the components on a single element within a collection node.
    *
-   * @param unnestingColumn     the column representing a single element
+   * @param unnestingColumn the column representing a single element
    * @param unnestingCollection the collection containing the element
-   * @param context             the projection context
+   * @param context the projection context
    * @return a struct combining the evaluated component columns
    */
   @Nonnull
