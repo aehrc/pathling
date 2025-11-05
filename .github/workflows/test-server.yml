@@ -38,9 +38,22 @@ jobs:
           restore-keys: |-
             ${{ runner.os }}-maven-
 
+      - name: Cache SonarQube packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
       - name: Build and test server module
         working-directory: server
-        run: mvn --batch-mode clean install
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          mvn --batch-mode clean install \
+          org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+          -Dsonar.projectKey=aehrc_pathling -Dsonar.organization=aehrc \
+          -Dsonar.host.url=https://sonarcloud.io
         timeout-minutes: 20
 
       - name: Save test reports
@@ -49,6 +62,15 @@ jobs:
         with:
           name: server-surefire-reports
           path: "server/**/surefire-reports/"
+
+      - name: Save coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-coverage-reports
+          path: |
+            server/**/jacoco.xml
+            server/**/target/site/jacoco
 
       - name: Save built JAR
         if: success()
