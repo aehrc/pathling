@@ -57,7 +57,7 @@ import org.apache.spark.sql.functions;
  *   <li>{@link ValidationLogic} - handles conversion validation orchestration and logic</li>
  * </ul>
  *
- * @author John Grimes
+ * @author Piotr Szul
  * @see <a href="https://build.fhir.org/ig/HL7/FHIRPath/#conversion">FHIRPath Specification -
  * Conversion</a>
  */
@@ -212,7 +212,7 @@ public class ConversionFunctions {
     // First convert to Quantity using standard conversion
     final Collection converted = ConversionLogic.performConversion(input, FhirPathType.QUANTITY);
     // If unitCode provided and result is QuantityCollection, apply unitCode conversion
-    if (unit != null && converted instanceof QuantityCollection quantityCollection) {
+    if (unit != null && converted instanceof final QuantityCollection quantityCollection) {
       return quantityCollection.toUnit(requireNonNull(unit));
     } else {
       return converted;
@@ -339,16 +339,17 @@ public class ConversionFunctions {
   /**
    * Checks if the input can be converted to a Quantity value.
    * <p>
-   * The optional {@code unitCode} parameter specifies a target unitCode for validation. If provided, the
-   * function returns true if the input can be converted to a Quantity AND the quantity can be
-   * converted to the target unitCode (either via exact match or UCUM conversion). Returns false if
-   * units are incompatible or conversion is not possible.
+   * The optional {@code unitCode} parameter specifies a target unitCode for validation. If
+   * provided, the function returns true if the input can be converted to a Quantity AND the
+   * quantity can be converted to the target unitCode (either via exact match or UCUM conversion).
+   * Returns false if units are incompatible or conversion is not possible.
    * <p>
-   * <b>UCUM Conversion:</b> Full UCUM unitCode conversion checking is supported for compatible units
-   * (e.g., 'kg' to 'g', 'wk' to 'd', 'cm' to 'mm'). Incompatible units (e.g., mass to length)
+   * <b>UCUM Conversion:</b> Full UCUM unitCode conversion checking is supported for compatible
+   * units (e.g., 'kg' to 'g', 'wk' to 'd', 'cm' to 'mm'). Incompatible units (e.g., mass to length)
    * return false.
    * <p>
-   * <b>Note:</b> Calendar duration conversions (e.g., days to hours, years to months) are supported.
+   * <b>Note:</b> Calendar duration conversions (e.g., days to hours, years to months) are
+   * supported.
    *
    * @param input The input collection
    * @param unit Optional target unitCode for validation (null if not specified)
@@ -371,7 +372,7 @@ public class ConversionFunctions {
         ? ConversionLogic.performConversion(input, FhirPathType.QUANTITY)
         : null;
 
-    if (unit != null && converted instanceof QuantityCollection quantityCollection) {
+    if (unit != null && converted instanceof final QuantityCollection quantityCollection) {
       final Collection canConvertToUnit = quantityCollection.convertibleToUnit(
           requireNonNull(unit));
       return canConvertToQuantity.mapColumn(
