@@ -28,14 +28,14 @@ escape quotes and represent Unicode characters:
 
 - Unicode characters may be escaped using \u followed by four hex digits.
 - Additional escapes are those supported in JSON:
-  - `\\` (backslash),
-  - `\/` (slash),
-  - `\f` (form feed - `\u000c`),
-  - `\n` (newline - `\u000a`),
-  - `\r` (carriage return - `\u000d`),
-  - `\t` (tab - `\u0009`)
-  - <code>\``</code> (backtick)
-  - `\'` (single-quote)
+    - `\\` (backslash),
+    - `\/` (slash),
+    - `\f` (form feed - `\u000c`),
+    - `\n` (newline - `\u000a`),
+    - `\r` (carriage return - `\u000d`),
+    - `\t` (tab - `\u0009`)
+    - <code>\``</code> (backtick)
+    - `\'` (single-quote)
 
 Unicode is supported in both string literals and delimited identifiers.
 
@@ -189,7 +189,7 @@ Not all code systems require the use of a version to unambiguously specify a
 code - see
 [Versioning Code Systems](https://hl7.org/fhir/R4/codesystem.html#versioning).
 
-You can also optionally single-quote each of the components within the Coding 
+You can also optionally single-quote each of the components within the Coding
 literal, in cases where certain characters might otherwise confuse the parser.
 
 Examples:
@@ -210,9 +210,9 @@ unique to the Pathling implementation.
 
 There is a subset of all possible FHIR types that can be "materialized", i.e.
 used as the result of an aggregation or grouping expression in
-the [aggregate](/docs/server/operations/aggregate)
+the [aggregate](/docs/7.2.0/server/operations/aggregate)
 operation, or a column expression within
-the [extract](/docs/server/operations/extract)
+the [extract](/docs/7.2.0/server/operations/extract)
 operation. These types are:
 
 - [Boolean](#boolean)

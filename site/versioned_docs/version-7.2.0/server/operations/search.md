@@ -12,7 +12,8 @@ This operation extends the search capabilities of FHIR using a
 for use with all resource types.
 
 This search profile allows the user to retrieve a set of FHIR resources from the
-server filtered by one or more [FHIRPath](/docs/fhirpath) expressions. Each
+server filtered by one or more [FHIRPath](/docs/7.2.0/fhirpath) expressions.
+Each
 expression is evaluated against each resource, returning a Boolean value which
 determines whether the resource will be included in the search result.
 
@@ -20,7 +21,8 @@ As per the [FHIR search](https://hl7.org/fhir/R4/search.html#combining)
 specification, multiple instances of the search parameter are combined using
 Boolean AND logic, and multiple expressions can be provided within a single
 search parameter and delimited by commas to achieve OR logic. In addition to
-this, [FHIRPath boolean operators](/docs/fhirpath/operators#boolean-logic) can
+this, [FHIRPath boolean operators](/docs/7.2.0/fhirpath/operators#boolean-logic)
+can
 be used within expressions.
 
 Composite search parameters (using the `$` notation) are not currently
@@ -47,7 +49,7 @@ The named query is invoked using a parameter of `_query` with a value of
 `fhirPath`.
 
 Parameters are passed in the query portion of the URL for GET requests, and can
-be passed either in the URL or in a `application/x-www-form-urlencoded` body for 
+be passed either in the URL or in a `application/x-www-form-urlencoded` body for
 POST requests.
 
 ## Response
