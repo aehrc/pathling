@@ -53,20 +53,90 @@ import org.apache.spark.sql.types.DataTypes;
  * This class provides the template method for performing type conversions and all type-specific
  * conversion helper methods used by {@link ConversionFunctions}.
  *
- * @author John Grimes
+ * @author Piotr Szul
  */
 @UtilityClass
 class ConversionLogic {
 
-  // Regex constants used by conversion logic
+  /**
+   * Regex pattern for validating FHIRPath integer strings.
+   * <p>
+   * Matches: Optional sign (+ or -) followed by one or more digits.
+   * <p>
+   * Examples: "123", "+456", "-789", "0"
+   * <p>
+   * Pattern: ^(\+|-)?\d+$
+   */
   static final String INTEGER_REGEX = "^(\\+|-)?\\d+$";
+
+  /**
+   * Regex pattern for validating FHIR date strings with partial precision support.
+   * <p>
+   * Matches three valid formats:
+   * <ul>
+   *   <li>YYYY - Year only (e.g., "2023")</li>
+   *   <li>YYYY-MM - Year and month (e.g., "2023-06")</li>
+   *   <li>YYYY-MM-DD - Full date (e.g., "2023-06-15")</li>
+   * </ul>
+   * <p>
+   * Pattern: ^\d{4}(-\d{2}(-\d{2})?)?$
+   */
   static final String DATE_REGEX = "^\\d{4}(-\\d{2}(-\\d{2})?)?$";
+
+  /**
+   * Regex pattern for validating FHIR dateTime strings with partial precision and timezone
+   * support.
+   * <p>
+   * Matches progressively more precise formats:
+   * <ul>
+   *   <li>YYYY - Year (e.g., "2023")</li>
+   *   <li>YYYY-MM - Year and month (e.g., "2023-06")</li>
+   *   <li>YYYY-MM-DD - Date (e.g., "2023-06-15")</li>
+   *   <li>YYYY-MM-DDThh - Date with hour (e.g., "2023-06-15T14")</li>
+   *   <li>YYYY-MM-DDThh:mm - Date with hour and minute (e.g., "2023-06-15T14:30")</li>
+   *   <li>YYYY-MM-DDThh:mm:ss - Date with seconds (e.g., "2023-06-15T14:30:45")</li>
+   *   <li>YYYY-MM-DDThh:mm:ss.fff - Date with fractional seconds (e.g., "2023-06-15T14:30:45.123")</li>
+   * </ul>
+   * Optional timezone: Z for UTC or ±hh:mm offset (e.g., "2023-06-15T14:30:45+10:00")
+   * <p>
+   * Pattern: ^\d{4}(-\d{2}(-\d{2}(T\d{2}(:\d{2}(:\d{2}(\.\d+)?)?)?(Z|[+\-]\d{2}:\d{2})?)?)?)?$
+   */
   static final String DATETIME_REGEX =
       "^\\d{4}(-\\d{2}(-\\d{2}(T\\d{2}(:\\d{2}(:\\d{2}(\\.\\d+)?)?)?(Z|[+\\-]\\d{2}:\\d{2})?)?)?)?$";
+
+  /**
+   * Regex pattern for validating FHIR time strings with partial precision support.
+   * <p>
+   * Matches three valid formats:
+   * <ul>
+   *   <li>hh - Hour only (e.g., "14")</li>
+   *   <li>hh:mm - Hour and minute (e.g., "14:30")</li>
+   *   <li>hh:mm:ss - Hour, minute, and second (e.g., "14:30:45")</li>
+   *   <li>hh:mm:ss.fff - Hour, minute, second with fractional seconds (e.g., "14:30:45.123")</li>
+   * </ul>
+   * <p>
+   * Pattern: ^\d{2}(:\d{2}(:\d{2}(\.\d+)?)?)?$
+   */
   static final String TIME_REGEX = "^\\d{2}(:\\d{2}(:\\d{2}(\\.\\d+)?)?)?$";
-  // Unit is optional per FHIRPath spec: (?'value'(\+|-)?\d+(\.\d+)?)\s*('(?'unitCode'[^']+)'|(?'time'[a-zA-Z]+))?
-  // Valid calendar duration units: year(s), month(s), week(s), day(s), hour(s), minute(s), second(s), millisecond(s)
-  // Case-insensitive matching via (?i) flag
+
+  /**
+   * Regex pattern for validating FHIRPath quantity literal strings.
+   * <p>
+   * Matches a numeric value with optional unit specification:
+   * <ul>
+   *   <li>Numeric part: Optional sign (+ or -), integer or decimal (e.g., "1", "-2.5", "+3.14")</li>
+   *   <li>Optional whitespace separator</li>
+   *   <li>Optional unit: Either quoted UCUM code (e.g., "'mg'") or calendar duration unit</li>
+   * </ul>
+   * Valid calendar duration units (case-insensitive, singular or plural):
+   * year, month, week, day, hour, minute, second, millisecond
+   * <p>
+   * Examples: "5", "1.5 'kg'", "3 weeks", "10.5 mg", "-2.5 'cm'"
+   * <p>
+   * Note: Unit is optional per FHIRPath spec. When absent, unitCode defaults to '1'.
+   * <p>
+   * Pattern: ^[+-]?\d+(?:\.\d+)?\s*(?:'[^']+'|(?i:years?|months?|weeks?|days?|hours?|minutes?|seconds?|milliseconds?))?$
+   */
   static final String QUANTITY_REGEX =
       "^[+-]?\\d+(?:\\.\\d+)?\\s*(?:'[^']+'|(?i:years?|months?|weeks?|days?|hours?|minutes?|seconds?|milliseconds?))?$";
 
