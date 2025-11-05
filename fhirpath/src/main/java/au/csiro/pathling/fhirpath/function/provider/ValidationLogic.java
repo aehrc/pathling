@@ -44,9 +44,23 @@ import org.apache.spark.sql.types.DataTypes;
 @UtilityClass
 class ValidationLogic {
 
-  // Regex constants used by validation logic
-  private static final String INTEGER_REGEX = ConversionLogic.INTEGER_REGEX;
+  /**
+   * Regex pattern for validating FHIRPath decimal strings.
+   * <p>
+   * Matches numeric values with optional sign and optional decimal part:
+   * <ul>
+   *   <li>Optional sign: + or - (e.g., "+3.14", "-2.5")</li>
+   *   <li>Integer part: One or more digits (required)</li>
+   *   <li>Decimal part: Period followed by one or more digits (optional)</li>
+   * </ul>
+   * <p>
+   * Examples: "123", "123.456", "+123.456", "-123.456", "0.5", "+0.5", "-0.5"
+   * <p>
+   * Pattern: ^(\+|-)?\d+(\.\d+)?$
+   */
   private static final String DECIMAL_REGEX = "^(\\+|-)?\\d+(\\.\\d+)?$";
+
+  private static final String INTEGER_REGEX = ConversionLogic.INTEGER_REGEX;
   private static final String DATE_REGEX = ConversionLogic.DATE_REGEX;
   private static final String DATETIME_REGEX = ConversionLogic.DATETIME_REGEX;
   private static final String TIME_REGEX = ConversionLogic.TIME_REGEX;
@@ -86,7 +100,8 @@ class ValidationLogic {
     }
 
     // Look up validation function from registry
-    final BiFunction<FhirPathType, Column, Column> validationLogic = VALIDATION_REGISTRY.get(targetType);
+    final BiFunction<FhirPathType, Column, Column> validationLogic = VALIDATION_REGISTRY.get(
+        targetType);
 
     final Column singularValue = input.getColumn().singular().getValue();
     // Use Nothing when the type is not known to enforce default value for a non-convertible type
