@@ -867,8 +867,9 @@ class DataSourcesTest {
     // Attempting to read from a path that causes an IOException
     // This covers line 215 (IOException handling)
     // Use a path with invalid scheme to trigger filesystem error
+    final DataSourceBuilder read = pathlingContext.read();
     assertThrows(PersistenceError.class,
-        () -> pathlingContext.read().ndjson("invalidscheme://invalid/path"));
+        () -> read.ndjson("invalidscheme://invalid/path"));
   }
 
   @Test
