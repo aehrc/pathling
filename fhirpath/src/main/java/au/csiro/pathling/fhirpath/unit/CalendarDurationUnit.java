@@ -18,13 +18,13 @@
 package au.csiro.pathling.fhirpath.unit;
 
 import jakarta.annotation.Nonnull;
-import lombok.Getter;
-import org.apache.commons.lang3.tuple.Pair;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import lombok.Getter;
+import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * Enumeration of valid FHIRPath calendar duration units from year to millisecond.
@@ -61,7 +61,8 @@ public enum CalendarDurationUnit implements FhirPathUnit {
   /**
    * APPROXIMATION: Calendar years are assumed to be 365 days for conversion purposes.
    */
-  YEAR("year", false, "a", new BigDecimal("31536000000")),      // 365 * 24 * 60 * 60 * 1000 (assumes 365 days/year, does NOT account for leap years; approximation per FHIRPath spec)
+  YEAR("year", false, "a", new BigDecimal(
+      "31536000000")),      // 365 * 24 * 60 * 60 * 1000 (assumes 365 days/year, does NOT account for leap years; approximation per FHIRPath spec)
   /**
    * APPROXIMATION: Calendar months are assumed to be 30 days for conversion purposes.
    */
@@ -74,7 +75,7 @@ public enum CalendarDurationUnit implements FhirPathUnit {
   MILLISECOND("millisecond", true, "ms", BigDecimal.ONE);       // 1 ms
 
   /**
-   * The system URI for Fhipath calendar duration units (e.g. year, month, day).
+   * The system URI for FHIRPath calendar duration units (e.g. year, month, day).
    */
   public static final String FHIRPATH_CALENDAR_DURATION_SYSTEM_URI = "https://hl7.org/fhirpath/N1/calendar-duration";
   @Nonnull
@@ -107,15 +108,15 @@ public enum CalendarDurationUnit implements FhirPathUnit {
   private static final Map<String, CalendarDurationUnit> NAME_MAP = new HashMap<>();
 
   static {
-    for (CalendarDurationUnit unit : values()) {
+    for (final CalendarDurationUnit unit : values()) {
       NAME_MAP.put(unit.unit, unit);
       NAME_MAP.put(unit.unit + "s", unit); // plural
     }
   }
 
 
-  CalendarDurationUnit(@Nonnull String code, boolean definite, @Nonnull String ucumEquivalent,
-      @Nonnull BigDecimal millisecondsEquivalent) {
+  CalendarDurationUnit(@Nonnull final String code, final boolean definite,
+      @Nonnull final String ucumEquivalent, @Nonnull final BigDecimal millisecondsEquivalent) {
     this.unit = code;
     this.definite = definite;
     this.ucumEquivalent = ucumEquivalent;
@@ -197,7 +198,7 @@ public enum CalendarDurationUnit implements FhirPathUnit {
    */
   @Nonnull
   public Optional<ConversionFactor> conversionFactorTo(
-      @Nonnull CalendarDurationUnit targetUnit) {
+      @Nonnull final CalendarDurationUnit targetUnit) {
 
     // Check for explicitly incompatible conversions first
     if (INCOMPATIBLE_CONVERSIONS.contains(Pair.of(this, targetUnit))) {

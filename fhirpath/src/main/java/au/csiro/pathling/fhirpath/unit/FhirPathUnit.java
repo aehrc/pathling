@@ -104,17 +104,19 @@ public sealed interface FhirPathUnit permits UcumUnit, CalendarDurationUnit {
    * units are incompatible or custom units are involved
    */
   @Nonnull
-  static Optional<ConversionFactor> conversionFactorTo(@Nonnull FhirPathUnit sourceUnit,
-      @Nonnull FhirPathUnit targetUnit) {
+  static Optional<ConversionFactor> conversionFactorTo(@Nonnull final FhirPathUnit sourceUnit,
+      @Nonnull final FhirPathUnit targetUnit) {
     // This handles cross-unit conversions.
     return switch (sourceUnit) {
-      case CalendarDurationUnit cdUnitSource -> switch (targetUnit) {
-        case CalendarDurationUnit cdUnitTarget -> cdUnitSource.conversionFactorTo(cdUnitTarget);
-        case UcumUnit ucumUnitTarget -> cdUnitSource.conversionFactorTo(ucumUnitTarget);
+      case final CalendarDurationUnit cdUnitSource -> switch (targetUnit) {
+        case final CalendarDurationUnit cdUnitTarget ->
+            cdUnitSource.conversionFactorTo(cdUnitTarget);
+        case final UcumUnit ucumUnitTarget -> cdUnitSource.conversionFactorTo(ucumUnitTarget);
       };
-      case UcumUnit ucumUnitSource -> switch (targetUnit) {
-        case UcumUnit ucumUnitTarget -> ucumUnitSource.conversionFactorTo(ucumUnitTarget);
-        case CalendarDurationUnit cdUnitTarget -> cdUnitTarget.conversionFactorFrom(ucumUnitSource);
+      case final UcumUnit ucumUnitSource -> switch (targetUnit) {
+        case final UcumUnit ucumUnitTarget -> ucumUnitSource.conversionFactorTo(ucumUnitTarget);
+        case final CalendarDurationUnit cdUnitTarget ->
+            cdUnitTarget.conversionFactorFrom(ucumUnitSource);
       };
     };
   }
@@ -143,7 +145,7 @@ public sealed interface FhirPathUnit permits UcumUnit, CalendarDurationUnit {
    * @return a FhirPathUnit instance (CalendarDurationUnit if recognized, otherwise UcumUnit)
    */
   @Nonnull
-  static FhirPathUnit fromString(@Nonnull String unit) {
+  static FhirPathUnit fromString(@Nonnull final String unit) {
     return CalendarDurationUnit.fromString(unit)
         .map(FhirPathUnit.class::cast)
         .orElseGet(() -> new UcumUnit(unit));

@@ -27,12 +27,12 @@ import lombok.Value;
 /**
  * Represents a conversion factor between two units of measure, expressed as a fraction.
  * <p>
- * A conversion factor is stored as a fraction (numerator/denominator) rather than a decimal
- * to preserve precision during conversions. This is particularly important for conversions
- * involving irrational or repeating decimals.
+ * A conversion factor is stored as a fraction (numerator/denominator) rather than a decimal to
+ * preserve precision during conversions. This is particularly important for conversions involving
+ * irrational or repeating decimals.
  * <p>
- * Conversion factors can be applied to numeric values to convert them from one unit to another,
- * or composed with other conversion factors to create multi-step conversions.
+ * Conversion factors can be applied to numeric values to convert them from one unit to another, or
+ * composed with other conversion factors to create multi-step conversions.
  * <p>
  * Example usage:
  * <pre>
@@ -43,7 +43,7 @@ import lombok.Value;
  */
 @Value
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class ConversionFactor  {
+public class ConversionFactor {
 
   /**
    * The numerator of the conversion factor fraction.
@@ -88,7 +88,7 @@ public class ConversionFactor  {
    * @throws IllegalArgumentException if precision is not between 1 and 100
    */
   @Nonnull
-  public BigDecimal apply(@Nonnull final BigDecimal value, int precision) {
+  public BigDecimal apply(@Nonnull final BigDecimal value, final int precision) {
     if (precision < 1 || precision > 100) {
       throw new IllegalArgumentException(
           "precision must be between 1 and 100, got: " + precision);
@@ -101,8 +101,8 @@ public class ConversionFactor  {
   /**
    * Composes this conversion factor with another conversion factor.
    * <p>
-   * This creates a new conversion factor representing the combined conversion. This is useful
-   * for multi-step conversions (e.g., calendar unit → second → UCUM unit).
+   * This creates a new conversion factor representing the combined conversion. This is useful for
+   * multi-step conversions (e.g., calendar unit → second → UCUM unit).
    * <p>
    * The composition is performed as:
    * {@code (this.numerator * value.numerator) / (this.denominator * value.denominator)}
@@ -151,7 +151,8 @@ public class ConversionFactor  {
   /**
    * Creates a conversion factor representing the inverse (1/value) of the given value.
    * <p>
-   * This is useful for creating reciprocal conversions (e.g., if kg→mg is 1000, then mg→kg is 1/1000).
+   * This is useful for creating reciprocal conversions (e.g., if kg→mg is 1000, then mg→kg is
+   * 1/1000).
    *
    * @param value the value to invert
    * @return a ConversionFactor representing 1/value
