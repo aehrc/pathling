@@ -405,6 +405,9 @@
         <version>3.5.3</version>
         <configuration>
           <groups>IntegrationTest</groups>
+          <includes>
+            <include>**/*Test.java</include>
+          </includes>
           <argLine>@{argLine}
             --add-opens java.base/java.lang=ALL-UNNAMED
             --add-opens java.base/java.lang.invoke=ALL-UNNAMED
