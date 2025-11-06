@@ -25,16 +25,15 @@
 package au.csiro.pathling.encoders
 
 import org.apache.spark.SparkException
-import org.apache.spark.sql.{AnalysisException, Column}
+import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
 import org.apache.spark.sql.catalyst.analysis.{TypeCheckResult, UnresolvedException}
-import org.apache.spark.sql.catalyst.expressions.{FoldableUnevaluable, _}
+import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext, ExprCode, FalseLiteral}
 import org.apache.spark.sql.catalyst.trees.TreePattern.{ARRAYS_ZIP, TreePattern}
 import org.apache.spark.sql.catalyst.util.{ArrayData, GenericArrayData}
-import org.apache.spark.sql.errors.QueryExecutionErrors
 import org.apache.spark.sql.types._
 
 import scala.language.existentials
@@ -450,6 +449,65 @@ case class UnresolvedNullIfUnresolved(value: Expression)
 
   override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
     UnresolvedNullIfUnresolved(newChildren.head)
+  }
+}
+
+/**
+ * A custom Spark expression for recursive tree traversal with extraction at each level.
+ *
+ * This expression implements a depth-first traversal of nested structures by recursively
+ * applying a sequence of traversal operations and extracting values at each level. When
+ * resolved, it concatenates:
+ * 1. The extracted value from the current node
+ * 2. The results of recursively traversing child nodes
+ *
+ * The expression handles field resolution gracefully - if a field is not found during
+ * traversal (FIELD_NOT_FOUND error), it returns an empty array rather than failing.
+ *
+ * @param node the current node expression to traverse
+ * @param extractor a function to extract values from a node
+ * @param traversals a sequence of functions to traverse to child nodes
+ */
+case class UnresolvedTransformTree(node: Expression,
+                                   extractor: Expression => Expression,
+                                   traversals: Seq[Expression => Expression]
+                                  )
+  extends Expression with UnevaluableCopy with NonSQLExpression {
+
+  override def mapChildren(f: Expression => Expression): Expression = {
+
+    try {
+      val newValue = f(node)
+      if (newValue.resolved) {
+        // if node is resolved we concatenate
+        // the value extracted from the node with next level traversal
+        Concat(
+          Seq(extractor(node)) ++
+            traversals.map(t => UnresolvedTransformTree(t(node), extractor, traversals))
+        )
+      }
+      else {
+        copy(node = newValue)
+      }
+    } catch {
+      case e: AnalysisException if e.errorClass.contains("FIELD_NOT_FOUND") =>
+        // in case of AnalysisException we just return an empty array
+        CreateArray(Seq.empty)
+    }
+  }
+
+  override def dataType: DataType = throw new UnresolvedException("dataType")
+
+  override def nullable: Boolean = throw new UnresolvedException("nullable")
+
+  override lazy val resolved = false
+
+  override def toString: String = s"$node"
+
+  override def children: Seq[Expression] = node :: Nil
+
+  override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    UnresolvedTransformTree(newChildren.head, extractor, traversals)
   }
 }
 

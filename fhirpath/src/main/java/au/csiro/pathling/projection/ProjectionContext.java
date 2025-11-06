@@ -21,12 +21,15 @@ import static java.util.stream.Collectors.toMap;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.views.ConstantDeclaration;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Map;
+import java.util.function.UnaryOperator;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -40,8 +43,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public record ProjectionContext(
     @Nonnull FhirPathEvaluator executor,
-    @Nonnull Collection inputContext,
-    int maxNestingLevel
+    @Nonnull Collection inputContext
 ) {
 
   /**
@@ -62,8 +64,39 @@ public record ProjectionContext(
    */
   @Nonnull
   public ProjectionContext withInputContext(@Nonnull final Collection inputContext) {
-    return new ProjectionContext(executor, inputContext, maxNestingLevel);
+    return new ProjectionContext(executor, inputContext);
   }
+
+  /**
+   * Creates a new ProjectionContext with the input context replaced by a new column.
+   * <p>
+   * This is a convenience method that wraps the column in a new input context while preserving
+   * other context properties. It is particularly useful when transforming input data during
+   * projection evaluation.
+   * </p>
+   *
+   * @param inputColumn the new input column to use
+   * @return a new ProjectionContext with the specified input column
+   */
+  @Nonnull
+  public ProjectionContext withInputColumn(@Nonnull final Column inputColumn) {
+    return withInputContext(inputContext.copyWithColumn(inputColumn));
+  }
+
+  /**
+   * Creates a new ProjectionContext with an empty input context.
+   * <p>
+   * This is useful for creating stub contexts when determining result schemas without
+   * evaluating actual data, or when no input data is available.
+   * </p>
+   *
+   * @return a new ProjectionContext with an empty input context
+   */
+  @Nonnull
+  public ProjectionContext withEmptyInput() {
+    return withInputContext(EmptyCollection.getInstance());
+  }
+
 
   /**
    * Evaluates the given FHIRPath path and returns the result as a column.
@@ -76,6 +109,30 @@ public record ProjectionContext(
     return executor.evaluate(path, inputContext);
   }
 
+  /**
+   * Creates a unary operator that evaluates a FHIRPath expression on a given column.
+   * <p>
+   * This method returns a function that takes a column as input, evaluates the specified
+   * FHIRPath expression using that column as the input context, and returns the resulting
+   * column value. This is particularly useful for creating reusable transformations that
+   * can be applied to multiple columns or used in higher-order operations like tree traversal.
+   * </p>
+   * <p>
+   * Example use case: Creating a traversal operation for recursive tree structures where
+   * the same FHIRPath expression needs to be evaluated on each node.
+   * </p>
+   *
+   * @param path the FHIRPath expression to evaluate
+   * @return a unary operator that takes a column and returns the result of evaluating the
+   *     expression on that column
+   */
+  @Nonnull
+  public UnaryOperator<Column> asColumnOperator(@Nonnull final FhirPath path) {
+    return c -> withInputColumn(c)
+        .evalExpression(path)
+        .getColumnValue();
+  }
+  
   /**
    * Creates a new ProjectionContext from the given execution context, subject resource, and
    * constants.
@@ -99,9 +156,7 @@ public record ProjectionContext(
         .create(subjectResource, StaticFunctionRegistry.getInstance(), variables);
 
     // Return a new ProjectionContext with the executor and the default input context.
-    return new ProjectionContext(executor,
-        executor.createDefaultInputContext(),
-        SchemaUtils.computeMaxNestingLevel(executor.createInitialDataset().schema()));
+    return new ProjectionContext(executor, executor.createDefaultInputContext());
   }
 
   @Nonnull

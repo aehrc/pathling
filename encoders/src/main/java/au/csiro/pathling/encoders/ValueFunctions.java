@@ -29,11 +29,16 @@ import static org.apache.spark.sql.classic.ExpressionUtils.expression;
 
 import au.csiro.pathling.sql.PruneSyntheticFields;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.function.UnaryOperator;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.classic.ColumnConversions$;
+import scala.Function1;
+import scala.collection.immutable.Seq;
+import scala.jdk.javaapi.CollectionConverters;
+import scala.jdk.javaapi.FunctionConverters;
 
 /**
  * Java-based utility class for value-based Column operations. This class uses Java to access
@@ -130,6 +135,74 @@ public class ValueFunctions {
     final Expression valueExpr = expression(value);
     final Expression nullOrExpr = new UnresolvedNullIfUnresolved(valueExpr);
     return column(nullOrExpr);
+  }
+
+
+  /**
+   * Performs a recursive tree traversal with value extraction at each level.
+   * <p>
+   * This method implements a depth-first traversal of nested structures, applying a sequence
+   * of traversal operations recursively and extracting values at each level. The result is
+   * a flattened array containing all extracted values from the tree traversal.
+   * </p>
+   * <p>
+   * The traversal process works as follows:
+   * <ol>
+   *   <li>Apply the extractor to the current value to get the result for this level</li>
+   *   <li>For each traversal operation, apply it to the current value to get child values</li>
+   *   <li>Recursively apply the same process to each child value</li>
+   *   <li>Concatenate all results into a single array</li>
+   * </ol>
+   * </p>
+   * <p>
+   * This is particularly useful for traversing self-referential FHIR structures like
+   * Questionnaire.item, where items can contain nested items. The method handles missing
+   * fields gracefully by returning empty arrays when fields are not found.
+   * </p>
+   *
+   * @param value The starting value column to traverse
+   * @param extractor An extraction operation to apply at each node to get the desired value
+   * @param traversals A list of traversal operations to apply recursively to reach child nodes
+   * @return A Column containing an array of all extracted values from the tree traversal
+   */
+  @Nonnull
+  public static Column transformTree(@Nonnull final Column value,
+      @Nonnull final UnaryOperator<Column> extractor,
+      @Nonnull final List<UnaryOperator<Column>> traversals
+  ) {
+
+    final List<Function1<Expression, Expression>> x = traversals.stream()
+        .map(ValueFunctions::liftToExpression)
+        .map(FunctionConverters::asScalaFromUnaryOperator)
+        .toList();
+
+    final Seq<Function1<Expression, Expression>> scalaSeq = CollectionConverters.asScala(x).toSeq();
+    return column(new UnresolvedTransformTree(
+        expression(value),
+        liftToExpression(extractor)::apply,
+        scalaSeq
+        ));
+  }
+
+  /**
+   * Performs a recursive tree traversal with value extraction at each level using a single
+   * traversal operation.
+   * <p>
+   * This is a convenience overload of {@link #transformTree(Column, UnaryOperator, List)} for
+   * the common case where there is only one traversal operation to apply recursively.
+   * </p>
+   *
+   * @param value The starting value column to traverse
+   * @param extractor An extraction operation to apply at each node to get the desired value
+   * @param traversal A single traversal operation to apply recursively to reach child nodes
+   * @return A Column containing an array of all extracted values from the tree traversal
+   * @see #transformTree(Column, UnaryOperator, List)
+   */
+  @Nonnull
+  public static Column transformTree(@Nonnull final Column value,
+      @Nonnull final UnaryOperator<Column> extractor, @Nonnull final UnaryOperator<Column> traversal
+  ) {
+    return transformTree(value, extractor, List.of(traversal));
   }
 
   /**

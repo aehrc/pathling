@@ -259,6 +259,8 @@ abstract class FhirViewTest {
       final Dataset<Row> selectedActualResult = rowDataset.select(
           asScala(selectColumns).toSeq());
 
+      log.debug("Actual schema:\n {}", selectedActualResult.schema().treeString());
+      
       // Assert that the rowDataset has rows unordered as in selectedExpectedResult.
       assertThat(selectedActualResult).hasRowsAndColumnsUnordered(selectedExpectedResult);
     }

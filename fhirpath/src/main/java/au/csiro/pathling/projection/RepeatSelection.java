@@ -17,17 +17,14 @@
 
 package au.csiro.pathling.projection;
 
-import static au.csiro.pathling.encoders.ColumnFunctions.structProduct;
 import static org.apache.spark.sql.functions.concat;
 
 import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 
 /**
@@ -42,96 +39,41 @@ public record RepeatSelection(
     @Nonnull List<FhirPath> paths,
     @Nonnull List<ProjectionClause> components
 ) implements ProjectionClause {
-  
+
   @Nonnull
   @Override
   public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
-    // Start with the input context as the initial level
-    final Collection inputContext = context.inputContext();
 
-    // Perform recursive traversal: at each level, apply all paths to all nodes from the previous
-    // level. This implements the algorithm specified in the SQL on FHIR spec:
-    // 1. Initialize result list with root nodes
-    // 2. For each level: evaluate all paths on all nodes from previous level
-    // 3. Union results from all levels
+    final ProjectionEvalHelper evalHelper = new ProjectionEvalHelper(components);
 
-    // Create the list of all levels' collections
-    final List<Collection> allLevels = Stream.iterate(
-            // Start with a list containing just the input context
-            List.of(inputContext),
-            // For each level: apply all paths to all nodes from the previous level
-            levelCollections -> levelCollections.stream()
-                .flatMap(col -> paths.stream()
-                    .map(path -> context.withInputContext(col).evalExpression(path)))
-                .toList()
-        )
-        .limit(context.maxNestingLevel())  // Limit depth to prevent infinite recursion
-        .flatMap(List::stream)  // Flatten the list of collections
-        .filter(c -> c != inputContext)  // Exclude the root context from results
+    // create the list of the  non-empty starting context the current context and provided paths
+    final List<ProjectionContext> startingNodes = paths.stream()
+        .map(context::evalExpression)
+        .filter(Collection::isNotEmpty)
+        .map(context::withInputContext)
         .toList();
 
-    // Evaluate components on each node from all levels
-    final Column[] nodeResults = allLevels.stream()
-        .map(node -> evaluateComponentsOnNode(node, context))
-        .map(ValueFunctions::nullIfUnresolved)
-        .map(c -> new DefaultRepresentation(c).plural().getValue())
-        .toArray(Column[]::new);
+    // then we map them to transformTree expressions and contact the results
+    final Column[] nodeResults = startingNodes.stream()
+        .map(ctx -> ValueFunctions.transformTree(
+                ctx.inputContext().getColumnValue(),
+                c -> evalHelper.evalForEach(ctx.withInputColumn(c)),
+                paths.stream().map(ctx::asColumnOperator).toList()
+            )
+        ).toArray(Column[]::new);
 
-    final Column result = concat(nodeResults);
+    final Column result = nodeResults.length > 0
+                          ? concat(nodeResults)
+                          : evalHelper.evalForEach(context.withEmptyInput());
 
-    // Create a stub context to determine the types of the results
-    final ProjectionContext stubContext = context.withInputContext(
-        allLevels.getFirst().map(c -> DefaultRepresentation.empty()));
-    final List<ProjectionResult> stubResults = components.stream()
-        .map(s -> s.evaluate(stubContext))
-        .toList();
-    final List<ProjectedColumn> columnDescriptors = stubResults.stream()
-        .flatMap(sr -> sr.getResults().stream())
-        .toList();
+    // compute the output schema based on the first non-empty starting context or an empty context
+    final ProjectionContext schemaContext = startingNodes.stream()
+        .findFirst()
+        .orElse(context.withEmptyInput());
 
+    final List<ProjectedColumn> columnDescriptors = evalHelper.getResultSchema(schemaContext);
     // Return a new projection result from the column result and the column descriptors
     return ProjectionResult.of(columnDescriptors, result);
-  }
-
-  /**
-   * Evaluates the components on a single node from the recursively collected results.
-   *
-   * @param inputContext the collection representing a node from the recursive traversal
-   * @param context the projection context
-   * @return a column representing the evaluated components as a flattened array of structs
-   */
-  @Nonnull
-  private Column evaluateComponentsOnNode(@Nonnull final Collection inputContext,
-      @Nonnull final ProjectionContext context) {
-    // Use the Collection's transform and flatten methods to unnest the components.
-    // This approach is similar to how UnnestingSelection works.
-    return inputContext.getColumn().transform(
-        c -> unnestComponents(c, inputContext, context)
-    ).flatten().getValue();
-  }
-
-  /**
-   * Evaluates the components on a single element within a collection node.
-   *
-   * @param unnestingColumn the column representing a single element
-   * @param unnestingCollection the collection containing the element
-   * @param context the projection context
-   * @return a struct combining the evaluated component columns
-   */
-  @Nonnull
-  private Column unnestComponents(@Nonnull final Column unnestingColumn,
-      @Nonnull final Collection unnestingCollection, @Nonnull final ProjectionContext context) {
-    // Create a new projection context based upon the unnesting collection.
-    final ProjectionContext projectionContext = context.withInputContext(
-        unnestingCollection.map(c -> new DefaultRepresentation(unnestingColumn)));
-
-    // Evaluate each of the components of the unnesting selection, and get the result columns.
-    final Column[] subSelectionColumns = components.stream()
-        .map(s -> s.evaluate(projectionContext).getResultColumn())
-        .toArray(Column[]::new);
-
-    // Combine the result columns into a struct.
-    return structProduct(subSelectionColumns);
   }
 
   @Nonnull
@@ -168,5 +110,4 @@ public record RepeatSelection(
             .map(c -> c.toTreeString(level + 1))
             .collect(Collectors.joining("\n"));
   }
-
 }
