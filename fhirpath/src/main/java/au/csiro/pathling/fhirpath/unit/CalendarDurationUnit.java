@@ -59,19 +59,55 @@ import org.apache.commons.lang3.tuple.Pair;
  */
 public enum CalendarDurationUnit implements FhirPathUnit {
   /**
-   * APPROXIMATION: Calendar years are assumed to be 365 days for conversion purposes.
+   * Calendar year unit with UCUM equivalent 'a'. This is a non-definite duration unit with variable
+   * length due to leap years. For conversion purposes, one year is approximated as 365 days
+   * (31,536,000,000 milliseconds) as specified by the FHIRPath specification.
    */
   YEAR("year", false, "a", new BigDecimal(
       "31536000000")),      // 365 * 24 * 60 * 60 * 1000 (assumes 365 days/year, does NOT account for leap years; approximation per FHIRPath spec)
+
   /**
-   * APPROXIMATION: Calendar months are assumed to be 30 days for conversion purposes.
+   * Calendar month unit with UCUM equivalent 'mo'. This is a non-definite duration unit with
+   * variable length due to different month lengths. For conversion purposes, one month is
+   * approximated as 30 days (2,592,000,000 milliseconds) as specified by the FHIRPath
+   * specification.
    */
   MONTH("month", false, "mo", new BigDecimal("2592000000")),    // 30 * 24 * 60 * 60 * 1000
+
+  /**
+   * Calendar week unit with UCUM equivalent 'wk'. This is a non-definite duration unit. One week
+   * equals 7 days (604,800,000 milliseconds).
+   */
   WEEK("week", false, "wk", new BigDecimal("604800000")),       // 7 * 24 * 60 * 60 * 1000
+
+  /**
+   * Calendar day unit with UCUM equivalent 'd'. This is a non-definite duration unit. One day
+   * equals 24 hours (86,400,000 milliseconds).
+   */
   DAY("day", false, "d", new BigDecimal("86400000")),           // 24 * 60 * 60 * 1000
+
+  /**
+   * Calendar hour unit with UCUM equivalent 'h'. This is a non-definite duration unit. One hour
+   * equals 60 minutes (3,600,000 milliseconds).
+   */
   HOUR("hour", false, "h", new BigDecimal("3600000")),          // 60 * 60 * 1000
+
+  /**
+   * Calendar minute unit with UCUM equivalent 'min'. This is a non-definite duration unit. One
+   * minute equals 60 seconds (60,000 milliseconds).
+   */
   MINUTE("minute", false, "min", new BigDecimal("60000")),      // 60 * 1000
+
+  /**
+   * Calendar second unit with UCUM equivalent 's'. This is a definite duration unit with a fixed
+   * length. One second equals 1,000 milliseconds.
+   */
   SECOND("second", true, "s", new BigDecimal("1000")),          // 1000 ms
+
+  /**
+   * Calendar millisecond unit with UCUM equivalent 'ms'. This is a definite duration unit with a
+   * fixed length. One millisecond equals 1 millisecond.
+   */
   MILLISECOND("millisecond", true, "ms", BigDecimal.ONE);       // 1 ms
 
   /**
