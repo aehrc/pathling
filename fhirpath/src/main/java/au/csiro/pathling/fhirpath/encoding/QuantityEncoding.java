@@ -58,10 +58,38 @@ import org.apache.spark.sql.types.StructType;
 @Value(staticConstructor = "of")
 public class QuantityEncoding {
 
+  /**
+   * The name of the column containing the numeric value of the quantity.
+   */
   public static final String VALUE_COLUMN = "value";
+
+  /**
+   * The name of the column containing the code system URI of the quantity unit.
+   */
   public static final String SYSTEM_COLUMN = "system";
+
+  /**
+   * The name of the column containing the code representing the quantity unit.
+   */
   public static final String CODE_COLUMN = "code";
+
+  /**
+   * The name of the column containing the human-readable unit string.
+   */
   public static final String UNIT_COLUMN = "unit";
+
+  /**
+   * The name of the column containing the canonicalised value of the quantity.
+   */
+  public static final String CANONICALIZED_VALUE_COLUMN = QuantitySupport
+      .VALUE_CANONICALIZED_FIELD_NAME();
+
+  /**
+   * The name of the column containing the canonicalised code of the quantity unit.
+   */
+  public static final String CANONICALIZED_CODE_COLUMN = QuantitySupport
+      .CODE_CANONICALIZED_FIELD_NAME();
+
   @Nonnull
   Column id;
   @Nonnull
@@ -89,11 +117,6 @@ public class QuantityEncoding {
       .collect(
           toUnmodifiableMap(CalendarDurationUnit::code,
               CalendarDurationUnit::getUcumEquivalent));
-
-  public static final String CANONICALIZED_VALUE_COLUMN = QuantitySupport
-      .VALUE_CANONICALIZED_FIELD_NAME();
-  public static final String CANONICALIZED_CODE_COLUMN = QuantitySupport
-      .CODE_CANONICALIZED_FIELD_NAME();
 
   /**
    * Converts this quantity to a struct column.
