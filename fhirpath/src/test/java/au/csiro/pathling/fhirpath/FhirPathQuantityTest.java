@@ -18,13 +18,14 @@
 package au.csiro.pathling.fhirpath;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import java.math.BigDecimal;
-import java.util.stream.Stream;
 import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
 import jakarta.annotation.Nullable;
+import java.math.BigDecimal;
+import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -78,8 +79,8 @@ class FhirPathQuantityTest {
 
   @ParameterizedTest
   @MethodSource("quantityLiterals")
-  void testParseQuantity(String literal, FhirPathQuantity expected) {
-    FhirPathQuantity actual = FhirPathQuantity.parse(literal);
+  void testParseQuantity(final String literal, final FhirPathQuantity expected) {
+    final FhirPathQuantity actual = FhirPathQuantity.parse(literal);
     assertEquals(expected, actual, "Parsed quantity should match expected");
   }
 
@@ -92,78 +93,109 @@ class FhirPathQuantityTest {
         Arguments.of(CalendarDurationUnit.WEEK, "week", new BigDecimal("1"), new BigDecimal("1")),
         Arguments.of(CalendarDurationUnit.DAY, "day", new BigDecimal("5"), new BigDecimal("5")),
         Arguments.of(CalendarDurationUnit.HOUR, "hour", new BigDecimal("1"), new BigDecimal("1")),
-        Arguments.of(CalendarDurationUnit.MINUTE, "minute", new BigDecimal("10"), new BigDecimal("10")),
-        Arguments.of(CalendarDurationUnit.SECOND, "second", new BigDecimal("5"), new BigDecimal("5")),
-        Arguments.of(CalendarDurationUnit.MILLISECOND, "millisecond", new BigDecimal("1000"), new BigDecimal("1000")),
+        Arguments.of(CalendarDurationUnit.MINUTE, "minute", new BigDecimal("10"),
+            new BigDecimal("10")),
+        Arguments.of(CalendarDurationUnit.SECOND, "second", new BigDecimal("5"),
+            new BigDecimal("5")),
+        Arguments.of(CalendarDurationUnit.MILLISECOND, "millisecond", new BigDecimal("1000"),
+            new BigDecimal("1000")),
 
         // 2. Direct Conversions (one-hop)
-        Arguments.of(CalendarDurationUnit.YEAR, "months", new BigDecimal("1"), new BigDecimal("12")),
+        Arguments.of(CalendarDurationUnit.YEAR, "months", new BigDecimal("1"),
+            new BigDecimal("12")),
         Arguments.of(CalendarDurationUnit.YEAR, "days", new BigDecimal("1"), new BigDecimal("365")),
         Arguments.of(CalendarDurationUnit.MONTH, "days", new BigDecimal("1"), new BigDecimal("30")),
         Arguments.of(CalendarDurationUnit.WEEK, "days", new BigDecimal("1"), new BigDecimal("7")),
         Arguments.of(CalendarDurationUnit.DAY, "hours", new BigDecimal("1"), new BigDecimal("24")),
-        Arguments.of(CalendarDurationUnit.HOUR, "minutes", new BigDecimal("1"), new BigDecimal("60")),
-        Arguments.of(CalendarDurationUnit.MINUTE, "seconds", new BigDecimal("1"), new BigDecimal("60")),
-        Arguments.of(CalendarDurationUnit.SECOND, "milliseconds", new BigDecimal("1"), new BigDecimal("1000")),
+        Arguments.of(CalendarDurationUnit.HOUR, "minutes", new BigDecimal("1"),
+            new BigDecimal("60")),
+        Arguments.of(CalendarDurationUnit.MINUTE, "seconds", new BigDecimal("1"),
+            new BigDecimal("60")),
+        Arguments.of(CalendarDurationUnit.SECOND, "milliseconds", new BigDecimal("1"),
+            new BigDecimal("1000")),
 
         // 3. Reverse Conversions
-        Arguments.of(CalendarDurationUnit.MONTH, "years", new BigDecimal("12"), new BigDecimal("1")),
+        Arguments.of(CalendarDurationUnit.MONTH, "years", new BigDecimal("12"),
+            new BigDecimal("1")),
         Arguments.of(CalendarDurationUnit.DAY, "years", new BigDecimal("365"), new BigDecimal("1")),
         Arguments.of(CalendarDurationUnit.DAY, "months", new BigDecimal("30"), new BigDecimal("1")),
         Arguments.of(CalendarDurationUnit.DAY, "weeks", new BigDecimal("7"), new BigDecimal("1")),
         Arguments.of(CalendarDurationUnit.HOUR, "days", new BigDecimal("24"), new BigDecimal("1")),
-        Arguments.of(CalendarDurationUnit.MINUTE, "hours", new BigDecimal("60"), new BigDecimal("1")),
-        Arguments.of(CalendarDurationUnit.SECOND, "minutes", new BigDecimal("60"), new BigDecimal("1")),
-        Arguments.of(CalendarDurationUnit.MILLISECOND, "seconds", new BigDecimal("1000"), new BigDecimal("1")),
+        Arguments.of(CalendarDurationUnit.MINUTE, "hours", new BigDecimal("60"),
+            new BigDecimal("1")),
+        Arguments.of(CalendarDurationUnit.SECOND, "minutes", new BigDecimal("60"),
+            new BigDecimal("1")),
+        Arguments.of(CalendarDurationUnit.MILLISECOND, "seconds", new BigDecimal("1000"),
+            new BigDecimal("1")),
 
         // 4. Transitive Conversions (multi-hop via shortest path)
         // year -> day -> hour
-        Arguments.of(CalendarDurationUnit.YEAR, "hours", new BigDecimal("1"), new BigDecimal("8760")),
+        Arguments.of(CalendarDurationUnit.YEAR, "hours", new BigDecimal("1"),
+            new BigDecimal("8760")),
         // year -> day -> hour -> minute
-        Arguments.of(CalendarDurationUnit.YEAR, "minutes", new BigDecimal("1"), new BigDecimal("525600")),
+        Arguments.of(CalendarDurationUnit.YEAR, "minutes", new BigDecimal("1"),
+            new BigDecimal("525600")),
         // year -> day -> hour -> minute -> second
-        Arguments.of(CalendarDurationUnit.YEAR, "seconds", new BigDecimal("1"), new BigDecimal("31536000")),
+        Arguments.of(CalendarDurationUnit.YEAR, "seconds", new BigDecimal("1"),
+            new BigDecimal("31536000")),
         // year -> day -> hour -> minute -> second -> millisecond
-        Arguments.of(CalendarDurationUnit.YEAR, "milliseconds", new BigDecimal("1"), new BigDecimal("31536000000")),
+        Arguments.of(CalendarDurationUnit.YEAR, "milliseconds", new BigDecimal("1"),
+            new BigDecimal("31536000000")),
 
         // month -> day -> hour
-        Arguments.of(CalendarDurationUnit.MONTH, "hours", new BigDecimal("1"), new BigDecimal("720")),
+        Arguments.of(CalendarDurationUnit.MONTH, "hours", new BigDecimal("1"),
+            new BigDecimal("720")),
         // month -> day -> hour -> minute
-        Arguments.of(CalendarDurationUnit.MONTH, "minutes", new BigDecimal("1"), new BigDecimal("43200")),
+        Arguments.of(CalendarDurationUnit.MONTH, "minutes", new BigDecimal("1"),
+            new BigDecimal("43200")),
         // month -> day -> hour -> minute -> second
-        Arguments.of(CalendarDurationUnit.MONTH, "seconds", new BigDecimal("1"), new BigDecimal("2592000")),
+        Arguments.of(CalendarDurationUnit.MONTH, "seconds", new BigDecimal("1"),
+            new BigDecimal("2592000")),
         // month -> day -> hour -> minute -> second -> millisecond
-        Arguments.of(CalendarDurationUnit.MONTH, "milliseconds", new BigDecimal("1"), new BigDecimal("2592000000")),
+        Arguments.of(CalendarDurationUnit.MONTH, "milliseconds", new BigDecimal("1"),
+            new BigDecimal("2592000000")),
 
         // week -> day -> hour
-        Arguments.of(CalendarDurationUnit.WEEK, "hours", new BigDecimal("1"), new BigDecimal("168")),
+        Arguments.of(CalendarDurationUnit.WEEK, "hours", new BigDecimal("1"),
+            new BigDecimal("168")),
         // week -> day -> hour -> minute
-        Arguments.of(CalendarDurationUnit.WEEK, "minutes", new BigDecimal("1"), new BigDecimal("10080")),
+        Arguments.of(CalendarDurationUnit.WEEK, "minutes", new BigDecimal("1"),
+            new BigDecimal("10080")),
         // week -> day -> hour -> minute -> second
-        Arguments.of(CalendarDurationUnit.WEEK, "seconds", new BigDecimal("1"), new BigDecimal("604800")),
+        Arguments.of(CalendarDurationUnit.WEEK, "seconds", new BigDecimal("1"),
+            new BigDecimal("604800")),
         // week -> day -> hour -> minute -> second -> millisecond
-        Arguments.of(CalendarDurationUnit.WEEK, "milliseconds", new BigDecimal("1"), new BigDecimal("604800000")),
+        Arguments.of(CalendarDurationUnit.WEEK, "milliseconds", new BigDecimal("1"),
+            new BigDecimal("604800000")),
 
         // day -> hour -> minute
-        Arguments.of(CalendarDurationUnit.DAY, "minutes", new BigDecimal("1"), new BigDecimal("1440")),
+        Arguments.of(CalendarDurationUnit.DAY, "minutes", new BigDecimal("1"),
+            new BigDecimal("1440")),
         // day -> hour -> minute -> second
-        Arguments.of(CalendarDurationUnit.DAY, "seconds", new BigDecimal("1"), new BigDecimal("86400")),
+        Arguments.of(CalendarDurationUnit.DAY, "seconds", new BigDecimal("1"),
+            new BigDecimal("86400")),
         // day -> hour -> minute -> second -> millisecond
-        Arguments.of(CalendarDurationUnit.DAY, "milliseconds", new BigDecimal("1"), new BigDecimal("86400000")),
+        Arguments.of(CalendarDurationUnit.DAY, "milliseconds", new BigDecimal("1"),
+            new BigDecimal("86400000")),
 
         // hour -> minute -> second
-        Arguments.of(CalendarDurationUnit.HOUR, "seconds", new BigDecimal("1"), new BigDecimal("3600")),
+        Arguments.of(CalendarDurationUnit.HOUR, "seconds", new BigDecimal("1"),
+            new BigDecimal("3600")),
         // hour -> minute -> second -> millisecond
-        Arguments.of(CalendarDurationUnit.HOUR, "milliseconds", new BigDecimal("1"), new BigDecimal("3600000")),
+        Arguments.of(CalendarDurationUnit.HOUR, "milliseconds", new BigDecimal("1"),
+            new BigDecimal("3600000")),
 
         // minute -> second -> millisecond
-        Arguments.of(CalendarDurationUnit.MINUTE, "milliseconds", new BigDecimal("1"), new BigDecimal("60000")),
+        Arguments.of(CalendarDurationUnit.MINUTE, "milliseconds", new BigDecimal("1"),
+            new BigDecimal("60000")),
 
         // 5. Calendar Duration to UCUM Conversions (only 's' and 'ms' as targets)
         // Direct UCUM conversions for definite duration units
         Arguments.of(CalendarDurationUnit.SECOND, "s", new BigDecimal("1"), new BigDecimal("1")),
-        Arguments.of(CalendarDurationUnit.SECOND, "ms", new BigDecimal("1"), new BigDecimal("1000")),
-        Arguments.of(CalendarDurationUnit.MILLISECOND, "ms", new BigDecimal("1500"), new BigDecimal("1500")),
+        Arguments.of(CalendarDurationUnit.SECOND, "ms", new BigDecimal("1"),
+            new BigDecimal("1000")),
+        Arguments.of(CalendarDurationUnit.MILLISECOND, "ms", new BigDecimal("1500"),
+            new BigDecimal("1500")),
 
         // Transitive Calendar → UCUM (via second/millisecond bridge)
         // All calendar units can convert to 's' via: calendar → second → 's'
@@ -171,13 +203,18 @@ class FhirPathQuantityTest {
         Arguments.of(CalendarDurationUnit.HOUR, "s", new BigDecimal("1"), new BigDecimal("3600")),
         Arguments.of(CalendarDurationUnit.DAY, "s", new BigDecimal("1"), new BigDecimal("86400")),
         Arguments.of(CalendarDurationUnit.WEEK, "s", new BigDecimal("1"), new BigDecimal("604800")),
-        Arguments.of(CalendarDurationUnit.MONTH, "s", new BigDecimal("1"), new BigDecimal("2592000")),
-        Arguments.of(CalendarDurationUnit.YEAR, "s", new BigDecimal("1"), new BigDecimal("31536000")),
+        Arguments.of(CalendarDurationUnit.MONTH, "s", new BigDecimal("1"),
+            new BigDecimal("2592000")),
+        Arguments.of(CalendarDurationUnit.YEAR, "s", new BigDecimal("1"),
+            new BigDecimal("31536000")),
 
         // All calendar units can convert to 'ms' via: calendar → millisecond → 'ms'
-        Arguments.of(CalendarDurationUnit.MINUTE, "ms", new BigDecimal("1"), new BigDecimal("60000")),
-        Arguments.of(CalendarDurationUnit.HOUR, "ms", new BigDecimal("1"), new BigDecimal("3600000")),
-        Arguments.of(CalendarDurationUnit.DAY, "ms", new BigDecimal("1"), new BigDecimal("86400000")),
+        Arguments.of(CalendarDurationUnit.MINUTE, "ms", new BigDecimal("1"),
+            new BigDecimal("60000")),
+        Arguments.of(CalendarDurationUnit.HOUR, "ms", new BigDecimal("1"),
+            new BigDecimal("3600000")),
+        Arguments.of(CalendarDurationUnit.DAY, "ms", new BigDecimal("1"),
+            new BigDecimal("86400000")),
 
         // Transitive Calendar → UCUM via 's' bridge: calendar → second → 's' → UCUM time unit
         // NOTE: Calendar durations and UCUM time units have different definitions!
@@ -195,13 +232,16 @@ class FhirPathQuantityTest {
 
         // Calendar month/year to UCUM with non-1:1 factors
         // 1 calendar month (2592000s) to 'mo' (2629800s): factor = 2592000/2629800 (15 decimals)
-        Arguments.of(CalendarDurationUnit.MONTH, "mo", new BigDecimal("1"), new BigDecimal("0.985626283367556")),
+        Arguments.of(CalendarDurationUnit.MONTH, "mo", new BigDecimal("1"),
+            new BigDecimal("0.985626283367556")),
 
         // 1 calendar year (31536000s) to 'a' (31557600s): factor = 31536000/31557600 (15 decimals)
-        Arguments.of(CalendarDurationUnit.YEAR, "a", new BigDecimal("1"), new BigDecimal("0.999315537303217")),
+        Arguments.of(CalendarDurationUnit.YEAR, "a", new BigDecimal("1"),
+            new BigDecimal("0.999315537303217")),
 
         // 1 calendar year to UCUM 'mo': 31536000s / 2629800s (15 decimals)
-        Arguments.of(CalendarDurationUnit.YEAR, "mo", new BigDecimal("1"), new BigDecimal("11.991786447638604")),
+        Arguments.of(CalendarDurationUnit.YEAR, "mo", new BigDecimal("1"),
+            new BigDecimal("11.991786447638604")),
 
         // Additional cross-unit UCUM conversions via 's' bridge
         Arguments.of(CalendarDurationUnit.HOUR, "min", new BigDecimal("1"), new BigDecimal("60")),
@@ -212,19 +252,21 @@ class FhirPathQuantityTest {
 
   @ParameterizedTest
   @MethodSource("calendarDurationConversions")
-  void testCalendarDurationConversion(CalendarDurationUnit sourceUnit, String targetUnit,
-      BigDecimal sourceValue, BigDecimal expectedValue) {
-    FhirPathQuantity source = FhirPathQuantity.ofUnit(sourceValue, sourceUnit);
-    FhirPathQuantity result = source.convertToUnit(targetUnit).orElse(null);
+  void testCalendarDurationConversion(final CalendarDurationUnit sourceUnit,
+      final String targetUnit,
+      final BigDecimal sourceValue, final BigDecimal expectedValue) {
+    final FhirPathQuantity source = FhirPathQuantity.ofUnit(sourceValue, sourceUnit);
+    final FhirPathQuantity result = source.convertToUnit(targetUnit).orElse(null);
 
     // Compare values with compareTo for proper BigDecimal equality (ignoring scale)
+    assertNotNull(result);
     assertEquals(0, expectedValue.compareTo(result.getValue()),
         String.format("Converting %s %s to %s should produce %s, but got %s",
             sourceValue, sourceUnit.code(), targetUnit, expectedValue, result.getValue()));
 
     // Check that result has correct system and unit
     // Determine if target is calendar duration or UCUM by attempting to parse
-    boolean isCalendarDuration = CalendarDurationUnit.fromString(targetUnit).isPresent();
+    final boolean isCalendarDuration = CalendarDurationUnit.fromString(targetUnit).isPresent();
     if (isCalendarDuration) {
       // Calendar duration conversion
       assertEquals(CalendarDurationUnit.FHIRPATH_CALENDAR_DURATION_SYSTEM_URI, result.getSystem(),
@@ -325,12 +367,14 @@ class FhirPathQuantityTest {
 
   @ParameterizedTest
   @MethodSource("ucumToCalendarDurationConversions")
-  void testUcumToCalendarDurationConversion(String sourceUcumUnit, String targetCalendarUnit,
-      BigDecimal sourceValue, BigDecimal expectedValue) {
-    FhirPathQuantity source = FhirPathQuantity.ofUcum(sourceValue, sourceUcumUnit);
-    FhirPathQuantity result = source.convertToUnit(targetCalendarUnit).orElse(null);
+  void testUcumToCalendarDurationConversion(final String sourceUcumUnit,
+      final String targetCalendarUnit,
+      final BigDecimal sourceValue, final BigDecimal expectedValue) {
+    final FhirPathQuantity source = FhirPathQuantity.ofUcum(sourceValue, sourceUcumUnit);
+    final FhirPathQuantity result = source.convertToUnit(targetCalendarUnit).orElse(null);
 
     // Compare values with compareTo for proper BigDecimal equality (ignoring scale)
+    assertNotNull(result);
     assertEquals(0, expectedValue.compareTo(result.getValue()),
         String.format("Converting %s '%s' to %s should produce %s, but got %s",
             sourceValue, sourceUcumUnit, targetCalendarUnit, expectedValue, result.getValue()));
@@ -361,11 +405,10 @@ class FhirPathQuantityTest {
 
   @ParameterizedTest
   @MethodSource("unsupportedCalendarDurationConversions")
-  void testUnsupportedCalendarDurationConversion(CalendarDurationUnit sourceUnit,
-      String targetUnit) {
-    FhirPathQuantity source = FhirPathQuantity.ofUnit(new BigDecimal("1"), sourceUnit);
-    @Nullable
-    FhirPathQuantity result = source.convertToUnit(targetUnit).orElse(null);
+  void testUnsupportedCalendarDurationConversion(final CalendarDurationUnit sourceUnit,
+      final String targetUnit) {
+    final FhirPathQuantity source = FhirPathQuantity.ofUnit(new BigDecimal("1"), sourceUnit);
+    @Nullable final FhirPathQuantity result = source.convertToUnit(targetUnit).orElse(null);
 
     assertNull(result,
         String.format("Converting %s to %s should return null (not supported)",
@@ -388,10 +431,10 @@ class FhirPathQuantityTest {
 
   @ParameterizedTest
   @MethodSource("unsupportedUcumToCalendarConversions")
-  void testUnsupportedUcumToCalendarConversion(String sourceUcumUnit, String targetCalendarUnit) {
-    FhirPathQuantity source = FhirPathQuantity.ofUcum(new BigDecimal("1"), sourceUcumUnit);
-    @Nullable
-    FhirPathQuantity result = source.convertToUnit(targetCalendarUnit).orElse(null);
+  void testUnsupportedUcumToCalendarConversion(final String sourceUcumUnit,
+      final String targetCalendarUnit) {
+    final FhirPathQuantity source = FhirPathQuantity.ofUcum(new BigDecimal("1"), sourceUcumUnit);
+    @Nullable final FhirPathQuantity result = source.convertToUnit(targetCalendarUnit).orElse(null);
 
     assertNull(result,
         String.format("Converting UCUM '%s' to calendar '%s' should return null (not supported)",

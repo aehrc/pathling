@@ -25,7 +25,7 @@ import org.junit.jupiter.api.DynamicTest;
 /**
  * Tests for FHIRPath conversion functions.
  *
- * @author John Grimes
+ * @author Piotr Szul
  */
 public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
 
@@ -774,7 +774,8 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testEquals("4 days", "'4 days'.toQuantity('days')",
             "toQuantity() with matching calendar unitCode returns quantity")
 
-        .group("toQuantity(unitCode) - Calendar duration sources → calendar-to-calendar conversions")
+        .group(
+            "toQuantity(unitCode) - Calendar duration sources → calendar-to-calendar conversions")
         .testEquals("86400 seconds", "'1 day'.toQuantity('seconds')",
             "toQuantity() converts calendar day to seconds")
         .testEquals("86400000 milliseconds", "'1 day'.toQuantity('milliseconds')",
@@ -932,13 +933,15 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testTrue("'4 days'.convertsToQuantity('days')",
             "convertsToQuantity() with matching calendar unitCode returns true")
 
-        .group("convertsToQuantity(unitCode) - Calendar duration sources → calendar-to-calendar conversions")
+        .group(
+            "convertsToQuantity(unitCode) - Calendar duration sources → calendar-to-calendar conversions")
         .testTrue("'1 day'.convertsToQuantity('seconds')",
             "convertsToQuantity() returns true for calendar day to seconds")
         .testTrue("'1 day'.convertsToQuantity('milliseconds')",
             "convertsToQuantity() returns true for calendar day to milliseconds")
 
-        .group("convertsToQuantity(unitCode) - Calendar duration sources → calendar-to-UCUM conversions")
+        .group(
+            "convertsToQuantity(unitCode) - Calendar duration sources → calendar-to-UCUM conversions")
         .testTrue("'2 minutes'.convertsToQuantity('s')",
             "convertsToQuantity() returns true for calendar minutes to UCUM 's'")
         .testTrue("'1500 milliseconds'.convertsToQuantity('ms')",
@@ -954,7 +957,8 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
         .testTrue("'3.14'.convertsToQuantity('1')",
             "convertsToQuantity() with matching unitCode '1' returns true for decimal string")
 
-        .group("convertsToQuantity(unitCode) - Numeric string sources → different unitCode (incompatible)")
+        .group(
+            "convertsToQuantity(unitCode) - Numeric string sources → different unitCode (incompatible)")
         .testFalse("'42'.convertsToQuantity('mg')",
             "convertsToQuantity() with different unitCode returns false for numeric string")
         .testFalse("'3.14'.convertsToQuantity('kg')",
