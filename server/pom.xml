@@ -24,7 +24,7 @@
     <pathling.testDataVersion>1.0.0</pathling.testDataVersion>
     <pathling.slf4jVersion>2.0.17</pathling.slf4jVersion>
 
-    <project.majorVersion>9</project.majorVersion>
+    <project.majorVersion>1</project.majorVersion>
 
     <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
     <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
@@ -582,75 +582,5 @@
         </plugins>
       </build>
     </profile>
-    <profile>
-      <id>dockerPreRelease</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>com.google.cloud.tools</groupId>
-            <artifactId>jib-maven-plugin</artifactId>
-            <version>${jib.version}</version>
-            <configuration>
-              <from>
-                <image>${pathling.dockerBaseImage}</image>
-                <platforms>
-                  <platform>
-                    <architecture>amd64</architecture>
-                    <os>linux</os>
-                  </platform>
-                  <platform>
-                    <architecture>arm64</architecture>
-                    <os>linux</os>
-                  </platform>
-                </platforms>
-              </from>
-              <container>
-                <jvmFlags>
-                  <jvmFlag>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</jvmFlag>
-                  <jvmFlag>--add-opens=java.base/java.net=ALL-UNNAMED</jvmFlag>
-                  <jvmFlag>--add-opens=java.base/sun.util.calendar=ALL-UNNAMED</jvmFlag>
-                </jvmFlags>
-              </container>
-              <allowInsecureRegistries>true</allowInsecureRegistries>
-            </configuration>
-            <executions>
-              <execution>
-                <id>deploy</id>
-                <phase>deploy</phase>
-                <goals>
-                  <goal>build</goal>
-                </goals>
-                <configuration>
-                  <to combine.self="override">
-                    <image>${pathling.fhirServerDockerRepo}:${pathling.fhirServerDockerTag}-develop</image>
-                  </to>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
   </profiles>
-
-  <repositories>
-    <repository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-    </repository>
-  </repositories>
-
-  <distributionManagement>
-    <repository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/content/repositories/releases/</url>
-    </repository>
-    <snapshotRepository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-    </snapshotRepository>
-  </distributionManagement>
 </project>
