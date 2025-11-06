@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.fhirpath.unit;
 
-import io.github.fhnaumann.funcs.ConverterService;
+import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import jakarta.annotation.Nonnull;
 import java.util.Optional;
 
@@ -89,12 +89,8 @@ public record UcumUnit(@Nonnull String code) implements FhirPathUnit {
   @Nonnull
   public Optional<ConversionFactor> conversionFactorTo(
       @Nonnull UcumUnit targetUnit) {
-    var conversionResult = au.csiro.pathling.encoders.terminology.ucum.Ucum.service()
-        .convert(code(), targetUnit.code());
-    if (conversionResult instanceof ConverterService.Success(var conversionFactor)) {
-      return Optional.of(ConversionFactor.of(conversionFactor.getValue()));
-    }
-    return Optional.empty(); // Return empty if conversion fails.
+    return Optional.ofNullable(Ucum.getConversionFactor(code(), targetUnit.code()))
+        .map(ConversionFactor::of);
   }
 
   /**

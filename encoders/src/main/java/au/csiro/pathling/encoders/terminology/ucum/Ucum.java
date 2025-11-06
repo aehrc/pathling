@@ -24,8 +24,13 @@
 
 package au.csiro.pathling.encoders.terminology.ucum;
 
+import static java.util.Objects.nonNull;
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.annotations.UsedByReflection;
 import io.github.fhnaumann.funcs.CanonicalizerService;
+import io.github.fhnaumann.funcs.ConverterService;
+import io.github.fhnaumann.funcs.ConverterService.ConversionResult;
 import io.github.fhnaumann.funcs.UCUMService;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -57,6 +62,13 @@ public class Ucum {
     return service;
   }
 
+  /**
+   * Gets the canonical value for a given value and UCUM code.
+   *
+   * @param value the value to canonicalize
+   * @param code the UCUM code of the value
+   * @return the canonical value, or null if canonicalization fails
+   */
   @UsedByReflection
   @Nullable
   public static BigDecimal getCanonicalValue(@Nullable final BigDecimal value,
@@ -89,6 +101,13 @@ public class Ucum {
     }
   }
 
+  /**
+   * Gets the canonical UCUM code for a given value and UCUM code.
+   *
+   * @param value the value to canonicalize
+   * @param code the UCUM code of the value
+   * @return the canonical UCUM code, or null if canonicalization fails
+   */
   @UsedByReflection
   @Nullable
   public static String getCanonicalCode(@Nullable final BigDecimal value,
@@ -117,12 +136,43 @@ public class Ucum {
     }
   }
 
+  /**
+   * Retrieves the conversion factor between two UCUM codes.
+   *
+   * @param fromCode the source UCUM code
+   * @param toCode the target UCUM code
+   * @return the conversion factor as a BigDecimal, or null if conversion is not possible
+   */
+  @Nullable
+  public static BigDecimal getConversionFactor(@Nullable final String fromCode,
+      @Nullable final String toCode) {
+    if (fromCode == null || toCode == null) {
+      return null;
+    }
+    try {
+      final ConversionResult conversionResult = service
+          .convert(requireNonNull(fromCode), requireNonNull(toCode));
+      if (conversionResult instanceof ConverterService.Success(var conversionFactor) && nonNull(
+          conversionFactor)) {
+        return conversionFactor.getValue();
+      } else {
+        return null;
+      }
+    } catch (final Exception e) {
+      log.warn("Error getting conversion factor from '{}' to '{}': {}",
+          fromCode, toCode, e.getMessage());
+      return null;
+    }
+  }
+
   @Nullable
   private static String adjustNoUnitCode(@Nullable final String code) {
     if (code == null) {
       return null;
     }
-    return code.isEmpty() ? NO_UNIT_CODE : code;
+    return code.isEmpty()
+           ? NO_UNIT_CODE
+           : code;
   }
 
 }

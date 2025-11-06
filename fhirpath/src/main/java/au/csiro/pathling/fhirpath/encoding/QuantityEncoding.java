@@ -25,9 +25,8 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.encoders.QuantitySupport;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
-import au.csiro.pathling.encoders.terminology.ucum.Ucum;
-import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
+import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
 import au.csiro.pathling.sql.types.FlexiDecimal;
 import au.csiro.pathling.sql.types.FlexiDecimalSupport;
@@ -228,6 +227,34 @@ public class QuantityEncoding {
   }
 
   /**
+   * A simple record to hold a value and unit pair.
+   */
+  private record ValueWithUnit(
+      @Nullable BigDecimal value,
+      @Nullable String unit
+  ) {
+
+    /**
+     * An empty ValueWithUnit instance.
+     */
+
+    static final ValueWithUnit EMPTY = new ValueWithUnit(null, null);
+
+    /**
+     * Creates a canonical ValueWithUnit from a FhirPathQuantity.
+     *
+     * @param quantity the quantity
+     * @return the canonical ValueWithUnit
+     */
+    @Nonnull
+    static ValueWithUnit canonicalOf(@Nonnull final FhirPathQuantity quantity) {
+      return quantity.asCanonical()
+          .map(q -> new ValueWithUnit(q.getValue(), q.getCode()))
+          .orElse(EMPTY);
+    }
+  }
+
+  /**
    * Encodes the quantity as a literal column that includes appropriate canonicalization.
    *
    * @param quantity the quantity to encode.
@@ -236,26 +263,7 @@ public class QuantityEncoding {
   @Nonnull
   public static Column encodeLiteral(@Nonnull final FhirPathQuantity quantity) {
     final BigDecimal value = quantity.getValue();
-    final BigDecimal canonicalizedValue;
-    final String canonicalizedCode;
-    if (quantity.isUcum()) {
-      // If it is a UCUM Quantity, use the UCUM library to canonicalize the value and code.
-      canonicalizedValue = Ucum.getCanonicalValue(value, quantity.getCode());
-      canonicalizedCode = Ucum.getCanonicalCode(value, quantity.getCode());
-    } else if (quantity.isCalendarDuration() &&
-        CALENDAR_DURATION_TO_UCUM.containsKey(quantity.getCode())) {
-      // If it is a (supported) calendar duration, get the corresponding UCUM unit and then use the
-      // UCUM library to canonicalize the value and code.
-      final String resolvedCode = CALENDAR_DURATION_TO_UCUM.get(quantity.getCode());
-      canonicalizedValue = Ucum.getCanonicalValue(value, resolvedCode);
-      canonicalizedCode = Ucum.getCanonicalCode(value, resolvedCode);
-    } else {
-      // If it is neither a UCUM Quantity nor a calendar duration, it will not have a canonicalized
-      // form available.
-      canonicalizedValue = null;
-      canonicalizedCode = null;
-    }
-
+    final ValueWithUnit canonical = ValueWithUnit.canonicalOf(quantity);
     return toStruct(
         lit(null),
         lit(value),
@@ -264,8 +272,8 @@ public class QuantityEncoding {
         lit(quantity.getUnitName()),
         lit(quantity.getSystem()),
         lit(quantity.getCode()),
-        FlexiDecimalSupport.toLiteral(canonicalizedValue),
-        lit(canonicalizedCode),
+        FlexiDecimalSupport.toLiteral(canonical.value()),
+        lit(canonical.unit()),
         lit(null));
   }
 
@@ -290,9 +298,9 @@ public class QuantityEncoding {
             // We cannot encode the scale of the results of arithmetic operations.
             lit(null),
             lit(null),
-            lit("1"),
+            lit(UcumUnit.ONE.code()),
             lit(UcumUnit.UCUM_SYSTEM_URI),
-            lit("1"),
+            lit(UcumUnit.ONE.code()),
             // we do not need to normalize this as the unit is always "1"
             // so it will be comparable with other quantities with unit "1"
             lit(null),
@@ -313,26 +321,7 @@ public class QuantityEncoding {
   @Nonnull
   public static Row encode(@Nonnull final FhirPathQuantity quantity) {
     final BigDecimal value = quantity.getValue();
-    final BigDecimal canonicalizedValue;
-    final String canonicalizedCode;
-
-    if (quantity.isUcum()) {
-      // If it is a UCUM Quantity, use the UCUM library to canonicalize the value and code.
-      canonicalizedValue = Ucum.getCanonicalValue(value, quantity.getCode());
-      canonicalizedCode = Ucum.getCanonicalCode(value, quantity.getCode());
-    } else if (quantity.isCalendarDuration() &&
-        CALENDAR_DURATION_TO_UCUM.containsKey(quantity.getCode())) {
-      // If it is a (supported) calendar duration, get the corresponding UCUM unit and then use
-      // the UCUM library to canonicalize the value and code.
-      final String resolvedCode = CALENDAR_DURATION_TO_UCUM.get(quantity.getCode());
-      canonicalizedValue = Ucum.getCanonicalValue(value, resolvedCode);
-      canonicalizedCode = Ucum.getCanonicalCode(value, resolvedCode);
-    } else {
-      // If it is neither a UCUM Quantity nor a calendar duration, it will not have a
-      // canonicalized form available.
-      canonicalizedValue = null;
-      canonicalizedCode = null;
-    }
+    final ValueWithUnit canonical = ValueWithUnit.canonicalOf(quantity);
 
     // Create the Quantity Row with all fields:
     // id, value, value_scale, comparator, unit, system, code,
@@ -345,8 +334,8 @@ public class QuantityEncoding {
         quantity.getUnitName(),                      // unit
         quantity.getSystem(),                    // system
         quantity.getCode(),                      // code
-        FlexiDecimal.toValue(canonicalizedValue), // canonicalized_value (as FlexiDecimal Row)
-        canonicalizedCode,                       // canonicalized_code
+        FlexiDecimal.toValue(canonical.value()), // canonicalized_value (as FlexiDecimal Row)
+        canonical.unit(),                       // canonicalized_code
         null                                     // _fid
     );
   }
