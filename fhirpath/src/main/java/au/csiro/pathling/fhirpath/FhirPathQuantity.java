@@ -139,7 +139,7 @@ public class FhirPathQuantity {
    */
   @Nonnull
   public static FhirPathQuantity ofDuration(@Nonnull final BigDecimal value,
-      @Nonnull String calendarDurationUnit) {
+      @Nonnull final String calendarDurationUnit) {
     return ofUnit(value, CalendarDurationUnit.parseString(calendarDurationUnit),
         calendarDurationUnit);
   }
@@ -199,8 +199,8 @@ public class FhirPathQuantity {
   }
 
   /**
-   * Factory method for creating a quantity from system, code, and optional unit name. This method is
-   * typically used when reconstructing quantities from FHIR Quantity resources.
+   * Factory method for creating a quantity from system, code, and optional unit name. This method
+   * is typically used when reconstructing quantities from FHIR Quantity resources.
    *
    * @param value the numeric value (nullable)
    * @param system the system URI (nullable)
@@ -209,8 +209,8 @@ public class FhirPathQuantity {
    * @return quantity with the specified value and unit, or null if any required parameter is null
    */
   @Nullable
-  public static FhirPathQuantity of(@Nullable BigDecimal value, @Nullable final String system,
-      @Nullable String code, @Nullable String unit) {
+  public static FhirPathQuantity of(@Nullable final BigDecimal value, @Nullable final String system,
+      @Nullable final String code, @Nullable final String unit) {
 
     if (isNull(value) || isNull(system) || isNull(code)) {
       return null;
@@ -265,7 +265,8 @@ public class FhirPathQuantity {
    * @throws IllegalArgumentException if precision is not between 1 and 100
    */
   @Nonnull
-  public Optional<FhirPathQuantity> convertToUnit(@Nonnull final String unitName, int precision) {
+  public Optional<FhirPathQuantity> convertToUnit(@Nonnull final String unitName,
+      final int precision) {
     final FhirPathUnit sourceUnit = getUnit();
     final FhirPathUnit targetUnit = FhirPathUnit.fromString(unitName);
     if (targetUnit.equals(sourceUnit)) {
@@ -282,8 +283,8 @@ public class FhirPathQuantity {
   public String toString() {
     final String formattedValue = getValue().stripTrailingZeros().toPlainString();
     return switch (unit) {
-      case UcumUnit ignore -> formattedValue + " '" + unitName + "'";
-      case CalendarDurationUnit ignore -> formattedValue + " " + unitName;
+      case final UcumUnit ignore -> formattedValue + " '" + unitName + "'";
+      case final CalendarDurationUnit ignore -> formattedValue + " " + unitName;
     };
   }
 }
