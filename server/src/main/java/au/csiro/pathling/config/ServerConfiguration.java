@@ -9,6 +9,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import jakarta.annotation.PostConstruct;
 import jakarta.validation.constraints.NotNull;
 import java.util.Optional;
 import lombok.AccessLevel;
@@ -16,6 +17,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -29,6 +31,7 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @Data
 @ToString(doNotUseGetters = true)
+@Slf4j
 public class ServerConfiguration {
 
   /**
@@ -122,4 +125,12 @@ public class ServerConfiguration {
 
   @NotNull
   private CorsConfiguration cors;
+
+  /**
+   * Logs the server configuration on startup.
+   */
+  @PostConstruct
+  public void logConfiguration() {
+    log.debug("Server configuration: {}", this);
+  }
 }
