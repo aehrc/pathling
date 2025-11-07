@@ -31,9 +31,6 @@ import lombok.Value;
  * preserve precision during conversions. This is particularly important for conversions involving
  * irrational or repeating decimals.
  * <p>
- * Conversion factors can be applied to numeric values to convert them from one unit to another, or
- * composed with other conversion factors to create multi-step conversions.
- * <p>
  * Example usage:
  * <pre>
  *   // Convert 1000 mg to kg (factor = 1/1000)
@@ -43,7 +40,7 @@ import lombok.Value;
  */
 @Value
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class ConversionFactor {
+class ConversionFactor {
 
   /**
    * The numerator of the conversion factor fraction.
@@ -63,7 +60,7 @@ public class ConversionFactor {
    * <p>
    * The conversion is performed as: {@code value * numerator / denominator}
    * <p>
-   * The result is calculated with {@value FhirPathUnit#CONVERSION_PRECISION} decimal places of
+   * The result is calculated with {@value FhirPathUnit#DEFAULT_PRECISION} decimal places of
    * precision using {@link RoundingMode#HALF_UP}, and trailing zeros are stripped.
    *
    * @param value the value to convert
@@ -71,7 +68,7 @@ public class ConversionFactor {
    */
   @Nonnull
   public BigDecimal apply(@Nonnull final BigDecimal value) {
-    return apply(value, FhirPathUnit.CONVERSION_PRECISION);
+    return apply(value, FhirPathUnit.DEFAULT_PRECISION);
   }
 
   /**
@@ -96,26 +93,6 @@ public class ConversionFactor {
     return value.multiply(numerator)
         .divide(denominator, precision, RoundingMode.HALF_UP)
         .stripTrailingZeros();
-  }
-
-  /**
-   * Composes this conversion factor with another conversion factor.
-   * <p>
-   * This creates a new conversion factor representing the combined conversion. This is useful for
-   * multi-step conversions (e.g., calendar unit → second → UCUM unit).
-   * <p>
-   * The composition is performed as:
-   * {@code (this.numerator * value.numerator) / (this.denominator * value.denominator)}
-   *
-   * @param value the conversion factor to compose with this one
-   * @return a new conversion factor representing the combined conversion
-   */
-  @Nonnull
-  public ConversionFactor apply(@Nonnull final ConversionFactor value) {
-    return ofFraction(
-        this.numerator.multiply(value.numerator),
-        this.denominator.multiply(value.denominator)
-    );
   }
 
   /**

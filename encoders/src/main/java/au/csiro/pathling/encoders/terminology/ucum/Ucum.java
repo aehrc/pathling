@@ -24,14 +24,12 @@
 
 package au.csiro.pathling.encoders.terminology.ucum;
 
-import static java.util.Objects.nonNull;
-import static java.util.Objects.requireNonNull;
-
 import au.csiro.pathling.annotations.UsedByReflection;
 import io.github.fhnaumann.funcs.CanonicalizerService;
 import io.github.fhnaumann.funcs.ConverterService;
 import io.github.fhnaumann.funcs.ConverterService.ConversionResult;
 import io.github.fhnaumann.funcs.UCUMService;
+import io.github.fhnaumann.util.PreciseDecimal;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
@@ -78,7 +76,13 @@ public class Ucum {
     }
 
     try {
-      final CanonicalizerService.CanonicalizationResult result = service.canonicalize(code);
+      // We need to delegate the canonicalization to the service including both value and code.
+      // This is because some UCUM conversions use multiplicative factors and some use additive
+      // offsets (e.g., temperature conversions).
+      final CanonicalizerService.CanonicalizationResult result = service.canonicalize(
+          new PreciseDecimal(value.toPlainString()),
+          code
+      );
 
       // Check if the result is a Success instance.
       if (!(result instanceof CanonicalizerService.Success success)) {
@@ -86,15 +90,14 @@ public class Ucum {
         return null;
       }
 
-      // Get the magnitude (conversion factor) from the success result.
-      @Nullable final BigDecimal conversionFactor = success.magnitude().getValue();
-      if (conversionFactor == null) {
-        log.warn("No conversion factor available for UCUM code '{}'", code);
+      // Get the magnitude of the value in canonical units.
+      @Nullable final PreciseDecimal magnitude = success.magnitude();
+      if (magnitude == null) {
+        log.warn("No magnitude available for UCUM code '{}'", code);
         return null;
       }
-
-      // Apply the conversion factor to the value to get the canonical value.
-      return value.multiply(conversionFactor);
+      // Get magnitude as BigDecimal.
+      return magnitude.getValue();
     } catch (final Exception e) {
       log.warn("Error canonicalising UCUM code '{}': {}", code, e.getMessage());
       return null;
@@ -137,30 +140,41 @@ public class Ucum {
   }
 
   /**
-   * Retrieves the conversion factor between two UCUM codes.
+   * Converts a value from one UCUM unit to another. Supports both multiplicative conversions (e.g.,
+   * mg to kg) and additive conversions (e.g., Celsius to Kelvin).
    *
+   * @param value the value to convert
    * @param fromCode the source UCUM code
    * @param toCode the target UCUM code
-   * @return the conversion factor as a BigDecimal, or null if conversion is not possible
+   * @return the converted value, or null if conversion is not possible
    */
   @Nullable
-  public static BigDecimal getConversionFactor(@Nullable final String fromCode,
-      @Nullable final String toCode) {
-    if (fromCode == null || toCode == null) {
+  public static BigDecimal convertValue(@Nullable final BigDecimal value,
+      @Nullable final String fromCode, @Nullable final String toCode) {
+    if (value == null || fromCode == null || toCode == null) {
       return null;
     }
+
     try {
-      final ConversionResult conversionResult = service
-          .convert(requireNonNull(fromCode), requireNonNull(toCode));
-      if (conversionResult instanceof ConverterService.Success(var conversionFactor) && nonNull(
-          conversionFactor)) {
-        return conversionFactor.getValue();
-      } else {
+      // Use the ucumate library's convert method that handles both multiplicative and additive
+      // conversions directly by taking the value as the first argument
+      final ConversionResult conversionResult = service.convert(
+          new PreciseDecimal(value.toPlainString()),
+          fromCode,
+          toCode
+      );
+
+      if (!(conversionResult instanceof ConverterService.Success(var convertedValue))
+          || convertedValue == null) {
+        log.warn("Failed to convert value {} from '{}' to '{}': {}",
+            value, fromCode, toCode, conversionResult);
         return null;
       }
+
+      return convertedValue.getValue();
     } catch (final Exception e) {
-      log.warn("Error getting conversion factor from '{}' to '{}': {}",
-          fromCode, toCode, e.getMessage());
+      log.warn("Error converting value {} from '{}' to '{}': {}",
+          value, fromCode, toCode, e.getMessage());
       return null;
     }
   }

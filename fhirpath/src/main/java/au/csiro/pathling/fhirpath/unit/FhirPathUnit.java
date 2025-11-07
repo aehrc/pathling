@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.unit;
 
 import jakarta.annotation.Nonnull;
+import java.math.BigDecimal;
 import java.util.Optional;
 
 /**
@@ -30,8 +31,8 @@ import java.util.Optional;
  *   <li>{@link CalendarDurationUnit} - FHIRPath calendar duration units (year, month, week, etc.)</li>
  * </ul>
  * <p>
- * Units can be converted between compatible types using the {@link #conversionFactorTo} method,
- * which computes conversion factors for both same-type conversions (UCUM-to-UCUM, calendar-to-calendar)
+ * Units can be converted between compatible types using the {@link #convertValue} method,
+ * which converts values for both same-type conversions (UCUM-to-UCUM, calendar-to-calendar)
  * and cross-type conversions (calendar-to-UCUM, UCUM-to-calendar) where applicable.
  */
 public sealed interface FhirPathUnit permits UcumUnit, CalendarDurationUnit {
@@ -39,7 +40,7 @@ public sealed interface FhirPathUnit permits UcumUnit, CalendarDurationUnit {
   /**
    * The precision (number of decimal places) to use when computing unit conversions.
    */
-  int CONVERSION_PRECISION = 15;
+  int DEFAULT_PRECISION = 15;
 
   /**
    * Gets the system URI for this unit (e.g., UCUM system URI, calendar duration system URI).
@@ -72,9 +73,10 @@ public sealed interface FhirPathUnit permits UcumUnit, CalendarDurationUnit {
   boolean isValidName(@Nonnull final String unitName);
 
   /**
-   * Computes the conversion factor between two units, supporting same-type conversions
-   * (UCUM-to-UCUM, calendar-to-calendar) and cross-type conversions (calendar-to-UCUM,
-   * UCUM-to-calendar) where applicable.
+   * Converts a value from one unit to another, supporting same-type conversions (UCUM-to-UCUM,
+   * calendar-to-calendar) and cross-type conversions (calendar-to-UCUM, UCUM-to-calendar) where
+   * applicable. Handles both multiplicative conversions (e.g., mg → kg) and additive conversions
+   * (e.g., Celsius → Kelvin).
    * <p>
    * Cross-type conversions work by finding intermediate representations:
    * <ul>
@@ -86,10 +88,11 @@ public sealed interface FhirPathUnit permits UcumUnit, CalendarDurationUnit {
    * <p>
    * Examples of valid conversions:
    * <ul>
-   *   <li>UCUM → UCUM: mg → kg</li>
-   *   <li>Calendar → Calendar: day → hour</li>
-   *   <li>Calendar → UCUM: millisecond → ms</li>
-   *   <li>UCUM → Calendar: s → second</li>
+   *   <li>UCUM → UCUM: 1000 mg → 1 kg</li>
+   *   <li>UCUM → UCUM (additive): 0 Cel → 273.15 K</li>
+   *   <li>Calendar → Calendar: 1 day → 24 hour</li>
+   *   <li>Calendar → UCUM: 1 millisecond → 1 ms</li>
+   *   <li>UCUM → Calendar: 60 s → 1 minute</li>
    * </ul>
    * <p>
    * Conversions return empty when:
@@ -98,25 +101,26 @@ public sealed interface FhirPathUnit permits UcumUnit, CalendarDurationUnit {
    *   <li>Non-definite calendar units are involved in certain conversions</li>
    * </ul>
    *
+   * @param value the value to convert
    * @param sourceUnit the source unit to convert from
    * @param targetUnit the target unit to convert to
-   * @return an Optional containing the conversion factor if conversion is possible, or empty if the
-   * units are incompatible or custom units are involved
+   * @return an Optional containing the converted value if conversion is possible, or empty if the
+   * units are incompatible
    */
   @Nonnull
-  static Optional<ConversionFactor> conversionFactorTo(@Nonnull final FhirPathUnit sourceUnit,
-      @Nonnull final FhirPathUnit targetUnit) {
+  static Optional<BigDecimal> convertValue(@Nonnull final BigDecimal value,
+      @Nonnull final FhirPathUnit sourceUnit, @Nonnull final FhirPathUnit targetUnit) {
     // This handles cross-unit conversions.
     return switch (sourceUnit) {
       case final CalendarDurationUnit cdUnitSource -> switch (targetUnit) {
         case final CalendarDurationUnit cdUnitTarget ->
-            cdUnitSource.conversionFactorTo(cdUnitTarget);
-        case final UcumUnit ucumUnitTarget -> cdUnitSource.conversionFactorTo(ucumUnitTarget);
+            cdUnitSource.convertValue(value, cdUnitTarget);
+        case final UcumUnit ucumUnitTarget -> cdUnitSource.convertValue(value, ucumUnitTarget);
       };
       case final UcumUnit ucumUnitSource -> switch (targetUnit) {
-        case final UcumUnit ucumUnitTarget -> ucumUnitSource.conversionFactorTo(ucumUnitTarget);
+        case final UcumUnit ucumUnitTarget -> ucumUnitSource.convertValue(value, ucumUnitTarget);
         case final CalendarDurationUnit cdUnitTarget ->
-            cdUnitTarget.conversionFactorFrom(ucumUnitSource);
+            cdUnitTarget.convertValueFrom(value, ucumUnitSource);
       };
     };
   }

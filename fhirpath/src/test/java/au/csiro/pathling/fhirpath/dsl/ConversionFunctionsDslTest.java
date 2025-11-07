@@ -761,6 +761,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             "toQuantity() converts cm to mm (length)")
         .testEquals("1000 'mL'", "'1 \\'L\\''.toQuantity('mL')",
             "toQuantity() converts L to mL (volume)")
+        .testEquals("273.15 'K'", "'0 \\'Cel\\''.toQuantity('K')",
+            "toQuantity() converts Celsius to Kelvin (temperature, additive)")
+        
 
         .group("toQuantity(unitCode) - UCUM string sources → incompatible units")
         .testEmpty("'1 \\'kg\\''.toQuantity('m')",

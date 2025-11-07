@@ -224,78 +224,64 @@ public enum CalendarDurationUnit implements FhirPathUnit {
   }
 
   /**
-   * Computes the conversion factor to convert values from this calendar duration unit to the target
-   * calendar duration unit. Only supports conversions to definite duration units (second,
-   * millisecond) as per the FHIRPath specification.
+   * Converts a value from this calendar duration unit to the target calendar duration unit. Only
+   * supports conversions to definite duration units (second, millisecond) as per the FHIRPath
+   * specification.
    *
+   * @param value the value to convert
    * @param targetUnit the target calendar duration unit to convert to
-   * @return an Optional containing the conversion factor if conversion is possible, or empty if the
+   * @return an Optional containing the converted value if conversion is possible, or empty if the
    * units are incompatible (e.g., week to month)
    */
   @Nonnull
-  public Optional<ConversionFactor> conversionFactorTo(
+  public Optional<BigDecimal> convertValue(@Nonnull final BigDecimal value,
       @Nonnull final CalendarDurationUnit targetUnit) {
-
-    // Check for explicitly incompatible conversions first
-    if (INCOMPATIBLE_CONVERSIONS.contains(Pair.of(this, targetUnit))) {
-      return Optional.empty();
-    }
-
-    // Check for special case conversions (e.g., year to month)
-    return Optional.ofNullable(SPECIAL_CASES.get(Pair.of(this, targetUnit)))
-        .or(() ->
-            // Fall back to milliseconds-based conversion for compatible units
-            Optional.of(ConversionFactor.ofFraction(
-                getMillisecondsEquivalent(),
-                targetUnit.getMillisecondsEquivalent()
-            ))
-        );
+    return conversionFactorTo(targetUnit).map(cf -> cf.apply(value));
   }
 
   /**
-   * Computes the conversion factor to convert values from this calendar duration unit to a target
-   * UCUM unit.
+   * Converts a value from this calendar duration unit to a target UCUM unit.
    * <p>
    * This is a cross-type conversion that works by:
    * <ol>
-   *   <li>Converting this calendar unit to seconds (if possible)</li>
-   *   <li>Converting seconds to its UCUM equivalent</li>
-   *   <li>Converting the UCUM equivalent to the target UCUM unit</li>
+   *   <li>Converting this calendar unit value to seconds (if possible)</li>
+   *   <li>Converting the seconds value to the target UCUM unit</li>
    * </ol>
    *
+   * @param value the value to convert
    * @param ucumUnitTarget the target UCUM unit to convert to
-   * @return an Optional containing the conversion factor if conversion is possible, or empty
+   * @return an Optional containing the converted value if conversion is possible, or empty
    * otherwise
    */
   @Nonnull
-  public Optional<ConversionFactor> conversionFactorTo(@Nonnull final UcumUnit ucumUnitTarget) {
-    return conversionFactorTo(SECOND)
-        .flatMap(cdFactor ->
-            SECOND.asUcum().conversionFactorTo(ucumUnitTarget)
-                .map(cdFactor::apply)
+  public Optional<BigDecimal> convertValue(@Nonnull final BigDecimal value,
+      @Nonnull final UcumUnit ucumUnitTarget) {
+    return convertValue(value, SECOND)
+        .flatMap(secondsValue ->
+            SECOND.asUcum().convertValue(secondsValue, ucumUnitTarget)
         );
   }
 
   /**
-   * Computes the conversion factor to convert values from a source UCUM unit to this calendar
-   * duration unit.
+   * Converts a value from a source UCUM unit to this calendar duration unit.
    * <p>
    * This is a cross-type conversion that works by:
    * <ol>
-   *   <li>Converting the UCUM source to the UCUM equivalent of seconds ('s')</li>
-   *   <li>Converting 'second' (calendar) to this calendar unit</li>
+   *   <li>Converting the UCUM source value to seconds ('s')</li>
+   *   <li>Converting the seconds value to this calendar unit</li>
    * </ol>
    *
+   * @param value the value to convert
    * @param ucumUnitSource the source UCUM unit to convert from
-   * @return an Optional containing the conversion factor if conversion is possible, or empty
+   * @return an Optional containing the converted value if conversion is possible, or empty
    * otherwise
    */
   @Nonnull
-  Optional<ConversionFactor> conversionFactorFrom(@Nonnull final UcumUnit ucumUnitSource) {
-    return ucumUnitSource.conversionFactorTo(SECOND.asUcum())
-        .flatMap(ucumFactor ->
-            SECOND.conversionFactorTo(this)
-                .map(ucumFactor::apply)
+  public Optional<BigDecimal> convertValueFrom(@Nonnull final BigDecimal value,
+      @Nonnull final UcumUnit ucumUnitSource) {
+    return ucumUnitSource.convertValue(value, SECOND.asUcum())
+        .flatMap(secondsValue ->
+            SECOND.convertValue(secondsValue, this)
         );
   }
 
@@ -316,6 +302,35 @@ public enum CalendarDurationUnit implements FhirPathUnit {
         .filter(CalendarDurationUnit::isDefinite)
         .map(cdu -> new UcumUnit(cdu.getUcumEquivalent()))
         .orElseThrow(() -> new IllegalArgumentException("Cannot convert to Ucum: " + unit));
+  }
+  
+  /**
+   * Computes the conversion factor to convert values from this calendar duration unit to the target
+   * calendar duration unit. Only supports conversions to definite duration units (second,
+   * millisecond) as per the FHIRPath specification.
+   *
+   * @param targetUnit the target calendar duration unit to convert to
+   * @return an Optional containing the conversion factor if conversion is possible, or empty if the
+   * units are incompatible (e.g., week to month)
+   */
+  @Nonnull
+  private Optional<ConversionFactor> conversionFactorTo(
+      @Nonnull final CalendarDurationUnit targetUnit) {
+
+    // Check for explicitly incompatible conversions first
+    if (INCOMPATIBLE_CONVERSIONS.contains(Pair.of(this, targetUnit))) {
+      return Optional.empty();
+    }
+
+    // Check for special case conversions (e.g., year to month)
+    return Optional.ofNullable(SPECIAL_CASES.get(Pair.of(this, targetUnit)))
+        .or(() ->
+            // Fall back to milliseconds-based conversion for compatible units
+            Optional.of(ConversionFactor.ofFraction(
+                getMillisecondsEquivalent(),
+                targetUnit.getMillisecondsEquivalent()
+            ))
+        );
   }
 
 

@@ -27,6 +27,7 @@ import au.csiro.pathling.fhirpath.unit.UcumUnit;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -96,25 +97,6 @@ public class FhirPathQuantity {
   @Nonnull
   public String getCode() {
     return unit.code();
-  }
-
-  /**
-   * Check if the quantity is a calendar duration.
-   *
-   * @return true if the quantity is a calendar duration, false otherwise
-   */
-  public boolean isCalendarDuration() {
-    return unit instanceof CalendarDurationUnit;
-  }
-
-  /**
-   * Check if the quantity is a UCUM quantity.
-   *
-   * @return true if the quantity is a UCUM quantity, false otherwise
-   */
-
-  public boolean isUcum() {
-    return unit instanceof UcumUnit;
   }
 
   /**
@@ -228,8 +210,7 @@ public class FhirPathQuantity {
   }
 
   /**
-   * Converts this quantity to the specified target unit if a conversion is possible, using the
-   * default precision.
+   * Converts this quantity to the specified target unit if a conversion is possible.
    * <p>
    * Supports:
    * <ul>
@@ -238,45 +219,36 @@ public class FhirPathQuantity {
    *       millisecond)</li>
    *   <li>Cross-type conversions: calendar duration to UCUM 's' or 'ms', and vice versa</li>
    * </ul>
+   *
+   * @param unitName the target unit string (e.g., "mg", "second", "s")
+   * @param scale the scale to apply to the converted value
+   * @return an Optional containing the converted quantity, or empty if conversion is not possible
+   */
+  @Nonnull
+  public Optional<FhirPathQuantity> convertToUnit(@Nonnull final String unitName, final int scale) {
+    final FhirPathUnit sourceUnit = getUnit();
+    final FhirPathUnit targetUnit = FhirPathUnit.fromString(unitName);
+    if (targetUnit.equals(sourceUnit)) {
+      return Optional.of(FhirPathQuantity.ofUnit(getValue(), targetUnit, unitName));
+    } else {
+      return FhirPathUnit.convertValue(getValue(), getUnit(), targetUnit)
+          .map(convertedValue ->
+              FhirPathQuantity.ofUnit(
+                  convertedValue.setScale(scale, RoundingMode.HALF_UP).stripTrailingZeros()
+                  , targetUnit, unitName));
+    }
+  }
+
+  /**
+   * Converts this quantity to the specified target unit if a conversion is possible, using the
+   * default scale.
    *
    * @param unitName the target unit string (e.g., "mg", "second", "s")
    * @return an Optional containing the converted quantity, or empty if conversion is not possible
    */
   @Nonnull
   public Optional<FhirPathQuantity> convertToUnit(@Nonnull final String unitName) {
-    return convertToUnit(unitName, FhirPathUnit.CONVERSION_PRECISION);
-  }
-
-  /**
-   * Converts this quantity to the specified target unit if a conversion is possible, using the
-   * specified precision.
-   * <p>
-   * Supports:
-   * <ul>
-   *   <li>UCUM to UCUM conversions (e.g., 'mg' to 'kg')</li>
-   *   <li>Calendar duration to calendar duration conversions (only to definite units: second,
-   *       millisecond)</li>
-   *   <li>Cross-type conversions: calendar duration to UCUM 's' or 'ms', and vice versa</li>
-   * </ul>
-   *
-   * @param unitName the target unit string (e.g., "mg", "second", "s")
-   * @param precision the number of decimal places to use in the conversion (must be between 1 and
-   * 100)
-   * @return an Optional containing the converted quantity, or empty if conversion is not possible
-   * @throws IllegalArgumentException if precision is not between 1 and 100
-   */
-  @Nonnull
-  public Optional<FhirPathQuantity> convertToUnit(@Nonnull final String unitName,
-      final int precision) {
-    final FhirPathUnit sourceUnit = getUnit();
-    final FhirPathUnit targetUnit = FhirPathUnit.fromString(unitName);
-    if (targetUnit.equals(sourceUnit)) {
-      return Optional.of(FhirPathQuantity.ofUnit(getValue(), targetUnit, unitName));
-    } else {
-      return FhirPathUnit.conversionFactorTo(getUnit(), targetUnit)
-          .map(cf -> FhirPathQuantity.ofUnit(cf.apply(getValue(), precision), targetUnit,
-              unitName));
-    }
+    return convertToUnit(unitName, FhirPathUnit.DEFAULT_PRECISION);
   }
 
   /**

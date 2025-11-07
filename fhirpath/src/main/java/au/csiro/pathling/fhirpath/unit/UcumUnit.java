@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.unit;
 
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import jakarta.annotation.Nonnull;
+import java.math.BigDecimal;
 import java.util.Optional;
 
 /**
@@ -63,17 +64,20 @@ public record UcumUnit(@Nonnull String code) implements FhirPathUnit {
   }
 
   /**
-   * Computes the conversion factor to convert values from this UCUM unit to the target UCUM unit.
+   * Converts a value from this UCUM unit to the target UCUM unit. Handles both multiplicative
+   * conversions (e.g., mg → kg) and additive conversions (e.g., Celsius → Kelvin).
    * <p>
    * This method uses the UCUM conversion service to determine if the two units are compatible and
-   * calculate the appropriate conversion factor. Units are compatible if they measure the same
-   * dimension (e.g., both measure mass, length, or time).
+   * perform the conversion. Units are compatible if they measure the same dimension (e.g., both
+   * measure mass, length, or time).
    * <p>
    * Examples of valid conversions:
    * <ul>
-   *   <li>mg → kg (mass)</li>
-   *   <li>mL → L (volume)</li>
-   *   <li>s → ms (time)</li>
+   *   <li>1000 mg → 1 kg (mass, multiplicative)</li>
+   *   <li>1 mL → 0.001 L (volume, multiplicative)</li>
+   *   <li>1000 s → 1000000 ms (time, multiplicative)</li>
+   *   <li>0 Cel → 273.15 K (temperature, additive)</li>
+   *   <li>100 Cel → 373.15 K (temperature, additive)</li>
    * </ul>
    * <p>
    * Examples of invalid conversions that return empty:
@@ -82,15 +86,15 @@ public record UcumUnit(@Nonnull String code) implements FhirPathUnit {
    *   <li>s → kg (time vs mass)</li>
    * </ul>
    *
+   * @param value the value to convert
    * @param targetUnit the target UCUM unit to convert to
-   * @return an Optional containing the conversion factor if conversion is possible, or empty if the
+   * @return an Optional containing the converted value if conversion is possible, or empty if the
    * units are incompatible
    */
   @Nonnull
-  public Optional<ConversionFactor> conversionFactorTo(
-      @Nonnull UcumUnit targetUnit) {
-    return Optional.ofNullable(Ucum.getConversionFactor(code(), targetUnit.code()))
-        .map(ConversionFactor::of);
+  public Optional<BigDecimal> convertValue(@Nonnull final BigDecimal value,
+      @Nonnull final UcumUnit targetUnit) {
+    return Optional.ofNullable(Ucum.convertValue(value, code(), targetUnit.code()));
   }
 
   /**

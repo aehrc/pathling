@@ -440,4 +440,118 @@ class FhirPathQuantityTest {
         String.format("Converting UCUM '%s' to calendar '%s' should return null (not supported)",
             sourceUcumUnit, targetCalendarUnit));
   }
+
+  static Stream<Arguments> ucumConversions() {
+    return Stream.of(
+        // Multiplicative conversions (simple scaling factor)
+        Arguments.of("kg", "g", new BigDecimal("1"), new BigDecimal("1000")),
+        Arguments.of("g", "kg", new BigDecimal("2000"), new BigDecimal("2")),
+
+        // Additive conversions (offset-based)
+        Arguments.of("Cel", "K", new BigDecimal("0"), new BigDecimal("273.15")),
+        Arguments.of("K", "Cel", new BigDecimal("373.15"), new BigDecimal("100"))
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource("ucumConversions")
+  void testUcumConversion(final String sourceUnit, final String targetUnit,
+      final BigDecimal sourceValue, final BigDecimal expectedValue) {
+    final FhirPathQuantity source = FhirPathQuantity.ofUcum(sourceValue, sourceUnit);
+    final FhirPathQuantity result = source.convertToUnit(targetUnit).orElse(null);
+
+    assertNotNull(result,
+        String.format("Converting %s '%s' to '%s' should succeed",
+            sourceValue, sourceUnit, targetUnit));
+    assertEquals(0, expectedValue.compareTo(result.getValue()),
+        String.format("Converting %s '%s' to '%s' should produce %s, but got %s",
+            sourceValue, sourceUnit, targetUnit, expectedValue, result.getValue()));
+
+    // Check that result has correct system and unit
+    assertEquals(UcumUnit.UCUM_SYSTEM_URI, result.getSystem(),
+        "Result should be UCUM system");
+    assertEquals(targetUnit, result.getUnitName(), "Result unit should be " + targetUnit);
+  }
+
+  static Stream<Arguments> ucumCanonicalization() {
+    return Stream.of(
+        // Multiplicative conversions to canonical units
+        Arguments.of("kg", new BigDecimal("2"), "g", new BigDecimal("2000")),
+        Arguments.of("cm", new BigDecimal("100"), "m", new BigDecimal("1")),
+        Arguments.of("L", new BigDecimal("500"), "m+3", new BigDecimal("0.5")),
+
+        // Additive conversion to canonical unit (Celsius -> Kelvin)
+        Arguments.of("Cel", new BigDecimal("100"), "K", new BigDecimal("373.15"))
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource("ucumCanonicalization")
+  void testUcumCanonicalization(final String sourceUnit, final BigDecimal sourceValue,
+      final String expectedCanonicalUnit, final BigDecimal expectedCanonicalValue) {
+    final FhirPathQuantity source = FhirPathQuantity.ofUcum(sourceValue, sourceUnit);
+    final FhirPathQuantity canonical = source.asCanonical().orElse(null);
+
+    assertNotNull(canonical,
+        String.format("Canonicalizing %s '%s' should succeed", sourceValue, sourceUnit));
+    assertEquals(expectedCanonicalUnit, canonical.getUnitName(),
+        String.format("Canonical unit should be '%s'", expectedCanonicalUnit));
+    assertEquals(0, expectedCanonicalValue.compareTo(canonical.getValue()),
+        String.format("Canonical value should be %s, but got %s",
+            expectedCanonicalValue, canonical.getValue()));
+    assertEquals(UcumUnit.UCUM_SYSTEM_URI, canonical.getSystem(),
+        "Canonical quantity should be UCUM system");
+  }
+
+  static Stream<Arguments> calendarDurationCanonicalization() {
+    return Stream.of(
+        // Only definite calendar durations (second and millisecond) can be canonicalized to UCUM
+        Arguments.of(CalendarDurationUnit.SECOND, new BigDecimal("5"), "s", new BigDecimal("5")),
+        Arguments.of(CalendarDurationUnit.MILLISECOND, new BigDecimal("1000"), "s",
+            new BigDecimal("1"))
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource("calendarDurationCanonicalization")
+  void testCalendarDurationCanonicalization(final CalendarDurationUnit sourceUnit,
+      final BigDecimal sourceValue,
+      final String expectedCanonicalUnit, final BigDecimal expectedCanonicalValue) {
+    final FhirPathQuantity source = FhirPathQuantity.ofUnit(sourceValue, sourceUnit);
+    final FhirPathQuantity canonical = source.asCanonical().orElse(null);
+
+    assertNotNull(canonical,
+        String.format("Canonicalizing %s %s should succeed", sourceValue, sourceUnit.code()));
+    assertEquals(expectedCanonicalUnit, canonical.getUnitName(),
+        String.format("Canonical unit should be '%s'", expectedCanonicalUnit));
+    assertEquals(0, expectedCanonicalValue.compareTo(canonical.getValue()),
+        String.format("Canonical value should be %s, but got %s",
+            expectedCanonicalValue, canonical.getValue()));
+    assertEquals(UcumUnit.UCUM_SYSTEM_URI, canonical.getSystem(),
+        "Canonical quantity should be UCUM system");
+  }
+
+  static Stream<Arguments> indefiniteCalendarDurationCanonicalization() {
+    return Stream.of(
+        // Indefinite calendar durations cannot be canonicalized
+        Arguments.of(CalendarDurationUnit.MINUTE, new BigDecimal("2")),
+        Arguments.of(CalendarDurationUnit.HOUR, new BigDecimal("1")),
+        Arguments.of(CalendarDurationUnit.DAY, new BigDecimal("1")),
+        Arguments.of(CalendarDurationUnit.WEEK, new BigDecimal("1")),
+        Arguments.of(CalendarDurationUnit.MONTH, new BigDecimal("1")),
+        Arguments.of(CalendarDurationUnit.YEAR, new BigDecimal("1"))
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource("indefiniteCalendarDurationCanonicalization")
+  void testIndefiniteCalendarDurationCanonicalization(final CalendarDurationUnit sourceUnit,
+      final BigDecimal sourceValue) {
+    final FhirPathQuantity source = FhirPathQuantity.ofUnit(sourceValue, sourceUnit);
+    @Nullable final FhirPathQuantity canonical = source.asCanonical().orElse(null);
+
+    assertNull(canonical,
+        String.format("Canonicalizing indefinite duration %s %s should return null",
+            sourceValue, sourceUnit.code()));
+  }
 }
