@@ -21,7 +21,6 @@ import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.config.ServerConfiguration;
 import io.sentry.Sentry;
 import jakarta.annotation.Nonnull;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.EventListener;
@@ -43,12 +42,12 @@ public class ErrorReportingInitialization implements ApplicationListener<Applica
 
   /**
    * @param configuration A {@link ServerConfiguration} object to control the behaviour of the
-   * listene
+   * listener
    * @param version A {@link PathlingVersion} object containing version information about the
    * server
    */
   public ErrorReportingInitialization(@Nonnull final ServerConfiguration configuration,
-      @Qualifier("pathlingVersion") @Nonnull final PathlingVersion version) {
+      @Nonnull final PathlingVersion version) {
     this.configuration = configuration;
     this.version = version;
   }

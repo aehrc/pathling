@@ -1,27 +1,16 @@
 package au.csiro.pathling.config;
 
-import au.csiro.pathling.PathlingVersion;
-import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.io.source.DeltaSource;
-import au.csiro.pathling.library.io.source.QueryableDataSource;
-import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.parser.IParser;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.PostConstruct;
 import jakarta.validation.constraints.NotNull;
 import java.util.Optional;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Bean;
 import org.springframework.validation.annotation.Validated;
 
 /**
@@ -39,12 +28,6 @@ public class ServerConfiguration {
    */
   @NotNull
   private String implementationDescription;
-
-  @NotNull
-  private HttpServerCachingConfiguration httpCaching;
-
-  @NotNull
-  private AsyncConfiguration async;
 
   /**
    * If this variable is set, all errors will be reported to a Sentry service, e.g.
@@ -75,53 +58,36 @@ public class ServerConfiguration {
   @NotNull
   private SparkConfiguration spark = SparkConfiguration.builder().build();
 
-  @Bean
-  @ConditionalOnMissingBean
-  public PathlingVersion pathlingVersion() {
-    return new PathlingVersion();
-  }
-
-  @Bean
-  @ConditionalOnMissingBean
-  public FhirContext fhirContext() {
-    return FhirEncoders.forR4().getOrCreate().getContext();
-  }
-
-  @Bean
-  @ConditionalOnMissingBean
-  public IParser jsonParser() {
-    return fhirContext().newJsonParser();
-  }
-
-  @Bean
-  @ConditionalOnMissingBean
-  public PathlingContext pathlingContext() {
-    return PathlingContext.create();
-  }
-
-  @Bean
-  @ConditionalOnMissingBean
-  public QueryableDataSource deltaLake(PathlingContext pathlingContext) {
-    return new DeltaSource(pathlingContext, databasePath);
-  }
-
-  // Handle the `import` property outside of Lombok, as import is a Java keyword.
-  @Getter(AccessLevel.NONE)
-  @Setter(AccessLevel.NONE)
   @NotNull
+  private StorageConfiguration storage = StorageConfiguration.builder().build();
+
+  @NotNull
+  private EncodingConfiguration encoding = EncodingConfiguration.builder().build();
+
+  @NotNull
+  private TerminologyConfiguration terminology = TerminologyConfiguration.builder().build();
+
+  @NotNull
+  private AuthorizationConfiguration auth;
+
+  @NotNull
+  private HttpServerCachingConfiguration httpCaching;
+
+  @NotNull
+  @JsonProperty("import")
   private ImportConfiguration import_;
 
-  @Nonnull
+  @Nullable
   public ImportConfiguration getImport() {
     return import_;
   }
 
-  public void setImport(@Nonnull final ImportConfiguration import_) {
-    this.import_ = import_;
+  public void setImport(@Nonnull final ImportConfiguration newImport) {
+    this.import_ = newImport;
   }
 
   @NotNull
-  private AuthorizationConfiguration auth;
+  private AsyncConfiguration async;
 
   @NotNull
   private CorsConfiguration cors;
@@ -133,4 +99,5 @@ public class ServerConfiguration {
   public void logConfiguration() {
     log.debug("Server configuration: {}", this);
   }
+
 }
