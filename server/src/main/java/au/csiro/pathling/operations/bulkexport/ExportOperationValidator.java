@@ -53,8 +53,8 @@ public class ExportOperationValidator {
 
   public PreAsyncValidation.PreAsyncValidationResult<ExportRequest> validateRequest(
       @Nonnull RequestDetails requestDetails,
-      @Nonnull String outputFormat,
-      @Nonnull InstantType since,
+      @Nullable String outputFormat,
+      @Nullable InstantType since,
       @Nullable InstantType until,
       @Nullable List<String> type,
       @Nullable List<String> elements
