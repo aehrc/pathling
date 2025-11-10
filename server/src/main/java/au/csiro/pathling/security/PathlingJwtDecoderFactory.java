@@ -24,7 +24,6 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
 import org.springframework.stereotype.Component;
@@ -35,7 +34,6 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
-@Profile("server & !ga4gh")
 @ConditionalOnProperty(prefix = "pathling", name = "auth.enabled", havingValue = "true")
 public class PathlingJwtDecoderFactory implements JwtDecoderFactory<ServerConfiguration> {
 

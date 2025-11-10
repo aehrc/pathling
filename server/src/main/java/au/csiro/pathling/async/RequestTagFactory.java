@@ -35,7 +35,6 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
@@ -44,7 +43,6 @@ import org.springframework.stereotype.Component;
  * Factory for creating {@link RequestTag} objects using the key of provided cacheable object.
  */
 @Component
-@Profile("server")
 @ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
 @Getter
 public final class RequestTagFactory {

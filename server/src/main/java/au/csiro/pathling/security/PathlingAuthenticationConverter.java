@@ -21,7 +21,6 @@ import jakarta.annotation.Nonnull;
 import java.util.Collection;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Profile;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -36,7 +35,6 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @ConditionalOnProperty(prefix = "pathling", name = "auth.enabled", havingValue = "true")
-@Profile("server & !ga4gh")
 @Slf4j
 public class PathlingAuthenticationConverter extends JwtAuthenticationConverter {
 

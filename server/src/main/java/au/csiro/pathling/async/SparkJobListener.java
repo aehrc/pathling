@@ -27,7 +27,6 @@ import org.apache.spark.scheduler.SparkListenerStageSubmitted;
 import org.apache.spark.sql.SparkSession;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
@@ -36,7 +35,6 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
-@Profile("server")
 @ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
 @Slf4j
 public class SparkJobListener extends org.apache.spark.scheduler.SparkListener {

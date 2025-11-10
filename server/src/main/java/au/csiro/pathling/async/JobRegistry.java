@@ -29,7 +29,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
@@ -39,7 +38,6 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-@Profile("server")
 @ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
 public class JobRegistry {
 

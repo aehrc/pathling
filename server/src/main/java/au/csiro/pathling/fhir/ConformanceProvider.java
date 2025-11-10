@@ -78,7 +78,6 @@ import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.OperationDefinition;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
@@ -89,7 +88,6 @@ import org.springframework.stereotype.Component;
  * @see <a href="https://hl7.org/fhir/R4/capabilitystatement.html">CapabilityStatement</a>
  */
 @Component
-@Profile("server")
 @Slf4j
 public class ConformanceProvider implements IServerConformanceProvider<CapabilityStatement>,
         Cacheable {

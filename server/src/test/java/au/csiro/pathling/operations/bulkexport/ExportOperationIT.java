@@ -61,7 +61,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Tag("IntegrationTest")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ResourceLock(value = "wiremock", mode = ResourceAccessMode.READ_WRITE)
-@ActiveProfiles({"core", "server", "integration-test"})
+@ActiveProfiles({"integration-test"})
 class ExportOperationIT {
 
   @LocalServerPort

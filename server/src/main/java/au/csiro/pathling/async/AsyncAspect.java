@@ -64,7 +64,6 @@ import org.springframework.stereotype.Component;
  */
 @Aspect
 @Component
-@Profile("server")
 @ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
 @Slf4j
 @Order(200)

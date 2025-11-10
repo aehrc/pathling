@@ -375,7 +375,7 @@
                 <argument>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</argument>
                 <argument>--add-opens=java.base/java.net=ALL-UNNAMED</argument>
                 <argument>--add-opens=java.base/sun.nio.ch=ALL-UNNAMED</argument>
-                <argument>-Dspring.profiles.active=spark,fhir,import,cli</argument>
+                <argument>-Dspring.profiles.active=cli</argument>
                 <argument>-Dpathling.version=${project.version}</argument>
                 <argument>-Dpathling.terminology.enabled=false</argument>
                 <argument>-Dpathling.storage.warehouseUrl=file://${project.basedir}/src/test/resources/test-data</argument>

@@ -30,7 +30,7 @@ import org.springframework.test.context.ActiveProfiles;
 @Tag("IntegrationTest")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @ResourceLock(value = "wiremock", mode = ResourceAccessMode.READ_WRITE)
-@ActiveProfiles({"core", "server", "integration-test"})
+@ActiveProfiles({"integration-test"})
 public abstract class IntegrationTest {
 
 }

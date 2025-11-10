@@ -35,14 +35,12 @@ import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Profile;
 import scala.jdk.javaapi.CollectionConverters;
 
 /**
  * @author Felix Naumann
  */
 @WebServlet(urlPatterns = "/fhir/*")
-@Profile("server")
 @Slf4j
 public class FhirServer extends RestfulServer {
 

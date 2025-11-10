@@ -40,7 +40,6 @@ import java.io.IOException;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Parameters;
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -52,7 +51,6 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
-@Profile("server")
 @Slf4j
 public class ImportProvider implements PreAsyncValidation<ImportRequest> {
 

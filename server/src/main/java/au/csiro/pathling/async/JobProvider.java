@@ -54,7 +54,6 @@ import org.hl7.fhir.r4.model.Parameters;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -63,7 +62,6 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
-@Profile("server")
 @ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
 @Slf4j
 public class JobProvider {

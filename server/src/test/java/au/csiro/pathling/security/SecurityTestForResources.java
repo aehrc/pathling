@@ -40,7 +40,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
  * Spring Boot Test, how do I map a temporary folder to a configuration property?</a>
  */
 @Slf4j
-@ActiveProfiles({"core", "unit-test"})
+@ActiveProfiles({"unit-test"})
 // @DirtiesContext(classMode = ClassMode.AFTER_CLASS)
 abstract class SecurityTestForResources extends SecurityTest {
 

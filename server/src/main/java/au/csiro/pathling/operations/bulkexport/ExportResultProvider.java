@@ -23,7 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.fs.Path;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -35,7 +34,6 @@ import org.springframework.stereotype.Component;
  * @author Felix Naumann
  */
 @Component
-@Profile("server")
 @Slf4j
 public class ExportResultProvider {
   

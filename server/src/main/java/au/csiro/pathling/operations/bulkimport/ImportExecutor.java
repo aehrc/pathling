@@ -39,7 +39,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
@@ -49,7 +48,6 @@ import org.springframework.stereotype.Component;
  * @see <a href="https://pathling.csiro.au/docs/server/operations/import">Import</a>
  */
 @Component
-@Profile({"core", "import"})
 @Slf4j
 public class ImportExecutor {
 

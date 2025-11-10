@@ -29,7 +29,6 @@ import java.util.function.Supplier;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
@@ -38,7 +37,6 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
-@Profile("server")
 @ConditionalOnProperty(prefix = "pathling", name = "auth.enabled", havingValue = "true")
 @Getter
 public class OidcConfiguration {

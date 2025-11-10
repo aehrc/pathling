@@ -30,7 +30,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  */
 @Configuration
 @EnableAsync
-@Profile("server")
 @ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
 public class PathlingAsyncConfigurer implements
     org.springframework.scheduling.annotation.AsyncConfigurer {

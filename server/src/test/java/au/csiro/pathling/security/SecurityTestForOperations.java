@@ -64,7 +64,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
-@ActiveProfiles({"core", "server", "unit-test"})
+@ActiveProfiles({"unit-test"})
 @Tag("IntegrationTest")
 @TestPropertySource(properties = {"pathling.async.enabled=false"})
 abstract class SecurityTestForOperations<T> extends SecurityTest {

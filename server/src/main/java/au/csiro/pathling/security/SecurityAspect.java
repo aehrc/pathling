@@ -27,7 +27,6 @@ import org.aspectj.lang.annotation.Before;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -47,7 +46,6 @@ import org.springframework.stereotype.Component;
  */
 @Aspect
 @Component
-@Profile("core")
 @ConditionalOnProperty(prefix = "pathling", name = "auth.enabled", havingValue = "true")
 @Slf4j
 @Order(100)

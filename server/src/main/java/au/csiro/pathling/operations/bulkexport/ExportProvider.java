@@ -25,7 +25,6 @@ import java.util.Optional;
 import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.InstantType;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -34,7 +33,6 @@ import org.springframework.stereotype.Component;
  * @author Felix Naumann
  */
 @Component
-@Profile("server")
 public class ExportProvider implements PreAsyncValidation<ExportRequest> {
 
   /**

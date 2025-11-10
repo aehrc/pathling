@@ -51,7 +51,6 @@ import java.util.Arrays;
 import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
-import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatusCode;
@@ -72,7 +71,6 @@ import org.springframework.web.client.RestTemplate;
  * @author John Grimes
  */
 @Component
-@Profile("server & !ga4gh")
 @ConditionalOnProperty(prefix = "pathling", name = "auth.enabled", havingValue = "true")
 @Primary
 public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelector<SecurityContext> {

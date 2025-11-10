@@ -22,7 +22,6 @@ import jakarta.annotation.Nonnull;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
@@ -30,7 +29,6 @@ import org.springframework.stereotype.Component;
  */
 @Aspect
 @Component
-@Profile("core")
 public class ImportLock {
 
   private static boolean locked = false;
