@@ -18,27 +18,45 @@
 package au.csiro.pathling.config;
 
 import jakarta.annotation.Nullable;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import java.util.List;
-
 /**
- * Represents configuration specific to import functionality.
+ * Represents configuration specific to ping and pull import functionality.
+ *
+ * @author John Grimes
  */
 @Data
-public class ImportConfiguration {
+public class PnpConfiguration {
 
   /**
-   * A set of URL prefixes which are allowable for use within the import operation.
-   */
-  @NotNull
-  private List<String> allowableSources;
-
-  /**
-   * Configuration for ping and pull import operations.
+   * The client identifier for SMART Backend Services authentication.
    */
   @Nullable
-  private PnpConfiguration pnp;
+  private String clientId;
+
+  /**
+   * The token endpoint URL for obtaining access tokens. If not specified, the client will attempt
+   * to discover it via the SMART configuration endpoint.
+   */
+  @Nullable
+  private String tokenEndpoint;
+
+  /**
+   * The private key in JWK format for asymmetric authentication (RS384).
+   */
+  @Nullable
+  private String privateKeyJwk;
+
+  /**
+   * The client secret for symmetric authentication.
+   */
+  @Nullable
+  private String clientSecret;
+
+  /**
+   * The requested scope for authentication (e.g., "system/*.read").
+   */
+  @Nullable
+  private String scope;
 
 }

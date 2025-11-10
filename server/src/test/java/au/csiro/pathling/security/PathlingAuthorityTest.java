@@ -60,6 +60,7 @@ class PathlingAuthorityTest {
     PathlingAuthority.fromAuthority("pathling:search");
     PathlingAuthority.fromAuthority("pathling:extract");
     PathlingAuthority.fromAuthority("pathling:import");
+    PathlingAuthority.fromAuthority("pathling:import-pnp");
     PathlingAuthority.fromAuthority("pathling:create");
     PathlingAuthority.fromAuthority("pathling:update");
     for (final ResourceType resourceType : ResourceType.values()) {

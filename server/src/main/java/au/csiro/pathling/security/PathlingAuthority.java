@@ -38,7 +38,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public class PathlingAuthority {
 
   private static final Pattern VALID_AUTHORITY_REGEX =
-      Pattern.compile("pathling(?::([a-zA-Z]+))?(?::([a-zA-Z]+))?");
+      Pattern.compile("pathling(?::([a-zA-Z-]+))?(?::([a-zA-Z]+))?");
   private static final String WILDCARD = "*";
 
   private final String authority;
@@ -131,7 +131,7 @@ public class PathlingAuthority {
     } else {
       final Optional<String> action = Optional.ofNullable(matcher.group(1));
       final Optional<String> subject = Optional.ofNullable(matcher.group(2));
-      
+
       final List<String> accessCodes = Arrays.stream(ResourceAccess.AccessType.values())
           .map(ResourceAccess.AccessType::getCode)
           .toList();

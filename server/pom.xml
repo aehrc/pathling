@@ -288,6 +288,11 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <dependency>
+      <groupId>au.csiro.fhir</groupId>
+      <artifactId>bulk-export</artifactId>
+      <version>1.0.3</version>
+    </dependency>
   </dependencies>
 
   <dependencyManagement>
