@@ -34,6 +34,9 @@ jobs:
         with:
           java-version: 21
           distribution: "zulu"
+          
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
