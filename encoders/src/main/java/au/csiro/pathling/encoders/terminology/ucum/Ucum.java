@@ -29,6 +29,7 @@ import io.github.fhnaumann.funcs.CanonicalizerService;
 import io.github.fhnaumann.funcs.ConverterService;
 import io.github.fhnaumann.funcs.ConverterService.ConversionResult;
 import io.github.fhnaumann.funcs.UCUMService;
+import io.github.fhnaumann.model.UCUMExpression.CanonicalTerm;
 import io.github.fhnaumann.util.PreciseDecimal;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -44,6 +45,16 @@ import lombok.extern.slf4j.Slf4j;
 public class Ucum {
 
   public static final String NO_UNIT_CODE = "1";
+
+  /**
+   * A record to hold a canonical value and unit pair.
+   */
+  public record ValueWithUnit(
+      @Nonnull BigDecimal value,
+      @Nonnull String unit
+  ) {
+
+  }
 
   private static final UCUMService service;
 
@@ -61,15 +72,18 @@ public class Ucum {
   }
 
   /**
-   * Gets the canonical value for a given value and UCUM code.
+   * Gets both the canonical value and code for a given value and UCUM code in a single operation.
+   * This method performs a single canonicalization call and returns both results together, ensuring
+   * consistency and better performance compared to calling getCanonicalValue and getCanonicalCode
+   * separately.
    *
    * @param value the value to canonicalize
    * @param code the UCUM code of the value
-   * @return the canonical value, or null if canonicalization fails
+   * @return a ValueWithUnit containing both canonical value and code, or null if canonicalization
+   * fails
    */
-  @UsedByReflection
   @Nullable
-  public static BigDecimal getCanonicalValue(@Nullable final BigDecimal value,
+  public static ValueWithUnit getCanonical(@Nullable final BigDecimal value,
       @Nullable final String code) {
     if (value == null || code == null) {
       return null;
@@ -85,23 +99,54 @@ public class Ucum {
       );
 
       // Check if the result is a Success instance.
-      if (!(result instanceof CanonicalizerService.Success success)) {
+      if (!(result instanceof CanonicalizerService.Success(
+          PreciseDecimal magnitude,
+          CanonicalTerm canonicalTerm
+      ))) {
         log.warn("Failed to canonicalise UCUM code '{}': {}", code, result);
         return null;
       }
 
       // Get the magnitude of the value in canonical units.
-      @Nullable final PreciseDecimal magnitude = success.magnitude();
       if (magnitude == null) {
         log.warn("No magnitude available for UCUM code '{}'", code);
         return null;
       }
-      // Get magnitude as BigDecimal.
-      return magnitude.getValue();
+
+      // Get the canonical unit code by printing the canonical term.
+      @Nullable final String canonicalCode = service.print(canonicalTerm);
+      if (canonicalCode == null) {
+        log.warn("No canonical code available for UCUM code '{}'", code);
+        return null;
+      }
+
+      // Handle empty canonical code by converting to NO_UNIT_CODE
+      final String adjustedCode = canonicalCode.isEmpty()
+                                  ? NO_UNIT_CODE
+                                  : canonicalCode;
+
+      return new ValueWithUnit(magnitude.getValue(), adjustedCode);
     } catch (final Exception e) {
       log.warn("Error canonicalising UCUM code '{}': {}", code, e.getMessage());
       return null;
     }
+  }
+
+  /**
+   * Gets the canonical value for a given value and UCUM code.
+   *
+   * @param value the value to canonicalize
+   * @param code the UCUM code of the value
+   * @return the canonical value, or null if canonicalization fails
+   */
+  @UsedByReflection
+  @Nullable
+  public static BigDecimal getCanonicalValue(@Nullable final BigDecimal value,
+      @Nullable final String code) {
+    @Nullable final ValueWithUnit canonical = getCanonical(value, code);
+    return canonical != null
+           ? canonical.value()
+           : null;
   }
 
   /**
@@ -115,28 +160,10 @@ public class Ucum {
   @Nullable
   public static String getCanonicalCode(@Nullable final BigDecimal value,
       @Nullable final String code) {
-    if (value == null || code == null) {
-      return null;
-    }
-
-    try {
-      final CanonicalizerService.CanonicalizationResult result = service.canonicalize(code);
-
-      // Check if the result is a Success instance.
-      if (!(result instanceof CanonicalizerService.Success success)) {
-        log.warn("Failed to canonicalise UCUM code '{}': {}", code, result);
-        return null;
-      }
-
-      // Get the canonical unit code by printing the canonical term.
-      @Nullable final String canonicalCode = service.print(success.canonicalTerm());
-
-      // Apply the NO_UNIT_CODE adjustment for empty codes.
-      return adjustNoUnitCode(canonicalCode);
-    } catch (final Exception e) {
-      log.warn("Error canonicalising UCUM code '{}': {}", code, e.getMessage());
-      return null;
-    }
+    @Nullable final ValueWithUnit canonical = getCanonical(value, code);
+    return canonical != null
+           ? canonical.unit()
+           : null;
   }
 
   /**
@@ -177,16 +204,6 @@ public class Ucum {
           value, fromCode, toCode, e.getMessage());
       return null;
     }
-  }
-
-  @Nullable
-  private static String adjustNoUnitCode(@Nullable final String code) {
-    if (code == null) {
-      return null;
-    }
-    return code.isEmpty()
-           ? NO_UNIT_CODE
-           : code;
   }
 
 }

@@ -25,6 +25,7 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.encoders.QuantitySupport;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
+import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import au.csiro.pathling.fhirpath.unit.CalendarDurationUnit;
 import au.csiro.pathling.fhirpath.unit.UcumUnit;
@@ -227,31 +228,16 @@ public class QuantityEncoding {
   }
 
   /**
-   * A simple record to hold a value and unit pair.
+   * Creates a canonical ValueWithUnit from a FhirPathQuantity.
+   *
+   * @param quantity the quantity
+   * @return the canonical ValueWithUnit, or null if canonicalization fails
    */
-  private record ValueWithUnit(
-      @Nullable BigDecimal value,
-      @Nullable String unit
-  ) {
-
-    /**
-     * An empty ValueWithUnit instance.
-     */
-
-    static final ValueWithUnit EMPTY = new ValueWithUnit(null, null);
-
-    /**
-     * Creates a canonical ValueWithUnit from a FhirPathQuantity.
-     *
-     * @param quantity the quantity
-     * @return the canonical ValueWithUnit
-     */
-    @Nonnull
-    static ValueWithUnit canonicalOf(@Nonnull final FhirPathQuantity quantity) {
-      return quantity.asCanonical()
-          .map(q -> new ValueWithUnit(q.getValue(), q.getCode()))
-          .orElse(EMPTY);
-    }
+  @Nullable
+  private static Ucum.ValueWithUnit canonicalOf(@Nonnull final FhirPathQuantity quantity) {
+    return quantity.asCanonical()
+        .map(q -> new Ucum.ValueWithUnit(q.getValue(), q.getCode()))
+        .orElse(null);
   }
 
   /**
@@ -263,7 +249,7 @@ public class QuantityEncoding {
   @Nonnull
   public static Column encodeLiteral(@Nonnull final FhirPathQuantity quantity) {
     final BigDecimal value = quantity.getValue();
-    final ValueWithUnit canonical = ValueWithUnit.canonicalOf(quantity);
+    @Nullable final Ucum.ValueWithUnit canonical = canonicalOf(quantity);
     return toStruct(
         lit(null),
         lit(value),
@@ -272,8 +258,8 @@ public class QuantityEncoding {
         lit(quantity.getUnitName()),
         lit(quantity.getSystem()),
         lit(quantity.getCode()),
-        FlexiDecimalSupport.toLiteral(canonical.value()),
-        lit(canonical.unit()),
+        FlexiDecimalSupport.toLiteral(canonical != null ? canonical.value() : null),
+        lit(canonical != null ? canonical.unit() : null),
         lit(null));
   }
 
@@ -321,7 +307,7 @@ public class QuantityEncoding {
   @Nonnull
   public static Row encode(@Nonnull final FhirPathQuantity quantity) {
     final BigDecimal value = quantity.getValue();
-    final ValueWithUnit canonical = ValueWithUnit.canonicalOf(quantity);
+    @Nullable final Ucum.ValueWithUnit canonical = canonicalOf(quantity);
 
     // Create the Quantity Row with all fields:
     // id, value, value_scale, comparator, unit, system, code,
@@ -331,11 +317,11 @@ public class QuantityEncoding {
         value,                                   // value
         value.scale(),                           // value_scale
         null,                                    // comparator
-        quantity.getUnitName(),                      // unit
+        quantity.getUnitName(),                  // unit
         quantity.getSystem(),                    // system
         quantity.getCode(),                      // code
-        FlexiDecimal.toValue(canonical.value()), // canonicalized_value (as FlexiDecimal Row)
-        canonical.unit(),                       // canonicalized_code
+        FlexiDecimal.toValue(canonical != null ? canonical.value() : null), // canonicalized_value (as FlexiDecimal Row)
+        canonical != null ? canonical.unit() : null,                        // canonicalized_code
         null                                     // _fid
     );
   }

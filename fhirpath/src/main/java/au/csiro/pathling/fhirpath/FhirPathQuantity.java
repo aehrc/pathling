@@ -262,11 +262,8 @@ public class FhirPathQuantity {
   private static Optional<FhirPathQuantity> ofUcumCanonical(
       @Nonnull final BigDecimal value,
       @Nonnull final String code) {
-    return Optional.ofNullable(Ucum.getCanonicalCode(value, code))
-        .flatMap(canonicalCode ->
-            Optional.ofNullable(Ucum.getCanonicalValue(value, code))
-                .map(canonicalValue -> ofUcum(canonicalValue, canonicalCode))
-        );
+    return Optional.ofNullable(Ucum.getCanonical(value, code))
+        .map(result -> ofUcum(result.value(), result.unit()));
   }
 
   /**
