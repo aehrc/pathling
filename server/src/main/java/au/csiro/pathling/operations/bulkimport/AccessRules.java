@@ -18,6 +18,7 @@
 package au.csiro.pathling.operations.bulkimport;
 
 import au.csiro.pathling.cache.CacheableDatabase;
+import au.csiro.pathling.config.ImportConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.SecurityError;
@@ -47,16 +48,21 @@ public class AccessRules {
    */
   public AccessRules(@Nonnull final ServerConfiguration configuration) {
 
-    @SuppressWarnings("NullableProblems") final List<String> sources = configuration.getImport()
-        .getAllowableSources();
-    this.allowableSources = sources.stream()
-        .filter(StringUtils::isNotBlank)
-        .map(CacheableDatabase::convertS3ToS3aUrl)
-        .toList();
-
-    if (allowableSources.size() < sources.size()) {
-      log.warn("Some empty or blank allowable sources have been ignored in import configuration.");
+    final ImportConfiguration importConfiguration = configuration.getImport();
+    if (importConfiguration == null) {
+      this.allowableSources = List.of();
+    } else {
+      final List<String> sources = importConfiguration.getAllowableSources();
+      this.allowableSources = sources.stream()
+          .filter(StringUtils::isNotBlank)
+          .map(CacheableDatabase::convertS3ToS3aUrl)
+          .toList();
+      if (allowableSources.size() < sources.size()) {
+        log.warn(
+            "Some empty or blank allowable sources have been ignored in import configuration.");
+      }
     }
+
     if (allowableSources.isEmpty()) {
       log.warn("There are NO allowable sources defined in the configuration for import.");
     }
