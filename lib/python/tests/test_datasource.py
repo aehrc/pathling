@@ -1,6 +1,6 @@
 #  Copyright © 2018-2025 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
@@ -17,16 +17,17 @@ import os
 from tempfile import TemporaryDirectory
 
 from flask import Response
-from pathling.datasource import DataSource
 from pyspark.sql import DataFrame, Row
 from pytest import fixture
+
+from pathling.datasource import DataSource
 
 
 @fixture(scope="function", autouse=True)
 def func_temp_dir(temp_dir):
     """
     Fixture to create a temporary directory for each test function.
-    :param temp_dir: 
+    :param temp_dir:
     :return: existing temporary directory for each test function.
     """
     temp_ndjson_dir = TemporaryDirectory(dir=temp_dir, prefix="function")
@@ -85,13 +86,17 @@ def bulk_server(mock_server, ndjson_test_data_dir):
 
     @mock_server.route("/pool", methods=["GET"])
     def pool():
-        return dict(
-            transactionTime="1970-01-01T00:00:00.000Z",
-            output=[
-                dict(type=resource, url=mock_server.url(f"/download/{resource}"), count=1) for
-                resource in ["Patient", "Condition"]
+        return {
+            "transactionTime": "1970-01-01T00:00:00.000Z",
+            "output": [
+                {
+                    "type": resource, 
+                    "url": mock_server.url(f"/download/{resource}"),
+                    "count": 1
+                }
+                for resource in ["Patient", "Condition"]
             ],
-        )
+        }
 
     @mock_server.route("/download/<resource>", methods=["GET"])
     def download(resource):
@@ -207,34 +212,99 @@ def test_datasource_delta_merge(delta_test_data_dir, temp_delta_dir, pathling_ct
     ]
 
 
-def test_datasource_tables(ndjson_test_data_dir, pathling_ctx):
-    pathling_ctx.read.ndjson(ndjson_test_data_dir).write.tables()
+def test_datasource_delta_merge_with_delete(
+    delta_test_data_dir, temp_delta_dir, pathling_ctx
+):
+    pathling_ctx.read.delta(delta_test_data_dir).write.delta(
+        temp_delta_dir, save_mode="merge", delete_on_merge=True
+    )
+    data_source = pathling_ctx.read.delta(temp_delta_dir)
 
-    data_source = pathling_ctx.read.tables()
-    result = ndjson_query(data_source)
+    result = delta_query(data_source)
     assert result.columns == list(ResultRow)
     assert result.collect() == [
         ResultRow(71),
     ]
+
+
+def test_datasource_tables(ndjson_test_data_dir, pathling_ctx):
+    try:
+        pathling_ctx.read.ndjson(ndjson_test_data_dir).write.tables()
+
+        data_source = pathling_ctx.read.tables()
+        result = ndjson_query(data_source)
+        assert result.columns == list(ResultRow)
+        assert result.collect() == [
+            ResultRow(71),
+        ]
+    finally:
+        # Clean up tables created by this test.
+        pathling_ctx.spark.sql("DROP TABLE IF EXISTS default.Patient")
+        pathling_ctx.spark.sql("DROP TABLE IF EXISTS default.Condition")
 
 
 def test_datasource_tables_schema(ndjson_test_data_dir, pathling_ctx):
-    pathling_ctx.read.ndjson(ndjson_test_data_dir).write.tables(schema="test")
+    try:
+        pathling_ctx.read.ndjson(ndjson_test_data_dir).write.tables(schema="test")
 
-    data_source = pathling_ctx.read.tables(schema="test")
-    result = ndjson_query(data_source)
-    assert result.columns == list(ResultRow)
-    assert result.collect() == [
-        ResultRow(71),
-    ]
+        data_source = pathling_ctx.read.tables(schema="test")
+        result = ndjson_query(data_source)
+        assert result.columns == list(ResultRow)
+        assert result.collect() == [
+            ResultRow(71),
+        ]
+    finally:
+        # Clean up tables created by this test.
+        pathling_ctx.spark.sql("DROP TABLE IF EXISTS test.Patient")
+        pathling_ctx.spark.sql("DROP TABLE IF EXISTS test.Condition")
+
+
+def test_datasource_tables_merge_with_delete(ndjson_test_data_dir, pathling_ctx):
+    # Read the full test NDJSON data (9 patients).
+    full_data = pathling_ctx.read.ndjson(ndjson_test_data_dir)
+
+    try:
+        # Write the full data to Delta tables initially.
+        full_data.write.tables(schema="test", save_mode="overwrite", table_format="delta", delete_on_merge=False)
+
+        # Verify all 9 patients were written.
+        initial_data = pathling_ctx.read.tables(schema="test")
+        initial_count = initial_data.read("Patient").groupBy().count()
+        assert initial_count.collect()[0][0] == 9
+
+        # Create a subset containing only 3 specific patients.
+        patient_subset = full_data.read("Patient").filter(
+            "id IN ('8ee183e2-b3c0-4151-be94-b945d6aa8c6d', "
+            "'beff242e-580b-47c0-9844-c1a68c36c5bf', "
+            "'e62e52ae-2d75-4070-a0ae-3cc78d35ed08')"
+        )
+
+        filtered_data = pathling_ctx.read.datasets(
+            resources={
+                "Patient": patient_subset,
+                "Condition": full_data.read("Condition"),
+            }
+        )
+
+        # Merge the subset into the existing Delta table with delete_on_merge=True.
+        filtered_data.write.tables(schema="test", save_mode="merge", table_format="delta", delete_on_merge=True)
+
+        # Read the merged data back.
+        merged_data = pathling_ctx.read.tables(schema="test")
+        merged_count = merged_data.read("Patient").groupBy().count()
+
+        # With delete_on_merge=True, only the 3 patients in the subset should remain.
+        assert merged_count.collect()[0][0] == 3
+    finally:
+        # Clean up tables created by this test.
+        pathling_ctx.spark.sql("DROP TABLE IF EXISTS test.Patient")
+        pathling_ctx.spark.sql("DROP TABLE IF EXISTS test.Condition")
 
 
 def test_datasource_bulk_with_temp_dir(pathling_ctx, bulk_server):
     # !!! this directory cannot exist for the datasource to work
     with bulk_server.run():
-        data_source = pathling_ctx.read.bulk(
-            fhir_endpoint_url=bulk_server.url("/fhir")
-        )
+        data_source = pathling_ctx.read.bulk(fhir_endpoint_url=bulk_server.url("/fhir"))
         result = ndjson_query(data_source)
         assert result.columns == list(ResultRow)
         assert result.collect() == [
@@ -248,7 +318,7 @@ def test_datasource_bulk_with_existing_dir(pathling_ctx, bulk_server, func_temp_
         data_source = pathling_ctx.read.bulk(
             fhir_endpoint_url=bulk_server.url("/fhir"),
             output_dir=func_temp_dir,
-            overwrite=True  # default anyway, but explicit for clarity
+            overwrite=True,  # default anyway, but explicit for clarity
         )
         result = ndjson_query(data_source)
         assert result.columns == list(ResultRow)
@@ -258,29 +328,23 @@ def test_datasource_bulk_with_existing_dir(pathling_ctx, bulk_server, func_temp_
 
 
 def ndjson_query(data_source: DataSource) -> DataFrame:
-    return data_source.view(
-        resource='Condition',
-        select=[
-            {
-                'column': [
-                    {'path': 'id', 'name': 'id'}
-                ]
-            }
-        ]
-    ).groupby().count()
+    return (
+        data_source.view(
+            resource="Condition", select=[{"column": [{"path": "id", "name": "id"}]}]
+        )
+        .groupby()
+        .count()
+    )
 
 
 def bundles_query(data_source: DataSource) -> DataFrame:
-    return data_source.view(
-        resource='Patient',
-        select=[
-            {
-                'column': [
-                    {'path': 'id', 'name': 'id'}
-                ]
-            }
-        ]
-    ).groupby().count()
+    return (
+        data_source.view(
+            resource="Patient", select=[{"column": [{"path": "id", "name": "id"}]}]
+        )
+        .groupby()
+        .count()
+    )
 
 
 def parquet_query(data_source: DataSource) -> DataFrame:
@@ -294,16 +358,16 @@ def delta_query(data_source: DataSource) -> DataFrame:
 def test_datasource_resource_types(ndjson_test_data_dir, pathling_ctx):
     """Test that resource_types() returns a list of strings."""
     data_source = pathling_ctx.read.ndjson(ndjson_test_data_dir)
-    
+
     # Call the resource_types method.
     resource_types = data_source.resource_types()
-    
+
     # Verify it returns a list.
     assert isinstance(resource_types, list)
-    
+
     # Verify the list contains strings.
     assert all(isinstance(rt, str) for rt in resource_types)
-    
+
     # Verify expected resource types are present.
     assert "Patient" in resource_types
     assert "Condition" in resource_types
