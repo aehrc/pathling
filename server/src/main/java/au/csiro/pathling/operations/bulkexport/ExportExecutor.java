@@ -20,6 +20,7 @@ import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
@@ -42,7 +43,6 @@ import org.apache.spark.sql.types.MapType;
 import org.apache.spark.sql.types.StructField;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -56,19 +56,36 @@ import org.springframework.stereotype.Component;
 @Component
 public class ExportExecutor {
 
+  @Nonnull
   private final PathlingContext pathlingContext;
+  @Nonnull
   private final QueryableDataSource deltaLake;
+  @Nonnull
   private final FhirContext fhirContext;
+  @Nonnull
   private final SparkSession sparkSession;
+  @Nonnull
   private final String databasePath;
+  @Nonnull
   private final ServerConfiguration serverConfiguration;
 
+  /**
+   * Constructs a new ExportExecutor.
+   *
+   * @param pathlingContext The Pathling context.
+   * @param deltaLake The queryable data source.
+   * @param fhirContext The FHIR context.
+   * @param sparkSession The Spark session.
+   * @param databasePath The database path.
+   * @param serverConfiguration The server configuration.
+   */
   @Autowired
-  public ExportExecutor(PathlingContext pathlingContext, QueryableDataSource deltaLake,
-      FhirContext fhirContext,
-      SparkSession sparkSession,
-      @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-      String databasePath, ServerConfiguration serverConfiguration) {
+  public ExportExecutor(@Nonnull final PathlingContext pathlingContext,
+      @Nonnull final QueryableDataSource deltaLake,
+      @Nonnull final FhirContext fhirContext,
+      @Nonnull final SparkSession sparkSession,
+      @Nonnull @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
+      final String databasePath, @Nonnull final ServerConfiguration serverConfiguration) {
     this.pathlingContext = pathlingContext;
     this.deltaLake = deltaLake;
     this.fhirContext = fhirContext;
@@ -84,7 +101,9 @@ public class ExportExecutor {
    * @param jobId The job id to which this async request belongs to.
    * @return The export response data.
    */
-  public ExportResponse execute(ExportRequest exportRequest, String jobId) {
+  @Nonnull
+  public ExportResponse execute(@Nonnull final ExportRequest exportRequest,
+      @Nonnull final String jobId) {
     // filter out resources (silently) due to insufficient permissions
     QueryableDataSource mapped = checkResourceAccess(AccessType.READ, deltaLake);
 
@@ -94,15 +113,16 @@ public class ExportExecutor {
 
     if (!exportRequest.elements().isEmpty()) {
       mapped = applyElementsParams(exportRequest, mapped);
-      // If the returned ndjson is limited by the _elements param, then it should have the SUBSETTED tag
-      Column subsettedTagArray = createSubsettedTagInSparkStructure();
+      // If the returned ndjson is limited by the _elements param, then it should have the SUBSETTED tag.
+      final Column subsettedTagArray = createSubsettedTagInSparkStructure();
       mapped = addSubsettedTag(mapped, subsettedTagArray);
     }
     return writeResultToJobDirectory(exportRequest, jobId, mapped);
   }
 
-  private @NotNull QueryableDataSource checkResourceAccess(AccessType accessType,
-      QueryableDataSource dataSource) {
+  @Nonnull
+  private QueryableDataSource checkResourceAccess(@Nonnull final AccessType accessType,
+      @Nonnull final QueryableDataSource dataSource) {
     if (!serverConfiguration.getAuth().isEnabled()) {
       return dataSource;
     }
@@ -118,17 +138,18 @@ public class ExportExecutor {
     });
   }
 
-  private @NotNull ExportResponse writeResultToJobDirectory(ExportRequest exportRequest,
-      String jobId,
-      QueryableDataSource mapped) {
-    URI warehouseUri = URI.create(databasePath);
-    Path warehousePath = new Path(warehouseUri);
-    Path jobDirPath = new Path(new Path(warehousePath, "jobs"), jobId);
-    Configuration configuration = sparkSession.sparkContext().hadoopConfiguration();
+  @Nonnull
+  private ExportResponse writeResultToJobDirectory(@Nonnull final ExportRequest exportRequest,
+      @Nonnull final String jobId,
+      @Nonnull final QueryableDataSource mapped) {
+    final URI warehouseUri = URI.create(databasePath);
+    final Path warehousePath = new Path(warehouseUri);
+    final Path jobDirPath = new Path(new Path(warehousePath, "jobs"), jobId);
+    final Configuration configuration = sparkSession.sparkContext().hadoopConfiguration();
     try {
-      FileSystem fs = FileSystem.get(configuration);
+      final FileSystem fs = FileSystem.get(configuration);
       if (!fs.exists(jobDirPath)) {
-        boolean created = fs.mkdirs(jobDirPath);
+        final boolean created = fs.mkdirs(jobDirPath);
         if (!created) {
           throw new InternalErrorException("Failed to created subdirectory at %s for job %s."
               .formatted(databasePath, jobId));
@@ -136,17 +157,18 @@ public class ExportExecutor {
         log.debug("Created dir {}", jobDirPath);
       }
 
-      WriteDetails writeDetails = new DataSinkBuilder(pathlingContext,
+      final WriteDetails writeDetails = new DataSinkBuilder(pathlingContext,
           mapped).saveMode("overwrite").ndjson(jobDirPath.toString());
       return new ExportResponse(exportRequest.originalRequest(), writeDetails);
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new InternalErrorException("Failed to created subdirectory at %s for job %s."
           .formatted(databasePath, jobId));
     }
   }
 
-  private static @NotNull QueryableDataSource addSubsettedTag(QueryableDataSource mapped,
-      Column subsettedTagArray) {
+  @Nonnull
+  private static QueryableDataSource addSubsettedTag(@Nonnull QueryableDataSource mapped,
+      @Nonnull final Column subsettedTagArray) {
     mapped = mapped.map(rowDataset -> rowDataset.withColumn("meta",
         struct(
             coalesce(col("meta.id"), lit(null).cast(DataTypes.StringType)).as("id"),
@@ -179,6 +201,7 @@ public class ExportExecutor {
     return mapped;
   }
 
+  @Nonnull
   private static Column createSubsettedTagInSparkStructure() {
     return array(struct(
         lit(null).cast(DataTypes.StringType).as("id"),
@@ -191,9 +214,10 @@ public class ExportExecutor {
     ));
   }
 
-  private QueryableDataSource applyElementsParams(ExportRequest exportRequest,
-      QueryableDataSource mapped) {
-    Map<String, Set<String>> localElements = exportRequest.elements().stream()
+  @Nonnull
+  private QueryableDataSource applyElementsParams(@Nonnull final ExportRequest exportRequest,
+      @Nonnull QueryableDataSource mapped) {
+    final Map<String, Set<String>> localElements = exportRequest.elements().stream()
         .filter(fhirElement -> fhirElement.resourceType() != null)
         .collect(Collectors.groupingBy(
             fhirElement -> fhirElement.resourceType().toCode(),
@@ -202,22 +226,22 @@ public class ExportExecutor {
                 Collectors.toSet()
             )
         ));
-    Set<String> globalElements = exportRequest.elements().stream()
+    final Set<String> globalElements = exportRequest.elements().stream()
         .filter(fhirElement -> fhirElement.resourceType() == null)
         .map(ExportRequest.FhirElement::elementName)
         .collect(Collectors.toCollection(HashSet::new));
-    globalElements.add("id"); // id is globally mandatory
-    globalElements.add("id_versioned"); // id_versioned is coupled to id in spark datasets
-    globalElements.add("meta"); // meta is globally mandatory
-    Map<String, UnaryOperator<Dataset<Row>>> localGlobalCombined = localElements.entrySet()
+    globalElements.add("id"); // id is globally mandatory.
+    globalElements.add("id_versioned"); // id_versioned is coupled to id in spark datasets.
+    globalElements.add("meta"); // meta is globally mandatory.
+    final Map<String, UnaryOperator<Dataset<Row>>> localGlobalCombined = localElements.entrySet()
         .stream()
         .collect(Collectors.toMap(
             Map.Entry::getKey,
             entry -> {
-              Set<String> allElementsForThisResourceType = new HashSet<>(entry.getValue());
+              final Set<String> allElementsForThisResourceType = new HashSet<>(entry.getValue());
               allElementsForThisResourceType.addAll(getMandatoryElements(
                   Enumerations.ResourceType.fromCode(
-                      entry.getKey()))); // add all local mandatory elements to be returned
+                      entry.getKey()))); // Add all local mandatory elements to be returned.
               allElementsForThisResourceType.addAll(globalElements);
               return rowDataset -> rowDataset.select(
                   columnsWithNullification(rowDataset, allElementsForThisResourceType));
@@ -239,8 +263,10 @@ public class ExportExecutor {
     return mapped;
   }
 
-  private static QueryableDataSource applyUntilDateFilter(ExportRequest exportRequest,
-      QueryableDataSource mapped) {
+  @Nonnull
+  private static QueryableDataSource applyUntilDateFilter(
+      @Nonnull final ExportRequest exportRequest,
+      @Nonnull QueryableDataSource mapped) {
     if (exportRequest.until() != null) {
       mapped = mapped.map(rowDataset -> rowDataset.filter(
           "meta.lastUpdated IS NULL OR meta.lastUpdated <= '" + exportRequest.until()
@@ -249,8 +275,10 @@ public class ExportExecutor {
     return mapped;
   }
 
-  private static QueryableDataSource applySinceDateFilter(ExportRequest exportRequest,
-      QueryableDataSource mapped) {
+  @Nonnull
+  private static QueryableDataSource applySinceDateFilter(
+      @Nonnull final ExportRequest exportRequest,
+      @Nonnull QueryableDataSource mapped) {
     if (exportRequest.since() != null) {
       mapped = mapped.map(rowDataset -> rowDataset.filter(
           "meta.lastUpdated IS NULL OR meta.lastUpdated >= '" + exportRequest.since()
@@ -259,18 +287,19 @@ public class ExportExecutor {
     return mapped;
   }
 
-  private @NotNull QueryableDataSource applyResourceTypeFiltering(ExportRequest exportRequest,
-      QueryableDataSource mapped) {
-    // Assume that every resource from the _type param is accessible
-    Map<String, Boolean> perResourceAuth = exportRequest.includeResourceTypeFilters().stream()
+  @Nonnull
+  private QueryableDataSource applyResourceTypeFiltering(@Nonnull final ExportRequest exportRequest,
+      @Nonnull final QueryableDataSource mapped) {
+    // Assume that every resource from the _type param is accessible.
+    final Map<String, Boolean> perResourceAuth = exportRequest.includeResourceTypeFilters().stream()
         .collect(Collectors.toMap(ResourceType::toCode, resourceType -> true));
     if (serverConfiguration.getAuth().isEnabled()) {
-      // Provide actual authority access for each resource type
+      // Provide actual authority access for each resource type.
       exportRequest.includeResourceTypeFilters().stream()
           .map(resourceType -> Map.entry(resourceType,
               PathlingAuthority.resourceAccess(AccessType.READ, resourceType)))
           .forEach(entry -> {
-            // handling=strict and auth exists -> throw error on wrong auth
+            // handling=strict and auth exists -> throw error on wrong auth.
             if (!exportRequest.lenient()) {
               SecurityAspect.checkHasAuthority(entry.getValue());
             } else {
@@ -279,11 +308,11 @@ public class ExportExecutor {
             }
           });
     }
-    // Apply the perResourceAuth map
+    // Apply the perResourceAuth map.
     return mapped.filterByResourceType(resourceType -> {
       if (exportRequest.includeResourceTypeFilters().isEmpty()) {
         // It is ok to just pass the resources on without further auth, because at this stage,
-        // the delta lake only contains resources that the user is allowed to see (it was filtered earlier)
+        // the delta lake only contains resources that the user is allowed to see (it was filtered earlier).
         return true;
       }
       return perResourceAuth.getOrDefault(resourceType, false)
@@ -292,13 +321,15 @@ public class ExportExecutor {
     });
   }
 
-  private Column[] columnsWithNullification(Dataset<Row> dataset, Set<String> columnsToKeep) {
+  @Nonnull
+  private Column[] columnsWithNullification(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Set<String> columnsToKeep) {
     return Arrays.stream(dataset.columns())
         .map(colName -> {
           if (columnsToKeep.contains(colName)) {
             return col(colName);
           } else {
-            DataType expectedType = dataset.schema().apply(colName).dataType();
+            final DataType expectedType = dataset.schema().apply(colName).dataType();
             // For MapType, create an empty map instead of null to avoid NullPointerException
             // when Spark tries to convert null Scala Maps to Java Maps.
             if (expectedType instanceof MapType) {
@@ -311,14 +342,21 @@ public class ExportExecutor {
         .toArray(Column[]::new);
   }
 
-  public Set<String> getMandatoryElements(Enumerations.ResourceType resourceType) {
-    Set<String> alwaysMandatory = Set.of("id");
+  /**
+   * Returns the set of mandatory elements for a given resource type.
+   *
+   * @param resourceType The resource type.
+   * @return The set of mandatory element names.
+   */
+  @Nonnull
+  public Set<String> getMandatoryElements(@Nonnull final Enumerations.ResourceType resourceType) {
+    final Set<String> alwaysMandatory = Set.of("id");
 
-    RuntimeResourceDefinition resourceDef = fhirContext.getResourceDefinition(
+    final RuntimeResourceDefinition resourceDef = fhirContext.getResourceDefinition(
         resourceType.toCode());
-    Set<String> mandatoryElements = new HashSet<>();
+    final Set<String> mandatoryElements = new HashSet<>();
 
-    for (BaseRuntimeChildDefinition child : resourceDef.getChildren()) {
+    for (final BaseRuntimeChildDefinition child : resourceDef.getChildren()) {
       if (child.getMin() > 0) {
         mandatoryElements.add(child.getElementName());
       }

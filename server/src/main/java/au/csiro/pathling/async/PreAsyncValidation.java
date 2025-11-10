@@ -13,21 +13,17 @@ import org.hl7.fhir.r4.model.OperationOutcome;
 public interface PreAsyncValidation<R> {
 
   /**
-   * Optionally modify some headers if Prefer: handling=lenient is present.
-   * @param servletRequestDetails The details from the initial client request.
-   */
-  default void modifyOnLenient(ServletRequestDetails servletRequestDetails) {}
-
-  /**
    * Run some validation before the async request kicks off. If the code in this method determines
    * that the request is invalid, then instead of a 202, an error is returned immediately.
    *
    * @param servletRequestDetails The details from the initial client request.
+   * @param params The operation parameters.
    * @return A result object with the parsed structure and potential warnings.
    * @throws InvalidRequestException When the request is invalid.
    */
-  PreAsyncValidationResult<R> preAsyncValidate(ServletRequestDetails servletRequestDetails,
-      Object[] params) throws InvalidRequestException;
+  @Nonnull
+  PreAsyncValidationResult<R> preAsyncValidate(@Nonnull ServletRequestDetails servletRequestDetails,
+      @Nonnull Object[] params) throws InvalidRequestException;
 
   record PreAsyncValidationResult<R>(
       @Nullable R result,
@@ -35,4 +31,5 @@ public interface PreAsyncValidation<R> {
   ) {
 
   }
+ 
 }
