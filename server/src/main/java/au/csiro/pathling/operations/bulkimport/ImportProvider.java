@@ -58,10 +58,20 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
 
   @Nonnull
   private final ImportExecutor executor;
+  
+  @Nonnull
   private final ImportOperationValidator importOperationValidator;
+  
+  @Nonnull
   private final RequestTagFactory requestTagFactory;
+  
+  @Nonnull
   private final JobRegistry jobRegistry;
+  
+  @Nonnull
   private final ImportResultRegistry importResultRegistry;
+  
+  @Nonnull
   private final ObjectMapper objectMapper;
 
   /**
@@ -72,10 +82,10 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
    * @param importResultRegistry registry for import results
    */
   public ImportProvider(@Nonnull final ImportExecutor executor,
-      final ImportOperationValidator importOperationValidator,
-      final RequestTagFactory requestTagFactory,
-      final JobRegistry jobRegistry,
-      final ImportResultRegistry importResultRegistry) {
+      @Nonnull final ImportOperationValidator importOperationValidator,
+      @Nonnull final RequestTagFactory requestTagFactory,
+      @Nonnull final JobRegistry jobRegistry,
+      @Nonnull final ImportResultRegistry importResultRegistry) {
     this.executor = executor;
     this.importOperationValidator = importOperationValidator;
     this.requestTagFactory = requestTagFactory;
@@ -97,8 +107,9 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
   @SuppressWarnings("UnusedReturnValue")
   @OperationAccess("import")
   @AsyncSupported
+  @Nullable
   public Parameters importOperation(@ResourceParam final Parameters parameters,
-      @SuppressWarnings("unused") @Nullable final ServletRequestDetails requestDetails) {
+      @Nonnull final ServletRequestDetails requestDetails) {
 
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication);
@@ -127,8 +138,9 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
   }
 
   @Override
+  @Nonnull
   public PreAsyncValidationResult<ImportRequest> preAsyncValidate(
-      final ServletRequestDetails servletRequestDetails, final Object[] params)
+      @Nonnull final ServletRequestDetails servletRequestDetails, @Nonnull final Object[] params)
       throws InvalidRequestException {
     // Detect content type to determine which validator to use.
     final String contentType = getContentType(servletRequestDetails);
@@ -151,8 +163,9 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
    * @param servletRequestDetails the servlet request details
    * @return the validation result
    */
+  @Nonnull
   private PreAsyncValidationResult<ImportRequest> validateJsonRequest(
-      final ServletRequestDetails servletRequestDetails) {
+      @Nonnull final ServletRequestDetails servletRequestDetails) {
     try {
       // Read the raw request body.
       final HttpServletRequest httpRequest = servletRequestDetails.getServletRequest();
@@ -173,7 +186,7 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
    * @return the content type, or null if not present
    */
   @Nullable
-  private String getContentType(final ServletRequestDetails servletRequestDetails) {
+  private String getContentType(@Nonnull final ServletRequestDetails servletRequestDetails) {
     final HttpServletRequest httpRequest = servletRequestDetails.getServletRequest();
     if (httpRequest != null) {
       return httpRequest.getContentType();
