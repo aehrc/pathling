@@ -17,30 +17,35 @@
 
 package au.csiro.pathling.sql.misc;
 
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.fhirpath.FhirPathQuantity;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
-import au.csiro.pathling.sql.udf.SqlFunction1;
+import au.csiro.pathling.sql.udf.SqlFunction2;
 import jakarta.annotation.Nullable;
 import java.io.Serial;
 import java.util.Optional;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.DataTypes;
 
 /**
- * Spark UDF to convert a Quantity represented as a Row to a valid Quantity literal string.
+ * Spark UDF to convert a Quantity from its current unitCode to a target unitCode using UCUM
+ * conversions.
  * <p>
- * UCUM units are quoted with single quotes, while time duration units are not quoted. For other
- * systems, the function returns null.
+ * This UDF wraps {@link FhirPathQuantity#convertToUnit(String)} for use in Spark SQL. It decodes
+ * the quantity Row, delegates to the conversion logic, and encodes the result back to a Row.
  * <p>
- * If the quantity is null, the function returns null.
+ * Returns null if either input is null or if the conversion fails.
+ *
+ * @see FhirPathQuantity#convertToUnit(String)
+ * @see QuantityEncoding
  */
-public class QuantityToLiteral implements SqlFunction1<Row, String> {
+public class ConvertQuantityToUnit implements SqlFunction2<Row, String, Row> {
 
   /**
    * The name of this function when used within SQL.
    */
-  public static final String FUNCTION_NAME = "quantity_to_literal";
+  public static final String FUNCTION_NAME = "convert_quantity_to_unit";
 
   @Serial
   private static final long serialVersionUID = 1L;
@@ -52,14 +57,19 @@ public class QuantityToLiteral implements SqlFunction1<Row, String> {
 
   @Override
   public DataType getReturnType() {
-    return DataTypes.StringType;
+    return QuantityEncoding.dataType();
   }
 
   @Override
   @Nullable
-  public String call(@Nullable final Row row) {
-    return Optional.ofNullable(QuantityEncoding.decode(row))
-        .map(FhirPathQuantity::toString)
+  public Row call(@Nullable final Row quantityRow, @Nullable final String targetUnit) {
+    if (quantityRow == null || targetUnit == null) {
+      return null;
+    }
+    // Decode the quantity from Row to FhirPathQuantity
+    return Optional.ofNullable(QuantityEncoding.decode(quantityRow))
+        .flatMap(q -> q.convertToUnit(requireNonNull(targetUnit)))
+        .map(QuantityEncoding::encode)
         .orElse(null);
   }
 }

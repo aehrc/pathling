@@ -22,25 +22,28 @@ import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.udf.SqlFunction1;
 import jakarta.annotation.Nullable;
 import java.io.Serial;
-import java.util.Optional;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.DataTypes;
 
 /**
- * Spark UDF to convert a Quantity represented as a Row to a valid Quantity literal string.
+ * Spark UDF to parse a FHIRPath quantity literal string to a Quantity struct.
  * <p>
- * UCUM units are quoted with single quotes, while time duration units are not quoted. For other
- * systems, the function returns null.
- * <p>
- * If the quantity is null, the function returns null.
+ * Parses strings matching the FHIRPath quantity literal format:
+ * <ul>
+ *   <li>UCUM units: {@code "value 'unit'"} (e.g., {@code "10 'mg'"}, {@code "1.5 'kg'"})
+ *   <li>Calendar duration units: {@code "value unit"} (e.g., {@code "4 days"}, {@code "1 year"})
+ * </ul>
+ * Returns null if the string cannot be parsed as a valid quantity.
+ *
+ * @see FhirPathQuantity#parse(String)
+ * @see QuantityEncoding#encode(FhirPathQuantity)
  */
-public class QuantityToLiteral implements SqlFunction1<Row, String> {
+public class StringToQuantity implements SqlFunction1<String, Row> {
 
   /**
    * The name of this function when used within SQL.
    */
-  public static final String FUNCTION_NAME = "quantity_to_literal";
+  public static final String FUNCTION_NAME = "string_to_quantity";
 
   @Serial
   private static final long serialVersionUID = 1L;
@@ -52,14 +55,21 @@ public class QuantityToLiteral implements SqlFunction1<Row, String> {
 
   @Override
   public DataType getReturnType() {
-    return DataTypes.StringType;
+    return QuantityEncoding.dataType();
   }
 
   @Override
   @Nullable
-  public String call(@Nullable final Row row) {
-    return Optional.ofNullable(QuantityEncoding.decode(row))
-        .map(FhirPathQuantity::toString)
-        .orElse(null);
+  public Row call(@Nullable final String quantityString) {
+    if (quantityString == null) {
+      return null;
+    }
+    try {
+      final FhirPathQuantity quantity = FhirPathQuantity.parse(quantityString);
+      return QuantityEncoding.encode(quantity);
+    } catch (final IllegalArgumentException e) {
+      // Invalid quantity literal format
+      return null;
+    }
   }
 }
