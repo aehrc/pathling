@@ -114,7 +114,7 @@ public class ImportOperationValidator {
    * @param manifest the JSON manifest
    * @return the validation result containing the ImportRequest and any issues
    */
-  @SuppressWarnings("ConstantValue")  // Null checks needed despite @Nonnull - Jackson can deserialize nulls.
+  @SuppressWarnings({"ConstantValue", "ConstantConditions", "java:S2583"})  // Null checks needed despite @Nonnull - Jackson can deserialize nulls.
   public PreAsyncValidation.PreAsyncValidationResult<ImportRequest> validateJsonRequest(
       @Nonnull final RequestDetails requestDetails,
       @Nonnull final ImportManifest manifest
@@ -247,7 +247,7 @@ public class ImportOperationValidator {
     return mapInputParams(resourceType, url);
   }
 
-  @SuppressWarnings("ConstantValue")  // Null checks needed despite @Nonnull - Jackson can deserialize nulls.
+  @SuppressWarnings({"ConstantValue", "ConstantConditions", "java:S2583"})  // Null checks needed despite @Nonnull - Jackson can deserialize nulls.
   private InputParams mapInputFieldsFromJson(final ImportManifestInput input) {
     final String resourceType = input.type();
     final String url = input.url();

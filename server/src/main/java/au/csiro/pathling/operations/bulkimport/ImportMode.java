@@ -30,6 +30,13 @@ public enum ImportMode {
     this.code = code;
   }
 
+  /**
+   * Converts a code string to an ImportMode enum value.
+   *
+   * @param code the code string to convert
+   * @return the corresponding ImportMode
+   * @throws IllegalArgumentException if the code does not match any ImportMode
+   */
   @Nonnull
   public static ImportMode fromCode(@Nullable final String code) {
     for (final ImportMode mode : values()) {

@@ -22,13 +22,11 @@ import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.SecurityError;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * This class encapsulates security rules for accessing external resources.
@@ -49,12 +47,14 @@ public class AccessRules {
    */
   public AccessRules(@Nonnull final ServerConfiguration configuration) {
 
-    this.allowableSources = configuration.getImport().getAllowableSources().stream()
+    @SuppressWarnings("NullableProblems") final List<String> sources = configuration.getImport()
+        .getAllowableSources();
+    this.allowableSources = sources.stream()
         .filter(StringUtils::isNotBlank)
         .map(CacheableDatabase::convertS3ToS3aUrl)
         .toList();
 
-    if (allowableSources.size() < configuration.getImport().getAllowableSources().size()) {
+    if (allowableSources.size() < sources.size()) {
       log.warn("Some empty or blank allowable sources have been ignored in import configuration.");
     }
     if (allowableSources.isEmpty()) {
