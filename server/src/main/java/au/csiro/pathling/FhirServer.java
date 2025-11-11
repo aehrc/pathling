@@ -8,11 +8,13 @@ import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ErrorReportingInterceptor;
-import au.csiro.pathling.operations.bulkexport.ExportProvider;
-import au.csiro.pathling.operations.bulkexport.ExportResultProvider;
 import au.csiro.pathling.fhir.ConformanceProvider;
 import au.csiro.pathling.interceptors.BulkExportDeleteInterceptor;
 import au.csiro.pathling.interceptors.SmartConfigurationInterceptor;
+import au.csiro.pathling.operations.bulkexport.ExportProvider;
+import au.csiro.pathling.operations.bulkexport.ExportResultProvider;
+import au.csiro.pathling.operations.bulkimport.ImportPnpProvider;
+import au.csiro.pathling.operations.bulkimport.ImportProvider;
 import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.ApacheProxyAddressStrategy;
@@ -64,15 +66,21 @@ public class FhirServer extends RestfulServer {
 
   @Nonnull
   private final transient Optional<OidcConfiguration> oidcConfiguration;
-  
+
   @Nonnull
   private final transient Optional<JobProvider> jobProvider;
 
   @Nonnull
   private final transient ExportProvider exportProvider;
-  
+
   @Nonnull
   private final transient ExportResultProvider exportResultProvider;
+
+  @Nonnull
+  private final transient ImportProvider importProvider;
+
+  @Nonnull
+  private final transient ImportPnpProvider importPnpProvider;
 
   @Nonnull
   private final transient ErrorReportingInterceptor errorReportingInterceptor;
@@ -88,9 +96,12 @@ public class FhirServer extends RestfulServer {
 
 
   public FhirServer(@Nonnull final ServerConfiguration configuration,
-      @Nonnull final Optional<OidcConfiguration> oidcConfiguration, @Nonnull Optional<JobProvider> jobProvider,
+      @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
+      @Nonnull Optional<JobProvider> jobProvider,
       @Nonnull ExportProvider exportProvider,
       @Nonnull ExportResultProvider exportResultProvider,
+      @Nonnull ImportProvider importProvider,
+      @Nonnull ImportPnpProvider importPnpProvider,
       @Nonnull ErrorReportingInterceptor errorReportingInterceptor,
       @Nonnull EntityTagInterceptor entityTagInterceptor, @Nonnull
       BulkExportDeleteInterceptor bulkExportDeleteInterceptor,
@@ -100,6 +111,8 @@ public class FhirServer extends RestfulServer {
     this.jobProvider = jobProvider;
     this.exportProvider = exportProvider;
     this.exportResultProvider = exportResultProvider;
+    this.importProvider = importProvider;
+    this.importPnpProvider = importPnpProvider;
     this.errorReportingInterceptor = errorReportingInterceptor;
     this.entityTagInterceptor = entityTagInterceptor;
     this.bulkExportDeleteInterceptor = bulkExportDeleteInterceptor;
@@ -125,6 +138,8 @@ public class FhirServer extends RestfulServer {
 
       registerProvider(exportProvider);
       registerProvider(exportResultProvider);
+      registerProvider(importProvider);
+      registerProvider(importPnpProvider);
 
       // Authorization-related configuration.
       configureAuthorization();
@@ -153,7 +168,7 @@ public class FhirServer extends RestfulServer {
 
       // Initialise the capability statement.
       setServerConformanceProvider(conformanceProvider);
-      
+
       log.info("FHIR server initialized");
     } catch (final Exception e) {
       throw new ServletException("Error initializing AnalyticsServer", e);

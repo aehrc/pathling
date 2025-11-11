@@ -77,9 +77,22 @@ public class ImportPnpExecutor {
 
     Path tempDir = null;
     try {
-      // Create temporary directory for downloaded files.
-      tempDir = Files.createTempDirectory("pathling-pnp-import-");
+      // Create temporary directory for downloaded files with job ID for uniqueness.
+      final String tempDirPrefix = "pathling-pnp-import-" + jobId + "-";
+      tempDir = Files.createTempDirectory(tempDirPrefix);
       log.debug("Created temporary directory: {}", tempDir);
+
+      // Clean any existing content in the temp directory (in case of retry).
+      try (final var paths = Files.walk(tempDir)) {
+        paths.filter(Files::isRegularFile)
+            .forEach(path -> {
+              try {
+                Files.delete(path);
+              } catch (final IOException e) {
+                log.warn("Failed to delete existing file in temp directory: {}", path, e);
+              }
+            });
+      }
 
       // Download files using fhir-bulk-java.
       final Map<String, Collection<String>> downloadedFiles =
@@ -163,9 +176,11 @@ public class ImportPnpExecutor {
     }
 
     // Build the client.
+    // Note: fhir-bulk-java creates the output directory, so we pass the parent and a subdirectory name.
+    final Path outputDir = tempDir.resolve("export-output");
     final var clientBuilder = BulkExportClient.systemBuilder()
         .withFhirEndpointUrl(pnpRequest.exportUrl())
-        .withOutputDir(tempDir.toString());
+        .withOutputDir(outputDir.toString());
 
     if (authConfig != null) {
       clientBuilder.withAuthConfig(authConfig);
@@ -178,8 +193,8 @@ public class ImportPnpExecutor {
     client.export();
     log.info("Bulk export download completed");
 
-    // Scan the temp directory to find downloaded files and organise by resource type.
-    return organiseDownloadedFiles(tempDir);
+    // Scan the output directory to find downloaded files and organise by resource type.
+    return organiseDownloadedFiles(outputDir);
   }
 
   /**
@@ -203,8 +218,10 @@ public class ImportPnpExecutor {
             final String resourceType = extractResourceType(fileName);
 
             if (resourceType != null) {
+              // Convert file path to file:// URL for ImportExecutor.
+              final String fileUrl = path.toUri().toString();
               result.computeIfAbsent(resourceType, k -> new ArrayList<>())
-                  .add(path.toString());
+                  .add(fileUrl);
             } else {
               log.warn("Could not determine resource type for file: {}", fileName);
             }

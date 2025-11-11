@@ -1,6 +1,15 @@
 pathling:
   storage:
     databaseName: delta
+  import:
+    allowableSources:
+      - file://
+      - http://localhost
+      - https://
+    pnp:
+      clientId: test-client
+      clientSecret: test-secret
+      scope: system/*.read
 spring:
   main:
     banner-mode: off
