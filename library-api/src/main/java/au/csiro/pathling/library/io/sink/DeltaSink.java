@@ -146,6 +146,11 @@ final class DeltaSink implements DataSink {
     // Apply save mode if it has a Spark equivalent
     saveMode.getSparkSaveMode().ifPresent(writer::mode);
 
+    // Delta Lake requires explicit schema overwrite permission when using OVERWRITE mode.
+    if (saveMode == SaveMode.OVERWRITE) {
+      writer.option("overwriteSchema", "true");
+    }
+
     writer.save(tablePath);
   }
 
