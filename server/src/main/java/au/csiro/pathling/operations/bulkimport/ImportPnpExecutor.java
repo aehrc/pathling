@@ -87,8 +87,8 @@ public class ImportPnpExecutor {
       }
 
       final String downloadLocation = pnpConfig.getDownloadLocation() != null
-          ? pnpConfig.getDownloadLocation()
-          : "/usr/share/staging/pnp";
+                                      ? pnpConfig.getDownloadLocation()
+                                      : "/usr/share/staging/pnp";
       final Path baseDir = Path.of(downloadLocation);
 
       // Ensure base directory exists.
@@ -117,9 +117,14 @@ public class ImportPnpExecutor {
             });
       }
 
+      // Determine file extension to filter for.
+      final String fileExtension = pnpConfig.getFileExtension() != null
+          ? pnpConfig.getFileExtension()
+          : ".ndjson";
+
       // Download files using fhir-bulk-java.
       final Map<String, Collection<String>> downloadedFiles =
-          downloadFiles(pnpRequest, pnpConfig, tempDir);
+          downloadFiles(pnpRequest, pnpConfig, tempDir, fileExtension);
 
       // Create an ImportRequest from the downloaded files.
       final ImportRequest importRequest = new ImportRequest(
@@ -154,7 +159,8 @@ public class ImportPnpExecutor {
   private Map<String, Collection<String>> downloadFiles(
       final ImportPnpRequest pnpRequest,
       final PnpConfiguration pnpConfig,
-      final Path tempDir) throws Exception {
+      final Path tempDir,
+      final String fileExtension) throws Exception {
 
     // Build the BulkExportClient based on export type.
     // Note: Static mode (manifest-based) is not directly supported by the current API,
@@ -214,71 +220,45 @@ public class ImportPnpExecutor {
     log.info("Bulk export download completed");
 
     // Scan the output directory to find downloaded files and organise by resource type.
-    return organiseDownloadedFiles(outputDir);
+    return organiseDownloadedFiles(outputDir, fileExtension);
   }
 
   /**
-   * Scans the downloaded files and organises them by resource type.
+   * Scans the downloaded files and collects all files with the specified extension.
    *
-   * @param tempDir the temporary directory containing downloaded files
-   * @return a map of resource type to file paths
+   * @param downloadDir the directory containing downloaded files
+   * @param fileExtension the file extension to filter for
+   * @return a map with a single entry containing all downloaded file URLs
    */
-  private Map<String, Collection<String>> organiseDownloadedFiles(final Path tempDir)
+  private Map<String, Collection<String>> organiseDownloadedFiles(final Path downloadDir,
+      final String fileExtension)
       throws IOException {
-    final Map<String, Collection<String>> result = new HashMap<>();
+    final Collection<String> fileUrls = new ArrayList<>();
 
-    // Walk through the temp directory to find all .ndjson files.
-    try (final var paths = Files.walk(tempDir)) {
+    // Walk through the download directory to find all files with the specified extension.
+    try (final var paths = Files.walk(downloadDir)) {
       paths.filter(Files::isRegularFile)
-          .filter(path -> path.toString().endsWith(".ndjson"))
+          .filter(path -> path.toString().endsWith(fileExtension))
           .forEach(path -> {
-            // Extract resource type from filename.
-            // fhir-bulk-java uses format: [ResourceType]-[sequence].ndjson.
-            final String fileName = path.getFileName().toString();
-            final String resourceType = extractResourceType(fileName);
-
-            if (resourceType != null) {
-              // Convert file path to file:// URL for ImportExecutor.
-              final String fileUrl = path.toUri().toString();
-              result.computeIfAbsent(resourceType, k -> new ArrayList<>())
-                  .add(fileUrl);
-            } else {
-              log.warn("Could not determine resource type for file: {}", fileName);
-            }
+            // Convert file path to file:// URL for ImportExecutor.
+            final String fileUrl = path.toUri().toString();
+            fileUrls.add(fileUrl);
+            log.debug("Found downloaded file: {}", fileUrl);
           });
     }
 
-    if (result.isEmpty()) {
-      throw new InvalidUserInputError("No FHIR resource files were downloaded");
+    if (fileUrls.isEmpty()) {
+      throw new InvalidUserInputError(
+          "No files with extension " + fileExtension + " were downloaded");
     }
 
-    log.info("Organised downloaded files by resource type: {}", result.keySet());
+    log.info("Found {} downloaded file(s)", fileUrls.size());
+
+    // Return a map with a single entry containing all files.
+    // The key doesn't matter as ImportExecutor will determine resource types from file content.
+    final Map<String, Collection<String>> result = new HashMap<>();
+    result.put("*", fileUrls);
     return result;
-  }
-
-  /**
-   * Extracts the resource type from a filename. Assumes format: [ResourceType]-[sequence].ndjson or
-   * [ResourceType].ndjson.
-   *
-   * @param fileName the filename
-   * @return the resource type, or null if it cannot be determined
-   */
-  private String extractResourceType(final String fileName) {
-    if (fileName == null || !fileName.endsWith(".ndjson")) {
-      return null;
-    }
-
-    // Remove .ndjson extension.
-    final String baseName = fileName.substring(0, fileName.length() - ".ndjson".length());
-
-    // Check for hyphen (indicates sequence number).
-    final int hyphenIndex = baseName.lastIndexOf('-');
-    if (hyphenIndex > 0) {
-      return baseName.substring(0, hyphenIndex);
-    }
-
-    // No hyphen, assume entire basename is the resource type.
-    return baseName;
   }
 
   /**
