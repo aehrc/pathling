@@ -65,8 +65,6 @@ import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestSecurity
 import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementSoftwareComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.ResourceInteractionComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.RestfulCapabilityMode;
-import org.hl7.fhir.r4.model.CapabilityStatement.SystemInteractionComponent;
-import org.hl7.fhir.r4.model.CapabilityStatement.SystemRestfulInteraction;
 import org.hl7.fhir.r4.model.CapabilityStatement.TypeRestfulInteraction;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.CodeableConcept;
@@ -90,7 +88,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 public class ConformanceProvider implements IServerConformanceProvider<CapabilityStatement>,
-        Cacheable {
+    Cacheable {
 
   /**
    * The base URI for canonical URIs.
@@ -99,12 +97,13 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   /**
    * All system-level operations available within Pathling.
    */
-  protected static final List<String> SYSTEM_LEVEL_OPERATIONS = Arrays.asList("job", "result", "export");
-  
+  protected static final List<String> SYSTEM_LEVEL_OPERATIONS = Arrays.asList("job", "result",
+      "export");
+
   private static final String RESTFUL_SECURITY_URI = "http://terminology.hl7.org/CodeSystem/restful-security-service";
   private static final String RESTFUL_SECURITY_CODE = "SMART-on-FHIR";
   private static final String SMART_OAUTH_URI = "http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris";
-  
+
   private static final String FHIR_RESOURCE_BASE = "http://hl7.org/fhir/StructureDefinition/";
   private static final String UNKNOWN_VERSION = "UNKNOWN";
 
@@ -154,8 +153,8 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
    */
   public ConformanceProvider(@Nonnull final ServerConfiguration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
-                             @Nonnull final PathlingVersion version, @Nonnull final FhirContext fhirContext,
-                             @Nonnull final IParser jsonParser) {
+      @Nonnull final PathlingVersion version, @Nonnull final FhirContext fhirContext,
+      @Nonnull final IParser jsonParser) {
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;
     this.version = version;
@@ -223,7 +222,6 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     server.setSecurity(buildSecurity());
     server.setResource(buildResources());
     server.setOperation(buildOperations());
-    server.setInteraction(buildSystemLevelInteractions());
     rest.add(server);
     return rest;
   }
@@ -267,19 +265,6 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
           new CapabilityStatementRestResourceComponent(new CodeType(resourceType.toCode()));
       resource.setProfile(FHIR_RESOURCE_BASE + resourceType.toCode());
 
-      // Add the search operation to all resources.
-      final ResourceInteractionComponent search = new ResourceInteractionComponent();
-      search.setCode(TypeRestfulInteraction.SEARCHTYPE);
-      resource.getInteraction().add(search);
-
-      // Add the create and update operations to all resources.
-      final ResourceInteractionComponent create = new ResourceInteractionComponent();
-      final ResourceInteractionComponent update = new ResourceInteractionComponent();
-      create.setCode(TypeRestfulInteraction.CREATE);
-      update.setCode(TypeRestfulInteraction.UPDATE);
-      resource.getInteraction().add(create);
-      resource.getInteraction().add(update);
-      
       resources2.add(resource);
     }
 
@@ -309,15 +294,6 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     }
 
     return operations;
-  }
-
-  @Nonnull
-  private List<SystemInteractionComponent> buildSystemLevelInteractions() {
-    final List<SystemInteractionComponent> interactions = new ArrayList<>();
-    final SystemInteractionComponent interaction = new SystemInteractionComponent();
-    interaction.setCode(SystemRestfulInteraction.BATCH);
-    interactions.add(interaction);
-    return interactions;
   }
 
   @Nonnull
