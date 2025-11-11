@@ -31,7 +31,10 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.stereotype.Component;
 
 /**
@@ -44,6 +47,10 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 public class ImportPnpExecutor {
+
+  // Pattern to match resource type with optional qualifier, e.g. "Patient.0000" -> "Patient"
+  private static final Pattern BASE_NAME_WITH_QUALIFIER = Pattern.compile(
+      "^([A-Za-z]+)(\\.[^.]+)?$");
 
   @Nonnull
   private final ServerConfiguration serverConfiguration;
@@ -119,8 +126,8 @@ public class ImportPnpExecutor {
 
       // Determine file extension to filter for.
       final String fileExtension = pnpConfig.getFileExtension() != null
-          ? pnpConfig.getFileExtension()
-          : ".ndjson";
+                                   ? pnpConfig.getFileExtension()
+                                   : ".ndjson";
 
       // Download files using fhir-bulk-java.
       final Map<String, Collection<String>> downloadedFiles =
@@ -224,40 +231,51 @@ public class ImportPnpExecutor {
   }
 
   /**
-   * Scans the downloaded files and collects all files with the specified extension.
+   * Scans the downloaded files and organises them by resource type extracted from filenames.
    *
    * @param downloadDir the directory containing downloaded files
    * @param fileExtension the file extension to filter for
-   * @return a map with a single entry containing all downloaded file URLs
+   * @return a map of resource type to file URLs
    */
   private Map<String, Collection<String>> organiseDownloadedFiles(final Path downloadDir,
       final String fileExtension)
       throws IOException {
-    final Collection<String> fileUrls = new ArrayList<>();
+    final Map<String, Collection<String>> result = new HashMap<>();
 
     // Walk through the download directory to find all files with the specified extension.
     try (final var paths = Files.walk(downloadDir)) {
       paths.filter(Files::isRegularFile)
           .filter(path -> path.toString().endsWith(fileExtension))
           .forEach(path -> {
-            // Convert file path to file:// URL for ImportExecutor.
-            final String fileUrl = path.toUri().toString();
-            fileUrls.add(fileUrl);
-            log.debug("Found downloaded file: {}", fileUrl);
+            // Get the full filename (with extension)
+            final String fileName = path.getFileName().toString();
+            // Extract the base name (without extension) for resource type matching
+            final String baseName = FilenameUtils.getBaseName(fileName);
+
+            // Extract resource type using the same pattern as FileSource
+            final Matcher matcher = BASE_NAME_WITH_QUALIFIER.matcher(baseName);
+            if (matcher.matches()) {
+              // Group 1 contains the resource type (e.g., "Patient" from "Patient.0000")
+              final String resourceType = matcher.group(1);
+
+              // Convert file path to file:// URL for ImportExecutor
+              final String fileUrl = path.toUri().toString();
+
+              // Add to map keyed by resource type
+              result.computeIfAbsent(resourceType, k -> new ArrayList<>()).add(fileUrl);
+              log.debug("Found {} file: {}", resourceType, fileName);
+            } else {
+              log.warn("Could not extract resource type from filename: {}", fileName);
+            }
           });
     }
 
-    if (fileUrls.isEmpty()) {
+    if (result.isEmpty()) {
       throw new InvalidUserInputError(
           "No files with extension " + fileExtension + " were downloaded");
     }
 
-    log.info("Found {} downloaded file(s)", fileUrls.size());
-
-    // Return a map with a single entry containing all files.
-    // The key doesn't matter as ImportExecutor will determine resource types from file content.
-    final Map<String, Collection<String>> result = new HashMap<>();
-    result.put("*", fileUrls);
+    log.info("Organised downloaded files by resource type: {}", result.keySet());
     return result;
   }
 
