@@ -6,7 +6,7 @@
   "kind": "operation",
   "experimental": false,
   "publisher": "Australian e-Health Research Centre, CSIRO",
-  "description": "This operation allows bulk data to be imported into the server from NDJSON, Parquet, or Delta format files, making the data available for query.",
+  "description": "This operation allows bulk data to be imported into the server from NDJSON, Parquet, or Delta format files, making the data available for query. Supports both FHIR Parameters and JSON request formats aligned with the SMART Bulk Data Import specification.",
   "affectsState": true,
   "code": "import",
   "system": true,
@@ -14,18 +14,26 @@
   "instance": false,
   "parameter": [
     {
-      "name": "source",
+      "name": "inputSource",
+      "use": "in",
+      "min": 1,
+      "max": "1",
+      "documentation": "URI for tracking the imported data throughout its lifecycle. Required by SMART Bulk Data Import specification.",
+      "type": "string"
+    },
+    {
+      "name": "input",
       "use": "in",
       "min": 1,
       "max": "*",
-      "documentation": "A source file containing FHIR resources to be included within this import operation. Each file must contain only one type of resource. Supported formats are NDJSON, Parquet, and Delta.",
+      "documentation": "An array of input files to import. Each input specifies a resource type and the location of a file containing resources of that type.",
       "part": [
         {
-          "name": "resourceType",
+          "name": "type",
           "use": "in",
           "min": 1,
           "max": "1",
-          "documentation": "The base FHIR resource type contained within this source file.",
+          "documentation": "The FHIR resource type contained within this input file.",
           "type": "code",
           "binding": {
             "strength": "required",
@@ -37,26 +45,26 @@
           "use": "in",
           "min": 1,
           "max": "1",
-          "documentation": "A URL that can be used to retrieve this source file.",
+          "documentation": "The URL of the input file containing resources of the specified type.",
           "type": "url"
-        },
-        {
-          "name": "mode",
-          "use": "in",
-          "min": 0,
-          "max": "1",
-          "documentation": "Controls how data is merged with existing resources. Possible values are 'error' (fail if resources exist; default), 'overwrite' (delete and replace all existing resources), 'append' (add new resources without modifying existing), 'ignore' (skip if resources exist), and 'merge' (match by ID and update or add as appropriate).",
-          "type": "code"
-        },
-        {
-          "name": "format",
-          "use": "in",
-          "min": 0,
-          "max": "1",
-          "documentation": "Indicates the format of the source file. Possible values are 'ndjson' (default), 'parquet', and 'delta'.",
-          "type": "code"
         }
       ]
+    },
+    {
+      "name": "inputFormat",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "The format of the input files. Supported values are 'application/fhir+ndjson' (default), 'application/parquet', and 'application/delta'. Can also use simple codes: 'ndjson', 'parquet', 'delta'.",
+      "type": "code"
+    },
+    {
+      "name": "mode",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "Controls how data is merged with existing resources (Pathling extension to SMART specification). Possible values are 'error' (fail if resources exist), 'overwrite' (delete and replace all existing resources; default), 'append' (add new resources without modifying existing), 'ignore' (skip if resources exist), and 'merge' (match by ID and update or add as appropriate).",
+      "type": "code"
     }
   ]
 }
