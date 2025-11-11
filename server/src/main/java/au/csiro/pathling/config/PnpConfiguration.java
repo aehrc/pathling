@@ -67,4 +67,12 @@ public class PnpConfiguration {
   @Nullable
   private Long tokenExpiryTolerance;
 
+  /**
+   * The directory where files will be downloaded during ping and pull import operations. This
+   * location should have sufficient space for large FHIR exports. Defaults to /usr/share/staging/pnp
+   * if not specified.
+   */
+  @Nullable
+  private String downloadLocation;
+
 }

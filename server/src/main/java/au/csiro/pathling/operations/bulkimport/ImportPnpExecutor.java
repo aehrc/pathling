@@ -77,10 +77,33 @@ public class ImportPnpExecutor {
 
     Path tempDir = null;
     try {
-      // Create temporary directory for downloaded files with job ID for uniqueness.
-      final String tempDirPrefix = "pathling-pnp-import-" + jobId + "-";
-      tempDir = Files.createTempDirectory(tempDirPrefix);
-      log.debug("Created temporary directory: {}", tempDir);
+      // Create directory for downloaded files with job ID for uniqueness.
+      final PnpConfiguration pnpConfig =
+          serverConfiguration.getImport() != null
+          ? serverConfiguration.getImport().getPnp()
+          : null;
+      if (pnpConfig == null) {
+        throw new InvalidUserInputError("PnP configuration is missing");
+      }
+
+      final String downloadLocation = pnpConfig.getDownloadLocation() != null
+          ? pnpConfig.getDownloadLocation()
+          : "/usr/share/staging/pnp";
+      final Path baseDir = Path.of(downloadLocation);
+
+      // Ensure base directory exists.
+      if (!Files.exists(baseDir)) {
+        Files.createDirectories(baseDir);
+        log.debug("Created base download directory: {}", baseDir);
+      }
+
+      // Create job-specific subdirectory.
+      final String tempDirName = "pathling-pnp-import-" + jobId;
+      tempDir = baseDir.resolve(tempDirName);
+      if (!Files.exists(tempDir)) {
+        Files.createDirectories(tempDir);
+      }
+      log.debug("Using download directory: {}", tempDir);
 
       // Clean any existing content in the temp directory (in case of retry).
       try (final var paths = Files.walk(tempDir)) {
@@ -96,7 +119,7 @@ public class ImportPnpExecutor {
 
       // Download files using fhir-bulk-java.
       final Map<String, Collection<String>> downloadedFiles =
-          downloadFiles(pnpRequest, tempDir);
+          downloadFiles(pnpRequest, pnpConfig, tempDir);
 
       // Create an ImportRequest from the downloaded files.
       final ImportRequest importRequest = new ImportRequest(
@@ -130,15 +153,8 @@ public class ImportPnpExecutor {
 
   private Map<String, Collection<String>> downloadFiles(
       final ImportPnpRequest pnpRequest,
+      final PnpConfiguration pnpConfig,
       final Path tempDir) throws Exception {
-
-    final PnpConfiguration pnpConfig =
-        serverConfiguration.getImport() != null
-        ? serverConfiguration.getImport().getPnp()
-        : null;
-    if (pnpConfig == null) {
-      throw new InvalidUserInputError("PnP configuration is missing");
-    }
 
     // Build the BulkExportClient based on export type.
     // Note: Static mode (manifest-based) is not directly supported by the current API,
