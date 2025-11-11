@@ -226,6 +226,25 @@ cd server
 mvn clean deploy -Pdocker
 ```
 
+##### Configuring Docker repository and tag
+
+You can customise the Docker repository and tag using Maven properties:
+
+```bash
+cd server
+mvn clean install -Pdocker \
+  -Dpathling.fhirServerDockerRepo=myregistry/pathling \
+  -Dpathling.fhirServerDockerTag=v1.0.0
+```
+
+The default repository is `aehrc/pathling` and the default tag is `latest`.
+
+##### Multi-architecture builds
+
+The Docker build automatically creates multi-architecture images for both
+`linux/amd64` and `linux/arm64` platforms. This is configured in the Jib
+plugin and cannot be overridden via command-line properties.
+
 ### Testing Python and R libraries
 
 The Python and R libraries depend on both JARs and generated files created by
