@@ -213,13 +213,11 @@ public class ImportOperationValidator {
     if (formatString == null || formatString.isBlank()) {
       return ImportFormat.NDJSON; // Default.
     }
-    return switch (formatString.toLowerCase()) {
-      case "application/fhir+ndjson" -> ImportFormat.NDJSON;
-      case "application/x-pathling-parquet" -> ImportFormat.PARQUET;
-      case "application/x-pathling-delta+parquet" -> ImportFormat.DELTA;
-      default -> throw new InvalidUserInputError("Unsupported format: " + formatString
-          + ". Supported values are: application/fhir+ndjson, application/x-pathling-parquet, application/x-pathling-delta+parquet");
-    };
+    try {
+      return ImportFormat.fromCode(formatString);
+    } catch (final IllegalArgumentException e) {
+      throw new InvalidUserInputError(e.getMessage());
+    }
   }
 
   private record InputParams(

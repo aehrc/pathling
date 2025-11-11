@@ -179,8 +179,7 @@ public class ImportPnpOperationValidator {
   }
 
   /**
-   * Parses an import format string, supporting both simple codes (e.g., "ndjson") and MIME types
-   * (e.g., "application/fhir+ndjson").
+   * Parses an import format string from MIME type (e.g., "application/fhir+ndjson").
    *
    * @param formatString the format string
    * @return the ImportFormat
@@ -189,17 +188,10 @@ public class ImportPnpOperationValidator {
     if (formatString == null || formatString.isBlank()) {
       return ImportFormat.NDJSON; // Default.
     }
-    // Try direct code match first.
     try {
       return ImportFormat.fromCode(formatString);
     } catch (final IllegalArgumentException e) {
-      // Try MIME type mapping.
-      return switch (formatString.toLowerCase()) {
-        case "application/fhir+ndjson" -> ImportFormat.NDJSON;
-        case "application/parquet" -> ImportFormat.PARQUET;
-        case "application/delta" -> ImportFormat.DELTA;
-        default -> throw new InvalidUserInputError("Unsupported format: " + formatString);
-      };
+      throw new InvalidUserInputError(e.getMessage());
     }
   }
 

@@ -20,23 +20,30 @@ package au.csiro.pathling.operations.bulkimport;
 import lombok.Getter;
 
 /**
- * Represents the supported formats for resource import. MIME type variants (e.g.,
- * "application/fhir+ndjson") are mapped to these codes by the ImportOperationValidator.
+ * Represents the supported formats for resource import using MIME type codes.
  */
 @Getter
 public enum ImportFormat {
   /**
-   * Newline-delimited JSON (NDJSON) format. MIME type: application/fhir+ndjson.
+   * FHIR newline-delimited JSON (NDJSON) format.
+   *
+   * @see <a href="https://hl7.org/fhir/nd-json.html">FHIR NDJSON</a>
    */
-  NDJSON("ndjson"),
+  NDJSON("application/fhir+ndjson"),
   /**
-   * Parquet format (Pathling extension). MIME type: application/parquet.
+   * Parquet format.
+   *
+   * @see <a href="https://pathling.csiro.au/docs/libraries/io/schema">Pathling Parquet
+   * Specification</a>
    */
-  PARQUET("parquet"),
+  PARQUET("application/x-pathling-parquet"),
   /**
-   * Delta Lake format (Pathling extension). MIME type: application/delta.
+   * Delta Lake format.
+   *
+   * @see <a href="https://pathling.csiro.au/docs/libraries/io/schema">Pathling Parquet
+   * Specification</a>
    */
-  DELTA("delta");
+  DELTA("application/x-pathling-delta+parquet");
 
   private final String code;
 
@@ -45,10 +52,9 @@ public enum ImportFormat {
   }
 
   /**
-   * Resolve an ImportFormat enum from its string code. Note: MIME type variants (e.g.,
-   * "application/fhir+ndjson") should be mapped by the validator before calling this method.
+   * Resolve an ImportFormat enum from its MIME type code.
    *
-   * @param code The string code to resolve (simple format codes only).
+   * @param code The MIME type code to resolve.
    * @return An ImportFormat if a match is found.
    * @throws IllegalArgumentException if no match can be found.
    */
