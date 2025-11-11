@@ -114,7 +114,8 @@ public class ImportOperationValidator {
    * @param manifest the JSON manifest
    * @return the validation result containing the ImportRequest and any issues
    */
-  @SuppressWarnings({"ConstantValue", "ConstantConditions", "java:S2583"})  // Null checks needed despite @Nonnull - Jackson can deserialize nulls.
+  @SuppressWarnings({"ConstantValue", "ConstantConditions", "java:S2583"})
+  // Null checks needed despite @Nonnull - Jackson can deserialize nulls.
   public PreAsyncValidation.PreAsyncValidationResult<ImportRequest> validateJsonRequest(
       @Nonnull final RequestDetails requestDetails,
       @Nonnull final ImportManifest manifest
@@ -214,10 +215,10 @@ public class ImportOperationValidator {
     }
     return switch (formatString.toLowerCase()) {
       case "application/fhir+ndjson" -> ImportFormat.NDJSON;
-      case "application/parquet" -> ImportFormat.PARQUET;
-      case "application/delta" -> ImportFormat.DELTA;
+      case "application/x-pathling-parquet" -> ImportFormat.PARQUET;
+      case "application/x-pathling-delta+parquet" -> ImportFormat.DELTA;
       default -> throw new InvalidUserInputError("Unsupported format: " + formatString
-          + ". Supported values are: application/fhir+ndjson, application/parquet, application/delta");
+          + ". Supported values are: application/fhir+ndjson, application/x-pathling-parquet, application/x-pathling-delta+parquet");
     };
   }
 
@@ -241,7 +242,8 @@ public class ImportOperationValidator {
     return mapInputParams(resourceType, url);
   }
 
-  @SuppressWarnings({"ConstantValue", "ConstantConditions", "java:S2583"})  // Null checks needed despite @Nonnull - Jackson can deserialize nulls.
+  @SuppressWarnings({"ConstantValue", "ConstantConditions", "java:S2583"})
+  // Null checks needed despite @Nonnull - Jackson can deserialize nulls.
   private InputParams mapInputFieldsFromJson(final ImportManifestInput input) {
     final String resourceType = input.type();
     final String url = input.url();
