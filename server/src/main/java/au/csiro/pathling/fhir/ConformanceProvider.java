@@ -98,7 +98,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
    * All system-level operations available within Pathling.
    */
   protected static final List<String> SYSTEM_LEVEL_OPERATIONS = Arrays.asList("job", "result",
-      "export");
+      "export", "import", "import-pnp");
 
   private static final String RESTFUL_SECURITY_URI = "http://terminology.hl7.org/CodeSystem/restful-security-service";
   private static final String RESTFUL_SECURITY_CODE = "SMART-on-FHIR";

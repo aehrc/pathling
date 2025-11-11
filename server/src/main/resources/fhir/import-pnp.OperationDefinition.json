@@ -1,0 +1,49 @@
+{
+  "resourceType": "OperationDefinition",
+  "name": "import-pnp",
+  "title": "Pathling Ping and Pull Import Operation",
+  "status": "active",
+  "kind": "operation",
+  "experimental": false,
+  "publisher": "Australian e-Health Research Centre, CSIRO",
+  "description": "This operation allows bulk FHIR data to be imported via a ping and pull workflow, where the server fetches data from a remote FHIR bulk export endpoint",
+  "affectsState": true,
+  "code": "import-pnp",
+  "system": true,
+  "type": false,
+  "instance": false,
+  "parameter": [
+    {
+      "name": "exportUrl",
+      "use": "in",
+      "min": 1,
+      "max": "1",
+      "documentation": "The base URL of the FHIR bulk export endpoint to import data from (e.g. https://example.org/fhir/$export or https://example.org/fhir/$export?_type=Patient)",
+      "type": "url"
+    },
+    {
+      "name": "inputSource",
+      "use": "in",
+      "min": 1,
+      "max": "1",
+      "documentation": "The base URL of the source FHIR server that the data is being exported from (e.g. https://example.org/fhir)",
+      "type": "string"
+    },
+    {
+      "name": "exportType",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "The type of bulk export being requested. Possible values are 'dynamic' (default) or 'static'. Dynamic exports include data as of the time the export completes, whilst static exports include data as of the time the export is initiated.",
+      "type": "code"
+    },
+    {
+      "name": "saveMode",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "Controls how data is merged with existing resources. Possible values are 'error', 'overwrite', 'append', 'ignore', and 'merge'. A value of 'error' (default) will cause the operation to fail if resources already exist. A value of 'overwrite' will cause all existing resources of the same type to be deleted and replaced. A value of 'append' will add new resources without modifying existing ones. A value of 'ignore' will skip resources that already exist. A value of 'merge' will match existing resources with updated resources based on their ID.",
+      "type": "code"
+    }
+  ]
+}
