@@ -464,15 +464,38 @@ case class UnresolvedNullIfUnresolved(value: Expression)
  * The expression handles field resolution gracefully - if a field is not found during
  * traversal (FIELD_NOT_FOUND error), it returns an empty array rather than failing.
  *
- * @param node the current node expression to traverse
- * @param extractor a function to extract values from a node
+ * '''Depth Limiting:''' The `level` parameter (maxDepth) controls recursion depth to prevent
+ * infinite loops in self-referential structures. The depth counter only decrements when
+ * traversing to a node of the '''same type''' as its parent (`parentType.contains(newValue.dataType)`).
+ * This allows finite paths through different types to traverse deeper than the level limit while
+ * preventing infinite recursion. For example:
+ *  - Traversing Item → Answer → Item (type changes): depth counter does not decrement
+ *  - Traversing Item → Item (same type): depth counter decrements, limiting recursion
+ *
+ * '''Requirements:'''
+ *  - The `extractor` function must return an array type
+ *  - The array type must be consistent across all traversed nodes to avoid type mismatch errors
+ *
+ * @param node       the current node expression to traverse
+ * @param extractor  a function to extract values from a node (must return array type)
  * @param traversals a sequence of functions to traverse to child nodes
+ * @param parentType the data type of the parent node, used to determine if depth should decrement
+ * @param level      the remaining levels to traverse for same-type recursion; when exhausted, only extraction occurs
  */
 case class UnresolvedTransformTree(node: Expression,
                                    extractor: Expression => Expression,
-                                   traversals: Seq[Expression => Expression]
+                                   traversals: Seq[Expression => Expression],
+                                   parentType: Option[DataType],
+                                   level: Int
                                   )
   extends Expression with UnevaluableCopy with NonSQLExpression {
+
+  def this(node: Expression,
+           extractor: Expression => Expression,
+           traversals: Seq[Expression => Expression],
+           level: Int) = {
+    this(node, extractor, traversals, None, level)
+  }
 
   override def mapChildren(f: Expression => Expression): Expression = {
 
@@ -481,10 +504,16 @@ case class UnresolvedTransformTree(node: Expression,
       if (newValue.resolved) {
         // if node is resolved we concatenate
         // the value extracted from the node with next level traversal
-        Concat(
-          Seq(extractor(node)) ++
-            traversals.map(t => UnresolvedTransformTree(t(node), extractor, traversals))
-        )
+        if (level > 0 && !parentType.contains(newValue.dataType))
+          Concat(
+            Seq(extractor(node)) ++
+              traversals
+                .map(t => UnresolvedTransformTree(t(node), extractor, traversals,
+                  Some(newValue.dataType),
+                  if (parentType.contains(newValue.dataType)) level - 1 else level
+                ))
+          )
+        else extractor(node)
       }
       else {
         copy(node = newValue)
@@ -507,7 +536,7 @@ case class UnresolvedTransformTree(node: Expression,
   override def children: Seq[Expression] = node :: Nil
 
   override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
-    UnresolvedTransformTree(newChildren.head, extractor, traversals)
+    UnresolvedTransformTree(newChildren.head, extractor, traversals, parentType, level)
   }
 }
 

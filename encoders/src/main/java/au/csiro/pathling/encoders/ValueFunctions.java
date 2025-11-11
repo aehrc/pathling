@@ -156,19 +156,40 @@ public class ValueFunctions {
    * </p>
    * <p>
    * This is particularly useful for traversing self-referential FHIR structures like
-   * Questionnaire.item, where items can contain nested items. The method handles missing
-   * fields gracefully by returning empty arrays when fields are not found.
+   * QuestionnaireResponse.item, where items can contain nested items through multiple paths
+   * (e.g., item.item and item.answer.item). The method handles missing fields gracefully
+   * by returning empty arrays when fields are not found.
+   * </p>
+   * <p>
+   * <strong>Depth Limiting:</strong> The {@code maxDepth} parameter controls recursion depth
+   * to prevent infinite loops in self-referential structures. Critically, the depth counter
+   * only increments when traversing to a node of the same type as its parent. This allows
+   * finite paths through different types to traverse deeper than {@code maxDepth} while still
+   * preventing infinite recursion in truly self-referential cases. For example, traversing
+   * through alternating types (Item → Answer → Item) will not count against the depth limit,
+   * but traversing with an identity function (Item → Item) will be limited.
+   * </p>
+   * <p>
+   * <strong>Important Requirements:</strong>
+   * <ul>
+   *   <li>The {@code extractor} function must return an array type. If you need to extract
+   *       a scalar value, wrap it in an array (e.g., {@code c -> functions.array(c.getField("id"))}).</li>
+   *   <li>The array type returned by the {@code extractor} must be consistent across all
+   *       traversed nodes. Mixing different array element types will result in a type mismatch error.</li>
+   * </ul>
    * </p>
    *
    * @param value The starting value column to traverse
-   * @param extractor An extraction operation to apply at each node to get the desired value
+   * @param extractor An extraction operation to apply at each node that must return an array type
    * @param traversals A list of traversal operations to apply recursively to reach child nodes
+   * @param maxDepth The maximum recursion depth for same-type traversals to prevent infinite loops
    * @return A Column containing an array of all extracted values from the tree traversal
    */
   @Nonnull
   public static Column transformTree(@Nonnull final Column value,
       @Nonnull final UnaryOperator<Column> extractor,
-      @Nonnull final List<UnaryOperator<Column>> traversals
+      @Nonnull final List<UnaryOperator<Column>> traversals,
+      int maxDepth
   ) {
 
     final List<Function1<Expression, Expression>> x = traversals.stream()
@@ -180,29 +201,9 @@ public class ValueFunctions {
     return column(new UnresolvedTransformTree(
         expression(value),
         liftToExpression(extractor)::apply,
-        scalaSeq
+        scalaSeq,
+        maxDepth
         ));
-  }
-
-  /**
-   * Performs a recursive tree traversal with value extraction at each level using a single
-   * traversal operation.
-   * <p>
-   * This is a convenience overload of {@link #transformTree(Column, UnaryOperator, List)} for
-   * the common case where there is only one traversal operation to apply recursively.
-   * </p>
-   *
-   * @param value The starting value column to traverse
-   * @param extractor An extraction operation to apply at each node to get the desired value
-   * @param traversal A single traversal operation to apply recursively to reach child nodes
-   * @return A Column containing an array of all extracted values from the tree traversal
-   * @see #transformTree(Column, UnaryOperator, List)
-   */
-  @Nonnull
-  public static Column transformTree(@Nonnull final Column value,
-      @Nonnull final UnaryOperator<Column> extractor, @Nonnull final UnaryOperator<Column> traversal
-  ) {
-    return transformTree(value, extractor, List.of(traversal));
   }
 
   /**

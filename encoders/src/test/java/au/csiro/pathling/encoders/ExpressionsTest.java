@@ -477,4 +477,157 @@ public class ExpressionsTest {
     assertEquals(expectedResult.schema(), groupedResult.schema());
     assertEquals(expectedResult.collectAsList(), groupedResult.collectAsList());
   }
+
+  /**
+   * Helper method to create a nested item structure with 3 levels for testing transformTree.
+   * The structure has different types at each level to enable testing of type-based traversal limits.
+   *
+   * @return Dataset with structure: items[level0Type(item[level1Type(item[level2Type])])]
+   */
+  private Dataset<Row> createNestedItemDataset() {
+    final Metadata metadata = Metadata.empty();
+
+    // Level 2 (leaf): NO item field - different type from level1
+    final StructType level2Type = DataTypes.createStructType(new StructField[]{
+        new StructField("linkId", DataTypes.StringType, true, metadata),
+        new StructField("text", DataTypes.StringType, true, metadata)
+    });
+
+    // Level 1: HAS item field (array of level2Type) - different type from level0
+    final StructType level1Type = DataTypes.createStructType(new StructField[]{
+        new StructField("linkId", DataTypes.StringType, true, metadata),
+        new StructField("text", DataTypes.StringType, true, metadata),
+        new StructField("item", DataTypes.createArrayType(level2Type), true, metadata)
+    });
+
+    // Level 0: HAS item field (array of level1Type) - root level type
+    final StructType level0Type = DataTypes.createStructType(new StructField[]{
+        new StructField("linkId", DataTypes.StringType, true, metadata),
+        new StructField("text", DataTypes.StringType, true, metadata),
+        new StructField("item", DataTypes.createArrayType(level1Type), true, metadata)
+    });
+
+    // Create test data: 3 levels deep
+    final Row level2Item = RowFactory.create("3", "Level 2");
+    final Row level1Item = RowFactory.create("2", "Level 1", List.of(level2Item));
+    final Row level0Item = RowFactory.create("1", "Level 0", List.of(level1Item));
+
+    final StructType rootSchema = DataTypes.createStructType(new StructField[]{
+        new StructField("id", DataTypes.IntegerType, true, metadata),
+        new StructField("items", DataTypes.createArrayType(level0Type), true, metadata)
+    });
+
+    return spark.createDataFrame(
+        List.of(RowFactory.create(1, List.of(level0Item))),
+        rootSchema
+    );
+  }
+
+  @Test
+  void testTransformTreeFinitePathWithDifferentTypes() {
+    // Finite path: traversing via getField('item') through structurally different types
+    // Each level has a different schema type (level0Type != level1Type != level2Type)
+    // maxDepth should NOT apply because types change at each traversal step
+
+    final Dataset<Row> ds = createNestedItemDataset();
+
+    // Traverse with getField('item') - each traversal step changes type
+    // Level 0 (level0Type) -> getField('item') -> Level 1 (level1Type) -> getField('item') -> Level 2 (level2Type)
+    // maxDepth=1 is very strict, but should NOT limit because types change
+    final Dataset<Row> result = ds.withColumn("collected",
+        ValueFunctions.transformTree(
+            ds.col("items"),
+            c -> c.getField("linkId"),  // Extract linkId at each level
+            List.of(c -> unnest(c.getField("item"))),  // Traverse via item field (type changes)
+            1  // maxDepth=1 (strict limit)
+        )
+    );
+
+    final List<Row> results = result.collectAsList();
+    assertEquals(1, results.size());
+
+    final Row row = results.getFirst();
+    final Seq<?> collected = row.getAs("collected");
+    final List<?> linkIds = CollectionConverters.asJava(collected);
+
+    // Should collect ALL 3 levels because each level has different type
+    // "1" (level 0), "2" (level 1), "3" (level 2)
+    assertEquals(List.of("1", "2", "3"), linkIds);
+  }
+
+  @Test
+  void testTransformTreeSelfReferentialInfiniteLoop() {
+    // Self-referential: traversing with identity function c -> c
+    // This would create infinite recursion (same type forever)
+    // maxDepth MUST apply to prevent infinite loop
+
+    final Dataset<Row> ds = createNestedItemDataset();
+
+    // Traverse with identity function c -> c
+    // This would loop infinitely: items -> items -> items -> items ...
+    // Type never changes (always array<level0Type>), so maxDepth applies
+    // maxDepth=1 should limit to only 2 iterations (levels 0 and 1)
+    final Dataset<Row> result = ds.withColumn("collected",
+        ValueFunctions.transformTree(
+            ds.col("items"),
+            c -> c.getField("linkId"),  // Extract linkId at each level
+            List.of(c -> c),  // Identity function: infinite loop!
+            1  // maxDepth=1 must prevent infinite recursion
+        )
+    );
+
+    final List<Row> results = result.collectAsList();
+    assertEquals(1, results.size());
+
+    final Row row = results.getFirst();
+    final Seq<?> collected = row.getAs("collected");
+    final List<?> linkIds = CollectionConverters.asJava(collected);
+
+    // Should collect only 2 levels (0 and 1) because:
+    // - Level 0: items (type = array<level0Type>)
+    // - Level 1: c -> c returns items again (type = array<level0Type>, same type!)
+    // - Level 2: would be items again but maxDepth=1 prevents it
+    // All extracted linkIds should be "1" (same item repeated)
+    assertEquals(List.of("1", "1"), linkIds);
+  }
+
+  @Test
+  void testTransformTreeMultipleTraversalPaths() {
+    // Multiple traversal paths: combines finite path (type-changing) and self-referential (infinite loop)
+    // This demonstrates that different paths can have different depth behaviors simultaneously
+
+    final Dataset<Row> ds = createNestedItemDataset();
+
+    // Use TWO traversal paths:
+    // Path 1: c -> unnest(c.getField("item")) - finite path with type changes
+    // Path 2: c -> c - self-referential with same type (infinite loop)
+    final Dataset<Row> result = ds.withColumn("collected",
+        ValueFunctions.transformTree(
+            ds.col("items"),
+            c -> c.getField("linkId"),  // Extract linkId at each level
+            List.of(
+                c -> unnest(c.getField("item")),  // Path 1: finite, type changes
+                c -> c                             // Path 2: infinite loop, type stays same
+            ),
+            1  // maxDepth=1
+        )
+    );
+
+    final List<Row> results = result.collectAsList();
+    assertEquals(1, results.size());
+
+    final Row row = results.getFirst();
+    final Seq<?> collected = row.getAs("collected");
+    final List<?> linkIds = CollectionConverters.asJava(collected);
+
+    // Expected results from both paths:
+    // Path 1 (finite, type-changing): traverses through item field
+    //   - Extracts: "1" (root), "2" (level 1), "3" (level 2)
+    // Path 2 (self-referential, c->c): extracts from current node at each traversal level
+    //   - At level 2 (node with linkId=3): extract "3"
+    //   - At level 1 (node with linkId=2): extract "2"
+    //   - At level 0 (node with linkId=1): extract "1"
+    // Total result: [1, 2, 3] from Path 1, then [3, 2, 1] from Path 2 going back up
+    assertEquals(List.of("1", "2", "3", "3", "2", "1"), linkIds);
+  }
 }

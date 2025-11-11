@@ -40,6 +40,8 @@ public record RepeatSelection(
     @Nonnull List<ProjectionClause> components
 ) implements ProjectionClause {
 
+  private static final int DEF_MAX_DEPTH = 10;
+
   @Nonnull
   @Override
   public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
@@ -58,7 +60,8 @@ public record RepeatSelection(
         .map(ctx -> ValueFunctions.transformTree(
                 ctx.inputContext().getColumnValue(),
                 c -> evalHelper.evalForEach(ctx.withInputColumn(c)),
-                paths.stream().map(ctx::asColumnOperator).toList()
+                paths.stream().map(ctx::asColumnOperator).toList(),
+                DEF_MAX_DEPTH
             )
         ).toArray(Column[]::new);
 
