@@ -19,6 +19,7 @@ package au.csiro.pathling.config;
 
 import jakarta.annotation.Nullable;
 import lombok.Data;
+import lombok.ToString;
 
 /**
  * Represents configuration specific to ping and pull import functionality.
@@ -45,12 +46,14 @@ public class PnpConfiguration {
    * The private key in JWK format for asymmetric authentication (RS384).
    */
   @Nullable
+  @ToString.Exclude
   private String privateKeyJwk;
 
   /**
    * The client secret for symmetric authentication.
    */
   @Nullable
+  @ToString.Exclude
   private String clientSecret;
 
   /**
