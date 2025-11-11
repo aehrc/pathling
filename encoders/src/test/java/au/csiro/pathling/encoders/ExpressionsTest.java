@@ -26,9 +26,11 @@ package au.csiro.pathling.encoders;
 
 import static au.csiro.pathling.encoders.ValueFunctions.ifArray;
 import static au.csiro.pathling.encoders.ValueFunctions.ifArray2;
+import static au.csiro.pathling.encoders.ValueFunctions.nullIfMissingField;
 import static au.csiro.pathling.encoders.ValueFunctions.unnest;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.Arrays;
 import java.util.List;
@@ -629,5 +631,82 @@ public class ExpressionsTest {
     //   - At level 0 (node with linkId=1): extract "1"
     // Total result: [1, 2, 3] from Path 1, then [3, 2, 1] from Path 2 going back up
     assertEquals(List.of("1", "2", "3", "3", "2", "1"), linkIds);
+  }
+
+  @Test
+  void testNullIfMissingField() {
+    // Comprehensive test for nullIfMissingField covering all scenarios:
+    // 1. Existing top-level fields returning actual values
+    // 2. Existing nested struct fields returning actual values
+    // 3. Missing struct fields returning null
+    // 4. Struct fields with null values vs non-existent fields
+
+    final Metadata metadata = Metadata.empty();
+
+    // Create a struct type for person with name and age fields (no email or salary fields)
+    final StructType personType = DataTypes.createStructType(new StructField[]{
+        new StructField("name", DataTypes.StringType, true, metadata),
+        new StructField("age", DataTypes.IntegerType, true, metadata)
+    });
+
+    final StructType schema = DataTypes.createStructType(new StructField[]{
+        new StructField("id", DataTypes.IntegerType, true, metadata),
+        new StructField("value", DataTypes.IntegerType, true, metadata),
+        new StructField("person", personType, true, metadata)
+    });
+
+    final List<Row> data = List.of(
+        RowFactory.create(1, 100, RowFactory.create(null, 25)),  // person.name is null
+        RowFactory.create(2, 200, RowFactory.create("Bob", null)),  // person.age is null
+        RowFactory.create(3, 300, RowFactory.create("Charlie", 30))
+    );
+
+    final Dataset<Row> ds = spark.createDataFrame(data, schema);
+
+    // Apply multiple nullIfMissingField expressions to test all scenarios
+    final Dataset<Row> result = ds
+        // Test 1: Existing top-level field
+        .withColumn("test_top_level", nullIfMissingField(ds.col("value")))
+        // Test 2: Existing nested field using dot notation
+        .withColumn("test_nested_exists", nullIfMissingField(ds.col("person.name")))
+        // Test 3: Existing nested field using getField
+        .withColumn("test_struct_field", nullIfMissingField(ds.col("person").getField("age")))
+        // Test 4: Missing struct field (address doesn't exist)
+        .withColumn("test_missing_address", nullIfMissingField(ds.col("person").getField("address")))
+        // Test 5: Missing struct field (email doesn't exist)
+        .withColumn("test_missing_email", nullIfMissingField(ds.col("person").getField("email")))
+        // Test 6: Missing struct field (salary doesn't exist)
+        .withColumn("test_missing_salary", nullIfMissingField(ds.col("person").getField("salary")));
+
+    final List<Row> results = result.collectAsList();
+    assertEquals(3, results.size());
+
+    // Row 1: person.name is null, person.age is 25
+    assertEquals(100, (Integer) results.getFirst().getAs("test_top_level"));
+    assertNull(results.getFirst().getAs("test_nested_exists"));  // null value from data
+    assertEquals(25, (Integer) results.getFirst().getAs("test_struct_field"));
+    assertNull(results.getFirst().getAs("test_missing_address"));  // field doesn't exist
+    assertNull(results.get(0).getAs("test_missing_email"));
+    assertNull(results.get(0).getAs("test_missing_salary"));
+
+    // Row 2: person.name is "Bob", person.age is null
+    assertEquals(200, (Integer) results.get(1).getAs("test_top_level"));
+    assertEquals("Bob", results.get(1).getAs("test_nested_exists"));
+    assertNull(results.get(1).getAs("test_struct_field"));  // null value from data
+    assertNull(results.get(1).getAs("test_missing_address"));  // field doesn't exist
+    assertNull(results.get(1).getAs("test_missing_email"));
+    assertNull(results.get(1).getAs("test_missing_salary"));
+
+    // Row 3: person.name is "Charlie", person.age is 30
+    assertEquals(300, (Integer) results.get(2).getAs("test_top_level"));
+    assertEquals("Charlie", results.get(2).getAs("test_nested_exists"));
+    assertEquals(30, (Integer) results.get(2).getAs("test_struct_field"));
+    assertNull(results.get(2).getAs("test_missing_address"));  // field doesn't exist
+    assertNull(results.get(2).getAs("test_missing_email"));
+    assertNull(results.get(2).getAs("test_missing_salary"));
+
+    // Key distinction: Fields that exist but have null values (row 1 name, row 2 age)
+    // preserve the null from the data, while missing fields (address, email, salary)
+    // return null because they don't exist in the struct schema
   }
 }

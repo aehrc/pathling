@@ -121,19 +121,32 @@ public class ValueFunctions {
   }
 
   /**
-   * Wraps a column expression to resolve to null if the field is not found during resolution.
+   * Returns SQL NULL when a struct field doesn't exist in the schema, instead of throwing an
+   * error.
    * <p>
-   * This is useful for handling optional fields in nested structures where the field may not exist
-   * in all instances. Instead of throwing an error when a field is not found, this function will
-   * return null.
+   * This function is essential for handling optional fields in nested structures where a field may
+   * not be present in all instances of a struct type. When the specified field is missing from the
+   * struct schema, this returns null rather than causing a FIELD_NOT_FOUND analysis error.
+   * <p>
+   * <strong>Important:</strong> This only handles fields that don't exist in the schema. If a
+   * field
+   * exists but has a null value, that null value is returned normally.
+   * <p>
+   * <strong>Typical usage:</strong>
+   * <pre>{@code
+   * // Safe access to optional field that may not exist in all structs
+   * dataset.withColumn("email", nullIfMissingField(col("person").getField("email")))
+   * }</pre>
    *
-   * @param value The column expression to wrap
-   * @return A new column that resolves to null if the field is not found
+   * @param value The column expression that may reference a non-existent field
+   * @return A column that resolves to null if the field is not found in the schema, or the field's
+   * value (including null) if the field exists
+   * @see org.apache.spark.sql.Column#getField(String)
    */
   @Nonnull
-  public static Column nullIfUnresolved(@Nonnull final Column value) {
+  public static Column nullIfMissingField(@Nonnull final Column value) {
     final Expression valueExpr = expression(value);
-    final Expression nullOrExpr = new UnresolvedNullIfUnresolved(valueExpr);
+    final Expression nullOrExpr = new UnresolvedNullIfMissingField(valueExpr);
     return column(nullOrExpr);
   }
 
@@ -141,9 +154,9 @@ public class ValueFunctions {
   /**
    * Performs a recursive tree traversal with value extraction at each level.
    * <p>
-   * This method implements a depth-first traversal of nested structures, applying a sequence
-   * of traversal operations recursively and extracting values at each level. The result is
-   * a flattened array containing all extracted values from the tree traversal.
+   * This method implements a depth-first traversal of nested structures, applying a sequence of
+   * traversal operations recursively and extracting values at each level. The result is a flattened
+   * array containing all extracted values from the tree traversal.
    * </p>
    * <p>
    * The traversal process works as follows:
@@ -203,7 +216,7 @@ public class ValueFunctions {
         liftToExpression(extractor)::apply,
         scalaSeq,
         maxDepth
-        ));
+    ));
   }
 
   /**

@@ -413,13 +413,18 @@ case class UnresolvedUnnest(value: Expression)
 }
 
 /**
- * An expression that resolves to null if the field is not found during resolution.
- * This is useful for handling optional fields in nested structures where the field
- * may not exist in all instances.
+ * Returns null when a struct field doesn't exist in the schema, instead of throwing an error.
+ * <p>
+ * This expression is essential for handling optional fields in nested structures where a field
+ * may not be present in all instances of a struct type. When the specified field is missing
+ * from the struct schema, this returns null rather than causing a FIELD_NOT_FOUND analysis error.
+ * <p>
+ * '''Important:''' This only handles fields that don't exist in the schema. If a field
+ * exists but has a null value, that null value is returned normally.
  *
- * @param value the expression to resolve
+ * @param value the expression that may reference a non-existent field
  */
-case class UnresolvedNullIfUnresolved(value: Expression)
+case class UnresolvedNullIfMissingField(value: Expression)
   extends Expression with UnevaluableCopy with NonSQLExpression {
 
   override def mapChildren(f: Expression => Expression): Expression = {
@@ -448,7 +453,7 @@ case class UnresolvedNullIfUnresolved(value: Expression)
   override def children: Seq[Expression] = value :: Nil
 
   override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
-    UnresolvedNullIfUnresolved(newChildren.head)
+    UnresolvedNullIfMissingField(newChildren.head)
   }
 }
 
