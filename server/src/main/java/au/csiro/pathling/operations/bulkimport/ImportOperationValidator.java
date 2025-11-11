@@ -213,18 +213,20 @@ public class ImportOperationValidator {
     if (formatString == null || formatString.isBlank()) {
       return ImportFormat.NDJSON; // Default.
     }
-    // Try direct code match first.
-    try {
-      return ImportFormat.fromCode(formatString);
-    } catch (final IllegalArgumentException e) {
-      // Try MIME type mapping.
-      return switch (formatString.toLowerCase()) {
-        case "application/fhir+ndjson" -> ImportFormat.NDJSON;
-        case "application/parquet" -> ImportFormat.PARQUET;
-        case "application/delta" -> ImportFormat.DELTA;
-        default -> throw new InvalidUserInputError("Unsupported format: " + formatString);
-      };
-    }
+    // Try MIME type mapping first (per SMART specification).
+    return switch (formatString.toLowerCase()) {
+      case "application/fhir+ndjson" -> ImportFormat.NDJSON;
+      case "application/parquet" -> ImportFormat.PARQUET;
+      case "application/delta" -> ImportFormat.DELTA;
+      default -> {
+        // Fall back to simple code for backwards compatibility.
+        try {
+          yield ImportFormat.fromCode(formatString);
+        } catch (final IllegalArgumentException e) {
+          throw new InvalidUserInputError("Unsupported format: " + formatString);
+        }
+      }
+    };
   }
 
   private record InputParams(

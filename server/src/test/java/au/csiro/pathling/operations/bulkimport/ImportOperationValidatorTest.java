@@ -174,9 +174,9 @@ class ImportOperationValidatorTest {
   private static Stream<Arguments> provide_format_params() {
     return Stream.of(
         arguments(minimalValidParams(), ImportFormat.NDJSON),
-        arguments(paramsWithFormat("ndjson"), ImportFormat.NDJSON),
-        arguments(paramsWithFormat("parquet"), ImportFormat.PARQUET),
-        arguments(paramsWithFormat("delta"), ImportFormat.DELTA)
+        arguments(paramsWithFormat("application/fhir+ndjson"), ImportFormat.NDJSON),
+        arguments(paramsWithFormat("application/parquet"), ImportFormat.PARQUET),
+        arguments(paramsWithFormat("application/delta"), ImportFormat.DELTA)
     );
   }
 
