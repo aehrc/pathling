@@ -6,7 +6,7 @@
   "kind": "operation",
   "experimental": false,
   "publisher": "Australian e-Health Research Centre, CSIRO",
-  "description": "This operation allows bulk NDJSON data to be imported into the server, making it available for query",
+  "description": "This operation allows bulk data to be imported into the server from NDJSON, Parquet, or Delta format files, making the data available for query.",
   "affectsState": true,
   "code": "import",
   "system": true,
@@ -18,7 +18,7 @@
       "use": "in",
       "min": 1,
       "max": "*",
-      "documentation": "A source FHIR NDJSON file containing resources to be included within this import operation. Each file must contain only one type of resource.",
+      "documentation": "A source file containing FHIR resources to be included within this import operation. Each file must contain only one type of resource. Supported formats are NDJSON, Parquet, and Delta.",
       "part": [
         {
           "name": "resourceType",
@@ -45,7 +45,7 @@
           "use": "in",
           "min": 0,
           "max": "1",
-          "documentation": "A value of 'overwrite' will cause all existing resources of the specified type to be deleted and replaced with the contents of the source file. A value of 'merge' will match existing resources with updated resources in the source file based on their ID, and either update the existing resources or add new resources as appropriate. The default value is 'overwrite'.",
+          "documentation": "Controls how data is merged with existing resources. Possible values are 'error' (fail if resources exist; default), 'overwrite' (delete and replace all existing resources), 'append' (add new resources without modifying existing), 'ignore' (skip if resources exist), and 'merge' (match by ID and update or add as appropriate).",
           "type": "code"
         },
         {
@@ -53,7 +53,7 @@
           "use": "in",
           "min": 0,
           "max": "1",
-          "documentation": "Indicates the format of the source file. Possible values are 'ndjson', 'parquet' and 'delta'. The default value is 'ndjson'.",
+          "documentation": "Indicates the format of the source file. Possible values are 'ndjson' (default), 'parquet', and 'delta'.",
           "type": "code"
         }
       ]
