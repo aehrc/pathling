@@ -59,4 +59,12 @@ public class PnpConfiguration {
   @Nullable
   private String scope;
 
+  /**
+   * The minimum number of seconds that a token should have before expiry when deciding whether to
+   * use it. If a cached token has less than this many seconds until expiry, a new token will be
+   * requested. Defaults to 120 seconds if not specified.
+   */
+  @Nullable
+  private Long tokenExpiryTolerance;
+
 }

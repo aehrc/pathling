@@ -172,6 +172,10 @@ public class ImportPnpExecutor {
         authBuilder.scope(pnpConfig.getScope());
       }
 
+      if (pnpConfig.getTokenExpiryTolerance() != null) {
+        authBuilder.tokenExpiryTolerance(pnpConfig.getTokenExpiryTolerance());
+      }
+
       authConfig = authBuilder.build();
     }
 
