@@ -113,16 +113,8 @@ final class DeltaSink implements DataSink {
       fileInfos.add(new FileInformation(resourceType, tablePath, null));
 
       switch (saveMode) {
-        case ERROR_IF_EXISTS, APPEND, IGNORE -> writeDataset(dataset, tablePath, saveMode);
-        case OVERWRITE -> {
-          // This is to work around a bug relating to Delta tables not being able to be overwritten,
-          // due to their inability to handle the truncate operation that Spark performs when
-          // overwriting a table.
-          if (deltaTableExists(tablePath)) {
-            delete(tablePath);
-          }
-          writeDataset(dataset, tablePath, SaveMode.ERROR_IF_EXISTS);
-        }
+        case ERROR_IF_EXISTS, APPEND, IGNORE, OVERWRITE ->
+            writeDataset(dataset, tablePath, saveMode);
         case MERGE -> {
           if (deltaTableExists(tablePath)) {
             // If the table already exists, merge the data in.
@@ -197,6 +189,7 @@ final class DeltaSink implements DataSink {
    *
    * @param tableUrl the URL of the Delta table to delete
    */
+  @SuppressWarnings("unused")
   private void delete(@Nonnull final String tableUrl) {
     try {
       final Path tablePath = new Path(tableUrl);

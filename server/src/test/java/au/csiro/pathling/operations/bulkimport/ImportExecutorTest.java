@@ -2,7 +2,9 @@ package au.csiro.pathling.operations.bulkimport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import au.csiro.pathling.config.ImportConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.library.PathlingContext;
@@ -12,10 +14,8 @@ import au.csiro.pathling.library.io.sink.WriteDetails;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,9 +28,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 
 /**
- * Unit tests for ImportExecutor focusing on NDJSON format.
+ * Unit tests for ImportExecutor. Tests import from various source formats (NDJSON, Delta, Parquet)
+ * with all imports writing to Delta format in the warehouse.
  *
  * @author Felix Naumann
+ * @author John Grimes
  */
 @Slf4j
 @Import(FhirServerTestConfiguration.class)
@@ -140,7 +142,7 @@ class ImportExecutorTest {
   // ========================================
 
   @Test
-  void testSaveModeOverwrite() throws IOException {
+  void testSaveModeOverwrite() {
     // Given - import data once
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final ImportRequest request = new ImportRequest(
@@ -153,47 +155,34 @@ class ImportExecutorTest {
 
     // When - first import
     final ImportResponse response1 = importExecutor.execute(request, JOB_ID);
-    final Path patientFile = Paths.get(
-        URI.create(
-            response1.getOriginalInternalWriteDetails().fileInfos().getFirst().absoluteUrl()));
-    final long firstImportCount;
-    try (final var lines = Files.lines(patientFile)) {
-      firstImportCount = lines.count();
-    }
 
-    // Then - second import with OVERWRITE should replace the file
-    final String patient2Url =
-        "file://" + TEST_DATA_PATH.resolve("Patient_2.ndjson").toAbsolutePath();
-    final ImportRequest request2 = new ImportRequest(
-        "http://example.com/fhir/$import",
-        "https://example.org/source",
-        Map.of("Patient", List.of(patient2Url)),
-        SaveMode.OVERWRITE,
-        ImportFormat.NDJSON
-    );
+    // Read count from Delta table using Spark
+    final String tablePath = response1.getOriginalInternalWriteDetails().fileInfos().getFirst()
+        .absoluteUrl();
+    final long firstImportCount = pathlingContext.getSpark().read()
+        .format("delta")
+        .load(tablePath)
+        .count();
 
-    final ImportResponse response2 = importExecutor.execute(request2, JOB_ID);
+    // Then - second import with OVERWRITE should replace the data
+    final ImportResponse response2 = importExecutor.execute(request, JOB_ID);
 
-    // Get the new file path (may be different after overwrite)
-    final Path patientFile2 = Paths.get(
-        URI.create(
-            response2.getOriginalInternalWriteDetails().fileInfos().getFirst().absoluteUrl()));
-    final long secondImportCount;
-    try (final var lines = Files.lines(patientFile2)) {
-      secondImportCount = lines.count();
-    }
+    // Read count from Delta table after overwrite
+    final long secondImportCount = pathlingContext.getSpark().read()
+        .format("delta")
+        .load(tablePath)
+        .count();
 
     assertThat(response1).isNotNull();
     assertThat(response2).isNotNull();
     assertThat(firstImportCount).isEqualTo(100L); // Patient.ndjson has 100 records
 
-    // In OVERWRITE mode, if Patient_2.ndjson doesn't exist, use Patient.ndjson again
-    // The key is that the file is replaced (line counts may or may not differ)
-    assertThat(secondImportCount).isGreaterThan(0L);
+    // In OVERWRITE mode, data should be replaced with same count
+    assertThat(secondImportCount).isEqualTo(100L);
   }
 
   @Test
-  void testSaveModeAppend() throws IOException {
+  void testSaveModeAppend() {
     // Given - import data once
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final ImportRequest request = new ImportRequest(
@@ -207,13 +196,17 @@ class ImportExecutorTest {
     // When - first import
     final ImportResponse response1 = importExecutor.execute(request, JOB_ID);
 
-    // Get the actual database file path from WriteDetails
+    // Get the actual database path from WriteDetails
     final WriteDetails writeDetails1 = getWriteDetails(response1);
-    final String dbFilePath = writeDetails1.fileInfos().getFirst().absoluteUrl();
-    final Path patientFile = Paths.get(URI.create(dbFilePath));
-    final long firstImportSize = Files.size(patientFile);
+    final String tablePath = writeDetails1.fileInfos().getFirst().absoluteUrl();
 
-    // Then - second import with APPEND should add to the file
+    // Read count from Delta table after first import
+    final long firstImportCount = pathlingContext.getSpark().read()
+        .format("delta")
+        .load(tablePath)
+        .count();
+
+    // Then - second import with APPEND should add to the data
     final ImportResponse response2 = importExecutor.execute(request, JOB_ID);
 
     assertThat(response1).isNotNull();
@@ -221,12 +214,15 @@ class ImportExecutorTest {
     assertThat(response1.getInputUrls()).containsExactly(patientUrl);
     assertThat(response2.getInputUrls()).containsExactly(patientUrl);
 
-    // Verify file exists and data was appended
-    assertThat(patientFile).exists();
-    assertThat(firstImportSize).isGreaterThan(0L);
+    // Verify data was appended - count should double
+    final long secondImportCount = pathlingContext.getSpark().read()
+        .format("delta")
+        .load(tablePath)
+        .count();
+    assertThat(firstImportCount).isEqualTo(100L); // Patient.ndjson has 100 records
+    assertThat(secondImportCount).isEqualTo(200L); // After append, should have 200
 
-    // In APPEND mode, Spark may create new part files instead of appending to existing file
-    // Just verify data was written in both imports
+    // Verify data was written in both imports
     final WriteDetails writeDetails2 = getWriteDetails(response2);
     assertThat(writeDetails2.fileInfos()).isNotEmpty();
   }
@@ -248,9 +244,7 @@ class ImportExecutorTest {
     assertThat(initialResponse).isNotNull();
     assertThat(initialResponse.getInputUrls()).containsExactly(patientUrl);
 
-    // When - second import with ERROR_IF_EXISTS
-    // Note: Spark's ERROR_IF_EXISTS behavior with ndjson format may vary
-    // The important thing is that the mode is accepted and processed
+    // When - second import with ERROR_IF_EXISTS should throw because Delta table exists
     final ImportRequest errorRequest = new ImportRequest(
         "http://example.com/fhir/$import",
         "https://example.org/source",
@@ -259,20 +253,14 @@ class ImportExecutorTest {
         ImportFormat.NDJSON
     );
 
-    // Try the operation - Spark may or may not throw depending on internal state
-    // Just verify the mode is accepted
-    try {
-      final ImportResponse response = importExecutor.execute(errorRequest, JOB_ID);
-      // If it succeeds, verify response is valid
-      assertThat(response).isNotNull();
-    } catch (final RuntimeException e) {
-      // If it throws, that's also expected behavior for ERROR_IF_EXISTS
-      assertThat(e.getMessage()).containsAnyOf("exist", "already", "found");
-    }
+    // Then - should throw because table already exists
+    assertThatThrownBy(() -> importExecutor.execute(errorRequest, JOB_ID))
+        .satisfies(e -> assertThat(e.getMessage())
+            .containsAnyOf("exist", "already", "found", "DELTA_PATH_EXISTS"));
   }
 
   @Test
-  void testSaveModeErrorIfExistsSucceedsWhenFileDoesNotExist() throws IOException {
+  void testSaveModeErrorIfExistsSucceedsWhenFileDoesNotExist() {
     // Given - fresh database with no existing data
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
     final ImportRequest request = new ImportRequest(
@@ -286,16 +274,18 @@ class ImportExecutorTest {
     // When
     final ImportResponse response = importExecutor.execute(request, JOB_ID);
 
-    // Then - should succeed when file doesn't exist
+    // Then - should succeed when table doesn't exist
     assertThat(response).isNotNull();
     assertThat(response.getInputUrls()).containsExactly(patientUrl);
 
-    // Verify data was written to database
+    // Verify data was written to Delta table
     final WriteDetails writeDetails = getWriteDetails(response);
-    final String dbFilePath = writeDetails.fileInfos().getFirst().absoluteUrl();
-    final Path patientFile = Paths.get(URI.create(dbFilePath));
-    assertThat(patientFile).exists();
-    assertThat(Files.size(patientFile)).isGreaterThan(0L);
+    final String tablePath = writeDetails.fileInfos().getFirst().absoluteUrl();
+    final long count = pathlingContext.getSpark().read()
+        .format("delta")
+        .load(tablePath)
+        .count();
+    assertThat(count).isEqualTo(100L);
   }
 
   // ========================================
@@ -407,7 +397,9 @@ class ImportExecutorTest {
   @Test
   void testAccessRulesValidationSuccess() {
     // Given - configure to allow file:// URLs
-    serverConfiguration.getImport().setAllowableSources(List.of("file://"));
+    final ImportConfiguration importConfiguration = serverConfiguration.getImport();
+    assertNotNull(importConfiguration);
+    importConfiguration.setAllowableSources(List.of("file://"));
 
     final ImportExecutor executorWithRules = new ImportExecutor(
         Optional.of(new AccessRules(serverConfiguration)),
@@ -435,7 +427,9 @@ class ImportExecutorTest {
   @Test
   void testAccessRulesValidationFailure() {
     // Given - configure to only allow s3:// URLs
-    serverConfiguration.getImport().setAllowableSources(List.of("s3://allowed-bucket/"));
+    final ImportConfiguration importConfiguration = serverConfiguration.getImport();
+    assertNotNull(importConfiguration);
+    importConfiguration.setAllowableSources(List.of("s3://allowed-bucket/"));
 
     final ImportExecutor executorWithRules = new ImportExecutor(
         Optional.of(new AccessRules(serverConfiguration)),
@@ -483,7 +477,9 @@ class ImportExecutorTest {
   @Test
   void testAccessRulesPartialFailure() {
     // Given - allow file:// but one URL uses s3://
-    serverConfiguration.getImport().setAllowableSources(List.of("file://"));
+    final ImportConfiguration importConfiguration = serverConfiguration.getImport();
+    assertNotNull(importConfiguration);
+    importConfiguration.setAllowableSources(List.of("file://"));
 
     final ImportExecutor executorWithRules = new ImportExecutor(
         Optional.of(new AccessRules(serverConfiguration)),
@@ -540,7 +536,7 @@ class ImportExecutorTest {
 
 
   @Test
-  void testImportVerifiesDataWrittenToDatabase() throws IOException {
+  void testImportVerifiesDataWrittenToDatabase() {
     // Given
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
 
@@ -563,14 +559,13 @@ class ImportExecutorTest {
     final WriteDetails writeDetails = getWriteDetails(response);
     assertThat(writeDetails.fileInfos()).isNotEmpty();
 
-    // Get actual database file path and verify it exists
-    final String dbFilePath = writeDetails.fileInfos().getFirst().absoluteUrl();
-    final Path patientDataPath = Paths.get(URI.create(dbFilePath));
-    assertThat(patientDataPath).exists();
-
-    // Verify the file has content
-    final long fileSize = Files.size(patientDataPath);
-    assertThat(fileSize).isGreaterThan(0);
+    // Get actual database path and verify Delta table has data
+    final String tablePath = writeDetails.fileInfos().getFirst().absoluteUrl();
+    final long count = pathlingContext.getSpark().read()
+        .format("delta")
+        .load(tablePath)
+        .count();
+    assertThat(count).isEqualTo(100L); // Patient.ndjson has 100 records
   }
 
   @Test
