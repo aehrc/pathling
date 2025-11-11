@@ -45,6 +45,7 @@ import org.springframework.stereotype.Component;
  * Encapsulates the execution of an import operation.
  *
  * @author Felix Naumann
+ * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/server/operations/import">Import</a>
  */
 @Component
@@ -93,19 +94,18 @@ public class ImportExecutor {
   private WriteDetails readAndWriteFilesFrom(final ImportRequest request) {
     final Map<String, Collection<String>> resourcesWithAuthority = checkAuthority(request);
 
-    final Function<DataSource, DataSinkBuilder> sinkBuilderFunc = dataSource -> new DataSinkBuilder(
-        pathlingContext, dataSource).saveMode(request.saveMode().getCode());
-    return switch (request.importFormat()) {
-      case NDJSON ->
-          sinkBuilderFunc.apply(new NdjsonSource(pathlingContext, resourcesWithAuthority, "ndjson"))
-              .ndjson(databasePath);
-      case DELTA -> sinkBuilderFunc.apply(new DeltaSource(pathlingContext, resourcesWithAuthority))
-          .delta(databasePath);
-      case PARQUET -> sinkBuilderFunc.apply(
-              new ParquetSource(pathlingContext, resourcesWithAuthority,
-                  (Predicate<ResourceType>) ignored -> true))
-          .parquet(databasePath);
+    // Create the appropriate data source based on the import format.
+    final DataSource dataSource = switch (request.importFormat()) {
+      case NDJSON -> new NdjsonSource(pathlingContext, resourcesWithAuthority, "ndjson");
+      case DELTA -> new DeltaSource(pathlingContext, resourcesWithAuthority);
+      case PARQUET -> new ParquetSource(pathlingContext, resourcesWithAuthority,
+          (Predicate<ResourceType>) ignored -> true);
     };
+
+    // Always write to Delta format regardless of source format.
+    return new DataSinkBuilder(pathlingContext, dataSource)
+        .saveMode(request.saveMode().getCode())
+        .delta(databasePath);
   }
 
   private @NotNull Map<String, Collection<String>> checkAuthority(final ImportRequest request) {
