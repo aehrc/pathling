@@ -55,7 +55,7 @@
       "use": "in",
       "min": 0,
       "max": "1",
-      "documentation": "The MIME type of the input files as specified by the SMART Bulk Data Import specification. Supported MIME types are 'application/fhir+ndjson' (default), 'application/parquet', and 'application/delta'. For convenience, simple codes ('ndjson', 'parquet', 'delta') are also accepted.",
+      "documentation": "The MIME type of the input files as specified by the SMART Bulk Data Import specification. Supported values are 'application/fhir+ndjson' (default), 'application/parquet', and 'application/delta'.",
       "type": "code"
     },
     {

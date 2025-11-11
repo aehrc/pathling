@@ -203,8 +203,7 @@ public class ImportOperationValidator {
   }
 
   /**
-   * Parses an import format string, supporting both simple codes (e.g., "ndjson") and MIME types
-   * (e.g., "application/fhir+ndjson").
+   * Parses an import format string from MIME type (e.g., "application/fhir+ndjson").
    *
    * @param formatString the format string
    * @return the ImportFormat
@@ -213,19 +212,12 @@ public class ImportOperationValidator {
     if (formatString == null || formatString.isBlank()) {
       return ImportFormat.NDJSON; // Default.
     }
-    // Try MIME type mapping first (per SMART specification).
     return switch (formatString.toLowerCase()) {
       case "application/fhir+ndjson" -> ImportFormat.NDJSON;
       case "application/parquet" -> ImportFormat.PARQUET;
       case "application/delta" -> ImportFormat.DELTA;
-      default -> {
-        // Fall back to simple code for backwards compatibility.
-        try {
-          yield ImportFormat.fromCode(formatString);
-        } catch (final IllegalArgumentException e) {
-          throw new InvalidUserInputError("Unsupported format: " + formatString);
-        }
-      }
+      default -> throw new InvalidUserInputError("Unsupported format: " + formatString
+          + ". Supported values are: application/fhir+ndjson, application/parquet, application/delta");
     };
   }
 

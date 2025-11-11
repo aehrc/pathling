@@ -258,10 +258,7 @@ class ImportOperationValidatorTest {
     return Stream.of(
         arguments("application/fhir+ndjson", ImportFormat.NDJSON),
         arguments("application/parquet", ImportFormat.PARQUET),
-        arguments("application/delta", ImportFormat.DELTA),
-        arguments("ndjson", ImportFormat.NDJSON),
-        arguments("parquet", ImportFormat.PARQUET),
-        arguments("delta", ImportFormat.DELTA)
+        arguments("application/delta", ImportFormat.DELTA)
     );
   }
 
