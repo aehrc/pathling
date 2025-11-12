@@ -193,13 +193,13 @@ public class ImportOperationValidator {
   private SaveMode getSaveModeFromParameters(final Parameters parameters) {
     return ParamUtil.extractFromPart(
         parameters.getParameter(),
-        "mode",
+        "saveMode",
         Coding.class,
         coding -> SaveMode.fromCode(coding.getCode()),
         true,
         SaveMode.OVERWRITE, // Default to OVERWRITE.
         false,
-        new InvalidUserInputError("Unknown mode.")
+        new InvalidUserInputError("Unknown saveMode.")
     );
   }
 

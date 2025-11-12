@@ -292,7 +292,7 @@ class ImportOperationValidatorTest {
   private static Parameters paramsWithMode(String modeCode) {
     final Parameters params = minimalValidParams();
     params.addParameter()
-        .setName("mode")
+        .setName("saveMode")
         .setValue(new Coding().setCode(modeCode));
     return params;
   }

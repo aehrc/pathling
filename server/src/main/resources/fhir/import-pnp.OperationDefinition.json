@@ -6,7 +6,7 @@
   "kind": "operation",
   "experimental": false,
   "publisher": "Australian e-Health Research Centre, CSIRO",
-  "description": "This operation allows bulk FHIR data to be imported via a ping and pull workflow, where the server fetches data from a remote FHIR bulk export endpoint",
+  "description": "This operation allows bulk FHIR data to be imported via a ping and pull workflow, where the server fetches data from a remote FHIR bulk export endpoint, aligned with the SMART Bulk Data Import proposal (Ping and Pull Approach).",
   "affectsState": true,
   "code": "import-pnp",
   "system": true,
@@ -22,14 +22,6 @@
       "type": "url"
     },
     {
-      "name": "inputSource",
-      "use": "in",
-      "min": 1,
-      "max": "1",
-      "documentation": "The base URL of the source FHIR server that the data is being exported from (e.g. https://example.org/fhir)",
-      "type": "string"
-    },
-    {
       "name": "exportType",
       "use": "in",
       "min": 0,
@@ -42,7 +34,7 @@
       "use": "in",
       "min": 0,
       "max": "1",
-      "documentation": "Controls how data is merged with existing resources. Possible values are 'error', 'overwrite', 'append', 'ignore', and 'merge'. A value of 'error' (default) will cause the operation to fail if resources already exist. A value of 'overwrite' will cause all existing resources of the same type to be deleted and replaced. A value of 'append' will add new resources without modifying existing ones. A value of 'ignore' will skip resources that already exist. A value of 'merge' will match existing resources with updated resources based on their ID.",
+      "documentation": "Controls how data is merged with existing resources. Possible values are 'error' (fail if resources exist), 'overwrite' (delete and replace all existing resources; default), 'append' (add new resources without modifying existing), 'ignore' (skip if resources exist), and 'merge' (match by ID and update or add as appropriate). This parameter is an extension to the SMART Bulk Data Import proposal that is specific to the Pathling implementation.",
       "type": "code"
     }
   ]

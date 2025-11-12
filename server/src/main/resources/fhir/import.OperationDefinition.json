@@ -59,7 +59,7 @@
       "type": "code"
     },
     {
-      "name": "mode",
+      "name": "saveMode",
       "use": "in",
       "min": 0,
       "max": "1",
