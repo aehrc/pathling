@@ -45,7 +45,7 @@ import org.apache.spark.sql.Column;
 public record RepeatSelection(
     @Nonnull List<FhirPath> paths,
     @Nonnull ProjectionClause component
-) implements ProjectionClause {
+) implements UnarySelection {
 
   private static final int DEF_MAX_DEPTH = 10;
 
@@ -84,34 +84,16 @@ public record RepeatSelection(
     return component.evaluate(schemaContext).withResultColumn(result);
   }
 
-  @Nonnull
-  @Override
-  public String toString() {
-    return "RepeatSelection{" +
-        "paths=[" + paths.stream()
-        .map(FhirPath::toExpression)
-        .collect(Collectors.joining(", ")) +
-        "], component=" + component +
-        '}';
-  }
-
   /**
    * Returns the FHIRPath expression representation of this repeat selection.
    *
    * @return the expression string containing repeat with paths
    */
   @Nonnull
+  @Override
   public String toExpression() {
     return "repeat: [" + paths.stream()
         .map(FhirPath::toExpression)
         .collect(Collectors.joining(", ")) + "]";
-  }
-
-  @Override
-  @Nonnull
-  public String toTreeString(final int level) {
-    final String indent = "  ".repeat(level);
-    return indent + toExpression() + "\n" +
-        component.toTreeString(level + 1);
   }
 }

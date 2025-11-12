@@ -17,11 +17,8 @@
 
 package au.csiro.pathling.projection;
 
-import static java.util.stream.Collectors.joining;
-
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Groups multiple selections together using a union (concatenation).
@@ -35,7 +32,7 @@ import org.jetbrains.annotations.NotNull;
  * @author Piotr Szul
  */
 public record UnionSelection(@Nonnull List<ProjectionClause> components) implements
-    ProjectionClause {
+    CompositeSelection {
 
   @Nonnull
   @Override
@@ -55,17 +52,8 @@ public record UnionSelection(@Nonnull List<ProjectionClause> components) impleme
    * @return the expression string "union"
    */
   @Nonnull
+  @Override
   public String toExpression() {
     return "union";
-  }
-
-  @Override
-  @Nonnull
-  public @NotNull String toTreeString(final int level) {
-    final String indent = "  ".repeat(level);
-    return indent + toExpression() + "\n" +
-        components.stream()
-            .map(c -> c.toTreeString(level + 1))
-            .collect(joining("\n"));
   }
 }

@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.projection;
 
-import static au.csiro.pathling.encoders.ColumnFunctions.structProductOuter;
-
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import jakarta.annotation.Nonnull;
@@ -45,7 +43,7 @@ public record UnnestingSelection(
     @Nonnull FhirPath path,
     @Nonnull ProjectionClause component,
     boolean joinOuter
-) implements ProjectionClause {
+) implements UnarySelection {
 
   @Nonnull
   @Override
@@ -54,20 +52,10 @@ public record UnnestingSelection(
     final Collection unnestingCollection = context.evalExpression(path);
     final ProjectionContext unnestingContext = context.withInputContext(unnestingCollection);
     final Column columnResult = component.evaluateElementWise(unnestingContext);
-    return component.evaluate(unnestingContext.asStubContext())
-        .withResultColumn(joinOuter
-                          ? structProductOuter(columnResult)
-                          : columnResult);
-  }
-
-  @Nonnull
-  @Override
-  public String toString() {
-    return "UnnestingSelection{" +
-        "path=" + path +
-        ", component=" + component +
-        ", joinOuter=" + joinOuter +
-        '}';
+    return component
+        .evaluate(unnestingContext.asStubContext())
+        .withResultColumn(columnResult)
+        .orNull(joinOuter);
   }
 
   /**
@@ -76,19 +64,12 @@ public record UnnestingSelection(
    * @return the expression string containing forEach or forEachOrNull with path
    */
   @Nonnull
+  @Override
   public String toExpression() {
     return (joinOuter
             ? "forEachOrNull"
             : "forEach")
         + ": " + path.toExpression();
-  }
-
-  @Override
-  @Nonnull
-  public String toTreeString(final int level) {
-    final String indent = "  ".repeat(level);
-    return indent + toExpression() + "\n" +
-        component.toTreeString(level + 1);
   }
 
 }

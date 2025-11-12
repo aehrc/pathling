@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.projection;
 
-import static java.util.stream.Collectors.joining;
-
 import jakarta.annotation.Nonnull;
 import java.util.List;
 
@@ -34,7 +32,7 @@ import java.util.List;
  * @author Piotr Szul
  */
 public record GroupingSelection(@Nonnull List<ProjectionClause> components) implements
-    ProjectionClause {
+    CompositeSelection {
 
   @Override
   @Nonnull
@@ -43,17 +41,7 @@ public record GroupingSelection(@Nonnull List<ProjectionClause> components) impl
     final List<ProjectionResult> subResults = components.stream().map(c -> c.evaluate(context))
         .toList();
     // Use the explicit product method for clarity
-    return ProjectionResult.product(subResults, false);
-  }
-
-  @Nonnull
-  @Override
-  public String toString() {
-    return "GroupingSelection{" +
-        "components=[" + components.stream()
-        .map(ProjectionClause::toString)
-        .collect(joining(", ")) +
-        "]}";
+    return ProjectionResult.product(subResults);
   }
 
   /**
@@ -62,17 +50,8 @@ public record GroupingSelection(@Nonnull List<ProjectionClause> components) impl
    * @return the string expression "group"
    */
   @Nonnull
+  @Override
   public String toExpression() {
     return "group";
-  }
-
-  @Override
-  @Nonnull
-  public String toTreeString(final int level) {
-    final String indent = "  ".repeat(level);
-    return indent + toExpression() + "\n" +
-        components.stream()
-            .map(c -> c.toTreeString(level + 1))
-            .collect(joining("\n"));
   }
 }

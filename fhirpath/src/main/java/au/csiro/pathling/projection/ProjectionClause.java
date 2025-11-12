@@ -20,6 +20,8 @@ package au.csiro.pathling.projection;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import jakarta.annotation.Nonnull;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.spark.sql.Column;
 
 /**
@@ -69,12 +71,51 @@ public interface ProjectionClause {
   }
 
   /**
+   * Returns a stream of child projection clauses.
+   * <p>
+   * The default implementation returns an empty stream for leaf nodes.
+   * Implementations with children should override this method.
+   * </p>
+   *
+   * @return a stream of child projection clauses
+   */
+  @Nonnull
+  default Stream<ProjectionClause> getChildren() {
+    return Stream.empty();
+  }
+
+  /**
+   * Returns an expression string representation of this clause.
+   * <p>
+   * Used by {@link #toTreeString(int)} to display this node in the tree.
+   * </p>
+   *
+   * @return a string representation of this clause's expression
+   */
+  @Nonnull
+  String toExpression();
+
+  /**
    * Returns a tree-like string representation of this clause for debugging purposes.
+   * <p>
+   * The default implementation uses {@link #toExpression()} for this node and
+   * recursively calls {@link #toTreeString(int)} on children from {@link #getChildren()}.
+   * </p>
    *
    * @param level the indentation level for the tree structure
    * @return a formatted tree string representation
    */
   @Nonnull
-  String toTreeString(final int level);
+  default String toTreeString(final int level) {
+    final String indent = "  ".repeat(level);
+    final String childrenStr = getChildren()
+        .map(child -> child.toTreeString(level + 1))
+        .collect(Collectors.joining("\n"));
+
+    if (childrenStr.isEmpty()) {
+      return indent + toExpression();
+    }
+    return indent + toExpression() + "\n" + childrenStr;
+  }
 
 }
