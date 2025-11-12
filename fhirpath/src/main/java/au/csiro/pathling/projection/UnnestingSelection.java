@@ -17,25 +17,25 @@
 
 package au.csiro.pathling.projection;
 
-import static au.csiro.pathling.encoders.ColumnFunctions.structProduct;
 import static au.csiro.pathling.encoders.ColumnFunctions.structProductOuter;
-import static org.apache.spark.sql.functions.flatten;
-import static org.apache.spark.sql.functions.transform;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import jakarta.annotation.Nonnull;
-import java.util.List;
-import java.util.stream.Collectors;
 import org.apache.spark.sql.Column;
 
 /**
  * Represents a selection that unnests a nested data structure, with either inner or outer join
  * semantics.
+ * <p>
+ * This selection evaluates a FHIRPath expression to get a collection, then applies a projection
+ * clause to each element of that collection. The results are flattened into a single array. When
+ * multiple projections are needed, wrap them in a {@link GroupingSelection} first.
+ * </p>
  *
  * @param path the FHIRPath expression that identifies the collection to unnest
- * @param components the list of components to select from the unnesting collection
+ * @param component the projection clause to apply to each element (use GroupingSelection for
+ * multiple)
  * @param joinOuter whether to use outer join semantics (i.e., return a row even if the unnesting
  * collection is empty)
  * @author John Grimes
@@ -43,7 +43,7 @@ import org.apache.spark.sql.Column;
  */
 public record UnnestingSelection(
     @Nonnull FhirPath path,
-    @Nonnull List<ProjectionClause> components,
+    @Nonnull ProjectionClause component,
     boolean joinOuter
 ) implements ProjectionClause {
 
@@ -52,49 +52,12 @@ public record UnnestingSelection(
   public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
     // Evaluate the path to get the collection that will serve as the basis for unnesting.
     final Collection unnestingCollection = context.evalExpression(path);
-
-    // Get the column that represents the unnesting collection.
-    final Column unnestingColumn = unnestingCollection.getColumn().toArray().getValue();
-
-    // Unnest the components of the unnesting selection.
-    Column columnResult = flatten(
-        transform(unnestingColumn, c -> unnestComponents(c, unnestingCollection, context)));
-
-    if (joinOuter) {
-      // If we are doing an outer join, we need to use structProductOuter to ensure that a row is
-      // always returned, even if the unnesting collection is empty.
-      columnResult = structProductOuter(columnResult);
-    }
-
-    // This is a way to evaluate the expression for the purpose of getting the types of the result.
-    final ProjectionContext stubContext = context.withInputContext(
-        unnestingCollection.map(c -> DefaultRepresentation.empty()));
-    final List<ProjectionResult> stubResults = components.stream()
-        .map(s -> s.evaluate(stubContext))
-        .toList();
-    final List<ProjectedColumn> columnDescriptors = stubResults.stream()
-        .flatMap(sr -> sr.getResults().stream())
-        .toList();
-
-    // Return a new projection result from the column result and the column descriptors.
-    return ProjectionResult.of(columnDescriptors, columnResult);
-  }
-
-  @Nonnull
-  private Column unnestComponents(@Nonnull final Column unnestingColumn,
-      @Nonnull final Collection unnestingCollection, @Nonnull final ProjectionContext context) {
-    // Create a new projection context based upon the unnesting collection.
-    final ProjectionContext projectionContext = context.withInputContext(
-        unnestingCollection.map(c -> new DefaultRepresentation(unnestingColumn)));
-
-    // Evaluate each of the components of the unnesting selection, and get the result
-    // columns.
-    final Column[] subSelectionColumns = components.stream()
-        .map(s -> s.evaluate(projectionContext).getResultColumn())
-        .toArray(Column[]::new);
-
-    // Combine the result columns into a struct.
-    return structProduct(subSelectionColumns);
+    final ProjectionContext unnestingContext = context.withInputContext(unnestingCollection);
+    final Column columnResult = component.evaluateElementWise(unnestingContext);
+    return component.evaluate(unnestingContext.asStubContext())
+        .withResultColumn(joinOuter
+                          ? structProductOuter(columnResult)
+                          : columnResult);
   }
 
   @Nonnull
@@ -102,10 +65,8 @@ public record UnnestingSelection(
   public String toString() {
     return "UnnestingSelection{" +
         "path=" + path +
-        ", components=[" + components.stream()
-        .map(ProjectionClause::toString)
-        .collect(Collectors.joining(", ")) +
-        "], joinOuter=" + joinOuter +
+        ", component=" + component +
+        ", joinOuter=" + joinOuter +
         '}';
   }
 
@@ -127,9 +88,7 @@ public record UnnestingSelection(
   public String toTreeString(final int level) {
     final String indent = "  ".repeat(level);
     return indent + toExpression() + "\n" +
-        components.stream()
-            .map(c -> c.toTreeString(level + 1))
-            .collect(Collectors.joining("\n"));
+        component.toTreeString(level + 1);
   }
 
 }

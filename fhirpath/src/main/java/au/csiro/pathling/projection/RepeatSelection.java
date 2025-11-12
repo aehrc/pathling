@@ -22,6 +22,7 @@ import static org.apache.spark.sql.functions.concat;
 import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,15 +30,21 @@ import org.apache.spark.sql.Column;
 
 /**
  * Represents a selection that performs recursive traversal of nested data structures using the
- * repeat directive. This enables automatic flattening of hierarchical data to any depth.
+ * repeat directive.
+ * <p>
+ * This enables automatic flattening of hierarchical data to any depth by recursively following the
+ * specified paths and applying a projection clause at each level. When multiple projections are
+ * needed, wrap them in a {@link GroupingSelection} first.
+ * </p>
  *
  * @param paths the list of FHIRPath expressions that define paths to recursively traverse
- * @param components the list of components to select from the recursively collected nodes
+ * @param component the projection clause to apply at each level (use GroupingSelection for
+ * multiple)
  * @author Piotr Szul
  */
 public record RepeatSelection(
     @Nonnull List<FhirPath> paths,
-    @Nonnull List<ProjectionClause> components
+    @Nonnull ProjectionClause component
 ) implements ProjectionClause {
 
   private static final int DEF_MAX_DEPTH = 10;
@@ -46,20 +53,18 @@ public record RepeatSelection(
   @Override
   public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
 
-    final ProjectionEvalHelper evalHelper = new ProjectionEvalHelper(components);
-
-    // create the list of the  non-empty starting context the current context and provided paths
+    // Create the list of non-empty starting contexts from current context and provided paths
     final List<ProjectionContext> startingNodes = paths.stream()
         .map(context::evalExpression)
         .filter(Collection::isNotEmpty)
         .map(context::withInputContext)
         .toList();
 
-    // then we map them to transformTree expressions and contact the results
+    // Map starting nodes to transformTree expressions and concatenate the results
     final Column[] nodeResults = startingNodes.stream()
         .map(ctx -> ValueFunctions.transformTree(
                 ctx.inputContext().getColumnValue(),
-                c -> evalHelper.evalForEach(ctx.withInputColumn(c)),
+                c -> component.evaluateElementWise(ctx.withInputColumn(c)),
                 paths.stream().map(ctx::asColumnOperator).toList(),
                 DEF_MAX_DEPTH
             )
@@ -67,16 +72,16 @@ public record RepeatSelection(
 
     final Column result = nodeResults.length > 0
                           ? concat(nodeResults)
-                          : evalHelper.evalForEach(context.withEmptyInput());
+                          : DefaultRepresentation.empty().plural()
+                              .transform(component.asColumnOperator(context.withEmptyInput()))
+                              .flatten().getValue();
 
-    // compute the output schema based on the first non-empty starting context or an empty context
+    // Compute the output schema based on first non-empty context or empty context
     final ProjectionContext schemaContext = startingNodes.stream()
         .findFirst()
         .orElse(context.withEmptyInput());
 
-    final List<ProjectedColumn> columnDescriptors = evalHelper.getResultSchema(schemaContext);
-    // Return a new projection result from the column result and the column descriptors
-    return ProjectionResult.of(columnDescriptors, result);
+    return component.evaluate(schemaContext).withResultColumn(result);
   }
 
   @Nonnull
@@ -86,10 +91,8 @@ public record RepeatSelection(
         "paths=[" + paths.stream()
         .map(FhirPath::toExpression)
         .collect(Collectors.joining(", ")) +
-        "], components=[" + components.stream()
-        .map(ProjectionClause::toString)
-        .collect(Collectors.joining(", ")) +
-        "]}";
+        "], component=" + component +
+        '}';
   }
 
   /**
@@ -109,8 +112,6 @@ public record RepeatSelection(
   public String toTreeString(final int level) {
     final String indent = "  ".repeat(level);
     return indent + toExpression() + "\n" +
-        components.stream()
-            .map(c -> c.toTreeString(level + 1))
-            .collect(Collectors.joining("\n"));
+        component.toTreeString(level + 1);
   }
 }

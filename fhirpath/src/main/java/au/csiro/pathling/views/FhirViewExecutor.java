@@ -161,7 +161,7 @@ public class FhirViewExecutor {
       final List<FhirPath> repeatPaths = select.getRepeat().stream()
           .map(parser::parse)
           .toList();
-      return new RepeatSelection(repeatPaths, parseSubSelection(select));
+      return new RepeatSelection(repeatPaths, wrapInGroupingIfNeeded(parseSubSelection(select)));
     } else if (nonNull(select.getForEach()) && nonNull(select.getForEachOrNull())) {
       throw new IllegalStateException(
           "Both forEach and forEachOrNull are set in the select clause");
@@ -169,13 +169,13 @@ public class FhirViewExecutor {
       // If this is a "for each" selection, we use an UnnestingSelection. This will produce a row
       // for each item in the collection produced by the parent path.
       return new UnnestingSelection(parser.parse(requireNonNull(select.getForEach())),
-          parseSubSelection(select), false);
+          wrapInGroupingIfNeeded(parseSubSelection(select)), false);
     } else { // this implies that forEachOrNull is non-null
       // If this is a "for each or null" selection, we use an UnnestingSelection with a flag set to
       // true. This will produce a row for each item in the collection produced by the parent path,
       // or a single null row if the parent path evaluates to an empty collection.
       return new UnnestingSelection(parser.parse(requireNonNull(select.getForEachOrNull())),
-          parseSubSelection(select), true);
+          wrapInGroupingIfNeeded(parseSubSelection(select)), true);
     }
   }
 
@@ -223,6 +223,23 @@ public class FhirViewExecutor {
         )
         .flatMap(Function.identity())
         .toList();
+  }
+
+  /**
+   * Wraps a list of projection clauses in a {@link GroupingSelection} if needed.
+   * <p>
+   * This helper method is used to adapt multiple projection clauses into a single clause, which is
+   * required by {@link UnnestingSelection} and {@link RepeatSelection}. If the list contains a
+   * single clause, it is returned as-is. If the list contains multiple clauses, they are wrapped in
+   * a {@link GroupingSelection} to produce their Cartesian product.
+   * </p>
+   *
+   * @param clauses the list of projection clauses to wrap
+   * @return a single projection clause
+   */
+  @Nonnull
+  private ProjectionClause wrapInGroupingIfNeeded(@Nonnull final List<ProjectionClause> clauses) {
+    return clauses.size() == 1 ? clauses.getFirst() : new GroupingSelection(clauses);
   }
 
   /**

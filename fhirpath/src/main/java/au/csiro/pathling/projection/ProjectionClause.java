@@ -17,7 +17,10 @@
 
 package au.csiro.pathling.projection;
 
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import jakarta.annotation.Nonnull;
+import java.util.function.UnaryOperator;
+import org.apache.spark.sql.Column;
 
 /**
  * Represents a component of an abstract query for projecting FHIR data.
@@ -32,6 +35,38 @@ public interface ProjectionClause {
    */
   @Nonnull
   ProjectionResult evaluate(@Nonnull final ProjectionContext context);
+
+  /**
+   * Converts this projection clause into a column operator that can be applied to individual
+   * elements in a collection.
+   * <p>
+   * This is useful for per-element evaluation in transformations like unnesting and recursive
+   * traversal. The returned operator evaluates this projection clause using the provided column as
+   * input context.
+   * </p>
+   *
+   * @param context The projection context containing execution environment
+   * @return A unary operator that takes a column and returns the projection result column
+   */
+  @Nonnull
+  default UnaryOperator<Column> asColumnOperator(@Nonnull final ProjectionContext context) {
+    return column -> evaluate(context.withInputColumn(column)).getResultColumn();
+  }
+
+
+  /**
+   * Evaluates this projection clause element-wise on the input column in the provided context.
+   *
+   * @param context The projection context containing execution environment
+   * @return The resulting column after element-wise evaluation
+   */
+  @Nonnull
+  default Column evaluateElementWise(@Nonnull final ProjectionContext context) {
+    return new DefaultRepresentation(context.inputContext().getColumnValue())
+        .transform(asColumnOperator(context))
+        .flatten()
+        .getValue();
+  }
 
   /**
    * Returns a tree-like string representation of this clause for debugging purposes.
