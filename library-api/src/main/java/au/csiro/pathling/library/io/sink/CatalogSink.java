@@ -24,6 +24,8 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
 import io.delta.tables.DeltaTable;
 import jakarta.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
@@ -47,18 +49,6 @@ class CatalogSink implements DataSink {
 
   @Nonnull
   private final Optional<String> format;
-
-  /**
-   * Constructs a CatalogSink with the specified PathlingContext and default import mode.
-   *
-   * @param context the PathlingContext to use
-   */
-  CatalogSink(@Nonnull final PathlingContext context) {
-    this.context = context;
-    this.saveMode = SaveMode.ERROR_IF_EXISTS; // Default import mode
-    this.schema = Optional.empty(); // Schema not specified
-    this.format = Optional.empty(); // Format not specified
-  }
 
   /**
    * Constructs a CatalogSink with the specified PathlingContext and import mode.
@@ -105,10 +95,14 @@ class CatalogSink implements DataSink {
   }
 
   @Override
-  public void write(@Nonnull final DataSource source) {
+  @Nonnull
+  public WriteDetails write(@Nonnull final DataSource source) {
+    final List<FileInformation> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       final String tableName = getTableName(resourceType);
+
+      fileInfos.add(new FileInformation(resourceType, tableName, null));
 
       switch (saveMode) {
         case ERROR_IF_EXISTS, APPEND, IGNORE -> writeDataset(dataset, tableName, saveMode);
@@ -136,6 +130,7 @@ class CatalogSink implements DataSink {
         }
       }
     }
+    return new WriteDetails(fileInfos);
   }
 
   private void writeDataset(@Nonnull final Dataset<Row> dataset,

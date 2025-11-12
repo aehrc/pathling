@@ -291,12 +291,13 @@ public class PathlingContext {
 
     final ExpressionEncoder<T> encoder = fhirEncoders.of(resourceClass);
     final Dataset<T> typedResources = resources.as(encoder);
+    
     final MapPartitionsFunction<T, String> mapper = new DecodeResourceMapPartitions<>(fhirVersion,
         outputMimeType);
 
     return typedResources.mapPartitions(mapper, Encoders.STRING());
   }
-
+  
   /**
    * Takes a dataframe with string representations of FHIR resources and encodes the resources of
    * the given type as a Spark dataframe.
