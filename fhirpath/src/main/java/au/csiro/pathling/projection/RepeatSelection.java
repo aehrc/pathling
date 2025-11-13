@@ -40,14 +40,14 @@ import org.apache.spark.sql.Column;
  * @param paths the list of FHIRPath expressions that define paths to recursively traverse
  * @param component the projection clause to apply at each level (use GroupingSelection for
  * multiple)
+ * @param maxDepth the maximum depth for self-referencing structure traversals
  * @author Piotr Szul
  */
 public record RepeatSelection(
     @Nonnull List<FhirPath> paths,
-    @Nonnull ProjectionClause component
+    @Nonnull ProjectionClause component,
+    int maxDepth
 ) implements UnarySelection {
-
-  private static final int DEF_MAX_DEPTH = 10;
 
   @Nonnull
   @Override
@@ -66,7 +66,7 @@ public record RepeatSelection(
                 ctx.inputContext().getColumnValue(),
                 c -> component.evaluateElementWise(ctx.withInputColumn(c)),
                 paths.stream().map(ctx::asColumnOperator).toList(),
-                DEF_MAX_DEPTH
+                maxDepth
             )
         ).toArray(Column[]::new);
 

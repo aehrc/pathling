@@ -39,10 +39,11 @@ public class QueryConfiguration {
   private Boolean explainQueries = false;
 
   /**
-   * This controls whether the built-in caching within Spark is used for search results. It may be
-   * useful to turn this off for large datasets in memory-constrained environments.
+   * Maximum depth for self-referencing structure traversals in repeat operations. Controls how
+   * deeply nested hierarchical data can be flattened during projection.
    */
   @NotNull
   @Builder.Default
-  private Boolean cacheResults = true;
+  private Integer maxSelfReferencingTraversalDepth = 10;
+
 }

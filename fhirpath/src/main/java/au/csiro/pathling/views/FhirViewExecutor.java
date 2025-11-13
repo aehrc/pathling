@@ -22,6 +22,7 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.execution.FhirPathEvaluators.SingleEvaluatorFactory;
 import au.csiro.pathling.fhirpath.parser.Parser;
@@ -75,6 +76,25 @@ public class FhirViewExecutor {
   @Nonnull
   private final Parser parser;
 
+  @Nonnull
+  private final QueryConfiguration queryConfiguration;
+
+  /**
+   * @param fhirContext The FHIR context to use for the execution context
+   * @param sparkSession The Spark session to use for the execution context
+   * @param dataset The data source to use for the execution context
+   * @param queryConfiguration The query configuration to control query execution behavior
+   */
+  public FhirViewExecutor(@Nonnull final FhirContext fhirContext,
+      @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataset,
+      @Nonnull final QueryConfiguration queryConfiguration) {
+    this.fhirContext = fhirContext;
+    this.sparkSession = sparkSession;
+    this.dataSource = dataset;
+    this.queryConfiguration = queryConfiguration;
+    this.parser = new Parser();
+  }
+
   /**
    * @param fhirContext The FHIR context to use for the execution context
    * @param sparkSession The Spark session to use for the execution context
@@ -82,10 +102,7 @@ public class FhirViewExecutor {
    */
   public FhirViewExecutor(@Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataset) {
-    this.fhirContext = fhirContext;
-    this.sparkSession = sparkSession;
-    this.dataSource = dataset;
-    this.parser = new Parser();
+    this(fhirContext, sparkSession, dataset, QueryConfiguration.builder().build());
   }
 
   /**
@@ -161,7 +178,8 @@ public class FhirViewExecutor {
       final List<FhirPath> repeatPaths = select.getRepeat().stream()
           .map(parser::parse)
           .toList();
-      return new RepeatSelection(repeatPaths, wrapInGroupingIfNeeded(parseSubSelection(select)));
+      return new RepeatSelection(repeatPaths, wrapInGroupingIfNeeded(parseSubSelection(select)),
+          queryConfiguration.getMaxSelfReferencingTraversalDepth());
     } else if (nonNull(select.getForEach()) && nonNull(select.getForEachOrNull())) {
       throw new IllegalStateException(
           "Both forEach and forEachOrNull are set in the select clause");
