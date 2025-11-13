@@ -33,6 +33,7 @@ import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.HttpClientCachingConfiguration;
 import au.csiro.pathling.config.HttpClientCachingStorageType;
 import au.csiro.pathling.config.HttpClientConfiguration;
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
@@ -242,7 +243,9 @@ public class PathlingContextTest {
         .enableExtensions(false)
         .maxNestingLevel(1)
         .build();
-    final Row rowWithNesting = PathlingContext.create(spark, encodingConfig1)
+    final Row rowWithNesting = PathlingContext.builder(spark)
+        .encodingConfiguration(encodingConfig1)
+        .build()
         .encode(jsonResourcesDF, "Questionnaire").head();
     assertFieldNotPresent("_extension", rowWithNesting.schema());
     // Test item nesting
@@ -259,7 +262,9 @@ public class PathlingContextTest {
         .enableExtensions(true)
         .openTypes(Set.of("boolean", "string", "Address"))
         .build();
-    final Row rowWithExtensions = PathlingContext.create(spark, encodingConfig2)
+    final Row rowWithExtensions = PathlingContext.builder(spark)
+        .encodingConfiguration(encodingConfig2)
+        .build()
         .encode(jsonResourcesDF, "Patient").head();
     assertFieldPresent("_extension", rowWithExtensions.schema());
 
@@ -279,7 +284,9 @@ public class PathlingContextTest {
     final EncodingConfiguration encodingConfig = EncodingConfiguration.builder()
         .enableExtensions(true)
         .build();
-    final PathlingContext pathling = PathlingContext.create(spark, encodingConfig);
+    final PathlingContext pathling = PathlingContext.builder(spark)
+        .encodingConfiguration(encodingConfig)
+        .build();
 
     final Dataset<Row> jsonResources = spark.readStream()
         .text(TEST_DATA_URL + "/resources/R4/json");
@@ -323,7 +330,9 @@ public class PathlingContextTest {
     final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
         .serverUrl(terminologyServerUrl)
         .build();
-    final PathlingContext pathlingContext = PathlingContext.create(spark, terminologyConfig);
+    final PathlingContext pathlingContext = PathlingContext.builder(spark)
+        .terminologyConfiguration(terminologyConfig)
+        .build();
     assertNotNull(pathlingContext);
     final DefaultTerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
         FhirVersionEnum.R4, terminologyConfig);
@@ -345,7 +354,9 @@ public class PathlingContextTest {
         .serverUrl(terminologyServerUrl)
         .cache(cacheConfig)
         .build();
-    final PathlingContext pathlingContext = PathlingContext.create(spark, terminologyConfig);
+    final PathlingContext pathlingContext = PathlingContext.builder(spark)
+        .terminologyConfiguration(terminologyConfig)
+        .build();
     assertNotNull(pathlingContext);
     final TerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
         FhirVersionEnum.R4, terminologyConfig);
@@ -400,7 +411,9 @@ public class PathlingContextTest {
         .authentication(authConfig)
         .build();
 
-    final PathlingContext pathlingContext = PathlingContext.create(spark, terminologyConfig);
+    final PathlingContext pathlingContext = PathlingContext.builder(spark)
+        .terminologyConfiguration(terminologyConfig)
+        .build();
     assertNotNull(pathlingContext);
     final TerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
         FhirVersionEnum.R4, terminologyConfig);
@@ -422,8 +435,11 @@ public class PathlingContextTest {
             .build())
         .build();
 
+    final PathlingContext.Builder builder = PathlingContext.builder(spark)
+        .terminologyConfiguration(invalidTerminologyConfig);
+
     final ConstraintViolationException ex = assertThrows(ConstraintViolationException.class,
-        () -> PathlingContext.create(spark, invalidTerminologyConfig));
+        builder::build);
 
     assertEquals("Invalid terminology configuration:"
         + " cache: If the storage type is disk, then a storage path must be supplied.,"
@@ -442,8 +458,12 @@ public class PathlingContextTest {
         .openTypes(null)
         .build();
 
+    final PathlingContext.Builder builder = PathlingContext.builder(spark)
+        .encodingConfiguration(invalidEncodersConfiguration)
+        .terminologyConfiguration(terminologyConfig);
+
     final ConstraintViolationException ex = assertThrows(ConstraintViolationException.class,
-        () -> PathlingContext.create(spark, invalidEncodersConfiguration, terminologyConfig));
+        builder::build);
 
     assertEquals("Invalid encoding configuration:"
             + " maxNestingLevel: must be greater than or equal to 0,"
@@ -451,4 +471,88 @@ public class PathlingContextTest {
         ex.getMessage());
   }
 
+  @Test
+  void testBuildContextWithQueryConfiguration() {
+    final QueryConfiguration queryConfig = QueryConfiguration.builder()
+        .explainQueries(true)
+        .maxUnboundTraversalDepth(20)
+        .build();
+
+    final PathlingContext pathlingContext = PathlingContext.builder(spark)
+        .queryConfiguration(queryConfig)
+        .build();
+
+    assertNotNull(pathlingContext);
+    assertNotNull(pathlingContext.getQueryConfiguration());
+    assertEquals(true, pathlingContext.getQueryConfiguration().getExplainQueries());
+    assertEquals(20, pathlingContext.getQueryConfiguration().getMaxUnboundTraversalDepth());
+  }
+
+  @Test
+  void testBuildContextWithDefaultQueryConfiguration() {
+    final PathlingContext pathlingContext = PathlingContext.builder(spark).build();
+
+    assertNotNull(pathlingContext);
+    assertNotNull(pathlingContext.getQueryConfiguration());
+    assertEquals(false, pathlingContext.getQueryConfiguration().getExplainQueries());
+    assertEquals(10, pathlingContext.getQueryConfiguration().getMaxUnboundTraversalDepth());
+  }
+
+  @Test
+  void failsOnInvalidQueryConfiguration() {
+    // Test with both null explainQueries and negative maxUnboundTraversalDepth
+    final QueryConfiguration invalidQueryConfig = QueryConfiguration.builder()
+        .explainQueries(null)
+        .maxUnboundTraversalDepth(-5)
+        .build();
+
+    final PathlingContext.Builder builder = PathlingContext.builder(spark)
+        .queryConfiguration(invalidQueryConfig);
+
+    final ConstraintViolationException ex = assertThrows(ConstraintViolationException.class,
+        builder::build);
+
+    final String message = ex.getMessage();
+    assertTrue(message.contains("explainQueries: must not be null"),
+        "Expected error message to contain 'explainQueries: must not be null', but was: " + message);
+    assertTrue(message.contains("maxUnboundTraversalDepth: must be greater than or equal to 0"),
+        "Expected error message to contain 'maxUnboundTraversalDepth: must be greater than or equal to 0', but was: " + message);
+  }
+
+  @Test
+  void testBuilderWithNullSpark() {
+    final PathlingContext pathlingContext = PathlingContext.builder()
+        .spark(null)
+        .build();
+
+    assertNotNull(pathlingContext);
+    assertNotNull(pathlingContext.getSpark());
+  }
+
+  @Test
+  void testBuilderWithAllConfigurations() {
+    final EncodingConfiguration encodingConfig = EncodingConfiguration.builder()
+        .maxNestingLevel(5)
+        .enableExtensions(false)
+        .build();
+
+    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
+        .build();
+
+    final QueryConfiguration queryConfig = QueryConfiguration.builder()
+        .explainQueries(true)
+        .maxUnboundTraversalDepth(15)
+        .build();
+
+    final PathlingContext pathlingContext = PathlingContext.builder(spark)
+        .encodingConfiguration(encodingConfig)
+        .terminologyConfiguration(terminologyConfig)
+        .queryConfiguration(queryConfig)
+        .build();
+
+    assertNotNull(pathlingContext);
+    assertNotNull(pathlingContext.getQueryConfiguration());
+    assertEquals(true, pathlingContext.getQueryConfiguration().getExplainQueries());
+    assertEquals(15, pathlingContext.getQueryConfiguration().getMaxUnboundTraversalDepth());
+  }
 }

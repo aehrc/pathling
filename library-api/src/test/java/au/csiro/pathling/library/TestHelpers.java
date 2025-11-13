@@ -17,11 +17,18 @@
 
 package au.csiro.pathling.library;
 
+import au.csiro.pathling.config.QueryConfiguration;
+import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.SparkSession.Builder;
 
 public class TestHelpers {
+
+  private TestHelpers() {
+    // Utility class - prevent instantiation
+  }
 
   @Nonnull
   public static SparkSession spark() {
@@ -40,6 +47,22 @@ public class TestHelpers {
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog");
+  }
+
+  /**
+   * Creates a {@link PathlingContext} with advanced configuration for testing purposes.
+   *
+   * @param spark the Spark session to use
+   * @param fhirEncoders the FHIR encoders to use
+   * @param terminologyServiceFactory the terminology service factory to use
+   * @return a new {@link PathlingContext} instance with default query configuration
+   */
+  @Nonnull
+  public static PathlingContext createPathlingContext(@Nonnull final SparkSession spark,
+      @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
+    return new PathlingContext(spark, fhirEncoders, terminologyServiceFactory,
+        QueryConfiguration.builder().build());
   }
 
 }

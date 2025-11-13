@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.config;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Data;
@@ -43,7 +44,8 @@ public class QueryConfiguration {
    * deeply nested hierarchical data can be flattened during projection.
    */
   @NotNull
+  @Min(0)
   @Builder.Default
-  private Integer maxSelfReferencingTraversalDepth = 10;
+  private Integer maxUnboundTraversalDepth = 10;
 
 }

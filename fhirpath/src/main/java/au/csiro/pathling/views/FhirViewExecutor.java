@@ -179,7 +179,7 @@ public class FhirViewExecutor {
           .map(parser::parse)
           .toList();
       return new RepeatSelection(repeatPaths, wrapInGroupingIfNeeded(parseSubSelection(select)),
-          queryConfiguration.getMaxSelfReferencingTraversalDepth());
+          queryConfiguration.getMaxUnboundTraversalDepth());
     } else if (nonNull(select.getForEach()) && nonNull(select.getForEachOrNull())) {
       throw new IllegalStateException(
           "Both forEach and forEachOrNull are set in the select clause");

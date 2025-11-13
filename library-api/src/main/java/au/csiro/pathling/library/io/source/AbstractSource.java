@@ -63,7 +63,7 @@ public abstract class AbstractSource implements QueryableDataSource {
   private QueryDispatcher buildDispatcher(final @Nonnull PathlingContext context,
       final DataSource dataSource) {
     final FhirViewExecutor viewExecutor = new FhirViewExecutor(context.getFhirContext(),
-        context.getSpark(), dataSource
+        context.getSpark(), dataSource, context.getQueryConfiguration()
     );
 
     // Build the dispatcher using the executors.
