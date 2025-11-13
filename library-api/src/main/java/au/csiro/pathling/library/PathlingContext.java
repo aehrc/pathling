@@ -102,7 +102,15 @@ public class PathlingContext {
   @Getter
   private final Gson gson;
 
-  PathlingContext(@Nonnull final SparkSession spark,
+  /**
+   * Creates a new PathlingContext with the specified configuration.
+   *
+   * @param spark the Spark session to use
+   * @param fhirEncoders the FHIR encoders to use
+   * @param terminologyServiceFactory the terminology service factory to use
+   * @param queryConfiguration the query configuration to use
+   */
+  private PathlingContext(@Nonnull final SparkSession spark,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
       @Nonnull final QueryConfiguration queryConfiguration) {
@@ -122,6 +130,24 @@ public class PathlingContext {
     builder.registerTypeAdapterFactory(new ConstantDeclarationTypeAdapterFactory());
     builder.registerTypeAdapterFactory(new StrictStringTypeAdapterFactory());
     return builder.create();
+  }
+
+  /**
+   * Creates a {@link PathlingContext} with advanced configuration for testing purposes. This method
+   * is internal and should not be used by library consumers but it needs to be public to be
+   * accessible from other packages in the module.
+   *
+   * @param spark the Spark session to use
+   * @param fhirEncoders the FHIR encoders to use
+   * @param terminologyServiceFactory the terminology service factory to use
+   * @return a new {@link PathlingContext} instance with default query configuration
+   */
+  @Nonnull
+  public static PathlingContext createInternal(@Nonnull final SparkSession spark,
+      @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
+    return new PathlingContext(spark, fhirEncoders, terminologyServiceFactory,
+        QueryConfiguration.builder().build());
   }
 
   /**
@@ -219,7 +245,9 @@ public class PathlingContext {
     @Nonnull
     private static <T> T getOrDefault(@Nullable final T value,
         @Nonnull final java.util.function.Supplier<T> defaultSupplier) {
-      return value != null ? value : defaultSupplier.get();
+      return value != null
+             ? value
+             : defaultSupplier.get();
     }
 
     private static void validateConfigurations(

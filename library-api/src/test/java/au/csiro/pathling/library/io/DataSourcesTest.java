@@ -103,7 +103,7 @@ class DataSourcesTest {
         TerminologyServiceFactory.class, withSettings().serializable());
 
     // Create the Pathling context.
-    pathlingContext = TestHelpers.createPathlingContext(spark, FhirEncoders.forR4().getOrCreate(),
+    pathlingContext = PathlingContext.createInternal(spark, FhirEncoders.forR4().getOrCreate(),
         terminologyServiceFactory);
   }
 
