@@ -306,6 +306,35 @@ public class PathlingContext {
   }
 
   /**
+   * Returns the encoding configuration used by this PathlingContext.
+   * <p>
+   * The configuration is constructed on-demand from the current state of the FhirEncoders
+   * instance.
+   *
+   * @return the encoding configuration, never null
+   */
+  @Nonnull
+  public EncodingConfiguration getEncodingConfiguration() {
+    return fhirEncoders.getConfiguration();
+  }
+
+  /**
+   * Returns the terminology configuration used by this PathlingContext.
+   * <p>
+   * The configuration is retrieved from the terminology service factory. Factories that do not
+   * support configuration access will throw {@link IllegalStateException}.
+   *
+   * @return the terminology configuration, never null
+   * @throws IllegalStateException if the terminology service factory does not support
+   *     configuration access
+   */
+  @Nonnull
+  public TerminologyConfiguration getTerminologyConfiguration() {
+    return terminologyServiceFactory.getConfiguration();
+  }
+
+
+  /**
    * Creates a new {@link PathlingContext} with a default setup for Spark, FHIR encoders, and
    * terminology services.
    *

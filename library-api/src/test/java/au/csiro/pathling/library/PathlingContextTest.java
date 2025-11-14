@@ -22,6 +22,7 @@ import static au.csiro.pathling.test.SchemaAsserts.assertFieldPresent;
 import static java.util.function.Predicate.not;
 import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -36,6 +37,7 @@ import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -243,10 +245,10 @@ public class PathlingContextTest {
         .enableExtensions(false)
         .maxNestingLevel(1)
         .build();
-    final Row rowWithNesting = PathlingContext.builder(spark)
+    final PathlingContext context1 = PathlingContext.builder(spark)
         .encodingConfiguration(encodingConfig1)
-        .build()
-        .encode(jsonResourcesDF, "Questionnaire").head();
+        .build();
+    final Row rowWithNesting = context1.encode(jsonResourcesDF, "Questionnaire").head();
     assertFieldNotPresent("_extension", rowWithNesting.schema());
     // Test item nesting
     final Row itemWithNesting = (Row) rowWithNesting
@@ -256,16 +258,21 @@ public class PathlingContextTest {
         .getList(itemWithNesting.fieldIndex("item")).getFirst();
     assertFieldNotPresent("item", nestedItem.schema());
 
+    // Verify encoding configuration can be retrieved
+    final EncodingConfiguration retrievedConfig1 = context1.getEncodingConfiguration();
+    assertFalse(retrievedConfig1.isEnableExtensions());
+    assertEquals(1, retrievedConfig1.getMaxNestingLevel());
+
     // Test explicit options
     // Extensions and open types
     final EncodingConfiguration encodingConfig2 = EncodingConfiguration.builder()
         .enableExtensions(true)
         .openTypes(Set.of("boolean", "string", "Address"))
         .build();
-    final Row rowWithExtensions = PathlingContext.builder(spark)
+    final PathlingContext context2 = PathlingContext.builder(spark)
         .encodingConfiguration(encodingConfig2)
-        .build()
-        .encode(jsonResourcesDF, "Patient").head();
+        .build();
+    final Row rowWithExtensions = context2.encode(jsonResourcesDF, "Patient").head();
     assertFieldPresent("_extension", rowWithExtensions.schema());
 
     final Map<Integer, ArraySeq<Row>> extensions = rowWithExtensions
@@ -277,6 +284,11 @@ public class PathlingContextTest {
     assertFieldPresent("valueAddress", extension.schema());
     assertFieldPresent("valueBoolean", extension.schema());
     assertFieldNotPresent("valueInteger", extension.schema());
+
+    // Verify encoding configuration can be retrieved
+    final EncodingConfiguration retrievedConfig2 = context2.getEncodingConfiguration();
+    assertTrue(retrievedConfig2.isEnableExtensions());
+    assertEquals(Set.of("boolean", "string", "Address"), retrievedConfig2.getOpenTypes());
   }
 
   @Test
@@ -341,6 +353,12 @@ public class PathlingContextTest {
     assertEquals(expectedFactory, actualServiceFactory);
     final TerminologyService actualService = actualServiceFactory.build();
     assertNotNull(actualService);
+
+    // Verify terminology configuration can be retrieved
+    final TerminologyConfiguration retrievedConfig = pathlingContext.getTerminologyConfiguration();
+    assertNotNull(retrievedConfig);
+    assertEquals(terminologyServerUrl, retrievedConfig.getServerUrl());
+    assertTrue(retrievedConfig.isEnabled());
   }
 
   @Test
@@ -422,6 +440,24 @@ public class PathlingContextTest {
     assertEquals(expectedFactory, actualServiceFactory);
     final TerminologyService actualService = actualServiceFactory.build();
     assertNotNull(actualService);
+
+    // Verify terminology configuration can be retrieved with all custom values
+    final TerminologyConfiguration retrievedConfig = pathlingContext.getTerminologyConfiguration();
+    assertNotNull(retrievedConfig);
+    assertEquals(terminologyServerUrl, retrievedConfig.getServerUrl());
+    assertTrue(retrievedConfig.isVerboseLogging());
+    assertEquals(maxConnectionsTotal, retrievedConfig.getClient().getMaxConnectionsTotal());
+    assertEquals(maxConnectionsPerRoute, retrievedConfig.getClient().getMaxConnectionsPerRoute());
+    assertEquals(socketTimeout, retrievedConfig.getClient().getSocketTimeout());
+    assertEquals(cacheMaxEntries, retrievedConfig.getCache().getMaxEntries());
+    assertEquals(cacheStorageType, retrievedConfig.getCache().getStorageType());
+    assertEquals(cacheStoragePath, retrievedConfig.getCache().getStoragePath());
+    assertEquals(tokenEndpoint, retrievedConfig.getAuthentication().getTokenEndpoint());
+    assertEquals(clientId, retrievedConfig.getAuthentication().getClientId());
+    assertEquals(clientSecret, retrievedConfig.getAuthentication().getClientSecret());
+    assertEquals(scope, retrievedConfig.getAuthentication().getScope());
+    assertEquals(tokenExpiryTolerance,
+        retrievedConfig.getAuthentication().getTokenExpiryTolerance());
   }
 
   @Test
@@ -486,6 +522,10 @@ public class PathlingContextTest {
     assertNotNull(pathlingContext.getQueryConfiguration());
     assertEquals(true, pathlingContext.getQueryConfiguration().getExplainQueries());
     assertEquals(20, pathlingContext.getQueryConfiguration().getMaxUnboundTraversalDepth());
+
+    // Verify configuration can be retrieved
+    final QueryConfiguration retrievedConfig = pathlingContext.getQueryConfiguration();
+    assertEquals(queryConfig, retrievedConfig);
   }
 
   @Test
@@ -514,9 +554,11 @@ public class PathlingContextTest {
 
     final String message = ex.getMessage();
     assertTrue(message.contains("explainQueries: must not be null"),
-        "Expected error message to contain 'explainQueries: must not be null', but was: " + message);
+        "Expected error message to contain 'explainQueries: must not be null', but was: "
+            + message);
     assertTrue(message.contains("maxUnboundTraversalDepth: must be greater than or equal to 0"),
-        "Expected error message to contain 'maxUnboundTraversalDepth: must be greater than or equal to 0', but was: " + message);
+        "Expected error message to contain 'maxUnboundTraversalDepth: must be greater than or equal to 0', but was: "
+            + message);
   }
 
   @Test
@@ -554,5 +596,73 @@ public class PathlingContextTest {
     assertNotNull(pathlingContext.getQueryConfiguration());
     assertEquals(true, pathlingContext.getQueryConfiguration().getExplainQueries());
     assertEquals(15, pathlingContext.getQueryConfiguration().getMaxUnboundTraversalDepth());
+  }
+
+  @Test
+  void testConfigurationRoundTrip() {
+    // Create specific configurations
+    final EncodingConfiguration encodingConfig = EncodingConfiguration.builder()
+        .maxNestingLevel(7)
+        .enableExtensions(true)
+        .openTypes(Set.of("string", "Coding"))
+        .build();
+
+    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
+        .serverUrl("https://test.server.com/fhir")
+        .verboseLogging(true)
+        .build();
+
+    final QueryConfiguration queryConfig = QueryConfiguration.builder()
+        .explainQueries(true)
+        .maxUnboundTraversalDepth(25)
+        .build();
+
+    // Build context with configurations
+    final PathlingContext pathlingContext = PathlingContext.builder(spark)
+        .encodingConfiguration(encodingConfig)
+        .terminologyConfiguration(terminologyConfig)
+        .queryConfiguration(queryConfig)
+        .build();
+
+    // Retrieve configurations
+    final EncodingConfiguration retrievedEncodingConfig = pathlingContext.getEncodingConfiguration();
+    final TerminologyConfiguration retrievedTerminologyConfig = pathlingContext.getTerminologyConfiguration();
+    final QueryConfiguration retrievedQueryConfig = pathlingContext.getQueryConfiguration();
+
+    // Verify encoding configuration matches
+    assertEquals(7, retrievedEncodingConfig.getMaxNestingLevel());
+    assertTrue(retrievedEncodingConfig.isEnableExtensions());
+    assertEquals(Set.of("string", "Coding"), retrievedEncodingConfig.getOpenTypes());
+
+    // Verify terminology configuration matches
+    assertEquals("https://test.server.com/fhir", retrievedTerminologyConfig.getServerUrl());
+    assertTrue(retrievedTerminologyConfig.isVerboseLogging());
+
+    // Verify query configuration matches
+    assertEquals(queryConfig, retrievedQueryConfig);
+    assertEquals(true, retrievedQueryConfig.getExplainQueries());
+    assertEquals(25, retrievedQueryConfig.getMaxUnboundTraversalDepth());
+  }
+
+  @Test
+  void testTerminologyConfigurationWithNonConfigurableFactory() {
+    // Create a mock terminology service factory that uses default implementation
+    final TerminologyServiceFactory mockFactory = mock(
+        TerminologyServiceFactory.class, withSettings().serializable());
+
+    // Mock uses default method which throws IllegalStateException
+    when(mockFactory.getConfiguration()).thenCallRealMethod();
+
+    // Create context using createInternal (which bypasses builder validations)
+    final PathlingContext pathlingContext = PathlingContext.createInternal(
+        spark, FhirEncoders.forR4().getOrCreate(), mockFactory);
+
+    // Verify default implementation throws expected exception
+    final IllegalStateException ex = assertThrows(IllegalStateException.class,
+        pathlingContext::getTerminologyConfiguration);
+
+    assertTrue(ex.getMessage().contains("does not support configuration access"),
+        "Expected error message to contain 'does not support configuration access', but was: "
+            + ex.getMessage());
   }
 }
