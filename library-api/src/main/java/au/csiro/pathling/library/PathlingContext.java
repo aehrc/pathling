@@ -230,11 +230,11 @@ public class PathlingContext {
     public PathlingContext build() {
       final SparkSession finalSpark = getOrDefault(spark, PathlingContext::buildDefaultSpark);
       final EncodingConfiguration finalEncodingConfig = getOrDefault(encodingConfiguration,
-          () -> EncodingConfiguration.builder().build());
+          EncodingConfiguration.builder()::build);
       final TerminologyConfiguration finalTerminologyConfig = getOrDefault(
-          terminologyConfiguration, () -> TerminologyConfiguration.builder().build());
+          terminologyConfiguration, TerminologyConfiguration.builder()::build);
       final QueryConfiguration finalQueryConfig = getOrDefault(queryConfiguration,
-          () -> QueryConfiguration.builder().build());
+          QueryConfiguration.builder()::build);
 
       validateConfigurations(finalEncodingConfig, finalTerminologyConfig, finalQueryConfig);
 
