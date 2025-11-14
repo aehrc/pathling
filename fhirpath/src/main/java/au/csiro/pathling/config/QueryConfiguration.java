@@ -18,7 +18,6 @@
 package au.csiro.pathling.config;
 
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Data;
 
@@ -35,17 +34,15 @@ public class QueryConfiguration {
    * Setting this option to {@code true} will enable additional logging relating to the query plan
    * used to execute queries.
    */
-  @NotNull
   @Builder.Default
-  private Boolean explainQueries = false;
+  private boolean explainQueries = false;
 
   /**
    * Maximum depth for self-referencing structure traversals in repeat operations. Controls how
    * deeply nested hierarchical data can be flattened during projection.
    */
-  @NotNull
   @Min(0)
   @Builder.Default
-  private Integer maxUnboundTraversalDepth = 10;
+  private int maxUnboundTraversalDepth = 10;
 
 }

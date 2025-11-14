@@ -520,7 +520,7 @@ public class PathlingContextTest {
 
     assertNotNull(pathlingContext);
     assertNotNull(pathlingContext.getQueryConfiguration());
-    assertEquals(true, pathlingContext.getQueryConfiguration().getExplainQueries());
+    assertTrue(pathlingContext.getQueryConfiguration().isExplainQueries());
     assertEquals(20, pathlingContext.getQueryConfiguration().getMaxUnboundTraversalDepth());
 
     // Verify configuration can be retrieved
@@ -534,15 +534,14 @@ public class PathlingContextTest {
 
     assertNotNull(pathlingContext);
     assertNotNull(pathlingContext.getQueryConfiguration());
-    assertEquals(false, pathlingContext.getQueryConfiguration().getExplainQueries());
+    assertFalse(pathlingContext.getQueryConfiguration().isExplainQueries());
     assertEquals(10, pathlingContext.getQueryConfiguration().getMaxUnboundTraversalDepth());
   }
 
   @Test
   void failsOnInvalidQueryConfiguration() {
-    // Test with both null explainQueries and negative maxUnboundTraversalDepth
+    // Test with negative maxUnboundTraversalDepth
     final QueryConfiguration invalidQueryConfig = QueryConfiguration.builder()
-        .explainQueries(null)
         .maxUnboundTraversalDepth(-5)
         .build();
 
@@ -553,9 +552,6 @@ public class PathlingContextTest {
         builder::build);
 
     final String message = ex.getMessage();
-    assertTrue(message.contains("explainQueries: must not be null"),
-        "Expected error message to contain 'explainQueries: must not be null', but was: "
-            + message);
     assertTrue(message.contains("maxUnboundTraversalDepth: must be greater than or equal to 0"),
         "Expected error message to contain 'maxUnboundTraversalDepth: must be greater than or equal to 0', but was: "
             + message);
@@ -594,7 +590,7 @@ public class PathlingContextTest {
 
     assertNotNull(pathlingContext);
     assertNotNull(pathlingContext.getQueryConfiguration());
-    assertEquals(true, pathlingContext.getQueryConfiguration().getExplainQueries());
+    assertTrue(pathlingContext.getQueryConfiguration().isExplainQueries());
     assertEquals(15, pathlingContext.getQueryConfiguration().getMaxUnboundTraversalDepth());
   }
 
@@ -640,7 +636,7 @@ public class PathlingContextTest {
 
     // Verify query configuration matches
     assertEquals(queryConfig, retrievedQueryConfig);
-    assertEquals(true, retrievedQueryConfig.getExplainQueries());
+    assertTrue(retrievedQueryConfig.isExplainQueries());
     assertEquals(25, retrievedQueryConfig.getMaxUnboundTraversalDepth());
   }
 

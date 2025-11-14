@@ -23,13 +23,12 @@ test_that("default configurations are correct", {
   encoding_config <- pc %>% j_invoke("getEncodingConfiguration")
 
   # Verify default encoding configuration values
-  expect_equal(encoding_config %>% j_invoke("getMaxNestingLevel"), 3L)
-  expect_equal(encoding_config %>% j_invoke("isEnableExtensions"), FALSE)
+  expect_equal(encoding_config %>% invoke("getMaxNestingLevel"), 3L)
+  expect_equal(encoding_config %>% invoke("isEnableExtensions"), FALSE)
 
   # Verify default open types match STANDARD_OPEN_TYPES
-  open_types <- encoding_config %>%
-    j_invoke("getOpenTypes") %>%
-    as.character()
+  open_types_set <- encoding_config %>% j_invoke("getOpenTypes")
+  open_types <- invoke(open_types_set, "toArray")
   expected_types <- c(
     "boolean", "code", "date", "dateTime", "decimal", "integer",
     "string", "Coding", "CodeableConcept", "Address", "Identifier", "Reference"
@@ -40,8 +39,8 @@ test_that("default configurations are correct", {
   query_config <- pc %>% j_invoke("getQueryConfiguration")
 
   # Verify default query configuration values
-  expect_equal(query_config %>% j_invoke("isExplainQueries"), FALSE)
-  expect_equal(query_config %>% j_invoke("getMaxUnboundTraversalDepth"), 10L)
+  expect_equal(query_config %>% invoke("isExplainQueries"), FALSE)
+  expect_equal(query_config %>% invoke("getMaxUnboundTraversalDepth"), 10L)
 
   # Clean up
   pathling_disconnect(pc)
@@ -63,21 +62,20 @@ test_that("custom configurations round trip correctly", {
   encoding_config <- pc %>% j_invoke("getEncodingConfiguration")
 
   # Verify custom encoding configuration values
-  expect_equal(encoding_config %>% j_invoke("getMaxNestingLevel"), 5L)
-  expect_equal(encoding_config %>% j_invoke("isEnableExtensions"), TRUE)
+  expect_equal(encoding_config %>% invoke("getMaxNestingLevel"), 5L)
+  expect_equal(encoding_config %>% invoke("isEnableExtensions"), TRUE)
 
   # Verify custom open types
-  open_types <- encoding_config %>%
-    j_invoke("getOpenTypes") %>%
-    as.character()
+  open_types_set <- encoding_config %>% j_invoke("getOpenTypes")
+  open_types <- invoke(open_types_set, "toArray")
   expect_setequal(open_types, c("string", "boolean"))
 
   # Retrieve QueryConfiguration
   query_config <- pc %>% j_invoke("getQueryConfiguration")
 
   # Verify custom query configuration values
-  expect_equal(query_config %>% j_invoke("isExplainQueries"), TRUE)
-  expect_equal(query_config %>% j_invoke("getMaxUnboundTraversalDepth"), 20L)
+  expect_equal(query_config %>% invoke("isExplainQueries"), TRUE)
+  expect_equal(query_config %>% invoke("getMaxUnboundTraversalDepth"), 20L)
 
   # Clean up
   pathling_disconnect(pc)
