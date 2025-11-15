@@ -78,32 +78,19 @@ public record ColumnSelection(@Nonnull List<RequestedColumn> columns) implements
     return collections.iterator();
   }
 
-  @Nonnull
-  @Override
-  public String toString() {
-    return "ColumnSelection{" +
-        "columns=[" + columns.stream()
-        .map(RequestedColumn::toString)
-        .collect(Collectors.joining(", ")) +
-        "]}";
-  }
-
   /**
    * Returns a string expression representation of this column selection.
    *
    * @return the string expression "columns"
    */
   @Nonnull
+  @Override
   public String toExpression() {
-    return "columns";
+    return "columns[" +
+        columns.stream()
+            .map(RequestedColumn::toExpression)
+            .collect(Collectors.joining(", ")) +
+        "]";
   }
 
-  @Override
-  @Nonnull
-  public String toTreeString(final int level) {
-    return "  ".repeat(level) + toExpression() + "\n" +
-        columns.stream()
-            .map(c -> "  ".repeat(level + 1) + c.toExpression())
-            .collect(Collectors.joining("\n"));
-  }
 }

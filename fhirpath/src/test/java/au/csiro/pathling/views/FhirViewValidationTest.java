@@ -200,9 +200,48 @@ class FhirViewValidationTest {
     final Set<ConstraintViolation<FhirView>> validationResult = ValidationUtils.validate(fhirView);
     assertEquals(1, validationResult.size());
     final ConstraintViolation<FhirView> violation = validationResult.iterator().next();
-    assertEquals("Only one of the fields [forEach, forEachOrNull] can be non-null",
+    assertEquals("Only one of the fields [forEach, forEachOrNull, repeat] can be non-null",
         violation.getMessage());
     assertEquals("select[0]", violation.getPropertyPath().toString());
+  }
+
+  @Test
+  void testAtMostOneNonNullWithRepeat() {
+    // Create a SelectClause with both forEach and repeat set
+    final SelectClause invalidSelectClause1 = SelectClause.builder()
+        .forEach("Patient.name")
+        .repeat("item", "answer.item")
+        .column(Column.single("id", "Patient.id"))
+        .build();
+
+    final FhirView fhirView1 = FhirView.ofResource("Patient")
+        .select(invalidSelectClause1)
+        .build();
+
+    final Set<ConstraintViolation<FhirView>> validationResult1 = ValidationUtils.validate(fhirView1);
+    assertEquals(1, validationResult1.size());
+    final ConstraintViolation<FhirView> violation1 = validationResult1.iterator().next();
+    assertEquals("Only one of the fields [forEach, forEachOrNull, repeat] can be non-null",
+        violation1.getMessage());
+    assertEquals("select[0]", violation1.getPropertyPath().toString());
+
+    // Create a SelectClause with both forEachOrNull and repeat set
+    final SelectClause invalidSelectClause2 = SelectClause.builder()
+        .forEachOrNull("Patient.address")
+        .repeat("item", "answer.item")
+        .column(Column.single("id", "Patient.id"))
+        .build();
+
+    final FhirView fhirView2 = FhirView.ofResource("Patient")
+        .select(invalidSelectClause2)
+        .build();
+
+    final Set<ConstraintViolation<FhirView>> validationResult2 = ValidationUtils.validate(fhirView2);
+    assertEquals(1, validationResult2.size());
+    final ConstraintViolation<FhirView> violation2 = validationResult2.iterator().next();
+    assertEquals("Only one of the fields [forEach, forEachOrNull, repeat] can be non-null",
+        violation2.getMessage());
+    assertEquals("select[0]", violation2.getPropertyPath().toString());
   }
 
   @Test
@@ -269,7 +308,16 @@ class FhirViewValidationTest {
         Arguments.of(
             "ForEachOrNullSelect direct validation",
             FhirView.ofResource("Patient")
-                .select(forEach("Patient.name", invalidColumn))
+                .select(FhirView.forEachOrNull("Patient.name", invalidColumn))
+                .build(),
+            "select[0].column[0].name"
+        ),
+
+        // Test validation in RepeatSelect
+        Arguments.of(
+            "RepeatSelect direct validation",
+            FhirView.ofResource("QuestionnaireResponse")
+                .select(FhirView.repeat(List.of("item", "answer.item"), invalidColumn))
                 .build(),
             "select[0].column[0].name"
         ),

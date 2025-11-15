@@ -1,0 +1,84 @@
+{
+  "resourceType": "ViewDefinition",
+  "id": "QuestionnaireResponseFlat",
+  "name": "questionnaire_response_flat",
+  "description": "Flattened questionnaire response data with recursively unnested items. One row per item at any nesting level. Useful for analysing questionnaire answers across all item types and testing the repeat directive with multiple expressions.",
+  "status": "draft",
+  "resource": "QuestionnaireResponse",
+  "select": [
+    {
+      "column": [
+        {
+          "path": "getResourceKey()",
+          "name": "id",
+          "description": "Unique questionnaire response identifier"
+        },
+        {
+          "path": "questionnaire",
+          "name": "questionnaire",
+          "type": "canonical",
+          "description": "Canonical URL of the questionnaire being answered"
+        },
+        {
+          "path": "status",
+          "name": "status",
+          "type": "code",
+          "description": "Response status: in-progress, completed, amended, entered-in-error, stopped"
+        },
+        {
+          "path": "subject.getReferenceKey(Patient)",
+          "name": "patient_id",
+          "description": "Patient identifier for joining with patient views"
+        },
+        {
+          "path": "authored",
+          "name": "authored",
+          "type": "dateTime",
+          "description": "Date and time the response was authored in ISO 8601 format"
+        }
+      ]
+    },
+    {
+      "repeat": [
+        "item"
+      ],
+      "column": [
+        {
+          "path": "linkId",
+          "name": "item_link_id",
+          "description": "Unique identifier for this item within the questionnaire definition"
+        },
+        {
+          "path": "answer.value.ofType(integer)",
+          "name": "answer_value_integer",
+          "description": "Integer answer value; null if answer is not an integer or no answer provided"
+        },
+        {
+          "path": "answer.value.ofType(string)",
+          "name": "answer_value_string",
+          "description": "String answer value; null if answer is not a string or no answer provided"
+        },
+        {
+          "path": "answer.value.ofType(boolean)",
+          "name": "answer_value_boolean",
+          "description": "Boolean answer value; null if answer is not a boolean or no answer provided"
+        },
+        {
+          "path": "answer.value.ofType(decimal)",
+          "name": "answer_value_decimal",
+          "description": "Decimal answer value; null if answer is not a decimal or no answer provided"
+        },
+        {
+          "path": "answer.value.ofType(date)",
+          "name": "answer_value_date",
+          "description": "Date answer value in YYYY-MM-DD format; null if answer is not a date or no answer provided"
+        },
+        {
+          "path": "answer.value.ofType(time)",
+          "name": "answer_value_time",
+          "description": "Time answer value; null if answer is not a time or no answer provided"
+        }
+      ]
+    }
+  ]
+}

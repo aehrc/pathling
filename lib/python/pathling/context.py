@@ -99,6 +99,8 @@ class PathlingContext:
         scope: Optional[str] = None,
         token_expiry_tolerance: Optional[int] = 120,
         accept_language: Optional[str] = None,
+        explain_queries: Optional[bool] = False,
+        max_unbound_traversal_depth: Optional[int] = 10,
         enable_delta=False,
         enable_remote_debugging: Optional[bool] = False,
         debug_port: Optional[int] = 5005,
@@ -173,6 +175,11 @@ class PathlingContext:
                the header is not sent. The server can use the header to return the result in the
                preferred language if it is able. The actual behaviour may depend on the server
                implementation and the code systems used.
+        :param explain_queries: setting this option to `True` will enable additional logging relating
+               to the query plan used to execute queries
+        :param max_unbound_traversal_depth: maximum depth for self-referencing structure traversals
+               in repeat operations. Controls how deeply nested hierarchical data can be flattened
+               during projection.
         :param enable_delta: enables the use of Delta for storage of FHIR data.
                Only supported when no SparkSession is provided.
         :param enable_remote_debugging: enables remote debugging for the JVM process.
@@ -270,8 +277,20 @@ class PathlingContext:
             .build()
         )
 
-        jpc: JavaObject = jvm.au.csiro.pathling.library.PathlingContext.create(
-            spark._jsparkSession, encoders_config, terminology_config
+        # Build a query configuration object from the provided parameters.
+        query_config = (
+            jvm.au.csiro.pathling.config.QueryConfiguration.builder()
+            .explainQueries(explain_queries)
+            .maxUnboundTraversalDepth(max_unbound_traversal_depth)
+            .build()
+        )
+
+        jpc: JavaObject = (
+            jvm.au.csiro.pathling.library.PathlingContext.builder(spark._jsparkSession)
+            .encodingConfiguration(encoders_config)
+            .terminologyConfiguration(terminology_config)
+            .queryConfiguration(query_config)
+            .build()
         )
         return PathlingContext(spark, jpc)
 

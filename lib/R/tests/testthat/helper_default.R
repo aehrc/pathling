@@ -36,7 +36,7 @@ def_pathling_context <- function(spark) {
       j_invoke_new("au.csiro.pathling.terminology.mock.MockTerminologyServiceFactory")
 
   spark %>%
-      j_invoke_static("au.csiro.pathling.library.PathlingContext", "create",
+      j_invoke_static("au.csiro.pathling.library.PathlingContext", "createInternal",
                       spark_session(spark), encoders, terminology_service_factory)
 }
 

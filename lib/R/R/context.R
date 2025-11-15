@@ -79,6 +79,11 @@ StorageType <- list(
 #'   expiry when deciding whether to send it with a terminology request
 #' @param accept_language The default value of the Accept-Language HTTP header passed to the
 #'   terminology server
+#' @param explain_queries Setting this option to TRUE will enable additional logging relating
+#'   to the query plan used to execute queries
+#' @param max_unbound_traversal_depth Maximum depth for self-referencing structure traversals
+#'   in repeat operations. Controls how deeply nested hierarchical data can be flattened
+#'   during projection.
 #'
 #' @return A Pathling context instance initialized with the specified configuration
 #'
@@ -124,7 +129,9 @@ pathling_connect <- function(
     client_secret = NULL,
     scope = NULL,
     token_expiry_tolerance = 120,
-    accept_language = NULL
+    accept_language = NULL,
+    explain_queries = FALSE,
+    max_unbound_traversal_depth = 10
 ) {
 
 
@@ -202,9 +209,19 @@ pathling_connect <- function(
       j_invoke("acceptLanguage", accept_language) %>%
       j_invoke("build")
 
-  j_invoke_static(spark, "au.csiro.pathling.library.PathlingContext", "create",
-                  sparklyr::spark_session(spark),
-                  encoders_config, terminology_config)
+  query_config <- j_invoke_static(
+      spark, "au.csiro.pathling.config.QueryConfiguration", "builder"
+  ) %>%
+      j_invoke("explainQueries", as.logical(explain_queries)) %>%
+      j_invoke("maxUnboundTraversalDepth", as.integer(max_unbound_traversal_depth)) %>%
+      j_invoke("build")
+
+  j_invoke_static(spark, "au.csiro.pathling.library.PathlingContext", "builder",
+                  sparklyr::spark_session(spark)) %>%
+      j_invoke("encodingConfiguration", encoders_config) %>%
+      j_invoke("terminologyConfiguration", terminology_config) %>%
+      j_invoke("queryConfiguration", query_config) %>%
+      j_invoke("build")
 }
 
 #' Get the Spark session

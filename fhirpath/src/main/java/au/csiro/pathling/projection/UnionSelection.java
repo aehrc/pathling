@@ -17,54 +17,33 @@
 
 package au.csiro.pathling.projection;
 
-import static au.csiro.pathling.encoders.ValueFunctions.ifArray;
-import static java.util.stream.Collectors.joining;
-import static org.apache.spark.sql.functions.array;
-import static org.apache.spark.sql.functions.concat;
-import static org.apache.spark.sql.functions.isnull;
-import static org.apache.spark.sql.functions.when;
-
 import jakarta.annotation.Nonnull;
 import java.util.List;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
-import org.jetbrains.annotations.NotNull;
 
 /**
- * Groups multiple selections together using a union.
+ * Groups multiple selections together using a union (concatenation).
+ * <p>
+ * This is the primary mechanism for combining multiple projection clauses into a single result
+ * where all component results are concatenated sequentially.
+ * </p>
  *
- * @param components The list of projection clauses to be combined in the union
+ * @param components The list of projection clauses to be combined via concatenation
  * @author John Grimes
  * @author Piotr Szul
  */
 public record UnionSelection(@Nonnull List<ProjectionClause> components) implements
-    ProjectionClause {
+    CompositeSelection {
 
   @Nonnull
   @Override
   public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
-    // Evaluate each component of the union.
+    // Evaluate each component
     final List<ProjectionResult> results = components.stream()
         .map(c -> c.evaluate(context))
         .toList();
 
-    // Process each result to ensure that they are all arrays.
-    final Column[] converted = results.stream()
-        .map(ProjectionResult::getResultColumn)
-        // When the result is a singular null, convert it to an empty array.
-        .map(col -> when(isnull(col), array())
-            .otherwise(ifArray(col,
-                // If the column is an array, return it as is.
-                c -> c,
-                // If the column is a singular value, convert it to an array.
-                functions::array
-            )))
-        .toArray(Column[]::new);
-
-    // Concatenate the converted columns.
-    final Column combinedResult = concat(converted);
-
-    return ProjectionResult.of(results.get(0).getResults(), combinedResult);
+    // Use the explicit concatenate method
+    return ProjectionResult.concatenate(results);
   }
 
   /**
@@ -73,17 +52,8 @@ public record UnionSelection(@Nonnull List<ProjectionClause> components) impleme
    * @return the expression string "union"
    */
   @Nonnull
+  @Override
   public String toExpression() {
     return "union";
-  }
-
-  @Override
-  @Nonnull
-  public @NotNull String toTreeString(final int level) {
-    final String indent = "  ".repeat(level);
-    return indent + toExpression() + "\n" +
-        components.stream()
-            .map(c -> c.toTreeString(level + 1))
-            .collect(joining("\n"));
   }
 }

@@ -18,8 +18,12 @@
 package au.csiro.pathling.projection;
 
 
+import static org.apache.spark.sql.functions.concat;
+
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import lombok.Value;
@@ -48,50 +52,86 @@ public class ProjectionResult {
   @Nonnull
   Column resultColumn;
 
+
   /**
-   * Combine the results of multiple projections into a single result.
+   * Creates a new ProjectionResult with the specified result column, retaining the existing
+   * results list.
    *
-   * @param results The results to combine
-   * @return The combined result
+   * @param newResultColumn The new result column
+   * @return A new ProjectionResult with the updated result column
    */
   @Nonnull
-  public static ProjectionResult combine(@Nonnull final List<ProjectionResult> results) {
-    return combine(results, false);
+  ProjectionResult withResultColumn(@Nonnull final Column newResultColumn) {
+    return of(this.results, newResultColumn);
   }
 
   /**
-   * Combine the results of multiple projections into a single result, with outer join semantics.
+   * Creates a product (Cartesian product) of multiple projection results.
+   * <p>
+   * This combines results using struct product semantics, where each result is expanded to include
+   * all combinations from the inputs.
+   * </p>
    *
-   * @param results The results to combine
-   * @param outer Whether to use outer join semantics
-   * @return The combined result
+   * @param results The results to combine via product
+   * @return The product of all results
    */
   @Nonnull
-  public static ProjectionResult combine(@Nonnull final List<ProjectionResult> results,
-      final boolean outer) {
-    if (results.size() == 1 && !outer) {
-      return results.get(0);
+  public static ProjectionResult product(@Nonnull final List<ProjectionResult> results) {
+    if (results.isEmpty()) {
+      throw new IllegalArgumentException("Cannot create product of empty list of results");
+    }
+    if (results.size() == 1) {
+      return results.getFirst();
     } else {
       return of(
           results.stream().flatMap(r -> r.getResults().stream()).toList(),
-          structProduct(outer,
+          ColumnFunctions.structProduct(
               results.stream().map(ProjectionResult::getResultColumn).toArray(Column[]::new))
       );
     }
   }
 
   /**
-   * Creates a struct product column from the given columns.
+   * Creates a concatenation (union) of multiple projection results.
+   * <p>
+   * This combines results by concatenating their arrays, ensuring each result is converted to an
+   * array format before concatenation.
+   * </p>
    *
-   * @param outer whether to use outer join semantics
-   * @param columns the columns to include in the struct product
-   * @return a new struct product column
+   * @param results The results to concatenate
+   * @return The concatenated result
    */
   @Nonnull
-  public static Column structProduct(final boolean outer, @Nonnull final Column... columns) {
-    return outer
-           ? ColumnFunctions.structProductOuter(columns)
-           : ColumnFunctions.structProduct(columns);
+  public static ProjectionResult concatenate(@Nonnull final List<ProjectionResult> results) {
+    if (results.isEmpty()) {
+      throw new IllegalArgumentException("Cannot concatenate empty list of results");
+    }
+    // Process each result to ensure they are all arrays
+    final Column[] converted = results.stream()
+        .map(ProjectionResult::getResultColumn)
+        .map(DefaultRepresentation::new)
+        .map(ColumnRepresentation::plural)
+        .map(ColumnRepresentation::getValue)
+        .toArray(Column[]::new);
+    // Concatenate the converted columns
+    final Column combinedResult = concat(converted);
+    // Use the schema from the first result
+    return results.getFirst().withResultColumn(combinedResult);
   }
 
+
+  /**
+   * Creates a new ProjectionResult where the null value is added if the result is empty for outer
+   * join.
+   *
+   * @param outerJoin Whether to use outer join semantics
+   * @return A new ProjectionResult with null values
+   */
+  @Nonnull
+  public ProjectionResult orNull(final boolean outerJoin) {
+    return outerJoin
+           ? withResultColumn(ColumnFunctions.structProductOuter(resultColumn))
+           : this;
+
+  }
 }

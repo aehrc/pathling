@@ -278,19 +278,22 @@ public class Collection implements Equatable {
     // 1. If the child is a choice, we have special behaviour for traversing to the choice that 
     //    results in a mixed collection.
     // 2. If the child is a regular element, we use the standard traversal method.
-    if (childDefinition instanceof final ChoiceDefinition choiceChildDefinition) {
-      return MixedCollection.buildElement(this, choiceChildDefinition);
-    } else if (childDefinition instanceof final ElementDefinition elementChildDefinition) {
-      if (elementChildDefinition.isChoiceElement()) {
-        log.warn(
-            "Traversing a choice element `{}` without using ofType() is not portable and may not work in some FHIRPath implementations. "
-                + "Consider using ofType() to specify the type of element you want to traverse.",
-            elementChildDefinition.getElementName());
+    switch (childDefinition) {
+      case final ChoiceDefinition choiceChildDefinition -> {
+        return MixedCollection.buildElement(this, choiceChildDefinition);
       }
-      return traverseElement(elementChildDefinition);
-    } else {
-      throw new IllegalArgumentException("Unsupported child definition type: " + childDefinition
-          .getClass().getSimpleName());
+      case final ElementDefinition elementChildDefinition -> {
+        if (elementChildDefinition.isChoiceElement()) {
+          log.warn(
+              "Traversing a choice element `{}` without using ofType() is not portable and may not work in some FHIRPath implementations. "
+                  + "Consider using ofType() to specify the type of element you want to traverse.",
+              elementChildDefinition.getElementName());
+        }
+        return traverseElement(elementChildDefinition);
+      }
+      default ->
+          throw new IllegalArgumentException("Unsupported child definition type: " + childDefinition
+              .getClass().getSimpleName());
     }
   }
 
@@ -360,6 +363,26 @@ public class Collection implements Equatable {
   }
 
   /**
+   * Returns a new {@link Collection} with the specified {@link Column}, preserving type and
+   * extension information.
+   * <p>
+   * This is a convenience method that wraps the provided column in a {@link DefaultRepresentation}
+   * and creates a new collection while maintaining the FHIR type and extension mapping from the
+   * original collection. This is particularly useful when transforming column data while preserving
+   * the collection's semantic context.
+   * </p>
+   *
+   * @param newColumn The new {@link Column} to use as the collection's data
+   * @return A new {@link Collection} with the specified {@link Column} but preserving FHIR type
+   *     and extension information
+   * @throws CollectionConstructionError if there was a problem constructing the collection
+   */
+  @Nonnull
+  public Collection copyWithColumn(@Nonnull final Column newColumn) {
+    return copyWith(new DefaultRepresentation(newColumn));
+  }
+
+  /**
    * Filters the elements of this collection using the specified lambda.
    *
    * @param lambda The lambda to use for filtering
@@ -372,6 +395,36 @@ public class Collection implements Equatable {
         ctx -> ctx.filter(col -> lambda.apply(new DefaultRepresentation(col)).getValue()));
   }
 
+  /**
+   * Checks if this collection is statically known to be empty.
+   * <p>
+   * This method performs a static type check to determine if the collection is an
+   * {@link EmptyCollection}. It does not evaluate the actual data or count elements
+   * at runtime. A collection that is not statically empty may still contain zero
+   * elements when evaluated.
+   * </p>
+   *
+   * @return {@code true} if this collection is an {@link EmptyCollection}, {@code false} otherwise
+   */
+  public boolean isEmpty() {
+    return this instanceof EmptyCollection;
+  }
+
+  /**
+   * Checks if this collection is statically known to be non-empty.
+   * <p>
+   * This method performs a static type check to determine if the collection is not an
+   * {@link EmptyCollection}. It does not evaluate the actual data or count elements
+   * at runtime. A collection that is statically non-empty may still contain zero
+   * elements when evaluated.
+   * </p>
+   *
+   * @return {@code true} if this collection is not an {@link EmptyCollection}, {@code false}
+   *     otherwise
+   */
+  public boolean isNotEmpty() {
+    return !isEmpty();
+  }
 
   /**
    * Returns a new collection representing the elements of this collection as a singular value.

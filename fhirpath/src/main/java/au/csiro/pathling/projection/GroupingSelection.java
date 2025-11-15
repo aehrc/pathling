@@ -17,38 +17,31 @@
 
 package au.csiro.pathling.projection;
 
-import static java.util.stream.Collectors.joining;
-
 import jakarta.annotation.Nonnull;
 import java.util.List;
 
 /**
- * Groups multiple selections together using a cross join.
+ * Groups multiple selections together using a cross join (Cartesian product).
+ * <p>
+ * This is the primary mechanism for composing multiple projection clauses into a single result
+ * where all combinations of the component results are included.
+ * </p>
  *
- * @param components the list of projection clauses to be grouped
+ * @param components the list of projection clauses to be combined via product
  * @author John Grimes
  * @author Piotr Szul
  */
 public record GroupingSelection(@Nonnull List<ProjectionClause> components) implements
-    ProjectionClause {
+    CompositeSelection {
 
   @Override
   @Nonnull
   public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
-    // evaluate and cross join the subcomponents
+    // Evaluate all components
     final List<ProjectionResult> subResults = components.stream().map(c -> c.evaluate(context))
         .toList();
-    return ProjectionResult.combine(subResults);
-  }
-
-  @Nonnull
-  @Override
-  public String toString() {
-    return "GroupingSelection{" +
-        "components=[" + components.stream()
-        .map(ProjectionClause::toString)
-        .collect(joining(", ")) +
-        "]}";
+    // Use the explicit product method for clarity
+    return ProjectionResult.product(subResults);
   }
 
   /**
@@ -57,17 +50,8 @@ public record GroupingSelection(@Nonnull List<ProjectionClause> components) impl
    * @return the string expression "group"
    */
   @Nonnull
+  @Override
   public String toExpression() {
     return "group";
-  }
-
-  @Override
-  @Nonnull
-  public String toTreeString(final int level) {
-    final String indent = "  ".repeat(level);
-    return indent + toExpression() + "\n" +
-        components.stream()
-            .map(c -> c.toTreeString(level + 1))
-            .collect(joining("\n"));
   }
 }

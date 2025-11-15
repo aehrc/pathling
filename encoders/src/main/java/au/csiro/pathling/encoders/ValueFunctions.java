@@ -29,11 +29,16 @@ import static org.apache.spark.sql.classic.ExpressionUtils.expression;
 
 import au.csiro.pathling.sql.PruneSyntheticFields;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.function.UnaryOperator;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.classic.ColumnConversions$;
+import scala.Function1;
+import scala.collection.immutable.Seq;
+import scala.jdk.javaapi.CollectionConverters;
+import scala.jdk.javaapi.FunctionConverters;
 
 /**
  * Java-based utility class for value-based Column operations. This class uses Java to access
@@ -113,6 +118,105 @@ public class ValueFunctions {
     final Expression valueExpr = expression(value);
     final Expression unnestExpr = new UnresolvedUnnest(valueExpr);
     return column(unnestExpr);
+  }
+
+  /**
+   * Returns SQL NULL when a struct field doesn't exist in the schema, instead of throwing an
+   * error.
+   * <p>
+   * This function is essential for handling optional fields in nested structures where a field may
+   * not be present in all instances of a struct type. When the specified field is missing from the
+   * struct schema, this returns null rather than causing a FIELD_NOT_FOUND analysis error.
+   * <p>
+   * <strong>Important:</strong> This only handles fields that don't exist in the schema. If a
+   * field
+   * exists but has a null value, that null value is returned normally.
+   * <p>
+   * <strong>Typical usage:</strong>
+   * <pre>{@code
+   * // Safe access to optional field that may not exist in all structs
+   * dataset.withColumn("email", nullIfMissingField(col("person").getField("email")))
+   * }</pre>
+   *
+   * @param value The column expression that may reference a non-existent field
+   * @return A column that resolves to null if the field is not found in the schema, or the field's
+   * value (including null) if the field exists
+   * @see org.apache.spark.sql.Column#getField(String)
+   */
+  @Nonnull
+  public static Column nullIfMissingField(@Nonnull final Column value) {
+    final Expression valueExpr = expression(value);
+    final Expression nullOrExpr = new UnresolvedNullIfMissingField(valueExpr);
+    return column(nullOrExpr);
+  }
+
+
+  /**
+   * Performs a recursive tree traversal with value extraction at each level.
+   * <p>
+   * This method implements a depth-first traversal of nested structures, applying a sequence of
+   * traversal operations recursively and extracting values at each level. The result is a flattened
+   * array containing all extracted values from the tree traversal.
+   * </p>
+   * <p>
+   * The traversal process works as follows:
+   * <ol>
+   *   <li>Apply the extractor to the current value to get the result for this level</li>
+   *   <li>For each traversal operation, apply it to the current value to get child values</li>
+   *   <li>Recursively apply the same process to each child value</li>
+   *   <li>Concatenate all results into a single array</li>
+   * </ol>
+   * </p>
+   * <p>
+   * This is particularly useful for traversing self-referential FHIR structures like
+   * QuestionnaireResponse.item, where items can contain nested items through multiple paths
+   * (e.g., item.item and item.answer.item). The method handles missing fields gracefully
+   * by returning empty arrays when fields are not found.
+   * </p>
+   * <p>
+   * <strong>Depth Limiting:</strong> The {@code maxDepth} parameter controls recursion depth
+   * to prevent infinite loops in self-referential structures. Critically, the depth counter
+   * only increments when traversing to a node of the same type as its parent. This allows
+   * finite paths through different types to traverse deeper than {@code maxDepth} while still
+   * preventing infinite recursion in truly self-referential cases. For example, traversing
+   * through alternating types (Item → Answer → Item) will not count against the depth limit,
+   * but traversing with an identity function (Item → Item) will be limited.
+   * </p>
+   * <p>
+   * <strong>Important Requirements:</strong>
+   * <ul>
+   *   <li>The {@code extractor} function must return an array type. If you need to extract
+   *       a scalar value, wrap it in an array (e.g., {@code c -> functions.array(c.getField("id"))}).</li>
+   *   <li>The array type returned by the {@code extractor} must be consistent across all
+   *       traversed nodes. Mixing different array element types will result in a type mismatch error.</li>
+   * </ul>
+   * </p>
+   *
+   * @param value The starting value column to traverse
+   * @param extractor An extraction operation to apply at each node that must return an array type
+   * @param traversals A list of traversal operations to apply recursively to reach child nodes
+   * @param maxDepth The maximum recursion depth for same-type traversals to prevent infinite loops
+   * @return A Column containing an array of all extracted values from the tree traversal
+   */
+  @Nonnull
+  public static Column transformTree(@Nonnull final Column value,
+      @Nonnull final UnaryOperator<Column> extractor,
+      @Nonnull final List<UnaryOperator<Column>> traversals,
+      int maxDepth
+  ) {
+
+    final List<Function1<Expression, Expression>> x = traversals.stream()
+        .map(ValueFunctions::liftToExpression)
+        .map(FunctionConverters::asScalaFromUnaryOperator)
+        .toList();
+
+    final Seq<Function1<Expression, Expression>> scalaSeq = CollectionConverters.asScala(x).toSeq();
+    return column(new UnresolvedTransformTree(
+        expression(value),
+        liftToExpression(extractor)::apply,
+        scalaSeq,
+        maxDepth
+    ));
   }
 
   /**

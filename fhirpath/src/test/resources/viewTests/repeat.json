@@ -1,0 +1,72 @@
+{
+  "title": "repeat",
+  "description": "Recursive traversal with repeat directive",
+  "fhirVersion": ["5.0.0", "4.0.1", "3.0.2"],
+  "resources": [
+    {
+      "resourceType": "Patient",
+      "id": "pt1",
+      "extension": [
+        {
+          "url": "urn:id1",
+          "extension": [
+            {
+              "url": "urn:id2",
+              "valueBoolean": true
+            }
+          ]
+        }
+      ],
+      "name": [
+        {
+          "use": "official",
+          "family": "f1.1",
+          "given": [
+            "g1.1"
+          ]
+        }
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "title": "extension",
+      "tags": ["shareable"],
+      "view": {
+        "resource": "Patient",
+        "status": "active",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id",
+                "type": "id"
+              }
+            ]
+          },
+          {
+            "repeat": ["extension"],
+            "column": [
+              {
+                "name": "url",
+                "path": "url",
+                "type": "uri"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "pt1",
+          "url": "urn:id1"
+        },
+        {
+          "id": "pt1",
+          "url": "urn:id2"
+        }
+      ]
+    }
+  ]
+}

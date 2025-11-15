@@ -90,4 +90,13 @@ public class PathlingBenchmark {
         .collectAsList();
   }
 
+  @Benchmark
+  public List<Row> questionnaireResponseFlat(@Nonnull final PathlingBenchmarkState state) {
+    return state.getNdjsonSource()
+        .view("QuestionnaireResponse")
+        .json(state.getViewDefinitions().get("QuestionnaireResponseFlat"))
+        .execute()
+        .collectAsList();
+  }
+
 }

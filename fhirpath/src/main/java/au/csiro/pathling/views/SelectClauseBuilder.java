@@ -20,6 +20,7 @@ package au.csiro.pathling.views;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -62,6 +63,9 @@ public class SelectClauseBuilder {
 
   @Nullable
   private String forEachOrNull;
+
+  @Nullable
+  private List<String> repeat;
 
   @Nonnull
   private final List<SelectClause> unionAll = new ArrayList<>();
@@ -128,6 +132,22 @@ public class SelectClauseBuilder {
   }
 
   /**
+   * Sets the repeat expressions for recursive traversal of nested structures.
+   * <p>
+   * The repeat operation enables recursive traversal of nested structures, automatically flattening
+   * hierarchical data to any depth. For each path expression, the view runner will recursively
+   * apply the same patterns until no more matches are found. All results from all levels and all
+   * paths are unioned together.
+   *
+   * @param repeat one or more FHIRPath expressions defining paths to recursively traverse
+   * @return this builder instance for method chaining
+   */
+  public SelectClauseBuilder repeat(@Nonnull final String... repeat) {
+    this.repeat = Arrays.asList(repeat);
+    return this;
+  }
+
+  /**
    * Adds select clauses to be combined using a union operation.
    * <p>
    * The {@code unionAll} operation combines the results of multiple select clauses into a single
@@ -152,7 +172,7 @@ public class SelectClauseBuilder {
    */
   @Nonnull
   public SelectClause build() {
-    return new SelectClause(column, select, forEach, forEachOrNull, unionAll);
+    return new SelectClause(column, select, forEach, forEachOrNull, repeat, unionAll);
   }
 
 }
