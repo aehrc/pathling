@@ -227,8 +227,8 @@ class ExportOperationIT {
     final ObjectMapper objectMapper = new ObjectMapper();
     final JsonNode node = objectMapper.readTree(responseBody);
 
-    log.info("Response headers:");
-    headers.forEach((name, values) -> log.info("  {}: {}", name, String.join(", ", values)));
+    log.trace("Response headers:");
+    headers.forEach((name, values) -> log.trace("  {}: {}", name, String.join(", ", values)));
 
     assertThat(headers).containsKey("Expires");
     assertThat(headers.getFirst("Content-Type"))
