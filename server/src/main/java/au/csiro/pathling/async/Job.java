@@ -31,6 +31,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
  * Represents a background job that is in progress or complete.
  *
  * @author John Grimes
+ * @author Felix Naumann
  */
 @Getter
 @ToString
@@ -44,40 +45,69 @@ public class Job<T> {
 
   }
 
+  /**
+   * The unique identifier for this job.
+   */
   @Nonnull
   final String id;
 
+  /**
+   * The name of the operation that initiated this job, used for enforcing authorisation.
+   */
   @Nonnull
   private final String operation;
 
+  /**
+   * The future representing the asynchronous computation of the job result.
+   */
   @Nonnull
   private final Future<IBaseResource> result;
 
+  /**
+   * The identifier of the user who owns this job, if authenticated.
+   */
   @Nonnull
   private final Optional<String> ownerId;
 
+  /**
+   * The total number of stages in this job, used to calculate progress percentage.
+   */
   private int totalStages;
 
+  /**
+   * The number of completed stages in this job, used to calculate progress percentage.
+   */
   private int completedStages;
 
+  /**
+   * The result of pre-async validation, stored to be used when the job executes.
+   */
   private T preAsyncValidationResult;
 
+  /**
+   * A consumer that modifies the HTTP response for this job, such as adding headers.
+   */
   @Setter
   private Consumer<HttpServletResponse> responseModification;
 
+  /**
+   * Indicates whether this job has been marked for deletion.
+   */
   @Setter
   private boolean markedAsDeleted;
 
-  /*
-  When a job is at 100% that does not always indicate that the job is actually finished. Most of the time,
-  this indicates that a new stage has not been submitted while the current stage is already completed.
-  In that case just show the last calculated percentage again.
+  /**
+   * The last calculated progress percentage. When a job is at 100% that does not always indicate
+   * that the job is actually finished. Most of the time, this indicates that a new stage has not
+   * been submitted while the current stage is already completed. In that case just show the last
+   * calculated percentage again.
    */
   @Setter
   private int lastProgress;
 
   /**
-   * @param operation the operation that initiated the job, used for enforcing authorization
+   * @param id the unique identifier for the job
+   * @param operation the operation that initiated the job, used for enforcing authorisation
    * @param result the {@link Future} result
    * @param ownerId the identifier of the owner of the job, if authenticated
    */
@@ -111,10 +141,10 @@ public class Job<T> {
   }
 
   @SuppressWarnings("unchecked")
-  public void setPreAsyncValidationResult(Object preAsyncValidationResult) {
+  public void setPreAsyncValidationResult(final Object preAsyncValidationResult) {
     try {
       this.preAsyncValidationResult = (T) preAsyncValidationResult;
-    } catch (ClassCastException e) {
+    } catch (final ClassCastException e) {
       throw new InternalError("PreAsyncValidationResult casting failed.", e);
     }
   }
