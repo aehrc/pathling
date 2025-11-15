@@ -132,7 +132,7 @@ class ExportOperationExecutorTest {
       throw new RuntimeException("Failed to create unique temp dir", e);
     }
 
-    testDataSetup.copyTestDataToTempDir(uniqueTempDir);
+    TestDataSetup.copyTestDataToTempDir(uniqueTempDir);
 
     parser = fhirContext.newJsonParser();
   }

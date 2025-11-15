@@ -98,7 +98,7 @@ class ExportOperationIT {
 
   @DynamicPropertySource
   static void configureProperties(final DynamicPropertyRegistry registry) {
-    TestDataSetup.staticCopyTestDataToTempDir(warehouseDir);
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.toAbsolutePath());
   }
 
@@ -118,7 +118,7 @@ class ExportOperationIT {
 
   @Test
   void testMissingRespondAsyncHeaderLenientRuns() {
-    testDataSetup.copyTestDataToTempDir(warehouseDir);
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
     final String uri = "http://localhost:" + port
         + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-01T00:00:00Z";
     webTestClient.get()
@@ -131,7 +131,7 @@ class ExportOperationIT {
 
   @Test
   void testMissingRespondAsyncHeaderStrictReturnsError() {
-    testDataSetup.copyTestDataToTempDir(warehouseDir);
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port
         + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-01T00:00:00Z";
@@ -144,7 +144,7 @@ class ExportOperationIT {
 
   @Test
   void testCancellingRequestReturns202() {
-    testDataSetup.copyTestDataToTempDir(warehouseDir);
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port
         + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-01T00:00:00Z";
@@ -163,7 +163,7 @@ class ExportOperationIT {
 
   @Test
   void testPollingCancelledRequestReturns404() {
-    testDataSetup.copyTestDataToTempDir(warehouseDir);
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port
         + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-02T00:00:00Z";
@@ -189,7 +189,7 @@ class ExportOperationIT {
 
   @Test
   void testInvalidKickoffRequest() {
-    testDataSetup.copyTestDataToTempDir(warehouseDir);
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port
         + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-01T00:00:00Z&_type=Patient,Encounter";
@@ -203,7 +203,7 @@ class ExportOperationIT {
 
   @Test
   void testExportValid() {
-    testDataSetup.copyTestDataToTempDir(warehouseDir);
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port
         + "/fhir/$export?_outputFormat=application/fhir+ndjson&_since=2017-01-01T00:00:00Z&_type=Patient,Encounter&_elements=identifier,Patient.name,Encounter.subject";

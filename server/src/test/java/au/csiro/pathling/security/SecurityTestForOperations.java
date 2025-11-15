@@ -173,7 +173,7 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
   }
 
   protected ExportProvider setup_scenario(Path tempDir, String... resourceTypes) {
-    TestDataSetup.staticCopyTestDataToTempDir(tempDir, resourceTypes);
+    TestDataSetup.copyTestDataToTempDir(tempDir, resourceTypes);
     QueryableDataSource deltaLake = new DataSourceBuilder(pathlingContext)
         .delta("file://" + tempDir.toString());
 

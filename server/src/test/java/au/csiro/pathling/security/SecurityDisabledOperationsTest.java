@@ -51,7 +51,7 @@ class SecurityDisabledOperationsTest extends SecurityTestForOperations<ExportReq
 
   @DynamicPropertySource
   static void configureProperties(DynamicPropertyRegistry registry) {
-    TestDataSetup.staticCopyTestDataToTempDir(tempDir);
+    TestDataSetup.copyTestDataToTempDir(tempDir);
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + tempDir.toAbsolutePath());
   }
 

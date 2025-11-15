@@ -32,7 +32,7 @@ public class TestDataSetup {
     this.pathlingContext = pathlingContext;
   }
 
-  public static void staticCopyTestDataToTempDir(@Nonnull final Path tempDir,
+  public static void copyTestDataToTempDir(@Nonnull final Path tempDir,
       @Nullable final String... resourceTypes) {
     try {
       final Path deltaPath = Path.of("src/test/resources/test-data/bulk/fhir/delta");
@@ -58,17 +58,6 @@ public class TestDataSetup {
       @Nonnull final String resourceType) {
     assertThat(tempDir.resolve(resourceType + ".parquet")).exists()
         .isDirectoryContaining(path -> path.toString().endsWith(".parquet"));
-  }
-
-  /**
-   * Copies the generated parquet data from src/test/resources/test-data/fhir/delta/** to the
-   * tempdir, preserving the directory structure. I.e. delta/Encounter.parquet/* is copied with the
-   * directory structure so it copies to tempdir/Encounter.parquet/*
-   *
-   * @param tempDir Where to copy to
-   */
-  public void copyTestDataToTempDir(@Nonnull final Path tempDir) {
-    staticCopyTestDataToTempDir(tempDir);
   }
 
   public void setupTestData(@Nonnull final Path ndjsonTestDataDir) {

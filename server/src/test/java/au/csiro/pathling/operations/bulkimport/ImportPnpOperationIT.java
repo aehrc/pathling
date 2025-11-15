@@ -105,7 +105,7 @@ class ImportPnpOperationIT {
 
   @DynamicPropertySource
   static void configureProperties(final DynamicPropertyRegistry registry) {
-    TestDataSetup.staticCopyTestDataToTempDir(warehouseDir);
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.toAbsolutePath());
 
     // Configure PnP settings for testing with WireMock token endpoint.
@@ -222,7 +222,7 @@ class ImportPnpOperationIT {
 
   @Test
   void testMissingRespondAsyncHeaderReturnsError() {
-    testDataSetup.copyTestDataToTempDir(warehouseDir);
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
     final String requestBody = """
@@ -252,7 +252,7 @@ class ImportPnpOperationIT {
 
   @Test
   void testMissingPnpConfigurationReturnsError() {
-    testDataSetup.copyTestDataToTempDir(warehouseDir);
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     // This test would need a separate profile without PnP config, so we'll skip it for now.
     // In a real scenario, you'd create a test profile without the PnP configuration.
@@ -260,7 +260,7 @@ class ImportPnpOperationIT {
 
   @Test
   void testMissingExportUrlReturnsError() {
-    testDataSetup.copyTestDataToTempDir(warehouseDir);
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
     final String requestBody = """
@@ -291,7 +291,7 @@ class ImportPnpOperationIT {
 
   @Test
   void testMissingInputSourceReturnsError() {
-    testDataSetup.copyTestDataToTempDir(warehouseDir);
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
     final String requestBody = """
@@ -322,7 +322,7 @@ class ImportPnpOperationIT {
 
   @Test
   void testValidRequestReturns202WithContentLocation() {
-    testDataSetup.copyTestDataToTempDir(warehouseDir);
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
     setupSuccessfulBulkExportStubs();
 
     // Use base URL for fhir-bulk-java client.
@@ -386,7 +386,7 @@ class ImportPnpOperationIT {
 
   @Test
   void testStaticModeReturnsError() {
-    testDataSetup.copyTestDataToTempDir(warehouseDir);
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String exportUrl = "http://localhost:" + wireMockServer.port() + "/fhir";
     final String uri = "http://localhost:" + port + "/fhir/$import-pnp";
