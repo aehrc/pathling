@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.io.source.NdjsonSource;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,36 +24,38 @@ import org.springframework.stereotype.Component;
 @Component
 public class TestDataSetup {
 
-
+  @Nonnull
   private final PathlingContext pathlingContext;
 
   @Autowired
-  public TestDataSetup(PathlingContext pathlingContext) {
+  public TestDataSetup(@Nonnull final PathlingContext pathlingContext) {
     this.pathlingContext = pathlingContext;
   }
 
-  public static void staticCopyTestDataToTempDir(Path tempDir, String... resourceTypes) {
+  public static void staticCopyTestDataToTempDir(@Nonnull final Path tempDir,
+      @Nullable final String... resourceTypes) {
     try {
-      Path deltaPath = Path.of("src/test/resources/test-data/bulk/fhir/delta");
+      final Path deltaPath = Path.of("src/test/resources/test-data/bulk/fhir/delta");
       if (resourceTypes == null || resourceTypes.length == 0) {
-        File deltaTestData = deltaPath.toFile();
+        final File deltaTestData = deltaPath.toFile();
         FileUtils.copyDirectoryToDirectory(deltaTestData, tempDir.toFile());
       } else {
-        for (String resourceType : resourceTypes) {
-          File deltaSpecificTestResourceData = deltaPath.resolve(resourceType + ".parquet")
+        for (final String resourceType : resourceTypes) {
+          final File deltaSpecificTestResourceData = deltaPath.resolve(resourceType + ".parquet")
               .toFile();
           FileUtils.copyDirectoryToDirectory(deltaSpecificTestResourceData, tempDir.toFile());
-          assert_file_was_copied_correctly(tempDir, resourceType);
+          assertFileWasCopiedCorrectly(tempDir, resourceType);
         }
       }
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new RuntimeException(e);
     } finally {
       logDirectoryContents(tempDir);
     }
   }
 
-  private static void assert_file_was_copied_correctly(Path tempDir, String resourceType) {
+  private static void assertFileWasCopiedCorrectly(@Nonnull final Path tempDir,
+      @Nonnull final String resourceType) {
     assertThat(tempDir.resolve(resourceType + ".parquet")).exists()
         .isDirectoryContaining(path -> path.toString().endsWith(".parquet"));
   }
@@ -63,19 +67,19 @@ public class TestDataSetup {
    *
    * @param tempDir Where to copy to
    */
-  public void copyTestDataToTempDir(Path tempDir) {
+  public void copyTestDataToTempDir(@Nonnull final Path tempDir) {
     staticCopyTestDataToTempDir(tempDir);
   }
 
-  public void setupTestData(Path ndjsonTestDataDir) {
+  public void setupTestData(@Nonnull final Path ndjsonTestDataDir) {
     try {
-      Path deltaPath = ndjsonTestDataDir.resolve("delta");
+      final Path deltaPath = ndjsonTestDataDir.resolve("delta");
       Files.createDirectories(deltaPath);
-      NdjsonSource ndjsonSource = new NdjsonSource(pathlingContext,
+      final NdjsonSource ndjsonSource = new NdjsonSource(pathlingContext,
           ndjsonTestDataDir.toAbsolutePath().toString());
       new DataSinkBuilder(pathlingContext, ndjsonSource).saveMode("overwrite")
           .delta(deltaPath.toAbsolutePath().toString());
-    } catch (Exception e) {
+    } catch (final Exception e) {
       throw new RuntimeException("Failed to setup warehouse test data", e);
     } finally {
       logDirectoryContents(ndjsonTestDataDir);
@@ -83,34 +87,37 @@ public class TestDataSetup {
 
   }
 
-  public static void logDirectoryContents(Path directory) {
+  public static void logDirectoryContents(@Nonnull final Path directory) {
     try {
       log.debug("Directory tree for: {}", directory);
-      List<Path> paths = Files.walk(directory)
-          .sorted()
-          .toList();
+      final List<Path> paths;
+      try (final var stream = Files.walk(directory)) {
+        paths = stream
+            .sorted()
+            .toList();
+      }
 
       printTree(paths, directory);
-    } catch (IOException e) {
+    } catch (final IOException e) {
       log.error("Failed to list directory: {}", directory, e);
     }
   }
 
-  private static void printTree(List<Path> paths, Path root) {
-    for (Path path : paths) {
+  private static void printTree(@Nonnull final List<Path> paths, @Nonnull final Path root) {
+    for (final Path path : paths) {
       if (path.equals(root)) {
         continue; // Skip root
       }
 
-      Path relativePath = root.relativize(path);
-      int depth = relativePath.getNameCount();
+      final Path relativePath = root.relativize(path);
+      final int depth = relativePath.getNameCount();
 
-      StringBuilder tree = new StringBuilder();
+      final StringBuilder tree = new StringBuilder();
 
       // Build the tree structure
       for (int d = 1; d < depth; d++) {
-        Path ancestor = getAncestorAtDepth(relativePath, d);
-        Path fullAncestor = root.resolve(ancestor);
+        final Path ancestor = getAncestorAtDepth(relativePath, d);
+        final Path fullAncestor = root.resolve(ancestor);
 
         if (isLastSiblingInPaths(paths, fullAncestor)) {
           tree.append("    ");
@@ -135,7 +142,8 @@ public class TestDataSetup {
     }
   }
 
-  private static Path getAncestorAtDepth(Path relativePath, int depth) {
+  @Nonnull
+  private static Path getAncestorAtDepth(@Nonnull final Path relativePath, final int depth) {
     Path result = relativePath;
     for (int i = relativePath.getNameCount(); i > depth; i--) {
       result = result.getParent();
@@ -143,20 +151,21 @@ public class TestDataSetup {
     return result;
   }
 
-  private static boolean isLastSiblingInPaths(List<Path> paths, Path path) {
-    Path parent = path.getParent();
+  private static boolean isLastSiblingInPaths(@Nonnull final List<Path> paths,
+      @Nonnull final Path path) {
+    final Path parent = path.getParent();
     if (parent == null) {
       return true;
     }
 
-    int pathIndex = paths.indexOf(path);
+    final int pathIndex = paths.indexOf(path);
     if (pathIndex == -1) {
       return true;
     }
 
     // Check if there are any more siblings after this path
     for (int i = pathIndex + 1; i < paths.size(); i++) {
-      Path sibling = paths.get(i);
+      final Path sibling = paths.get(i);
       if (parent.equals(sibling.getParent())) {
         return false; // Found a sibling
       }
