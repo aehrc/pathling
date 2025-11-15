@@ -1,7 +1,6 @@
 package au.csiro.pathling.operations.bulkexport;
 
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
-import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
 import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.async.Job;
@@ -125,10 +124,8 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
       @Nullable @OperationParam(name = UNTIL_PARAM_NAME) final InstantType until,
       @Nullable @OperationParam(name = TYPE_PARAM_NAME) final List<String> type,
       @Nullable @OperationParam(name = ELEMENTS_PARAM_NAME) final List<String> elements,
-      @Nullable final ServletRequestDetails requestDetails
+      @Nonnull final ServletRequestDetails requestDetails
   ) {
-
-    checkArgument(requestDetails != null, "requestDetails must not be null");
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication);
     final Job<ExportRequest> ownJob = jobRegistry.get(ownTag);
@@ -152,14 +149,14 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
 
     final ExportResponse exportResponse = exportExecutor.execute(exportRequest, ownJob.getId());
 
-    // TODO - this is invoked everytime the $job endpoint is called, so the Expires header is "refreshed" everytime.
-    // This is allowed (see 2.5.7) but what's missing here is the actual file updating.
-    // Right now, this is just an arbitrary time not bound to anything.
-    // If it's bound to the lifecycle of actual resources, then they should be updated accordingly
-    // when this consumer is invoked but that would introduce heavy side effects (is this ok??).
-    ownJob.setResponseModification(httpServletResponse -> httpServletResponse.addHeader("Expires",
-        ZonedDateTime.now(ZoneOffset.UTC).plusSeconds(exportConfiguration.getResultExpiry())
-            .format(DateTimeFormatter.RFC_1123_DATE_TIME)));
+    // Set the Expires header to indicate when the export result will expire, based on the 
+    // configured value.
+    ownJob.setResponseModification(httpServletResponse -> {
+      final String expiresValue = ZonedDateTime.now(ZoneOffset.UTC)
+          .plusSeconds(exportConfiguration.getResultExpiry())
+          .format(DateTimeFormatter.RFC_1123_DATE_TIME);
+      httpServletResponse.addHeader("Expires", expiresValue);
+    });
 
     return exportResponse.toOutput();
   }
