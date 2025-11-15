@@ -87,6 +87,10 @@ public class ServerConfiguration {
   }
 
   @NotNull
+  @JsonProperty("export")
+  private ExportConfiguration export = new ExportConfiguration();
+
+  @NotNull
   private AsyncConfiguration async;
 
   @NotNull

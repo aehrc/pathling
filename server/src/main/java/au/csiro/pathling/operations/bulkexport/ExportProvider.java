@@ -9,6 +9,7 @@ import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.async.PreAsyncValidation;
 import au.csiro.pathling.async.RequestTag;
 import au.csiro.pathling.async.RequestTagFactory;
+import au.csiro.pathling.config.ExportConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
@@ -75,6 +76,9 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
   @Nonnull
   private final ExportResultRegistry exportResultRegistry;
 
+  @Nonnull
+  private final ExportConfiguration exportConfiguration;
+
   /**
    * Constructs a new ExportProvider.
    *
@@ -83,18 +87,21 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
    * @param jobRegistry The job registry.
    * @param requestTagFactory The request tag factory.
    * @param exportResultRegistry The export result registry.
+   * @param exportConfiguration The export configuration.
    */
   @Autowired
   public ExportProvider(@Nonnull final ExportExecutor exportExecutor,
       @Nonnull final ExportOperationValidator exportOperationValidator,
       @Nonnull final JobRegistry jobRegistry,
       @Nonnull final RequestTagFactory requestTagFactory,
-      @Nonnull final ExportResultRegistry exportResultRegistry) {
+      @Nonnull final ExportResultRegistry exportResultRegistry,
+      @Nonnull final ExportConfiguration exportConfiguration) {
     this.exportExecutor = exportExecutor;
     this.exportOperationValidator = exportOperationValidator;
     this.jobRegistry = jobRegistry;
     this.requestTagFactory = requestTagFactory;
     this.exportResultRegistry = exportResultRegistry;
+    this.exportConfiguration = exportConfiguration;
   }
 
   /**
@@ -148,10 +155,10 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
     // TODO - this is invoked everytime the $job endpoint is called, so the Expires header is "refreshed" everytime.
     // This is allowed (see 2.5.7) but what's missing here is the actual file updating.
     // Right now, this is just an arbitrary time not bound to anything.
-    // If it's bound to the lifecycle of actual resources, then they should be updated accordingly 
+    // If it's bound to the lifecycle of actual resources, then they should be updated accordingly
     // when this consumer is invoked but that would introduce heavy side effects (is this ok??).
     ownJob.setResponseModification(httpServletResponse -> httpServletResponse.addHeader("Expires",
-        ZonedDateTime.now(ZoneOffset.UTC).plusHours(24)
+        ZonedDateTime.now(ZoneOffset.UTC).plusSeconds(exportConfiguration.getResultExpiry())
             .format(DateTimeFormatter.RFC_1123_DATE_TIME)));
 
     return exportResponse.toOutput();
