@@ -8,6 +8,11 @@
   <artifactId>server</artifactId>
   <version>1.0.0-SNAPSHOT</version>
 
+  <name>Pathling Server</name>
+  <description>
+    A FHIR server implementation that supports data import, export, and bulk operations using the Pathling library.
+  </description>
+
   <properties>
     <maven.compiler.source>21</maven.compiler.source>
     <maven.compiler.target>21</maven.compiler.target>
