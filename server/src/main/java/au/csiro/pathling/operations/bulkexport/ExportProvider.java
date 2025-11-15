@@ -8,7 +8,7 @@ import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.async.PreAsyncValidation;
 import au.csiro.pathling.async.RequestTag;
 import au.csiro.pathling.async.RequestTagFactory;
-import au.csiro.pathling.config.ExportConfiguration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
@@ -76,7 +76,7 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
   private final ExportResultRegistry exportResultRegistry;
 
   @Nonnull
-  private final ExportConfiguration exportConfiguration;
+  private final ServerConfiguration serverConfiguration;
 
   /**
    * Constructs a new ExportProvider.
@@ -86,7 +86,7 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
    * @param jobRegistry The job registry.
    * @param requestTagFactory The request tag factory.
    * @param exportResultRegistry The export result registry.
-   * @param exportConfiguration The export configuration.
+   * @param serverConfiguration The server configuration.
    */
   @Autowired
   public ExportProvider(@Nonnull final ExportExecutor exportExecutor,
@@ -94,13 +94,13 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
       @Nonnull final JobRegistry jobRegistry,
       @Nonnull final RequestTagFactory requestTagFactory,
       @Nonnull final ExportResultRegistry exportResultRegistry,
-      @Nonnull final ExportConfiguration exportConfiguration) {
+      @Nonnull final ServerConfiguration serverConfiguration) {
     this.exportExecutor = exportExecutor;
     this.exportOperationValidator = exportOperationValidator;
     this.jobRegistry = jobRegistry;
     this.requestTagFactory = requestTagFactory;
     this.exportResultRegistry = exportResultRegistry;
-    this.exportConfiguration = exportConfiguration;
+    this.serverConfiguration = serverConfiguration;
   }
 
   /**
@@ -149,11 +149,11 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
 
     final ExportResponse exportResponse = exportExecutor.execute(exportRequest, ownJob.getId());
 
-    // Set the Expires header to indicate when the export result will expire, based on the 
+    // Set the Expires header to indicate when the export result will expire, based on the
     // configured value.
     ownJob.setResponseModification(httpServletResponse -> {
       final String expiresValue = ZonedDateTime.now(ZoneOffset.UTC)
-          .plusSeconds(exportConfiguration.getResultExpiry())
+          .plusSeconds(serverConfiguration.getExport().getResultExpiry())
           .format(DateTimeFormatter.RFC_1123_DATE_TIME);
       httpServletResponse.addHeader("Expires", expiresValue);
     });

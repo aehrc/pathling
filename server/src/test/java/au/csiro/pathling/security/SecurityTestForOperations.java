@@ -192,7 +192,7 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
         jobRegistry,
         requestTagFactory,
         exportResultRegistry,
-        serverConfiguration.getExport()
+        serverConfiguration
     );
   }
 
