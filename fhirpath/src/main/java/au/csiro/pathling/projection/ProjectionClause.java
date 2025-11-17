@@ -73,8 +73,8 @@ public interface ProjectionClause {
   /**
    * Returns a stream of child projection clauses.
    * <p>
-   * The default implementation returns an empty stream for leaf nodes.
-   * Implementations with children should override this method.
+   * The default implementation returns an empty stream for leaf nodes. Implementations with
+   * children should override this method.
    * </p>
    *
    * @return a stream of child projection clauses
@@ -87,7 +87,7 @@ public interface ProjectionClause {
   /**
    * Returns an expression string representation of this clause.
    * <p>
-   * Used by {@link #toTreeString(int)} to display this node in the tree.
+   * Used by {@link #toExpressionTree(int)} to display this node in the tree.
    * </p>
    *
    * @return a string representation of this clause's expression
@@ -95,21 +95,32 @@ public interface ProjectionClause {
   @Nonnull
   String toExpression();
 
+
+  /**
+   * Returns a tree-like string representation of this clause for debugging purposes.
+   *
+   * @return a formatted tree string representation
+   */
+  @Nonnull
+  default String toExpressionTree() {
+    return toExpressionTree(0);
+  }
+
   /**
    * Returns a tree-like string representation of this clause for debugging purposes.
    * <p>
-   * The default implementation uses {@link #toExpression()} for this node and
-   * recursively calls {@link #toTreeString(int)} on children from {@link #getChildren()}.
+   * The default implementation uses {@link #toExpression()} for this node and recursively calls
+   * itself on children from {@link #getChildren()}.
    * </p>
    *
    * @param level the indentation level for the tree structure
    * @return a formatted tree string representation
    */
   @Nonnull
-  default String toTreeString(final int level) {
+  default String toExpressionTree(final int level) {
     final String indent = "  ".repeat(level);
     final String childrenStr = getChildren()
-        .map(child -> child.toTreeString(level + 1))
+        .map(child -> child.toExpressionTree(level + 1))
         .collect(Collectors.joining("\n"));
 
     if (childrenStr.isEmpty()) {
