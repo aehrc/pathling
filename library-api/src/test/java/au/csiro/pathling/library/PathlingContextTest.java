@@ -245,9 +245,8 @@ public class PathlingContextTest {
         .enableExtensions(false)
         .maxNestingLevel(1)
         .build();
-    final PathlingContext context1 = PathlingContext.builder(spark)
-        .encodingConfiguration(encodingConfig1)
-        .build();
+    final PathlingContext context1 = PathlingContext.createForEncoding(spark, encodingConfig1);
+
     final Row rowWithNesting = context1.encode(jsonResourcesDF, "Questionnaire").head();
     assertFieldNotPresent("_extension", rowWithNesting.schema());
     // Test item nesting
@@ -269,9 +268,7 @@ public class PathlingContextTest {
         .enableExtensions(true)
         .openTypes(Set.of("boolean", "string", "Address"))
         .build();
-    final PathlingContext context2 = PathlingContext.builder(spark)
-        .encodingConfiguration(encodingConfig2)
-        .build();
+    final PathlingContext context2 = PathlingContext.createForEncoding(spark, encodingConfig2);
     final Row rowWithExtensions = context2.encode(jsonResourcesDF, "Patient").head();
     assertFieldPresent("_extension", rowWithExtensions.schema());
 
@@ -296,9 +293,7 @@ public class PathlingContextTest {
     final EncodingConfiguration encodingConfig = EncodingConfiguration.builder()
         .enableExtensions(true)
         .build();
-    final PathlingContext pathling = PathlingContext.builder(spark)
-        .encodingConfiguration(encodingConfig)
-        .build();
+    final PathlingContext pathling = PathlingContext.createForEncoding(spark, encodingConfig);
 
     final Dataset<Row> jsonResources = spark.readStream()
         .text(TEST_DATA_URL + "/resources/R4/json");
@@ -342,9 +337,8 @@ public class PathlingContextTest {
     final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
         .serverUrl(terminologyServerUrl)
         .build();
-    final PathlingContext pathlingContext = PathlingContext.builder(spark)
-        .terminologyConfiguration(terminologyConfig)
-        .build();
+    final PathlingContext pathlingContext = PathlingContext.createForTerminology(spark, terminologyConfig);
+
     assertNotNull(pathlingContext);
     final DefaultTerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
         FhirVersionEnum.R4, terminologyConfig);
@@ -372,9 +366,8 @@ public class PathlingContextTest {
         .serverUrl(terminologyServerUrl)
         .cache(cacheConfig)
         .build();
-    final PathlingContext pathlingContext = PathlingContext.builder(spark)
-        .terminologyConfiguration(terminologyConfig)
-        .build();
+    final PathlingContext pathlingContext = PathlingContext.createForTerminology(spark,
+        terminologyConfig);
     assertNotNull(pathlingContext);
     final TerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
         FhirVersionEnum.R4, terminologyConfig);
@@ -429,9 +422,9 @@ public class PathlingContextTest {
         .authentication(authConfig)
         .build();
 
-    final PathlingContext pathlingContext = PathlingContext.builder(spark)
-        .terminologyConfiguration(terminologyConfig)
-        .build();
+    final PathlingContext pathlingContext = PathlingContext.createForTerminology(spark,
+        terminologyConfig);
+
     assertNotNull(pathlingContext);
     final TerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
         FhirVersionEnum.R4, terminologyConfig);

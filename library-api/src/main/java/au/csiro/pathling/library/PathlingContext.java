@@ -325,8 +325,8 @@ public class PathlingContext {
    * support configuration access will throw {@link IllegalStateException}.
    *
    * @return the terminology configuration, never null
-   * @throws IllegalStateException if the terminology service factory does not support
-   *     configuration access
+   * @throws IllegalStateException if the terminology service factory does not support configuration
+   * access
    */
   @Nonnull
   public TerminologyConfiguration getTerminologyConfiguration() {
@@ -357,17 +357,17 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
-   * {@link SparkSession}.
+   * Creates a new {@link PathlingContext} using supplied encodinf configuration and a
+   * pre-configured {@link SparkSession}.
+   * <p>
+   * This is a convenience method for case when only encoding functionality of Pathling is needed.
    *
    * @param sparkSession the Spark session to use
    * @param encodingConfig the encoding configuration to use
    * @return a new {@link PathlingContext} instance
-   * @deprecated Use {@link #builder(SparkSession)} instead
    */
-  @Deprecated(since = "9.1")
   @Nonnull
-  public static PathlingContext create(@Nonnull final SparkSession sparkSession,
+  public static PathlingContext createForEncoding(@Nonnull final SparkSession sparkSession,
       @Nonnull final EncodingConfiguration encodingConfig) {
     return builder(sparkSession)
         .encodingConfiguration(encodingConfig)
@@ -375,41 +375,21 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
-   * {@link SparkSession}.
+   * Creates a new {@link PathlingContext} using supplied configuration terminology and a
+   * pre-configured {@link SparkSession}.
+   * <p>
+   * This is a convenience method for case when only terminology functionality (terminology UDFs) of
+   * Pathling is needed.
    *
    * @param sparkSession the Spark session to use
    * @param terminologyConfig the terminology configuration to use
    * @return a new {@link PathlingContext} instance
-   * @deprecated Use {@link #builder(SparkSession)} instead
    */
-  @Deprecated(since = "9.1")
   @Nonnull
-  public static PathlingContext create(@Nonnull final SparkSession sparkSession,
+  public static PathlingContext createForTerminology(@Nonnull final SparkSession sparkSession,
       @Nonnull final TerminologyConfiguration terminologyConfig) {
     return builder(sparkSession)
         .terminologyConfiguration(terminologyConfig)
-        .build();
-  }
-
-  /**
-   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
-   * {@link SparkSession}.
-   *
-   * @param sparkSession the Spark session to use
-   * @param encodingConfiguration the encoding configuration to use
-   * @param terminologyConfiguration the terminology configuration to use
-   * @return a new {@link PathlingContext} instance
-   * @deprecated Use {@link #builder(SparkSession)} instead
-   */
-  @Deprecated(since = "9.1")
-  @Nonnull
-  public static PathlingContext create(@Nonnull final SparkSession sparkSession,
-      @Nonnull final EncodingConfiguration encodingConfiguration,
-      @Nonnull final TerminologyConfiguration terminologyConfiguration) {
-    return builder(sparkSession)
-        .encodingConfiguration(encodingConfiguration)
-        .terminologyConfiguration(terminologyConfiguration)
         .build();
   }
 
