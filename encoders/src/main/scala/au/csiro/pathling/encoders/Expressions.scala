@@ -509,7 +509,7 @@ case class UnresolvedTransformTree(node: Expression,
       if (newValue.resolved) {
         // if node is resolved we concatenate
         // the value extracted from the node with next level traversal
-        if (level > 0 && !parentType.contains(newValue.dataType))
+        if (level > 0 || !parentType.contains(newValue.dataType))
           Concat(
             Seq(extractor(node)) ++
               traversals
@@ -518,7 +518,7 @@ case class UnresolvedTransformTree(node: Expression,
                   if (parentType.contains(newValue.dataType)) level - 1 else level
                 ))
           )
-        else extractor(node)
+        else CreateArray(Seq.empty)
       }
       else {
         copy(node = newValue)

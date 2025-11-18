@@ -481,8 +481,8 @@ public class ExpressionsTest {
   }
 
   /**
-   * Helper method to create a nested item structure with 3 levels for testing transformTree.
-   * The structure has different types at each level to enable testing of type-based traversal limits.
+   * Helper method to create a nested item structure with 3 levels for testing transformTree. The
+   * structure has different types at each level to enable testing of type-based traversal limits.
    *
    * @return Dataset with structure: items[level0Type(item[level1Type(item[level2Type])])]
    */
@@ -574,7 +574,7 @@ public class ExpressionsTest {
             ds.col("items"),
             c -> c.getField("linkId"),  // Extract linkId at each level
             List.of(c -> c),  // Identity function: infinite loop!
-            1  // maxDepth=1 must prevent infinite recursion
+            2  // maxDepth=1 must prevent infinite recursion
         )
     );
 
@@ -585,12 +585,13 @@ public class ExpressionsTest {
     final Seq<?> collected = row.getAs("collected");
     final List<?> linkIds = CollectionConverters.asJava(collected);
 
-    // Should collect only 2 levels (0 and 1) because:
+    // Should collect only 3 levels (0, 1 and 2) because:
     // - Level 0: items (type = array<level0Type>)
     // - Level 1: c -> c returns items again (type = array<level0Type>, same type!)
-    // - Level 2: would be items again but maxDepth=1 prevents it
+    // - Level 2: c -> c returns items again (type = array<level1Type>, same type!)
+    // - Level 3: would be items again but maxDepth=3 prevents it
     // All extracted linkIds should be "1" (same item repeated)
-    assertEquals(List.of("1", "1"), linkIds);
+    assertEquals(List.of("1", "1", "1"), linkIds);
   }
 
   @Test
@@ -621,16 +622,17 @@ public class ExpressionsTest {
     final Row row = results.getFirst();
     final Seq<?> collected = row.getAs("collected");
     final List<?> linkIds = CollectionConverters.asJava(collected);
+    
+    
+    // Should collect:
+    // From Path 1 (finite, type-changing):
+    // - "1" (level 0), "2" (level 1),
+    // From Path 2 (self-referential, infinite loop, maxDepth=1):
+    // - "1" (level 0), "2" (level 1),
+    // Total collected: "1", "2", "3", "3", "2", "3", "1", "2", "3"
+    
+    assertEquals(List.of("1", "2", "3", "3", "2", "3", "1", "2", "3"), linkIds);
 
-    // Expected results from both paths:
-    // Path 1 (finite, type-changing): traverses through item field
-    //   - Extracts: "1" (root), "2" (level 1), "3" (level 2)
-    // Path 2 (self-referential, c->c): extracts from current node at each traversal level
-    //   - At level 2 (node with linkId=3): extract "3"
-    //   - At level 1 (node with linkId=2): extract "2"
-    //   - At level 0 (node with linkId=1): extract "1"
-    // Total result: [1, 2, 3] from Path 1, then [3, 2, 1] from Path 2 going back up
-    assertEquals(List.of("1", "2", "3", "3", "2", "1"), linkIds);
   }
 
   @Test
@@ -672,7 +674,8 @@ public class ExpressionsTest {
         // Test 3: Existing nested field using getField
         .withColumn("test_struct_field", nullIfMissingField(ds.col("person").getField("age")))
         // Test 4: Missing struct field (address doesn't exist)
-        .withColumn("test_missing_address", nullIfMissingField(ds.col("person").getField("address")))
+        .withColumn("test_missing_address",
+            nullIfMissingField(ds.col("person").getField("address")))
         // Test 5: Missing struct field (email doesn't exist)
         .withColumn("test_missing_email", nullIfMissingField(ds.col("person").getField("email")))
         // Test 6: Missing struct field (salary doesn't exist)

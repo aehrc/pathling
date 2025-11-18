@@ -12,7 +12,16 @@
           "extension": [
             {
               "url": "urn:id2",
-              "valueBoolean": true
+              "extension": [
+                {
+                  "url": "urn:id3",
+                  "extension": [
+                    {
+                      "url": "urn:id4",
+                      "valueString": "value4"
+                    }
+                  ]                }
+              ]
             }
           ]
         }
@@ -52,6 +61,11 @@
                 "name": "url",
                 "path": "url",
                 "type": "uri"
+              },
+              {
+                "name": "valueString",
+                "path": "value.ofType(string)",
+                "type": "string"
               }
             ]
           }
@@ -60,11 +74,23 @@
       "expect": [
         {
           "id": "pt1",
-          "url": "urn:id1"
+          "url": "urn:id1",
+          "valueString": null
         },
         {
           "id": "pt1",
-          "url": "urn:id2"
+          "url": "urn:id2",
+          "valueString": null
+        },
+        {
+          "id": "pt1",
+          "url": "urn:id3",
+          "valueString": null
+        },
+        {
+          "id": "pt1",
+          "url": "urn:id4",
+          "valueString": "value4"
         }
       ]
     }
