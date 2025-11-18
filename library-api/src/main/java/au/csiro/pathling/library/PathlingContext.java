@@ -357,7 +357,7 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using supplied encodinf configuration and a
+   * Creates a new {@link PathlingContext} using supplied encoding configuration and a
    * pre-configured {@link SparkSession}.
    * <p>
    * This is a convenience method for case when only encoding functionality of Pathling is needed.

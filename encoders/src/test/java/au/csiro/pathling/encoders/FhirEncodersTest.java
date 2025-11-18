@@ -688,7 +688,7 @@ class FhirEncodersTest {
 
   @Test
   void testEncodersConfiguration() {
-    // test the defaul FhirEncoders configuration
+    // test the default FhirEncoders configuration
     assertEquals(
         EncodingConfiguration.builder().enableExtensions(false).maxNestingLevel(0).openTypes(
             Set.of()).build(),
