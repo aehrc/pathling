@@ -25,16 +25,15 @@
 package au.csiro.pathling.encoders
 
 import org.apache.spark.SparkException
-import org.apache.spark.sql.Column
+import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
 import org.apache.spark.sql.catalyst.analysis.{TypeCheckResult, UnresolvedException}
-import org.apache.spark.sql.catalyst.expressions.{FoldableUnevaluable, _}
+import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext, ExprCode, FalseLiteral}
 import org.apache.spark.sql.catalyst.trees.TreePattern.{ARRAYS_ZIP, TreePattern}
 import org.apache.spark.sql.catalyst.util.{ArrayData, GenericArrayData}
-import org.apache.spark.sql.errors.QueryExecutionErrors
 import org.apache.spark.sql.types._
 
 import scala.language.existentials
@@ -289,8 +288,8 @@ case class AttachExtensions(targetObject: Expression,
  * in both Spark 4.0.1 and Spark 4.1.0-rc1 (where FoldableUnevaluable has been removed) 
  * and which is deployed in Databrics Runtime 17.3 LTS.
  * <p>
- * An expression that cannot be evaluated and is not foldable. These expressions 
- * on't live past analysis or optimization time (e.g. Star)
+ * An expression that cannot be evaluated and is not foldable. These expressions
+ * don't live past analysis or optimization time (e.g. Star)
  * and should not be evaluated during query planning and execution.
  */
 trait UnevaluableCopy extends Expression {
@@ -410,6 +409,139 @@ case class UnresolvedUnnest(value: Expression)
 
   override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
     UnresolvedUnnest(newChildren.head)
+  }
+}
+
+/**
+ * Returns null when a struct field doesn't exist in the schema, instead of throwing an error.
+ * <p>
+ * This expression is essential for handling optional fields in nested structures where a field
+ * may not be present in all instances of a struct type. When the specified field is missing
+ * from the struct schema, this returns null rather than causing a FIELD_NOT_FOUND analysis error.
+ * <p>
+ * '''Important:''' This only handles fields that don't exist in the schema. If a field
+ * exists but has a null value, that null value is returned normally.
+ *
+ * @param value the expression that may reference a non-existent field
+ */
+case class UnresolvedNullIfMissingField(value: Expression)
+  extends Expression with UnevaluableCopy with NonSQLExpression {
+
+  override def mapChildren(f: Expression => Expression): Expression = {
+    try {
+      val newValue = f(value)
+      if (newValue.resolved) {
+        newValue
+      } else {
+        copy(value = newValue)
+      }
+    } catch {
+      case e: AnalysisException if e.errorClass.contains("FIELD_NOT_FOUND") =>
+        // If field is not found, return null instead of throwing an error
+        Literal(null)
+    }
+  }
+
+  override def dataType: DataType = throw new UnresolvedException("dataType")
+
+  override def nullable: Boolean = throw new UnresolvedException("nullable")
+
+  override lazy val resolved = false
+
+  override def toString: String = s"$value"
+
+  override def children: Seq[Expression] = value :: Nil
+
+  override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    UnresolvedNullIfMissingField(newChildren.head)
+  }
+}
+
+/**
+ * A custom Spark expression for recursive tree traversal with extraction at each level.
+ *
+ * This expression implements a depth-first traversal of nested structures by recursively
+ * applying a sequence of traversal operations and extracting values at each level. When
+ * resolved, it concatenates:
+ * 1. The extracted value from the current node
+ * 2. The results of recursively traversing child nodes
+ *
+ * The expression handles field resolution gracefully - if a field is not found during
+ * traversal (FIELD_NOT_FOUND error), it returns an empty array rather than failing.
+ *
+ * '''Depth Limiting:''' The `level` parameter (maxDepth) controls recursion depth to prevent
+ * infinite loops in self-referential structures. The depth counter only decrements when
+ * traversing to a node of the '''same type''' as its parent (`parentType.contains(newValue.dataType)`).
+ * This allows finite paths through different types to traverse deeper than the level limit while
+ * preventing infinite recursion. For example:
+ *  - Traversing Item → Answer → Item (type changes): depth counter does not decrement
+ *  - Traversing Item → Item (same type): depth counter decrements, limiting recursion
+ *
+ * '''Requirements:'''
+ *  - The `extractor` function must return an array type
+ *  - The array type must be consistent across all traversed nodes to avoid type mismatch errors
+ *
+ * @param node       the current node expression to traverse
+ * @param extractor  a function to extract values from a node (must return array type)
+ * @param traversals a sequence of functions to traverse to child nodes
+ * @param parentType the data type of the parent node, used to determine if depth should decrement
+ * @param level      the remaining levels to traverse for same-type recursion; when exhausted, only extraction occurs
+ */
+case class UnresolvedTransformTree(node: Expression,
+                                   extractor: Expression => Expression,
+                                   traversals: Seq[Expression => Expression],
+                                   parentType: Option[DataType],
+                                   level: Int
+                                  )
+  extends Expression with UnevaluableCopy with NonSQLExpression {
+
+  def this(node: Expression,
+           extractor: Expression => Expression,
+           traversals: Seq[Expression => Expression],
+           level: Int) = {
+    this(node, extractor, traversals, None, level)
+  }
+
+  override def mapChildren(f: Expression => Expression): Expression = {
+
+    try {
+      val newValue = f(node)
+      if (newValue.resolved) {
+        // if node is resolved we concatenate
+        // the value extracted from the node with next level traversal
+        if (level > 0 || !parentType.contains(newValue.dataType))
+          Concat(
+            Seq(extractor(node)) ++
+              traversals
+                .map(t => UnresolvedTransformTree(t(node), extractor, traversals,
+                  Some(newValue.dataType),
+                  if (parentType.contains(newValue.dataType)) level - 1 else level
+                ))
+          )
+        else CreateArray(Seq.empty)
+      }
+      else {
+        copy(node = newValue)
+      }
+    } catch {
+      case e: AnalysisException if e.errorClass.contains("FIELD_NOT_FOUND") =>
+        // in case of AnalysisException we just return an empty array
+        CreateArray(Seq.empty)
+    }
+  }
+
+  override def dataType: DataType = throw new UnresolvedException("dataType")
+
+  override def nullable: Boolean = throw new UnresolvedException("nullable")
+
+  override lazy val resolved = false
+
+  override def toString: String = s"$node"
+
+  override def children: Seq[Expression] = node :: Nil
+
+  override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    UnresolvedTransformTree(newChildren.head, extractor, traversals, parentType, level)
   }
 }
 

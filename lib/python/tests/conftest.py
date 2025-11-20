@@ -105,7 +105,7 @@ def pathling_ctx(request, temp_warehouse_dir):
     terminology_service_factory = (
         jvm.au.csiro.pathling.terminology.mock.MockTerminologyServiceFactory()
     )
-    pathling_context = jvm.au.csiro.pathling.library.PathlingContext.create(
+    pathling_context = jvm.au.csiro.pathling.library.PathlingContext.createInternal(
         spark._jsparkSession, encoders, terminology_service_factory
     )
     return PathlingContext(spark, pathling_context)

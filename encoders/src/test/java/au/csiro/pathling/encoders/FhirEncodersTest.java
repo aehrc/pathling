@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.config.EncodingConfiguration;
 import ca.uhn.fhir.parser.IParser;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -39,6 +40,7 @@ import java.nio.file.Path;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.spark.api.java.JavaRDD;
@@ -683,5 +685,28 @@ class FhirEncodersTest {
     assertTrue(subjectRow.isNullAt(2));
   }
 
+
+  @Test
+  void testEncodersConfiguration() {
+    // test the default FhirEncoders configuration
+    assertEquals(
+        EncodingConfiguration.builder().enableExtensions(false).maxNestingLevel(0).openTypes(
+            Set.of()).build(),
+        FhirEncoders.forR4().getOrCreate()
+            .getConfiguration());
+
+    // test a custom FhirEncoders configuration
+    final EncodingConfiguration customConfig = EncodingConfiguration.builder()
+        .enableExtensions(true)
+        .maxNestingLevel(5)
+        .openTypes(Set.of("code", "Identifier", "string"))
+        .build();
+
+    assertEquals(customConfig, FhirEncoders.forR4()
+        .withMaxNestingLevel(customConfig.getMaxNestingLevel())
+        .withExtensionsEnabled(customConfig.isEnableExtensions())
+        .withOpenTypes(customConfig.getOpenTypes())
+        .getOrCreate().getConfiguration());
+  }
 
 }
