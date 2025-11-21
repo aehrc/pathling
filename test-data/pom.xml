@@ -22,7 +22,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>au.csiro.pathling</groupId>
   <artifactId>test-data</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
 
   <name>Pathling Test Data</name>
   <description>
