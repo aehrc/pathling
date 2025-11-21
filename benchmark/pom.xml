@@ -31,7 +31,7 @@
 
   <properties>
     <pathling.jmhVersion>1.37</pathling.jmhVersion>
-    <pathling.testDataVersion>1.0.0</pathling.testDataVersion>
+    <pathling.testDataVersion>1.1.0</pathling.testDataVersion>
   </properties>
 
   <dependencies>
