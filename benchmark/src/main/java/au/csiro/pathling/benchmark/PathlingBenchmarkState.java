@@ -163,7 +163,8 @@ public class PathlingBenchmarkState {
   public void setup() {
     // Define the FHIR resource types that will be loaded for benchmarking
     // These represent core clinical data types commonly used in healthcare analytics
-    final List<String> resourceTypes = List.of("Patient", "Observation", "Condition", "Encounter");
+    final List<String> resourceTypes = List.of("Patient", "Observation", "Condition", "Encounter",
+        "QuestionnaireResponse");
 
     // Initialize the appropriate data source based on the benchmark parameter
     if ("ndjson".equals(sourceType)) {
