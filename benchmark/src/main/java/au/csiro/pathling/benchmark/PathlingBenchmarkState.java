@@ -66,7 +66,7 @@ public class PathlingBenchmarkState {
    */
   private static final List<String> VIEW_DEFINITIONS = List.of(
       "ConditionFlat", "EncounterFlat", "PatientAddresses", "PatientAndContactAddressUnion",
-      "PatientDemographics", "UsCoreBloodPressures", "QuestionnaireFlat"
+      "PatientDemographics", "UsCoreBloodPressures", "QuestionnaireResponseFlat"
   );
 
   /**
