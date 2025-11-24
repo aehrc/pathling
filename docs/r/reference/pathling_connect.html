@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">pathling</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">9.0.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">9.1.0</span>
       </span>
     </div>
 
@@ -79,7 +79,9 @@
 <span>  client_secret <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  scope <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  token_expiry_tolerance <span class="op">=</span> <span class="fl">120</span>,</span>
-<span>  accept_language <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  accept_language <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  explain_queries <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  max_unbound_traversal_depth <span class="op">=</span> <span class="fl">10</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -197,6 +199,17 @@ expiry when deciding whether to send it with a terminology request</p></dd>
 <dd><p>The default value of the Accept-Language HTTP header passed to the
 terminology server</p></dd>
 
+
+<dt id="arg-explain-queries">explain_queries<a class="anchor" aria-label="anchor" href="#arg-explain-queries"></a></dt>
+<dd><p>Setting this option to TRUE will enable additional logging relating
+to the query plan used to execute queries</p></dd>
+
+
+<dt id="arg-max-unbound-traversal-depth">max_unbound_traversal_depth<a class="anchor" aria-label="anchor" href="#arg-max-unbound-traversal-depth"></a></dt>
+<dd><p>Maximum depth for self-referencing structure traversals
+in repeat operations. Controls how deeply nested hierarchical data can be flattened
+during projection.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
@@ -214,9 +227,9 @@ your own cluster, make sure it is on the list of packages.</p>
     <div id="see-also">
     <h2>See also</h2>
     <div class="dont-index"><p>Other context lifecycle functions:
-<code><a href="pathling_disconnect.html">pathling_disconnect</a>()</code>,
-<code><a href="pathling_disconnect_all.html">pathling_disconnect_all</a>()</code>,
-<code><a href="pathling_spark.html">pathling_spark</a>()</code></p></div>
+<code><a href="pathling_disconnect.html">pathling_disconnect()</a></code>,
+<code><a href="pathling_disconnect_all.html">pathling_disconnect_all()</a></code>,
+<code><a href="pathling_spark.html">pathling_spark()</a></code></p></div>
     </div>
 
     <div id="ref-examples">
@@ -243,7 +256,7 @@ your own cluster, make sure it is on the list of packages.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
       </footer></div>

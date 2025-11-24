@@ -170,6 +170,8 @@
         <span class="n">scope</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">token_expiry_tolerance</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">120</span><span class="p">,</span>
         <span class="n">accept_language</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">explain_queries</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">max_unbound_traversal_depth</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
         <span class="n">enable_delta</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
         <span class="n">enable_remote_debugging</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">debug_port</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">5005</span><span class="p">,</span>
@@ -244,6 +246,11 @@
 <span class="sd">               the header is not sent. The server can use the header to return the result in the</span>
 <span class="sd">               preferred language if it is able. The actual behaviour may depend on the server</span>
 <span class="sd">               implementation and the code systems used.</span>
+<span class="sd">        :param explain_queries: setting this option to `True` will enable additional logging relating</span>
+<span class="sd">               to the query plan used to execute queries</span>
+<span class="sd">        :param max_unbound_traversal_depth: maximum depth for self-referencing structure traversals</span>
+<span class="sd">               in repeat operations. Controls how deeply nested hierarchical data can be flattened</span>
+<span class="sd">               during projection.</span>
 <span class="sd">        :param enable_delta: enables the use of Delta for storage of FHIR data.</span>
 <span class="sd">               Only supported when no SparkSession is provided.</span>
 <span class="sd">        :param enable_remote_debugging: enables remote debugging for the JVM process.</span>
@@ -341,8 +348,20 @@
             <span class="o">.</span><span class="n">build</span><span class="p">()</span>
         <span class="p">)</span>
 
-        <span class="n">jpc</span><span class="p">:</span> <span class="n">JavaObject</span> <span class="o">=</span> <span class="n">jvm</span><span class="o">.</span><span class="n">au</span><span class="o">.</span><span class="n">csiro</span><span class="o">.</span><span class="n">pathling</span><span class="o">.</span><span class="n">library</span><span class="o">.</span><span class="n">PathlingContext</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-            <span class="n">spark</span><span class="o">.</span><span class="n">_jsparkSession</span><span class="p">,</span> <span class="n">encoders_config</span><span class="p">,</span> <span class="n">terminology_config</span>
+        <span class="c1"># Build a query configuration object from the provided parameters.</span>
+        <span class="n">query_config</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">jvm</span><span class="o">.</span><span class="n">au</span><span class="o">.</span><span class="n">csiro</span><span class="o">.</span><span class="n">pathling</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">QueryConfiguration</span><span class="o">.</span><span class="n">builder</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">explainQueries</span><span class="p">(</span><span class="n">explain_queries</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">maxUnboundTraversalDepth</span><span class="p">(</span><span class="n">max_unbound_traversal_depth</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">build</span><span class="p">()</span>
+        <span class="p">)</span>
+
+        <span class="n">jpc</span><span class="p">:</span> <span class="n">JavaObject</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">jvm</span><span class="o">.</span><span class="n">au</span><span class="o">.</span><span class="n">csiro</span><span class="o">.</span><span class="n">pathling</span><span class="o">.</span><span class="n">library</span><span class="o">.</span><span class="n">PathlingContext</span><span class="o">.</span><span class="n">builder</span><span class="p">(</span><span class="n">spark</span><span class="o">.</span><span class="n">_jsparkSession</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">encodingConfiguration</span><span class="p">(</span><span class="n">encoders_config</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">terminologyConfiguration</span><span class="p">(</span><span class="n">terminology_config</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">queryConfiguration</span><span class="p">(</span><span class="n">query_config</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">build</span><span class="p">()</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">PathlingContext</span><span class="p">(</span><span class="n">spark</span><span class="p">,</span> <span class="n">jpc</span><span class="p">)</span></div>
 

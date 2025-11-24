@@ -25,6 +25,7 @@ au.csiro.pathling.fhirpath.operator
 au.csiro.pathling.fhirpath.parser
 au.csiro.pathling.fhirpath.parser.generated
 au.csiro.pathling.fhirpath.path
+au.csiro.pathling.fhirpath.unit
 au.csiro.pathling.fhirpath.variable
 au.csiro.pathling.io.source
 au.csiro.pathling.library
