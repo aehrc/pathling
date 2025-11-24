@@ -127,7 +127,7 @@ public class ResourceCollection extends Collection {
   protected ColumnRepresentation getFid() {
     return getColumn().traverse(ExtensionSupport.FID_FIELD_NAME());
   }
-  
+
   @Nonnull
   @Override
   public Collection copyWith(@Nonnull final ColumnRepresentation newValue) {
