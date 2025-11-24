@@ -26,9 +26,11 @@ package au.csiro.pathling.encoders;
 
 import static au.csiro.pathling.encoders.ValueFunctions.ifArray;
 import static au.csiro.pathling.encoders.ValueFunctions.ifArray2;
+import static au.csiro.pathling.encoders.ValueFunctions.nullIfMissingField;
 import static au.csiro.pathling.encoders.ValueFunctions.unnest;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.Arrays;
 import java.util.List;
@@ -476,5 +478,238 @@ public class ExpressionsTest {
 
     assertEquals(expectedResult.schema(), groupedResult.schema());
     assertEquals(expectedResult.collectAsList(), groupedResult.collectAsList());
+  }
+
+  /**
+   * Helper method to create a nested item structure with 3 levels for testing transformTree. The
+   * structure has different types at each level to enable testing of type-based traversal limits.
+   *
+   * @return Dataset with structure: items[level0Type(item[level1Type(item[level2Type])])]
+   */
+  private Dataset<Row> createNestedItemDataset() {
+    final Metadata metadata = Metadata.empty();
+
+    // Level 2 (leaf): NO item field - different type from level1
+    final StructType level2Type = DataTypes.createStructType(new StructField[]{
+        new StructField("linkId", DataTypes.StringType, true, metadata),
+        new StructField("text", DataTypes.StringType, true, metadata)
+    });
+
+    // Level 1: HAS item field (array of level2Type) - different type from level0
+    final StructType level1Type = DataTypes.createStructType(new StructField[]{
+        new StructField("linkId", DataTypes.StringType, true, metadata),
+        new StructField("text", DataTypes.StringType, true, metadata),
+        new StructField("item", DataTypes.createArrayType(level2Type), true, metadata)
+    });
+
+    // Level 0: HAS item field (array of level1Type) - root level type
+    final StructType level0Type = DataTypes.createStructType(new StructField[]{
+        new StructField("linkId", DataTypes.StringType, true, metadata),
+        new StructField("text", DataTypes.StringType, true, metadata),
+        new StructField("item", DataTypes.createArrayType(level1Type), true, metadata)
+    });
+
+    // Create test data: 3 levels deep
+    final Row level2Item = RowFactory.create("3", "Level 2");
+    final Row level1Item = RowFactory.create("2", "Level 1", List.of(level2Item));
+    final Row level0Item = RowFactory.create("1", "Level 0", List.of(level1Item));
+
+    final StructType rootSchema = DataTypes.createStructType(new StructField[]{
+        new StructField("id", DataTypes.IntegerType, true, metadata),
+        new StructField("items", DataTypes.createArrayType(level0Type), true, metadata)
+    });
+
+    return spark.createDataFrame(
+        List.of(RowFactory.create(1, List.of(level0Item))),
+        rootSchema
+    );
+  }
+
+  @Test
+  void testTransformTreeFinitePathWithDifferentTypes() {
+    // Finite path: traversing via getField('item') through structurally different types
+    // Each level has a different schema type (level0Type != level1Type != level2Type)
+    // maxDepth should NOT apply because types change at each traversal step
+
+    final Dataset<Row> ds = createNestedItemDataset();
+
+    // Traverse with getField('item') - each traversal step changes type
+    // Level 0 (level0Type) -> getField('item') -> Level 1 (level1Type) -> getField('item') -> Level 2 (level2Type)
+    // maxDepth=1 is very strict, but should NOT limit because types change
+    final Dataset<Row> result = ds.withColumn("collected",
+        ValueFunctions.transformTree(
+            ds.col("items"),
+            c -> c.getField("linkId"),  // Extract linkId at each level
+            List.of(c -> unnest(c.getField("item"))),  // Traverse via item field (type changes)
+            1  // maxDepth=1 (strict limit)
+        )
+    );
+
+    final List<Row> results = result.collectAsList();
+    assertEquals(1, results.size());
+
+    final Row row = results.getFirst();
+    final Seq<?> collected = row.getAs("collected");
+    final List<?> linkIds = CollectionConverters.asJava(collected);
+
+    // Should collect ALL 3 levels because each level has different type
+    // "1" (level 0), "2" (level 1), "3" (level 2)
+    assertEquals(List.of("1", "2", "3"), linkIds);
+  }
+
+  @Test
+  void testTransformTreeSelfReferentialInfiniteLoop() {
+    // Self-referential: traversing with identity function c -> c
+    // This would create infinite recursion (same type forever)
+    // maxDepth MUST apply to prevent infinite loop
+
+    final Dataset<Row> ds = createNestedItemDataset();
+
+    // Traverse with identity function c -> c
+    // This would loop infinitely: items -> items -> items -> items ...
+    // Type never changes (always array<level0Type>), so maxDepth applies
+    // maxDepth=1 should limit to only 2 iterations (levels 0 and 1)
+    final Dataset<Row> result = ds.withColumn("collected",
+        ValueFunctions.transformTree(
+            ds.col("items"),
+            c -> c.getField("linkId"),  // Extract linkId at each level
+            List.of(c -> c),  // Identity function: infinite loop!
+            2  // maxDepth=1 must prevent infinite recursion
+        )
+    );
+
+    final List<Row> results = result.collectAsList();
+    assertEquals(1, results.size());
+
+    final Row row = results.getFirst();
+    final Seq<?> collected = row.getAs("collected");
+    final List<?> linkIds = CollectionConverters.asJava(collected);
+
+    // Should collect only 3 levels (0, 1 and 2) because:
+    // - Level 0: items (type = array<level0Type>)
+    // - Level 1: c -> c returns items again (type = array<level0Type>, same type!)
+    // - Level 2: c -> c returns items again (type = array<level1Type>, same type!)
+    // - Level 3: would be items again but maxDepth=3 prevents it
+    // All extracted linkIds should be "1" (same item repeated)
+    assertEquals(List.of("1", "1", "1"), linkIds);
+  }
+
+  @Test
+  void testTransformTreeMultipleTraversalPaths() {
+    // Multiple traversal paths: combines finite path (type-changing) and self-referential (infinite loop)
+    // This demonstrates that different paths can have different depth behaviors simultaneously
+
+    final Dataset<Row> ds = createNestedItemDataset();
+
+    // Use TWO traversal paths:
+    // Path 1: c -> unnest(c.getField("item")) - finite path with type changes
+    // Path 2: c -> c - self-referential with same type (infinite loop)
+    final Dataset<Row> result = ds.withColumn("collected",
+        ValueFunctions.transformTree(
+            ds.col("items"),
+            c -> c.getField("linkId"),  // Extract linkId at each level
+            List.of(
+                c -> unnest(c.getField("item")),  // Path 1: finite, type changes
+                c -> c                             // Path 2: infinite loop, type stays same
+            ),
+            1  // maxDepth=1
+        )
+    );
+
+    final List<Row> results = result.collectAsList();
+    assertEquals(1, results.size());
+
+    final Row row = results.getFirst();
+    final Seq<?> collected = row.getAs("collected");
+    final List<?> linkIds = CollectionConverters.asJava(collected);
+    
+    
+    // Should collect:
+    // From Path 1 (finite, type-changing):
+    // - "1" (level 0), "2" (level 1),
+    // From Path 2 (self-referential, infinite loop, maxDepth=1):
+    // - "1" (level 0), "2" (level 1),
+    // Total collected: "1", "2", "3", "3", "2", "3", "1", "2", "3"
+    
+    assertEquals(List.of("1", "2", "3", "3", "2", "3", "1", "2", "3"), linkIds);
+
+  }
+
+  @Test
+  void testNullIfMissingField() {
+    // Comprehensive test for nullIfMissingField covering all scenarios:
+    // 1. Existing top-level fields returning actual values
+    // 2. Existing nested struct fields returning actual values
+    // 3. Missing struct fields returning null
+    // 4. Struct fields with null values vs non-existent fields
+
+    final Metadata metadata = Metadata.empty();
+
+    // Create a struct type for person with name and age fields (no email or salary fields)
+    final StructType personType = DataTypes.createStructType(new StructField[]{
+        new StructField("name", DataTypes.StringType, true, metadata),
+        new StructField("age", DataTypes.IntegerType, true, metadata)
+    });
+
+    final StructType schema = DataTypes.createStructType(new StructField[]{
+        new StructField("id", DataTypes.IntegerType, true, metadata),
+        new StructField("value", DataTypes.IntegerType, true, metadata),
+        new StructField("person", personType, true, metadata)
+    });
+
+    final List<Row> data = List.of(
+        RowFactory.create(1, 100, RowFactory.create(null, 25)),  // person.name is null
+        RowFactory.create(2, 200, RowFactory.create("Bob", null)),  // person.age is null
+        RowFactory.create(3, 300, RowFactory.create("Charlie", 30))
+    );
+
+    final Dataset<Row> ds = spark.createDataFrame(data, schema);
+
+    // Apply multiple nullIfMissingField expressions to test all scenarios
+    final Dataset<Row> result = ds
+        // Test 1: Existing top-level field
+        .withColumn("test_top_level", nullIfMissingField(ds.col("value")))
+        // Test 2: Existing nested field using dot notation
+        .withColumn("test_nested_exists", nullIfMissingField(ds.col("person.name")))
+        // Test 3: Existing nested field using getField
+        .withColumn("test_struct_field", nullIfMissingField(ds.col("person").getField("age")))
+        // Test 4: Missing struct field (address doesn't exist)
+        .withColumn("test_missing_address",
+            nullIfMissingField(ds.col("person").getField("address")))
+        // Test 5: Missing struct field (email doesn't exist)
+        .withColumn("test_missing_email", nullIfMissingField(ds.col("person").getField("email")))
+        // Test 6: Missing struct field (salary doesn't exist)
+        .withColumn("test_missing_salary", nullIfMissingField(ds.col("person").getField("salary")));
+
+    final List<Row> results = result.collectAsList();
+    assertEquals(3, results.size());
+
+    // Row 1: person.name is null, person.age is 25
+    assertEquals(100, (Integer) results.getFirst().getAs("test_top_level"));
+    assertNull(results.getFirst().getAs("test_nested_exists"));  // null value from data
+    assertEquals(25, (Integer) results.getFirst().getAs("test_struct_field"));
+    assertNull(results.getFirst().getAs("test_missing_address"));  // field doesn't exist
+    assertNull(results.get(0).getAs("test_missing_email"));
+    assertNull(results.get(0).getAs("test_missing_salary"));
+
+    // Row 2: person.name is "Bob", person.age is null
+    assertEquals(200, (Integer) results.get(1).getAs("test_top_level"));
+    assertEquals("Bob", results.get(1).getAs("test_nested_exists"));
+    assertNull(results.get(1).getAs("test_struct_field"));  // null value from data
+    assertNull(results.get(1).getAs("test_missing_address"));  // field doesn't exist
+    assertNull(results.get(1).getAs("test_missing_email"));
+    assertNull(results.get(1).getAs("test_missing_salary"));
+
+    // Row 3: person.name is "Charlie", person.age is 30
+    assertEquals(300, (Integer) results.get(2).getAs("test_top_level"));
+    assertEquals("Charlie", results.get(2).getAs("test_nested_exists"));
+    assertEquals(30, (Integer) results.get(2).getAs("test_struct_field"));
+    assertNull(results.get(2).getAs("test_missing_address"));  // field doesn't exist
+    assertNull(results.get(2).getAs("test_missing_email"));
+    assertNull(results.get(2).getAs("test_missing_salary"));
+
+    // Key distinction: Fields that exist but have null values (row 1 name, row 2 age)
+    // preserve the null from the data, while missing fields (address, email, salary)
+    // return null because they don't exist in the struct schema
   }
 }

@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.config.EncodingConfiguration;
 import ca.uhn.fhir.parser.IParser;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -39,6 +40,7 @@ import java.nio.file.Path;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.spark.api.java.JavaRDD;
@@ -53,6 +55,7 @@ import org.apache.spark.sql.functions;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Annotation;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.Encounter;
@@ -683,5 +686,66 @@ class FhirEncodersTest {
     assertTrue(subjectRow.isNullAt(2));
   }
 
+
+  @Test
+  void testResourceWithMetaVersionId() {
+    // Setting meta.versionId does NOT affect the id_versioned column.
+    // The id_versioned column is populated from IdType.getValue(), which only includes
+    // version info if the IdType was constructed with a version parameter.
+    final Patient patientWithMetaVersion = new Patient();
+    patientWithMetaVersion.setId("patient-123");
+    patientWithMetaVersion.getMeta().setVersionId("1");
+
+    final Dataset<Patient> dataset = spark.createDataset(
+        List.of(patientWithMetaVersion), ENCODERS_L0.of(Patient.class));
+
+    final Row row = dataset.select("id", "id_versioned").head();
+
+    // Both columns contain just the logical ID when meta.versionId is used.
+    assertEquals("patient-123", row.getString(0));
+    assertEquals("patient-123", row.getString(1));
+  }
+
+  @Test
+  void testResourceWithVersionedIdType() {
+    // When IdType is constructed with resource type and version, id_versioned includes the
+    // full versioned reference. This is what getResourceKey() returns.
+    final Patient patientWithVersionedIdType = new Patient();
+    patientWithVersionedIdType.setIdElement(new IdType("Patient", "patient-123", "1"));
+
+    final Dataset<Patient> dataset = spark.createDataset(
+        List.of(patientWithVersionedIdType), ENCODERS_L0.of(Patient.class));
+
+    final Row row = dataset.select("id", "id_versioned").head();
+
+    // The id column contains just the logical ID part.
+    assertEquals("patient-123", row.getString(0));
+
+    // The id_versioned column contains the full versioned reference.
+    assertEquals("Patient/patient-123/_history/1", row.getString(1));
+  }
+
+  @Test
+  void testEncodersConfiguration() {
+    // test the default FhirEncoders configuration
+    assertEquals(
+        EncodingConfiguration.builder().enableExtensions(false).maxNestingLevel(0).openTypes(
+            Set.of()).build(),
+        FhirEncoders.forR4().getOrCreate()
+            .getConfiguration());
+
+    // test a custom FhirEncoders configuration
+    final EncodingConfiguration customConfig = EncodingConfiguration.builder()
+        .enableExtensions(true)
+        .maxNestingLevel(5)
+        .openTypes(Set.of("code", "Identifier", "string"))
+        .build();
+
+    assertEquals(customConfig, FhirEncoders.forR4()
+        .withMaxNestingLevel(customConfig.getMaxNestingLevel())
+        .withExtensionsEnabled(customConfig.isEnableExtensions())
+        .withOpenTypes(customConfig.getOpenTypes())
+        .getOrCreate().getConfiguration());
+  }
 
 }

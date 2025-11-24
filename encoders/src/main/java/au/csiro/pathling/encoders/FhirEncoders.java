@@ -24,6 +24,8 @@
 
 package au.csiro.pathling.encoders;
 
+import au.csiro.pathling.config.Configurable;
+import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
@@ -39,7 +41,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 /**
  * Spark Encoders for FHIR Resources. This object is thread safe.
  */
-public class FhirEncoders {
+public class FhirEncoders implements Configurable<EncodingConfiguration> {
 
   /**
    * The reasonable default set of open types to encode with extension values.
@@ -88,7 +90,7 @@ public class FhirEncoders {
   private static final Map<FhirVersionEnum, FhirContext> FHIR_CONTEXTS = new ConcurrentHashMap<>();
 
   /**
-   * @return the FHIR context used by encoders produced by this instance.
+   * The FHIR context used by encoders produced by this instance.
    */
   @Getter
   private final FhirContext context;
@@ -265,6 +267,23 @@ public class FhirEncoders {
    */
   public FhirVersionEnum getFhirVersion() {
     return context.getVersion().getVersion();
+  }
+
+  /**
+   * Returns the encoding configuration that corresponds to this FhirEncoders instance.
+   * <p>
+   * The configuration is constructed on-demand from the current state of this instance.
+   *
+   * @return the encoding configuration, never null
+   */
+  @Nonnull
+  @Override
+  public EncodingConfiguration getConfiguration() {
+    return EncodingConfiguration.builder()
+        .maxNestingLevel(maxNestingLevel)
+        .enableExtensions(enableExtensions)
+        .openTypes(openTypes)
+        .build();
   }
 
 }

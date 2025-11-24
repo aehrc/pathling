@@ -390,9 +390,54 @@ verified to be green within CI before merging to main. Merging to main
 automatically triggers publishing of artifacts and deployment of the software to
 production environments such as the Pathling website and sandbox instance.
 
-### Coding conventions
 
-#### Comments
+## Commit Message Format
+
+Write commit messages that capture the **objective** of the change, not the specific implementation details that can be obtained from the diff.
+
+**Structure**:
+```
+<type>: <succinct description of the objective>
+
+<optional body explaining the why and context>
+```
+
+**Types**:
+- `fix:` - Bug fixes or resolving warnings/errors
+- `feat:` - New features or enhancements
+- `refactor:` - Code restructuring without changing behavior
+- `docs:` - Documentation updates
+- `test:` - Test-related changes
+- `chore:` - Build, tooling, or dependency updates
+
+**Guidelines**:
+- Focus on **why** the change was needed and **what problem** it solves
+- Avoid mentioning specific files, line numbers, or implementation details
+- Keep the first line concise (under 72 characters when possible)
+- Use the body to provide context if the objective isn't obvious
+
+**Examples**:
+
+Good:
+```
+fix: Suppress Mockito dynamic agent loading warnings in Java 21
+
+Added JVM flag to suppress warnings about Mockito's inline mock maker
+self-attaching. Updated documentation to record Maven test configuration.
+```
+
+Poor:
+```
+fix: Added -XX:+EnableDynamicAgentLoading to pom.xml line 637
+
+Changed the argLine in maven-surefire-plugin configuration.
+Updated CLAUDE.md with new section at lines 102-120.
+```
+
+
+## Coding conventions
+
+### Comments
 
 - All comments must use correct grammar and be written as complete sentences.
 - Every comment, including single-line comments, must be terminated with a
@@ -406,7 +451,7 @@ production environments such as the Pathling website and sandbox instance.
   If you have a task that you want to complete in the future, please create an
   issue for it.
 
-#### Java
+### Java
 
 - Use meaningful and descriptive names for classes, methods, and variables
   (avoid abbreviations).
@@ -445,7 +490,7 @@ production environments such as the Pathling website and sandbox instance.
 - Ensure code is free of major bugs, vulnerabilities, and code smells as
   reported by SonarQube.
 
-#### Scala
+### Scala
 
 - Use meaningful and descriptive names
   following [Scala conventions](https://docs.scala-lang.org/style/).
@@ -462,7 +507,7 @@ production environments such as the Pathling website and sandbox instance.
 - Use appropriate collection methods (`map`, `filter`, `fold`) instead of loops.
 - Keep methods short and focused on a single responsibility.
 
-#### Python
+### Python
 
 - Follow [PEP 8](https://peps.python.org/pep-0008/) style guidelines.
 - Use meaningful and descriptive names with snake_case convention.
@@ -474,7 +519,7 @@ production environments such as the Pathling website and sandbox instance.
 - Write unit tests using [pytest framework](https://pytest.org/).
 - Keep imports organized: standard library, third-party, local imports.
 
-#### R
+### R
 
 - Follow [tidyverse style guide](https://style.tidyverse.org/) conventions.
 - Use snake_case for variable and function names.
@@ -487,7 +532,7 @@ production environments such as the Pathling website and sandbox instance.
 - Handle missing values (`NA`) appropriately.
 - Use consistent indentation (2 spaces recommended).
 
-#### Formatting
+### Formatting
 
 This repository uses multiple code formatters:
 

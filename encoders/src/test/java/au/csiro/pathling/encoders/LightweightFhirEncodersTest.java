@@ -331,10 +331,10 @@ public class LightweightFhirEncodersTest implements JsonMethods {
     final List<Row> quantityArray = propertyRow.getList(propertyRow.fieldIndex("valueQuantity"));
 
     final Row quantity1 = quantityArray.getFirst();
-    assertQuantity(quantity1, "0.0010", "m");
+    assertQuantity(quantity1, "0.001", "m");
 
     final Row quantity2 = quantityArray.get(1);
-    assertQuantity(quantity2, "0.0020", "m");
+    assertQuantity(quantity2, "0.002", "m");
   }
 
 }

@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.config;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Min;
 import lombok.Builder;
 import lombok.Data;
 
@@ -34,15 +34,15 @@ public class QueryConfiguration {
    * Setting this option to {@code true} will enable additional logging relating to the query plan
    * used to execute queries.
    */
-  @NotNull
   @Builder.Default
-  private Boolean explainQueries = false;
+  private boolean explainQueries = false;
 
   /**
-   * This controls whether the built-in caching within Spark is used for search results. It may be
-   * useful to turn this off for large datasets in memory-constrained environments.
+   * Maximum depth for self-referencing structure traversals in repeat operations. Controls how
+   * deeply nested hierarchical data can be flattened during projection.
    */
-  @NotNull
+  @Min(0)
   @Builder.Default
-  private Boolean cacheResults = true;
+  private int maxUnboundTraversalDepth = 10;
+
 }

@@ -5,6 +5,11 @@ description: Instructions for configuring Apache Spark to use the Pathling libra
 
 # Spark configuration
 
+## Supported versions
+
+Pathling is built and tested against **Apache Spark 4.0.x**. The Python library
+requires PySpark 4.0.x, and the R library requires sparklyr with Spark 4.0.x.
+
 ## Session configuration
 
 When you create a `PathlingContext` within your Spark application, it will
@@ -35,7 +40,7 @@ from pyspark.sql import SparkSession
 spark = (
     SparkSession.builder.config(
         "spark.jars.packages",
-        "au.csiro.pathling:library-runtime:9.0.0," +
+        "au.csiro.pathling:library-runtime:9.1.0," +
         "io.delta:delta-spark_2.13:4.0.0"
     )
     .config(
@@ -63,7 +68,7 @@ sc <- spark_connect(master = "local",
                     config = list("sparklyr.shell.conf" = c(
                             "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
                             "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
-                    )), version = "3.5.6")
+                    )), version = "4.0.1")
 
 pc <- pathling_connect(sc)
 ```
@@ -75,7 +80,7 @@ pc <- pathling_connect(sc)
 import au.csiro.pathling.library.PathlingContext
 
 val spark = SparkSession.builder
-        .config("spark.jars.packages", "au.csiro.pathling:library-runtime:9.0.0," +
+        .config("spark.jars.packages", "au.csiro.pathling:library-runtime:9.1.0," +
                 "io.delta:delta-spark_2.13:4.0.0")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.sql.catalog.spark_catalog",
@@ -97,7 +102,7 @@ class MyApp {
     public static void main(String[] args) {
         SparkSession spark = SparkSession.builder()
                 .config("spark.jars.packages",
-                        "au.csiro.pathling:library-runtime:9.0.0," +
+                        "au.csiro.pathling:library-runtime:9.1.0," +
                                 "io.delta:delta-spark_2.13:4.0.0")
                 .config("spark.sql.extensions",
                         "io.delta.sql.DeltaSparkSessionExtension")

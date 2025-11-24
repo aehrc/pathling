@@ -185,6 +185,36 @@ public class FhirView {
   }
 
   /**
+   * Creates a new 'repeat' SelectClause with the specified paths and columns.
+   *
+   * @param paths the FHIRPath expressions for recursive traversal
+   * @param columns the columns to include
+   * @return a new SelectClause instance
+   */
+  @Nonnull
+  public static SelectClause repeat(@Nonnull final List<String> paths,
+      @Nonnull final Column... columns) {
+    return SelectClause.builder()
+        .repeat(paths.toArray(new String[0]))
+        .column(columns).build();
+  }
+
+  /**
+   * Creates a new 'repeat' SelectClause with the specified paths and nested selects.
+   *
+   * @param paths the FHIRPath expressions for recursive traversal
+   * @param selects the nested select clauses to include
+   * @return a new SelectClause instance
+   */
+  @Nonnull
+  public static SelectClause repeat(@Nonnull final List<String> paths,
+      @Nonnull final SelectClause... selects) {
+    return SelectClause.builder()
+        .repeat(paths.toArray(new String[0]))
+        .select(selects).build();
+  }
+
+  /**
    * Creates a new {@link SelectClause} that unions all the given select clauses.
    *
    * @param selects the select clauses to union

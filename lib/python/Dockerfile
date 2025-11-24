@@ -1,7 +1,7 @@
 FROM jupyter/all-spark-notebook
 
 USER root
-RUN echo "spark.jars.packages au.csiro.pathling:library-runtime:9.0.0" >> /usr/local/spark/conf/spark-defaults.conf
+RUN echo "spark.jars.packages au.csiro.pathling:library-runtime:9.1.0" >> /usr/local/spark/conf/spark-defaults.conf
 
 USER ${NB_UID}
 
