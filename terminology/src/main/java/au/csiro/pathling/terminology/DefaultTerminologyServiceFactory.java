@@ -74,6 +74,19 @@ public record DefaultTerminologyServiceFactory(
     return terminologyServiceHolder.getOrCreate(this);
   }
 
+  /**
+   * Returns the terminology configuration used by this factory.
+   * <p>
+   * The configuration is stored as a record component and returned directly.
+   *
+   * @return the terminology configuration, never null
+   */
+  @Nonnull
+  @Override
+  public TerminologyConfiguration getConfiguration() {
+    return configuration;
+  }
+
   @Nonnull
   private TerminologyService createService() {
 

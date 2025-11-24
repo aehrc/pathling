@@ -61,12 +61,12 @@ import org.openjdk.jmh.annotations.TearDown;
 public class PathlingBenchmarkState {
 
   /**
-   * Pre-defined view definitions used in benchmarks to test complex query scenarios. These view
-   * definitions are taken from the SQL on FHIR implementation guide.
+   * Pre-defined view definitions used in benchmarks to test query scenarios. These view definitions
+   * are taken from the SQL on FHIR implementation guide.
    */
   private static final List<String> VIEW_DEFINITIONS = List.of(
       "ConditionFlat", "EncounterFlat", "PatientAddresses", "PatientAndContactAddressUnion",
-      "PatientDemographics", "UsCoreBloodPressures"
+      "PatientDemographics", "UsCoreBloodPressures", "QuestionnaireResponseFlat"
   );
 
   /**
@@ -163,7 +163,8 @@ public class PathlingBenchmarkState {
   public void setup() {
     // Define the FHIR resource types that will be loaded for benchmarking
     // These represent core clinical data types commonly used in healthcare analytics
-    final List<String> resourceTypes = List.of("Patient", "Observation", "Condition", "Encounter");
+    final List<String> resourceTypes = List.of("Patient", "Observation", "Condition", "Encounter",
+        "QuestionnaireResponse");
 
     // Initialize the appropriate data source based on the benchmark parameter
     if ("ndjson".equals(sourceType)) {

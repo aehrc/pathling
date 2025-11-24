@@ -22,7 +22,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>au.csiro.pathling</groupId>
   <artifactId>test-data</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
 
   <name>Pathling Test Data</name>
   <description>
@@ -71,7 +71,21 @@
     <seed>589</seed>
     <clinicianSeed>1652609873669</clinicianSeed>
     <referenceTime>20240101</referenceTime>
+    <pathling.hapiFhirVersion>8.4.0</pathling.hapiFhirVersion>
   </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <artifactId>hapi-fhir-structures-r4</artifactId>
+      <version>${pathling.hapiFhirVersion}</version>
+    </dependency>
+    <dependency>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <artifactId>hapi-fhir-base</artifactId>
+      <version>${pathling.hapiFhirVersion}</version>
+    </dependency>
+  </dependencies>
 
   <build>
     <plugins>
@@ -113,6 +127,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
+        <version>3.1.0</version>
         <executions>
           <execution>
             <id>generate-bulk</id>
@@ -169,6 +184,20 @@
                 <argument>target/output/bundles</argument>
                 <argument>--exporter.fhir.bulk_data</argument>
                 <argument>false</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>generate-questionnaireresponses</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>java</goal>
+            </goals>
+            <configuration>
+              <mainClass>au.csiro.pathling.testdata.QuestionnaireResponseGenerator</mainClass>
+              <arguments>
+                <argument>target/output/bulk/fhir/QuestionnaireResponse.ndjson</argument>
+                <argument>10000</argument>
               </arguments>
             </configuration>
           </execution>

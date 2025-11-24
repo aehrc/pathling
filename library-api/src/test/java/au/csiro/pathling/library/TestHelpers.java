@@ -23,6 +23,10 @@ import org.apache.spark.sql.SparkSession.Builder;
 
 public class TestHelpers {
 
+  private TestHelpers() {
+    // Utility class - prevent instantiation
+  }
+
   @Nonnull
   public static SparkSession spark() {
     return sparkBuilder()

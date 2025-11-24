@@ -17,6 +17,9 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import static org.apache.spark.sql.functions.concat;
+import static org.apache.spark.sql.functions.lit;
+
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
@@ -124,7 +127,7 @@ public class ResourceCollection extends Collection {
   protected ColumnRepresentation getFid() {
     return getColumn().traverse(ExtensionSupport.FID_FIELD_NAME());
   }
-  
+
   @Nonnull
   @Override
   public Collection copyWith(@Nonnull final ColumnRepresentation newValue) {
@@ -133,13 +136,19 @@ public class ResourceCollection extends Collection {
   }
 
   /**
-   * @return A column that can be used as a key for joining to this resource type
+   * Returns a column that can be used as a key for joining to this resource type. The key is
+   * constructed as "ResourceType/id" (e.g., "Patient/123") to match the format used by FHIR
+   * references. This ensures that {@code getResourceKey()} returns a value compatible with
+   * {@code getReferenceKey()} for joining resources to their references.
+   *
+   * @return A collection containing the resource key
    */
   @Nonnull
   public Collection getKeyCollection() {
-    return StringCollection.build(
-        getColumn().traverse("id_versioned", Optional.of(FHIRDefinedType.STRING))
-    );
+    final String prefix = resourceDefinition.getResourceCode() + "/";
+    final ColumnRepresentation idColumn = getColumn()
+        .traverse("id", Optional.of(FHIRDefinedType.STRING));
+    return StringCollection.build(idColumn.transform(id -> concat(lit(prefix), id)));
   }
 
   /**

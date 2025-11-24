@@ -23,6 +23,7 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DateCollection;
 import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
@@ -93,7 +94,12 @@ public enum FhirPathType {
    * Quantity FHIRPath type.
    */
   QUANTITY("Quantity", QuantityEncoding.dataType(), QuantityCollection.class,
-      FHIRDefinedType.QUANTITY);
+      FHIRDefinedType.QUANTITY),
+
+  /**
+   * Nothing FHIRPath type (empty collection).
+   */
+  NOTHING("Nothing", DataTypes.NullType, EmptyCollection.class, FHIRDefinedType.NULL);
 
 
   @Nonnull
