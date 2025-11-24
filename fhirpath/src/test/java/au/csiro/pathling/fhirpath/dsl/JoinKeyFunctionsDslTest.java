@@ -35,8 +35,9 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
   @FhirPathTest
   public Stream<DynamicTest> testGetResourceKey() {
     return builder()
-        .withSubject(sb -> sb.string("id_versioned", "Patient/1")
-        )
+        .withSubject(sb -> sb
+            .string("resourceType", "Patient")
+            .string("id", "1"))
         .group("getResourceKey() function")
         .testEquals("Patient/1", "getResourceKey()",
             "getResourceKey() returns a non-empty value for a Patient resource")
@@ -112,19 +113,22 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
 
   @FhirPathTest
   public Stream<DynamicTest> testResourceKeyMatchesReferenceKeyWithVersionedId() {
-    // This test demonstrates issue #2519: when a resource has a versioned ID,
+    // This test demonstrates issue #2519: when a resource has a versioned ID in id_versioned,
     // getResourceKey() should return an unversioned key that matches getReferenceKey().
     // References typically don't include version info, so the keys must match for joining.
     return builder()
         .withSubject(sb -> sb
+            .string("resourceType", "Patient")
             .string("id", "patient-123")
+            // Simulate a resource that was encoded with versioned IdType - this populates
+            // id_versioned with the full versioned reference format.
             .string("id_versioned", "Patient/patient-123/_history/1")
             .element("selfReference", ref -> ref
                 .fhirType(REFERENCE)
                 .string("reference", "Patient/patient-123")))
         .group("getResourceKey() and getReferenceKey() matching with versioned IDs")
         .testEquals("Patient/patient-123", "getResourceKey()",
-            "getResourceKey() should return unversioned key to match reference format")
+            "getResourceKey() should return unversioned key (not id_versioned) to match reference format")
         .testEquals("Patient/patient-123", "selfReference.getReferenceKey()",
             "getReferenceKey() returns unversioned reference")
         .build();
