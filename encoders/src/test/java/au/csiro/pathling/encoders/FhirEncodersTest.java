@@ -55,6 +55,7 @@ import org.apache.spark.sql.functions;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Annotation;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.Encounter;
@@ -685,6 +686,44 @@ class FhirEncodersTest {
     assertTrue(subjectRow.isNullAt(2));
   }
 
+
+  @Test
+  void testResourceWithMetaVersionId() {
+    // Setting meta.versionId does NOT affect the id_versioned column.
+    // The id_versioned column is populated from IdType.getValue(), which only includes
+    // version info if the IdType was constructed with a version parameter.
+    final Patient patientWithMetaVersion = new Patient();
+    patientWithMetaVersion.setId("patient-123");
+    patientWithMetaVersion.getMeta().setVersionId("1");
+
+    final Dataset<Patient> dataset = spark.createDataset(
+        List.of(patientWithMetaVersion), ENCODERS_L0.of(Patient.class));
+
+    final Row row = dataset.select("id", "id_versioned").head();
+
+    // Both columns contain just the logical ID when meta.versionId is used.
+    assertEquals("patient-123", row.getString(0));
+    assertEquals("patient-123", row.getString(1));
+  }
+
+  @Test
+  void testResourceWithVersionedIdType() {
+    // When IdType is constructed with resource type and version, id_versioned includes the
+    // full versioned reference. This is what getResourceKey() returns.
+    final Patient patientWithVersionedIdType = new Patient();
+    patientWithVersionedIdType.setIdElement(new IdType("Patient", "patient-123", "1"));
+
+    final Dataset<Patient> dataset = spark.createDataset(
+        List.of(patientWithVersionedIdType), ENCODERS_L0.of(Patient.class));
+
+    final Row row = dataset.select("id", "id_versioned").head();
+
+    // The id column contains just the logical ID part.
+    assertEquals("patient-123", row.getString(0));
+
+    // The id_versioned column contains the full versioned reference.
+    assertEquals("Patient/patient-123/_history/1", row.getString(1));
+  }
 
   @Test
   void testEncodersConfiguration() {

@@ -109,4 +109,24 @@ public class JoinKeyFunctionsDslTest extends FhirPathDslTestBase {
             "getReferenceKey() throws an error when called with more than one parameter")
         .build();
   }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testResourceKeyMatchesReferenceKeyWithVersionedId() {
+    // This test demonstrates issue #2519: when a resource has a versioned ID,
+    // getResourceKey() should return an unversioned key that matches getReferenceKey().
+    // References typically don't include version info, so the keys must match for joining.
+    return builder()
+        .withSubject(sb -> sb
+            .string("id", "patient-123")
+            .string("id_versioned", "Patient/patient-123/_history/1")
+            .element("selfReference", ref -> ref
+                .fhirType(REFERENCE)
+                .string("reference", "Patient/patient-123")))
+        .group("getResourceKey() and getReferenceKey() matching with versioned IDs")
+        .testEquals("Patient/patient-123", "getResourceKey()",
+            "getResourceKey() should return unversioned key to match reference format")
+        .testEquals("Patient/patient-123", "selfReference.getReferenceKey()",
+            "getReferenceKey() returns unversioned reference")
+        .build();
+  }
 }
