@@ -50,33 +50,33 @@ class SecurityDisabledOperationsTest extends SecurityTestForOperations<ExportReq
   private static Path tempDir;
 
   @DynamicPropertySource
-  static void configureProperties(DynamicPropertyRegistry registry) {
+  static void configureProperties(final DynamicPropertyRegistry registry) {
     TestDataSetup.copyTestDataToTempDir(tempDir);
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + tempDir.toAbsolutePath());
   }
 
   @BeforeEach
-  void child_setup() {
-    exportProvider = setup_scenario(tempDir, "Patient", "Encounter");
+  void childSetup() {
+    exportProvider = setupScenario(tempDir, "Patient", "Encounter");
   }
 
   @Test
   void testPassExportIfExportWithNoAuth() {
-    assertThatNoException().isThrownBy(this::perform_export);
+    assertThatNoException().isThrownBy(this::performExport);
   }
 
   @Test
   void testPassIfExportWithTypeWithNoAuth() {
     assertThatNoException().isThrownBy(
-        () -> perform_export(ADMIN_USER, List.of("Patient", "Encounter"), false));
+        () -> performExport(ADMIN_USER, List.of("Patient", "Encounter"), false));
   }
 
   @Order(Order.DEFAULT + 100)
   @Test
   void testPassExportResultIfExportResultWithNoAuth() {
-    perform_export();
+    performExport();
     assertThatNoException().isThrownBy(
-        () -> perform_export_result(job.getId(), "Patient.00000.ndjson", null));
+        () -> performExportResult(job.getId(), "Patient.00000.ndjson", null));
   }
 
 }

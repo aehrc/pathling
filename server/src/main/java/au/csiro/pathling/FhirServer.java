@@ -13,6 +13,8 @@ import au.csiro.pathling.interceptors.BulkExportDeleteInterceptor;
 import au.csiro.pathling.interceptors.SmartConfigurationInterceptor;
 import au.csiro.pathling.operations.bulkexport.ExportProvider;
 import au.csiro.pathling.operations.bulkexport.ExportResultProvider;
+import au.csiro.pathling.operations.bulkexport.GroupExportProvider;
+import au.csiro.pathling.operations.bulkexport.PatientExportProvider;
 import au.csiro.pathling.operations.bulkimport.ImportPnpProvider;
 import au.csiro.pathling.operations.bulkimport.ImportProvider;
 import au.csiro.pathling.security.OidcConfiguration;
@@ -44,16 +46,32 @@ import scala.jdk.javaapi.CollectionConverters;
  */
 @WebServlet(urlPatterns = "/fhir/*")
 @Slf4j
+@SuppressWarnings("serial")
 public class FhirServer extends RestfulServer {
 
   @Serial
   private static final long serialVersionUID = -1519567839063860047L;
 
+  /**
+   * The Accept header for FHIR JSON content.
+   */
   public static final Header ACCEPT_HEADER = new Header("Accept", List.of("application/fhir+json"));
+
+  /**
+   * The Prefer header for respond-async behaviour.
+   */
   public static final Header PREFER_RESPOND_TYPE_HEADER = new Header("Prefer",
       List.of("respond-async"));
+
+  /**
+   * The Prefer header for lenient handling behaviour.
+   */
   public static final Header PREFER_LENIENT_HEADER = new Header("Prefer",
       List.of("handling=lenient"));
+
+  /**
+   * The _outputFormat parameter for specifying output format.
+   */
   public static final Header OUTPUT_FORMAT = new Header("_outputFormat",
       List.of("application/fhir+ndjson", "application/ndjson", "ndjson"));
 
@@ -77,6 +95,12 @@ public class FhirServer extends RestfulServer {
   private final transient ExportResultProvider exportResultProvider;
 
   @Nonnull
+  private final transient PatientExportProvider patientExportProvider;
+
+  @Nonnull
+  private final transient GroupExportProvider groupExportProvider;
+
+  @Nonnull
   private final transient ImportProvider importProvider;
 
   @Nonnull
@@ -94,23 +118,43 @@ public class FhirServer extends RestfulServer {
   @Nonnull
   private final transient ConformanceProvider conformanceProvider;
 
-
+  /**
+   * Constructs a new FhirServer.
+   *
+   * @param configuration the server configuration
+   * @param oidcConfiguration the optional OIDC configuration
+   * @param jobProvider the optional job provider
+   * @param exportProvider the export provider
+   * @param exportResultProvider the export result provider
+   * @param patientExportProvider the patient export provider
+   * @param groupExportProvider the group export provider
+   * @param importProvider the import provider
+   * @param importPnpProvider the import PnP provider
+   * @param errorReportingInterceptor the error reporting interceptor
+   * @param entityTagInterceptor the entity tag interceptor
+   * @param bulkExportDeleteInterceptor the bulk export delete interceptor
+   * @param conformanceProvider the conformance provider
+   */
   public FhirServer(@Nonnull final ServerConfiguration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
-      @Nonnull Optional<JobProvider> jobProvider,
-      @Nonnull ExportProvider exportProvider,
-      @Nonnull ExportResultProvider exportResultProvider,
-      @Nonnull ImportProvider importProvider,
-      @Nonnull ImportPnpProvider importPnpProvider,
-      @Nonnull ErrorReportingInterceptor errorReportingInterceptor,
-      @Nonnull EntityTagInterceptor entityTagInterceptor, @Nonnull
-      BulkExportDeleteInterceptor bulkExportDeleteInterceptor,
-      @Nonnull ConformanceProvider conformanceProvider) {
+      @Nonnull final Optional<JobProvider> jobProvider,
+      @Nonnull final ExportProvider exportProvider,
+      @Nonnull final ExportResultProvider exportResultProvider,
+      @Nonnull final PatientExportProvider patientExportProvider,
+      @Nonnull final GroupExportProvider groupExportProvider,
+      @Nonnull final ImportProvider importProvider,
+      @Nonnull final ImportPnpProvider importPnpProvider,
+      @Nonnull final ErrorReportingInterceptor errorReportingInterceptor,
+      @Nonnull final EntityTagInterceptor entityTagInterceptor,
+      @Nonnull final BulkExportDeleteInterceptor bulkExportDeleteInterceptor,
+      @Nonnull final ConformanceProvider conformanceProvider) {
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;
     this.jobProvider = jobProvider;
     this.exportProvider = exportProvider;
     this.exportResultProvider = exportResultProvider;
+    this.patientExportProvider = patientExportProvider;
+    this.groupExportProvider = groupExportProvider;
     this.importProvider = importProvider;
     this.importPnpProvider = importPnpProvider;
     this.errorReportingInterceptor = errorReportingInterceptor;
@@ -138,6 +182,8 @@ public class FhirServer extends RestfulServer {
 
       registerProvider(exportProvider);
       registerProvider(exportResultProvider);
+      registerProvider(patientExportProvider);
+      registerProvider(groupExportProvider);
       registerProvider(importProvider);
       registerProvider(importPnpProvider);
 

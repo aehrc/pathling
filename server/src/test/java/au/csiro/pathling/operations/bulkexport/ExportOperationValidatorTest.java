@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.FhirServer;
 import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.operations.compartment.PatientCompartmentService;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import java.util.List;
@@ -46,7 +47,10 @@ class ExportOperationValidatorTest {
   void setUp() {
     final FhirContext fhirContext = FhirContext.forR4();
     final ServerConfiguration serverConfiguration = new ServerConfiguration();
-    validator = new ExportOperationValidator(fhirContext, serverConfiguration);
+    final PatientCompartmentService patientCompartmentService =
+        new PatientCompartmentService(fhirContext);
+    validator = new ExportOperationValidator(fhirContext, serverConfiguration,
+        patientCompartmentService);
 
     requestDetails = mock(RequestDetails.class);
     when(requestDetails.getCompleteUrl()).thenReturn("http://localhost:8080/fhir/$export");

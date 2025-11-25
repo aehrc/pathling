@@ -18,8 +18,8 @@
 package au.csiro.pathling.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.operations.bulkexport.ExportProvider;
@@ -69,10 +69,10 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
 
 
   @DynamicPropertySource
-  static void configureProperties(DynamicPropertyRegistry registry) {
+  static void configureProperties(final DynamicPropertyRegistry registry) {
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + tempDir.toAbsolutePath());
   }
-  
+
   @AfterEach
   void cleanup() throws IOException {
     FileUtils.cleanDirectory(tempDir.toFile());
@@ -80,11 +80,11 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
 
   @Test
   @WithMockJwt(username = "admin", authorities = {"pathling:export"})
-  void test_forbidden_if_export_with_authority_no_read_authority() {
-    exportProvider = setup_scenario(tempDir, "Patient");
+  void testForbiddenIfExportWithAuthorityNoReadAuthority() {
+    exportProvider = setupScenario(tempDir, "Patient");
     assertThatNoException().isThrownBy(() -> {
-      JsonNode manifest = perform_export();
-      ArrayNode output = (ArrayNode) manifest.get("output");
+      final JsonNode manifest = performExport();
+      final ArrayNode output = (ArrayNode) manifest.get("output");
       assertThat(output)
           .isEmpty();
     });
@@ -92,23 +92,23 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
 
   @Test
   @WithMockJwt(username = "admin", authorities = {"pathling:export"})
-  void test_forbidden_if_job_with_different_owner() {
-    exportProvider = setup_scenario(tempDir, "Patient");
+  void testForbiddenIfJobWithDifferentOwner() {
+    exportProvider = setupScenario(tempDir, "Patient");
     // Test Scenario:
     // Another user 'other-user' has submitted a job. The 'admin' user with 'pathling:export'
     // authority attempts to read the job submitted by 'other-user' (it should fail).
-    assertThatThrownBy(() -> perform_export("other-user"))
+    assertThatThrownBy(() -> performExport("other-user"))
         .isExactlyInstanceOf(AccessDeniedError.class)
         .hasMessage("The requested result is not owned by the current user 'admin'.");
   }
 
   @Test
   @WithMockJwt(username = "admin", authorities = {"pathling:export", "pathling:read"})
-  void test_pass_if_export_with_authority_and_read_authority() {
-    exportProvider = setup_scenario(tempDir, "Patient");
+  void testPassIfExportWithAuthorityAndReadAuthority() {
+    exportProvider = setupScenario(tempDir, "Patient");
     assertThatNoException().isThrownBy(() -> {
-      JsonNode manifest = perform_export();
-      ArrayNode output = (ArrayNode) manifest.get("output");
+      final JsonNode manifest = performExport();
+      final ArrayNode output = (ArrayNode) manifest.get("output");
       assertThat(output)
           .hasSize(1)
           .extracting(node -> node.get("url").asText())
@@ -116,14 +116,14 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
           .contains("Patient");
     });
   }
-  
+
   @Test
   @WithMockJwt(username = "admin", authorities = {"pathling:export", "pathling:read:Patient"})
-  void test_silently_filter_out_if_export_with_authority_and_partial_read_authority() {
-    exportProvider = setup_scenario(tempDir, "Patient", "Encounter");
+  void testSilentlyFilterOutIfExportWithAuthorityAndPartialReadAuthority() {
+    exportProvider = setupScenario(tempDir, "Patient", "Encounter");
     assertThatNoException().isThrownBy(() -> {
-      JsonNode manifest = perform_export();
-      ArrayNode output = (ArrayNode) manifest.get("output");
+      final JsonNode manifest = performExport();
+      final ArrayNode output = (ArrayNode) manifest.get("output");
       assertThat(output)
           .hasSize(1)
           .extracting(node -> node.get("url").asText())
@@ -135,11 +135,11 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
 
   @Test
   @WithMockJwt(username = "admin", authorities = {"pathling:export", "pathling:read:Patient"})
-  void test_lenient_silently_filter_out_if_export_with_authority_and_partial_read_authority() {
-    exportProvider = setup_scenario(tempDir, "Patient", "Encounter");
+  void testLenientSilentlyFilterOutIfExportWithAuthorityAndPartialReadAuthority() {
+    exportProvider = setupScenario(tempDir, "Patient", "Encounter");
     assertThatNoException().isThrownBy(() -> {
-      JsonNode manifest = perform_lenient_export();
-      ArrayNode output = (ArrayNode) manifest.get("output");
+      final JsonNode manifest = performLenientExport();
+      final ArrayNode output = (ArrayNode) manifest.get("output");
       assertThat(output)
           .hasSize(1)
           .extracting(node -> node.get("url").asText())
@@ -150,23 +150,25 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
   }
 
   @Test
-  @DisplayName("User only has read:Patient but explicitly requests Patient,Encounter (lenient=false) -> deny access")
+  @DisplayName(
+      "User only has read:Patient but explicitly requests Patient,Encounter (lenient=false) -> deny access")
   @WithMockJwt(username = "admin", authorities = {"pathling:export", "pathling:read:Patient"})
-  void test_forbidden_if_export_with_type_param_with_authority_and_partial_read_authority() {
-    exportProvider = setup_scenario(tempDir, "Patient", "Encounter");
-    assertThatThrownBy(() -> perform_export(ADMIN_USER, List.of("Patient", "Encounter"), false))
+  void testForbiddenIfExportWithTypeParamWithAuthorityAndPartialReadAuthority() {
+    exportProvider = setupScenario(tempDir, "Patient", "Encounter");
+    assertThatThrownBy(() -> performExport(ADMIN_USER, List.of("Patient", "Encounter"), false))
         .isExactlyInstanceOf(AccessDeniedError.class)
         .hasMessage(ERROR_MSG.apply("read:Encounter"));
   }
 
   @Test
-  @DisplayName("User only has read:Patient but explicitly requests Patient,Encounter (lenient=true) -> silently filter out")
+  @DisplayName(
+      "User only has read:Patient but explicitly requests Patient,Encounter (lenient=true) -> silently filter out")
   @WithMockJwt(username = "admin", authorities = {"pathling:export", "pathling:read:Patient"})
-  void test_lenient_silently_filter_out_if_export_with_type_param_with_authority_and_partial_read_authority() {
-    exportProvider = setup_scenario(tempDir, "Patient", "Encounter");
+  void testLenientSilentlyFilterOutIfExportWithTypeParamWithAuthorityAndPartialReadAuthority() {
+    exportProvider = setupScenario(tempDir, "Patient", "Encounter");
     assertThatNoException().isThrownBy(() -> {
-      JsonNode manifest = perform_export(ADMIN_USER, List.of("Patient", "Encounter"), true);
-      ArrayNode output = (ArrayNode) manifest.get("output");
+      final JsonNode manifest = performExport(ADMIN_USER, List.of("Patient", "Encounter"), true);
+      final ArrayNode output = (ArrayNode) manifest.get("output");
       assertThat(output)
           .hasSize(1)
           .extracting(node -> node.get("url").asText())
@@ -175,53 +177,59 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
           .contains("Patient");
     });
   }
-  
+
   @Test
   @WithMockJwt(username = "admin")
-  void test_forbidden_if_export_without_authority() {
-    ExportProvider beanExportProvider = applicationContext.getBean(ExportProvider.class);
-    assertThatThrownBy(() -> perform_export(beanExportProvider, ADMIN_USER, List.of(), false))
+  void testForbiddenIfExportWithoutAuthority() {
+    final ExportProvider beanExportProvider = applicationContext.getBean(ExportProvider.class);
+    assertThatThrownBy(() -> performExport(beanExportProvider, ADMIN_USER, List.of(), false))
         .isExactlyInstanceOf(AccessDeniedError.class)
         .hasMessage(PATHLING_EXPORT_MSG);
   }
-  
+
   @Test
   @WithMockJwt(username = "admin", authorities = {"pathling:export", "pathling:read:Patient"})
-  void test_forbidden_download_ndjson_without_authority() {
-    exportProvider = setup_scenario(tempDir, "Patient");
-    JsonNode manifest = perform_export();
-    String url = manifest.get("output").get(0).get("url").asText();
-    Map<String, String> queryParams = UriComponentsBuilder.fromUriString(url).build().getQueryParams().toSingleValueMap();
+  void testForbiddenDownloadNdjsonWithoutAuthority() {
+    exportProvider = setupScenario(tempDir, "Patient");
+    final JsonNode manifest = performExport();
+    final String url = manifest.get("output").get(0).get("url").asText();
+    final Map<String, String> queryParams = UriComponentsBuilder.fromUriString(url).build()
+        .getQueryParams().toSingleValueMap();
 
     switchToUser("newUser");
 
-    assertThatThrownBy(() -> perform_export_result(queryParams.get("job"), queryParams.get("file"), null))
+    assertThatThrownBy(
+        () -> performExportResult(queryParams.get("job"), queryParams.get("file"), null))
         .isExactlyInstanceOf(AccessDeniedError.class)
         .hasMessage(PATHLING_EXPORT_MSG);
   }
-  
+
   @Test
   @WithMockJwt(username = "admin", authorities = {"pathling:export", "pathling:read:Patient"})
-  void test_forbidden_download_ndjson_if_job_with_different_owner() {
-    exportProvider = setup_scenario(tempDir, "Patient");
-    JsonNode manifest = perform_export();
-    String url = manifest.get("output").get(0).get("url").asText();
-    Map<String, String> queryParams = UriComponentsBuilder.fromUriString(url).build().getQueryParams().toSingleValueMap();
+  void testForbiddenDownloadNdjsonIfJobWithDifferentOwner() {
+    exportProvider = setupScenario(tempDir, "Patient");
+    final JsonNode manifest = performExport();
+    final String url = manifest.get("output").get(0).get("url").asText();
+    final Map<String, String> queryParams = UriComponentsBuilder.fromUriString(url).build()
+        .getQueryParams().toSingleValueMap();
 
-    assertThatThrownBy(() -> perform_export_result(queryParams.get("job"), queryParams.get("file"), "other-user"))
+    assertThatThrownBy(
+        () -> performExportResult(queryParams.get("job"), queryParams.get("file"), "other-user"))
         .isExactlyInstanceOf(AccessDeniedError.class)
         .hasMessage("The requested result is not owned by the current user 'admin'.");
   }
-  
+
   @Test
   @WithMockJwt(username = "admin", authorities = {"pathling:export", "pathling:read:Patient"})
-  void test_pass_if_download_ndjson_with_same_auth() {
-    exportProvider = setup_scenario(tempDir, "Patient");
-    JsonNode manifest = perform_export();
-    String url = manifest.get("output").get(0).get("url").asText();
-    Map<String, String> queryParams = UriComponentsBuilder.fromUriString(url).build().getQueryParams().toSingleValueMap();
-    
-    assertThatNoException().isThrownBy(() -> perform_export_result(queryParams.get("job"), queryParams.get("file"), "admin"));
+  void testPassIfDownloadNdjsonWithSameAuth() {
+    exportProvider = setupScenario(tempDir, "Patient");
+    final JsonNode manifest = performExport();
+    final String url = manifest.get("output").get(0).get("url").asText();
+    final Map<String, String> queryParams = UriComponentsBuilder.fromUriString(url).build()
+        .getQueryParams().toSingleValueMap();
+
+    assertThatNoException().isThrownBy(
+        () -> performExportResult(queryParams.get("job"), queryParams.get("file"), "admin"));
   }
 
 }

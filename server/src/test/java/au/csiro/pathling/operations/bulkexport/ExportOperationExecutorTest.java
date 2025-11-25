@@ -20,6 +20,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.operations.compartment.PatientCompartmentService;
 import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.test.SharedMocks;
@@ -70,7 +71,8 @@ import org.springframework.context.annotation.Import;
     ExportOperationValidator.class,
     ExportExecutor.class,
     TestDataSetup.class,
-    FhirServerTestConfiguration.class
+    FhirServerTestConfiguration.class,
+    PatientCompartmentService.class
 })
 @SpringBootUnitTest
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
@@ -109,6 +111,9 @@ class ExportOperationExecutorTest {
   @Autowired
   private ServerConfiguration serverConfiguration;
 
+  @Autowired
+  private PatientCompartmentService patientCompartmentService;
+
   @SuppressWarnings("unused")
   @Autowired
   private ExportResultRegistry exportResultRegistry;
@@ -123,7 +128,8 @@ class ExportOperationExecutorTest {
         fhirContext,
         sparkSession,
         "file://" + uniqueTempDir.toAbsolutePath(),
-        serverConfiguration
+        serverConfiguration,
+        patientCompartmentService
     );
 
     try {
@@ -366,7 +372,8 @@ class ExportOperationExecutorTest {
     final CustomObjectDataSource objectDataSource = new CustomObjectDataSource(sparkSession,
         pathlingContext, fhirEncoders, resources);
     exportExecutor = new ExportExecutor(pathlingContext, objectDataSource, fhirContext,
-        sparkSession, "file://" + uniqueTempDir.toAbsolutePath(), serverConfiguration);
+        sparkSession, "file://" + uniqueTempDir.toAbsolutePath(), serverConfiguration,
+        patientCompartmentService);
     return exportExecutor;
   }
 
@@ -384,7 +391,8 @@ class ExportOperationExecutorTest {
         fhirContext,
         sparkSession,
         "file://" + uniqueTempDir.toAbsolutePath(),
-        serverConfiguration
+        serverConfiguration,
+        patientCompartmentService
     );
 
     final TestExportResponse actualExportResponse = execute(exportRequest);

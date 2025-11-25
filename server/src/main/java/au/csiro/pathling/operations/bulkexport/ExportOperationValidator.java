@@ -4,6 +4,8 @@ import au.csiro.pathling.FhirServer;
 import au.csiro.pathling.async.PreAsyncValidation;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.operations.OperationValidatorUtil;
+import au.csiro.pathling.operations.bulkexport.ExportRequest.ExportLevel;
+import au.csiro.pathling.operations.compartment.PatientCompartmentService;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
 import au.csiro.pathling.security.SecurityAspect;
@@ -34,32 +36,65 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
 /**
+ * Validates export operation requests.
+ *
  * @author Felix Naumann
+ * @author John Grimes
  */
 @Slf4j
 @Component
 public class ExportOperationValidator {
 
-  public static final Set<String> UNSUPPORTED_QUERY_PARAMS = Set.of("patient",
+  /**
+   * Query parameters that are not supported by the export operation.
+   */
+  public static final Set<String> UNSUPPORTED_QUERY_PARAMS = Set.of(
       "includeAssociatedData", "_typeFilter", "organizeOutputBy");
+
+  @Nonnull
   private final FhirContext fhirContext;
+
+  @Nonnull
   private final ServerConfiguration serverConfiguration;
 
-  public ExportOperationValidator(FhirContext fhirContext,
-      ServerConfiguration serverConfiguration) {
+  @Nonnull
+  private final PatientCompartmentService patientCompartmentService;
+
+  /**
+   * Constructs a new ExportOperationValidator.
+   *
+   * @param fhirContext the FHIR context
+   * @param serverConfiguration the server configuration
+   * @param patientCompartmentService the patient compartment service
+   */
+  public ExportOperationValidator(@Nonnull final FhirContext fhirContext,
+      @Nonnull final ServerConfiguration serverConfiguration,
+      @Nonnull final PatientCompartmentService patientCompartmentService) {
     this.fhirContext = fhirContext;
     this.serverConfiguration = serverConfiguration;
+    this.patientCompartmentService = patientCompartmentService;
   }
 
+  /**
+   * Validates a system-level export request.
+   *
+   * @param requestDetails the request details
+   * @param outputFormat the output format parameter
+   * @param since the since parameter
+   * @param until the until parameter
+   * @param type the type parameter
+   * @param elements the elements parameter
+   * @return the pre-async validation result
+   */
   public PreAsyncValidation.PreAsyncValidationResult<ExportRequest> validateRequest(
-      @Nonnull RequestDetails requestDetails,
-      @Nullable String outputFormat,
-      @Nullable InstantType since,
-      @Nullable InstantType until,
+      @Nonnull final RequestDetails requestDetails,
+      @Nullable final String outputFormat,
+      @Nullable final InstantType since,
+      @Nullable final InstantType until,
       @Nullable List<String> type,
       @Nullable List<String> elements
   ) {
-    boolean lenient = requestDetails.getHeaders(FhirServer.PREFER_LENIENT_HEADER.headerName())
+    final boolean lenient = requestDetails.getHeaders(FhirServer.PREFER_LENIENT_HEADER.headerName())
         .stream()
         .anyMatch(FhirServer.PREFER_LENIENT_HEADER::validValue);
 
@@ -70,9 +105,56 @@ public class ExportOperationValidator {
       elements = new ArrayList<>();
     }
 
-    ExportRequest exportRequest = createExportRequest(requestDetails.getCompleteUrl(), lenient,
-        outputFormat, since, until, type, elements);
-    List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
+    final ExportRequest exportRequest = createExportRequest(requestDetails.getCompleteUrl(),
+        lenient, outputFormat, since, until, type, elements);
+    final List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
+            OperationValidatorUtil.validateAcceptHeader(requestDetails, lenient),
+            OperationValidatorUtil.validatePreferHeader(requestDetails, lenient),
+            validateUnsupportedQueryParams(requestDetails, lenient))
+        .flatMap(Collection::stream)
+        .toList();
+    return new PreAsyncValidation.PreAsyncValidationResult<>(exportRequest, issues);
+  }
+
+  /**
+   * Validates a patient-level or group-level export request.
+   *
+   * @param requestDetails the request details
+   * @param exportLevel the export level (PATIENT_TYPE, PATIENT_INSTANCE, or GROUP)
+   * @param patientIds the patient IDs to export (empty for all patients)
+   * @param outputFormat the output format parameter
+   * @param since the since parameter
+   * @param until the until parameter
+   * @param type the type parameter
+   * @param elements the elements parameter
+   * @return the pre-async validation result
+   */
+  public PreAsyncValidation.PreAsyncValidationResult<ExportRequest> validatePatientExportRequest(
+      @Nonnull final RequestDetails requestDetails,
+      @Nonnull final ExportLevel exportLevel,
+      @Nonnull final Set<String> patientIds,
+      @Nullable final String outputFormat,
+      @Nullable final InstantType since,
+      @Nullable final InstantType until,
+      @Nullable List<String> type,
+      @Nullable List<String> elements
+  ) {
+    final boolean lenient = requestDetails.getHeaders(FhirServer.PREFER_LENIENT_HEADER.headerName())
+        .stream()
+        .anyMatch(FhirServer.PREFER_LENIENT_HEADER::validValue);
+
+    if (type == null) {
+      type = new ArrayList<>();
+    }
+    if (elements == null) {
+      elements = new ArrayList<>();
+    }
+
+    final ExportRequest exportRequest = createPatientExportRequest(
+        requestDetails.getCompleteUrl(), lenient, outputFormat, since, until, type, elements,
+        exportLevel, patientIds);
+
+    final List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
             OperationValidatorUtil.validateAcceptHeader(requestDetails, lenient),
             OperationValidatorUtil.validatePreferHeader(requestDetails, lenient),
             validateUnsupportedQueryParams(requestDetails, lenient))
@@ -82,9 +164,9 @@ public class ExportOperationValidator {
   }
 
   private List<OperationOutcome.OperationOutcomeIssueComponent> validateUnsupportedQueryParams(
-      RequestDetails requestDetails, boolean lenient) {
-    Set<String> queryParams = requestDetails.getParameters().keySet();
-    Set<String> unsupportedParams = queryParams.stream()
+      final RequestDetails requestDetails, final boolean lenient) {
+    final Set<String> queryParams = requestDetails.getParameters().keySet();
+    final Set<String> unsupportedParams = queryParams.stream()
         .filter(UNSUPPORTED_QUERY_PARAMS::contains)
         .collect(Collectors.toSet());
 
@@ -93,7 +175,7 @@ public class ExportOperationValidator {
     }
 
     if (!lenient) {
-      String firstUnsupported = unsupportedParams.iterator().next();
+      final String firstUnsupported = unsupportedParams.iterator().next();
       throw new InvalidRequestException(
           "The query parameter '%s' is not supported. Either remove the query parameter or add %s: %s header."
               .formatted(firstUnsupported, FhirServer.PREFER_LENIENT_HEADER.headerName(),
@@ -110,25 +192,36 @@ public class ExportOperationValidator {
     }
   }
 
+  /**
+   * Creates an ExportRequest for system-level exports.
+   *
+   * @param originalRequest the original request URL
+   * @param lenient whether lenient handling is enabled
+   * @param outputFormat the output format
+   * @param since the since parameter
+   * @param until the until parameter
+   * @param type the type parameter
+   * @param elements the elements parameter
+   * @return the export request
+   */
   public ExportRequest createExportRequest(
-      @Nonnull String originalRequest,
-      boolean lenient,
-      String outputFormat,
-      InstantType since,
-      InstantType until,
-      List<String> type,
-      List<String> elements
-
+      @Nonnull final String originalRequest,
+      final boolean lenient,
+      @Nullable final String outputFormat,
+      @Nullable final InstantType since,
+      @Nullable final InstantType until,
+      @Nonnull final List<String> type,
+      @Nonnull final List<String> elements
   ) {
     if (outputFormat == null) {
-      log.debug("Missing _outputFormat detected.");
+      log.debug("No _outputFormat specified, defaulting to ndjson.");
     }
     if (outputFormat != null && !FhirServer.OUTPUT_FORMAT.validValue(outputFormat)) {
       throw new InvalidRequestException("Unknown '%s' value '%s'. Only %s are allowed.".formatted(
           ExportProvider.OUTPUT_FORMAT_PARAM_NAME, outputFormat,
           FhirServer.OUTPUT_FORMAT.acceptedHeaderValues()));
     }
-    List<Enumerations.ResourceType> resourceFilter = type.stream()
+    final List<Enumerations.ResourceType> resourceFilter = type.stream()
         .map(String::strip)
         .filter(Predicate.not(String::isEmpty))
         .flatMap(string -> Arrays.stream(string.split(",")))
@@ -138,7 +231,7 @@ public class ExportOperationValidator {
         .filter(this::filterUnauthorizedResources)
         .toList();
 
-    List<ExportRequest.FhirElement> fhirElements = elements.stream()
+    final List<ExportRequest.FhirElement> fhirElements = elements.stream()
         .flatMap(string -> Arrays.stream(string.split(",")))
         .map(this::mapFhirElement)
         .toList();
@@ -153,12 +246,91 @@ public class ExportOperationValidator {
     );
   }
 
-  private boolean filterUnauthorizedResources(ResourceType resourceType) {
-    /*
-    Check auth for resource types before checking if there are actually resources for that type.
-    Otherwise, this could leak information to unauthorized users (the information 
-    "no Encounter resources exist" should not be available)
-     */
+  /**
+   * Creates an ExportRequest for patient-level or group-level exports.
+   *
+   * @param originalRequest the original request URL
+   * @param lenient whether lenient handling is enabled
+   * @param outputFormat the output format
+   * @param since the since parameter
+   * @param until the until parameter
+   * @param type the type parameter
+   * @param elements the elements parameter
+   * @param exportLevel the export level
+   * @param patientIds the patient IDs to export
+   * @return the export request
+   */
+  public ExportRequest createPatientExportRequest(
+      @Nonnull final String originalRequest,
+      final boolean lenient,
+      @Nullable final String outputFormat,
+      @Nullable final InstantType since,
+      @Nullable final InstantType until,
+      @Nonnull final List<String> type,
+      @Nonnull final List<String> elements,
+      @Nonnull final ExportLevel exportLevel,
+      @Nonnull final Set<String> patientIds
+  ) {
+    if (outputFormat == null) {
+      log.debug("No _outputFormat specified for patient export, defaulting to ndjson.");
+    }
+    if (outputFormat != null && !FhirServer.OUTPUT_FORMAT.validValue(outputFormat)) {
+      throw new InvalidRequestException("Unknown '%s' value '%s'. Only %s are allowed.".formatted(
+          ExportProvider.OUTPUT_FORMAT_PARAM_NAME, outputFormat,
+          FhirServer.OUTPUT_FORMAT.acceptedHeaderValues()));
+    }
+
+    // For patient-level exports, filter out non-compartment resource types (silently).
+    final List<Enumerations.ResourceType> resourceFilter = type.stream()
+        .map(String::strip)
+        .filter(Predicate.not(String::isEmpty))
+        .flatMap(string -> Arrays.stream(string.split(",")))
+        .map(code -> mapTypeQueryParam(code, lenient))
+        .filter(Optional::isPresent)
+        .map(Optional::get)
+        .filter(this::filterUnauthorizedResources)
+        .filter(this::filterNonCompartmentResources)
+        .toList();
+
+    final List<ExportRequest.FhirElement> fhirElements = elements.stream()
+        .flatMap(string -> Arrays.stream(string.split(",")))
+        .map(this::mapFhirElement)
+        .toList();
+
+    return new ExportRequest(
+        originalRequest,
+        ExportOutputFormat.ND_JSON,
+        since,
+        until,
+        resourceFilter,
+        fhirElements,
+        lenient,
+        exportLevel,
+        patientIds
+    );
+  }
+
+  /**
+   * Filters out resource types that are not in the Patient compartment. Non-compartment types are
+   * silently ignored as per the lenient behaviour decision.
+   *
+   * @param resourceType the resource type to check
+   * @return true if the resource type should be included
+   */
+  private boolean filterNonCompartmentResources(@Nonnull final ResourceType resourceType) {
+    final boolean inCompartment = patientCompartmentService.isInPatientCompartment(
+        resourceType.toCode());
+    if (!inCompartment) {
+      log.info("Resource type '{}' is not in the Patient compartment. Ignoring.",
+          resourceType.toCode());
+    }
+    return inCompartment;
+  }
+
+  private boolean filterUnauthorizedResources(final ResourceType resourceType) {
+    // Check auth for resource types before checking if there are actually resources for that type.
+    // Otherwise, this could leak information to unauthorised users (the information "no Encounter
+    // resources exist" should not be available).
     if (serverConfiguration.getAuth().isEnabled()) {
       SecurityAspect.checkHasAuthority(
           PathlingAuthority.resourceAccess(AccessType.READ, resourceType));
@@ -166,19 +338,19 @@ public class ExportOperationValidator {
     return true; // has auth if no error from the stream chain above
   }
 
-  private Optional<ResourceType> mapTypeQueryParam(String code, boolean lenient) {
+  private Optional<ResourceType> mapTypeQueryParam(final String code, final boolean lenient) {
     try {
-      ResourceType resourceType = Enumerations.ResourceType.fromCode(code);
-      Set<ResourceType> unsupported = FhirServer.unsupportedResourceTypes();
+      final ResourceType resourceType = Enumerations.ResourceType.fromCode(code);
+      final Set<ResourceType> unsupported = FhirServer.unsupportedResourceTypes();
       if (!lenient && unsupported.contains(resourceType)) {
         throw new InvalidRequestException(
             "'_type' includes unsupported resource type '%s'. Note that '%s' are all unsupported.".formatted(
                 resourceType.toCode(), unsupported));
       } else if (lenient && unsupported.contains(resourceType)) {
-        return Optional.<Enumerations.ResourceType>empty();
+        return Optional.empty();
       }
       return Optional.of(resourceType);
-    } catch (FHIRException e) {
+    } catch (final FHIRException e) {
       if (lenient) {
         log.info("Failed to map '_type' value '{}' to actual FHIR resource type. Skipping.",
             code);
@@ -191,13 +363,13 @@ public class ExportOperationValidator {
     }
   }
 
-  private ExportRequest.FhirElement mapFhirElement(@NotNull String element) {
-    String[] split = element.split("\\.");
+  private ExportRequest.FhirElement mapFhirElement(@NotNull final String element) {
+    final String[] split = element.split("\\.");
     if (split.length == 1) {
-      // Only [element name] -> apply to all resources
+      // Only [element name] -> apply to all resources.
       return new ExportRequest.FhirElement(null, element);
     } else if (split.length == 2) {
-      // [resource type].[element name] -> apply to this resource type only
+      // [resource type].[element name] -> apply to this resource type only.
       validateTopLevelElement(split[0], split[1]);
       return new ExportRequest.FhirElement(ResourceType.fromCode(split[0]), split[1]);
     } else {
@@ -206,16 +378,16 @@ public class ExportOperationValidator {
     }
   }
 
-  private void validateTopLevelElement(@NotNull String resourceType, @NotNull String element)
-      throws InvalidRequestException {
+  private void validateTopLevelElement(@NotNull final String resourceType,
+      @NotNull final String element) throws InvalidRequestException {
     try {
-      RuntimeResourceDefinition resourceDef = fhirContext.getResourceDefinition(resourceType);
+      final RuntimeResourceDefinition resourceDef = fhirContext.getResourceDefinition(resourceType);
       if (resourceDef.getChildByName(element) == null) {
         throw new InvalidRequestException(
             "Failed to parse element '%s' for resource type '%s' in _elements.".formatted(element,
                 resourceType));
       }
-    } catch (DataFormatException e) {
+    } catch (final DataFormatException e) {
       throw new InvalidRequestException(
           "Failed to parse resource type '%s' in _elements.".formatted(resourceType));
     }

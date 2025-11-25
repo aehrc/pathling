@@ -57,7 +57,8 @@ import scala.jdk.javaapi.CollectionConverters;
 @Import({
     ExportOperationValidator.class,
     ExportExecutor.class,
-    FhirServerTestConfiguration.class
+    FhirServerTestConfiguration.class,
+    au.csiro.pathling.operations.compartment.PatientCompartmentService.class
 })
 @SpringBootUnitTest
 class ExportOperationTest {

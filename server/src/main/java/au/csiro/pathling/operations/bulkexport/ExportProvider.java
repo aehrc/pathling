@@ -1,35 +1,22 @@
 package au.csiro.pathling.operations.bulkexport;
 
-import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
-
 import au.csiro.pathling.async.AsyncSupported;
-import au.csiro.pathling.async.Job;
-import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.async.PreAsyncValidation;
-import au.csiro.pathling.async.RequestTag;
-import au.csiro.pathling.async.RequestTagFactory;
-import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Optional;
 import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.InstantType;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
+ * Provider for system-level bulk export operations.
+ *
  * @author Felix Naumann
  */
 @Component
@@ -61,63 +48,40 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
   public static final String ELEMENTS_PARAM_NAME = "_elements";
 
   @Nonnull
-  private final ExportExecutor exportExecutor;
-
-  @Nonnull
   private final ExportOperationValidator exportOperationValidator;
 
   @Nonnull
-  private final JobRegistry jobRegistry;
-
-  @Nonnull
-  private final RequestTagFactory requestTagFactory;
-
-  @Nonnull
-  private final ExportResultRegistry exportResultRegistry;
-
-  @Nonnull
-  private final ServerConfiguration serverConfiguration;
+  private final ExportOperationHelper exportOperationHelper;
 
   /**
    * Constructs a new ExportProvider.
    *
-   * @param exportExecutor The export executor.
-   * @param exportOperationValidator The export operation validator.
-   * @param jobRegistry The job registry.
-   * @param requestTagFactory The request tag factory.
-   * @param exportResultRegistry The export result registry.
-   * @param serverConfiguration The server configuration.
+   * @param exportOperationValidator the export operation validator
+   * @param exportOperationHelper the export operation helper
    */
   @Autowired
-  public ExportProvider(@Nonnull final ExportExecutor exportExecutor,
-      @Nonnull final ExportOperationValidator exportOperationValidator,
-      @Nonnull final JobRegistry jobRegistry,
-      @Nonnull final RequestTagFactory requestTagFactory,
-      @Nonnull final ExportResultRegistry exportResultRegistry,
-      @Nonnull final ServerConfiguration serverConfiguration) {
-    this.exportExecutor = exportExecutor;
+  public ExportProvider(@Nonnull final ExportOperationValidator exportOperationValidator,
+      @Nonnull final ExportOperationHelper exportOperationHelper) {
     this.exportOperationValidator = exportOperationValidator;
-    this.jobRegistry = jobRegistry;
-    this.requestTagFactory = requestTagFactory;
-    this.exportResultRegistry = exportResultRegistry;
-    this.serverConfiguration = serverConfiguration;
+    this.exportOperationHelper = exportOperationHelper;
   }
 
   /**
-   * Handles the $export operation.
+   * Handles the $export operation at the system level (/$export).
    *
-   * @param outputFormat The output format parameter (unused in current implementation).
-   * @param since The since date parameter (unused in current implementation).
-   * @param until The until date parameter (unused in current implementation).
-   * @param type The type parameter (unused in current implementation).
-   * @param elements The elements parameter (unused in current implementation).
-   * @param requestDetails The request details.
-   * @return The binary result, or null if the job was cancelled.
+   * @param outputFormat the output format parameter (validated in pre-async validation)
+   * @param since the since date parameter (validated in pre-async validation)
+   * @param until the until date parameter (validated in pre-async validation)
+   * @param type the type parameter (validated in pre-async validation)
+   * @param elements the elements parameter (validated in pre-async validation)
+   * @param requestDetails the request details
+   * @return the binary result, or null if the job was cancelled
    */
   @Operation(name = "export", idempotent = true)
   @OperationAccess("export")
   @AsyncSupported
   @Nullable
+  @SuppressWarnings("unused")
   public Binary export(
       @Nullable @OperationParam(name = OUTPUT_FORMAT_PARAM_NAME) final String outputFormat,
       @Nullable @OperationParam(name = SINCE_PARAM_NAME) final InstantType since,
@@ -126,39 +90,7 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
       @Nullable @OperationParam(name = ELEMENTS_PARAM_NAME) final List<String> elements,
       @Nonnull final ServletRequestDetails requestDetails
   ) {
-    final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication);
-    final Job<ExportRequest> ownJob = jobRegistry.get(ownTag);
-    if (ownJob == null) {
-      throw new InvalidRequestException("Missing 'Prefer: respond-async' header value.");
-    }
-    // Check that the user requesting the result is the same user that started the job.
-    final Optional<String> currentUserId = getCurrentUserId(authentication);
-    if (currentUserId.isPresent() && !ownJob.getOwnerId().equals(currentUserId)) {
-      throw new AccessDeniedError(
-          "The requested result is not owned by the current user '%s'.".formatted(
-              currentUserId.orElse("null")));
-    }
-
-    final ExportRequest exportRequest = ownJob.getPreAsyncValidationResult();
-    if (ownJob.isCancelled()) {
-      return null;
-    }
-
-    exportResultRegistry.put(ownJob.getId(), new ExportResult(ownJob.getOwnerId()));
-
-    final ExportResponse exportResponse = exportExecutor.execute(exportRequest, ownJob.getId());
-
-    // Set the Expires header to indicate when the export result will expire, based on the
-    // configured value.
-    ownJob.setResponseModification(httpServletResponse -> {
-      final String expiresValue = ZonedDateTime.now(ZoneOffset.UTC)
-          .plusSeconds(serverConfiguration.getExport().getResultExpiry())
-          .format(DateTimeFormatter.RFC_1123_DATE_TIME);
-      httpServletResponse.addHeader("Expires", expiresValue);
-    });
-
-    return exportResponse.toOutput();
+    return exportOperationHelper.executeExport(requestDetails);
   }
 
   @Override

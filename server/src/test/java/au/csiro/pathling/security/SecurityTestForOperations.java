@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.security;
 
+import static java.util.Objects.requireNonNull;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.async.Job;
@@ -28,6 +29,7 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.bulkexport.ExportExecutor;
+import au.csiro.pathling.operations.bulkexport.ExportOperationHelper;
 import au.csiro.pathling.operations.bulkexport.ExportOperationValidator;
 import au.csiro.pathling.operations.bulkexport.ExportOutputFormat;
 import au.csiro.pathling.operations.bulkexport.ExportProvider;
@@ -35,6 +37,7 @@ import au.csiro.pathling.operations.bulkexport.ExportRequest;
 import au.csiro.pathling.operations.bulkexport.ExportResult;
 import au.csiro.pathling.operations.bulkexport.ExportResultProvider;
 import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
+import au.csiro.pathling.operations.compartment.PatientCompartmentService;
 import au.csiro.pathling.util.TestDataSetup;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
@@ -71,9 +74,8 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
 
   public static final String ADMIN_USER = "admin";
 
-  public static final UnaryOperator<String> ERROR_MSG = "Missing authority: 'pathling:%s'"::formatted;
-  public static final String PATHLING_READ_MSG = ERROR_MSG.apply("read");
-  public static final String PATHLING_WRITE_MSG = ERROR_MSG.apply("write");
+  public static final UnaryOperator<String> ERROR_MSG =
+      "Missing authority: 'pathling:%s'"::formatted;
 
   protected ExportProvider exportProvider;
 
@@ -82,25 +84,36 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
 
   @MockBean
   protected JobRegistry jobRegistry;
+  
   @Autowired
   protected RequestTagFactory requestTagFactory;
 
   @MockBean
   protected Job<T> job;
+  
   @Autowired
   private PathlingContext pathlingContext;
+  
   @Autowired
   private FhirContext fhirContext;
+  
   @Autowired
   private SparkSession sparkSession;
+  
   @Autowired
   private ExportOperationValidator exportOperationValidator;
+  
   @Autowired
   private ServerConfiguration serverConfiguration;
+  
   @Autowired
   private ExportResultRegistry exportResultRegistry;
+  
   @Autowired
   private ExportResultProvider exportResultProvider;
+  
+  @Autowired
+  private PatientCompartmentService patientCompartmentService;
 
   @BeforeEach
   @SuppressWarnings("unchecked")
@@ -108,45 +121,45 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
     when(requestDetails.getCompleteUrl()).thenReturn("test-url");
     when(requestDetails.getHeaders("Prefer")).thenReturn(List.of("respond-async"));
     when(requestDetails.getHeader("Prefer")).thenReturn("respond-async");
-    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-    JobTag tag = requestTagFactory.createTag(requestDetails, auth);
+    final Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    final JobTag tag = requestTagFactory.createTag(requestDetails, auth);
     when(jobRegistry.get(tag)).thenReturn((Job<Object>) job);
     when(job.getId()).thenReturn(UUID.randomUUID().toString());
   }
 
-  MockHttpServletResponse perform_export_result(String jobId, String file,
-      @Nullable String ownerId) {
+  MockHttpServletResponse performExportResult(final String jobId, final String file,
+      @Nullable final String ownerId) {
     exportResultRegistry.put(jobId, new ExportResult(Optional.ofNullable(ownerId)));
-    MockHttpServletResponse response = new MockHttpServletResponse();
+    final MockHttpServletResponse response = new MockHttpServletResponse();
     exportResultProvider.result(jobId, file, response);
     return response;
   }
 
-  JsonNode perform_export() {
-    return perform_export(ADMIN_USER, List.of(), false);
+  JsonNode performExport() {
+    return performExport(ADMIN_USER, List.of(), false);
   }
 
-  JsonNode perform_lenient_export() {
-    return perform_export(ADMIN_USER, List.of(), true);
+  JsonNode performLenientExport() {
+    return performExport(ADMIN_USER, List.of(), true);
   }
 
-  JsonNode perform_export(String ownerId) {
-    return perform_export(ownerId, List.of(), false);
+  JsonNode performExport(final String ownerId) {
+    return performExport(ownerId, List.of(), false);
   }
 
-  JsonNode perform_export(String ownerId, List<String> type, boolean lenient) {
-    return perform_export(exportProvider, ownerId, type, lenient);
+  JsonNode performExport(final String ownerId, final List<String> type, final boolean lenient) {
+    return performExport(exportProvider, ownerId, type, lenient);
   }
 
   @SuppressWarnings("unchecked")
-  JsonNode perform_export(ExportProvider exportProvider, String ownerId, List<String> type,
-      boolean lenient) {
+  JsonNode performExport(final ExportProvider exportProvider, final String ownerId,
+      final List<String> type, final boolean lenient) {
     when(job.getOwnerId()).thenReturn(Optional.ofNullable(ownerId));
-    String lenientHeader = "handling=" + lenient;
+    final String lenientHeader = "handling=" + lenient;
     when(requestDetails.getHeader("Prefer")).thenReturn(lenientHeader + "," + "prefer-async");
     when(requestDetails.getHeaders("Prefer")).thenReturn(List.of(lenientHeader, "prefer-async"));
 
-    ExportRequest exportRequest = new ExportRequest(
+    final ExportRequest exportRequest = new ExportRequest(
         "test-req",
         ExportOutputFormat.ND_JSON,
         null,
@@ -157,8 +170,8 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
     );
     when(job.getPreAsyncValidationResult()).thenReturn((T) exportRequest);
 
-    Binary answer = exportProvider.export(
-        exportRequest.outputFormat().toString(),
+    final Binary answer = exportProvider.export(
+        requireNonNull(exportRequest.outputFormat()).toString(),
         exportRequest.since(),
         exportRequest.until(),
         type,
@@ -166,46 +179,51 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
         requestDetails
     );
     try {
-      return new ObjectMapper().readTree(answer.getData());
-    } catch (IOException e) {
+      return new ObjectMapper().readTree(requireNonNull(answer).getData());
+    } catch (final IOException e) {
       throw new RuntimeException(e);
     }
   }
 
-  protected ExportProvider setup_scenario(Path tempDir, String... resourceTypes) {
+  protected ExportProvider setupScenario(final Path tempDir, final String... resourceTypes) {
     TestDataSetup.copyTestDataToTempDir(tempDir, resourceTypes);
-    QueryableDataSource deltaLake = new DataSourceBuilder(pathlingContext)
-        .delta("file://" + tempDir.toString());
+    final QueryableDataSource deltaLake = new DataSourceBuilder(pathlingContext)
+        .delta("file://" + tempDir);
 
-    ExportExecutor executor = new ExportExecutor(
+    final ExportExecutor executor = new ExportExecutor(
         pathlingContext,
         deltaLake,
         fhirContext,
         sparkSession,
         tempDir.resolve("delta").toString(),
-        serverConfiguration
+        serverConfiguration,
+        patientCompartmentService
     );
 
-    return new ExportProvider(
+    final ExportOperationHelper helper = new ExportOperationHelper(
         executor,
-        exportOperationValidator,
         jobRegistry,
         requestTagFactory,
         exportResultRegistry,
         serverConfiguration
     );
+
+    return new ExportProvider(
+        exportOperationValidator,
+        helper
+    );
   }
 
-  protected void switchToUser(String username, String... authorities) {
-    Jwt jwt = Jwt.withTokenValue("mock-token")
+  protected void switchToUser(final String username, final String... authorities) {
+    final Jwt jwt = Jwt.withTokenValue("mock-token")
         .header("alg", "none")
         .claim("sub", username)
         .build();
 
-    List<GrantedAuthority> grantedAuthorities =
+    final List<GrantedAuthority> grantedAuthorities =
         AuthorityUtils.createAuthorityList(authorities);
 
-    JwtAuthenticationToken authentication =
+    final JwtAuthenticationToken authentication =
         new JwtAuthenticationToken(jwt, grantedAuthorities);
 
     SecurityContextHolder.getContext().setAuthentication(authentication);

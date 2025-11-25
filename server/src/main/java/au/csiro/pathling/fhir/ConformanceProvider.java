@@ -94,11 +94,14 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
    * The base URI for canonical URIs.
    */
   public static final String URI_BASE = "https://pathling.csiro.au/fhir";
+
+  private static final String EXPORT_OPERATION = "export";
+
   /**
    * All system-level operations available within Pathling.
    */
   protected static final List<String> SYSTEM_LEVEL_OPERATIONS = Arrays.asList("job", "result",
-      "export", "import", "import-pnp");
+      EXPORT_OPERATION, "import", "import-pnp");
 
   private static final String RESTFUL_SECURITY_URI = "http://terminology.hl7.org/CodeSystem/restful-security-service";
   private static final String RESTFUL_SECURITY_CODE = "SMART-on-FHIR";
@@ -110,17 +113,25 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   /**
    * All resource-level operations available within Pathling.
    */
-  private static final List<String> RESOURCE_LEVEL_OPERATIONS = List.of();
+  private static final List<String> RESOURCE_LEVEL_OPERATIONS = List.of(EXPORT_OPERATION);
 
   /**
-   * All operations available within Pathling.
+   * Resource types that have the export operation available.
+   */
+  private static final Set<ResourceType> EXPORT_RESOURCE_TYPES = Set.of(
+      ResourceType.PATIENT, ResourceType.GROUP);
+
+  /**
+   * All operations available within Pathling (deduplicated).
    */
   private static final List<String> OPERATIONS;
 
   static {
-    OPERATIONS = new ArrayList<>();
-    OPERATIONS.addAll(ConformanceProvider.SYSTEM_LEVEL_OPERATIONS);
-    OPERATIONS.addAll(ConformanceProvider.RESOURCE_LEVEL_OPERATIONS);
+    // Use a Set to deduplicate operations that appear at both system and resource level.
+    final Set<String> operationSet = new java.util.LinkedHashSet<>();
+    operationSet.addAll(ConformanceProvider.SYSTEM_LEVEL_OPERATIONS);
+    operationSet.addAll(ConformanceProvider.RESOURCE_LEVEL_OPERATIONS);
+    OPERATIONS = new ArrayList<>(operationSet);
   }
 
   @Nonnull
@@ -147,6 +158,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   /**
    * @param configuration a {@link ServerConfiguration} object controlling the behaviour of the
    * capability statement
+   * @param oidcConfiguration the OIDC configuration for security
    * @param version a {@link PathlingVersion} object containing version information for the server
    * @param fhirContext a {@link FhirContext} for determining the supported FHIR version
    * @param jsonParser a {@link IParser} for parsing JSON OperationDefinitions
@@ -264,6 +276,15 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
       final CapabilityStatementRestResourceComponent resource =
           new CapabilityStatementRestResourceComponent(new CodeType(resourceType.toCode()));
       resource.setProfile(FHIR_RESOURCE_BASE + resourceType.toCode());
+
+      // Add export operation to Patient and Group resources.
+      if (EXPORT_RESOURCE_TYPES.contains(resourceType)) {
+        final CanonicalType exportUri = new CanonicalType(getOperationUri(EXPORT_OPERATION));
+        final CapabilityStatementRestResourceOperationComponent exportOp =
+            new CapabilityStatementRestResourceOperationComponent(new StringType(EXPORT_OPERATION),
+                exportUri);
+        resource.addOperation(exportOp);
+      }
 
       resources2.add(resource);
     }

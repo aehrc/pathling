@@ -13,6 +13,8 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.io.sink.WriteDetails;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.operations.bulkexport.ExportRequest.ExportLevel;
+import au.csiro.pathling.operations.compartment.PatientCompartmentService;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
 import au.csiro.pathling.security.SecurityAspect;
@@ -51,6 +53,7 @@ import org.springframework.stereotype.Component;
  * Performs the $export logic.
  *
  * @author Felix Naumann
+ * @author John Grimes
  */
 @Slf4j
 @Component
@@ -58,16 +61,24 @@ public class ExportExecutor {
 
   @Nonnull
   private final PathlingContext pathlingContext;
+
   @Nonnull
   private final QueryableDataSource deltaLake;
+
   @Nonnull
   private final FhirContext fhirContext;
+
   @Nonnull
   private final SparkSession sparkSession;
+
   @Nonnull
   private final String databasePath;
+
   @Nonnull
   private final ServerConfiguration serverConfiguration;
+
+  @Nonnull
+  private final PatientCompartmentService patientCompartmentService;
 
   /**
    * Constructs a new ExportExecutor.
@@ -78,6 +89,7 @@ public class ExportExecutor {
    * @param sparkSession The Spark session.
    * @param databasePath The database path.
    * @param serverConfiguration The server configuration.
+   * @param patientCompartmentService The patient compartment service.
    */
   @Autowired
   public ExportExecutor(@Nonnull final PathlingContext pathlingContext,
@@ -85,13 +97,16 @@ public class ExportExecutor {
       @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession,
       @Nonnull @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-      final String databasePath, @Nonnull final ServerConfiguration serverConfiguration) {
+      final String databasePath,
+      @Nonnull final ServerConfiguration serverConfiguration,
+      @Nonnull final PatientCompartmentService patientCompartmentService) {
     this.pathlingContext = pathlingContext;
     this.deltaLake = deltaLake;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
     this.databasePath = databasePath;
     this.serverConfiguration = serverConfiguration;
+    this.patientCompartmentService = patientCompartmentService;
   }
 
   /**
@@ -104,20 +119,53 @@ public class ExportExecutor {
   @Nonnull
   public ExportResponse execute(@Nonnull final ExportRequest exportRequest,
       @Nonnull final String jobId) {
-    // filter out resources (silently) due to insufficient permissions
+    // Filter out resources (silently) due to insufficient permissions.
     QueryableDataSource mapped = checkResourceAccess(AccessType.READ, deltaLake);
 
     mapped = applyResourceTypeFiltering(exportRequest, mapped);
     mapped = applySinceDateFilter(exportRequest, mapped);
     mapped = applyUntilDateFilter(exportRequest, mapped);
 
+    // Apply patient compartment filtering for patient-level and group-level exports.
+    if (exportRequest.exportLevel() != ExportLevel.SYSTEM) {
+      mapped = applyPatientCompartmentFilter(exportRequest, mapped);
+    }
+
     if (!exportRequest.elements().isEmpty()) {
       mapped = applyElementsParams(exportRequest, mapped);
-      // If the returned ndjson is limited by the _elements param, then it should have the SUBSETTED tag.
+      // If the returned ndjson is limited by the _elements param, then it should have the SUBSETTED
+      // tag.
       final Column subsettedTagArray = createSubsettedTagInSparkStructure();
       mapped = addSubsettedTag(mapped, subsettedTagArray);
     }
     return writeResultToJobDirectory(exportRequest, jobId, mapped);
+  }
+
+  /**
+   * Applies patient compartment filtering for patient-level and group-level exports.
+   *
+   * @param exportRequest the export request
+   * @param dataSource the data source to filter
+   * @return the filtered data source
+   */
+  @Nonnull
+  private QueryableDataSource applyPatientCompartmentFilter(
+      @Nonnull final ExportRequest exportRequest,
+      @Nonnull final QueryableDataSource dataSource) {
+    final Set<String> patientIds = exportRequest.patientIds();
+
+    // First, filter out resource types that are not in the Patient compartment.
+    final QueryableDataSource filtered = dataSource.filterByResourceType(
+        patientCompartmentService::isInPatientCompartment);
+
+    // Then, apply row-level filtering based on patient compartment membership.
+    return filtered.map((resourceType, rowDataset) -> {
+      final Column patientFilter = patientCompartmentService.buildPatientFilter(resourceType,
+          patientIds);
+      log.debug("Applying patient compartment filter for resource type {}: {}", resourceType,
+          patientFilter);
+      return rowDataset.filter(patientFilter);
+    });
   }
 
   @Nonnull
