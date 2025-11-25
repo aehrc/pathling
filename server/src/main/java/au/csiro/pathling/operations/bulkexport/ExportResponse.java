@@ -21,97 +21,109 @@ import org.hl7.fhir.r4.model.InstantType;
  */
 public class ExportResponse implements OperationResponse<Binary> {
 
-    private final ObjectMapper mapper = new ObjectMapper();
+  private final ObjectMapper mapper = new ObjectMapper();
 
-    private final String kickOffRequestUrl;
-    private final WriteDetails writeDetails;
+  private final String kickOffRequestUrl;
+  private final WriteDetails writeDetails;
+  private final boolean requiresAccessToken;
 
-    public ExportResponse(String kickOffRequestUrl, WriteDetails writeDetails) {
-        this.kickOffRequestUrl = kickOffRequestUrl;
-        this.writeDetails = writeDetails;
+  public ExportResponse(String kickOffRequestUrl, WriteDetails writeDetails,
+      boolean requiresAccessToken) {
+    this.kickOffRequestUrl = kickOffRequestUrl;
+    this.writeDetails = writeDetails;
+    this.requiresAccessToken = requiresAccessToken;
+  }
+
+  @Override
+  public Binary toOutput() {
+
+    String manifestJSON = null;
+    try {
+      manifestJSON = buildManifest(kickOffRequestUrl, writeDetails);
+    } catch (IOException e) {
+      throw new IllegalStateException(e);
     }
+    Binary binary = new Binary();
+    binary.setContentType("application/json");
+    binary.setData(manifestJSON.getBytes(StandardCharsets.UTF_8));
+    return binary;
+  }
 
-    @Override
-    public Binary toOutput() {
+  private String buildManifest(String requestUrl, WriteDetails writeDetails) throws IOException {
+    ObjectNode manifest = mapper.createObjectNode();
 
-        String manifestJSON = null;
-        try {
-            manifestJSON = buildManifest(kickOffRequestUrl, writeDetails);
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
-        Binary binary = new Binary();
-        binary.setContentType("application/json");
-        binary.setData(manifestJSON.getBytes(StandardCharsets.UTF_8));
-        return binary;
+    String baseServerUrl = requestUrl.split("\\$export")[0];
+    UnaryOperator<String> localUrlToRemoteUrl = localUrl -> {
+      try {
+        String[] parts = localUrl.split("/jobs/")[1].split("/");
+        String jobUUID = parts[0];
+        String file = parts[1];
+
+        return new URIBuilder(baseServerUrl + "$result")
+            .addParameter("job", jobUUID)
+            .addParameter("file", file)
+            .build()
+            .toString();
+      } catch (URISyntaxException e) {
+        throw new InternalErrorException(e);
+      }
+    };
+
+    manifest.put("transactionTime", InstantType.now().getValueAsString());
+    manifest.put("request", requestUrl);
+    manifest.put("requiresAccessToken", requiresAccessToken);
+    ArrayNode outputArray = mapper.createArrayNode();
+    List<ObjectNode> objectNodes = writeDetails.fileInfos().stream()
+        .filter(fileInfo -> fileInfo.count() == null || fileInfo.count() > 0)
+        .map(fileInfo -> mapper.createObjectNode()
+            .put("type", fileInfo.fhirResourceType())
+            .put("url", localUrlToRemoteUrl.apply(fileInfo.absoluteUrl()))
+            //.put("url", fileInfo.absoluteUrl())
+            .put("count", fileInfo.count())
+        )
+        .toList();
+    outputArray.addAll(objectNodes);
+    manifest.set("output", outputArray);
+    // not supported (for now) but required
+    manifest.set("deleted", mapper.createArrayNode());
+    manifest.set("error", mapper.createArrayNode());
+    return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(manifest);
+  }
+
+  public String getKickOffRequestUrl() {
+    return kickOffRequestUrl;
+  }
+
+  public WriteDetails getWriteDetails() {
+    return writeDetails;
+  }
+
+  public boolean isRequiresAccessToken() {
+    return requiresAccessToken;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
     }
+    ExportResponse that = (ExportResponse) o;
+    return requiresAccessToken == that.requiresAccessToken
+        && Objects.equals(kickOffRequestUrl, that.kickOffRequestUrl)
+        && Objects.equals(writeDetails, that.writeDetails);
+  }
 
-    private String buildManifest(String requestUrl, WriteDetails writeDetails) throws IOException {
-        ObjectNode manifest = mapper.createObjectNode();
+  @Override
+  public int hashCode() {
+    return Objects.hash(kickOffRequestUrl, writeDetails, requiresAccessToken);
+  }
 
-        String baseServerUrl = requestUrl.split("\\$export")[0];
-        UnaryOperator<String> localUrlToRemoteUrl = localUrl -> {
-          try {
-            String[] parts = localUrl.split("/jobs/")[1].split("/");
-            String jobUUID = parts[0];
-            String file = parts[1];
-            
-            return new URIBuilder(baseServerUrl + "$result")
-                .addParameter("job", jobUUID)
-                .addParameter("file", file)
-                .build()
-                .toString();
-          } catch (URISyntaxException e) {
-            throw new InternalErrorException(e);
-          }
-        };
-        
-        manifest.put("transactionTime", InstantType.now().getValueAsString());
-        manifest.put("request", requestUrl);
-        manifest.put("requiresAccessToken", false);
-        ArrayNode outputArray = mapper.createArrayNode();
-        List<ObjectNode> objectNodes = writeDetails.fileInfos().stream()
-                .filter(fileInfo -> fileInfo.count() == null || fileInfo.count() > 0)
-                .map(fileInfo -> mapper.createObjectNode()
-                        .put("type", fileInfo.fhirResourceType())
-                        .put("url",  localUrlToRemoteUrl.apply(fileInfo.absoluteUrl()))
-                    //.put("url", fileInfo.absoluteUrl())
-                    .put("count", fileInfo.count())
-                )
-                .toList();
-        outputArray.addAll(objectNodes);
-        manifest.set("output", outputArray);
-        // not supported (for now) but required
-        manifest.set("deleted", mapper.createArrayNode());
-        manifest.set("error", mapper.createArrayNode());
-        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(manifest);
-    }
-
-    public String getKickOffRequestUrl() {
-        return kickOffRequestUrl;
-    }
-
-    public WriteDetails getWriteDetails() {
-        return writeDetails;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        ExportResponse that = (ExportResponse) o;
-        return Objects.equals(kickOffRequestUrl, that.kickOffRequestUrl) && Objects.equals(writeDetails, that.writeDetails);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(kickOffRequestUrl, writeDetails);
-    }
-
-    @Override
-    public String toString() {
-        return "ExportResponse{" +
-                "kickOffRequestUrl='" + kickOffRequestUrl + '\'' +
-                ", writeDetails=" + writeDetails +
-                '}';
-    }
+  @Override
+  public String toString() {
+    return "ExportResponse{"
+        + "kickOffRequestUrl='" + kickOffRequestUrl + '\''
+        + ", writeDetails=" + writeDetails
+        + ", requiresAccessToken=" + requiresAccessToken
+        + '}';
+  }
 }

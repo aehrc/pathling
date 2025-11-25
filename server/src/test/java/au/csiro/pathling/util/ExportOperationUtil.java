@@ -71,7 +71,12 @@ public class ExportOperationUtil {
   }
 
   public static ExportResponse res(ExportRequest request, WriteDetails writeDetails) {
-    return new ExportResponse(request.originalRequest(), writeDetails);
+    return res(request, writeDetails, false);
+  }
+
+  public static ExportResponse res(ExportRequest request, WriteDetails writeDetails,
+      boolean requiresAccessToken) {
+    return new ExportResponse(request.originalRequest(), writeDetails, requiresAccessToken);
   }
 
   public static ExportRequest req(String base,
@@ -216,7 +221,8 @@ public class ExportOperationUtil {
         .toList();
     return new ExportResponse(
         exportResponse.getKickOffRequestUrl(),
-        write_details(newFileInfos)
+        write_details(newFileInfos),
+        exportResponse.isRequiresAccessToken()
     );
   }
 

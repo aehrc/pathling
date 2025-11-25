@@ -52,7 +52,10 @@ public class Dependencies {
   @ConditionalOnMissingBean
   static PathlingContext pathlingContext(@Nonnull final SparkSession spark,
       @Nonnull final ServerConfiguration config) {
-    return PathlingContext.create(spark, config.getEncoding(), config.getTerminology());
+    return PathlingContext.builder(spark)
+        .encodingConfiguration(config.getEncoding())
+        .terminologyConfiguration(config.getTerminology())
+        .build();
   }
 
   @Bean
