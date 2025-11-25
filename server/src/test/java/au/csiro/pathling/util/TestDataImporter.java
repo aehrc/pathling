@@ -10,6 +10,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.ComponentScan.Filter;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
 
@@ -19,7 +21,13 @@ import org.springframework.context.annotation.Profile;
  * Delta tables are written to `src/test/resources/test-data/bulk/fhir/delta/`.
  */
 @SpringBootApplication
-@ComponentScan(basePackages = "au.csiro.pathling")
+@ComponentScan(
+    basePackages = "au.csiro.pathling",
+    excludeFilters = @Filter(
+        type = FilterType.ASSIGNABLE_TYPE,
+        classes = FhirServerTestConfiguration.class
+    )
+)
 @Import(TestDataSetup.class)
 @Profile("cli")
 @Slf4j
