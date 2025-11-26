@@ -106,7 +106,7 @@ public class ExportOperationValidator {
     }
 
     final ExportRequest exportRequest = createExportRequest(requestDetails.getCompleteUrl(),
-        lenient, outputFormat, since, until, type, elements);
+        requestDetails.getFhirServerBase(), lenient, outputFormat, since, until, type, elements);
     final List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
             OperationValidatorUtil.validateAcceptHeader(requestDetails, lenient),
             OperationValidatorUtil.validatePreferHeader(requestDetails, lenient),
@@ -151,8 +151,8 @@ public class ExportOperationValidator {
     }
 
     final ExportRequest exportRequest = createPatientExportRequest(
-        requestDetails.getCompleteUrl(), lenient, outputFormat, since, until, type, elements,
-        exportLevel, patientIds);
+        requestDetails.getCompleteUrl(), requestDetails.getFhirServerBase(), lenient, outputFormat,
+        since, until, type, elements, exportLevel, patientIds);
 
     final List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
             OperationValidatorUtil.validateAcceptHeader(requestDetails, lenient),
@@ -196,6 +196,7 @@ public class ExportOperationValidator {
    * Creates an ExportRequest for system-level exports.
    *
    * @param originalRequest the original request URL
+   * @param serverBaseUrl the FHIR server base URL
    * @param lenient whether lenient handling is enabled
    * @param outputFormat the output format
    * @param since the since parameter
@@ -206,6 +207,7 @@ public class ExportOperationValidator {
    */
   public ExportRequest createExportRequest(
       @Nonnull final String originalRequest,
+      @Nonnull final String serverBaseUrl,
       final boolean lenient,
       @Nullable final String outputFormat,
       @Nullable final InstantType since,
@@ -237,12 +239,15 @@ public class ExportOperationValidator {
         .toList();
     return new ExportRequest(
         originalRequest,
+        serverBaseUrl,
         ExportOutputFormat.ND_JSON,
         since,
         until,
         resourceFilter,
         fhirElements,
-        lenient
+        lenient,
+        ExportLevel.SYSTEM,
+        Set.of()
     );
   }
 
@@ -250,6 +255,7 @@ public class ExportOperationValidator {
    * Creates an ExportRequest for patient-level or group-level exports.
    *
    * @param originalRequest the original request URL
+   * @param serverBaseUrl the FHIR server base URL
    * @param lenient whether lenient handling is enabled
    * @param outputFormat the output format
    * @param since the since parameter
@@ -262,6 +268,7 @@ public class ExportOperationValidator {
    */
   public ExportRequest createPatientExportRequest(
       @Nonnull final String originalRequest,
+      @Nonnull final String serverBaseUrl,
       final boolean lenient,
       @Nullable final String outputFormat,
       @Nullable final InstantType since,
@@ -299,6 +306,7 @@ public class ExportOperationValidator {
 
     return new ExportRequest(
         originalRequest,
+        serverBaseUrl,
         ExportOutputFormat.ND_JSON,
         since,
         until,

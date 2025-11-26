@@ -7,6 +7,7 @@ import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.sink.WriteDetails;
 import au.csiro.pathling.operations.bulkexport.ExportOutputFormat;
 import au.csiro.pathling.operations.bulkexport.ExportRequest;
+import au.csiro.pathling.operations.bulkexport.ExportRequest.ExportLevel;
 import au.csiro.pathling.operations.bulkexport.ExportResponse;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -76,7 +78,8 @@ public class ExportOperationUtil {
 
   public static ExportResponse res(ExportRequest request, WriteDetails writeDetails,
       boolean requiresAccessToken) {
-    return new ExportResponse(request.originalRequest(), writeDetails, requiresAccessToken);
+    return new ExportResponse(request.originalRequest(), request.serverBaseUrl(), writeDetails,
+        requiresAccessToken);
   }
 
   public static ExportRequest req(String base,
@@ -91,8 +94,8 @@ public class ExportOperationUtil {
           "&_type=" + includeResourceTypeFilters.stream().map(Enumerations.ResourceType::toCode)
               .collect(Collectors.joining(","));
     }
-    return new ExportRequest(originalRequest, outputFormat, since, null, includeResourceTypeFilters,
-        List.of());
+    return new ExportRequest(originalRequest, deriveServerBaseUrl(base), outputFormat, since, null,
+        includeResourceTypeFilters, List.of(), false, ExportLevel.SYSTEM, Set.of());
   }
 
   public static ExportRequest req(@Nonnull String base, @Nullable List<String> elements) {
@@ -147,8 +150,25 @@ public class ExportOperationUtil {
         }
       }
     }
-    return new ExportRequest(originalRequest, ExportOutputFormat.ND_JSON, since, until, List.of(),
-        fhirElements);
+    return new ExportRequest(originalRequest, deriveServerBaseUrl(base), ExportOutputFormat.ND_JSON,
+        since, until, List.of(), fhirElements, false, ExportLevel.SYSTEM, Set.of());
+  }
+
+  private static String deriveServerBaseUrl(@Nonnull final String requestUrl) {
+    final int exportIndex = requestUrl.indexOf("$export");
+    if (exportIndex > 0) {
+      String base = requestUrl.substring(0, exportIndex);
+      if (base.endsWith("/")) {
+        base = base.substring(0, base.length() - 1);
+      }
+      return base;
+    }
+    // Remove query string if present.
+    final int queryIndex = requestUrl.indexOf("?");
+    if (queryIndex > 0) {
+      return requestUrl.substring(0, queryIndex);
+    }
+    return requestUrl;
   }
 
   public static WriteDetails write_details(List<FileInformation> fileInfos) {
@@ -221,6 +241,7 @@ public class ExportOperationUtil {
         .toList();
     return new ExportResponse(
         exportResponse.getKickOffRequestUrl(),
+        "http://localhost:8080/fhir",
         write_details(newFileInfos),
         exportResponse.isRequiresAccessToken()
     );

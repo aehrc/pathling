@@ -24,12 +24,22 @@ public class ExportResponse implements OperationResponse<Binary> {
   private final ObjectMapper mapper = new ObjectMapper();
 
   private final String kickOffRequestUrl;
+  private final String serverBaseUrl;
   private final WriteDetails writeDetails;
   private final boolean requiresAccessToken;
 
-  public ExportResponse(String kickOffRequestUrl, WriteDetails writeDetails,
-      boolean requiresAccessToken) {
+  /**
+   * Creates a new ExportResponse.
+   *
+   * @param kickOffRequestUrl the original export request URL (used in the manifest)
+   * @param serverBaseUrl the FHIR server base URL (used for constructing result URLs)
+   * @param writeDetails the write details containing file information
+   * @param requiresAccessToken whether access token is required to retrieve results
+   */
+  public ExportResponse(final String kickOffRequestUrl, final String serverBaseUrl,
+      final WriteDetails writeDetails, final boolean requiresAccessToken) {
     this.kickOffRequestUrl = kickOffRequestUrl;
+    this.serverBaseUrl = serverBaseUrl;
     this.writeDetails = writeDetails;
     this.requiresAccessToken = requiresAccessToken;
   }
@@ -39,7 +49,7 @@ public class ExportResponse implements OperationResponse<Binary> {
 
     String manifestJSON = null;
     try {
-      manifestJSON = buildManifest(kickOffRequestUrl, writeDetails);
+      manifestJSON = buildManifest(kickOffRequestUrl, serverBaseUrl, writeDetails);
     } catch (IOException e) {
       throw new IllegalStateException(e);
     }
@@ -49,17 +59,22 @@ public class ExportResponse implements OperationResponse<Binary> {
     return binary;
   }
 
-  private String buildManifest(String requestUrl, WriteDetails writeDetails) throws IOException {
+  private String buildManifest(String requestUrl, String baseServerUrl, WriteDetails writeDetails)
+      throws IOException {
     ObjectNode manifest = mapper.createObjectNode();
 
-    String baseServerUrl = requestUrl.split("\\$export")[0];
+    // Ensure the base URL ends with a slash for proper URL construction.
+    final String normalizedBaseUrl =
+        baseServerUrl.endsWith("/")
+        ? baseServerUrl
+        : baseServerUrl + "/";
     UnaryOperator<String> localUrlToRemoteUrl = localUrl -> {
       try {
         String[] parts = localUrl.split("/jobs/")[1].split("/");
         String jobUUID = parts[0];
         String file = parts[1];
 
-        return new URIBuilder(baseServerUrl + "$result")
+        return new URIBuilder(normalizedBaseUrl + "$result")
             .addParameter("job", jobUUID)
             .addParameter("file", file)
             .build()

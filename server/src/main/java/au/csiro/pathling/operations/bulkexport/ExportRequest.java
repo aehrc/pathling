@@ -11,6 +11,8 @@ import org.hl7.fhir.r4.model.InstantType;
  * Parsed data of the incoming export request.
  *
  * @param originalRequest The original request URL.
+ * @param serverBaseUrl The FHIR server base URL (without trailing slash), used for constructing
+ * result URLs.
  * @param outputFormat The desired output format.
  * @param since Resources will be included in the response if their state has changed after the
  * supplied time.
@@ -28,6 +30,7 @@ import org.hl7.fhir.r4.model.InstantType;
  */
 public record ExportRequest(
     @Nonnull String originalRequest,
+    @Nonnull String serverBaseUrl,
     @Nullable ExportOutputFormat outputFormat,
     @Nullable InstantType since,
     @Nullable InstantType until,
@@ -37,46 +40,6 @@ public record ExportRequest(
     @Nonnull ExportLevel exportLevel,
     @Nonnull Set<String> patientIds
 ) {
-
-  /**
-   * Backwards-compatible constructor for system-level exports.
-   *
-   * @param originalRequest the original request URL
-   * @param outputFormat the desired output format
-   * @param since resources changed after this time will be included
-   * @param until resources changed before this time will be included
-   * @param includeResourceTypeFilters resource types to include
-   * @param elements FHIR elements to include in the response
-   * @param lenient whether lenient handling is enabled
-   */
-  public ExportRequest(@Nonnull final String originalRequest,
-      @Nullable final ExportOutputFormat outputFormat, @Nullable final InstantType since,
-      @Nullable final InstantType until,
-      @Nonnull final List<ResourceType> includeResourceTypeFilters,
-      @Nonnull final List<FhirElement> elements,
-      final boolean lenient) {
-    this(originalRequest, outputFormat, since, until, includeResourceTypeFilters, elements, lenient,
-        ExportLevel.SYSTEM, Set.of());
-  }
-
-  /**
-   * Backwards-compatible constructor for system-level exports without lenient flag.
-   *
-   * @param originalRequest the original request URL
-   * @param outputFormat the desired output format
-   * @param since resources changed after this time will be included
-   * @param until resources changed before this time will be included
-   * @param includeResourceTypeFilters resource types to include
-   * @param elements FHIR elements to include in the response
-   */
-  public ExportRequest(@Nonnull final String originalRequest,
-      @Nullable final ExportOutputFormat outputFormat, @Nullable final InstantType since,
-      @Nullable final InstantType until,
-      @Nonnull final List<ResourceType> includeResourceTypeFilters,
-      @Nonnull final List<FhirElement> elements) {
-    this(originalRequest, outputFormat, since, until, includeResourceTypeFilters, elements, false,
-        ExportLevel.SYSTEM, Set.of());
-  }
 
   /**
    * The level at which the export operation is being executed.

@@ -34,6 +34,7 @@ import au.csiro.pathling.operations.bulkexport.ExportOperationValidator;
 import au.csiro.pathling.operations.bulkexport.ExportOutputFormat;
 import au.csiro.pathling.operations.bulkexport.ExportProvider;
 import au.csiro.pathling.operations.bulkexport.ExportRequest;
+import au.csiro.pathling.operations.bulkexport.ExportRequest.ExportLevel;
 import au.csiro.pathling.operations.bulkexport.ExportResult;
 import au.csiro.pathling.operations.bulkexport.ExportResultProvider;
 import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
@@ -48,6 +49,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.SparkSession;
@@ -84,34 +86,34 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
 
   @MockBean
   protected JobRegistry jobRegistry;
-  
+
   @Autowired
   protected RequestTagFactory requestTagFactory;
 
   @MockBean
   protected Job<T> job;
-  
+
   @Autowired
   private PathlingContext pathlingContext;
-  
+
   @Autowired
   private FhirContext fhirContext;
-  
+
   @Autowired
   private SparkSession sparkSession;
-  
+
   @Autowired
   private ExportOperationValidator exportOperationValidator;
-  
+
   @Autowired
   private ServerConfiguration serverConfiguration;
-  
+
   @Autowired
   private ExportResultRegistry exportResultRegistry;
-  
+
   @Autowired
   private ExportResultProvider exportResultProvider;
-  
+
   @Autowired
   private PatientCompartmentService patientCompartmentService;
 
@@ -161,12 +163,15 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
 
     final ExportRequest exportRequest = new ExportRequest(
         "test-req",
+        "http://localhost:8080/fhir",
         ExportOutputFormat.ND_JSON,
         null,
         null,
         type.stream().map(ResourceType::fromCode).toList(),
         List.of(),
-        lenient
+        lenient,
+        ExportLevel.SYSTEM,
+        Set.of()
     );
     when(job.getPreAsyncValidationResult()).thenReturn((T) exportRequest);
 

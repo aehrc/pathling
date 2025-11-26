@@ -207,8 +207,8 @@ public class ExportExecutor {
 
       final WriteDetails writeDetails = new DataSinkBuilder(pathlingContext,
           mapped).saveMode("overwrite").ndjson(jobDirPath.toString());
-      return new ExportResponse(exportRequest.originalRequest(), writeDetails,
-          serverConfiguration.getAuth().isEnabled());
+      return new ExportResponse(exportRequest.originalRequest(), exportRequest.serverBaseUrl(),
+          writeDetails, serverConfiguration.getAuth().isEnabled());
     } catch (final IOException e) {
       throw new InternalErrorException("Failed to created subdirectory at %s for job %s."
           .formatted(databasePath, jobId));

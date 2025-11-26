@@ -30,6 +30,7 @@ import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
+import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -48,13 +49,18 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
-public class PatientExportProvider implements PreAsyncValidation<ExportRequest> {
+public class PatientExportProvider implements IResourceProvider, PreAsyncValidation<ExportRequest> {
 
   @Nonnull
   private final ExportOperationValidator exportOperationValidator;
 
   @Nonnull
   private final ExportOperationHelper exportOperationHelper;
+
+  @Override
+  public Class<Patient> getResourceType() {
+    return Patient.class;
+  }
 
   /**
    * Constructs a new PatientExportProvider.
@@ -81,7 +87,7 @@ public class PatientExportProvider implements PreAsyncValidation<ExportRequest> 
    * @param requestDetails the request details
    * @return the binary result, or null if the job was cancelled
    */
-  @Operation(name = "export", type = Patient.class, idempotent = true)
+  @Operation(name = "export", idempotent = true)
   @OperationAccess("export")
   @AsyncSupported
   @Nullable
@@ -110,7 +116,7 @@ public class PatientExportProvider implements PreAsyncValidation<ExportRequest> 
    * @param requestDetails the request details
    * @return the binary result, or null if the job was cancelled
    */
-  @Operation(name = "export", type = Patient.class, idempotent = true)
+  @Operation(name = "export", idempotent = true)
   @OperationAccess("export")
   @AsyncSupported
   @Nullable

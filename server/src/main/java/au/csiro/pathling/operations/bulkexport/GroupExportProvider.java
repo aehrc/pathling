@@ -33,6 +33,7 @@ import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
+import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
@@ -57,7 +58,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-public class GroupExportProvider implements PreAsyncValidation<ExportRequest> {
+public class GroupExportProvider implements IResourceProvider, PreAsyncValidation<ExportRequest> {
 
   private static final String PATIENT_REFERENCE_PREFIX = "Patient/";
 
@@ -69,6 +70,11 @@ public class GroupExportProvider implements PreAsyncValidation<ExportRequest> {
 
   @Nonnull
   private final QueryableDataSource deltaLake;
+
+  @Override
+  public Class<Group> getResourceType() {
+    return Group.class;
+  }
 
   /**
    * Constructs a new GroupExportProvider.
@@ -99,7 +105,7 @@ public class GroupExportProvider implements PreAsyncValidation<ExportRequest> {
    * @param requestDetails the request details
    * @return the binary result, or null if the job was cancelled
    */
-  @Operation(name = "export", type = Group.class, idempotent = true)
+  @Operation(name = "export", idempotent = true)
   @OperationAccess("export")
   @AsyncSupported
   @Nullable

@@ -345,14 +345,15 @@ class ExportOperationTest {
       final InstantType since, final InstantType until, final List<String> type,
       final ExportRequest expectedMappedRequest) {
     final List<String> emptyList = List.of();
+    final String serverBaseUrl = "http://localhost:8080/fhir";
     if (expectedMappedRequest == null) {
       assertThatThrownBy(
-          () -> exportOperationValidator.createExportRequest(originalRequest, false, outputFormat,
-              since, until, type, emptyList))
+          () -> exportOperationValidator.createExportRequest(originalRequest, serverBaseUrl, false,
+              outputFormat, since, until, type, emptyList))
           .isExactlyInstanceOf(InvalidRequestException.class);
     } else {
       final ExportRequest expectedRequest = exportOperationValidator.createExportRequest(
-          originalRequest, false, outputFormat, since, until, type, emptyList);
+          originalRequest, serverBaseUrl, false, outputFormat, since, until, type, emptyList);
       assertThat(expectedRequest).isEqualTo(expectedMappedRequest);
     }
   }
