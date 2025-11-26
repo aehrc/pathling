@@ -96,6 +96,9 @@ public class ServerConfiguration {
   @NotNull
   private CorsConfiguration cors;
 
+  @Nullable
+  private BulkSubmitConfiguration bulkSubmit;
+
   /**
    * Logs the server configuration on startup.
    */

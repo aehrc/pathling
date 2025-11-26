@@ -17,6 +17,8 @@ import au.csiro.pathling.operations.bulkexport.PatientExportProvider;
 import au.csiro.pathling.operations.bulkexport.SystemExportProvider;
 import au.csiro.pathling.operations.bulkimport.ImportPnpProvider;
 import au.csiro.pathling.operations.bulkimport.ImportProvider;
+import au.csiro.pathling.operations.bulksubmit.BulkSubmitProvider;
+import au.csiro.pathling.operations.bulksubmit.BulkSubmitStatusProvider;
 import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.ApacheProxyAddressStrategy;
@@ -107,6 +109,12 @@ public class FhirServer extends RestfulServer {
   private final transient ImportPnpProvider importPnpProvider;
 
   @Nonnull
+  private final transient Optional<BulkSubmitProvider> bulkSubmitProvider;
+
+  @Nonnull
+  private final transient Optional<BulkSubmitStatusProvider> bulkSubmitStatusProvider;
+
+  @Nonnull
   private final transient ErrorReportingInterceptor errorReportingInterceptor;
 
   @Nonnull
@@ -130,6 +138,8 @@ public class FhirServer extends RestfulServer {
    * @param groupExportProvider the group export provider
    * @param importProvider the import provider
    * @param importPnpProvider the import PnP provider
+   * @param bulkSubmitProvider the optional bulk submit provider
+   * @param bulkSubmitStatusProvider the optional bulk submit status provider
    * @param errorReportingInterceptor the error reporting interceptor
    * @param entityTagInterceptor the entity tag interceptor
    * @param bulkExportDeleteInterceptor the bulk export delete interceptor
@@ -144,6 +154,8 @@ public class FhirServer extends RestfulServer {
       @Nonnull final GroupExportProvider groupExportProvider,
       @Nonnull final ImportProvider importProvider,
       @Nonnull final ImportPnpProvider importPnpProvider,
+      @Nonnull final Optional<BulkSubmitProvider> bulkSubmitProvider,
+      @Nonnull final Optional<BulkSubmitStatusProvider> bulkSubmitStatusProvider,
       @Nonnull final ErrorReportingInterceptor errorReportingInterceptor,
       @Nonnull final EntityTagInterceptor entityTagInterceptor,
       @Nonnull final BulkExportDeleteInterceptor bulkExportDeleteInterceptor,
@@ -157,6 +169,8 @@ public class FhirServer extends RestfulServer {
     this.groupExportProvider = groupExportProvider;
     this.importProvider = importProvider;
     this.importPnpProvider = importPnpProvider;
+    this.bulkSubmitProvider = bulkSubmitProvider;
+    this.bulkSubmitStatusProvider = bulkSubmitStatusProvider;
     this.errorReportingInterceptor = errorReportingInterceptor;
     this.entityTagInterceptor = entityTagInterceptor;
     this.bulkExportDeleteInterceptor = bulkExportDeleteInterceptor;
@@ -186,6 +200,10 @@ public class FhirServer extends RestfulServer {
       registerProvider(groupExportProvider);
       registerProvider(importProvider);
       registerProvider(importPnpProvider);
+
+      // Register bulk submit providers, if enabled.
+      bulkSubmitProvider.ifPresent(this::registerProvider);
+      bulkSubmitStatusProvider.ifPresent(this::registerProvider);
 
       // Authorization-related configuration.
       configureAuthorization();

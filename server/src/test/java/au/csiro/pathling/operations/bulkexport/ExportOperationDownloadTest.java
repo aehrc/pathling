@@ -112,6 +112,6 @@ class ExportOperationDownloadTest {
     final MockHttpServletResponse response = new MockHttpServletResponse();
     assertThatCode(() -> exportResultProvider.result(TEST_JOB_ID, "unknown-file.ndjson", response))
         .isExactlyInstanceOf(ResourceNotFoundError.class)
-        .hasMessageContaining("does not exist or is not a file!");
+        .hasMessageContaining("does not exist or is not a file.");
   }
 }
