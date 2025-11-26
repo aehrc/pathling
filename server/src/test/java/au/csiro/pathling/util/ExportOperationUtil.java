@@ -123,7 +123,7 @@ public class ExportOperationUtil {
       since = InstantType.now();
     }
     String originalRequest =
-        base + "_outputFormat=" + ExportOutputFormat.asParam(ExportOutputFormat.ND_JSON)
+        base + "_outputFormat=" + ExportOutputFormat.asParam(ExportOutputFormat.NDJSON)
             + "&_since=" + since;
 
     if (until != null) {
@@ -150,7 +150,7 @@ public class ExportOperationUtil {
         }
       }
     }
-    return new ExportRequest(originalRequest, deriveServerBaseUrl(base), ExportOutputFormat.ND_JSON,
+    return new ExportRequest(originalRequest, deriveServerBaseUrl(base), ExportOutputFormat.NDJSON,
         since, until, List.of(), fhirElements, false, ExportLevel.SYSTEM, Set.of());
   }
 

@@ -20,9 +20,9 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.operations.compartment.PatientCompartmentService;
 import au.csiro.pathling.library.io.sink.FileInformation;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
+import au.csiro.pathling.operations.compartment.PatientCompartmentService;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.CustomObjectDataSource;
@@ -405,12 +405,12 @@ class ExportOperationExecutorTest {
     final InstantType patientLastUpdated = date("2024-01-06");
 
     final String base = "http://localhost:8080/fhir/$export?";
-    final ExportRequest req1 = req(base, ExportOutputFormat.ND_JSON, date("2024-01-05"),
+    final ExportRequest req1 = req(base, ExportOutputFormat.NDJSON, date("2024-01-05"),
         List.of(ResourceType.PATIENT));
     final ExportResponse res1 = res(req1,
         write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER), 1)));
 
-    final ExportRequest req2 = req(base, ExportOutputFormat.ND_JSON, date("2024-01-07"),
+    final ExportRequest req2 = req(base, ExportOutputFormat.NDJSON, date("2024-01-07"),
         List.of(ResourceType.PATIENT));
     final ExportResponse res2 = res(req2,
         write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER), 0)));
@@ -439,23 +439,23 @@ class ExportOperationExecutorTest {
     final String base = "http://localhost:8080/fhir/$export?";
     final InstantType now = InstantType.now();
 
-    final ExportRequest req1 = req(base, ExportOutputFormat.ND_JSON, now,
+    final ExportRequest req1 = req(base, ExportOutputFormat.NDJSON, now,
         List.of(ResourceType.PATIENT));
     final ExportResponse res1 = res(req1,
         write_details(fi("Patient", RESOLVE_PATIENT.apply(warehouseUrl), PATIENT_COUNT)));
 
-    final ExportRequest req2 = req(base, ExportOutputFormat.ND_JSON, now,
+    final ExportRequest req2 = req(base, ExportOutputFormat.NDJSON, now,
         List.of(ResourceType.ENCOUNTER));
     final ExportResponse res2 = res(req2,
         write_details(fi("Encounter", RESOLVE_ENCOUNTER.apply(warehouseUrl), ENCOUNTER_COUNT)));
 
-    final ExportRequest req3 = req(base, ExportOutputFormat.ND_JSON, now,
+    final ExportRequest req3 = req(base, ExportOutputFormat.NDJSON, now,
         List.of(ResourceType.ENCOUNTER, ResourceType.PATIENT));
     final ExportResponse res3 = res(req3, write_details(
         fi("Encounter", RESOLVE_ENCOUNTER.apply(warehouseUrl), ENCOUNTER_COUNT),
         fi("Patient", RESOLVE_PATIENT.apply(warehouseUrl), PATIENT_COUNT)));
 
-    final ExportRequest req4 = req(base, ExportOutputFormat.ND_JSON, now, List.of());
+    final ExportRequest req4 = req(base, ExportOutputFormat.NDJSON, now, List.of());
     final ExportResponse res4 = res(req4, write_details(
         fi("Encounter", RESOLVE_ENCOUNTER.apply(warehouseUrl), ENCOUNTER_COUNT),
         fi("Patient", RESOLVE_PATIENT.apply(warehouseUrl), PATIENT_COUNT)));

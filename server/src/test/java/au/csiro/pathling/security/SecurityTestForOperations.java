@@ -164,7 +164,7 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
     final ExportRequest exportRequest = new ExportRequest(
         "test-req",
         "http://localhost:8080/fhir",
-        ExportOutputFormat.ND_JSON,
+        ExportOutputFormat.NDJSON,
         null,
         null,
         type.stream().map(ResourceType::fromCode).toList(),

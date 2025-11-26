@@ -1,7 +1,7 @@
 package au.csiro.pathling.operations.bulkexport;
 
 import static au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
-import static au.csiro.pathling.operations.bulkexport.ExportOutputFormat.ND_JSON;
+import static au.csiro.pathling.operations.bulkexport.ExportOutputFormat.NDJSON;
 import static au.csiro.pathling.util.ExportOperationUtil.fi;
 import static au.csiro.pathling.util.ExportOperationUtil.json;
 import static au.csiro.pathling.util.ExportOperationUtil.req;
@@ -82,7 +82,7 @@ class ExportOperationTest {
   @MethodSource("provideHeaders")
   void testHeaders(final String acceptHeader, final String preferHeader, final boolean lenient,
       final List<String> messages, final boolean valid) {
-    final String outputFormat = ExportOutputFormat.asParam(ND_JSON);
+    final String outputFormat = ExportOutputFormat.asParam(NDJSON);
     final InstantType now = InstantType.now();
     final RequestDetails mockRequest = MockUtil.mockRequest(acceptHeader, preferHeader, lenient);
     if (valid) {
@@ -139,7 +139,7 @@ class ExportOperationTest {
         false);
     final ExportRequest actualExportRequest = exportOperationValidator.validateRequest(
         mockReqDetails,
-        ExportOutputFormat.asParam(ND_JSON), InstantType.now(), until, null, null).result();
+        ExportOutputFormat.asParam(NDJSON), InstantType.now(), until, null, null).result();
     assertThat(actualExportRequest).isNotNull();
     assertThat(actualExportRequest.until()).isEqualTo(expectedUntil);
   }
@@ -163,13 +163,13 @@ class ExportOperationTest {
     if (expectedTypes != null) {
       final ExportRequest actualExportRequest = exportOperationValidator.validateRequest(
           mockReqDetails,
-          ExportOutputFormat.asParam(ND_JSON), now, null, types, null).result();
+          ExportOutputFormat.asParam(NDJSON), now, null, types, null).result();
       assertThat(actualExportRequest).isNotNull();
       assertThat(
           actualExportRequest.includeResourceTypeFilters()).containsExactlyInAnyOrderElementsOf(
           expectedTypes);
     } else {
-      final String outputFormat = ExportOutputFormat.asParam(ND_JSON);
+      final String outputFormat = ExportOutputFormat.asParam(NDJSON);
       assertThatCode(
           () -> exportOperationValidator.validateRequest(mockReqDetails, outputFormat, now, null,
               types, null))
@@ -203,7 +203,7 @@ class ExportOperationTest {
     final RequestDetails mockReqDetails = MockUtil.mockRequest("application/fhir+json",
         "respond-async",
         false);
-    final String outputFormat = ExportOutputFormat.asParam(ND_JSON);
+    final String outputFormat = ExportOutputFormat.asParam(NDJSON);
     final InstantType now = InstantType.now();
     if (expectedElements != null) {
       final ExportRequest actualExportRequest = exportOperationValidator.validateRequest(
@@ -280,15 +280,15 @@ class ExportOperationTest {
   private static Stream<Arguments> provideParameters() {
     final InstantType now = InstantType.now();
     return Stream.of(
-        arguments(ND_JSON, now, List.<String>of(), Map.of(), false, List.of(), true),
-        arguments(ND_JSON, now, List.of(""), Map.of(), false, List.of(), true),
-        arguments(ND_JSON, now, List.of("Patient"), Map.of(), false, List.of(), true),
-        arguments(ND_JSON, now, List.of("Patient123"), Map.of(), false, List.of(), false),
-        arguments(ND_JSON, now, List.of("Patient123"), Map.of(), true, List.of(), true),
-        arguments(ND_JSON, now, List.<String>of(), queryParameter("_typeFilter", "test"), false,
+        arguments(NDJSON, now, List.<String>of(), Map.of(), false, List.of(), true),
+        arguments(NDJSON, now, List.of(""), Map.of(), false, List.of(), true),
+        arguments(NDJSON, now, List.of("Patient"), Map.of(), false, List.of(), true),
+        arguments(NDJSON, now, List.of("Patient123"), Map.of(), false, List.of(), false),
+        arguments(NDJSON, now, List.of("Patient123"), Map.of(), true, List.of(), true),
+        arguments(NDJSON, now, List.<String>of(), queryParameter("_typeFilter", "test"), false,
             List.of(),
             false),
-        arguments(ND_JSON, now, List.<String>of(), queryParameter("_typeFilter", "test"), true,
+        arguments(NDJSON, now, List.<String>of(), queryParameter("_typeFilter", "test"), true,
             List.of(
                 "The query parameter '_typeFilter' is not supported. Ignoring because lenient handling is enabled."),
             true)
@@ -320,12 +320,12 @@ class ExportOperationTest {
     final String base = "http://localhost:8080/fhir/$export?";
     final InstantType now = InstantType.now();
 
-    final var req1 = req(base, ND_JSON, now, List.of(Enumerations.ResourceType.PATIENT));
+    final var req1 = req(base, NDJSON, now, List.of(Enumerations.ResourceType.PATIENT));
     final var res1 = res(req1,
         write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER), 1)));
     final var json1 = json(mapper, res1.getKickOffRequestUrl(), res1.getWriteDetails());
 
-    final var req2 = req(base, ND_JSON, now, List.of(Enumerations.ResourceType.PATIENT));
+    final var req2 = req(base, NDJSON, now, List.of(Enumerations.ResourceType.PATIENT));
     final var res2 = res(req2,
         write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER), 0)));
     final var json2 = json(mapper, res2.getKickOffRequestUrl(), write_details(
@@ -367,7 +367,7 @@ class ExportOperationTest {
             until, List.of(),
             ExportRequestBuilder.builder()
                 .originalRequest(base + "_outputFormat=application/fhir+ndjson")
-                .outputFormat(ND_JSON)
+                .outputFormat(NDJSON)
                 .since(now)
                 .until(until)
                 .build()
@@ -376,7 +376,7 @@ class ExportOperationTest {
             List.of(),
             ExportRequestBuilder.builder()
                 .originalRequest(base + "_outputFormat=application/ndjson")
-                .outputFormat(ND_JSON)
+                .outputFormat(NDJSON)
                 .since(now)
                 .until(until)
                 .build()
@@ -384,7 +384,7 @@ class ExportOperationTest {
         arguments(base + "_outputFormat=ndjson", "ndjson", now, until, List.of(),
             ExportRequestBuilder.builder()
                 .originalRequest(base + "_outputFormat=ndjson")
-                .outputFormat(ND_JSON)
+                .outputFormat(NDJSON)
                 .since(now)
                 .until(until)
                 .build()
@@ -393,7 +393,7 @@ class ExportOperationTest {
         arguments(base + "_outputFormat=ndjson", "ndjson", now, until, List.of("Patient"),
             ExportRequestBuilder.builder()
                 .originalRequest(base + "_outputFormat=ndjson")
-                .outputFormat(ND_JSON)
+                .outputFormat(NDJSON)
                 .since(now)
                 .until(until)
                 .includeResourceType(Enumerations.ResourceType.PATIENT)
@@ -403,7 +403,7 @@ class ExportOperationTest {
             List.of("Patient", "Observation"),
             ExportRequestBuilder.builder()
                 .originalRequest(base + "_outputFormat=ndjson")
-                .outputFormat(ND_JSON)
+                .outputFormat(NDJSON)
                 .since(now)
                 .until(until)
                 .includeResourceTypes(Enumerations.ResourceType.PATIENT,

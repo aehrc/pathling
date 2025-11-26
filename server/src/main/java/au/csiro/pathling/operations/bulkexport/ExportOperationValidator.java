@@ -240,7 +240,7 @@ public class ExportOperationValidator {
     return new ExportRequest(
         originalRequest,
         serverBaseUrl,
-        ExportOutputFormat.ND_JSON,
+        ExportOutputFormat.NDJSON,
         since,
         until,
         resourceFilter,
@@ -307,7 +307,7 @@ public class ExportOperationValidator {
     return new ExportRequest(
         originalRequest,
         serverBaseUrl,
-        ExportOutputFormat.ND_JSON,
+        ExportOutputFormat.NDJSON,
         since,
         until,
         resourceFilter,
