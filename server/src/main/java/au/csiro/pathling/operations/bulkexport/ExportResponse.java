@@ -6,26 +6,41 @@ import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ArrayNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ObjectNode;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.UnaryOperator;
+import lombok.Getter;
 import org.apache.http.client.utils.URIBuilder;
 import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.InstantType;
 
 /**
+ * Represents the response from a bulk export operation, containing the export manifest.
+ *
  * @author Felix Naumann
  */
 public class ExportResponse implements OperationResponse<Binary> {
 
+  @Nonnull
   private final ObjectMapper mapper = new ObjectMapper();
 
+  @Nonnull
   private final String kickOffRequestUrl;
+
+  @Nonnull
   private final String serverBaseUrl;
+
+  @Nonnull
   private final WriteDetails writeDetails;
+
+  /**
+   * Whether an access token is required to retrieve results.
+   */
+  @Getter
   private final boolean requiresAccessToken;
 
   /**
@@ -36,50 +51,53 @@ public class ExportResponse implements OperationResponse<Binary> {
    * @param writeDetails the write details containing file information
    * @param requiresAccessToken whether access token is required to retrieve results
    */
-  public ExportResponse(final String kickOffRequestUrl, final String serverBaseUrl,
-      final WriteDetails writeDetails, final boolean requiresAccessToken) {
+  public ExportResponse(@Nonnull final String kickOffRequestUrl,
+      @Nonnull final String serverBaseUrl, @Nonnull final WriteDetails writeDetails,
+      final boolean requiresAccessToken) {
     this.kickOffRequestUrl = kickOffRequestUrl;
     this.serverBaseUrl = serverBaseUrl;
     this.writeDetails = writeDetails;
     this.requiresAccessToken = requiresAccessToken;
   }
 
+  @Nonnull
   @Override
   public Binary toOutput() {
-
-    String manifestJSON = null;
+    final String manifestJSON;
     try {
       manifestJSON = buildManifest(kickOffRequestUrl, serverBaseUrl, writeDetails);
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new IllegalStateException(e);
     }
-    Binary binary = new Binary();
+    final Binary binary = new Binary();
     binary.setContentType("application/json");
     binary.setData(manifestJSON.getBytes(StandardCharsets.UTF_8));
     return binary;
   }
 
-  private String buildManifest(String requestUrl, String baseServerUrl, WriteDetails writeDetails)
+  @Nonnull
+  private String buildManifest(@Nonnull final String requestUrl,
+      @Nonnull final String baseServerUrl, @Nonnull final WriteDetails writeDetails)
       throws IOException {
-    ObjectNode manifest = mapper.createObjectNode();
+    final ObjectNode manifest = mapper.createObjectNode();
 
     // Ensure the base URL ends with a slash for proper URL construction.
     final String normalizedBaseUrl =
         baseServerUrl.endsWith("/")
         ? baseServerUrl
         : baseServerUrl + "/";
-    UnaryOperator<String> localUrlToRemoteUrl = localUrl -> {
+    final UnaryOperator<String> localUrlToRemoteUrl = localUrl -> {
       try {
-        String[] parts = localUrl.split("/jobs/")[1].split("/");
-        String jobUUID = parts[0];
-        String file = parts[1];
+        final String[] parts = localUrl.split("/jobs/")[1].split("/");
+        final String jobUUID = parts[0];
+        final String file = parts[1];
 
         return new URIBuilder(normalizedBaseUrl + "$result")
             .addParameter("job", jobUUID)
             .addParameter("file", file)
             .build()
             .toString();
-      } catch (URISyntaxException e) {
+      } catch (final URISyntaxException e) {
         throw new InternalErrorException(e);
       }
     };
@@ -87,42 +105,49 @@ public class ExportResponse implements OperationResponse<Binary> {
     manifest.put("transactionTime", InstantType.now().getValueAsString());
     manifest.put("request", requestUrl);
     manifest.put("requiresAccessToken", requiresAccessToken);
-    ArrayNode outputArray = mapper.createArrayNode();
-    List<ObjectNode> objectNodes = writeDetails.fileInfos().stream()
+    final ArrayNode outputArray = mapper.createArrayNode();
+    final List<ObjectNode> objectNodes = writeDetails.fileInfos().stream()
         .filter(fileInfo -> fileInfo.count() == null || fileInfo.count() > 0)
         .map(fileInfo -> mapper.createObjectNode()
             .put("type", fileInfo.fhirResourceType())
             .put("url", localUrlToRemoteUrl.apply(fileInfo.absoluteUrl()))
-            //.put("url", fileInfo.absoluteUrl())
             .put("count", fileInfo.count())
         )
         .toList();
     outputArray.addAll(objectNodes);
     manifest.set("output", outputArray);
-    // not supported (for now) but required
+    // Not supported yet but required by the specification.
     manifest.set("deleted", mapper.createArrayNode());
     manifest.set("error", mapper.createArrayNode());
     return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(manifest);
   }
 
+  /**
+   * Returns the original kick-off request URL.
+   *
+   * @return the kick-off request URL
+   */
+  @Nonnull
   public String getKickOffRequestUrl() {
     return kickOffRequestUrl;
   }
 
+  /**
+   * Returns the write details containing file information.
+   *
+   * @return the write details
+   */
+  @Nonnull
   public WriteDetails getWriteDetails() {
     return writeDetails;
   }
 
-  public boolean isRequiresAccessToken() {
-    return requiresAccessToken;
-  }
-
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(final Object o) {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ExportResponse that = (ExportResponse) o;
+    final ExportResponse that = (ExportResponse) o;
     return requiresAccessToken == that.requiresAccessToken
         && Objects.equals(kickOffRequestUrl, that.kickOffRequestUrl)
         && Objects.equals(writeDetails, that.writeDetails);
