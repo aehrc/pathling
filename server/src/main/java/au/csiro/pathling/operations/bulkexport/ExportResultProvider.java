@@ -31,17 +31,31 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 /**
+ * Provides the download endpoint for bulk export operation results.
+ *
  * @author Felix Naumann
  */
 @Component
 @Slf4j
 public class ExportResultProvider {
-  
+
+  @Nonnull
   private final ExportResultRegistry exportResultRegistry;
+
+  @Nonnull
   private final String databasePath;
 
+  /**
+   * Creates a new instance of the export result provider.
+   *
+   * @param exportResultRegistry the registry for tracking export results
+   * @param databasePath the path to the database storage location
+   */
   @Autowired
-  public ExportResultProvider(ExportResultRegistry exportResultRegistry, @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") String databasePath) {
+  public ExportResultProvider(
+      @Nonnull final ExportResultRegistry exportResultRegistry,
+      @Nonnull @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
+      final String databasePath) {
     this.exportResultRegistry = exportResultRegistry;
     this.databasePath = databasePath;
   }
@@ -49,9 +63,9 @@ public class ExportResultProvider {
   /**
    * Enables the download of the result of an export operation.
    *
-   * @param jobId the job jobId of the export request
-   * @param response the {@link HttpServletResponse} for updating the response
-   * processing
+   * @param jobId the job ID of the export request
+   * @param file the name of the file to download
+   * @param response the {@link HttpServletResponse} for sending the file content
    */
   @SuppressWarnings({"unused", "TypeMayBeWeakened"})
   @OperationAccess("export")
@@ -65,20 +79,20 @@ public class ExportResultProvider {
     // Validate that the ID looks reasonable.
     try {
       UUID.fromString(jobId);
-    } catch (IllegalArgumentException e) {
+    } catch (final IllegalArgumentException e) {
       response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
       return;
     }
 
     log.info("Retrieving export result: {}", jobId);
-    
-    ExportResult exportResult = exportResultRegistry.get(jobId);
-    if(exportResult == null) {
+
+    final ExportResult exportResult = exportResultRegistry.get(jobId);
+    if (exportResult == null) {
       response.setStatus(HttpServletResponse.SC_NOT_FOUND);
       throw new ResourceNotFoundError("Unknown job id.");
     }
-    Optional<String> ownerId = exportResultRegistry.get(jobId).ownerId();
-    
+    final Optional<String> ownerId = exportResult.ownerId();
+
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     // Check that the user requesting the result is the same user that started the job.
     final Optional<String> currentUserId = getCurrentUserId(authentication);
@@ -88,24 +102,28 @@ public class ExportResultProvider {
           "The requested result is not owned by the current user '%s'.".formatted(
               currentUserId.orElse("null")));
     }
-    Path requestedFilepath = new Path(URI.create(databasePath).getPath() + Path.SEPARATOR + "jobs" + Path.SEPARATOR + jobId + Path.SEPARATOR + file);
-    Resource resource = new FileSystemResource(requestedFilepath.toString());
 
-    if(!resource.exists() || !resource.isFile()) {
-      throw new ResourceNotFoundError("File '%s' does not exist or is not a file!".formatted(requestedFilepath.toString()));
+    final Path requestedFilepath = new Path(
+        URI.create(databasePath).getPath() + Path.SEPARATOR + "jobs" + Path.SEPARATOR + jobId
+            + Path.SEPARATOR + file);
+    final Resource resource = new FileSystemResource(requestedFilepath.toString());
+
+    if (!resource.exists() || !resource.isFile()) {
+      throw new ResourceNotFoundError(
+          "File '%s' does not exist or is not a file.".formatted(requestedFilepath));
     }
-    
+
     response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file + "\"");
     response.setContentType("application/octet-stream");
     response.setStatus(HttpServletResponse.SC_OK);
-    try (InputStream inputStream = new FileInputStream(resource.getFile());
-        OutputStream outputStream = response.getOutputStream()) {
+    try (final InputStream inputStream = new FileInputStream(resource.getFile());
+        final OutputStream outputStream = response.getOutputStream()) {
 
       inputStream.transferTo(outputStream);
       outputStream.flush();
 
-    } catch (IOException e) {
-      throw new InternalErrorException("Failed transferring file!", e);
+    } catch (final IOException e) {
+      throw new InternalErrorException("Failed transferring file.", e);
     }
   }
 }
