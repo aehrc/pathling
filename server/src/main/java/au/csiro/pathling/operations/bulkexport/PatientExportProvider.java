@@ -17,11 +17,11 @@
 
 package au.csiro.pathling.operations.bulkexport;
 
-import static au.csiro.pathling.operations.bulkexport.ExportProvider.ELEMENTS_PARAM_NAME;
-import static au.csiro.pathling.operations.bulkexport.ExportProvider.OUTPUT_FORMAT_PARAM_NAME;
-import static au.csiro.pathling.operations.bulkexport.ExportProvider.SINCE_PARAM_NAME;
-import static au.csiro.pathling.operations.bulkexport.ExportProvider.TYPE_PARAM_NAME;
-import static au.csiro.pathling.operations.bulkexport.ExportProvider.UNTIL_PARAM_NAME;
+import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.ELEMENTS_PARAM_NAME;
+import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.OUTPUT_FORMAT_PARAM_NAME;
+import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.SINCE_PARAM_NAME;
+import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.TYPE_PARAM_NAME;
+import static au.csiro.pathling.operations.bulkexport.SystemExportProvider.UNTIL_PARAM_NAME;
 
 import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.async.PreAsyncValidation;

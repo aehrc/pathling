@@ -11,10 +11,10 @@ import au.csiro.pathling.errors.ErrorReportingInterceptor;
 import au.csiro.pathling.fhir.ConformanceProvider;
 import au.csiro.pathling.interceptors.BulkExportDeleteInterceptor;
 import au.csiro.pathling.interceptors.SmartConfigurationInterceptor;
-import au.csiro.pathling.operations.bulkexport.ExportProvider;
 import au.csiro.pathling.operations.bulkexport.ExportResultProvider;
 import au.csiro.pathling.operations.bulkexport.GroupExportProvider;
 import au.csiro.pathling.operations.bulkexport.PatientExportProvider;
+import au.csiro.pathling.operations.bulkexport.SystemExportProvider;
 import au.csiro.pathling.operations.bulkimport.ImportPnpProvider;
 import au.csiro.pathling.operations.bulkimport.ImportProvider;
 import au.csiro.pathling.security.OidcConfiguration;
@@ -89,7 +89,7 @@ public class FhirServer extends RestfulServer {
   private final transient Optional<JobProvider> jobProvider;
 
   @Nonnull
-  private final transient ExportProvider exportProvider;
+  private final transient SystemExportProvider exportProvider;
 
   @Nonnull
   private final transient ExportResultProvider exportResultProvider;
@@ -138,7 +138,7 @@ public class FhirServer extends RestfulServer {
   public FhirServer(@Nonnull final ServerConfiguration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
       @Nonnull final Optional<JobProvider> jobProvider,
-      @Nonnull final ExportProvider exportProvider,
+      @Nonnull final SystemExportProvider exportProvider,
       @Nonnull final ExportResultProvider exportResultProvider,
       @Nonnull final PatientExportProvider patientExportProvider,
       @Nonnull final GroupExportProvider groupExportProvider,

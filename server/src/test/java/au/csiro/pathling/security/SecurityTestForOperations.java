@@ -32,12 +32,12 @@ import au.csiro.pathling.operations.bulkexport.ExportExecutor;
 import au.csiro.pathling.operations.bulkexport.ExportOperationHelper;
 import au.csiro.pathling.operations.bulkexport.ExportOperationValidator;
 import au.csiro.pathling.operations.bulkexport.ExportOutputFormat;
-import au.csiro.pathling.operations.bulkexport.ExportProvider;
 import au.csiro.pathling.operations.bulkexport.ExportRequest;
 import au.csiro.pathling.operations.bulkexport.ExportRequest.ExportLevel;
 import au.csiro.pathling.operations.bulkexport.ExportResult;
 import au.csiro.pathling.operations.bulkexport.ExportResultProvider;
 import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
+import au.csiro.pathling.operations.bulkexport.SystemExportProvider;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
 import au.csiro.pathling.util.TestDataSetup;
 import ca.uhn.fhir.context.FhirContext;
@@ -79,7 +79,7 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
   public static final UnaryOperator<String> ERROR_MSG =
       "Missing authority: 'pathling:%s'"::formatted;
 
-  protected ExportProvider exportProvider;
+  protected SystemExportProvider exportProvider;
 
   @MockBean
   protected ServletRequestDetails requestDetails;
@@ -154,7 +154,7 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
   }
 
   @SuppressWarnings("unchecked")
-  JsonNode performExport(final ExportProvider exportProvider, final String ownerId,
+  JsonNode performExport(final SystemExportProvider exportProvider, final String ownerId,
       final List<String> type, final boolean lenient) {
     when(job.getOwnerId()).thenReturn(Optional.ofNullable(ownerId));
     final String lenientHeader = "handling=" + lenient;
@@ -190,7 +190,7 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
     }
   }
 
-  protected ExportProvider setupScenario(final Path tempDir, final String... resourceTypes) {
+  protected SystemExportProvider setupScenario(final Path tempDir, final String... resourceTypes) {
     TestDataSetup.copyTestDataToTempDir(tempDir, resourceTypes);
     final QueryableDataSource deltaLake = new DataSourceBuilder(pathlingContext)
         .delta("file://" + tempDir);
@@ -213,7 +213,7 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
         serverConfiguration
     );
 
-    return new ExportProvider(
+    return new SystemExportProvider(
         exportOperationValidator,
         helper
     );

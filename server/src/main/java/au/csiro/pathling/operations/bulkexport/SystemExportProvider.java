@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
  * @author Felix Naumann
  */
 @Component
-public class ExportProvider implements PreAsyncValidation<ExportRequest> {
+public class SystemExportProvider implements PreAsyncValidation<ExportRequest> {
 
   /**
    * The name of the output format parameter.
@@ -54,13 +54,13 @@ public class ExportProvider implements PreAsyncValidation<ExportRequest> {
   private final ExportOperationHelper exportOperationHelper;
 
   /**
-   * Constructs a new ExportProvider.
+   * Constructs a new SystemExportProvider.
    *
    * @param exportOperationValidator the export operation validator
    * @param exportOperationHelper the export operation helper
    */
   @Autowired
-  public ExportProvider(@Nonnull final ExportOperationValidator exportOperationValidator,
+  public SystemExportProvider(@Nonnull final ExportOperationValidator exportOperationValidator,
       @Nonnull final ExportOperationHelper exportOperationHelper) {
     this.exportOperationValidator = exportOperationValidator;
     this.exportOperationHelper = exportOperationHelper;

@@ -22,8 +22,8 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import au.csiro.pathling.errors.AccessDeniedError;
-import au.csiro.pathling.operations.bulkexport.ExportProvider;
 import au.csiro.pathling.operations.bulkexport.ExportRequest;
+import au.csiro.pathling.operations.bulkexport.SystemExportProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import java.io.IOException;
@@ -181,7 +181,8 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
   @Test
   @WithMockJwt(username = "admin")
   void testForbiddenIfExportWithoutAuthority() {
-    final ExportProvider beanExportProvider = applicationContext.getBean(ExportProvider.class);
+    final SystemExportProvider beanExportProvider = applicationContext.getBean(
+        SystemExportProvider.class);
     assertThatThrownBy(() -> performExport(beanExportProvider, ADMIN_USER, List.of(), false))
         .isExactlyInstanceOf(AccessDeniedError.class)
         .hasMessage(PATHLING_EXPORT_MSG);

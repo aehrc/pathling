@@ -220,7 +220,7 @@ public class ExportOperationValidator {
     }
     if (outputFormat != null && !FhirServer.OUTPUT_FORMAT.validValue(outputFormat)) {
       throw new InvalidRequestException("Unknown '%s' value '%s'. Only %s are allowed.".formatted(
-          ExportProvider.OUTPUT_FORMAT_PARAM_NAME, outputFormat,
+          SystemExportProvider.OUTPUT_FORMAT_PARAM_NAME, outputFormat,
           FhirServer.OUTPUT_FORMAT.acceptedHeaderValues()));
     }
     final List<Enumerations.ResourceType> resourceFilter = type.stream()
@@ -283,7 +283,7 @@ public class ExportOperationValidator {
     }
     if (outputFormat != null && !FhirServer.OUTPUT_FORMAT.validValue(outputFormat)) {
       throw new InvalidRequestException("Unknown '%s' value '%s'. Only %s are allowed.".formatted(
-          ExportProvider.OUTPUT_FORMAT_PARAM_NAME, outputFormat,
+          SystemExportProvider.OUTPUT_FORMAT_PARAM_NAME, outputFormat,
           FhirServer.OUTPUT_FORMAT.acceptedHeaderValues()));
     }
 
