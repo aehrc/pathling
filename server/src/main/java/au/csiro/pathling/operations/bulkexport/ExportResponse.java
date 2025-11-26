@@ -12,7 +12,6 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.UnaryOperator;
 import lombok.Getter;
 import org.apache.http.client.utils.URIBuilder;
 import org.hl7.fhir.r4.model.Binary;
@@ -84,23 +83,8 @@ public class ExportResponse implements OperationResponse<Binary> {
     // Ensure the base URL ends with a slash for proper URL construction.
     final String normalizedBaseUrl =
         baseServerUrl.endsWith("/")
-        ? baseServerUrl
-        : baseServerUrl + "/";
-    final UnaryOperator<String> localUrlToRemoteUrl = localUrl -> {
-      try {
-        final String[] parts = localUrl.split("/jobs/")[1].split("/");
-        final String jobUUID = parts[0];
-        final String file = parts[1];
-
-        return new URIBuilder(normalizedBaseUrl + "$result")
-            .addParameter("job", jobUUID)
-            .addParameter("file", file)
-            .build()
-            .toString();
-      } catch (final URISyntaxException e) {
-        throw new InternalErrorException(e);
-      }
-    };
+            ? baseServerUrl
+            : baseServerUrl + "/";
 
     manifest.put("transactionTime", InstantType.now().getValueAsString());
     manifest.put("request", requestUrl);
@@ -110,7 +94,7 @@ public class ExportResponse implements OperationResponse<Binary> {
         .filter(fileInfo -> fileInfo.count() == null || fileInfo.count() > 0)
         .map(fileInfo -> mapper.createObjectNode()
             .put("type", fileInfo.fhirResourceType())
-            .put("url", localUrlToRemoteUrl.apply(fileInfo.absoluteUrl()))
+            .put("url", buildResultUrl(normalizedBaseUrl, fileInfo.absoluteUrl()))
             .put("count", fileInfo.count())
         )
         .toList();
@@ -120,6 +104,31 @@ public class ExportResponse implements OperationResponse<Binary> {
     manifest.set("deleted", mapper.createArrayNode());
     manifest.set("error", mapper.createArrayNode());
     return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(manifest);
+  }
+
+  /**
+   * Converts a local file URL to a remote result URL.
+   *
+   * @param baseUrl the normalised base server URL
+   * @param localUrl the local file URL containing the job ID and filename
+   * @return the remote result URL
+   */
+  @Nonnull
+  private static String buildResultUrl(@Nonnull final String baseUrl,
+      @Nonnull final String localUrl) {
+    try {
+      final String[] parts = localUrl.split("/jobs/")[1].split("/");
+      final String jobUUID = parts[0];
+      final String file = parts[1];
+
+      return new URIBuilder(baseUrl + "$result")
+          .addParameter("job", jobUUID)
+          .addParameter("file", file)
+          .build()
+          .toString();
+    } catch (final URISyntaxException e) {
+      throw new InternalErrorException(e);
+    }
   }
 
   /**
