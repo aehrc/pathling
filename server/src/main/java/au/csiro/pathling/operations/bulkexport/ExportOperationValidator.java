@@ -3,7 +3,7 @@ package au.csiro.pathling.operations.bulkexport;
 import au.csiro.pathling.FhirServer;
 import au.csiro.pathling.async.PreAsyncValidation;
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.operations.OperationValidatorUtil;
+import au.csiro.pathling.operations.OperationValidation;
 import au.csiro.pathling.operations.bulkexport.ExportRequest.ExportLevel;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
 import au.csiro.pathling.security.PathlingAuthority;
@@ -108,8 +108,8 @@ public class ExportOperationValidator {
     final ExportRequest exportRequest = createExportRequest(requestDetails.getCompleteUrl(),
         requestDetails.getFhirServerBase(), lenient, outputFormat, since, until, type, elements);
     final List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
-            OperationValidatorUtil.validateAcceptHeader(requestDetails, lenient),
-            OperationValidatorUtil.validatePreferHeader(requestDetails, lenient),
+            OperationValidation.validateAcceptHeader(requestDetails, lenient),
+            OperationValidation.validatePreferHeader(requestDetails, lenient),
             validateUnsupportedQueryParams(requestDetails, lenient))
         .flatMap(Collection::stream)
         .toList();
@@ -155,8 +155,8 @@ public class ExportOperationValidator {
         since, until, type, elements, exportLevel, patientIds);
 
     final List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
-            OperationValidatorUtil.validateAcceptHeader(requestDetails, lenient),
-            OperationValidatorUtil.validatePreferHeader(requestDetails, lenient),
+            OperationValidation.validateAcceptHeader(requestDetails, lenient),
+            OperationValidation.validatePreferHeader(requestDetails, lenient),
             validateUnsupportedQueryParams(requestDetails, lenient))
         .flatMap(Collection::stream)
         .toList();

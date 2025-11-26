@@ -23,7 +23,7 @@ import au.csiro.pathling.config.PnpConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.io.SaveMode;
-import au.csiro.pathling.operations.OperationValidatorUtil;
+import au.csiro.pathling.operations.OperationValidation;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import jakarta.annotation.Nonnull;
 import java.util.Collection;
@@ -75,7 +75,9 @@ public class ImportPnpOperationValidator {
   ) {
     // Validate that PnP configuration is present.
     final PnpConfiguration pnpConfig =
-        serverConfiguration.getImport() != null ? serverConfiguration.getImport().getPnp() : null;
+        serverConfiguration.getImport() != null
+        ? serverConfiguration.getImport().getPnp()
+        : null;
     if (pnpConfig == null) {
       throw new InvalidUserInputError(
           "Ping and pull import is not configured. Please configure pathling.import.pnp settings.");
@@ -170,8 +172,8 @@ public class ImportPnpOperationValidator {
     );
 
     final List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
-            OperationValidatorUtil.validateAcceptHeader(requestDetails, false),
-            OperationValidatorUtil.validatePreferHeader(requestDetails, false))
+            OperationValidation.validateAcceptHeader(requestDetails, false),
+            OperationValidation.validatePreferHeader(requestDetails, false))
         .flatMap(Collection::stream)
         .toList();
 

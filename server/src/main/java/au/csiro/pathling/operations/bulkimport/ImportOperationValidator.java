@@ -7,7 +7,7 @@ import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.io.SaveMode;
-import au.csiro.pathling.operations.OperationValidatorUtil;
+import au.csiro.pathling.operations.OperationValidation;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -99,8 +99,8 @@ public class ImportOperationValidator {
     );
 
     final List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
-            OperationValidatorUtil.validateAcceptHeader(requestDetails, false),
-            OperationValidatorUtil.validatePreferHeader(requestDetails, false))
+            OperationValidation.validateAcceptHeader(requestDetails, false),
+            OperationValidation.validatePreferHeader(requestDetails, false))
         .flatMap(Collection::stream)
         .toList();
 
@@ -155,8 +155,8 @@ public class ImportOperationValidator {
     );
 
     final List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
-            OperationValidatorUtil.validateAcceptHeader(requestDetails, false),
-            OperationValidatorUtil.validatePreferHeader(requestDetails, false))
+            OperationValidation.validateAcceptHeader(requestDetails, false),
+            OperationValidation.validatePreferHeader(requestDetails, false))
         .flatMap(Collection::stream)
         .toList();
 
