@@ -212,7 +212,7 @@ public class BulkSubmitProvider implements PreAsyncValidation<BulkSubmitRequest>
       @Nonnull final Optional<String> ownerId
   ) {
     // For "complete" status, update the submission and trigger processing.
-    final Submission submission;
+    Submission submission;
     if (existingSubmission.isPresent()) {
       final Submission existing = existingSubmission.get();
       if (existing.state() != SubmissionState.PENDING) {
@@ -258,6 +258,8 @@ public class BulkSubmitProvider implements PreAsyncValidation<BulkSubmitRequest>
       );
     }
 
+    // Set the state to PROCESSING before storing and executing.
+    submission = submission.withState(SubmissionState.PROCESSING);
     submissionRegistry.put(submission);
     log.info("Submission {} marked complete, starting processing", request.submissionId());
 

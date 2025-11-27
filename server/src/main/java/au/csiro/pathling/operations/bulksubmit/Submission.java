@@ -128,13 +128,13 @@ public record Submission(
   }
 
   /**
-   * Creates a copy of this submission with manifest details for processing.
+   * Creates a copy of this submission with manifest details, keeping the current state.
    *
    * @param manifestUrl The URL of the manifest file.
    * @param fhirBaseUrl The base URL of the FHIR server.
    * @param fileRequestHeaders Custom headers for file downloads.
    * @param metadata Optional submission metadata.
-   * @return A new submission ready for processing.
+   * @return A new submission with manifest details.
    */
   @Nonnull
   public Submission withManifestDetails(
@@ -146,7 +146,7 @@ public record Submission(
     return new Submission(
         submissionId,
         submitter,
-        SubmissionState.PROCESSING,
+        this.state,
         manifestUrl,
         replacesManifestUrl,
         fhirBaseUrl,
