@@ -47,7 +47,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -63,10 +62,6 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @ConditionalOnProperty(prefix = "pathling.bulk-submit", name = "enabled", havingValue = "true")
 public class BulkSubmitExecutor {
-
-  // Pattern to match resource type with optional qualifier, e.g. "Patient.0000" -> "Patient".
-  private static final Pattern BASE_NAME_WITH_QUALIFIER = Pattern.compile(
-      "^([A-Za-z]+)(\\.[^.]+)?$");
 
   private static final Duration HTTP_TIMEOUT = Duration.ofMinutes(5);
   private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_INSTANT;
