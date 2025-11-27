@@ -98,10 +98,16 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   private static final String EXPORT_OPERATION = "export";
 
   /**
-   * All system-level operations available within Pathling.
+   * Base system-level operations available within Pathling.
    */
-  protected static final List<String> SYSTEM_LEVEL_OPERATIONS = Arrays.asList("job", "result",
+  private static final List<String> BASE_SYSTEM_OPERATIONS = Arrays.asList("job", "result",
       EXPORT_OPERATION, "import", "import-pnp");
+
+  /**
+   * Bulk submit operations, conditionally enabled.
+   */
+  private static final List<String> BULK_SUBMIT_OPERATIONS = Arrays.asList("bulk-submit",
+      "bulk-submit-status");
 
   private static final String RESTFUL_SECURITY_URI = "http://terminology.hl7.org/CodeSystem/restful-security-service";
   private static final String RESTFUL_SECURITY_CODE = "SMART-on-FHIR";
@@ -120,19 +126,6 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
    */
   private static final Set<ResourceType> EXPORT_RESOURCE_TYPES = Set.of(
       ResourceType.PATIENT, ResourceType.GROUP);
-
-  /**
-   * All operations available within Pathling (deduplicated).
-   */
-  private static final List<String> OPERATIONS;
-
-  static {
-    // Use a Set to deduplicate operations that appear at both system and resource level.
-    final Set<String> operationSet = new java.util.LinkedHashSet<>();
-    operationSet.addAll(ConformanceProvider.SYSTEM_LEVEL_OPERATIONS);
-    operationSet.addAll(ConformanceProvider.RESOURCE_LEVEL_OPERATIONS);
-    OPERATIONS = new ArrayList<>(operationSet);
-  }
 
   @Nonnull
   private final ServerConfiguration configuration;
@@ -155,6 +148,9 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   @Nonnull
   private final Map<String, OperationDefinition> resources;
 
+  @Nonnull
+  private final List<String> systemLevelOperations;
+
   /**
    * @param configuration a {@link ServerConfiguration} object controlling the behaviour of the
    * capability statement
@@ -173,8 +169,21 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     this.fhirContext = fhirContext;
     this.jsonParser = jsonParser;
 
+    // Compute system-level operations based on configuration.
+    final List<String> systemOps = new ArrayList<>(BASE_SYSTEM_OPERATIONS);
+    if (configuration.getBulkSubmit() != null && configuration.getBulkSubmit().isEnabled()) {
+      systemOps.addAll(BULK_SUBMIT_OPERATIONS);
+    }
+    this.systemLevelOperations = List.copyOf(systemOps);
+
+    // Compute all operations (deduplicated).
+    final Set<String> operationSet = new java.util.LinkedHashSet<>();
+    operationSet.addAll(this.systemLevelOperations);
+    operationSet.addAll(RESOURCE_LEVEL_OPERATIONS);
+    final List<String> allOperations = new ArrayList<>(operationSet);
+
     final ImmutableMap.Builder<String, OperationDefinition> mapBuilder = new ImmutableMap.Builder<>();
-    for (final String operation : ConformanceProvider.OPERATIONS) {
+    for (final String operation : allOperations) {
       final String id =
           "OperationDefinition/" + operation + "-" +
               version.getMajorVersion().orElse(UNKNOWN_VERSION);
@@ -306,7 +315,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   private List<CapabilityStatementRestResourceOperationComponent> buildOperations() {
     final List<CapabilityStatementRestResourceOperationComponent> operations = new ArrayList<>();
 
-    for (final String name : SYSTEM_LEVEL_OPERATIONS) {
+    for (final String name : systemLevelOperations) {
       final CanonicalType operationUri = new CanonicalType(getOperationUri(name));
       final CapabilityStatementRestResourceOperationComponent operation =
           new CapabilityStatementRestResourceOperationComponent(new StringType(name),
