@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.operations.bulksubmit;
 
+import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
@@ -63,6 +64,10 @@ public class BulkSubmitStatusProvider {
 
   /**
    * The $bulk-submit-status operation endpoint.
+   * <p>
+   * When called with {@code Prefer: respond-async}, this operation integrates with the async Job
+   * framework. The method blocks until the submission completes, while the framework handles
+   * returning 202 Accepted with a Content-Location header pointing to the $job polling endpoint.
    *
    * @param submissionId The submission ID to check status for.
    * @param submitter The submitter identifier.
@@ -71,6 +76,7 @@ public class BulkSubmitStatusProvider {
    */
   @Operation(name = "$bulk-submit-status")
   @OperationAccess("bulk-submit")
+  @AsyncSupported
   @Nonnull
   public Binary bulkSubmitStatusOperation(
       @OperationParam(name = "submissionId") final StringType submissionId,
@@ -93,22 +99,23 @@ public class BulkSubmitStatusProvider {
         submitter.getValue()
     );
 
-    final Submission submission = submissionRegistry.get(submitterIdentifier,
-            submissionId.getValue())
-        .orElseThrow(() -> new ResourceNotFoundException(
-            "Submission not found: " + submissionId.getValue()
-        ));
-
-    log.debug("Status check for submission {}: state={}", submission.submissionId(),
-        submission.state());
-
-    // If the submission is still processing, return 202 Accepted.
-    if (submission.state() == SubmissionState.PENDING
+    // Block until the submission completes. The async framework handles returning 202 with
+    // Content-Location pointing to $job while this method is running.
+    Submission submission = getSubmission(submitterIdentifier, submissionId.getValue());
+    while (submission.state() == SubmissionState.PENDING
         || submission.state() == SubmissionState.PROCESSING) {
-      // For now, return a simple status response.
-      // In a full implementation, this would use ProcessingNotCompletedException.
-      return resultBuilder.buildProcessingResponse(submission, requestDetails.getFhirServerBase());
+      log.debug("Submission {} still processing, waiting...", submission.submissionId());
+      try {
+        Thread.sleep(1000);
+      } catch (final InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException("Status check interrupted", e);
+      }
+      submission = getSubmission(submitterIdentifier, submissionId.getValue());
     }
+
+    log.debug("Submission {} completed with state: {}", submission.submissionId(),
+        submission.state());
 
     // Get the result if available.
     final SubmissionResult result = submissionRegistry.getResult(submission.submissionId())
@@ -116,6 +123,17 @@ public class BulkSubmitStatusProvider {
 
     return resultBuilder.buildStatusManifest(submission, result,
         requestDetails.getFhirServerBase());
+  }
+
+  @Nonnull
+  private Submission getSubmission(
+      @Nonnull final SubmitterIdentifier submitterIdentifier,
+      @Nonnull final String submissionId
+  ) {
+    return submissionRegistry.get(submitterIdentifier, submissionId)
+        .orElseThrow(() -> new ResourceNotFoundException(
+            "Submission not found: " + submissionId
+        ));
   }
 
 }
