@@ -297,8 +297,8 @@ class BulkSubmitValidatorTest {
   private void addFileRequestHeader(Parameters params, String name, String value) {
     final ParametersParameterComponent headerParam = params.addParameter();
     headerParam.setName("fileRequestHeader");
-    headerParam.addPart().setName("name").setValue(new StringType(name));
-    headerParam.addPart().setName("value").setValue(new StringType(value));
+    headerParam.addPart().setName("headerName").setValue(new StringType(name));
+    headerParam.addPart().setName("headerValue").setValue(new StringType(value));
   }
 
 }

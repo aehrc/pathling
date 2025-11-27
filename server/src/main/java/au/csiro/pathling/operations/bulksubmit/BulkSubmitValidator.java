@@ -281,25 +281,26 @@ public class BulkSubmitValidator {
     for (final ParametersParameterComponent headerParam : headerParams) {
       final String name = ParamUtil.extractFromPart(
           headerParam.getPart(),
-          "name",
+          "headerName",
           StringType.class,
           StringType::getValue,
-          false,
+          true,
           null,
           false,
-          new InvalidUserInputError("fileRequestHeader.name is required")
+          null
       );
       final String value = ParamUtil.extractFromPart(
           headerParam.getPart(),
-          "value",
+          "headerValue",
           StringType.class,
           StringType::getValue,
-          false,
+          true,
           null,
           false,
-          new InvalidUserInputError("fileRequestHeader.value is required")
+          null
       );
-      if (name != null && value != null) {
+      // Skip empty or incomplete headers.
+      if (name != null && !name.isBlank() && value != null) {
         headers.add(new FileRequestHeader(name, value));
       }
     }
