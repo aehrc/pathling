@@ -146,8 +146,8 @@ public class BulkSubmitValidator {
     );
 
     final List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
-            OperationValidation.validateAcceptHeader(requestDetails, false),
-            OperationValidation.validatePreferHeader(requestDetails, false))
+            OperationValidation.validateAcceptHeader(requestDetails, true),
+            OperationValidation.validatePreferHeader(requestDetails, true))
         .flatMap(Collection::stream)
         .toList();
 

@@ -250,6 +250,20 @@ class BulkSubmitValidatorTest {
         .containsExactlyInAnyOrder("Authorization", "X-Custom-Header");
   }
 
+  @Test
+  void acceptsApplicationJsonHeader() {
+    final Parameters params = minimalInProgressParams();
+    // Client sends application/json instead of application/fhir+json.
+    final RequestDetails mockRequest = MockUtil.mockRequest("application/json",
+        "respond-async", false);
+
+    assertThatNoException().isThrownBy(() -> {
+      final PreAsyncValidationResult<BulkSubmitRequest> result =
+          validator.validateRequest(mockRequest, params);
+      assertThat(result.result()).isNotNull();
+    });
+  }
+
   // ========================================
   // Helper Methods
   // ========================================
