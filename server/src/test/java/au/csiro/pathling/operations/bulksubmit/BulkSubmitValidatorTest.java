@@ -33,7 +33,6 @@ import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
-import org.hl7.fhir.r4.model.UrlType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -190,7 +189,7 @@ class BulkSubmitValidatorTest {
     addSubmitter(params, SUBMITTER_SYSTEM, SUBMITTER_VALUE);
     addSubmissionStatus(params, BulkSubmitRequest.STATUS_COMPLETE);
     params.addParameter().setName("manifestUrl")
-        .setValue(new UrlType("https://example.org/manifest.json"));
+        .setValue(new StringType("https://example.org/manifest.json"));
 
     final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
         "respond-async", false);
@@ -269,8 +268,8 @@ class BulkSubmitValidatorTest {
     addSubmitter(params, SUBMITTER_SYSTEM, SUBMITTER_VALUE);
     addSubmissionStatus(params, BulkSubmitRequest.STATUS_COMPLETE);
     params.addParameter().setName("manifestUrl")
-        .setValue(new UrlType("https://example.org/manifest.json"));
-    params.addParameter().setName("fhirBaseUrl").setValue(new UrlType("https://example.org/fhir"));
+        .setValue(new StringType("https://example.org/manifest.json"));
+    params.addParameter().setName("fhirBaseUrl").setValue(new StringType("https://example.org/fhir"));
     return params;
   }
 

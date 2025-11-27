@@ -38,7 +38,6 @@ import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
-import org.hl7.fhir.r4.model.UrlType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -237,15 +236,16 @@ public class BulkSubmitValidator {
       @Nonnull final Parameters parameters,
       @Nonnull final String paramName
   ) {
+    // Per Argonaut spec, URL parameters are string (url), not FHIR url type.
     return ParamUtil.extractFromPart(
         parameters.getParameter(),
         paramName,
-        UrlType.class,
-        UrlType::getValue,
+        StringType.class,
+        StringType::getValue,
         true,
         null,
         false,
-        new InvalidUserInputError("Invalid " + paramName)
+        null
     );
   }
 

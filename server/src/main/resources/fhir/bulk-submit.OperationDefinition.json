@@ -43,7 +43,7 @@
       "min": 0,
       "max": "1",
       "documentation": "The URL of the bulk export manifest file. Required when submissionStatus is 'complete'.",
-      "type": "url"
+      "type": "string"
     },
     {
       "name": "fhirBaseUrl",
@@ -51,7 +51,7 @@
       "min": 0,
       "max": "1",
       "documentation": "The base URL of the FHIR server that produced the manifest. Required when submissionStatus is 'complete'.",
-      "type": "url"
+      "type": "string"
     },
     {
       "name": "replacesManifestUrl",
@@ -59,7 +59,7 @@
       "min": 0,
       "max": "1",
       "documentation": "The URL of a previous manifest that this submission replaces.",
-      "type": "url"
+      "type": "string"
     },
     {
       "name": "fileRequestHeader",
