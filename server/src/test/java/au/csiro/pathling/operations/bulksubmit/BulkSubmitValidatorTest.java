@@ -169,6 +169,8 @@ class BulkSubmitValidatorTest {
 
   @Test
   void completeStatusWithoutManifestUrl() {
+    // Per Argonaut spec, manifestUrl may be omitted when setting submissionStatus to complete.
+    // The manifest details can come from a previous in-progress request.
     final Parameters params = new Parameters();
     params.addParameter().setName("submissionId").setValue(new StringType("test-id"));
     addSubmitter(params, SUBMITTER_SYSTEM, SUBMITTER_VALUE);
@@ -177,9 +179,14 @@ class BulkSubmitValidatorTest {
     final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
         "respond-async", false);
 
-    assertThatCode(() -> validator.validateRequest(mockRequest, params))
-        .isInstanceOf(InvalidUserInputError.class)
-        .hasMessageContaining("manifestUrl");
+    // Validation should succeed - the check for manifest details happens in BulkSubmitProvider.
+    assertThatNoException().isThrownBy(() -> {
+      final PreAsyncValidationResult<BulkSubmitRequest> result =
+          validator.validateRequest(mockRequest, params);
+      assertThat(result.result()).isNotNull();
+      assertThat(result.result().isComplete()).isTrue();
+      assertThat(result.result().manifestUrl()).isNull();
+    });
   }
 
   @Test
@@ -283,7 +290,8 @@ class BulkSubmitValidatorTest {
     addSubmissionStatus(params, BulkSubmitRequest.STATUS_COMPLETE);
     params.addParameter().setName("manifestUrl")
         .setValue(new StringType("https://example.org/manifest.json"));
-    params.addParameter().setName("fhirBaseUrl").setValue(new StringType("https://example.org/fhir"));
+    params.addParameter().setName("fhirBaseUrl")
+        .setValue(new StringType("https://example.org/fhir"));
     return params;
   }
 

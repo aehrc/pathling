@@ -159,24 +159,45 @@ public class BulkSubmitProvider implements PreAsyncValidation<BulkSubmitRequest>
       @Nonnull final Optional<String> ownerId
   ) {
     // For "in-progress" status, create or update the submission in PENDING state.
+    Submission submission;
     if (existingSubmission.isPresent()) {
-      final Submission existing = existingSubmission.get();
-      if (existing.state() != SubmissionState.PENDING) {
+      submission = existingSubmission.get();
+      if (submission.state() != SubmissionState.PENDING) {
         throw new InvalidRequestException(
             "Cannot update submission %s: current state is %s, not PENDING."
-                .formatted(request.submissionId(), existing.state())
+                .formatted(request.submissionId(), submission.state())
         );
       }
-      // Already in PENDING state, this is a duplicate notification - that's OK.
-      log.debug("Received duplicate in-progress notification for submission: {}",
-          request.submissionId());
+      // Update with new manifest details if provided.
+      if (request.manifestUrl() != null) {
+        submission = submission.withManifestDetails(
+            request.manifestUrl(),
+            request.fhirBaseUrl(),
+            request.fileRequestHeaders(),
+            request.metadata()
+        );
+        submissionRegistry.put(submission);
+        log.info("Updated submission {} with manifest details", request.submissionId());
+      } else {
+        log.debug("Received in-progress notification for submission: {}",
+            request.submissionId());
+      }
     } else {
       // Create new submission in PENDING state.
-      final Submission submission = Submission.createPending(
+      submission = Submission.createPending(
           request.submissionId(),
           request.submitter(),
           ownerId
       );
+      // Store manifest details if provided.
+      if (request.manifestUrl() != null) {
+        submission = submission.withManifestDetails(
+            request.manifestUrl(),
+            request.fhirBaseUrl(),
+            request.fileRequestHeaders(),
+            request.metadata()
+        );
+      }
       submissionRegistry.put(submission);
       log.info("Created new submission: {}", request.submissionId());
     }
@@ -200,14 +221,31 @@ public class BulkSubmitProvider implements PreAsyncValidation<BulkSubmitRequest>
                 .formatted(request.submissionId(), existing.state())
         );
       }
-      submission = existing.withManifestDetails(
-          request.manifestUrl(),
-          request.fhirBaseUrl(),
-          request.fileRequestHeaders(),
-          request.metadata()
-      );
+      // Use request manifest details if provided, otherwise use stored details from in-progress.
+      if (request.manifestUrl() != null) {
+        submission = existing.withManifestDetails(
+            request.manifestUrl(),
+            request.fhirBaseUrl(),
+            request.fileRequestHeaders(),
+            request.metadata()
+        );
+      } else if (existing.manifestUrl() != null) {
+        // Use existing manifest details from previous in-progress request.
+        submission = existing;
+      } else {
+        throw new InvalidRequestException(
+            "Cannot complete submission %s: no manifest URL provided."
+                .formatted(request.submissionId())
+        );
+      }
     } else {
-      // No prior in-progress notification - create directly in PROCESSING state.
+      // No prior in-progress notification - must have manifest details in this request.
+      if (request.manifestUrl() == null) {
+        throw new InvalidRequestException(
+            "Cannot complete submission %s: no prior submission found and no manifest URL provided."
+                .formatted(request.submissionId())
+        );
+      }
       submission = Submission.createPending(
           request.submissionId(),
           request.submitter(),

@@ -108,11 +108,10 @@ public class BulkSubmitValidator {
     final String fhirBaseUrl = extractOptionalUrl(parameters, "fhirBaseUrl");
 
     // Validate conditional requirements.
-    if (BulkSubmitRequest.STATUS_COMPLETE.equals(submissionStatus)) {
-      if (manifestUrl == null) {
-        throw new InvalidUserInputError(
-            "manifestUrl is required when submissionStatus is 'complete'.");
-      }
+    // Per Argonaut spec, manifestUrl may be omitted when setting submissionStatus to complete or
+    // aborted. The manifest details can come from a previous in-progress request. However, if
+    // manifestUrl is provided, fhirBaseUrl must also be provided.
+    if (manifestUrl != null) {
       if (fhirBaseUrl == null) {
         throw new InvalidUserInputError(
             "fhirBaseUrl is required when manifestUrl is present.");
