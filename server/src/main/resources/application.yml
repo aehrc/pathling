@@ -124,8 +124,6 @@ pathling:
 
   # This section configures the $bulk-submit operation for receiving data from external systems.
   bulkSubmit:
-    # Enables the $bulk-submit operation.
-    enabled: false
     # The list of allowed submitters (by system and value) that can use this operation.
     allowedSubmitters: []
     # URL prefixes that are allowed as sources for manifest and file URLs.

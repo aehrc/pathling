@@ -36,7 +36,6 @@ import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -47,7 +46,6 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-@ConditionalOnProperty(prefix = "pathling.bulk-submit", name = "enabled", havingValue = "true")
 public class BulkSubmitValidator {
 
   private static final Set<String> VALID_STATUSES = Set.of(
@@ -164,8 +162,8 @@ public class BulkSubmitValidator {
   @Nonnull
   private BulkSubmitConfiguration getBulkSubmitConfig() {
     final BulkSubmitConfiguration config = serverConfiguration.getBulkSubmit();
-    if (config == null || !config.isEnabled()) {
-      throw new InvalidUserInputError("The $bulk-submit operation is not enabled.");
+    if (config == null) {
+      throw new InvalidUserInputError("The $bulk-submit operation is not configured.");
     }
     return config;
   }

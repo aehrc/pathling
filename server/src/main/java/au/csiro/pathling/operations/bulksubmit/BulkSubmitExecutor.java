@@ -41,7 +41,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -52,7 +51,6 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Slf4j
-@ConditionalOnProperty(prefix = "pathling.bulk-submit", name = "enabled", havingValue = "true")
 public class BulkSubmitExecutor {
 
   private static final Duration HTTP_TIMEOUT = Duration.ofMinutes(5);

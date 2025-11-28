@@ -28,7 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.StringType;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -39,7 +38,6 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Slf4j
-@ConditionalOnProperty(prefix = "pathling.bulk-submit", name = "enabled", havingValue = "true")
 public class BulkSubmitStatusProvider {
 
   @Nonnull

@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.SparkSession;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -48,7 +47,6 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-@ConditionalOnProperty(prefix = "pathling.bulk-submit", name = "enabled", havingValue = "true")
 public class SubmissionRegistry {
 
   private static final String SUBMISSIONS_DIR = "submissions";

@@ -51,7 +51,6 @@ class BulkSubmitValidatorTest {
   @BeforeEach
   void setUp() {
     final BulkSubmitConfiguration bulkSubmitConfig = new BulkSubmitConfiguration();
-    bulkSubmitConfig.setEnabled(true);
     bulkSubmitConfig.setAllowedSubmitters(
         List.of(new SubmitterIdentifier(SUBMITTER_SYSTEM, SUBMITTER_VALUE)));
     bulkSubmitConfig.setAllowableSources(List.of("https://"));
@@ -223,7 +222,6 @@ class BulkSubmitValidatorTest {
   @Test
   void invalidManifestUrlPrefix() {
     final BulkSubmitConfiguration config = new BulkSubmitConfiguration();
-    config.setEnabled(true);
     config.setAllowedSubmitters(
         List.of(new SubmitterIdentifier(SUBMITTER_SYSTEM, SUBMITTER_VALUE)));
     config.setAllowableSources(List.of("https://allowed.org/"));

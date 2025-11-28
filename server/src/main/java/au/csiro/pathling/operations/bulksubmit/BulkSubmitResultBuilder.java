@@ -26,7 +26,6 @@ import jakarta.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Binary;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -37,7 +36,6 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Slf4j
-@ConditionalOnProperty(prefix = "pathling.bulk-submit", name = "enabled", havingValue = "true")
 public class BulkSubmitResultBuilder {
 
   private static final String CONTENT_TYPE_JSON = "application/json";
