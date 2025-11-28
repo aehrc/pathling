@@ -23,7 +23,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.Binary;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,7 +57,6 @@ class BulkSubmitResultBuilderTest {
             new OutputFile("Observation", "https://fhir.example.org/output/Observation.ndjson",
                 500L)
         ),
-        List.of(),
         false
     );
 
@@ -72,27 +70,6 @@ class BulkSubmitResultBuilderTest {
     assertThat(json).contains("Patient");
     assertThat(json).contains("Observation");
     assertThat(json).contains(SUBMISSION_ID);
-  }
-
-  @Test
-  void buildStatusManifestWithErrorFiles() {
-    final Submission submission = createCompletedSubmission();
-    final SubmissionResult result = new SubmissionResult(
-        SUBMISSION_ID,
-        ISO_FORMATTER.format(Instant.now()),
-        List.of(),
-        List.of(
-            ErrorFile.create("https://fhir.example.org/errors/error.ndjson",
-                Map.of("error", 5L, "warning", 10L))
-        ),
-        false
-    );
-
-    final Binary binary = resultBuilder.buildStatusManifest(submission, result, SERVER_BASE_URL);
-
-    final String json = new String(binary.getData(), StandardCharsets.UTF_8);
-    assertThat(json).contains("\"error\"");
-    assertThat(json).contains("error.ndjson");
   }
 
   @Test
@@ -113,7 +90,6 @@ class BulkSubmitResultBuilderTest {
     final SubmissionResult result = new SubmissionResult(
         SUBMISSION_ID,
         ISO_FORMATTER.format(Instant.now()),
-        List.of(),
         List.of(),
         true
     );

@@ -29,7 +29,6 @@ import java.util.List;
  * @param submissionId The unique identifier of the submission.
  * @param transactionTime The time when the submission was processed (ISO-8601 format).
  * @param outputFiles The list of successfully processed output files.
- * @param errorFiles The list of error files containing OperationOutcome resources.
  * @param requiresAccessToken Whether an access token is required to retrieve result files.
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
@@ -38,17 +37,7 @@ public record SubmissionResult(
     @Nonnull String submissionId,
     @Nonnull String transactionTime,
     @Nonnull List<OutputFile> outputFiles,
-    @Nonnull List<ErrorFile> errorFiles,
     boolean requiresAccessToken
 ) {
-
-  /**
-   * Determines whether the submission completed with any errors.
-   *
-   * @return true if there are any error files, false otherwise.
-   */
-  public boolean hasErrors() {
-    return !errorFiles.isEmpty();
-  }
 
 }

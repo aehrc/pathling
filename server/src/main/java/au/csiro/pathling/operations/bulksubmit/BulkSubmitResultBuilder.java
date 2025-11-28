@@ -24,7 +24,6 @@ import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Binary;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -104,32 +103,8 @@ public class BulkSubmitResultBuilder {
       }
       manifest.set("output", outputArray);
 
-      // Add error array.
+      // Add empty error array (errors are communicated via submission state).
       final ArrayNode errorArray = objectMapper.createArrayNode();
-      if (result != null) {
-        for (final ErrorFile errorFile : result.errorFiles()) {
-          final ObjectNode errorNode = objectMapper.createObjectNode();
-          errorNode.put("type", errorFile.type());
-          errorNode.put("url", errorFile.url());
-
-          // Add countSeverity extension if present.
-          if (errorFile.countBySeverity() != null && !errorFile.countBySeverity().isEmpty()) {
-            final ArrayNode countExtensions = objectMapper.createArrayNode();
-            for (final Map.Entry<String, Long> entry : errorFile.countBySeverity().entrySet()) {
-              final ObjectNode countExt = objectMapper.createObjectNode();
-              countExt.put("url",
-                  "http://hl7.org/fhir/uv/bulkdata/StructureDefinition/bulk-submit-count-severity");
-              final ObjectNode valueNode = objectMapper.createObjectNode();
-              valueNode.put("severity", entry.getKey());
-              valueNode.put("count", entry.getValue());
-              countExt.set("valueCoding", valueNode);
-              countExtensions.add(countExt);
-            }
-            errorNode.set("extension", countExtensions);
-          }
-          errorArray.add(errorNode);
-        }
-      }
       manifest.set("error", errorArray);
 
       final String json = objectMapper.writerWithDefaultPrettyPrinter()

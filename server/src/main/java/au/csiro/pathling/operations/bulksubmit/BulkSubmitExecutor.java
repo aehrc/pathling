@@ -102,7 +102,6 @@ public class BulkSubmitExecutor {
     log.info("Starting processing for submission: {}", submission.submissionId());
 
     final List<OutputFile> outputFiles = new ArrayList<>();
-    final List<ErrorFile> errorFiles = new ArrayList<>();
 
     try {
       // Fetch and parse the manifest.
@@ -138,13 +137,10 @@ public class BulkSubmitExecutor {
       }
 
       // Update submission state to COMPLETED.
-      final SubmissionState finalState = errorFiles.isEmpty()
-                                         ? SubmissionState.COMPLETED
-                                         : SubmissionState.COMPLETED_WITH_ERRORS;
       submissionRegistry.updateState(
           submission.submitter(),
           submission.submissionId(),
-          finalState
+          SubmissionState.COMPLETED
       );
 
       // Store the result.
@@ -152,12 +148,11 @@ public class BulkSubmitExecutor {
           submission.submissionId(),
           ISO_FORMATTER.format(Instant.now()),
           outputFiles,
-          errorFiles,
           false
       );
       submissionRegistry.putResult(result);
 
-      log.info("Submission {} completed with state: {}", submission.submissionId(), finalState);
+      log.info("Submission {} completed successfully", submission.submissionId());
 
     } catch (final Exception e) {
       log.error("Failed to process submission {}: {}", submission.submissionId(), e.getMessage(),
@@ -169,17 +164,6 @@ public class BulkSubmitExecutor {
           submission.submissionId(),
           SubmissionState.COMPLETED_WITH_ERRORS
       );
-
-      // Store error result.
-      errorFiles.add(ErrorFile.create("error://internal", Map.of("error", 1L)));
-      final SubmissionResult result = new SubmissionResult(
-          submission.submissionId(),
-          ISO_FORMATTER.format(Instant.now()),
-          outputFiles,
-          errorFiles,
-          false
-      );
-      submissionRegistry.putResult(result);
     }
   }
 
