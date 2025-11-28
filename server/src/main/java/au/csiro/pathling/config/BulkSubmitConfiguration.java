@@ -19,7 +19,6 @@ package au.csiro.pathling.config;
 
 import au.csiro.pathling.operations.bulksubmit.SubmitterIdentifier;
 import jakarta.annotation.Nonnull;
-import jakarta.validation.constraints.Min;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Data;
@@ -43,18 +42,6 @@ public class BulkSubmitConfiguration {
    */
   @Nonnull
   private List<SubmitterIdentifier> allowedSubmitters = new ArrayList<>();
-
-  /**
-   * The location for staging downloaded files before processing.
-   */
-  @Nonnull
-  private String stagingLocation = "file:///tmp/pathling/bulk-submit";
-
-  /**
-   * The maximum number of concurrent file downloads.
-   */
-  @Min(1)
-  private int maxConcurrentDownloads = 10;
 
   /**
    * URL prefixes that are allowed as sources for manifest and file URLs.

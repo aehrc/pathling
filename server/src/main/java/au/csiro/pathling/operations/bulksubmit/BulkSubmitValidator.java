@@ -26,7 +26,6 @@ import au.csiro.pathling.operations.OperationValidation;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -36,7 +35,6 @@ import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.Parameters;
-import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -105,7 +103,9 @@ public class BulkSubmitValidator {
     // different $bulk-submit requests (e.g., in-progress vs complete) get different async job
     // cache tags, so each is processed independently rather than returning a cached response.
     final String originalUrl = requestDetails.getCompleteUrl();
-    final String separator = originalUrl.contains("?") ? "&" : "?";
+    final String separator = originalUrl.contains("?")
+                             ? "&"
+                             : "?";
     requestDetails.setCompleteUrl(originalUrl + separator + "_submissionId=" + submissionId
         + "&_submissionStatus=" + submissionStatus);
 
@@ -138,9 +138,6 @@ public class BulkSubmitValidator {
       validateUrl(replacesManifestUrl, "replacesManifestUrl", config);
     }
 
-    // Extract fileRequestHeaders (optional, multiple).
-    final List<FileRequestHeader> fileRequestHeaders = extractFileRequestHeaders(parameters);
-
     // Extract metadata (optional).
     final SubmissionMetadata metadata = extractMetadata(parameters);
 
@@ -152,7 +149,6 @@ public class BulkSubmitValidator {
         manifestUrl,
         fhirBaseUrl,
         replacesManifestUrl,
-        fileRequestHeaders,
         metadata
     );
 
@@ -275,47 +271,6 @@ public class BulkSubmitValidator {
           "%s '%s' does not match any allowed source prefixes.".formatted(paramName, url)
       );
     }
-  }
-
-  @Nonnull
-  private List<FileRequestHeader> extractFileRequestHeaders(@Nonnull final Parameters parameters) {
-    final List<FileRequestHeader> headers = new ArrayList<>();
-    final Collection<ParametersParameterComponent> headerParams = ParamUtil.extractManyFromParameters(
-        parameters.getParameter(),
-        "fileRequestHeader",
-        ParametersParameterComponent.class,
-        true,
-        List.of(),
-        false,
-        null
-    );
-    for (final ParametersParameterComponent headerParam : headerParams) {
-      final String name = ParamUtil.extractFromPart(
-          headerParam.getPart(),
-          "headerName",
-          StringType.class,
-          StringType::getValue,
-          true,
-          null,
-          false,
-          null
-      );
-      final String value = ParamUtil.extractFromPart(
-          headerParam.getPart(),
-          "headerValue",
-          StringType.class,
-          StringType::getValue,
-          true,
-          null,
-          false,
-          null
-      );
-      // Skip empty or incomplete headers.
-      if (name != null && !name.isBlank() && value != null) {
-        headers.add(new FileRequestHeader(name, value));
-      }
-    }
-    return headers;
   }
 
   @Nullable

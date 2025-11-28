@@ -103,8 +103,6 @@ class BulkSubmitOperationIT {
   static void configureProperties(final DynamicPropertyRegistry registry) {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.toAbsolutePath());
-    registry.add("pathling.bulk-submit.staging-location",
-        () -> "file://" + warehouseDir.resolve("staging").toAbsolutePath());
   }
 
   @BeforeEach
@@ -204,13 +202,13 @@ class BulkSubmitOperationIT {
 
     if (manifestUrl != null) {
       params.append("""
-            ,{"name": "manifestUrl", "valueUrl": "%s"}
+            ,{"name": "manifestUrl", "valueString": "%s"}
           """.formatted(manifestUrl));
     }
 
     if (fhirBaseUrl != null) {
       params.append("""
-            ,{"name": "fhirBaseUrl", "valueUrl": "%s"}
+            ,{"name": "fhirBaseUrl", "valueString": "%s"}
           """.formatted(fhirBaseUrl));
     }
 

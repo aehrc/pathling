@@ -31,7 +31,6 @@ import java.util.List;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Parameters;
-import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -240,24 +239,6 @@ class BulkSubmitValidatorTest {
   }
 
   @Test
-  void requestWithFileRequestHeaders() {
-    final Parameters params = completeParams();
-    addFileRequestHeader(params, "Authorization", "Bearer token123");
-    addFileRequestHeader(params, "X-Custom-Header", "custom-value");
-
-    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
-        "respond-async", false);
-
-    final PreAsyncValidationResult<BulkSubmitRequest> result =
-        validator.validateRequest(mockRequest, params);
-
-    assertThat(result.result().fileRequestHeaders()).hasSize(2);
-    assertThat(result.result().fileRequestHeaders())
-        .extracting(FileRequestHeader::name)
-        .containsExactlyInAnyOrder("Authorization", "X-Custom-Header");
-  }
-
-  @Test
   void acceptsApplicationJsonHeader() {
     final Parameters params = minimalInProgressParams();
     // Client sends application/json instead of application/fhir+json.
@@ -314,13 +295,6 @@ class BulkSubmitValidatorTest {
     final Coding coding = new Coding();
     coding.setCode(status);
     params.addParameter().setName("submissionStatus").setValue(coding);
-  }
-
-  private void addFileRequestHeader(Parameters params, String name, String value) {
-    final ParametersParameterComponent headerParam = params.addParameter();
-    headerParam.setName("fileRequestHeader");
-    headerParam.addPart().setName("headerName").setValue(new StringType(name));
-    headerParam.addPart().setName("headerValue").setValue(new StringType(value));
   }
 
 }

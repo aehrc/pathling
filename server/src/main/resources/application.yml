@@ -128,10 +128,6 @@ pathling:
     enabled: false
     # The list of allowed submitters (by system and value) that can use this operation.
     allowedSubmitters: []
-    # The location for staging downloaded files before processing.
-    stagingLocation: "file:///usr/share/staging/bulk-submit"
-    # The maximum number of concurrent file downloads.
-    maxConcurrentDownloads: 10
     # URL prefixes that are allowed as sources for manifest and file URLs.
     allowableSources:
       - "https://"

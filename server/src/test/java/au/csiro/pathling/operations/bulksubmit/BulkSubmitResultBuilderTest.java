@@ -164,7 +164,6 @@ class BulkSubmitResultBuilderTest {
         .withManifestDetails(
             "https://example.org/manifest.json",
             "https://example.org/fhir",
-            List.of(),
             null
         )
         .withState(SubmissionState.COMPLETED);
@@ -179,7 +178,6 @@ class BulkSubmitResultBuilderTest {
         .withManifestDetails(
             "https://example.org/manifest.json",
             "https://example.org/fhir",
-            List.of(),
             null
         )
         .withState(SubmissionState.PROCESSING);

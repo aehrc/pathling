@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.operations.bulksubmit;
 
-import au.csiro.pathling.config.BulkSubmitConfiguration;
-import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.operations.bulkimport.ImportExecutor;
@@ -33,27 +31,21 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
- * Executes bulk submission processing by fetching manifests, downloading files, and delegating to
- * ImportExecutor.
+ * Executes bulk submission processing by fetching manifests and delegating to ImportExecutor.
  *
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
@@ -65,9 +57,6 @@ public class BulkSubmitExecutor {
 
   private static final Duration HTTP_TIMEOUT = Duration.ofMinutes(5);
   private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_INSTANT;
-
-  @Nonnull
-  private final ServerConfiguration serverConfiguration;
 
   @Nonnull
   private final ImportExecutor importExecutor;
@@ -84,16 +73,13 @@ public class BulkSubmitExecutor {
   /**
    * Creates a new BulkSubmitExecutor.
    *
-   * @param serverConfiguration The server configuration.
    * @param importExecutor The import executor for processing files.
    * @param submissionRegistry The submission registry for tracking state.
    */
   public BulkSubmitExecutor(
-      @Nonnull final ServerConfiguration serverConfiguration,
       @Nonnull final ImportExecutor importExecutor,
       @Nonnull final SubmissionRegistry submissionRegistry
   ) {
-    this.serverConfiguration = serverConfiguration;
     this.importExecutor = importExecutor;
     this.submissionRegistry = submissionRegistry;
     this.objectMapper = new ObjectMapper();
@@ -115,25 +101,18 @@ public class BulkSubmitExecutor {
   private void executeInternal(@Nonnull final Submission submission) {
     log.info("Starting processing for submission: {}", submission.submissionId());
 
-    final BulkSubmitConfiguration config = getBulkSubmitConfig();
-    Path tempDir = null;
     final List<OutputFile> outputFiles = new ArrayList<>();
     final List<ErrorFile> errorFiles = new ArrayList<>();
 
     try {
-      // Create temporary directory for downloaded files.
-      tempDir = createTempDirectory(config, submission.submissionId());
-
       // Fetch and parse the manifest.
       final JsonNode manifest = fetchManifest(submission);
 
-      // Download files from the manifest.
-      final Map<String, Collection<String>> downloadedFiles = downloadFilesFromManifest(
-          manifest, submission, tempDir, config
-      );
+      // Extract file URLs from the manifest.
+      final Map<String, Collection<String>> fileUrls = extractUrlsFromManifest(manifest);
 
-      if (downloadedFiles.isEmpty()) {
-        throw new InvalidUserInputError("No files were downloaded from the manifest");
+      if (fileUrls.isEmpty()) {
+        throw new InvalidUserInputError("No files found in manifest");
       }
 
       // Create ImportRequest and delegate to ImportExecutor.
@@ -142,7 +121,7 @@ public class BulkSubmitExecutor {
           submission.fhirBaseUrl() != null
           ? submission.fhirBaseUrl()
           : "unknown",
-          downloadedFiles,
+          fileUrls,
           SaveMode.MERGE,
           ImportFormat.NDJSON
       );
@@ -152,7 +131,7 @@ public class BulkSubmitExecutor {
       importExecutor.execute(importRequest, jobId);
 
       // Build output file list.
-      for (final Map.Entry<String, Collection<String>> entry : downloadedFiles.entrySet()) {
+      for (final Map.Entry<String, Collection<String>> entry : fileUrls.entrySet()) {
         final String resourceType = entry.getKey();
         final long count = entry.getValue().size();
         outputFiles.add(new OutputFile(resourceType, "", count));
@@ -201,45 +180,7 @@ public class BulkSubmitExecutor {
           false
       );
       submissionRegistry.putResult(result);
-
-    } finally {
-      // Clean up temporary directory.
-      if (tempDir != null) {
-        cleanupTempDirectory(tempDir);
-      }
     }
-  }
-
-  @Nonnull
-  private BulkSubmitConfiguration getBulkSubmitConfig() {
-    final BulkSubmitConfiguration config = serverConfiguration.getBulkSubmit();
-    if (config == null) {
-      throw new InvalidUserInputError("Bulk submit configuration is missing");
-    }
-    return config;
-  }
-
-  @Nonnull
-  private Path createTempDirectory(
-      @Nonnull final BulkSubmitConfiguration config,
-      @Nonnull final String submissionId
-  ) throws IOException {
-    final String stagingLocation = config.getStagingLocation();
-    final Path baseDir = Path.of(URI.create(stagingLocation).getPath());
-
-    if (!Files.exists(baseDir)) {
-      Files.createDirectories(baseDir);
-      log.debug("Created staging directory: {}", baseDir);
-    }
-
-    final String tempDirName = "bulk-submit-" + submissionId;
-    final Path tempDir = baseDir.resolve(tempDirName);
-    if (!Files.exists(tempDir)) {
-      Files.createDirectories(tempDir);
-    }
-    log.debug("Using staging directory: {}", tempDir);
-
-    return tempDir;
   }
 
   @Nonnull
@@ -251,17 +192,11 @@ public class BulkSubmitExecutor {
 
     log.info("Fetching manifest from: {}", manifestUrl);
 
-    final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+    final HttpRequest request = HttpRequest.newBuilder()
         .uri(URI.create(manifestUrl))
         .timeout(HTTP_TIMEOUT)
-        .GET();
-
-    // Add custom headers from the submission.
-    for (final FileRequestHeader header : submission.fileRequestHeaders()) {
-      requestBuilder.header(header.name(), header.value());
-    }
-
-    final HttpRequest request = requestBuilder.build();
+        .GET()
+        .build();
 
     try {
       final HttpResponse<InputStream> response = httpClient.send(
@@ -284,13 +219,15 @@ public class BulkSubmitExecutor {
     }
   }
 
+  /**
+   * Extracts file URLs from the manifest, organised by resource type.
+   *
+   * @param manifest The parsed manifest JSON.
+   * @return A map of resource type to collection of file URLs.
+   */
   @Nonnull
-  private Map<String, Collection<String>> downloadFilesFromManifest(
-      @Nonnull final JsonNode manifest,
-      @Nonnull final Submission submission,
-      @Nonnull final Path tempDir,
-      @Nonnull final BulkSubmitConfiguration config
-  ) {
+  private Map<String, Collection<String>> extractUrlsFromManifest(
+      @Nonnull final JsonNode manifest) {
     final Map<String, Collection<String>> result = new HashMap<>();
     final JsonNode outputNode = manifest.get("output");
 
@@ -299,127 +236,24 @@ public class BulkSubmitExecutor {
       return result;
     }
 
-    final int maxConcurrent = config.getMaxConcurrentDownloads();
-    final ExecutorService downloadExecutor = Executors.newFixedThreadPool(maxConcurrent);
+    for (final JsonNode fileNode : outputNode) {
+      final String type = fileNode.has("type")
+                          ? fileNode.get("type").asText()
+                          : null;
+      final String url = fileNode.has("url")
+                         ? fileNode.get("url").asText()
+                         : null;
 
-    try {
-      final List<CompletableFuture<DownloadResult>> futures = new ArrayList<>();
-
-      for (final JsonNode fileNode : outputNode) {
-        final String type = fileNode.has("type")
-                            ? fileNode.get("type").asText()
-                            : null;
-        final String url = fileNode.has("url")
-                           ? fileNode.get("url").asText()
-                           : null;
-
-        if (type == null || url == null) {
-          log.warn("Skipping manifest entry with missing type or url");
-          continue;
-        }
-
-        futures.add(CompletableFuture.supplyAsync(
-            () -> downloadFile(url, type, tempDir, submission.fileRequestHeaders()),
-            downloadExecutor
-        ));
+      if (type == null || url == null) {
+        log.warn("Skipping manifest entry with missing type or url");
+        continue;
       }
 
-      // Wait for all downloads to complete.
-      for (final CompletableFuture<DownloadResult> future : futures) {
-        try {
-          final DownloadResult downloadResult = future.join();
-          if (downloadResult != null && downloadResult.localPath != null) {
-            result.computeIfAbsent(downloadResult.resourceType, k -> new ArrayList<>())
-                .add(downloadResult.localPath.toUri().toString());
-          }
-        } catch (final Exception e) {
-          log.error("Download failed: {}", e.getMessage());
-        }
-      }
-
-    } finally {
-      downloadExecutor.shutdown();
+      result.computeIfAbsent(type, k -> new ArrayList<>()).add(url);
     }
 
-    log.info("Downloaded files by resource type: {}", result.keySet());
+    log.info("Extracted URLs for resource types: {}", result.keySet());
     return result;
-  }
-
-  @Nonnull
-  private DownloadResult downloadFile(
-      @Nonnull final String url,
-      @Nonnull final String resourceType,
-      @Nonnull final Path tempDir,
-      @Nonnull final List<FileRequestHeader> headers
-  ) {
-    log.debug("Downloading file: {} (type: {})", url, resourceType);
-
-    try {
-      final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-          .uri(URI.create(url))
-          .timeout(HTTP_TIMEOUT)
-          .GET();
-
-      for (final FileRequestHeader header : headers) {
-        requestBuilder.header(header.name(), header.value());
-      }
-
-      final HttpRequest request = requestBuilder.build();
-      final HttpResponse<InputStream> response = httpClient.send(
-          request,
-          HttpResponse.BodyHandlers.ofInputStream()
-      );
-
-      if (response.statusCode() != 200) {
-        log.error("Failed to download {}: HTTP {}", url, response.statusCode());
-        return new DownloadResult(resourceType, null);
-      }
-
-      // Generate a unique filename.
-      final String filename = resourceType + "." + System.nanoTime() + ".ndjson";
-      final Path localPath = tempDir.resolve(filename);
-
-      try (final InputStream body = response.body()) {
-        Files.copy(body, localPath);
-      }
-
-      log.debug("Downloaded {} to {}", url, localPath);
-      return new DownloadResult(resourceType, localPath);
-
-    } catch (final IOException | InterruptedException e) {
-      log.error("Failed to download {}: {}", url, e.getMessage());
-      if (e instanceof InterruptedException) {
-        Thread.currentThread().interrupt();
-      }
-      return new DownloadResult(resourceType, null);
-    }
-  }
-
-  private void cleanupTempDirectory(@Nonnull final Path tempDir) {
-    try {
-      if (Files.exists(tempDir)) {
-        try (final var paths = Files.walk(tempDir)) {
-          paths.sorted(Comparator.reverseOrder())
-              .forEach(path -> {
-                try {
-                  Files.delete(path);
-                } catch (final IOException e) {
-                  log.warn("Failed to delete temporary file: {}", path, e);
-                }
-              });
-        }
-        log.debug("Cleaned up temporary directory: {}", tempDir);
-      }
-    } catch (final IOException e) {
-      log.warn("Failed to clean up temporary directory: {}", tempDir, e);
-    }
-  }
-
-  private record DownloadResult(
-      @Nonnull String resourceType,
-      Path localPath
-  ) {
-
   }
 
 }

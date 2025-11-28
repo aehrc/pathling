@@ -21,7 +21,6 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -39,7 +38,6 @@ import java.util.Optional;
  * @param createdAt The timestamp when the submission was created (ISO-8601 format).
  * @param completedAt The timestamp when the submission completed processing (ISO-8601 format).
  * @param ownerId The identifier of the user who owns this submission, or null if not applicable.
- * @param fileRequestHeaders Custom HTTP headers to include when downloading files.
  * @param metadata Optional metadata associated with the submission.
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
@@ -54,7 +52,6 @@ public record Submission(
     @Nonnull String createdAt,
     @Nullable String completedAt,
     @Nullable String ownerId,
-    @Nonnull List<FileRequestHeader> fileRequestHeaders,
     @Nullable SubmissionMetadata metadata
 ) {
 
@@ -94,7 +91,6 @@ public record Submission(
         now(),
         null,
         ownerId.orElse(null),
-        List.of(),
         null
     );
   }
@@ -122,7 +118,6 @@ public record Submission(
         createdAt,
         newCompletedAt,
         ownerId,
-        fileRequestHeaders,
         metadata
     );
   }
@@ -132,7 +127,6 @@ public record Submission(
    *
    * @param manifestUrl The URL of the manifest file.
    * @param fhirBaseUrl The base URL of the FHIR server.
-   * @param fileRequestHeaders Custom headers for file downloads.
    * @param metadata Optional submission metadata.
    * @return A new submission with manifest details.
    */
@@ -140,7 +134,6 @@ public record Submission(
   public Submission withManifestDetails(
       @Nonnull final String manifestUrl,
       @Nullable final String fhirBaseUrl,
-      @Nonnull final List<FileRequestHeader> fileRequestHeaders,
       @Nullable final SubmissionMetadata metadata
   ) {
     return new Submission(
@@ -153,7 +146,6 @@ public record Submission(
         createdAt,
         completedAt,
         ownerId,
-        fileRequestHeaders,
         metadata
     );
   }

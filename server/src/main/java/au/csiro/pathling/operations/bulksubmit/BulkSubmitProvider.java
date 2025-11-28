@@ -173,7 +173,6 @@ public class BulkSubmitProvider implements PreAsyncValidation<BulkSubmitRequest>
         submission = submission.withManifestDetails(
             request.manifestUrl(),
             request.fhirBaseUrl(),
-            request.fileRequestHeaders(),
             request.metadata()
         );
         submissionRegistry.put(submission);
@@ -194,7 +193,6 @@ public class BulkSubmitProvider implements PreAsyncValidation<BulkSubmitRequest>
         submission = submission.withManifestDetails(
             request.manifestUrl(),
             request.fhirBaseUrl(),
-            request.fileRequestHeaders(),
             request.metadata()
         );
       }
@@ -226,7 +224,6 @@ public class BulkSubmitProvider implements PreAsyncValidation<BulkSubmitRequest>
         submission = existing.withManifestDetails(
             request.manifestUrl(),
             request.fhirBaseUrl(),
-            request.fileRequestHeaders(),
             request.metadata()
         );
       } else if (existing.manifestUrl() != null) {
@@ -253,7 +250,6 @@ public class BulkSubmitProvider implements PreAsyncValidation<BulkSubmitRequest>
       ).withManifestDetails(
           request.manifestUrl(),
           request.fhirBaseUrl(),
-          request.fileRequestHeaders(),
           request.metadata()
       );
     }
