@@ -63,7 +63,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @ResourceLock(value = "wiremock", mode = ResourceAccessMode.READ_WRITE)
 @ActiveProfiles("integration-test")
 @TestPropertySource(properties = {
-    "pathling.bulk-submit.enabled=true",
     "pathling.bulk-submit.allowable-sources[0]=http://localhost",
     "pathling.bulk-submit.allowed-submitters[0].system=http://example.org/submitters",
     "pathling.bulk-submit.allowed-submitters[0].value=test-submitter"

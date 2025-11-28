@@ -104,7 +104,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
       EXPORT_OPERATION, "import", "import-pnp");
 
   /**
-   * Bulk submit operations, conditionally enabled.
+   * Bulk submit operations, added when bulk submit is configured.
    */
   private static final List<String> BULK_SUBMIT_OPERATIONS = Arrays.asList("bulk-submit",
       "bulk-submit-status");
@@ -171,7 +171,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
 
     // Compute system-level operations based on configuration.
     final List<String> systemOps = new ArrayList<>(BASE_SYSTEM_OPERATIONS);
-    if (configuration.getBulkSubmit() != null && configuration.getBulkSubmit().isEnabled()) {
+    if (configuration.getBulkSubmit() != null) {
       systemOps.addAll(BULK_SUBMIT_OPERATIONS);
     }
     this.systemLevelOperations = List.copyOf(systemOps);

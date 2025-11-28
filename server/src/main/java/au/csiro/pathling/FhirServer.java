@@ -201,7 +201,7 @@ public class FhirServer extends RestfulServer {
       registerProvider(importProvider);
       registerProvider(importPnpProvider);
 
-      // Register bulk submit providers, if enabled.
+      // Register bulk submit providers.
       bulkSubmitProvider.ifPresent(this::registerProvider);
       bulkSubmitStatusProvider.ifPresent(this::registerProvider);
 

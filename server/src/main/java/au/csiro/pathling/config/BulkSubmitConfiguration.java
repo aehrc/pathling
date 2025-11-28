@@ -34,11 +34,6 @@ import lombok.Data;
 public class BulkSubmitConfiguration {
 
   /**
-   * Whether the $bulk-submit operation is enabled.
-   */
-  private boolean enabled = false;
-
-  /**
    * The list of allowed submitters that can use the $bulk-submit operation.
    */
   @Nonnull
