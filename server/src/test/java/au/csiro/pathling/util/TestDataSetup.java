@@ -66,7 +66,9 @@ public class TestDataSetup {
       Files.createDirectories(deltaPath);
       final NdjsonSource ndjsonSource = new NdjsonSource(pathlingContext,
           ndjsonTestDataDir.toAbsolutePath().toString());
-      new DataSinkBuilder(pathlingContext, ndjsonSource).saveMode("overwrite")
+      new DataSinkBuilder(pathlingContext, ndjsonSource)
+          // If the data already exists, skip the import process.
+          .saveMode("ignore")
           .delta(deltaPath.toAbsolutePath().toString());
     } catch (final Exception e) {
       throw new RuntimeException("Failed to setup warehouse test data", e);
