@@ -205,8 +205,13 @@ To run specific tests:
 ```bash
 cd server
 mvn test -Dtest=ImportExecutorTest
-mvn verify -Dit.test=ImportPnpOperationIT
+mvn clean verify -Dit.test=ImportPnpOperationIT -Dtest=foo -Dsurefire.failIfNoSpecifiedTests=false
 ```
+
+The last command runs only the specified integration test without running unit tests.
+The `-Dtest=foo` parameter specifies a non-existent unit test pattern, and
+`-Dsurefire.failIfNoSpecifiedTests=false` prevents failure when no unit tests
+match.
 
 #### Docker image
 

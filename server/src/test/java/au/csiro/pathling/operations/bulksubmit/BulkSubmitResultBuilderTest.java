@@ -181,7 +181,8 @@ class BulkSubmitResultBuilderTest {
             "https://example.org/fhir",
             List.of(),
             null
-        );
+        )
+        .withState(SubmissionState.PROCESSING);
   }
 
 }
