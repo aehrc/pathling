@@ -23,10 +23,12 @@ import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Set;
-import java.util.function.UnaryOperator;
+import java.util.function.BiFunction;
+import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A data source that reads data from a FHIR Bulk Data endpoint. This source uses the FHIR Bulk Data
@@ -50,7 +52,7 @@ public class BulkDataSource extends AbstractSource {
    * parameters
    * @throws RuntimeException if the export fails or the source cannot be initialized
    */
-  BulkDataSource(@Nonnull final PathlingContext context,
+  public BulkDataSource(@Nonnull final PathlingContext context,
       @Nonnull final BulkExportClient client) {
     super(context);
 
@@ -80,10 +82,17 @@ public class BulkDataSource extends AbstractSource {
     return ndjsonSource.getResourceTypes();
   }
 
-  @Nonnull
   @Override
-  public QueryableDataSource map(@Nonnull final UnaryOperator<Dataset<Row>> operator) {
+  public QueryableDataSource map(
+      @NotNull final BiFunction<String, Dataset<Row>, Dataset<Row>> operator) {
     return new BulkDataSource(context, (NdjsonSource) ndjsonSource.map(operator));
+  }
+
+  @Override
+  public @NotNull QueryableDataSource filterByResourceType(
+      @NotNull final Predicate<String> resourceTypePredicate) {
+    return new BulkDataSource(context,
+        (NdjsonSource) ndjsonSource.filterByResourceType(resourceTypePredicate));
   }
 
   @Override

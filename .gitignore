@@ -39,3 +39,13 @@ spark-warehouse
 # AI
 .aider*
 .claude
+
+#server
+server/.idea
+server/.mvn
+server/warehouse
+server/src/test/resources/test-data
+server/client-tests
+
+*-local.yml
+*-local.properties

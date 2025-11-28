@@ -139,6 +139,17 @@ public class FhirEncoders implements Configurable<EncodingConfiguration> {
     this.enableExtensions = enableExtensions;
   }
 
+  /**
+   * Returns a cached FhirEncoders instance for the specified configuration, creating one if it
+   * does not already exist. This method is thread-safe and ensures that encoders with identical
+   * configurations are shared across the application.
+   *
+   * @param fhirVersion the FHIR version to use for encoding
+   * @param maxNestingLevel the maximum nesting level for encoding complex resources
+   * @param openTypes the set of open types to encode with extension values
+   * @param enableExtensions whether to enable extension encoding
+   * @return a FhirEncoders instance configured with the specified parameters
+   */
   public static FhirEncoders getOrCreate(@Nonnull final FhirVersionEnum fhirVersion,
       final int maxNestingLevel,
       @Nonnull final Set<String> openTypes, final boolean enableExtensions) {
@@ -237,11 +248,9 @@ public class FhirEncoders implements Configurable<EncodingConfiguration> {
    */
   @SuppressWarnings("unchecked")
   public final <T extends IBaseResource> ExpressionEncoder<T> of(final Class<T> type) {
-    final RuntimeResourceDefinition definition =
-        context.getResourceDefinition(type);
+    final RuntimeResourceDefinition definition = context.getResourceDefinition(type);
 
     final int key = type.getName().hashCode();
-
     return (ExpressionEncoder<T>) encoderCache.computeIfAbsent(key, k ->
         EncoderBuilder.of(definition,
             context,
