@@ -44,8 +44,8 @@ public class Dependencies {
   @Bean
   @ConditionalOnMissingBean
   @Nonnull
-  static PathlingVersion version() {
-    return new PathlingVersion();
+  static PathlingServerVersion serverVersion() {
+    return new PathlingServerVersion();
   }
 
   @Bean

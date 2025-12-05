@@ -25,7 +25,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.FhirServer;
-import au.csiro.pathling.PathlingVersion;
+import au.csiro.pathling.PathlingServerVersion;
 import au.csiro.pathling.cache.Cacheable;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.ResourceNotFoundError;
@@ -137,7 +137,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   private Optional<RestfulServer> restfulServer;
 
   @Nonnull
-  private final PathlingVersion version;
+  private final PathlingServerVersion version;
 
   @Nonnull
   private final FhirContext fhirContext;
@@ -155,13 +155,14 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
    * @param configuration a {@link ServerConfiguration} object controlling the behaviour of the
    * capability statement
    * @param oidcConfiguration the OIDC configuration for security
-   * @param version a {@link PathlingVersion} object containing version information for the server
+   * @param version a {@link PathlingServerVersion} object containing version information for the
+   * server
    * @param fhirContext a {@link FhirContext} for determining the supported FHIR version
    * @param jsonParser a {@link IParser} for parsing JSON OperationDefinitions
    */
   public ConformanceProvider(@Nonnull final ServerConfiguration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
-      @Nonnull final PathlingVersion version, @Nonnull final FhirContext fhirContext,
+      @Nonnull final PathlingServerVersion version, @Nonnull final FhirContext fhirContext,
       @Nonnull final IParser jsonParser) {
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;

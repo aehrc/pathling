@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.errors;
 
-import au.csiro.pathling.PathlingVersion;
+import au.csiro.pathling.PathlingServerVersion;
 import au.csiro.pathling.config.ServerConfiguration;
 import io.sentry.Sentry;
 import jakarta.annotation.Nonnull;
@@ -38,16 +38,16 @@ public class ErrorReportingInitialization implements ApplicationListener<Applica
   private final ServerConfiguration configuration;
 
   @Nonnull
-  private final PathlingVersion version;
+  private final PathlingServerVersion version;
 
   /**
    * @param configuration A {@link ServerConfiguration} object to control the behaviour of the
    * listener
-   * @param version A {@link PathlingVersion} object containing version information about the
+   * @param version A {@link PathlingServerVersion} object containing version information about the
    * server
    */
   public ErrorReportingInitialization(@Nonnull final ServerConfiguration configuration,
-      @Nonnull final PathlingVersion version) {
+      @Nonnull final PathlingServerVersion version) {
     this.configuration = configuration;
     this.version = version;
   }
