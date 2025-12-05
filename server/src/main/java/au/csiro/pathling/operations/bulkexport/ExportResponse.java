@@ -83,19 +83,17 @@ public class ExportResponse implements OperationResponse<Binary> {
     // Ensure the base URL ends with a slash for proper URL construction.
     final String normalizedBaseUrl =
         baseServerUrl.endsWith("/")
-            ? baseServerUrl
-            : baseServerUrl + "/";
+        ? baseServerUrl
+        : baseServerUrl + "/";
 
     manifest.put("transactionTime", InstantType.now().getValueAsString());
     manifest.put("request", requestUrl);
     manifest.put("requiresAccessToken", requiresAccessToken);
     final ArrayNode outputArray = mapper.createArrayNode();
     final List<ObjectNode> objectNodes = writeDetails.fileInfos().stream()
-        .filter(fileInfo -> fileInfo.count() == null || fileInfo.count() > 0)
         .map(fileInfo -> mapper.createObjectNode()
             .put("type", fileInfo.fhirResourceType())
             .put("url", buildResultUrl(normalizedBaseUrl, fileInfo.absoluteUrl()))
-            .put("count", fileInfo.count())
         )
         .toList();
     outputArray.addAll(objectNodes);

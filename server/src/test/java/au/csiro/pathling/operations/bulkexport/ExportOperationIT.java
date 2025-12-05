@@ -248,8 +248,7 @@ class ExportOperationIT {
     final List<FileInformation> actualFileInfos = StreamSupport.stream(output.spliterator(), false)
         .map(jsonNode -> new FileInformation(
             jsonNode.get("type").asText(),
-            jsonNode.get("url").asText(),
-            jsonNode.get("count").asLong()
+            jsonNode.get("url").asText()
         ))
         .toList();
 

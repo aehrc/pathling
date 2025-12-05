@@ -408,19 +408,19 @@ class ExportOperationExecutorTest {
     final ExportRequest req1 = req(base, ExportOutputFormat.NDJSON, date("2024-01-05"),
         List.of(ResourceType.PATIENT));
     final ExportResponse res1 = res(req1,
-        write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER), 1)));
+        write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER))));
 
     final ExportRequest req2 = req(base, ExportOutputFormat.NDJSON, date("2024-01-07"),
         List.of(ResourceType.PATIENT));
     final ExportResponse res2 = res(req2,
-        write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER), 0)));
+        write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER))));
 
     return Stream.of(
         arguments(patientLastUpdated, req1, res1),
         arguments(patientLastUpdated, req2, res2),
         arguments(null, req1, res1),
         arguments(null, req2, res(req2,
-            write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER), 1))))
+            write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER)))))
     );
   }
 
@@ -442,23 +442,23 @@ class ExportOperationExecutorTest {
     final ExportRequest req1 = req(base, ExportOutputFormat.NDJSON, now,
         List.of(ResourceType.PATIENT));
     final ExportResponse res1 = res(req1,
-        write_details(fi("Patient", RESOLVE_PATIENT.apply(warehouseUrl), PATIENT_COUNT)));
+        write_details(fi("Patient", RESOLVE_PATIENT.apply(warehouseUrl))));
 
     final ExportRequest req2 = req(base, ExportOutputFormat.NDJSON, now,
         List.of(ResourceType.ENCOUNTER));
     final ExportResponse res2 = res(req2,
-        write_details(fi("Encounter", RESOLVE_ENCOUNTER.apply(warehouseUrl), ENCOUNTER_COUNT)));
+        write_details(fi("Encounter", RESOLVE_ENCOUNTER.apply(warehouseUrl))));
 
     final ExportRequest req3 = req(base, ExportOutputFormat.NDJSON, now,
         List.of(ResourceType.ENCOUNTER, ResourceType.PATIENT));
     final ExportResponse res3 = res(req3, write_details(
-        fi("Encounter", RESOLVE_ENCOUNTER.apply(warehouseUrl), ENCOUNTER_COUNT),
-        fi("Patient", RESOLVE_PATIENT.apply(warehouseUrl), PATIENT_COUNT)));
+        fi("Encounter", RESOLVE_ENCOUNTER.apply(warehouseUrl)),
+        fi("Patient", RESOLVE_PATIENT.apply(warehouseUrl))));
 
     final ExportRequest req4 = req(base, ExportOutputFormat.NDJSON, now, List.of());
     final ExportResponse res4 = res(req4, write_details(
-        fi("Encounter", RESOLVE_ENCOUNTER.apply(warehouseUrl), ENCOUNTER_COUNT),
-        fi("Patient", RESOLVE_PATIENT.apply(warehouseUrl), PATIENT_COUNT)));
+        fi("Encounter", RESOLVE_ENCOUNTER.apply(warehouseUrl)),
+        fi("Patient", RESOLVE_PATIENT.apply(warehouseUrl))));
 
     return Stream.of(
         arguments(req1, res1),

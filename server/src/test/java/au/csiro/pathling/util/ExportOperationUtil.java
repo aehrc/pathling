@@ -62,7 +62,6 @@ public class ExportOperationUtil {
         .map(fileInfo -> mapper.createObjectNode()
             .put("type", fileInfo.fhirResourceType())
             .put("url", fileInfo.absoluteUrl())
-            .put("count", fileInfo.count())
         )
         .toList();
     ArrayNode arrayNode = mapper.createArrayNode().addAll(outputList);
@@ -179,8 +178,8 @@ public class ExportOperationUtil {
     return new WriteDetails(Arrays.asList(fileInfos));
   }
 
-  public static FileInformation fi(String fhirResourceType, String absoluteUrl, long count) {
-    return new FileInformation(fhirResourceType, absoluteUrl, count);
+  public static FileInformation fi(String fhirResourceType, String absoluteUrl) {
+    return new FileInformation(fhirResourceType, absoluteUrl);
   }
 
   public static InstantType date(String date) {
@@ -235,9 +234,8 @@ public class ExportOperationUtil {
         .map(
             fileInfo -> fi(fileInfo.fhirResourceType(),
                 fileInfo.absoluteUrl().replace("WAREHOUSE_PATH",
-                    "file:" + tempDir.toAbsolutePath().toString() + "/jobs/"
-                        + fakeJobId.toString()),
-                fileInfo.count()))
+                    "file:" + tempDir.toAbsolutePath() + "/jobs/"
+                        + fakeJobId)))
         .toList();
     return new ExportResponse(
         exportResponse.getKickOffRequestUrl(),

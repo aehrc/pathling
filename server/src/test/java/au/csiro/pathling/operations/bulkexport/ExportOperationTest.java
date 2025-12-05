@@ -322,20 +322,11 @@ class ExportOperationTest {
 
     final var req1 = req(base, NDJSON, now, List.of(Enumerations.ResourceType.PATIENT));
     final var res1 = res(req1,
-        write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER), 1)));
+        write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER))));
     final var json1 = json(mapper, res1.getKickOffRequestUrl(), res1.getWriteDetails());
 
-    final var req2 = req(base, NDJSON, now, List.of(Enumerations.ResourceType.PATIENT));
-    final var res2 = res(req2,
-        write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER), 0)));
-    final var json2 = json(mapper, res2.getKickOffRequestUrl(), write_details(
-        res2.getWriteDetails().fileInfos().stream()
-            .filter(fileInfo -> fileInfo.count() != null && fileInfo.count() > 0)
-            .toList()));
-
     return Stream.of(
-        arguments(res1, json1),
-        arguments(res2, json2)
+        arguments(res1, json1)
     );
   }
 

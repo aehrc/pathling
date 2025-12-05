@@ -113,10 +113,11 @@ final class NdjsonSink implements DataSink {
       }
       // Remove the partitioned directory and replace it with the renamed partitioned files
       // <resource_type>.<partId>.ndjson, i.e. Patient.00000.ndjson
-      final Collection<String> renamed = FileSystemPersistence.renamePartitionedFiles(context.getSpark(),
+      final Collection<String> renamed = FileSystemPersistence.renamePartitionedFiles(
+          context.getSpark(),
           resultUrl, resultUrl, "txt");
       renamed.forEach(renamedFilename -> fileInfos.add(
-          new FileInformation(resourceType, renamedFilename, null)));
+          new FileInformation(resourceType, renamedFilename)));
     }
     return new WriteDetails(fileInfos);
   }

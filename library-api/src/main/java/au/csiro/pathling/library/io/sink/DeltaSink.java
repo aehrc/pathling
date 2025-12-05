@@ -110,7 +110,7 @@ final class DeltaSink implements DataSink {
           "parquet");
       final String tablePath = safelyJoinPaths(path, fileName);
 
-      fileInfos.add(new FileInformation(resourceType, tablePath, null));
+      fileInfos.add(new FileInformation(resourceType, tablePath));
 
       switch (saveMode) {
         case ERROR_IF_EXISTS, APPEND, IGNORE, OVERWRITE ->

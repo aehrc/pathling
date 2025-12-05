@@ -102,7 +102,7 @@ class CatalogSink implements DataSink {
       final Dataset<Row> dataset = source.read(resourceType);
       final String tableName = getTableName(resourceType);
 
-      fileInfos.add(new FileInformation(resourceType, tableName, null));
+      fileInfos.add(new FileInformation(resourceType, tableName));
 
       switch (saveMode) {
         case ERROR_IF_EXISTS, APPEND, IGNORE -> writeDataset(dataset, tableName, saveMode);
