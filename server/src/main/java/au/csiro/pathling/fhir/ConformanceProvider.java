@@ -216,7 +216,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     capabilityStatement.setKind(CapabilityStatementKind.INSTANCE);
 
     final CapabilityStatementSoftwareComponent software = new CapabilityStatementSoftwareComponent(
-        new StringType("Pathling"));
+        new StringType("Pathling Server"));
     software.setVersion(version.getDescriptiveVersion().orElse(UNKNOWN_VERSION));
     capabilityStatement.setSoftware(software);
 
