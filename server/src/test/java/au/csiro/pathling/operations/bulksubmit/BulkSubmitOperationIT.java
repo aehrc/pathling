@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.bulksubmit;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.head;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -100,7 +101,8 @@ class BulkSubmitOperationIT {
 
   @DynamicPropertySource
   static void configureProperties(final DynamicPropertyRegistry registry) {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
+    // Copy only Condition data - exclude Patient and Observation which will be imported.
+    TestDataSetup.copyTestDataToTempDir(warehouseDir, "Condition");
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.toAbsolutePath());
   }
 
@@ -150,6 +152,10 @@ class BulkSubmitOperationIT {
         {"resourceType":"Patient","id":"patient1","name":[{"family":"Smith","given":["John"]}]}
         {"resourceType":"Patient","id":"patient2","name":[{"family":"Jones","given":["Jane"]}]}
         """;
+    wireMockServer.stubFor(head(urlEqualTo("/data/Patient.ndjson"))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withHeader("Content-Length", String.valueOf(patientNdjson.getBytes().length))));
     wireMockServer.stubFor(get(urlEqualTo("/data/Patient.ndjson"))
         .willReturn(aResponse()
             .withStatus(200)
@@ -160,6 +166,10 @@ class BulkSubmitOperationIT {
     final String observationNdjson = """
         {"resourceType":"Observation","id":"obs1","status":"final","code":{"coding":[{"system":"http://loinc.org","code":"8867-4"}]}}
         """;
+    wireMockServer.stubFor(head(urlEqualTo("/data/Observation.ndjson"))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withHeader("Content-Length", String.valueOf(observationNdjson.getBytes().length))));
     wireMockServer.stubFor(get(urlEqualTo("/data/Observation.ndjson"))
         .willReturn(aResponse()
             .withStatus(200)
@@ -217,7 +227,7 @@ class BulkSubmitOperationIT {
 
   @Test
   void testDirectCompleteWorkflow() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
+    TestDataSetup.copyTestDataToTempDir(warehouseDir, "Condition");
     setupSuccessfulManifestStubs();
 
     final String submissionId = UUID.randomUUID().toString();
@@ -262,7 +272,7 @@ class BulkSubmitOperationIT {
 
   @Test
   void testInProgressThenCompleteWorkflow() {
-    TestDataSetup.copyTestDataToTempDir(warehouseDir);
+    TestDataSetup.copyTestDataToTempDir(warehouseDir, "Condition");
     setupSuccessfulManifestStubs();
 
     final String submissionId = UUID.randomUUID().toString();

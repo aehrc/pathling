@@ -164,9 +164,14 @@ spark:
   scheduler:
     mode: FAIR
 
-# Use this section to set or override configuration relating to S3 configuration.
+# Use this section to set or override configuration relating to Hadoop filesystem configuration.
 # See: https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/index.html
 fs:
+  # Custom HTTP/HTTPS filesystem implementations that support Spark's file discovery operations.
+  http:
+    impl: au.csiro.pathling.io.fs.StreamingHttpFileSystem
+  https:
+    impl: au.csiro.pathling.io.fs.StreamingHttpsFileSystem
   s3a:
     aws:
     # credentials:

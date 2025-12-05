@@ -84,10 +84,13 @@ public class Spark {
       configurer.configure(spark);
     }
 
-    // Pass through Hadoop AWS configuration.
-    resolveThirdPartyConfiguration(environment, List.of("fs.s3a."),
-        property -> spark.sparkContext().hadoopConfiguration().set(property,
-            requireNonNull(environment.getProperty(property))));
+    // Pass through Hadoop filesystem configuration (S3, HTTP, HTTPS).
+    resolveThirdPartyConfiguration(environment, List.of("fs.s3a.", "fs.http.", "fs.https."),
+        property -> {
+          final String value = requireNonNull(environment.getProperty(property));
+          log.debug("Setting Hadoop configuration: {} = {}", property, value);
+          spark.sparkContext().hadoopConfiguration().set(property, value);
+        });
 
     return spark;
   }
