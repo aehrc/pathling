@@ -17,7 +17,7 @@
     <maven.compiler.source>21</maven.compiler.source>
     <maven.compiler.target>21</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <pathling.version>9.1.0</pathling.version>
+    <pathling.version>9.1.1-SNAPSHOT</pathling.version>
     <pathling.hapiFhirVersion>8.4.0</pathling.hapiFhirVersion>
     <pathling.springBootVersion>3.3.5</pathling.springBootVersion>
     <pathling.sparkVersion>4.0.1</pathling.sparkVersion>
