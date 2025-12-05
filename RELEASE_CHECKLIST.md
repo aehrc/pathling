@@ -31,12 +31,14 @@ The version number needs to be changed in the following places:
 
 - [ ] All POM files (version of the main POM, references to parent in all child
   POMs)
+
+The following should only be updated for release versions, not snapshots:
+
 - [ ] `examples/java/PathlingJavaApp/pom.xml`
 - [ ] `examples/scala/PathlingScalaApp/build.sbt`
 - [ ] `lib/python/Dockerfile`
 - [ ] `site/docs/libraries/installation/spark.md`
-- [ ] `site/docusaurus.config.js` (only change upon release version, not
-  snapshot)
+- [ ] `site/docusaurus.config.js`
 
 ## Helm chart
 
