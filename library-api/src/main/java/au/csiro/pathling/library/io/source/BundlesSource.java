@@ -48,7 +48,7 @@ public class BundlesSource extends FileSource {
    * @param mimeType the MIME type of the FHIR data (e.g., "application/fhir+json")
    * @param resourceTypes the set of FHIR resource types that are expected in the bundles
    */
-  BundlesSource(@Nonnull final PathlingContext context, @Nonnull final String path,
+  public BundlesSource(@Nonnull final PathlingContext context, @Nonnull final String path,
       @Nonnull final String mimeType, @Nonnull final Set<String> resourceTypes) {
     super(context, path,
         // Map to the fixed set of resource types for all files.
@@ -59,7 +59,8 @@ public class BundlesSource extends FileSource {
         context.getSpark().read().option("wholetext", true).format("text"),
         // Extract the nominated resource types from each file and encode using the specified MIME
         // type.
-        (sourceData, resourceType) -> context.encodeBundle(sourceData, resourceType, mimeType));
+        (sourceData, resourceType) -> context.encodeBundle(sourceData, resourceType, mimeType),
+        resourceType -> true);
   }
 
 }

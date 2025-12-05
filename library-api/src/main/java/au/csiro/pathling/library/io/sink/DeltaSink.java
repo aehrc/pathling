@@ -30,6 +30,8 @@ import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.UnaryOperator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -90,15 +92,6 @@ final class DeltaSink implements DataSink {
   /**
    * @param context the PathlingContext to use
    * @param path the path to write the Delta database to
-   */
-  DeltaSink(@Nonnull final PathlingContext context, @Nonnull final String path) {
-    // By default, name the files using the resource type alone.
-    this(context, path, SaveMode.ERROR_IF_EXISTS, UnaryOperator.identity());
-  }
-
-  /**
-   * @param context the PathlingContext to use
-   * @param path the path to write the Delta database to
    * @param saveMode the {@link SaveMode} to use
    */
   DeltaSink(@Nonnull final PathlingContext context, @Nonnull final String path,
@@ -108,24 +101,20 @@ final class DeltaSink implements DataSink {
   }
 
   @Override
-  public void write(@Nonnull final DataSource source) {
+  @Nonnull
+  public WriteDetails write(@Nonnull final DataSource source) {
+    final List<FileInformation> fileInfos = new ArrayList<>();
     for (final String resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       final String fileName = String.join(".", fileNameMapper.apply(resourceType),
           "parquet");
       final String tablePath = safelyJoinPaths(path, fileName);
 
+      fileInfos.add(new FileInformation(resourceType, tablePath, null));
+
       switch (saveMode) {
-        case ERROR_IF_EXISTS, APPEND, IGNORE -> writeDataset(dataset, tablePath, saveMode);
-        case OVERWRITE -> {
-          // This is to work around a bug relating to Delta tables not being able to be overwritten,
-          // due to their inability to handle the truncate operation that Spark performs when
-          // overwriting a table.
-          if (deltaTableExists(tablePath)) {
-            delete(tablePath);
-          }
-          writeDataset(dataset, tablePath, SaveMode.ERROR_IF_EXISTS);
-        }
+        case ERROR_IF_EXISTS, APPEND, IGNORE, OVERWRITE ->
+            writeDataset(dataset, tablePath, saveMode);
         case MERGE -> {
           if (deltaTableExists(tablePath)) {
             // If the table already exists, merge the data in.
@@ -139,6 +128,7 @@ final class DeltaSink implements DataSink {
         }
       }
     }
+    return new WriteDetails(fileInfos);
   }
 
   /**
@@ -155,6 +145,11 @@ final class DeltaSink implements DataSink {
 
     // Apply save mode if it has a Spark equivalent
     saveMode.getSparkSaveMode().ifPresent(writer::mode);
+
+    // Delta Lake requires explicit schema overwrite permission when using OVERWRITE mode.
+    if (saveMode == SaveMode.OVERWRITE) {
+      writer.option("overwriteSchema", "true");
+    }
 
     writer.save(tablePath);
   }
@@ -199,6 +194,7 @@ final class DeltaSink implements DataSink {
    *
    * @param tableUrl the URL of the Delta table to delete
    */
+  @SuppressWarnings("unused")
   private void delete(@Nonnull final String tableUrl) {
     try {
       final Path tablePath = new Path(tableUrl);
