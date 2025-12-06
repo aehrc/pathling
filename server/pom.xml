@@ -21,6 +21,7 @@
     <pathling.hapiFhirVersion>8.4.0</pathling.hapiFhirVersion>
     <pathling.springBootVersion>3.3.5</pathling.springBootVersion>
     <pathling.sparkVersion>4.0.1</pathling.sparkVersion>
+    <pathling.hadoopVersion>3.4.2</pathling.hadoopVersion>
     <pathling.scalaVersion>2.13</pathling.scalaVersion>
     <pathling.deltaVersion>4.0.0</pathling.deltaVersion>
     <pathling.nettyVersion>4.1.114.Final</pathling.nettyVersion>
@@ -120,6 +121,11 @@
           <artifactId>slf4j-api</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-aws</artifactId>
+      <version>${pathling.hadoopVersion}</version>
     </dependency>
     <dependency>
       <groupId>io.delta</groupId>
