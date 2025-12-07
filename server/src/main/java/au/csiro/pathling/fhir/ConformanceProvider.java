@@ -294,12 +294,13 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
       searchInteraction.setCode(TypeRestfulInteraction.SEARCHTYPE);
       resource.addInteraction(searchInteraction);
 
-      // Add the filter search parameter for FHIRPath-based search.
+      // Add the fhirPath named query with filter parameter for FHIRPath-based search.
       final CapabilityStatementRestResourceSearchParamComponent filterParam =
           new CapabilityStatementRestResourceSearchParamComponent();
       filterParam.setName("filter");
       filterParam.setType(SearchParamType.STRING);
-      filterParam.setDocumentation("FHIRPath expression to filter resources");
+      filterParam.setDocumentation(
+          "FHIRPath expression to filter resources (use with _query=fhirPath)");
       resource.addSearchParam(filterParam);
 
       // Add export operation to Patient and Group resources.
