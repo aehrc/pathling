@@ -19,6 +19,7 @@ import au.csiro.pathling.operations.bulkimport.ImportPnpProvider;
 import au.csiro.pathling.operations.bulkimport.ImportProvider;
 import au.csiro.pathling.operations.bulksubmit.BulkSubmitProvider;
 import au.csiro.pathling.operations.bulksubmit.BulkSubmitStatusProvider;
+import au.csiro.pathling.search.SearchProviderFactory;
 import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.ApacheProxyAddressStrategy;
@@ -126,6 +127,9 @@ public class FhirServer extends RestfulServer {
   @Nonnull
   private final transient ConformanceProvider conformanceProvider;
 
+  @Nonnull
+  private final transient SearchProviderFactory searchProviderFactory;
+
   /**
    * Constructs a new FhirServer.
    *
@@ -144,6 +148,7 @@ public class FhirServer extends RestfulServer {
    * @param entityTagInterceptor the entity tag interceptor
    * @param bulkExportDeleteInterceptor the bulk export delete interceptor
    * @param conformanceProvider the conformance provider
+   * @param searchProviderFactory the search provider factory
    */
   public FhirServer(@Nonnull final ServerConfiguration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
@@ -159,7 +164,8 @@ public class FhirServer extends RestfulServer {
       @Nonnull final ErrorReportingInterceptor errorReportingInterceptor,
       @Nonnull final EntityTagInterceptor entityTagInterceptor,
       @Nonnull final BulkExportDeleteInterceptor bulkExportDeleteInterceptor,
-      @Nonnull final ConformanceProvider conformanceProvider) {
+      @Nonnull final ConformanceProvider conformanceProvider,
+      @Nonnull final SearchProviderFactory searchProviderFactory) {
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;
     this.jobProvider = jobProvider;
@@ -175,6 +181,7 @@ public class FhirServer extends RestfulServer {
     this.entityTagInterceptor = entityTagInterceptor;
     this.bulkExportDeleteInterceptor = bulkExportDeleteInterceptor;
     this.conformanceProvider = conformanceProvider;
+    this.searchProviderFactory = searchProviderFactory;
   }
 
   @Override
@@ -204,6 +211,11 @@ public class FhirServer extends RestfulServer {
       // Register bulk submit providers.
       bulkSubmitProvider.ifPresent(this::registerProvider);
       bulkSubmitStatusProvider.ifPresent(this::registerProvider);
+
+      // Register search providers for all supported resource types.
+      for (final ResourceType resourceType : supportedResourceTypes()) {
+        registerProvider(searchProviderFactory.createSearchProvider(resourceType));
+      }
 
       // Authorization-related configuration.
       configureAuthorization();

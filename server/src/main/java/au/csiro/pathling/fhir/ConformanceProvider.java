@@ -61,6 +61,7 @@ import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementKind;
 import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestResourceComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestResourceOperationComponent;
+import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestResourceSearchParamComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestSecurityComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementSoftwareComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.ResourceInteractionComponent;
@@ -72,6 +73,7 @@ import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRVersion;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.Enumerations.SearchParamType;
 import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.OperationDefinition;
 import org.hl7.fhir.r4.model.StringType;
@@ -286,6 +288,19 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
       final CapabilityStatementRestResourceComponent resource =
           new CapabilityStatementRestResourceComponent(new CodeType(resourceType.toCode()));
       resource.setProfile(FHIR_RESOURCE_BASE + resourceType.toCode());
+
+      // Add search-type interaction to all resource types.
+      final ResourceInteractionComponent searchInteraction = new ResourceInteractionComponent();
+      searchInteraction.setCode(TypeRestfulInteraction.SEARCHTYPE);
+      resource.addInteraction(searchInteraction);
+
+      // Add the filter search parameter for FHIRPath-based search.
+      final CapabilityStatementRestResourceSearchParamComponent filterParam =
+          new CapabilityStatementRestResourceSearchParamComponent();
+      filterParam.setName("filter");
+      filterParam.setType(SearchParamType.STRING);
+      filterParam.setDocumentation("FHIRPath expression to filter resources");
+      resource.addSearchParam(filterParam);
 
       // Add export operation to Patient and Group resources.
       if (EXPORT_RESOURCE_TYPES.contains(resourceType)) {

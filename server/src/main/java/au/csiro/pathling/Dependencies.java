@@ -18,6 +18,7 @@
 package au.csiro.pathling;
 
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import ca.uhn.fhir.context.FhirContext;
@@ -81,6 +82,13 @@ public class Dependencies {
     final String databaseLocation = serverConfiguration.getStorage().getWarehouseUrl() + "/"
         + serverConfiguration.getStorage().getDatabaseName();
     return pathlingContext.read().delta(databaseLocation);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  @Nonnull
+  static FhirEncoders fhirEncoders(@Nonnull final PathlingContext pathlingContext) {
+    return pathlingContext.getFhirEncoders();
   }
 
 }

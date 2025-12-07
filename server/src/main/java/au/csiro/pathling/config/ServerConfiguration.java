@@ -99,6 +99,9 @@ public class ServerConfiguration {
   @Nullable
   private BulkSubmitConfiguration bulkSubmit;
 
+  @NotNull
+  private QueryConfiguration query = QueryConfiguration.builder().build();
+
   /**
    * Logs the server configuration on startup.
    */
