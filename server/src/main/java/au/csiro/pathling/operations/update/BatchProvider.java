@@ -109,7 +109,8 @@ public class BatchProvider {
     return response;
   }
 
-  private void processEntry(@Nonnull final Map<ResourceType, List<IBaseResource>> resourcesForUpdate,
+  private void processEntry(
+      @Nonnull final Map<ResourceType, List<IBaseResource>> resourcesForUpdate,
       @Nonnull final Bundle response, @Nonnull final BundleEntryComponent entry) {
     final Resource resource = entry.getResource();
     final BundleEntryRequestComponent request = entry.getRequest();

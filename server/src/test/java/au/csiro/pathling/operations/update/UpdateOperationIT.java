@@ -80,7 +80,8 @@ class UpdateOperationIT {
   void testUpdateExistingPatient() {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
-    final String uri = "http://localhost:" + port + "/fhir/Patient/121503c8-9564-4b48-9086-a22df717948e";
+    final String uri =
+        "http://localhost:" + port + "/fhir/Patient/121503c8-9564-4b48-9086-a22df717948e";
     final String requestBody = """
         {
           "resourceType": "Patient",

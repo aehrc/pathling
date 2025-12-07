@@ -52,6 +52,40 @@ default — this can be altered using the `_count` parameter.
 See [Search](https://hl7.org/fhir/R4/search.html) in the FHIR specification for
 more details.
 
+Example response:
+
+```json
+{
+    "resourceType": "Bundle",
+    "type": "searchset",
+    "total": 2,
+    "link": [
+        {
+            "relation": "self",
+            "url": "http://localhost:8080/fhir/Patient?_query=fhirPath&filter=gender%3D'male'"
+        }
+    ],
+    "entry": [
+        {
+            "resource": {
+                "resourceType": "Patient",
+                "id": "patient-1",
+                "gender": "male",
+                "birthDate": "1970-01-01"
+            }
+        },
+        {
+            "resource": {
+                "resourceType": "Patient",
+                "id": "patient-2",
+                "gender": "male",
+                "birthDate": "1985-06-15"
+            }
+        }
+    ]
+}
+```
+
 ## Examples
 
 ### Simple filter
