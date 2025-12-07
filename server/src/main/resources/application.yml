@@ -37,7 +37,7 @@ pathling:
 
   storage:
     # The base URL at which Pathling will look for data files, and where it will save data received
-    # within import requests. Can be an Amazon S3 (s3://), HDFS (hdfs://) or filesystem (file://)
+    # within import requests. Can be an Amazon S3 (s3a://), HDFS (hdfs://) or filesystem (file://)
     # URL.
     warehouseUrl: file:///usr/share/warehouse
 

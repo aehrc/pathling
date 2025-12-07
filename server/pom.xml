@@ -18,7 +18,7 @@
     <maven.compiler.target>21</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <pathling.version>9.1.1-SNAPSHOT</pathling.version>
-    <pathling.hapiFhirVersion>8.4.0</pathling.hapiFhirVersion>
+    <pathling.hapiFhirVersion>8.6.0</pathling.hapiFhirVersion>
     <pathling.springBootVersion>3.3.5</pathling.springBootVersion>
     <pathling.sparkVersion>4.0.1</pathling.sparkVersion>
     <pathling.hadoopVersion>3.4.1</pathling.hadoopVersion>
@@ -36,6 +36,7 @@
     <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
     <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
     <pathling.dockerBaseImage>amazoncorretto:21</pathling.dockerBaseImage>
+    <pathling.awsSdkVersion>2.40.3</pathling.awsSdkVersion>
   </properties>
 
   <dependencies>
@@ -126,27 +127,11 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-aws</artifactId>
       <version>${pathling.hadoopVersion}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>software.amazon.awssdk</groupId>
-          <artifactId>bundle</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
-      <artifactId>s3</artifactId>
-      <version>2.24.6</version>
-    </dependency>
-    <dependency>
-      <groupId>software.amazon.awssdk</groupId>
-      <artifactId>sts</artifactId>
-      <version>2.24.6</version>
-    </dependency>
-    <dependency>
-      <groupId>software.amazon.awssdk</groupId>
-      <artifactId>sso</artifactId>
-      <version>2.24.6</version>
+      <artifactId>bundle</artifactId>
+      <version>${pathling.awsSdkVersion}</version>
     </dependency>
     <dependency>
       <groupId>io.delta</groupId>

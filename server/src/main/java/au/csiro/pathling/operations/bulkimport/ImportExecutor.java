@@ -87,6 +87,7 @@ public class ImportExecutor {
       @SuppressWarnings("unused") final String jobId) {
     log.info("Received $import request");
     final WriteDetails writeDetails = readAndWriteFilesFrom(importRequest);
+    log.info("Import completed successfully");
     return new ImportResponse(importRequest.originalRequest(), importRequest, writeDetails);
   }
 
