@@ -116,13 +116,13 @@ export class PathlingStack extends Stack {
       resolvedProps,
       bucket,
       cluster,
-      cacheFileSystem
+      cacheFileSystem,
     );
 
     // Allow access to EFS from the service.
     cacheFileSystem.connections.allowDefaultPortFrom(
       service.service.connections,
-      `Allow traffic from Pathling service: ${deploymentName}`
+      `Allow traffic from Pathling service: ${deploymentName}`,
     );
   }
 
@@ -130,13 +130,13 @@ export class PathlingStack extends Stack {
     props: PathlingStackPropsResolved,
     bucket: IBucket,
     cluster: Cluster,
-    cacheFileSystem: FileSystem
+    cacheFileSystem: FileSystem,
   ): ApplicationLoadBalancedFargateService {
     const { domainName, domainZoneId, domainZoneName } = props;
     const appTaskDefinition = this.taskDefinition(
       props,
       bucket,
-      cacheFileSystem
+      cacheFileSystem,
     );
 
     // Create a service to wrap the application task.
@@ -152,10 +152,10 @@ export class PathlingStack extends Stack {
         domainZone: HostedZone.fromHostedZoneAttributes(
           this,
           this.buildId("HostedZone"),
-          { hostedZoneId: domainZoneId, zoneName: domainZoneName }
+          { hostedZoneId: domainZoneId, zoneName: domainZoneName },
         ),
         enableExecuteCommand: true,
-      }
+      },
     );
 
     // Point the load balancer to the cache container.
@@ -194,7 +194,7 @@ export class PathlingStack extends Stack {
       additionalConfiguration,
     }: PathlingStackPropsResolved,
     bucket: IBucket,
-    cacheFileSystem: FileSystem
+    cacheFileSystem: FileSystem,
   ) {
     // Enables the application to access the S3 warehouse location.
     const warehouseAccessStatement = new PolicyStatement({
@@ -235,7 +235,7 @@ export class PathlingStack extends Stack {
       {
         cpu: parseInt(cpu),
         memoryLimitMiB: parseInt(memoryMiB),
-      }
+      },
     );
 
     // Create the cache container.
@@ -254,7 +254,7 @@ export class PathlingStack extends Stack {
           streamPrefix: "cache",
           logRetention: RetentionDays.ONE_MONTH,
         }),
-      }
+      },
     );
     // Add a volume pointing to the cache EFS file system.
     taskDefinition.addVolume({
@@ -291,8 +291,6 @@ export class PathlingStack extends Stack {
         "pathling.storage.warehouseUrl": `s3://${bucket.bucketName}/warehouse`,
         "pathling.cors.allowedOrigins": allowedOrigins,
         "logging.level.au.csiro.pathling": "debug",
-        "fs.s3a.aws.credentials.provider":
-          "com.amazonaws.auth.ContainerCredentialsProvider",
         ...(sentryDsn ? { "pathling.sentryDsn": sentryDsn } : {}),
         ...{ "pathling.sentryEnvironment": sentryEnvironment ?? domainName },
         ...additionalConfiguration,
