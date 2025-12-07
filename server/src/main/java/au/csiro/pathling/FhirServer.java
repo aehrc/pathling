@@ -19,6 +19,8 @@ import au.csiro.pathling.operations.bulkimport.ImportPnpProvider;
 import au.csiro.pathling.operations.bulkimport.ImportProvider;
 import au.csiro.pathling.operations.bulksubmit.BulkSubmitProvider;
 import au.csiro.pathling.operations.bulksubmit.BulkSubmitStatusProvider;
+import au.csiro.pathling.operations.update.BatchProvider;
+import au.csiro.pathling.operations.update.UpdateProviderFactory;
 import au.csiro.pathling.search.SearchProviderFactory;
 import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.rest.api.EncodingEnum;
@@ -130,6 +132,12 @@ public class FhirServer extends RestfulServer {
   @Nonnull
   private final transient SearchProviderFactory searchProviderFactory;
 
+  @Nonnull
+  private final transient UpdateProviderFactory updateProviderFactory;
+
+  @Nonnull
+  private final transient BatchProvider batchProvider;
+
   /**
    * Constructs a new FhirServer.
    *
@@ -149,6 +157,8 @@ public class FhirServer extends RestfulServer {
    * @param bulkExportDeleteInterceptor the bulk export delete interceptor
    * @param conformanceProvider the conformance provider
    * @param searchProviderFactory the search provider factory
+   * @param updateProviderFactory the update provider factory
+   * @param batchProvider the batch provider
    */
   public FhirServer(@Nonnull final ServerConfiguration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
@@ -165,7 +175,9 @@ public class FhirServer extends RestfulServer {
       @Nonnull final EntityTagInterceptor entityTagInterceptor,
       @Nonnull final BulkExportDeleteInterceptor bulkExportDeleteInterceptor,
       @Nonnull final ConformanceProvider conformanceProvider,
-      @Nonnull final SearchProviderFactory searchProviderFactory) {
+      @Nonnull final SearchProviderFactory searchProviderFactory,
+      @Nonnull final UpdateProviderFactory updateProviderFactory,
+      @Nonnull final BatchProvider batchProvider) {
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;
     this.jobProvider = jobProvider;
@@ -182,6 +194,8 @@ public class FhirServer extends RestfulServer {
     this.bulkExportDeleteInterceptor = bulkExportDeleteInterceptor;
     this.conformanceProvider = conformanceProvider;
     this.searchProviderFactory = searchProviderFactory;
+    this.updateProviderFactory = updateProviderFactory;
+    this.batchProvider = batchProvider;
   }
 
   @Override
@@ -216,6 +230,14 @@ public class FhirServer extends RestfulServer {
       for (final ResourceType resourceType : supportedResourceTypes()) {
         registerProvider(searchProviderFactory.createSearchProvider(resourceType));
       }
+
+      // Register update providers for all supported resource types.
+      for (final ResourceType resourceType : supportedResourceTypes()) {
+        registerProvider(updateProviderFactory.createUpdateProvider(resourceType));
+      }
+
+      // Register batch provider.
+      registerProvider(batchProvider);
 
       // Authorization-related configuration.
       configureAuthorization();

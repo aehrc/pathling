@@ -66,6 +66,8 @@ import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestSecurity
 import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementSoftwareComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.ResourceInteractionComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.RestfulCapabilityMode;
+import org.hl7.fhir.r4.model.CapabilityStatement.SystemInteractionComponent;
+import org.hl7.fhir.r4.model.CapabilityStatement.SystemRestfulInteraction;
 import org.hl7.fhir.r4.model.CapabilityStatement.TypeRestfulInteraction;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.CodeableConcept;
@@ -246,8 +248,21 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     server.setSecurity(buildSecurity());
     server.setResource(buildResources());
     server.setOperation(buildOperations());
+    server.setInteraction(buildSystemInteractions());
     rest.add(server);
     return rest;
+  }
+
+  @Nonnull
+  private List<SystemInteractionComponent> buildSystemInteractions() {
+    final List<SystemInteractionComponent> interactions = new ArrayList<>();
+
+    // Add batch interaction at system level.
+    final SystemInteractionComponent batchInteraction = new SystemInteractionComponent();
+    batchInteraction.setCode(SystemRestfulInteraction.BATCH);
+    interactions.add(batchInteraction);
+
+    return interactions;
   }
 
   @Nonnull
@@ -293,6 +308,11 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
       final ResourceInteractionComponent searchInteraction = new ResourceInteractionComponent();
       searchInteraction.setCode(TypeRestfulInteraction.SEARCHTYPE);
       resource.addInteraction(searchInteraction);
+
+      // Add update interaction to all resource types.
+      final ResourceInteractionComponent updateInteraction = new ResourceInteractionComponent();
+      updateInteraction.setCode(TypeRestfulInteraction.UPDATE);
+      resource.addInteraction(updateInteraction);
 
       // Add the fhirPath named query with filter parameter for FHIRPath-based search.
       final CapabilityStatementRestResourceSearchParamComponent filterParam =
