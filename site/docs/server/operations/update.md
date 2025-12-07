@@ -13,6 +13,10 @@ the server.
 The `batch` implementation only supports the use of the `update` operation,
 other operations are not supported within batches.
 
+There are a number of configuration values that affect the encoding of
+resources, see the [Encoding](../configuration#encoding) section of the
+configuration documentation for details.
+
 Each entry in the batch Bundle must include:
 
 - A `request.method` of `PUT`
