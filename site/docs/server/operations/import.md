@@ -22,8 +22,9 @@ The following source formats are supported:
 
 ## Supported URL schemes
 
-Currently Pathling supports retrieval of files from the following URL schemes:
+Pathling supports retrieval of files from the following URL schemes:
 
+- HTTP/HTTPS (`http://`, `https://`)
 - [Amazon S3](https://aws.amazon.com/s3/) (`s3a://`)
 - [HDFS](https://hadoop.apache.org/docs/r1.2.1/hdfs_design.html) (`hdfs://`)
 - Local filesystem (`file://`)
