@@ -26,6 +26,10 @@ const darkCodeTheme = themes.dracula;
 const config = {
   title: "Pathling",
   tagline: "Analytics on FHIR&reg;",
+  markdown: {
+    mermaid: true,
+  },
+  themes: ["@docusaurus/theme-mermaid"],
   url: "https://pathling.csiro.au",
   baseUrl: "/",
   onBrokenLinks: "warn",
