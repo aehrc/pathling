@@ -167,5 +167,5 @@ public class FhirServerTestConfiguration {
   public ExportResultRegistry exportResultRegistry() {
     return new ExportResultRegistry();
   }
- 
+
 } 

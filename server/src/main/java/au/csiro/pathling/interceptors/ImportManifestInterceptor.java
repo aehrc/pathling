@@ -73,7 +73,7 @@ public class ImportManifestInterceptor {
   public FilterRegistrationBean<Filter> importManifestFilter() {
     final FilterRegistrationBean<Filter> registrationBean = new FilterRegistrationBean<>();
     registrationBean.setFilter(new ImportManifestFilter());
-    registrationBean.addUrlPatterns("/fhir/*");
+    registrationBean.addUrlPatterns("/fhir/$import");
     registrationBean.setOrder(Ordered.HIGHEST_PRECEDENCE);
     return registrationBean;
   }

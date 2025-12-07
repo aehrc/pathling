@@ -297,6 +297,8 @@ public class FhirServer extends RestfulServer {
             .map(Enumerations.ResourceType::fromCode)
             .collect(Collectors.toCollection(HashSet::new));
     unsupportedResourceTypes.add(ResourceType.NULL);
+    unsupportedResourceTypes.add(ResourceType.DOMAINRESOURCE);
+    unsupportedResourceTypes.add(ResourceType.RESOURCE);
     return unsupportedResourceTypes;
   }
 
