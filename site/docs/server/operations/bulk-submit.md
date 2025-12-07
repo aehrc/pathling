@@ -1,5 +1,5 @@
 ---
-sidebar_position: 2
+sidebar_position: 4
 description: The bulk submit operation allows external systems to push FHIR data to the server using a staged submission workflow.
 ---
 
