@@ -42,6 +42,20 @@ header indicating the URL of the status endpoint.
 Poll the status endpoint to check progress. When the job is complete, the
 response will include a `Location` header pointing to the final result.
 
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant P as Pathling
+    C->>P: POST /$import (Prefer: respond-async)
+    P-->>C: 202 Accepted + Content-Location
+    loop Poll for status
+        C->>P: GET [status URL]
+        P-->>C: 202 Accepted (in progress)
+    end
+    C->>P: GET [status URL]
+    P-->>C: 200 OK + result
+```
+
 ```
 POST [FHIR endpoint]/$import
 ```
