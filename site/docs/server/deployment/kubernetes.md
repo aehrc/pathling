@@ -1,7 +1,17 @@
-# Pathling Helm chart
+---
+sidebar_position: 1
+sidebar_label: Kubernetes
+description: Instructions for deploying Pathling server on Kubernetes using Helm.
+---
 
-Installs Pathling Server into a [Kubernetes](https://kubernetes.io/) cluster.
-Includes the following features:
+# Kubernetes
+
+[Kubernetes](https://kubernetes.io/) is an open-source system for automating
+deployment, scaling, and management of containerized applications. Support for
+deploying Pathling on Kubernetes is provided via a [Helm](https://helm.sh/)
+chart.
+
+The Helm chart includes the following features:
 
 - Support
   for [startup, liveness and readiness probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
@@ -14,16 +24,16 @@ Includes the following features:
   the [Spark Kubernetes cluster manager](https://spark.apache.org/docs/latest/running-on-kubernetes.html),
   including a service account, role and role binding to allow it to manage
   executor pods
-- Customisation
-  of [resource requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
-- Configuration
-  of [volumes and volume mounts](https://kubernetes.io/docs/concepts/storage/volumes/)
+- Customisation of [resource requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
+- Configuration of [volumes and volume mounts](https://kubernetes.io/docs/concepts/storage/volumes/)
 - [Image pull secrets](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
   for private Docker registries
 - [Tolerations and affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/)
   for control over pod scheduling
 - [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) config
   for sensitive values
+- [Security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
+  for pod security settings
 
 ## Installation
 
@@ -36,7 +46,7 @@ helm repo add pathling https://pathling.csiro.au/helm
 # Get the latest information about charts from the repository.
 helm repo update
 
-# Install the Pathling server chart as a release named `pathling`, with the 
+# Install the Pathling server chart as a release named `pathling`, with the
 # default values.
 helm install pathling pathling/pathling
 ```
@@ -47,7 +57,7 @@ This is the list of the configuration values that the chart supports, along with
 their default values.
 
 | Key                                   | Default                 | Description                                                                                                                                                                 |
-|---------------------------------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `pathling.image`                      | `ghcr.io/aehrc/pathling:latest` | The Pathling Docker image to use                                                                                                                                            |
 | `pathling.resources.requests.cpu`     | `2`                     | The CPU request for the Pathling pod                                                                                                                                        |
 | `pathling.resources.requests.memory`  | `4G`                    | The memory request for the Pathling pod                                                                                                                                     |
@@ -58,12 +68,12 @@ their default values.
 | `pathling.deployment.imagePullPolicy` | `Always`                | The [image pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) to use                                                                      |
 | `pathling.volumes`                    | `[ ]`                   | A list of [volumes](https://kubernetes.io/docs/concepts/storage/volumes/) to mount in the pod                                                                               |
 | `pathling.volumeMounts`               | `[ ]`                   | A list of [volume mounts](https://kubernetes.io/docs/concepts/storage/volumes/#using-volumes) to mount                                                                      |
-| `pathling.serviceAccount`             | `~`                     | The [service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) to assign to the pod                                             
+| `pathling.serviceAccount`             | `~`                     | The [service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) to assign to the pod                                            |
 | `pathling.imagePullSecrets`           | `[ ]`                   | A list of [image pull secrets](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) to use                                                |
 | `pathling.tolerations`                | `[ ]`                   | A list of [tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) to apply to the pod                                                  |
 | `pathling.affinity`                   | `~`                     | [Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) to apply to the pod                                         |
 | `pathling.securityContext`            | `~`                     | [Security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for the pod                                                                  |
-| `pathling.config`                     | `{ }`                   | A map of [configuration values](/server/configuration) to pass to Pathling                                                                                                  |
+| `pathling.config`                     | `{ }`                   | A map of [configuration values](/docs/server/configuration) to pass to Pathling                                                                                             |
 | `pathling.secretConfig`               | `{ }`                   | A map of secret configuration values to pass to Pathling, these values will be stored using [Kubernetes secrets](https://kubernetes.io/docs/concepts/configuration/secret/) |
 
 ## Example configuration
@@ -76,30 +86,30 @@ different deployment scenarios.
 This configuration is suitable for a single node deployment of Pathling. In this
 scenario, all processing is performed on a single pod.
 
-```yml
+```yaml
 pathling:
-    image: ghcr.io/aehrc/pathling:8
-    resources:
-        requests:
-            cpu: 2
-            memory: 4G
-        limits:
-            memory: 4G
-        maxHeapSize: 3g
-    volumes:
-        -   name: warehouse
-            hostPath:
-                path: /home/user/data/pathling
-    volumeMounts:
-        -   name: warehouse
-            mountPath: /usr/share/warehouse
-            readOnly: false
-    config:
-        pathling.implementationDescription: My Pathling Server
-        pathling.terminology.cache.maxEntries: 500000
-        pathling.terminology.cache.overrideExpiry: "2592000"
-        pathling.encoding.openTypes: string,code,decimal,Coding,Address
-        logging.level.au.csiro.pathling: debug
+  image: ghcr.io/aehrc/pathling:8
+  resources:
+    requests:
+      cpu: 2
+      memory: 4G
+    limits:
+      memory: 4G
+    maxHeapSize: 3g
+  volumes:
+    - name: warehouse
+      hostPath:
+        path: /home/user/data/pathling
+  volumeMounts:
+    - name: warehouse
+      mountPath: /usr/share/warehouse
+      readOnly: false
+  config:
+    pathling.implementationDescription: My Pathling Server
+    pathling.terminology.cache.maxEntries: 500000
+    pathling.terminology.cache.overrideExpiry: "2592000"
+    pathling.encoding.openTypes: string,code,decimal,Coding,Address
+    logging.level.au.csiro.pathling: debug
 ```
 
 ### Cluster
@@ -114,46 +124,41 @@ This configuration is suitable for the processing of larger datasets, or
 scenarios where it may be desirable to run a small driver pod and spawn executor
 pods on demand (at the cost of some latency).
 
-```yml
+```yaml
 pathling:
-    image: ghcr.io/aehrc/pathling:8
-    resources:
-        requests:
-            cpu: 1
-            memory: 2G
-        limits:
-            memory: 2G
-        maxHeapSize: 1500m
-    volumes:
-        -   name: warehouse
-            hostPath:
-                path: /home/user/data/pathling
-    volumeMounts:
-        -   name: warehouse
-            mountPath: /usr/share/warehouse
-            readOnly: false
-    serviceAccount: spark-service-account
-    config:
-        pathling.implementationDescription: My Pathling Server
-        pathling.terminology.cache.maxEntries: 500000
-        pathling.terminology.cache.overrideExpiry: "2592000"
-        pathling.encoding.openTypes: string,code,decimal,Coding,Address
-        logging.level.au.csiro.pathling: debug
-        spark.master: k8s://https://kubernetes.default.svc
-        spark.kubernetes.namespace: pathling
-        spark.kubernetes.executor.container.image: ghcr.io/aehrc/pathling:8
-        spark.kubernetes.executor.volumes.hostPath.warehouse.options.path: /home/user/data/pathling
-        spark.kubernetes.executor.volumes.hostPath.warehouse.mount.path: /usr/share/warehouse
-        spark.kubernetes.executor.volumes.hostPath.warehouse.mount.readOnly: false
-        spark.executor.instances: 3
-        spark.executor.memory: 3G
-        spark.kubernetes.executor.request.cores: 2
-        spark.kubernetes.executor.limit.cores: 2
-        spark.kubernetes.executor.request.memory: 4G
-        spark.kubernetes.executor.limit.memory: 4G
+  image: ghcr.io/aehrc/pathling:8
+  resources:
+    requests:
+      cpu: 1
+      memory: 2G
+    limits:
+      memory: 2G
+    maxHeapSize: 1500m
+  volumes:
+    - name: warehouse
+      hostPath:
+        path: /home/user/data/pathling
+  volumeMounts:
+    - name: warehouse
+      mountPath: /usr/share/warehouse
+      readOnly: false
+  serviceAccount: spark-service-account
+  config:
+    pathling.implementationDescription: My Pathling Server
+    pathling.terminology.cache.maxEntries: 500000
+    pathling.terminology.cache.overrideExpiry: "2592000"
+    pathling.encoding.openTypes: string,code,decimal,Coding,Address
+    logging.level.au.csiro.pathling: debug
+    spark.master: k8s://https://kubernetes.default.svc
+    spark.kubernetes.namespace: pathling
+    spark.kubernetes.executor.container.image: ghcr.io/aehrc/pathling:8
+    spark.kubernetes.executor.volumes.hostPath.warehouse.options.path: /home/user/data/pathling
+    spark.kubernetes.executor.volumes.hostPath.warehouse.mount.path: /usr/share/warehouse
+    spark.kubernetes.executor.volumes.hostPath.warehouse.mount.readOnly: false
+    spark.executor.instances: 3
+    spark.executor.memory: 3G
+    spark.kubernetes.executor.request.cores: 2
+    spark.kubernetes.executor.limit.cores: 2
+    spark.kubernetes.executor.request.memory: 4G
+    spark.kubernetes.executor.limit.memory: 4G
 ```
-
-Pathling is copyright © 2018-2025, Commonwealth Scientific and Industrial
-Research Organisation
-(CSIRO) ABN 41 687 119 230. Licensed under
-the [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0).

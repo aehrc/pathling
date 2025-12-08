@@ -1,5 +1,5 @@
 pathling:
-  image: aehrc/pathling:latest
+  image: ghcr.io/aehrc/pathling:latest
   resources:
     requests:
       cpu: 2
