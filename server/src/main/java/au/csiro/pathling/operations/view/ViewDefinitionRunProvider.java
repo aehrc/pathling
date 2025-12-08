@@ -68,13 +68,14 @@ import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import scala.collection.JavaConverters;
+import scala.jdk.javaapi.CollectionConverters;
 
 /**
  * Provider for the $viewdefinition-run operation from the SQL on FHIR specification.
  *
  * @author John Grimes
- * @see <a href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/OperationDefinition-ViewDefinitionRun.html">ViewDefinitionRun</a>
+ * @see <a
+ * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/OperationDefinition-ViewDefinitionRun.html">ViewDefinitionRun</a>
  */
 @Slf4j
 @Component
@@ -152,6 +153,8 @@ public class ViewDefinitionRunProvider {
    * @param inlineResources FHIR resources to use instead of the main data source
    * @param response the HTTP response for streaming output
    */
+  // Suppress parameter count warning - HAPI FHIR operation parameters are defined by the spec.
+  @SuppressWarnings("java:S107")
   @Operation(name = "$viewdefinition-run", idempotent = true, manualResponse = true)
   @OperationAccess("view-run")
   public void run(
@@ -215,7 +218,7 @@ public class ViewDefinitionRunProvider {
       if (outputFormat == ViewOutputFormat.NDJSON) {
         streamNdjson(outputStream, iterator, schema);
       } else {
-        streamCSV(outputStream, iterator, schema, shouldIncludeHeader);
+        streamCSV(outputStream, iterator, schema);
       }
 
       outputStream.flush();
@@ -379,17 +382,15 @@ public class ViewDefinitionRunProvider {
   }
 
   /**
-   * Streams results as CSV.
+   * Streams results as CSV. The header is written separately for TTFB optimisation.
    *
    * @param outputStream the output stream to write to
    * @param iterator the row iterator
    * @param schema the result schema
-   * @param headerAlreadyWritten true if header was already written (for early TTFB optimisation)
    */
   private void streamCSV(@Nonnull final OutputStream outputStream,
       @Nonnull final Iterator<Row> iterator,
-      @Nonnull final StructType schema,
-      final boolean headerAlreadyWritten) throws IOException {
+      @Nonnull final StructType schema) throws IOException {
     final OutputStreamWriter writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
     // Header was already written for TTFB optimisation, so always use DEFAULT (no header).
     final CSVPrinter printer = new CSVPrinter(writer, CSVFormat.DEFAULT);
@@ -399,19 +400,6 @@ public class ViewDefinitionRunProvider {
       printer.printRecord(rowToList(row, schema));
       printer.flush();
     }
-  }
-
-  /**
-   * Gets column names from schema.
-   */
-  @Nonnull
-  private String[] getColumnNames(@Nonnull final StructType schema) {
-    final StructField[] fields = schema.fields();
-    final String[] names = new String[fields.length];
-    for (int i = 0; i < fields.length; i++) {
-      names[i] = fields[i].name();
-    }
-    return names;
   }
 
   /**
@@ -440,24 +428,22 @@ public class ViewDefinitionRunProvider {
     if (value == null) {
       return null;
     }
-    if (value instanceof Row nestedRow) {
-      // Handle nested struct.
-      if (dataType instanceof StructType structType) {
-        final Map<String, Object> nested = new LinkedHashMap<>();
-        final StructField[] fields = structType.fields();
-        for (int i = 0; i < fields.length; i++) {
-          final Object nestedValue = nestedRow.get(i);
-          if (nestedValue != null) {
-            nested.put(fields[i].name(), convertValue(nestedValue, fields[i].dataType()));
-          }
+    // Handle nested struct.
+    if (value instanceof final Row nestedRow && dataType instanceof final StructType structType) {
+      final Map<String, Object> nested = new LinkedHashMap<>();
+      final StructField[] fields = structType.fields();
+      for (int i = 0; i < fields.length; i++) {
+        final Object nestedValue = nestedRow.get(i);
+        if (nestedValue != null) {
+          nested.put(fields[i].name(), convertValue(nestedValue, fields[i].dataType()));
         }
-        return nested;
       }
+      return nested;
     }
-    if (value instanceof scala.collection.Seq<?> seq) {
-      // Handle array.
-      final List<?> list = JavaConverters.seqAsJavaList(seq);
-      if (dataType instanceof ArrayType arrayType) {
+    // Handle array.
+    if (value instanceof final scala.collection.Seq<?> seq) {
+      final List<?> list = CollectionConverters.asJava(seq);
+      if (dataType instanceof final ArrayType arrayType) {
         return list.stream()
             .map(item -> convertValue(item, arrayType.elementType()))
             .toList();

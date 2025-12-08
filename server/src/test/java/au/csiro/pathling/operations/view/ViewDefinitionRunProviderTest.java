@@ -354,8 +354,8 @@ class ViewDefinitionRunProviderTest {
 
     final String content = response.getContentAsString().trim();
     // Parse the JSON line to verify structure.
-    @SuppressWarnings("unchecked")
-    final Map<String, Object> row = gson.fromJson(content, Map.class);
+    @SuppressWarnings("unchecked") final Map<String, Object> row = gson.fromJson(content,
+        Map.class);
     assertThat(row).containsKey("id");
     assertThat(row).containsKey("family_name");
     assertThat(row.get("id")).isEqualTo("row-test-id");
@@ -376,8 +376,8 @@ class ViewDefinitionRunProviderTest {
 
     final String content = response.getContentAsString().trim();
     // Should still produce valid JSON.
-    @SuppressWarnings("unchecked")
-    final Map<String, Object> row = gson.fromJson(content, Map.class);
+    @SuppressWarnings("unchecked") final Map<String, Object> row = gson.fromJson(content,
+        Map.class);
     assertThat(row).containsKey("id");
     // Null values should not be present in JSON output.
     assertThat(row.get("family_name")).isNull();
@@ -463,7 +463,8 @@ class ViewDefinitionRunProviderTest {
     view.put("select", List.of(
         Map.of("column", List.of(Map.of("name", "id", "path", "id"))),
         Map.of("column", List.of(Map.of("name", "family_name", "path", "name.first().family"))),
-        Map.of("column", List.of(Map.of("name", "given_name", "path", "name.first().given.first()"))),
+        Map.of("column",
+            List.of(Map.of("name", "given_name", "path", "name.first().given.first()"))),
         Map.of("column", List.of(Map.of("name", "gender", "path", "gender")))
     ));
     return gson.toJson(view);
