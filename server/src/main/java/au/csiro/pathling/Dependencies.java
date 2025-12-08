@@ -20,12 +20,13 @@ package au.csiro.pathling;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.operations.view.ViewDefinitionResource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.sql.classic.SparkSession;
+import org.apache.spark.sql.SparkSession;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
@@ -64,7 +65,10 @@ public class Dependencies {
   @Nonnull
   static FhirContext fhirContext(@Nonnull final PathlingContext pathlingContext) {
     log.debug("Creating R4 FHIR context");
-    return pathlingContext.getFhirContext();
+    final FhirContext fhirContext = pathlingContext.getFhirContext();
+    // Register the ViewDefinition custom resource type for SQL on FHIR support.
+    fhirContext.registerCustomType(ViewDefinitionResource.class);
+    return fhirContext;
   }
 
   @Bean

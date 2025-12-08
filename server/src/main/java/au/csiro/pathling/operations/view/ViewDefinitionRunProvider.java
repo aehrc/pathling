@@ -40,6 +40,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import jakarta.validation.ConstraintViolationException;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -143,7 +144,7 @@ public class ViewDefinitionRunProvider {
    * Executes a ViewDefinition and returns the results in NDJSON or CSV format with chunked
    * streaming.
    *
-   * @param viewResource the ViewDefinition resource as a JSON string
+   * @param viewResource the ViewDefinition resource
    * @param format the output format (ndjson or csv)
    * @param includeHeader whether to include a header row in CSV output
    * @param limit the maximum number of rows to return
@@ -158,7 +159,7 @@ public class ViewDefinitionRunProvider {
   @Operation(name = "$viewdefinition-run", idempotent = true, manualResponse = true)
   @OperationAccess("view-run")
   public void run(
-      @Nonnull @OperationParam(name = "viewResource") final String viewResource,
+      @Nonnull @OperationParam(name = "viewResource") final IBaseResource viewResource,
       @Nullable @OperationParam(name = "_format") final String format,
       @Nullable @OperationParam(name = "header") final BooleanType includeHeader,
       @Nullable @OperationParam(name = "_limit") final IntegerType limit,
@@ -204,7 +205,12 @@ public class ViewDefinitionRunProvider {
       // Execute the view query.
       final FhirViewExecutor executor = new FhirViewExecutor(
           fhirContext, sparkSession, dataSource, serverConfiguration.getQuery());
-      Dataset<Row> result = executor.buildQuery(view);
+      Dataset<Row> result;
+      try {
+        result = executor.buildQuery(view);
+      } catch (final ConstraintViolationException e) {
+        throw new InvalidRequestException("Invalid ViewDefinition: " + e.getMessage());
+      }
 
       // Apply limit if specified.
       if (limit != null && limit.getValue() != null) {
@@ -229,12 +235,20 @@ public class ViewDefinitionRunProvider {
   }
 
   /**
-   * Parses the ViewDefinition JSON string into a FhirView object.
+   * Parses the ViewDefinition resource into a FhirView object.
+   * <p>
+   * This method serialises the HAPI resource back to JSON, then parses it with Gson into the
+   * FhirView class. This approach avoids duplicating the FhirView class hierarchy as HAPI resource
+   * components.
+   * </p>
    */
   @Nonnull
-  private FhirView parseViewDefinition(@Nonnull final String viewResource) {
+  private FhirView parseViewDefinition(@Nonnull final IBaseResource viewResource) {
     try {
-      return gson.fromJson(viewResource, FhirView.class);
+      // Serialise the HAPI resource back to JSON.
+      final String viewJson = fhirContext.newJsonParser().encodeResourceToString(viewResource);
+      // Parse the JSON into the FhirView class.
+      return gson.fromJson(viewJson, FhirView.class);
     } catch (final JsonSyntaxException e) {
       throw new InvalidRequestException("Invalid ViewDefinition: " + e.getMessage());
     }

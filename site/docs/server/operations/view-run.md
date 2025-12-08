@@ -19,21 +19,21 @@ POST [base]/$viewdefinition-run
 
 ## Parameters
 
-| Name           | Cardinality | Type    | Description                                                                                               |
-|----------------|-------------|---------|-----------------------------------------------------------------------------------------------------------|
-| `viewResource` | 1..1        | string  | The ViewDefinition resource as a JSON string.                                                             |
-| `_format`      | 0..1        | string  | Output format. Accepts `application/x-ndjson` (default) or `text/csv`.                                    |
-| `header`       | 0..1        | boolean | Include header row in CSV output. Defaults to `true`.                                                     |
-| `_limit`       | 0..1        | integer | Maximum number of rows to return.                                                                         |
-| `patient`      | 0..*        | id      | Filter to resources for the specified patient(s).                                                         |
-| `group`        | 0..*        | id      | Filter to resources for patients in the specified Group(s).                                               |
-| `_since`       | 0..1        | instant | Only include resources where `meta.lastUpdated` is at or after this time.                                 |
-| `resource`     | 0..*        | string  | Inline FHIR resources as JSON strings. When provided, these are used instead of the server's stored data. |
+| Name           | Cardinality | Type     | Description                                                                                               |
+|----------------|-------------|----------|-----------------------------------------------------------------------------------------------------------|
+| `viewResource` | 1..1        | Resource | The ViewDefinition resource.                                                                              |
+| `_format`      | 0..1        | string   | Output format. Accepts `application/x-ndjson` (default) or `text/csv`.                                    |
+| `header`       | 0..1        | boolean  | Include header row in CSV output. Defaults to `true`.                                                     |
+| `_limit`       | 0..1        | integer  | Maximum number of rows to return.                                                                         |
+| `patient`      | 0..*        | id       | Filter to resources for the specified patient(s).                                                         |
+| `group`        | 0..*        | id       | Filter to resources for patients in the specified Group(s).                                               |
+| `_since`       | 0..1        | instant  | Only include resources where `meta.lastUpdated` is at or after this time.                                 |
+| `resource`     | 0..*        | string   | Inline FHIR resources as JSON strings. When provided, these are used instead of the server's stored data. |
 
 ## Request format
 
 The operation accepts a FHIR Parameters resource with the ViewDefinition passed
-as a JSON string:
+as a nested resource:
 
 ```http
 POST [base]/$viewdefinition-run HTTP/1.1
@@ -45,7 +45,38 @@ Accept: application/x-ndjson
     "parameter": [
         {
             "name": "viewResource",
-            "valueString": "{\"resourceType\":\"ViewDefinition\",\"name\":\"patient_demographics\",\"resource\":\"Patient\",\"status\":\"active\",\"select\":[{\"column\":[{\"name\":\"id\",\"path\":\"id\"}]},{\"column\":[{\"name\":\"family\",\"path\":\"name.first().family\"}]},{\"column\":[{\"name\":\"given\",\"path\":\"name.first().given.first()\"}]}]}"
+            "resource": {
+                "resourceType": "ViewDefinition",
+                "name": "patient_demographics",
+                "resource": "Patient",
+                "status": "active",
+                "select": [
+                    {
+                        "column": [
+                            {
+                                "name": "id",
+                                "path": "id"
+                            }
+                        ]
+                    },
+                    {
+                        "column": [
+                            {
+                                "name": "family",
+                                "path": "name.first().family"
+                            }
+                        ]
+                    },
+                    {
+                        "column": [
+                            {
+                                "name": "given",
+                                "path": "name.first().given.first()"
+                            }
+                        ]
+                    }
+                ]
+            }
         }
     ]
 }
@@ -150,7 +181,10 @@ testing ViewDefinitions or processing resources without importing them.
     "parameter": [
         {
             "name": "viewResource",
-            "valueString": "{...ViewDefinition JSON...}"
+            "resource": {
+                "resourceType": "ViewDefinition",
+                "...": "..."
+            }
         },
         {
             "name": "resource",
@@ -177,7 +211,10 @@ specific patients:
     "parameter": [
         {
             "name": "viewResource",
-            "valueString": "..."
+            "resource": {
+                "resourceType": "ViewDefinition",
+                "...": "..."
+            }
         },
         {
             "name": "patient",
@@ -202,7 +239,10 @@ members of the specified Group:
     "parameter": [
         {
             "name": "viewResource",
-            "valueString": "..."
+            "resource": {
+                "resourceType": "ViewDefinition",
+                "...": "..."
+            }
         },
         {
             "name": "group",
@@ -222,7 +262,10 @@ Use `_since` to only include resources updated after a specific time:
     "parameter": [
         {
             "name": "viewResource",
-            "valueString": "..."
+            "resource": {
+                "resourceType": "ViewDefinition",
+                "...": "..."
+            }
         },
         {
             "name": "_since",
@@ -284,7 +327,7 @@ def run_view(view_definition, output_format="ndjson", limit=None):
     parameters = {
         "resourceType": "Parameters",
         "parameter": [
-            {"name": "viewResource", "valueString": json.dumps(view_definition)}
+            {"name": "viewResource", "resource": view_definition}
         ],
     }
 
@@ -323,8 +366,7 @@ def run_view_with_inline_resources(view_definition, resources):
     parameters = {
         "resourceType": "Parameters",
         "parameter": [
-            {"name": "viewResource",
-             "valueString": json.dumps(view_definition)},
+            {"name": "viewResource", "resource": view_definition},
             {"name": "_format", "valueString": "application/x-ndjson"},
         ],
     }

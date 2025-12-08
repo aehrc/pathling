@@ -1,4 +1,6 @@
 {
   "label": "Deployment",
-  "position": 10
+  "position": 10,
+  "collapsed": false,
+  "collapsible": false
 }

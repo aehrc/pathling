@@ -26,13 +26,13 @@ import jakarta.annotation.Nonnull;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import org.springframework.http.MediaType;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Patient;
-import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -84,6 +84,8 @@ class ViewDefinitionRunProviderIT {
         .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
         .build();
     gson = new GsonBuilder().create();
+    // Register ViewDefinitionResource with the FhirContext so it can be serialised/parsed.
+    fhirContext.registerCustomType(ViewDefinitionResource.class);
   }
 
   @Test
@@ -94,14 +96,14 @@ class ViewDefinitionRunProviderIT {
     patient.addName().setFamily("NdjsonTestFamily");
     final String patientJson = fhirContext.newJsonParser().encodeResourceToString(patient);
 
-    final Parameters parameters = createParametersWithInlineResources(viewJson,
+    final String parametersJson = createParametersWithInlineResourcesJson(viewJson,
         "application/x-ndjson", List.of(patientJson));
 
     final EntityExchangeResult<byte[]> result = webTestClient.post()
         .uri("http://localhost:" + port + "/fhir/$viewdefinition-run")
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/x-ndjson")
-        .bodyValue(fhirContext.newJsonParser().encodeResourceToString(parameters))
+        .bodyValue(parametersJson)
         .exchange()
         .expectStatus().isOk()
         .expectHeader().contentTypeCompatibleWith(MediaType.parseMediaType("application/x-ndjson"))
@@ -130,16 +132,14 @@ class ViewDefinitionRunProviderIT {
     patient.addName().setFamily("CsvTestFamily");
     final String patientJson = fhirContext.newJsonParser().encodeResourceToString(patient);
 
-    final Parameters parameters = createParametersWithInlineResources(viewJson,
-        "text/csv", List.of(patientJson));
-    parameters.addParameter().setName("header")
-        .setValue(new org.hl7.fhir.r4.model.BooleanType(true));
+    final String parametersJson = createParametersWithInlineResourcesJson(viewJson,
+        "text/csv", List.of(patientJson), true);
 
     final EntityExchangeResult<byte[]> result = webTestClient.post()
         .uri("http://localhost:" + port + "/fhir/$viewdefinition-run")
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "text/csv")
-        .bodyValue(fhirContext.newJsonParser().encodeResourceToString(parameters))
+        .bodyValue(parametersJson)
         .exchange()
         .expectStatus().isOk()
         .expectHeader().contentTypeCompatibleWith(MediaType.parseMediaType("text/csv"))
@@ -173,14 +173,14 @@ class ViewDefinitionRunProviderIT {
     final String patient1Json = fhirContext.newJsonParser().encodeResourceToString(patient1);
     final String patient2Json = fhirContext.newJsonParser().encodeResourceToString(patient2);
 
-    final Parameters parameters = createParametersWithInlineResources(viewJson,
+    final String parametersJson = createParametersWithInlineResourcesJson(viewJson,
         "application/x-ndjson", List.of(patient1Json, patient2Json));
 
     final EntityExchangeResult<byte[]> result = webTestClient.post()
         .uri("http://localhost:" + port + "/fhir/$viewdefinition-run")
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/x-ndjson")
-        .bodyValue(fhirContext.newJsonParser().encodeResourceToString(parameters))
+        .bodyValue(parametersJson)
         .exchange()
         .expectStatus().isOk()
         .expectHeader().contentTypeCompatibleWith(MediaType.parseMediaType("application/x-ndjson"))
@@ -201,14 +201,29 @@ class ViewDefinitionRunProviderIT {
 
   @Test
   void invalidViewDefinitionReturns4xxError() {
-    final Parameters parameters = new Parameters();
-    parameters.addParameter().setName("viewResource").setValue(new StringType("{ invalid }"));
+    // ViewDefinition missing required 'resource' field.
+    final Map<String, Object> invalidView = new HashMap<>();
+    invalidView.put("resourceType", "ViewDefinition");
+    invalidView.put("name", "invalid_view");
+    invalidView.put("status", "active");
+    // Missing 'resource' and 'select' fields.
+    final String viewJson = gson.toJson(invalidView);
+
+    // Build invalid Parameters JSON directly using Gson.
+    final Map<String, Object> parameters = new LinkedHashMap<>();
+    parameters.put("resourceType", "Parameters");
+    final List<Map<String, Object>> parameterList = new ArrayList<>();
+    final Map<String, Object> viewParam = new LinkedHashMap<>();
+    viewParam.put("name", "viewResource");
+    viewParam.put("resource", gson.fromJson(viewJson, Map.class));
+    parameterList.add(viewParam);
+    parameters.put("parameter", parameterList);
 
     webTestClient.post()
         .uri("http://localhost:" + port + "/fhir/$viewdefinition-run")
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/x-ndjson")
-        .bodyValue(fhirContext.newJsonParser().encodeResourceToString(parameters))
+        .bodyValue(gson.toJson(parameters))
         .exchange()
         .expectStatus().is4xxClientError();
   }
@@ -232,28 +247,47 @@ class ViewDefinitionRunProviderIT {
   }
 
   @Nonnull
-  private Parameters createParameters(@Nonnull final String viewJson,
-      @Nonnull final String format, final Boolean includeHeader) {
-    final Parameters parameters = new Parameters();
-    parameters.addParameter().setName("viewResource").setValue(new StringType(viewJson));
-    parameters.addParameter().setName("_format").setValue(new StringType(format));
-    if (includeHeader != null) {
-      parameters.addParameter().setName("header")
-          .setValue(new org.hl7.fhir.r4.model.BooleanType(includeHeader));
-    }
-    return parameters;
+  private String createParametersWithInlineResourcesJson(@Nonnull final String viewJson,
+      @Nonnull final String format, @Nonnull final List<String> inlineResources) {
+    return createParametersWithInlineResourcesJson(viewJson, format, inlineResources, null);
   }
 
   @Nonnull
-  private Parameters createParametersWithInlineResources(@Nonnull final String viewJson,
-      @Nonnull final String format, @Nonnull final List<String> inlineResources) {
-    final Parameters parameters = new Parameters();
-    parameters.addParameter().setName("viewResource").setValue(new StringType(viewJson));
-    parameters.addParameter().setName("_format").setValue(new StringType(format));
-    for (final String resource : inlineResources) {
-      parameters.addParameter().setName("resource").setValue(new StringType(resource));
+  private String createParametersWithInlineResourcesJson(@Nonnull final String viewJson,
+      @Nonnull final String format, @Nonnull final List<String> inlineResources,
+      final Boolean includeHeader) {
+    // Build the Parameters resource JSON directly using Gson to avoid HAPI serialisation issues
+    // with custom resource types.
+    final Map<String, Object> parameters = new LinkedHashMap<>();
+    parameters.put("resourceType", "Parameters");
+    final List<Map<String, Object>> parameterList = new ArrayList<>();
+
+    final Map<String, Object> viewParam = new LinkedHashMap<>();
+    viewParam.put("name", "viewResource");
+    viewParam.put("resource", gson.fromJson(viewJson, Map.class));
+    parameterList.add(viewParam);
+
+    final Map<String, Object> formatParam = new LinkedHashMap<>();
+    formatParam.put("name", "_format");
+    formatParam.put("valueString", format);
+    parameterList.add(formatParam);
+
+    if (includeHeader != null) {
+      final Map<String, Object> headerParam = new LinkedHashMap<>();
+      headerParam.put("name", "header");
+      headerParam.put("valueBoolean", includeHeader);
+      parameterList.add(headerParam);
     }
-    return parameters;
+
+    for (final String resource : inlineResources) {
+      final Map<String, Object> resourceParam = new LinkedHashMap<>();
+      resourceParam.put("name", "resource");
+      resourceParam.put("valueString", resource);
+      parameterList.add(resourceParam);
+    }
+
+    parameters.put("parameter", parameterList);
+    return gson.toJson(parameters);
   }
 
 }

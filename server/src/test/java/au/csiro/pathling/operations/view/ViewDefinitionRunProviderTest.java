@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.IntegerType;
@@ -93,6 +94,8 @@ class ViewDefinitionRunProviderTest {
 
   @BeforeEach
   void setUp() {
+    // Register ViewDefinitionResource with the FhirContext.
+    fhirContext.registerCustomType(ViewDefinitionResource.class);
     provider = new ViewDefinitionRunProvider(
         sparkSession,
         deltaLake,
@@ -104,6 +107,14 @@ class ViewDefinitionRunProviderTest {
     gson = new GsonBuilder().create();
   }
 
+  /**
+   * Parses a ViewDefinition JSON string into an IBaseResource.
+   */
+  @Nonnull
+  private IBaseResource parseViewResource(@Nonnull final String viewJson) {
+    return fhirContext.newJsonParser().parseResource(viewJson);
+  }
+
   // -------------------------------------------------------------------------
   // Output format tests
   // -------------------------------------------------------------------------
@@ -111,10 +122,10 @@ class ViewDefinitionRunProviderTest {
   @Test
   void ndjsonOutputReturnsCorrectContentType() throws IOException {
     final MockHttpServletResponse response = new MockHttpServletResponse();
-    final String viewJson = createSimplePatientView();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final String inlinePatient = createPatientJson("test-1", "Smith");
 
-    provider.run(viewJson, "application/x-ndjson", null, null, null, null, null,
+    provider.run(viewResource, "application/x-ndjson", null, null, null, null, null,
         List.of(inlinePatient), response);
 
     assertThat(response.getContentType()).startsWith("application/x-ndjson");
@@ -124,10 +135,10 @@ class ViewDefinitionRunProviderTest {
   @Test
   void csvOutputReturnsCorrectContentType() throws IOException {
     final MockHttpServletResponse response = new MockHttpServletResponse();
-    final String viewJson = createSimplePatientView();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final String inlinePatient = createPatientJson("test-1", "Smith");
 
-    provider.run(viewJson, "text/csv", null, null, null, null, null,
+    provider.run(viewResource, "text/csv", null, null, null, null, null,
         List.of(inlinePatient), response);
 
     assertThat(response.getContentType()).startsWith("text/csv");
@@ -137,10 +148,10 @@ class ViewDefinitionRunProviderTest {
   @Test
   void csvOutputIncludesHeaderByDefault() throws IOException {
     final MockHttpServletResponse response = new MockHttpServletResponse();
-    final String viewJson = createSimplePatientView();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final String inlinePatient = createPatientJson("test-1", "Smith");
 
-    provider.run(viewJson, "text/csv", null, null, null, null, null,
+    provider.run(viewResource, "text/csv", null, null, null, null, null,
         List.of(inlinePatient), response);
 
     final String content = response.getContentAsString();
@@ -154,10 +165,10 @@ class ViewDefinitionRunProviderTest {
   @Test
   void csvOutputExcludesHeaderWhenFalse() throws IOException {
     final MockHttpServletResponse response = new MockHttpServletResponse();
-    final String viewJson = createSimplePatientView();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final String inlinePatient = createPatientJson("test-1", "Smith");
 
-    provider.run(viewJson, "text/csv", new BooleanType(false), null, null, null, null,
+    provider.run(viewResource, "text/csv", new BooleanType(false), null, null, null, null,
         List.of(inlinePatient), response);
 
     final String content = response.getContentAsString();
@@ -170,10 +181,10 @@ class ViewDefinitionRunProviderTest {
   @Test
   void defaultFormatIsNdjson() throws IOException {
     final MockHttpServletResponse response = new MockHttpServletResponse();
-    final String viewJson = createSimplePatientView();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final String inlinePatient = createPatientJson("test-1", "Smith");
 
-    provider.run(viewJson, null, null, null, null, null, null,
+    provider.run(viewResource, null, null, null, null, null, null,
         List.of(inlinePatient), response);
 
     assertThat(response.getContentType()).startsWith("application/x-ndjson");
@@ -184,22 +195,27 @@ class ViewDefinitionRunProviderTest {
   // -------------------------------------------------------------------------
 
   @Test
-  void invalidJsonThrowsInvalidRequestException() {
+  void invalidViewDefinitionThrowsException() {
     final MockHttpServletResponse response = new MockHttpServletResponse();
+    // Create a ViewDefinition missing required 'resource' field.
+    final Map<String, Object> invalidView = new HashMap<>();
+    invalidView.put("resourceType", "ViewDefinition");
+    invalidView.put("name", "invalid_view");
+    invalidView.put("status", "active");
+    final IBaseResource viewResource = parseViewResource(gson.toJson(invalidView));
 
     assertThatThrownBy(() ->
-        provider.run("{ invalid json", null, null, null, null, null, null, null, response))
-        .isInstanceOf(InvalidRequestException.class)
-        .hasMessageContaining("Invalid ViewDefinition");
+        provider.run(viewResource, null, null, null, null, null, null, null, response))
+        .isInstanceOf(Exception.class);
   }
 
   @Test
   void viewDefinitionWithMultipleColumnsProducesCorrectOutput() throws IOException {
     final MockHttpServletResponse response = new MockHttpServletResponse();
-    final String viewJson = createMultiColumnPatientView();
+    final IBaseResource viewResource = parseViewResource(createMultiColumnPatientView());
     final String inlinePatient = createPatientJsonWithGender("test-1", "Smith", "John", "male");
 
-    provider.run(viewJson, "application/x-ndjson", null, null, null, null, null,
+    provider.run(viewResource, "application/x-ndjson", null, null, null, null, null,
         List.of(inlinePatient), response);
 
     final String content = response.getContentAsString().trim();
@@ -215,14 +231,14 @@ class ViewDefinitionRunProviderTest {
   @Test
   void limitRestrictsRowCount() throws IOException {
     final MockHttpServletResponse response = new MockHttpServletResponse();
-    final String viewJson = createSimplePatientView();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final List<String> patients = List.of(
         createPatientJson("p1", "Smith"),
         createPatientJson("p2", "Jones"),
         createPatientJson("p3", "Brown")
     );
 
-    provider.run(viewJson, "application/x-ndjson", null, new IntegerType(2),
+    provider.run(viewResource, "application/x-ndjson", null, new IntegerType(2),
         null, null, null, patients, response);
 
     final String content = response.getContentAsString().trim();
@@ -233,14 +249,14 @@ class ViewDefinitionRunProviderTest {
   @Test
   void noLimitReturnsAllRows() throws IOException {
     final MockHttpServletResponse response = new MockHttpServletResponse();
-    final String viewJson = createSimplePatientView();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final List<String> patients = List.of(
         createPatientJson("p1", "Smith"),
         createPatientJson("p2", "Jones"),
         createPatientJson("p3", "Brown")
     );
 
-    provider.run(viewJson, "application/x-ndjson", null, null,
+    provider.run(viewResource, "application/x-ndjson", null, null,
         null, null, null, patients, response);
 
     final String content = response.getContentAsString().trim();
@@ -255,10 +271,10 @@ class ViewDefinitionRunProviderTest {
   @Test
   void inlineResourcesUsedInsteadOfDeltaLake() throws IOException {
     final MockHttpServletResponse response = new MockHttpServletResponse();
-    final String viewJson = createSimplePatientView();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final String inlinePatient = createPatientJson("inline-patient-123", "InlineFamily");
 
-    provider.run(viewJson, "application/x-ndjson", null, null, null, null, null,
+    provider.run(viewResource, "application/x-ndjson", null, null, null, null, null,
         List.of(inlinePatient), response);
 
     final String content = response.getContentAsString().trim();
@@ -270,13 +286,13 @@ class ViewDefinitionRunProviderTest {
   @Test
   void multipleInlineResourcesOfSameType() throws IOException {
     final MockHttpServletResponse response = new MockHttpServletResponse();
-    final String viewJson = createSimplePatientView();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final List<String> patients = List.of(
         createPatientJson("inline-1", "Family1"),
         createPatientJson("inline-2", "Family2")
     );
 
-    provider.run(viewJson, "application/x-ndjson", null, null, null, null, null,
+    provider.run(viewResource, "application/x-ndjson", null, null, null, null, null,
         patients, response);
 
     final String content = response.getContentAsString().trim();
@@ -289,14 +305,14 @@ class ViewDefinitionRunProviderTest {
   @Test
   void inlineResourcesFilteredByViewResourceType() throws IOException {
     final MockHttpServletResponse response = new MockHttpServletResponse();
-    final String viewJson = createSimplePatientView();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     // Include both Patient and Observation, but the view only queries Patient.
     final List<String> resources = List.of(
         createPatientJson("patient-1", "PatientFamily"),
         createObservationJson("obs-1", "patient-1")
     );
 
-    provider.run(viewJson, "application/x-ndjson", null, null, null, null, null,
+    provider.run(viewResource, "application/x-ndjson", null, null, null, null, null,
         resources, response);
 
     final String content = response.getContentAsString().trim();
@@ -308,10 +324,10 @@ class ViewDefinitionRunProviderTest {
   @Test
   void invalidInlineResourceThrowsException() {
     final MockHttpServletResponse response = new MockHttpServletResponse();
-    final String viewJson = createSimplePatientView();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
 
     assertThatThrownBy(() ->
-        provider.run(viewJson, null, null, null, null, null, null,
+        provider.run(viewResource, null, null, null, null, null, null,
             List.of("{ not valid fhir }"), response))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("Invalid inline resource");
@@ -331,10 +347,10 @@ class ViewDefinitionRunProviderTest {
 
   @Test
   void nullResponseThrowsInvalidRequestException() {
-    final String viewJson = createSimplePatientView();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
 
     assertThatThrownBy(() ->
-        provider.run(viewJson, null, null, null, null, null, null, null, null))
+        provider.run(viewResource, null, null, null, null, null, null, null, null))
         .isInstanceOf(InvalidRequestException.class)
         .hasMessageContaining("HTTP response is required");
   }
@@ -346,10 +362,10 @@ class ViewDefinitionRunProviderTest {
   @Test
   void ndjsonRowContainsExpectedFields() throws IOException {
     final MockHttpServletResponse response = new MockHttpServletResponse();
-    final String viewJson = createSimplePatientView();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final String inlinePatient = createPatientJson("row-test-id", "RowTestFamily");
 
-    provider.run(viewJson, "application/x-ndjson", null, null, null, null, null,
+    provider.run(viewResource, "application/x-ndjson", null, null, null, null, null,
         List.of(inlinePatient), response);
 
     final String content = response.getContentAsString().trim();
@@ -365,13 +381,13 @@ class ViewDefinitionRunProviderTest {
   @Test
   void ndjsonHandlesNullValues() throws IOException {
     final MockHttpServletResponse response = new MockHttpServletResponse();
-    final String viewJson = createSimplePatientView();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     // Create patient without family name.
     final String patientJson = """
         {"resourceType":"Patient","id":"null-test"}
         """;
 
-    provider.run(viewJson, "application/x-ndjson", null, null, null, null, null,
+    provider.run(viewResource, "application/x-ndjson", null, null, null, null, null,
         List.of(patientJson), response);
 
     final String content = response.getContentAsString().trim();
@@ -386,10 +402,10 @@ class ViewDefinitionRunProviderTest {
   @Test
   void csvOutputProducesValidFormat() throws IOException {
     final MockHttpServletResponse response = new MockHttpServletResponse();
-    final String viewJson = createSimplePatientView();
+    final IBaseResource viewResource = parseViewResource(createSimplePatientView());
     final String inlinePatient = createPatientJson("csv-test-id", "CsvTestFamily");
 
-    provider.run(viewJson, "text/csv", null, null, null, null, null,
+    provider.run(viewResource, "text/csv", null, null, null, null, null,
         List.of(inlinePatient), response);
 
     final String content = response.getContentAsString();

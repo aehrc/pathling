@@ -24,6 +24,7 @@ import au.csiro.pathling.operations.update.UpdateProviderFactory;
 import au.csiro.pathling.operations.view.ViewDefinitionRunProvider;
 import au.csiro.pathling.search.SearchProviderFactory;
 import au.csiro.pathling.security.OidcConfiguration;
+import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.ApacheProxyAddressStrategy;
 import ca.uhn.fhir.rest.server.FifoMemoryPagingProvider;
@@ -145,6 +146,7 @@ public class FhirServer extends RestfulServer {
   /**
    * Constructs a new FhirServer.
    *
+   * @param fhirContext the FHIR context
    * @param configuration the server configuration
    * @param oidcConfiguration the optional OIDC configuration
    * @param jobProvider the optional job provider
@@ -165,7 +167,8 @@ public class FhirServer extends RestfulServer {
    * @param batchProvider the batch provider
    * @param viewDefinitionRunProvider the view definition run provider
    */
-  public FhirServer(@Nonnull final ServerConfiguration configuration,
+  public FhirServer(@Nonnull final FhirContext fhirContext,
+      @Nonnull final ServerConfiguration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
       @Nonnull final Optional<JobProvider> jobProvider,
       @Nonnull final SystemExportProvider exportProvider,
@@ -184,6 +187,9 @@ public class FhirServer extends RestfulServer {
       @Nonnull final UpdateProviderFactory updateProviderFactory,
       @Nonnull final BatchProvider batchProvider,
       @Nonnull final ViewDefinitionRunProvider viewDefinitionRunProvider) {
+    // Pass the FhirContext to the RestfulServer superclass to ensure custom types like
+    // ViewDefinitionResource are recognized when parsing request bodies.
+    super(fhirContext);
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;
     this.jobProvider = jobProvider;

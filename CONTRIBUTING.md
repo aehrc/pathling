@@ -205,7 +205,7 @@ To run specific tests:
 ```bash
 cd server
 mvn test -Dtest=ImportExecutorTest
-mvn clean verify -Dit.test=ImportPnpOperationIT -Dtest=foo -Dsurefire.failIfNoSpecifiedTests=false
+mvn verify -Dit.test=ImportPnpOperationIT -Dtest=foo -Dsurefire.failIfNoSpecifiedTests=false
 ```
 
 The last command runs only the specified integration test without running unit tests.
