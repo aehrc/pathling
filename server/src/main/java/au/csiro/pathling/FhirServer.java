@@ -21,6 +21,7 @@ import au.csiro.pathling.operations.bulksubmit.BulkSubmitProvider;
 import au.csiro.pathling.operations.bulksubmit.BulkSubmitStatusProvider;
 import au.csiro.pathling.operations.update.BatchProvider;
 import au.csiro.pathling.operations.update.UpdateProviderFactory;
+import au.csiro.pathling.operations.view.ViewDefinitionRunProvider;
 import au.csiro.pathling.search.SearchProviderFactory;
 import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.rest.api.EncodingEnum;
@@ -138,6 +139,9 @@ public class FhirServer extends RestfulServer {
   @Nonnull
   private final transient BatchProvider batchProvider;
 
+  @Nonnull
+  private final transient ViewDefinitionRunProvider viewDefinitionRunProvider;
+
   /**
    * Constructs a new FhirServer.
    *
@@ -159,6 +163,7 @@ public class FhirServer extends RestfulServer {
    * @param searchProviderFactory the search provider factory
    * @param updateProviderFactory the update provider factory
    * @param batchProvider the batch provider
+   * @param viewDefinitionRunProvider the view definition run provider
    */
   public FhirServer(@Nonnull final ServerConfiguration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
@@ -177,7 +182,8 @@ public class FhirServer extends RestfulServer {
       @Nonnull final ConformanceProvider conformanceProvider,
       @Nonnull final SearchProviderFactory searchProviderFactory,
       @Nonnull final UpdateProviderFactory updateProviderFactory,
-      @Nonnull final BatchProvider batchProvider) {
+      @Nonnull final BatchProvider batchProvider,
+      @Nonnull final ViewDefinitionRunProvider viewDefinitionRunProvider) {
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;
     this.jobProvider = jobProvider;
@@ -196,6 +202,7 @@ public class FhirServer extends RestfulServer {
     this.searchProviderFactory = searchProviderFactory;
     this.updateProviderFactory = updateProviderFactory;
     this.batchProvider = batchProvider;
+    this.viewDefinitionRunProvider = viewDefinitionRunProvider;
   }
 
   @Override
@@ -238,6 +245,9 @@ public class FhirServer extends RestfulServer {
 
       // Register batch provider.
       registerProvider(batchProvider);
+
+      // Register view definition run provider.
+      registerProvider(viewDefinitionRunProvider);
 
       // Authorization-related configuration.
       configureAuthorization();

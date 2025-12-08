@@ -105,7 +105,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
    * Base system-level operations available within Pathling.
    */
   private static final List<String> BASE_SYSTEM_OPERATIONS = Arrays.asList("job", "result",
-      EXPORT_OPERATION, "import", "import-pnp");
+      EXPORT_OPERATION, "import", "import-pnp", "viewdefinition-run");
 
   /**
    * Bulk submit operations, added when bulk submit is configured.
