@@ -154,6 +154,19 @@ public class DecimalCollection extends Collection implements Comparable, Numeric
     return DECIMAL_TYPE;
   }
 
+  /**
+   * Normalizes this decimal collection to use the standard DECIMAL(32,6) type. This ensures type
+   * compatibility when combining decimal values with different precisions.
+   *
+   * @return a new DecimalCollection with normalized decimal type
+   */
+  @Nonnull
+  public DecimalCollection normalizeDecimalType() {
+    final Column normalizedArray = getColumn().plural().getValue()
+        .cast(DataTypes.createArrayType(DECIMAL_TYPE));
+    return (DecimalCollection) copyWithColumn(normalizedArray);
+  }
+
   @Override
   public boolean isComparableTo(@Nonnull final Collection path) {
     return IntegerCollection.getComparableTypes().contains(path.getClass());

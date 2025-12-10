@@ -172,4 +172,47 @@ public class CombiningOperatorsDslTest extends FhirPathDslTestBase {
             "Grouped with literal: ('a' | 'b') | ('c' | 'd')")
         .build();
   }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testDecimalUnion() {
+    return builder()
+        .withSubject(sb -> sb
+            .decimalArray("dec123", 1.1, 2.2, 3.3)
+            .decimalArray("dec234", 2.2, 3.3, 4.4)
+            .decimalArray("dec111", 1.1, 1.1)
+            .decimalEmpty("emptyDec")
+        )
+        .group("Decimal union - empty collections")
+        .testEquals(List.of(2.5), "2.5 | {}", "2.5 union empty literal")
+        .testEquals(List.of(2.5), "{} | 2.5", "Empty literal union 2.5")
+        .testEquals(List.of(2.5), "2.5 | emptyDec", "2.5 union empty Decimal")
+        .testEquals(List.of(2.5), "emptyDec | 2.5", "Empty Decimal union 2.5")
+        .testEmpty("emptyDec | emptyDec", "Empty Decimal union empty Decimal")
+        .testEquals(List.of(1.1), "{} | dec111", "Empty union [1.1, 1.1] deduplicates to [1.1]")
+        .testEquals(List.of(1.1), "dec111 | {}", "[1.1, 1.1] union empty deduplicates to [1.1]")
+        .group("Decimal union - single values")
+        .testEquals(List.of(2.5, 5.5), "2.5 | 5.5", "2.5 union 5.5")
+        .testEquals(List.of(5.5, 2.5), "5.5 | 2.5", "5.5 union 2.5")
+        .testEquals(List.of(2.5), "2.5 | 2.5", "2.5 union 2.5 (deduplication)")
+        .group("Decimal union - precision variations")
+        .testEquals(List.of(2.5), "2.5 | 2.50", "2.5 union 2.50 (different precision, same value)")
+        .testEquals(List.of(1.1), "1.1 | 1.10", "1.1 union 1.10 (trailing zeros)")
+        .testEquals(List.of(1.0), "1.0 | 1.00", "1.0 union 1.00 (trailing zeros after decimal)")
+        .group("Decimal union - arrays")
+        .testEquals(List.of(1.1, 2.2, 3.3, 4.4), "dec123 | dec234",
+            "Array [1.1, 2.2, 3.3] union [2.2, 3.3, 4.4] (deduplication)")
+        .testEquals(List.of(1.1, 2.2, 3.3), "dec123 | dec123",
+            "Array union itself (deduplication)")
+        .group("Decimal union - mixed with Integer")
+        .testEquals(List.of(2.5, 5.0), "2.5 | 5", "Decimal union integer (integer promoted to decimal)")
+        .testEquals(List.of(5.0, 2.5), "5 | 2.5", "Integer union decimal (integer promoted to decimal)")
+        .testEquals(List.of(1.0, 2.0), "1.0 | 2", "1.0 union 2")
+        .testEquals(List.of(1.0), "1.0 | 1", "1.0 union 1 (should deduplicate)")
+        .group("Decimal union - grouped/nested expressions")
+        .testEquals(List.of(1.1, 2.2, 3.3), "(1.1 | 2.2) | (2.2 | 3.3)",
+            "Grouped: (1.1 | 2.2) | (2.2 | 3.3)")
+        .testEquals(List.of(1.1, 2.2), "(1.1 | 1.1) | (2.2 | 2.2)",
+            "Grouped with duplicates: (1.1 | 1.1) | (2.2 | 2.2)")
+        .build();
+  }
 }

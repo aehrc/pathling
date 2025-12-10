@@ -23,9 +23,9 @@ import static org.apache.spark.sql.functions.array_union;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
@@ -35,8 +35,8 @@ import org.apache.spark.sql.Column;
  * Merges two collections into a single collection, eliminating any duplicate values using equality
  * semantics. There is no expectation of order in the resulting collection.
  * <p>
- * Currently supports only primitive types that use native Spark equality: Boolean, Integer, and
- * String.
+ * Currently supports only primitive types that use native Spark equality: Boolean, Integer, Decimal,
+ * and String.
  *
  * @author Piotr Szul
  * @see <a href="https://hl7.org/fhirpath/#union-collections">union</a>
@@ -53,11 +53,13 @@ public class UnionOperator extends SameTypeBinaryOperator {
 
     // Check if the collection type is supported
     if (!(nonEmpty instanceof BooleanCollection || nonEmpty instanceof IntegerCollection
-        || nonEmpty instanceof StringCollection)) {
+        || nonEmpty instanceof DecimalCollection || nonEmpty instanceof StringCollection)) {
       throw new UnsupportedFhirPathFeatureError(
           "Union operator is not supported for type: " + nonEmpty.getFhirType());
     }
-    return nonEmpty.copyWithColumn(array_distinct(nonEmpty.getColumn().plural().getValue()));
+
+    final Column array = getArrayForUnion(nonEmpty);
+    return nonEmpty.copyWithColumn(array_distinct(array));
   }
 
   @Nonnull
@@ -68,21 +70,33 @@ public class UnionOperator extends SameTypeBinaryOperator {
     // Check if the collection type is supported
     // Only primitive types with native Spark equality are currently supported
     if (!(left instanceof BooleanCollection || left instanceof IntegerCollection
-        || left instanceof StringCollection)) {
+        || left instanceof DecimalCollection || left instanceof StringCollection)) {
       throw new UnsupportedFhirPathFeatureError(
           "Union operator is not supported for type: " + left.getFhirType());
     }
 
-    final ColumnRepresentation leftCol = left.getColumn();
-    final ColumnRepresentation rightCol = right.getColumn();
-
-    // Convert both sides to plural (array) form, then use array_union
-    final Column leftArray = leftCol.plural().getValue();
-    final Column rightArray = rightCol.plural().getValue();
+    final Column leftArray = getArrayForUnion(left);
+    final Column rightArray = getArrayForUnion(right);
     final Column unionResult = array_union(leftArray, rightArray);
 
     // Return a collection of the same type as the input
     return left.copyWithColumn(unionResult);
+  }
+
+  /**
+   * Extracts and prepares an array column for union operations. For DecimalCollection, normalizes
+   * to DECIMAL(32,6) to ensure type compatibility.
+   *
+   * @param collection the collection to extract array from
+   * @return the array column ready for union operation
+   */
+  @Nonnull
+  private Column getArrayForUnion(@Nonnull final Collection collection) {
+    if (collection instanceof DecimalCollection decimalCollection) {
+      return decimalCollection.normalizeDecimalType()
+          .getColumn().plural().getValue();
+    }
+    return collection.getColumn().plural().getValue();
   }
 
   @Nonnull
