@@ -215,14 +215,14 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
       final PolarityExpressionContext ctx) {
     return new Paths.EvalUnaryOperator(
         ctx.expression().accept(this),
-        PolarityOperator.fromSymbol(ctx.children.get(0).toString())
+        PolarityOperator.fromSymbol(ctx.children.getFirst().toString())
     );
   }
 
   @Override
   @Nonnull
   public FhirPath visitUnionExpression(final UnionExpressionContext ctx) {
-    throw new UnsupportedFhirPathFeatureError("Union expressions are not supported");
+    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1), "|");
   }
 
   @Override

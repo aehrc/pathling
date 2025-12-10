@@ -338,6 +338,17 @@ excludeSet:
         outcome: failure
         any:
           - "Patient.telecom.where($this.use = 'work')"
+  - title: Combining exclusions
+    glob: "fhirpath-js/cases/5.4_combining.yaml"
+    exclude:
+      - title: "Polymorphic unions not supported"
+        type: feature
+        id: "#2398"
+        comment: |
+          Union operator currently only supports primitive types with native Spark equality
+          (Boolean, Integer, String). Cross-type unions like Integer | Boolean are not supported.
+        any:
+          - "Functions.attrdouble | Functions.coll1.colltrue.attr"
   - title: FHIR R4 Exclusions
     glob: "fhirpath-js/cases/fhir-r4.yaml"
     exclude:

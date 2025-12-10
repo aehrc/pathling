@@ -36,9 +36,16 @@ public abstract class SameTypeBinaryOperator implements FhirPathBinaryOperator {
     final Collection left = input.left();
     final Collection right = input.right();
 
-    // If either operand is an EmptyCollection, return an EmptyCollection.
-    if (left instanceof EmptyCollection || right instanceof EmptyCollection) {
+    // Handle empty collections with special semantics
+    final boolean leftIsEmpty = left instanceof EmptyCollection;
+    final boolean rightIsEmpty = right instanceof EmptyCollection;
+
+    if (leftIsEmpty && rightIsEmpty) {
       return EmptyCollection.getInstance();
+    }
+    if (leftIsEmpty || rightIsEmpty) {
+      final Collection nonEmpty = leftIsEmpty ? right : left;
+      return handleOneEmpty(nonEmpty, input);
     }
 
     // find common type for comparison and promote both sides to that type
@@ -57,6 +64,20 @@ public abstract class SameTypeBinaryOperator implements FhirPathBinaryOperator {
     return reconciledLeft.typeEquivalentWith(reconciledRight)
            ? handleEquivalentTypes(reconciledLeft, reconciledRight, input)
            : handleNonEquivalentTypes(reconciledLeft, reconciledRight, input);
+  }
+
+  /**
+   * Handles the case when exactly one operand is empty. By default, this returns an empty
+   * collection, but subclasses may override this to provide alternative behaviour.
+   *
+   * @param nonEmpty the non-empty operand
+   * @param input the original input for diagnostic purposes
+   * @return A {@link Collection} object representing the resulting expression
+   */
+  @Nonnull
+  protected Collection handleOneEmpty(@Nonnull final Collection nonEmpty,
+      @Nonnull final BinaryOperatorInput input) {
+    return EmptyCollection.getInstance();
   }
 
   /**
