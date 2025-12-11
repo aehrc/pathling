@@ -34,6 +34,7 @@ import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.Serial;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -288,6 +289,11 @@ public class FhirServer extends RestfulServer {
       throw new ServletException("Error initializing AnalyticsServer", e);
     }
 
+  }
+
+  @Override
+  public void addHeadersToResponse(final HttpServletResponse theHttpResponse) {
+    // This removes the information-leaking X-Powered-By header from responses.
   }
 
   private void configureAuthorization() {
