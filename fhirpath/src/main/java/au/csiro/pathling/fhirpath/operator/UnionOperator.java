@@ -31,6 +31,7 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
@@ -47,7 +48,7 @@ import org.apache.spark.sql.Column;
  * semantics. There is no expectation of order in the resulting collection.
  * <p>
  * Supports primitive types that use native Spark equality (Boolean, Integer, Decimal, String) and
- * types with custom equality semantics (Quantity).
+ * types with custom equality semantics (Quantity, Coding).
  *
  * @author Piotr Szul
  * @see <a href="https://hl7.org/fhirpath/#union-collections">union</a>
@@ -65,13 +66,13 @@ public class UnionOperator extends SameTypeBinaryOperator {
     // Check if the collection type is supported
     if (!(nonEmpty instanceof BooleanCollection || nonEmpty instanceof IntegerCollection
         || nonEmpty instanceof DecimalCollection || nonEmpty instanceof StringCollection
-        || nonEmpty instanceof QuantityCollection)) {
+        || nonEmpty instanceof QuantityCollection || nonEmpty instanceof CodingCollection)) {
       throw new UnsupportedFhirPathFeatureError(
           "Union operator is not supported for type: " + nonEmpty.getFhirType());
     }
 
-    // QuantityCollection requires custom equality for deduplication
-    if (nonEmpty instanceof QuantityCollection) {
+    // QuantityCollection and CodingCollection require custom equality for deduplication
+    if (nonEmpty instanceof QuantityCollection || nonEmpty instanceof CodingCollection) {
       final Column array = getArrayForUnion(nonEmpty);
       return nonEmpty.copyWithColumn(deduplicateWithEquality(array, nonEmpty));
     }
@@ -89,13 +90,13 @@ public class UnionOperator extends SameTypeBinaryOperator {
     // Check if the collection type is supported
     if (!(left instanceof BooleanCollection || left instanceof IntegerCollection
         || left instanceof DecimalCollection || left instanceof StringCollection
-        || left instanceof QuantityCollection)) {
+        || left instanceof QuantityCollection || left instanceof CodingCollection)) {
       throw new UnsupportedFhirPathFeatureError(
           "Union operator is not supported for type: " + left.getFhirType());
     }
 
-    // QuantityCollection requires custom equality for deduplication
-    if (left instanceof QuantityCollection) {
+    // QuantityCollection and CodingCollection require custom equality for deduplication
+    if (left instanceof QuantityCollection || left instanceof CodingCollection) {
       final Column leftArray = getArrayForUnion(left);
       final Column rightArray = getArrayForUnion(right);
       final Column combined = concat(leftArray, rightArray);

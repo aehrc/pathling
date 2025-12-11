@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
@@ -291,7 +292,9 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
 
     final Collection flattenedResult = evalResult instanceof QuantityCollection qty
                                        ? qty.asStringCollection()
-                                       : evalResult;
+                                       : evalResult instanceof CodingCollection coding
+                                         ? coding.asStringCollection()
+                                         : evalResult;
 
     // Get column representations for both actual and expected results.
     final ColumnRepresentation actualRepresentation = flattenedResult.getColumn().asCanonical();

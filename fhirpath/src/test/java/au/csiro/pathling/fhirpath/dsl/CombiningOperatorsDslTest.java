@@ -259,4 +259,92 @@ public class CombiningOperatorsDslTest extends FhirPathDslTestBase {
             "Nested union with deduplication")
         .build();
   }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testCodingUnion() {
+    return builder()
+        .withSubject(sb -> sb
+            .codingArray("heartRateDuplicate",
+                "http://loinc.org|8867-4||'Heart rate'",
+                "http://loinc.org|8867-4||'Heart rate'")
+            .codingArray("vitalSigns",
+                "http://loinc.org|8867-4||'Heart rate'",
+                "http://loinc.org|8480-6||'Systolic blood pressure'")
+            .codingArray("bloodPressure",
+                "http://loinc.org|8480-6||'Systolic blood pressure'",
+                "http://loinc.org|8462-4||'Diastolic blood pressure'")
+            .codingEmpty("emptyCoding")
+        )
+        .group("Coding union - empty collections")
+        .testEquals("http://loinc.org|8867-4||'Heart rate'",
+            "http://loinc.org|8867-4||'Heart rate' | {}",
+            "Coding literal union empty")
+        .testEquals("http://loinc.org|8867-4||'Heart rate'",
+            "{} | http://loinc.org|8867-4||'Heart rate'",
+            "Empty union coding literal")
+        .testEquals("http://loinc.org|8867-4||'Heart rate'",
+            "http://loinc.org|8867-4||'Heart rate' | emptyCoding",
+            "Coding literal union empty Coding")
+        .testEquals("http://loinc.org|8867-4||'Heart rate'",
+            "emptyCoding | http://loinc.org|8867-4||'Heart rate'",
+            "Empty Coding union coding literal")
+        .testEmpty("emptyCoding | emptyCoding", "Empty Coding union empty Coding")
+        .testEquals("http://loinc.org|8867-4||'Heart rate'",
+            "{} | heartRateDuplicate",
+            "Empty union [coding, coding] deduplicates to [coding]")
+        .testEquals("http://loinc.org|8867-4||'Heart rate'",
+            "heartRateDuplicate | {}",
+            "[coding, coding] union empty deduplicates to [coding]")
+        .group("Coding union - single values")
+        .testEquals("http://loinc.org|8867-4||'Heart rate'",
+            "http://loinc.org|8867-4||'Heart rate' | http://loinc.org|8867-4||'Heart rate'",
+            "Identical coding union itself (deduplication)")
+        .testEquals(
+            List.of("http://loinc.org|8867-4||'Heart rate'",
+                "http://loinc.org|8480-6||'Systolic blood pressure'"),
+            "http://loinc.org|8867-4||'Heart rate' | http://loinc.org|8480-6||'Systolic blood pressure'",
+            "Different coding literals union")
+        .group("Coding union - arrays")
+        .testEquals(
+            List.of("http://loinc.org|8867-4||'Heart rate'",
+                "http://loinc.org|8480-6||'Systolic blood pressure'"),
+            "vitalSigns | vitalSigns",
+            "Array union itself (deduplication)")
+        .testEquals(
+            List.of("http://loinc.org|8867-4||'Heart rate'",
+                "http://loinc.org|8480-6||'Systolic blood pressure'",
+                "http://loinc.org|8462-4||'Diastolic blood pressure'"),
+            "vitalSigns | bloodPressure",
+            "Arrays with one common element (deduplication)")
+        .group("Coding union - mixed singleton and array")
+        .testEquals(
+            List.of("http://loinc.org|8867-4||'Heart rate'",
+                "http://loinc.org|8480-6||'Systolic blood pressure'"),
+            "http://loinc.org|8867-4||'Heart rate' | vitalSigns",
+            "Singleton union array containing it (deduplication)")
+        .testEquals(
+            List.of("http://loinc.org|8867-4||'Heart rate'",
+                "http://loinc.org|8480-6||'Systolic blood pressure'"),
+            "vitalSigns | http://loinc.org|8867-4||'Heart rate'",
+            "Array union singleton it contains (deduplication)")
+        .testEquals(
+            List.of("http://loinc.org|8867-4||'Heart rate'",
+                "http://loinc.org|8480-6||'Systolic blood pressure'",
+                "http://loinc.org|8462-4||'Diastolic blood pressure'"),
+            "vitalSigns | http://loinc.org|8462-4||'Diastolic blood pressure'",
+            "Array union singleton not in array")
+        .group("Coding union - grouped/nested expressions")
+        .testEquals(
+            List.of("http://loinc.org|8867-4||'Heart rate'",
+                "http://loinc.org|8480-6||'Systolic blood pressure'",
+                "http://loinc.org|8462-4||'Diastolic blood pressure'"),
+            "(http://loinc.org|8867-4||'Heart rate' | http://loinc.org|8480-6||'Systolic blood pressure') | (http://loinc.org|8480-6||'Systolic blood pressure' | http://loinc.org|8462-4||'Diastolic blood pressure')",
+            "Grouped union with deduplication")
+        .testEquals(
+            List.of("http://loinc.org|8867-4||'Heart rate'",
+                "http://loinc.org|8480-6||'Systolic blood pressure'"),
+            "(http://loinc.org|8867-4||'Heart rate' | http://loinc.org|8867-4||'Heart rate') | (http://loinc.org|8480-6||'Systolic blood pressure' | http://loinc.org|8480-6||'Systolic blood pressure')",
+            "Grouped with duplicates within groups")
+        .build();
+  }
 }
