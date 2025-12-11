@@ -121,4 +121,17 @@ public class DateCollection extends Collection implements StringCoercible, Mater
         .orElseGet(() -> super.convertibleTo(other));
   }
 
+  @Override
+  @Nonnull
+  public Collection castAs(@Nonnull final Collection other) {
+    return other.getType()
+        .filter(FhirPathType.DATETIME::equals)
+        .map(t -> {
+          final Optional<NodeDefinition> definition = getDefinition()
+              .map(d -> (NodeDefinition) d);
+          return (Collection) DateTimeCollection.build(getColumn(), definition);
+        })
+        .orElseGet(() -> super.castAs(other));
+  }
+
 }

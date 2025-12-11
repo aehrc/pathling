@@ -33,6 +33,8 @@ import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.DateCollection;
+import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.QuantityCollection;
@@ -49,7 +51,10 @@ import org.apache.spark.sql.Column;
  * semantics. There is no expectation of order in the resulting collection.
  * <p>
  * Supports primitive types that use native Spark equality (Boolean, Integer, Decimal, String) and
- * types with custom equality semantics (Quantity, Coding, Time).
+ * types with custom equality semantics (Quantity, Coding, Time, Date, DateTime).
+ * <p>
+ * Date and DateTime are compatible types and can be unioned together with implicit type promotion
+ * from Date to DateTime.
  *
  * @author Piotr Szul
  * @see <a href="https://hl7.org/fhirpath/#union-collections">union</a>
@@ -68,14 +73,17 @@ public class UnionOperator extends SameTypeBinaryOperator {
     if (!(nonEmpty instanceof BooleanCollection || nonEmpty instanceof IntegerCollection
         || nonEmpty instanceof DecimalCollection || nonEmpty instanceof StringCollection
         || nonEmpty instanceof QuantityCollection || nonEmpty instanceof CodingCollection
-        || nonEmpty instanceof TimeCollection)) {
+        || nonEmpty instanceof TimeCollection || nonEmpty instanceof DateCollection
+        || nonEmpty instanceof DateTimeCollection)) {
       throw new UnsupportedFhirPathFeatureError(
           "Union operator is not supported for type: " + nonEmpty.getFhirType());
     }
 
-    // QuantityCollection, CodingCollection, and TimeCollection require custom equality for deduplication
+    // QuantityCollection, CodingCollection, TimeCollection, DateCollection, and DateTimeCollection
+    // require custom equality for deduplication
     if (nonEmpty instanceof QuantityCollection || nonEmpty instanceof CodingCollection
-        || nonEmpty instanceof TimeCollection) {
+        || nonEmpty instanceof TimeCollection || nonEmpty instanceof DateCollection
+        || nonEmpty instanceof DateTimeCollection) {
       final Column array = getArrayForUnion(nonEmpty);
       return nonEmpty.copyWithColumn(deduplicateWithEquality(array, nonEmpty));
     }
@@ -94,14 +102,17 @@ public class UnionOperator extends SameTypeBinaryOperator {
     if (!(left instanceof BooleanCollection || left instanceof IntegerCollection
         || left instanceof DecimalCollection || left instanceof StringCollection
         || left instanceof QuantityCollection || left instanceof CodingCollection
-        || left instanceof TimeCollection)) {
+        || left instanceof TimeCollection || left instanceof DateCollection
+        || left instanceof DateTimeCollection)) {
       throw new UnsupportedFhirPathFeatureError(
           "Union operator is not supported for type: " + left.getFhirType());
     }
 
-    // QuantityCollection, CodingCollection, and TimeCollection require custom equality for deduplication
+    // QuantityCollection, CodingCollection, TimeCollection, DateCollection, and DateTimeCollection
+    // require custom equality for deduplication
     if (left instanceof QuantityCollection || left instanceof CodingCollection
-        || left instanceof TimeCollection) {
+        || left instanceof TimeCollection || left instanceof DateCollection
+        || left instanceof DateTimeCollection) {
       final Column leftArray = getArrayForUnion(left);
       final Column rightArray = getArrayForUnion(right);
       final Column combined = concat(leftArray, rightArray);

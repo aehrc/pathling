@@ -17,6 +17,11 @@
 
 package au.csiro.pathling.fhirpath.dsl;
 
+import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toCoding;
+import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toDate;
+import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toDateTime;
+import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toTime;
+
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import java.util.List;
@@ -276,73 +281,73 @@ public class CombiningOperatorsDslTest extends FhirPathDslTestBase {
             .codingEmpty("emptyCoding")
         )
         .group("Coding union - empty collections")
-        .testEquals("http://loinc.org|8867-4||'Heart rate'",
+        .testEquals(toCoding("http://loinc.org|8867-4||'Heart rate'"),
             "http://loinc.org|8867-4||'Heart rate' | {}",
             "Coding literal union empty")
-        .testEquals("http://loinc.org|8867-4||'Heart rate'",
+        .testEquals(toCoding("http://loinc.org|8867-4||'Heart rate'"),
             "{} | http://loinc.org|8867-4||'Heart rate'",
             "Empty union coding literal")
-        .testEquals("http://loinc.org|8867-4||'Heart rate'",
+        .testEquals(toCoding("http://loinc.org|8867-4||'Heart rate'"),
             "http://loinc.org|8867-4||'Heart rate' | emptyCoding",
             "Coding literal union empty Coding")
-        .testEquals("http://loinc.org|8867-4||'Heart rate'",
+        .testEquals(toCoding("http://loinc.org|8867-4||'Heart rate'"),
             "emptyCoding | http://loinc.org|8867-4||'Heart rate'",
             "Empty Coding union coding literal")
         .testEmpty("emptyCoding | emptyCoding", "Empty Coding union empty Coding")
-        .testEquals("http://loinc.org|8867-4||'Heart rate'",
+        .testEquals(toCoding("http://loinc.org|8867-4||'Heart rate'"),
             "{} | heartRateDuplicate",
             "Empty union [coding, coding] deduplicates to [coding]")
-        .testEquals("http://loinc.org|8867-4||'Heart rate'",
+        .testEquals(toCoding("http://loinc.org|8867-4||'Heart rate'"),
             "heartRateDuplicate | {}",
             "[coding, coding] union empty deduplicates to [coding]")
         .group("Coding union - single values")
-        .testEquals("http://loinc.org|8867-4||'Heart rate'",
+        .testEquals(toCoding("http://loinc.org|8867-4||'Heart rate'"),
             "http://loinc.org|8867-4||'Heart rate' | http://loinc.org|8867-4||'Heart rate'",
             "Identical coding union itself (deduplication)")
         .testEquals(
-            List.of("http://loinc.org|8867-4||'Heart rate'",
-                "http://loinc.org|8480-6||'Systolic blood pressure'"),
+            List.of(toCoding("http://loinc.org|8867-4||'Heart rate'"),
+                toCoding("http://loinc.org|8480-6||'Systolic blood pressure'")),
             "http://loinc.org|8867-4||'Heart rate' | http://loinc.org|8480-6||'Systolic blood pressure'",
             "Different coding literals union")
         .group("Coding union - arrays")
         .testEquals(
-            List.of("http://loinc.org|8867-4||'Heart rate'",
-                "http://loinc.org|8480-6||'Systolic blood pressure'"),
+            List.of(toCoding("http://loinc.org|8867-4||'Heart rate'"),
+                toCoding("http://loinc.org|8480-6||'Systolic blood pressure'")),
             "vitalSigns | vitalSigns",
             "Array union itself (deduplication)")
         .testEquals(
-            List.of("http://loinc.org|8867-4||'Heart rate'",
-                "http://loinc.org|8480-6||'Systolic blood pressure'",
-                "http://loinc.org|8462-4||'Diastolic blood pressure'"),
+            List.of(toCoding("http://loinc.org|8867-4||'Heart rate'"),
+                toCoding("http://loinc.org|8480-6||'Systolic blood pressure'"),
+                toCoding("http://loinc.org|8462-4||'Diastolic blood pressure'")),
             "vitalSigns | bloodPressure",
             "Arrays with one common element (deduplication)")
         .group("Coding union - mixed singleton and array")
         .testEquals(
-            List.of("http://loinc.org|8867-4||'Heart rate'",
-                "http://loinc.org|8480-6||'Systolic blood pressure'"),
+            List.of(toCoding("http://loinc.org|8867-4||'Heart rate'"),
+                toCoding("http://loinc.org|8480-6||'Systolic blood pressure'")),
             "http://loinc.org|8867-4||'Heart rate' | vitalSigns",
             "Singleton union array containing it (deduplication)")
         .testEquals(
-            List.of("http://loinc.org|8867-4||'Heart rate'",
-                "http://loinc.org|8480-6||'Systolic blood pressure'"),
+            List.of(toCoding("http://loinc.org|8867-4||'Heart rate'"),
+                toCoding("http://loinc.org|8480-6||'Systolic blood pressure'")),
             "vitalSigns | http://loinc.org|8867-4||'Heart rate'",
             "Array union singleton it contains (deduplication)")
         .testEquals(
-            List.of("http://loinc.org|8867-4||'Heart rate'",
-                "http://loinc.org|8480-6||'Systolic blood pressure'",
-                "http://loinc.org|8462-4||'Diastolic blood pressure'"),
+            List.of(toCoding("http://loinc.org|8867-4||'Heart rate'"),
+                toCoding("http://loinc.org|8480-6||'Systolic blood pressure'"),
+                toCoding("http://loinc.org|8462-4||'Diastolic blood pressure'")),
             "vitalSigns | http://loinc.org|8462-4||'Diastolic blood pressure'",
             "Array union singleton not in array")
         .group("Coding union - grouped/nested expressions")
         .testEquals(
-            List.of("http://loinc.org|8867-4||'Heart rate'",
-                "http://loinc.org|8480-6||'Systolic blood pressure'",
-                "http://loinc.org|8462-4||'Diastolic blood pressure'"),
+            List.of(toCoding("http://loinc.org|8867-4||'Heart rate'"),
+                toCoding("http://loinc.org|8480-6||'Systolic blood pressure'"),
+                toCoding("http://loinc.org|8462-4||'Diastolic blood pressure'")),
             "(http://loinc.org|8867-4||'Heart rate' | http://loinc.org|8480-6||'Systolic blood pressure') | (http://loinc.org|8480-6||'Systolic blood pressure' | http://loinc.org|8462-4||'Diastolic blood pressure')",
             "Grouped union with deduplication")
         .testEquals(
-            List.of("http://loinc.org|8867-4||'Heart rate'",
-                "http://loinc.org|8480-6||'Systolic blood pressure'"),
+            List.of(toCoding("http://loinc.org|8867-4||'Heart rate'"),
+                toCoding("http://loinc.org|8480-6||'Systolic blood pressure'")),
             "(http://loinc.org|8867-4||'Heart rate' | http://loinc.org|8867-4||'Heart rate') | (http://loinc.org|8480-6||'Systolic blood pressure' | http://loinc.org|8480-6||'Systolic blood pressure')",
             "Grouped with duplicates within groups")
         .build();
@@ -362,51 +367,248 @@ public class CombiningOperatorsDslTest extends FhirPathDslTestBase {
             .timeEmpty("emptyTime")
         )
         .group("Time union - empty collections")
-        .testEquals("12:00", "@T12:00 | {}", "Time literal union empty")
-        .testEquals("12:00", "{} | @T12:00", "Empty union time literal")
-        .testEquals("12:00", "@T12:00 | emptyTime", "Time literal union empty Time")
-        .testEquals("12:00", "emptyTime | @T12:00", "Empty Time union time literal")
+        .testEquals(toTime("12:00"), "@T12:00 | {}", "Time literal union empty")
+        .testEquals(toTime("12:00"), "{} | @T12:00", "Empty union time literal")
+        .testEquals(toTime("12:00"), "@T12:00 | emptyTime", "Time literal union empty Time")
+        .testEquals(toTime("12:00"), "emptyTime | @T12:00", "Empty Time union time literal")
         .testEmpty("emptyTime | emptyTime", "Empty Time union empty Time")
-        .testEquals("12:00", "{} | samePrecision2", "Empty union [12:00, 12:00] deduplicates to [12:00]")
-        .testEquals("12:00", "samePrecision2 | {}", "[12:00, 12:00] union empty deduplicates to [12:00]")
+        .testEquals(toTime("12:00"), "{} | samePrecision2",
+            "Empty union [12:00, 12:00] deduplicates to [12:00]")
+        .testEquals(toTime("12:00"), "samePrecision2 | {}",
+            "[12:00, 12:00] union empty deduplicates to [12:00]")
         .group("Time union - single values, same precision")
-        .testEquals("12:00", "@T12:00 | @T12:00", "Same time union itself (deduplication)")
-        .testEquals(List.of("12:00", "13:00"), "@T12:00 | @T13:00", "Different times union")
-        .testEquals("12:00", "t1 | t1", "Variable union itself (deduplication)")
-        .testEquals(List.of("12:00", "13:00"), "t1 | t2", "Different time variables union")
+        .testEquals(toTime("12:00"), "@T12:00 | @T12:00", "Same time union itself (deduplication)")
+        .testEquals(List.of(toTime("12:00"), toTime("13:00")), "@T12:00 | @T13:00",
+            "Different times union")
+        .testEquals(toTime("12:00"), "t1 | t1", "Variable union itself (deduplication)")
+        .testEquals(List.of(toTime("12:00"), toTime("13:00")), "t1 | t2",
+            "Different time variables union")
         .group("Time union - single values, different precision")
-        .testEquals(List.of("12:00", "12:00:00"), "t1 | t3",
+        .testEquals(List.of(toTime("12:00"), toTime("12:00:00")), "t1 | t3",
             "Different precision (12:00 vs 12:00:00), keep both")
-        .testEquals(List.of("12:00", "12:00:00.000"), "t1 | t4",
+        .testEquals(List.of(toTime("12:00"), toTime("12:00:00.000")), "t1 | t4",
             "Different precision (12:00 vs 12:00:00.000), keep both")
-        .testEquals("12:00:00", "t3 | t4",
+        .testEquals(toTime("12:00:00"), "t3 | t4",
             "Both fractional seconds precision (12:00:00 vs 12:00:00.000), deduplicate")
         .group("Time union - arrays, same precision")
-        .testEquals(List.of("12:00", "13:00"), "samePrecision1 | samePrecision1",
+        .testEquals(List.of(toTime("12:00"), toTime("13:00")), "samePrecision1 | samePrecision1",
             "Array union itself (deduplication)")
-        .testEquals("12:00", "samePrecision2 | samePrecision2",
+        .testEquals(toTime("12:00"), "samePrecision2 | samePrecision2",
             "Array [12:00, 12:00] union itself (deduplication)")
         .group("Time union - arrays, mixed precision")
-        .testEquals(List.of("12:00", "12:00:00"), "mixedPrecision | mixedPrecision",
+        .testEquals(List.of(toTime("12:00"), toTime("12:00:00")), "mixedPrecision | mixedPrecision",
             "Array [12:00, 12:00:00] union itself (incomparable, keep both)")
         .group("Time union - mixed singleton and array")
-        .testEquals(List.of("12:00", "13:00"), "@T12:00 | samePrecision1",
+        .testEquals(List.of(toTime("12:00"), toTime("13:00")), "@T12:00 | samePrecision1",
             "Singleton union array containing it (deduplication)")
-        .testEquals(List.of("12:00", "13:00"), "samePrecision1 | @T12:00",
+        .testEquals(List.of(toTime("12:00"), toTime("13:00")), "samePrecision1 | @T12:00",
             "Array union singleton it contains (deduplication)")
-        .testEquals(List.of("12:00", "13:00", "14:00"), "samePrecision1 | @T14:00",
+        .testEquals(List.of(toTime("12:00"), toTime("13:00"), toTime("14:00")),
+            "samePrecision1 | @T14:00",
             "Array union singleton not in array")
         .group("Time union - grouped/nested expressions")
-        .testEquals(List.of("12:00", "13:00", "14:00"),
+        .testEquals(List.of(toTime("12:00"), toTime("13:00"), toTime("14:00")),
             "(@T12:00 | @T13:00) | (@T13:00 | @T14:00)",
             "Grouped union with deduplication")
-        .testEquals(List.of("12:00", "13:00"),
+        .testEquals(List.of(toTime("12:00"), toTime("13:00")),
             "(@T12:00 | @T12:00) | (@T13:00 | @T13:00)",
             "Grouped with duplicates within groups")
         .group("Time union - precision handling in groups")
-        .testEquals(List.of("12:00", "12:00:00", "13:00"),
+        .testEquals(List.of(toTime("12:00"), toTime("12:00:00"), toTime("13:00")),
             "(@T12:00 | @T12:00:00) | (@T13:00 | @T13:00)",
             "Mixed precision in union (incomparable, keep both 12:00 and 12:00:00)")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testDateUnion() {
+    return builder()
+        .withSubject(sb -> sb
+            .date("d1", "2020-01-01")
+            .date("d2", "2020-01-02")
+            .date("d3", "2020-01")
+            .date("d4", "2020")
+            .dateArray("samePrecision1", "2020-01-01", "2020-01-02")
+            .dateArray("samePrecision2", "2020-01-01", "2020-01-01")
+            .dateArray("mixedPrecision", "2020-01-01", "2020-01")
+            .dateEmpty("emptyDate")
+        )
+        .group("Date union - empty collections")
+        .testEquals(toDate("2020-01-01"), "@2020-01-01 | {}", "Date literal union empty")
+        .testEquals(toDate("2020-01-01"), "{} | @2020-01-01", "Empty union date literal")
+        .testEquals(toDate("2020-01-01"), "@2020-01-01 | emptyDate",
+            "Date literal union empty Date")
+        .testEquals(toDate("2020-01-01"), "emptyDate | @2020-01-01",
+            "Empty Date union date literal")
+        .testEmpty("emptyDate | emptyDate", "Empty Date union empty Date")
+        .testEquals(toDate("2020-01-01"), "{} | samePrecision2",
+            "Empty union [2020-01-01, 2020-01-01] deduplicates to [2020-01-01]")
+        .testEquals(toDate("2020-01-01"), "samePrecision2 | {}",
+            "[2020-01-01, 2020-01-01] union empty deduplicates to [2020-01-01]")
+        .group("Date union - single values, same precision")
+        .testEquals(toDate("2020-01-01"), "@2020-01-01 | @2020-01-01",
+            "Same date union itself (deduplication)")
+        .testEquals(List.of(toDate("2020-01-01"), toDate("2020-01-02")),
+            "@2020-01-01 | @2020-01-02", "Different dates union")
+        .testEquals(toDate("2020-01-01"), "d1 | d1", "Variable union itself (deduplication)")
+        .testEquals(List.of(toDate("2020-01-01"), toDate("2020-01-02")), "d1 | d2",
+            "Different date variables union")
+        .group("Date union - single values, different precision")
+        .testEquals(List.of(toDate("2020-01-01"), toDate("2020-01")), "d1 | d3",
+            "Different precision (2020-01-01 vs 2020-01), keep both")
+        .testEquals(List.of(toDate("2020-01-01"), toDate("2020")), "d1 | d4",
+            "Different precision (2020-01-01 vs 2020), keep both")
+        .testEquals(List.of(toDate("2020-01"), toDate("2020")), "d3 | d4",
+            "Different precision (2020-01 vs 2020), keep both")
+        .group("Date union - arrays, same precision")
+        .testEquals(List.of(toDate("2020-01-01"), toDate("2020-01-02")),
+            "samePrecision1 | samePrecision1",
+            "Array union itself (deduplication)")
+        .testEquals(toDate("2020-01-01"), "samePrecision2 | samePrecision2",
+            "Array [2020-01-01, 2020-01-01] union itself (deduplication)")
+        .group("Date union - arrays, mixed precision")
+        .testEquals(List.of(toDate("2020-01-01"), toDate("2020-01")),
+            "mixedPrecision | mixedPrecision",
+            "Array [2020-01-01, 2020-01] union itself (incomparable, keep both)")
+        .group("Date union - mixed singleton and array")
+        .testEquals(List.of(toDate("2020-01-01"), toDate("2020-01-02")),
+            "@2020-01-01 | samePrecision1",
+            "Singleton union array containing it (deduplication)")
+        .testEquals(List.of(toDate("2020-01-01"), toDate("2020-01-02")),
+            "samePrecision1 | @2020-01-01",
+            "Array union singleton it contains (deduplication)")
+        .testEquals(List.of(toDate("2020-01-01"), toDate("2020-01-02"), toDate("2020-01-03")),
+            "samePrecision1 | @2020-01-03",
+            "Array union singleton not in array")
+        .group("Date union - grouped/nested expressions")
+        .testEquals(List.of(toDate("2020-01-01"), toDate("2020-01-02"), toDate("2020-01-03")),
+            "(@2020-01-01 | @2020-01-02) | (@2020-01-02 | @2020-01-03)",
+            "Grouped union with deduplication")
+        .testEquals(List.of(toDate("2020-01-01"), toDate("2020-01-02")),
+            "(@2020-01-01 | @2020-01-01) | (@2020-01-02 | @2020-01-02)",
+            "Grouped with duplicates within groups")
+        .group("Date union - precision handling in groups")
+        .testEquals(List.of(toDate("2020-01-01"), toDate("2020-01"), toDate("2020-01-02")),
+            "(@2020-01-01 | @2020-01) | (@2020-01-02 | @2020-01-02)",
+            "Mixed precision in union (incomparable, keep both 2020-01-01 and 2020-01)")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testDateTimeUnion() {
+    return builder()
+        .withSubject(sb -> sb
+            .dateTime("dt1", "2020-01-01T10:00:00")
+            .dateTime("dt2", "2020-01-01T11:00:00")
+            .dateTime("dt3", "2020-01-01T10:00")
+            .dateTime("dt4", "2020-01-01T10:00:00+00:00")
+            .dateTime("dt5", "2020-01-01T10:00:00.000")
+            .dateTimeArray("samePrecision1", "2020-01-01T10:00:00", "2020-01-01T11:00:00")
+            .dateTimeArray("samePrecision2", "2020-01-01T10:00:00", "2020-01-01T10:00:00")
+            .dateTimeArray("mixedPrecision", "2020-01-01T10:00:00", "2020-01-01T10:00")
+            .dateTimeEmpty("emptyDateTime")
+        )
+        .group("DateTime union - empty collections")
+        .testEquals(toDateTime("2020-01-01T10:00:00"), "@2020-01-01T10:00:00 | {}",
+            "DateTime literal union empty")
+        .testEquals(toDateTime("2020-01-01T10:00:00"), "{} | @2020-01-01T10:00:00",
+            "Empty union dateTime literal")
+        .testEquals(toDateTime("2020-01-01T10:00:00"), "@2020-01-01T10:00:00 | emptyDateTime",
+            "DateTime literal union empty DateTime")
+        .testEquals(toDateTime("2020-01-01T10:00:00"), "emptyDateTime | @2020-01-01T10:00:00",
+            "Empty DateTime union dateTime literal")
+        .testEmpty("emptyDateTime | emptyDateTime", "Empty DateTime union empty DateTime")
+        .testEquals(toDateTime("2020-01-01T10:00:00"), "{} | samePrecision2",
+            "Empty union [2020-01-01T10:00:00, 2020-01-01T10:00:00] deduplicates to [2020-01-01T10:00:00]")
+        .testEquals(toDateTime("2020-01-01T10:00:00"), "samePrecision2 | {}",
+            "[2020-01-01T10:00:00, 2020-01-01T10:00:00] union empty deduplicates to [2020-01-01T10:00:00]")
+        .group("DateTime union - single values, same precision")
+        .testEquals(toDateTime("2020-01-01T10:00:00"),
+            "@2020-01-01T10:00:00 | @2020-01-01T10:00:00",
+            "Same dateTime union itself (deduplication)")
+        .testEquals(List.of(toDateTime("2020-01-01T10:00:00"), toDateTime("2020-01-01T11:00:00")),
+            "@2020-01-01T10:00:00 | @2020-01-01T11:00:00", "Different dateTimes union")
+        .testEquals(toDateTime("2020-01-01T10:00:00"), "dt1 | dt1",
+            "Variable union itself (deduplication)")
+        .testEquals(List.of(toDateTime("2020-01-01T10:00:00"), toDateTime("2020-01-01T11:00:00")),
+            "dt1 | dt2", "Different dateTime variables union")
+        .group("DateTime union - single values, different precision")
+        .testEquals(List.of(toDateTime("2020-01-01T10:00:00"), toDateTime("2020-01-01T10:00")),
+            "dt1 | dt3",
+            "Different precision (2020-01-01T10:00:00 vs 2020-01-01T10:00), keep both")
+        .testEquals(toDateTime("2020-01-01T10:00:00"), "dt1 | dt5",
+            "Both with fractional seconds precision (2020-01-01T10:00:00 vs 2020-01-01T10:00:00.000), deduplicate")
+        .group("DateTime union - timezone handling")
+        .testEquals(toDateTime("2020-01-01T10:00:00"), "dt1 | dt4",
+            "With timezone vs without timezone (2020-01-01T10:00:00 vs 2020-01-01T10:00:00+00:00), deduplicate")
+        .testEquals(toDateTime("2020-01-01T10:00:00+00:00"), "dt4 | dt4",
+            "Same dateTime with timezone union itself (deduplication)")
+        .group("DateTime union - arrays, same precision")
+        .testEquals(List.of(toDateTime("2020-01-01T10:00:00"), toDateTime("2020-01-01T11:00:00")),
+            "samePrecision1 | samePrecision1",
+            "Array union itself (deduplication)")
+        .testEquals(toDateTime("2020-01-01T10:00:00"), "samePrecision2 | samePrecision2",
+            "Array [2020-01-01T10:00:00, 2020-01-01T10:00:00] union itself (deduplication)")
+        .group("DateTime union - arrays, mixed precision")
+        .testEquals(List.of(toDateTime("2020-01-01T10:00:00"), toDateTime("2020-01-01T10:00")),
+            "mixedPrecision | mixedPrecision",
+            "Array [2020-01-01T10:00:00, 2020-01-01T10:00] union itself (incomparable, keep both)")
+        .group("DateTime union - mixed singleton and array")
+        .testEquals(List.of(toDateTime("2020-01-01T10:00:00"), toDateTime("2020-01-01T11:00:00")),
+            "@2020-01-01T10:00:00 | samePrecision1",
+            "Singleton union array containing it (deduplication)")
+        .testEquals(List.of(toDateTime("2020-01-01T10:00:00"), toDateTime("2020-01-01T11:00:00")),
+            "samePrecision1 | @2020-01-01T10:00:00",
+            "Array union singleton it contains (deduplication)")
+        .testEquals(List.of(toDateTime("2020-01-01T10:00:00"), toDateTime("2020-01-01T11:00:00"),
+                toDateTime("2020-01-01T12:00:00")), "samePrecision1 | @2020-01-01T12:00:00",
+            "Array union singleton not in array")
+        .group("DateTime union - grouped/nested expressions")
+        .testEquals(List.of(toDateTime("2020-01-01T10:00:00"), toDateTime("2020-01-01T11:00:00"),
+                toDateTime("2020-01-01T12:00:00")),
+            "(@2020-01-01T10:00:00 | @2020-01-01T11:00:00) | (@2020-01-01T11:00:00 | @2020-01-01T12:00:00)",
+            "Grouped union with deduplication")
+        .testEquals(List.of(toDateTime("2020-01-01T10:00:00"), toDateTime("2020-01-01T11:00:00")),
+            "(@2020-01-01T10:00:00 | @2020-01-01T10:00:00) | (@2020-01-01T11:00:00 | @2020-01-01T11:00:00)",
+            "Grouped with duplicates within groups")
+        .group("DateTime union - precision handling in groups")
+        .testEquals(List.of(toDateTime("2020-01-01T10:00:00"), toDateTime("2020-01-01T10:00"),
+                toDateTime("2020-01-01T11:00:00")),
+            "(@2020-01-01T10:00:00 | @2020-01-01T10:00) | (@2020-01-01T11:00:00 | @2020-01-01T11:00:00)",
+            "Mixed precision in union (incomparable, keep both 2020-01-01T10:00:00 and 2020-01-01T10:00)")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testDateDateTimeUnion() {
+    return builder()
+        .withSubject(sb -> sb
+            .date("d1", "2020-01-01")
+            .date("d2", "2020-01-02")
+            .dateTime("dt1", "2020-01-01T00:00:00")
+            .dateTime("dt2", "2020-01-01T10:00:00")
+            .dateArray("dateArray", "2020-01-01", "2020-01-02")
+            .dateTimeArray("dateTimeArray", "2020-01-01T00:00:00", "2020-01-01T10:00:00")
+        )
+        .group("Date and DateTime union - type promotion with precision differences")
+        .testEquals(List.of(toDate("2020-01-01"), toDateTime("2020-01-01T00:00:00")),
+            "@2020-01-01 | @2020-01-01T00:00:00",
+            "Date union DateTime (type promotion, but different precision - incomparable, keep both)")
+        .testEquals(List.of(toDate("2020-01-01"), toDateTime("2020-01-01T10:00:00")),
+            "@2020-01-01 | @2020-01-01T10:00:00",
+            "Date union DateTime with different instant (type promotion, incomparable)")
+        .testEquals(List.of(toDate("2020-01-01"), toDateTime("2020-01-01T00:00:00")), "d1 | dt1",
+            "Date variable union DateTime variable (type promotion, but different precision - incomparable, keep both)")
+        .testEquals(List.of(toDate("2020-01-01"), toDateTime("2020-01-01T10:00:00")), "d1 | dt2",
+            "Date variable union DateTime variable with different instant (type promotion, incomparable)")
+        .testEquals(
+            List.of(toDate("2020-01-01"), toDate("2020-01-02"), toDateTime("2020-01-01T00:00:00"),
+                toDateTime("2020-01-01T10:00:00")), "dateArray | dateTimeArray",
+            "Date array union DateTime array (type promotion, but different precision - incomparable, keep all)")
+        .testEquals(
+            List.of(toDate("2020-01-02"), toDate("2020-01-01"), toDateTime("2020-01-01T00:00:00"),
+                toDateTime("2020-01-01T10:00:00")), "d2 | (d1 | dateTimeArray)",
+            "Mixed Date and DateTime in grouped union (type promotion, incomparable)")
         .build();
   }
 }

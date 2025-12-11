@@ -25,13 +25,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
-import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
@@ -244,7 +242,7 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
 
       // Only check the specific error message if it's not the wildcard ANY_ERROR.
       if (!ANY_ERROR.equals(spec.errorMsg())) {
-        assertTrue(rootCauseMsg.contains(spec.errorMsg()),
+        assertTrue(rootCauseMsg.contains(requireNonNull(spec.errorMsg())),
             String.format("Error message mismatch for expression '%s'. Expected to contain: '%s',"
                     + " but got: '%s'",
                 spec.expression(), spec.errorMsg(), rootCauseMsg));
@@ -291,13 +289,10 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     // Evaluate the expression to get the actual result.
     final Collection evalResult = verifyEvaluation(evaluator);
 
+    // Convert Quantity collections to string representation for comparison
     final Collection flattenedResult = evalResult instanceof QuantityCollection qty
                                        ? qty.asStringCollection()
-                                       : evalResult instanceof CodingCollection coding
-                                         ? coding.asStringCollection()
-                                         : evalResult instanceof TimeCollection time
-                                           ? time.asStringCollection()
-                                           : evalResult;
+                                       : evalResult;
 
     // Get column representations for both actual and expected results.
     final ColumnRepresentation actualRepresentation = flattenedResult.getColumn().asCanonical();
