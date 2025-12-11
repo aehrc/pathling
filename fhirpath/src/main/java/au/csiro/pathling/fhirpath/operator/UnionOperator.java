@@ -17,15 +17,26 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import static org.apache.spark.sql.functions.aggregate;
+import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.array_distinct;
 import static org.apache.spark.sql.functions.array_union;
+import static org.apache.spark.sql.functions.concat;
+import static org.apache.spark.sql.functions.exists;
+import static org.apache.spark.sql.functions.filter;
+import static org.apache.spark.sql.functions.ifnull;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.not;
+import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
@@ -35,8 +46,8 @@ import org.apache.spark.sql.Column;
  * Merges two collections into a single collection, eliminating any duplicate values using equality
  * semantics. There is no expectation of order in the resulting collection.
  * <p>
- * Currently supports only primitive types that use native Spark equality: Boolean, Integer, Decimal,
- * and String.
+ * Supports primitive types that use native Spark equality (Boolean, Integer, Decimal, String) and
+ * types with custom equality semantics (Quantity).
  *
  * @author Piotr Szul
  * @see <a href="https://hl7.org/fhirpath/#union-collections">union</a>
@@ -53,11 +64,19 @@ public class UnionOperator extends SameTypeBinaryOperator {
 
     // Check if the collection type is supported
     if (!(nonEmpty instanceof BooleanCollection || nonEmpty instanceof IntegerCollection
-        || nonEmpty instanceof DecimalCollection || nonEmpty instanceof StringCollection)) {
+        || nonEmpty instanceof DecimalCollection || nonEmpty instanceof StringCollection
+        || nonEmpty instanceof QuantityCollection)) {
       throw new UnsupportedFhirPathFeatureError(
           "Union operator is not supported for type: " + nonEmpty.getFhirType());
     }
 
+    // QuantityCollection requires custom equality for deduplication
+    if (nonEmpty instanceof QuantityCollection) {
+      final Column array = getArrayForUnion(nonEmpty);
+      return nonEmpty.copyWithColumn(deduplicateWithEquality(array, nonEmpty));
+    }
+
+    // Primitive types use native Spark equality
     final Column array = getArrayForUnion(nonEmpty);
     return nonEmpty.copyWithColumn(array_distinct(array));
   }
@@ -68,13 +87,22 @@ public class UnionOperator extends SameTypeBinaryOperator {
       @Nonnull final Collection right, @Nonnull final BinaryOperatorInput input) {
 
     // Check if the collection type is supported
-    // Only primitive types with native Spark equality are currently supported
     if (!(left instanceof BooleanCollection || left instanceof IntegerCollection
-        || left instanceof DecimalCollection || left instanceof StringCollection)) {
+        || left instanceof DecimalCollection || left instanceof StringCollection
+        || left instanceof QuantityCollection)) {
       throw new UnsupportedFhirPathFeatureError(
           "Union operator is not supported for type: " + left.getFhirType());
     }
 
+    // QuantityCollection requires custom equality for deduplication
+    if (left instanceof QuantityCollection) {
+      final Column leftArray = getArrayForUnion(left);
+      final Column rightArray = getArrayForUnion(right);
+      final Column combined = concat(leftArray, rightArray);
+      return left.copyWithColumn(deduplicateWithEquality(combined, left));
+    }
+
+    // Primitive types use native Spark equality
     final Column leftArray = getArrayForUnion(left);
     final Column rightArray = getArrayForUnion(right);
     final Column unionResult = array_union(leftArray, rightArray);
@@ -97,6 +125,31 @@ public class UnionOperator extends SameTypeBinaryOperator {
           .getColumn().plural().getValue();
     }
     return collection.getColumn().plural().getValue();
+  }
+
+  /**
+   * Deduplicates an array using the collection's custom equality semantics. This is used for types
+   * that require custom comparison logic (e.g., Quantity) instead of native Spark equality.
+   *
+   * @param arrayColumn the array column to deduplicate
+   * @param collection the collection providing the equality comparator
+   * @return deduplicated array column
+   */
+  @Nonnull
+  private Column deduplicateWithEquality(@Nonnull final Column arrayColumn,
+      @Nonnull final Collection collection) {
+    final ColumnEquality comparator = collection.getComparator();
+    // Create a typed empty array by filtering arrayColumn with a condition that always returns false
+    final Column emptyTypedArray = filter(arrayColumn, x -> lit(false));
+    return aggregate(
+        arrayColumn,
+        emptyTypedArray,  // accumulator starts as typed empty array
+        (acc, elem) -> when(
+            // make sure not to de-duplicate non-comparable values (if non-comparable both should be retained)
+            not(exists(acc, x -> ifnull(comparator.equalsTo(x, elem), lit(false)))),
+            concat(acc, array(elem))
+        ).otherwise(acc)
+    );
   }
 
   @Nonnull

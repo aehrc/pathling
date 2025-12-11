@@ -45,20 +45,20 @@ public class CombiningOperatorsDslTest extends FhirPathDslTestBase {
             .boolEmpty("emptyBool")
         )
         .group("Boolean union - empty collections")
-        .testEquals(List.of(true), "true | {}", "True union empty literal")
-        .testEquals(List.of(true), "{} | true", "Empty literal union true")
-        .testEquals(List.of(false), "false | {}", "False union empty literal")
-        .testEquals(List.of(false), "{} | false", "Empty literal union false")
-        .testEquals(List.of(true), "true | emptyBool", "True union empty Boolean")
-        .testEquals(List.of(true), "emptyBool | true", "Empty Boolean union true")
+        .testTrue("true | {}", "True union empty literal")
+        .testTrue("{} | true", "Empty literal union true")
+        .testFalse("false | {}", "False union empty literal")
+        .testFalse("{} | false", "Empty literal union false")
+        .testTrue("true | emptyBool", "True union empty Boolean")
+        .testTrue("emptyBool | true", "Empty Boolean union true")
         .testEmpty("emptyBool | emptyBool", "Empty Boolean union empty Boolean")
-        .testEquals(List.of(true), "{} | trueTrueArray", "Empty union [true, true] deduplicates to [true]")
-        .testEquals(List.of(true), "trueTrueArray | {}", "[true, true] union empty deduplicates to [true]")
+        .testTrue("{} | trueTrueArray", "Empty union [true, true] deduplicates to [true]")
+        .testTrue("trueTrueArray | {}", "[true, true] union empty deduplicates to [true]")
         .group("Boolean union - single values")
         .testEquals(List.of(true, false), "true | false", "True union false")
         .testEquals(List.of(false, true), "false | true", "False union true")
-        .testEquals(List.of(true), "true | true", "True union true (deduplication)")
-        .testEquals(List.of(false), "false | false", "False union false (deduplication)")
+        .testTrue("true | true", "True union true (deduplication)")
+        .testFalse("false | false", "False union false (deduplication)")
         .group("Boolean union - arrays")
         .testEquals(List.of(true, false), "trueFalseArray | falseTrueArray",
             "Array [true, false] union [false, true] (deduplication)")
@@ -92,17 +92,17 @@ public class CombiningOperatorsDslTest extends FhirPathDslTestBase {
             .integerEmpty("emptyInt")
         )
         .group("Integer union - empty collections")
-        .testEquals(List.of(1), "1 | {}", "1 union empty literal")
-        .testEquals(List.of(1), "{} | 1", "Empty literal union 1")
-        .testEquals(List.of(1), "1 | emptyInt", "1 union empty Integer")
-        .testEquals(List.of(1), "emptyInt | 1", "Empty Integer union 1")
+        .testEquals(1, "1 | {}", "1 union empty literal")
+        .testEquals(1, "{} | 1", "Empty literal union 1")
+        .testEquals(1, "1 | emptyInt", "1 union empty Integer")
+        .testEquals(1, "emptyInt | 1", "Empty Integer union 1")
         .testEmpty("emptyInt | emptyInt", "Empty Integer union empty Integer")
-        .testEquals(List.of(1), "{} | oneOne", "Empty union [1, 1] deduplicates to [1]")
-        .testEquals(List.of(1), "oneOne | {}", "[1, 1] union empty deduplicates to [1]")
+        .testEquals(1, "{} | oneOne", "Empty union [1, 1] deduplicates to [1]")
+        .testEquals(1, "oneOne | {}", "[1, 1] union empty deduplicates to [1]")
         .group("Integer union - single values")
         .testEquals(List.of(1, 2), "1 | 2", "1 union 2")
         .testEquals(List.of(2, 1), "2 | 1", "2 union 1")
-        .testEquals(List.of(1), "1 | 1", "1 union 1 (deduplication)")
+        .testEquals(1, "1 | 1", "1 union 1 (deduplication)")
         .group("Integer union - arrays")
         .testEquals(List.of(1, 2, 3, 4), "oneTwoThree | twoThreeFour",
             "Array [1, 2, 3] union [2, 3, 4] (deduplication)")
@@ -138,17 +138,17 @@ public class CombiningOperatorsDslTest extends FhirPathDslTestBase {
             .stringEmpty("emptyString")
         )
         .group("String union - empty collections")
-        .testEquals(List.of("a"), "'a' | {}", "'a' union empty literal")
-        .testEquals(List.of("a"), "{} | 'a'", "Empty literal union 'a'")
-        .testEquals(List.of("a"), "'a' | emptyString", "'a' union empty String")
-        .testEquals(List.of("a"), "emptyString | 'a'", "Empty String union 'a'")
+        .testEquals("a", "'a' | {}", "'a' union empty literal")
+        .testEquals("a", "{} | 'a'", "Empty literal union 'a'")
+        .testEquals("a", "'a' | emptyString", "'a' union empty String")
+        .testEquals("a", "emptyString | 'a'", "Empty String union 'a'")
         .testEmpty("emptyString | emptyString", "Empty String union empty String")
-        .testEquals(List.of("a"), "{} | aaa", "Empty union ['a', 'a', 'a'] deduplicates to ['a']")
-        .testEquals(List.of("a"), "aaa | {}", "['a', 'a', 'a'] union empty deduplicates to ['a']")
+        .testEquals("a", "{} | aaa", "Empty union ['a', 'a', 'a'] deduplicates to ['a']")
+        .testEquals("a", "aaa | {}", "['a', 'a', 'a'] union empty deduplicates to ['a']")
         .group("String union - single values")
         .testEquals(List.of("a", "b"), "'a' | 'b'", "'a' union 'b'")
         .testEquals(List.of("b", "a"), "'b' | 'a'", "'b' union 'a'")
-        .testEquals(List.of("a"), "'a' | 'a'", "'a' union 'a' (deduplication)")
+        .testEquals("a", "'a' | 'a'", "'a' union 'a' (deduplication)")
         .group("String union - arrays")
         .testEquals(List.of("a", "b", "c", "d"), "abc | bcd",
             "Array ['a', 'b', 'c'] union ['b', 'c', 'd'] (deduplication)")
@@ -183,36 +183,80 @@ public class CombiningOperatorsDslTest extends FhirPathDslTestBase {
             .decimalEmpty("emptyDec")
         )
         .group("Decimal union - empty collections")
-        .testEquals(List.of(2.5), "2.5 | {}", "2.5 union empty literal")
-        .testEquals(List.of(2.5), "{} | 2.5", "Empty literal union 2.5")
-        .testEquals(List.of(2.5), "2.5 | emptyDec", "2.5 union empty Decimal")
-        .testEquals(List.of(2.5), "emptyDec | 2.5", "Empty Decimal union 2.5")
+        .testEquals(2.5, "2.5 | {}", "2.5 union empty literal")
+        .testEquals(2.5, "{} | 2.5", "Empty literal union 2.5")
+        .testEquals(2.5, "2.5 | emptyDec", "2.5 union empty Decimal")
+        .testEquals(2.5, "emptyDec | 2.5", "Empty Decimal union 2.5")
         .testEmpty("emptyDec | emptyDec", "Empty Decimal union empty Decimal")
-        .testEquals(List.of(1.1), "{} | dec111", "Empty union [1.1, 1.1] deduplicates to [1.1]")
-        .testEquals(List.of(1.1), "dec111 | {}", "[1.1, 1.1] union empty deduplicates to [1.1]")
+        .testEquals(1.1, "{} | dec111", "Empty union [1.1, 1.1] deduplicates to [1.1]")
+        .testEquals(1.1, "dec111 | {}", "[1.1, 1.1] union empty deduplicates to [1.1]")
         .group("Decimal union - single values")
         .testEquals(List.of(2.5, 5.5), "2.5 | 5.5", "2.5 union 5.5")
         .testEquals(List.of(5.5, 2.5), "5.5 | 2.5", "5.5 union 2.5")
-        .testEquals(List.of(2.5), "2.5 | 2.5", "2.5 union 2.5 (deduplication)")
+        .testEquals(2.5, "2.5 | 2.5", "2.5 union 2.5 (deduplication)")
         .group("Decimal union - precision variations")
-        .testEquals(List.of(2.5), "2.5 | 2.50", "2.5 union 2.50 (different precision, same value)")
-        .testEquals(List.of(1.1), "1.1 | 1.10", "1.1 union 1.10 (trailing zeros)")
-        .testEquals(List.of(1.0), "1.0 | 1.00", "1.0 union 1.00 (trailing zeros after decimal)")
+        .testEquals(2.5, "2.5 | 2.50", "2.5 union 2.50 (different precision, same value)")
+        .testEquals(1.1, "1.1 | 1.10", "1.1 union 1.10 (trailing zeros)")
+        .testEquals(1.0, "1.0 | 1.00", "1.0 union 1.00 (trailing zeros after decimal)")
         .group("Decimal union - arrays")
         .testEquals(List.of(1.1, 2.2, 3.3, 4.4), "dec123 | dec234",
             "Array [1.1, 2.2, 3.3] union [2.2, 3.3, 4.4] (deduplication)")
         .testEquals(List.of(1.1, 2.2, 3.3), "dec123 | dec123",
             "Array union itself (deduplication)")
         .group("Decimal union - mixed with Integer")
-        .testEquals(List.of(2.5, 5.0), "2.5 | 5", "Decimal union integer (integer promoted to decimal)")
-        .testEquals(List.of(5.0, 2.5), "5 | 2.5", "Integer union decimal (integer promoted to decimal)")
+        .testEquals(List.of(2.5, 5.0), "2.5 | 5",
+            "Decimal union integer (integer promoted to decimal)")
+        .testEquals(List.of(5.0, 2.5), "5 | 2.5",
+            "Integer union decimal (integer promoted to decimal)")
         .testEquals(List.of(1.0, 2.0), "1.0 | 2", "1.0 union 2")
-        .testEquals(List.of(1.0), "1.0 | 1", "1.0 union 1 (should deduplicate)")
+        .testEquals(1.0, "1.0 | 1", "1.0 union 1 (should deduplicate)")
         .group("Decimal union - grouped/nested expressions")
         .testEquals(List.of(1.1, 2.2, 3.3), "(1.1 | 2.2) | (2.2 | 3.3)",
             "Grouped: (1.1 | 2.2) | (2.2 | 3.3)")
         .testEquals(List.of(1.1, 2.2), "(1.1 | 1.1) | (2.2 | 2.2)",
             "Grouped with duplicates: (1.1 | 1.1) | (2.2 | 2.2)")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testQuantityUnion() {
+    return builder()
+        .withSubject(sb -> sb)  // No quantity arrays needed - using literals only
+        .group("Quantity union - same dimension different units")
+        .testEquals("1000 'mg'", "1000 'mg' | 1 'g'",
+            "1000mg = 1g, first element retained")
+        .testEquals(List.of("1000 'mg'", "2 'g'"), "1000 'mg' | 2 'g'",
+            "1000mg != 2g, keep both")
+        .testEquals(List.of("1000 'mg'", "2000 'mg'", "3 'g'"),
+            "(1000 'mg' | 2000 'mg') | (1 'g' | 3 'g')",
+            "Complex union with mixed units")
+        .group("Quantity union - definite time quantities")
+        .testEquals("1000 'ms'", "1000 'ms' | 1 's'",
+            "1000ms = 1s, first element retained")
+        .testEquals("2 second", "2 second | 2 's'",
+            "Calendar second = UCUM second, first element retained")
+        .testEquals("1 'd'", "1 'd' | 24 'h'",
+            "Definite durations comparable, keep first")
+        .group("Quantity union - indefinite calendar durations")
+        .testEquals(List.of("1 year", "12 months"), "1 year | 12 months",
+            "Indefinite durations not comparable, keep both")
+        .group("Quantity union - unit '1' with decimals/integers")
+        .testEquals("1 '1'", "1 '1' | 1.0",
+            "Decimal promoted to Quantity('1'), first element retained")
+        .testEquals("1 '1'", "1.0 '1' | 1.00 '1'",
+            "Unitless quantities with different precision, first retained")
+        .group("Quantity union - incompatible dimensions")
+        .testEquals(List.of("1 'cm'", "1 'cm2'"), "1 'cm' | 1 'cm2'",
+            "Different dimensions (length vs area), keep both")
+        .group("Quantity union - empty collections")
+        .testEquals("1 'mg'", "{} | 1 'mg'", "Empty union quantity")
+        .testEquals("1 'mg'", "(1 'mg' | 1 'mg') | {}",
+            "Deduplicate then union with empty")
+        .testEmpty("{} | {}", "Empty union empty")
+        .group("Quantity union - grouped expressions")
+        .testEquals(List.of("1 'mg'", "2 'mg'", "3 'mg'"),
+            "(1 'mg' | 2 'mg') | (2 'mg' | 3 'mg')",
+            "Nested union with deduplication")
         .build();
   }
 }

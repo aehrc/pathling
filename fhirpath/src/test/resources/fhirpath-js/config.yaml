@@ -349,6 +349,16 @@ excludeSet:
           (Boolean, Integer, String). Cross-type unions like Integer | Boolean are not supported.
         any:
           - "Functions.attrdouble | Functions.coll1.colltrue.attr"
+      - title: "Indefinite calendar duration union deduplication"
+        type: wontfix
+        outcome: failure
+        comment: |
+          Pathling treats indefinite calendar durations (year, month) as non-comparable in union
+          operations because they cannot be reliably converted to a common unit. The reference
+          implementation deduplicates (1 year | 12 months) to '1 year', while Pathling keeps
+          both values since the equality comparison returns NULL for incomparable quantities.
+        any:
+          - "(1 year | 12 months)"
   - title: FHIR R4 Exclusions
     glob: "fhirpath-js/cases/fhir-r4.yaml"
     exclude:

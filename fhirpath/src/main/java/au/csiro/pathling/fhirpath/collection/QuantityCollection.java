@@ -146,6 +146,17 @@ public class QuantityCollection extends Collection implements Comparable, String
         Optional.empty());
   }
 
+  /**
+   * Converts this quantity to a string collection using element-wise transformation.
+   *
+   * @return StringCollection representation of this quantity collection
+   */
+  @Nonnull
+  public StringCollection asStringCollection() {
+    return
+        map(r -> r.transformWithUdf(QuantityToLiteral.FUNCTION_NAME), StringCollection::build);
+  }
+
   @Nonnull
   @Override
   public StringCollection asStringPath() {
