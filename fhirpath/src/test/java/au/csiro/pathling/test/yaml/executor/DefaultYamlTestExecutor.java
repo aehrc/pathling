@@ -31,6 +31,7 @@ import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
@@ -294,7 +295,9 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
                                        ? qty.asStringCollection()
                                        : evalResult instanceof CodingCollection coding
                                          ? coding.asStringCollection()
-                                         : evalResult;
+                                         : evalResult instanceof TimeCollection time
+                                           ? time.asStringCollection()
+                                           : evalResult;
 
     // Get column representations for both actual and expected results.
     final ColumnRepresentation actualRepresentation = flattenedResult.getColumn().asCanonical();

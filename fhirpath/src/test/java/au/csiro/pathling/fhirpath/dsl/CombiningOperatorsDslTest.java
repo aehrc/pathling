@@ -347,4 +347,66 @@ public class CombiningOperatorsDslTest extends FhirPathDslTestBase {
             "Grouped with duplicates within groups")
         .build();
   }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testTimeUnion() {
+    return builder()
+        .withSubject(sb -> sb
+            .time("t1", "12:00")
+            .time("t2", "13:00")
+            .time("t3", "12:00:00")
+            .time("t4", "12:00:00.000")
+            .timeArray("samePrecision1", "12:00", "13:00")
+            .timeArray("samePrecision2", "12:00", "12:00")
+            .timeArray("mixedPrecision", "12:00", "12:00:00")
+            .timeEmpty("emptyTime")
+        )
+        .group("Time union - empty collections")
+        .testEquals("12:00", "@T12:00 | {}", "Time literal union empty")
+        .testEquals("12:00", "{} | @T12:00", "Empty union time literal")
+        .testEquals("12:00", "@T12:00 | emptyTime", "Time literal union empty Time")
+        .testEquals("12:00", "emptyTime | @T12:00", "Empty Time union time literal")
+        .testEmpty("emptyTime | emptyTime", "Empty Time union empty Time")
+        .testEquals("12:00", "{} | samePrecision2", "Empty union [12:00, 12:00] deduplicates to [12:00]")
+        .testEquals("12:00", "samePrecision2 | {}", "[12:00, 12:00] union empty deduplicates to [12:00]")
+        .group("Time union - single values, same precision")
+        .testEquals("12:00", "@T12:00 | @T12:00", "Same time union itself (deduplication)")
+        .testEquals(List.of("12:00", "13:00"), "@T12:00 | @T13:00", "Different times union")
+        .testEquals("12:00", "t1 | t1", "Variable union itself (deduplication)")
+        .testEquals(List.of("12:00", "13:00"), "t1 | t2", "Different time variables union")
+        .group("Time union - single values, different precision")
+        .testEquals(List.of("12:00", "12:00:00"), "t1 | t3",
+            "Different precision (12:00 vs 12:00:00), keep both")
+        .testEquals(List.of("12:00", "12:00:00.000"), "t1 | t4",
+            "Different precision (12:00 vs 12:00:00.000), keep both")
+        .testEquals("12:00:00", "t3 | t4",
+            "Both fractional seconds precision (12:00:00 vs 12:00:00.000), deduplicate")
+        .group("Time union - arrays, same precision")
+        .testEquals(List.of("12:00", "13:00"), "samePrecision1 | samePrecision1",
+            "Array union itself (deduplication)")
+        .testEquals("12:00", "samePrecision2 | samePrecision2",
+            "Array [12:00, 12:00] union itself (deduplication)")
+        .group("Time union - arrays, mixed precision")
+        .testEquals(List.of("12:00", "12:00:00"), "mixedPrecision | mixedPrecision",
+            "Array [12:00, 12:00:00] union itself (incomparable, keep both)")
+        .group("Time union - mixed singleton and array")
+        .testEquals(List.of("12:00", "13:00"), "@T12:00 | samePrecision1",
+            "Singleton union array containing it (deduplication)")
+        .testEquals(List.of("12:00", "13:00"), "samePrecision1 | @T12:00",
+            "Array union singleton it contains (deduplication)")
+        .testEquals(List.of("12:00", "13:00", "14:00"), "samePrecision1 | @T14:00",
+            "Array union singleton not in array")
+        .group("Time union - grouped/nested expressions")
+        .testEquals(List.of("12:00", "13:00", "14:00"),
+            "(@T12:00 | @T13:00) | (@T13:00 | @T14:00)",
+            "Grouped union with deduplication")
+        .testEquals(List.of("12:00", "13:00"),
+            "(@T12:00 | @T12:00) | (@T13:00 | @T13:00)",
+            "Grouped with duplicates within groups")
+        .group("Time union - precision handling in groups")
+        .testEquals(List.of("12:00", "12:00:00", "13:00"),
+            "(@T12:00 | @T12:00:00) | (@T13:00 | @T13:00)",
+            "Mixed precision in union (incomparable, keep both 12:00 and 12:00:00)")
+        .build();
+  }
 }
