@@ -17,258 +17,98 @@
 
 import * as cdk from "aws-cdk-lib";
 import { RemovalPolicy, Stack } from "aws-cdk-lib";
-import { Vpc } from "aws-cdk-lib/aws-ec2";
+import * as apprunner from "aws-cdk-lib/aws-apprunner";
 import {
-  AwsLogDriver,
-  Cluster,
-  ContainerImage,
-  FargateTaskDefinition,
-} from "aws-cdk-lib/aws-ecs";
-import { ApplicationLoadBalancedFargateService } from "aws-cdk-lib/aws-ecs-patterns";
-import { FileSystem } from "aws-cdk-lib/aws-efs";
-import { ApplicationProtocol } from "aws-cdk-lib/aws-elasticloadbalancingv2";
-import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
-import { RetentionDays } from "aws-cdk-lib/aws-logs";
-import { HostedZone } from "aws-cdk-lib/aws-route53";
+  Effect,
+  PolicyStatement,
+  Role,
+  ServicePrincipal,
+} from "aws-cdk-lib/aws-iam";
 import {
   BlockPublicAccess,
   Bucket,
   BucketEncryption,
   IBucket,
 } from "aws-cdk-lib/aws-s3";
-import { paramCase, pascalCase } from "change-case";
+import { paramCase } from "change-case";
 import { Construct } from "constructs";
 
-const DEFAULT_IMAGE = "ghcr.io/aehrc/pathling:latest";
-const DEFAULT_CACHE_IMAGE = "ghcr.io/aehrc/pathling-cache:latest";
+// ECR Public image (App Runner requires ECR or ECR Public).
+const DEFAULT_IMAGE = "public.ecr.aws/y4w7z7a1/pathling:latest";
 
 export interface PathlingStackProps extends cdk.StackProps {
-  domainName: string;
-  domainZoneId: string;
-  domainZoneName: string;
   image?: string;
-  cacheImage?: string;
   deploymentName?: string;
   bucketName?: string;
   bucketExists?: boolean;
   cpu?: string;
-  memoryMiB?: string;
+  memory?: string;
   maxHeapSize?: string;
   additionalJavaOptions?: string;
-  cacheSize?: string;
-  maxAzs?: number;
   allowedOrigins?: string;
   sentryDsn?: string;
   sentryEnvironment?: string;
   additionalConfiguration?: { [key: string]: string };
 }
 
-export interface PathlingStackPropsResolved extends PathlingStackProps {
-  image: string;
-  cacheImage: string;
-  deploymentName: string;
-  bucketName: string;
-  bucketExists: boolean;
-  cpu: string;
-  memoryMiB: string;
-  maxHeapSize: string;
-  cacheSize: string;
-  allowedOrigins: string;
-  additionalConfiguration: { [key: string]: string };
-}
-
 export class PathlingStack extends Stack {
-  private readonly deploymentName: string;
-
   constructor(scope: Construct, id: string, props: PathlingStackProps) {
     super(scope, id, props);
-    const resolvedProps = this.applyDefaults(props),
-      { deploymentName, bucketName, bucketExists, maxAzs } = resolvedProps;
-    this.deploymentName = deploymentName;
 
-    // All resources created by this stack will be tagged with a name of "PathlingDeployment" and a
-    // value equal to the deployment name.
-    this.tags.setTag("PathlingDeployment", this.deploymentName);
+    const {
+      image = DEFAULT_IMAGE,
+      deploymentName = "pathling",
+      bucketName = paramCase(deploymentName),
+      bucketExists = false,
+      cpu = "2 vCPU",
+      memory = "4 GB",
+      maxHeapSize = "2800m",
+      additionalJavaOptions,
+      allowedOrigins = "https://go.pathling.app",
+      sentryDsn,
+      sentryEnvironment,
+      additionalConfiguration = {},
+    } = props;
 
-    // Create an S3 bucket that will be used for the staging and warehouse locations.
-    const bucket = bucketExists
-      ? Bucket.fromBucketName(this, this.buildId("Bucket"), bucketName)
-      : new Bucket(this, this.buildId("Bucket"), {
-          bucketName: bucketName,
+    // Tag all resources.
+    this.tags.setTag("PathlingDeployment", deploymentName);
+
+    // Create or reference S3 bucket.
+    const bucket: IBucket = bucketExists
+      ? Bucket.fromBucketName(this, "Bucket", bucketName)
+      : new Bucket(this, "Bucket", {
+          bucketName,
           encryption: BucketEncryption.S3_MANAGED,
           enforceSSL: true,
           blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
           removalPolicy: RemovalPolicy.RETAIN,
         });
 
-    // Create a new VPC and cluster that will be used to run the service.
-    const vpc = new Vpc(this, this.buildId("Vpc"), { maxAzs });
-    const cluster = new Cluster(this, this.buildId("Cluster"), { vpc: vpc });
-
-    // Create an EFS file system that will be used for the cache.
-    const cacheFileSystem = new FileSystem(this, this.buildId("FileSystem"), {
-      vpc,
-      removalPolicy: RemovalPolicy.DESTROY,
+    // Create IAM role for App Runner instance.
+    const instanceRole = new Role(this, "InstanceRole", {
+      assumedBy: new ServicePrincipal("tasks.apprunner.amazonaws.com"),
     });
-
-    // Create the Fargate service on ECS.
-    const service = this.service(
-      resolvedProps,
-      bucket,
-      cluster,
-      cacheFileSystem,
+    instanceRole.addToPolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:ListBucketMultipartUploads",
+          "s3:AbortMultipartUpload",
+          "s3:ListBucket",
+          "s3:DeleteObject",
+          "s3:ListMultipartUploadParts",
+        ],
+        resources: [
+          `arn:aws:s3:::${bucket.bucketName}/warehouse/*`,
+          `arn:aws:s3:::${bucket.bucketName}/staging/*`,
+          `arn:aws:s3:::${bucket.bucketName}`,
+        ],
+      }),
     );
 
-    // Allow access to EFS from the service.
-    cacheFileSystem.connections.allowDefaultPortFrom(
-      service.service.connections,
-      `Allow traffic from Pathling service: ${deploymentName}`,
-    );
-  }
-
-  private service(
-    props: PathlingStackPropsResolved,
-    bucket: IBucket,
-    cluster: Cluster,
-    cacheFileSystem: FileSystem,
-  ): ApplicationLoadBalancedFargateService {
-    const { domainName, domainZoneId, domainZoneName } = props;
-    const appTaskDefinition = this.taskDefinition(
-      props,
-      bucket,
-      cacheFileSystem,
-    );
-
-    // Create a service to wrap the application task.
-    const service = new ApplicationLoadBalancedFargateService(
-      this,
-      this.buildId("AppService"),
-      {
-        cluster,
-        taskDefinition: appTaskDefinition,
-        protocol: ApplicationProtocol.HTTPS,
-        redirectHTTP: true,
-        domainName,
-        domainZone: HostedZone.fromHostedZoneAttributes(
-          this,
-          this.buildId("HostedZone"),
-          { hostedZoneId: domainZoneId, zoneName: domainZoneName },
-        ),
-        enableExecuteCommand: true,
-      },
-    );
-
-    // Point the load balancer to the cache container.
-    service.service.loadBalancerTarget({
-      containerName: "pathling-cache",
-      containerPort: 80,
-    });
-
-    // Define a health check based upon the capability statement.
-    service.targetGroup.configureHealthCheck({
-      path: "/fhir/metadata",
-      port: "80",
-      interval: cdk.Duration.seconds(30),
-      timeout: cdk.Duration.seconds(10),
-      healthyThresholdCount: 2,
-      unhealthyThresholdCount: 10,
-      healthyHttpCodes: "200,304",
-    });
-
-    return service;
-  }
-
-  private taskDefinition(
-    {
-      image,
-      cacheImage,
-      domainName,
-      cpu,
-      memoryMiB,
-      maxHeapSize,
-      additionalJavaOptions,
-      cacheSize,
-      allowedOrigins,
-      sentryDsn,
-      sentryEnvironment,
-      additionalConfiguration,
-    }: PathlingStackPropsResolved,
-    bucket: IBucket,
-    cacheFileSystem: FileSystem,
-  ) {
-    // Enables the application to access the S3 warehouse location.
-    const warehouseAccessStatement = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: [
-        "s3:PutObject",
-        "s3:GetObject",
-        "s3:ListBucketMultipartUploads",
-        "s3:AbortMultipartUpload",
-        "s3:ListBucket",
-        "s3:DeleteObject",
-        "s3:ListMultipartUploadParts",
-      ],
-      resources: [
-        `arn:aws:s3:::${bucket.bucketName}/warehouse/*`,
-        `arn:aws:s3:::${bucket.bucketName}`,
-      ],
-    });
-
-    // Enables the application to access the S3 staging location.
-    const stagingAccessStatement = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: [
-        "s3:GetObject",
-        "s3:ListBucketMultipartUploads",
-        "s3:ListBucket",
-      ],
-      resources: [
-        `arn:aws:s3:::${bucket.bucketName}/staging/*`,
-        `arn:aws:s3:::${bucket.bucketName}`,
-      ],
-    });
-
-    // Create a task definition that contains both the application and cache containers.
-    const taskDefinition = new FargateTaskDefinition(
-      this,
-      this.buildId("AppTaskDefinition"),
-      {
-        cpu: parseInt(cpu),
-        memoryLimitMiB: parseInt(memoryMiB),
-      },
-    );
-
-    // Create the cache container.
-    const cacheContainer = taskDefinition.addContainer(
-      this.buildId("CacheContainer"),
-      {
-        containerName: "pathling-cache",
-        image: ContainerImage.fromRegistry(cacheImage),
-        portMappings: [{ containerPort: 80 }],
-        environment: {
-          PATHLING_HOST: "localhost",
-          PATHLING_PORT: "8080",
-          VARNISH_STORAGE: `file,/var/lib/varnish/cache,${cacheSize}`,
-        },
-        logging: AwsLogDriver.awsLogs({
-          streamPrefix: "cache",
-          logRetention: RetentionDays.ONE_MONTH,
-        }),
-      },
-    );
-    // Add a volume pointing to the cache EFS file system.
-    taskDefinition.addVolume({
-      name: "cache",
-      efsVolumeConfiguration: { fileSystemId: cacheFileSystem.fileSystemId },
-    });
-    // Add a mount point for the cache volume.
-    cacheContainer.addMountPoints({
-      sourceVolume: "cache",
-      containerPath: "/var/lib/varnish",
-      readOnly: false,
-    });
-
-    // Build the JVM options string with required Spark/Hadoop flags.
+    // Build JVM options.
     const jvmOptions = [
       "-Duser.timezone=UTC",
       `-Xmx${maxHeapSize}`,
@@ -280,65 +120,57 @@ export class PathlingStack extends Stack {
       .filter(Boolean)
       .join(" ");
 
-    // Create the application container.
-    taskDefinition.addContainer(this.buildId("AppContainer"), {
-      containerName: "pathling",
-      image: ContainerImage.fromRegistry(image),
-      portMappings: [{ containerPort: 8080 }],
-      environment: {
-        JAVA_TOOL_OPTIONS: jvmOptions,
-        "pathling.import.allowableSources": `s3://${bucket.bucketName}/staging/`,
-        "pathling.storage.warehouseUrl": `s3://${bucket.bucketName}/warehouse`,
-        "pathling.cors.allowedOrigins": allowedOrigins,
-        "logging.level.au.csiro.pathling": "debug",
-        ...(sentryDsn ? { "pathling.sentryDsn": sentryDsn } : {}),
-        ...{ "pathling.sentryEnvironment": sentryEnvironment ?? domainName },
-        ...additionalConfiguration,
+    // Build environment variables.
+    const environmentVariables: { [key: string]: string } = {
+      JAVA_TOOL_OPTIONS: jvmOptions,
+      "pathling.import.allowableSources": `s3://${bucket.bucketName}/staging/`,
+      "pathling.storage.warehouseUrl": `s3://${bucket.bucketName}/warehouse`,
+      "pathling.cors.allowedOrigins": allowedOrigins,
+      "logging.level.au.csiro.pathling": "debug",
+      ...(sentryDsn ? { "pathling.sentryDsn": sentryDsn } : {}),
+      ...(sentryEnvironment
+        ? { "pathling.sentryEnvironment": sentryEnvironment }
+        : {}),
+      ...additionalConfiguration,
+    };
+
+    // Convert to App Runner format.
+    const runtimeEnvironmentVariables = Object.entries(environmentVariables).map(
+      ([name, value]) => ({ name, value }),
+    );
+
+    // Create App Runner service using L1 construct.
+    const service = new apprunner.CfnService(this, "Service", {
+      serviceName: deploymentName,
+      sourceConfiguration: {
+        imageRepository: {
+          imageIdentifier: image,
+          imageRepositoryType: "ECR_PUBLIC",
+          imageConfiguration: {
+            port: "8080",
+            runtimeEnvironmentVariables,
+          },
+        },
+        autoDeploymentsEnabled: false,
       },
-      logging: AwsLogDriver.awsLogs({
-        streamPrefix: "server",
-        logRetention: RetentionDays.ONE_MONTH,
-      }),
+      instanceConfiguration: {
+        cpu,
+        memory,
+        instanceRoleArn: instanceRole.roleArn,
+      },
+      healthCheckConfiguration: {
+        protocol: "HTTP",
+        path: "/fhir/metadata",
+        interval: 5,
+        timeout: 5,
+        healthyThreshold: 1,
+        unhealthyThreshold: 3,
+      },
     });
 
-    // Add the policy statements to the task definition.
-    taskDefinition.addToTaskRolePolicy(warehouseAccessStatement);
-    taskDefinition.addToTaskRolePolicy(stagingAccessStatement);
-
-    return taskDefinition;
-  }
-
-  private buildId(id: string): string {
-    return `${this.deploymentName}${pascalCase(id)}`;
-  }
-
-  private applyDefaults(props: PathlingStackProps): PathlingStackPropsResolved {
-    const {
-      image = DEFAULT_IMAGE,
-      cacheImage = DEFAULT_CACHE_IMAGE,
-      bucketName,
-      bucketExists = false,
-      deploymentName = "",
-      cpu = "2048",
-      memoryMiB = "4096",
-      maxHeapSize = "3096m",
-      cacheSize = "1G",
-      allowedOrigins = "https://go.pathling.app",
-      additionalConfiguration = {},
-    } = props;
-    return {
-      ...props,
-      image,
-      cacheImage,
-      deploymentName,
-      bucketName: bucketName || paramCase(deploymentName),
-      bucketExists: bucketExists,
-      cpu,
-      memoryMiB,
-      maxHeapSize,
-      cacheSize,
-      allowedOrigins,
-      additionalConfiguration,
-    };
+    // Output the service URL.
+    new cdk.CfnOutput(this, "ServiceUrl", {
+      value: `https://${service.attrServiceUrl}`,
+    });
   }
 }
