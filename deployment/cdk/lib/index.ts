@@ -151,7 +151,7 @@ export class PathlingStack extends Stack {
             runtimeEnvironmentVariables,
           },
         },
-        autoDeploymentsEnabled: false,
+        autoDeploymentsEnabled: true,
       },
       instanceConfiguration: {
         cpu,
