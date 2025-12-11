@@ -22,6 +22,7 @@ import au.csiro.pathling.operations.bulksubmit.BulkSubmitStatusProvider;
 import au.csiro.pathling.operations.update.BatchProvider;
 import au.csiro.pathling.operations.update.UpdateProviderFactory;
 import au.csiro.pathling.operations.view.ViewDefinitionRunProvider;
+import au.csiro.pathling.operations.viewexport.ViewDefinitionExportProvider;
 import au.csiro.pathling.search.SearchProviderFactory;
 import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.context.FhirContext;
@@ -144,6 +145,9 @@ public class FhirServer extends RestfulServer {
   @Nonnull
   private final transient ViewDefinitionRunProvider viewDefinitionRunProvider;
 
+  @Nonnull
+  private final transient ViewDefinitionExportProvider viewDefinitionExportProvider;
+
   /**
    * Constructs a new FhirServer.
    *
@@ -167,6 +171,7 @@ public class FhirServer extends RestfulServer {
    * @param updateProviderFactory the update provider factory
    * @param batchProvider the batch provider
    * @param viewDefinitionRunProvider the view definition run provider
+   * @param viewDefinitionExportProvider the view definition export provider
    */
   public FhirServer(@Nonnull final FhirContext fhirContext,
       @Nonnull final ServerConfiguration configuration,
@@ -187,7 +192,8 @@ public class FhirServer extends RestfulServer {
       @Nonnull final SearchProviderFactory searchProviderFactory,
       @Nonnull final UpdateProviderFactory updateProviderFactory,
       @Nonnull final BatchProvider batchProvider,
-      @Nonnull final ViewDefinitionRunProvider viewDefinitionRunProvider) {
+      @Nonnull final ViewDefinitionRunProvider viewDefinitionRunProvider,
+      @Nonnull final ViewDefinitionExportProvider viewDefinitionExportProvider) {
     // Pass the FhirContext to the RestfulServer superclass to ensure custom types like
     // ViewDefinitionResource are recognized when parsing request bodies.
     super(fhirContext);
@@ -210,6 +216,7 @@ public class FhirServer extends RestfulServer {
     this.updateProviderFactory = updateProviderFactory;
     this.batchProvider = batchProvider;
     this.viewDefinitionRunProvider = viewDefinitionRunProvider;
+    this.viewDefinitionExportProvider = viewDefinitionExportProvider;
   }
 
   @Override
@@ -255,6 +262,9 @@ public class FhirServer extends RestfulServer {
 
       // Register view definition run provider.
       registerProvider(viewDefinitionRunProvider);
+
+      // Register view definition export provider.
+      registerProvider(viewDefinitionExportProvider);
 
       // Authorization-related configuration.
       configureAuthorization();
