@@ -215,20 +215,28 @@ public class ViewDefinitionExportProvider
       @Nonnull final Object[] params) throws InvalidRequestException {
 
     @SuppressWarnings("unchecked") final List<String> viewNames =
-        params[0] != null ? (List<String>) params[0] : Collections.emptyList();
+        params[0] != null
+        ? (List<String>) params[0]
+        : Collections.emptyList();
 
     @SuppressWarnings("unchecked") final List<IBaseResource> viewResources =
-        params[1] != null ? (List<IBaseResource>) params[1] : Collections.emptyList();
+        params[1] != null
+        ? (List<IBaseResource>) params[1]
+        : Collections.emptyList();
 
     final String clientTrackingId = (String) params[2];
     final String format = (String) params[3];
     final BooleanType includeHeader = (BooleanType) params[4];
 
     @SuppressWarnings("unchecked") final List<String> patientIds =
-        params[5] != null ? (List<String>) params[5] : Collections.emptyList();
+        params[5] != null
+        ? (List<String>) params[5]
+        : Collections.emptyList();
 
     @SuppressWarnings("unchecked") final List<IdType> groupIds =
-        params[6] != null ? (List<IdType>) params[6] : Collections.emptyList();
+        params[6] != null
+        ? (List<IdType>) params[6]
+        : Collections.emptyList();
 
     final InstantType since = (InstantType) params[7];
 
@@ -272,7 +280,9 @@ public class ViewDefinitionExportProvider
     final List<ViewInput> views = new ArrayList<>();
 
     for (int i = 0; i < viewResources.size(); i++) {
-      final String name = i < viewNames.size() ? viewNames.get(i) : null;
+      final String name = i < viewNames.size()
+                          ? viewNames.get(i)
+                          : null;
       final IBaseResource resource = viewResources.get(i);
       final FhirView view = parseViewDefinition(resource, i);
       views.add(new ViewInput(name, view));

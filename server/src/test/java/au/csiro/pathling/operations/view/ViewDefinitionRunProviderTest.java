@@ -94,8 +94,6 @@ class ViewDefinitionRunProviderTest {
 
   @BeforeEach
   void setUp() {
-    // Register ViewDefinitionResource with the FhirContext.
-    fhirContext.registerCustomType(ViewDefinitionResource.class);
     provider = new ViewDefinitionRunProvider(
         sparkSession,
         deltaLake,

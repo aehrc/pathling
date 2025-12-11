@@ -11,6 +11,8 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
+import au.csiro.pathling.operations.view.ViewDefinitionResource;
+import ca.uhn.fhir.context.FhirContext;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
@@ -79,6 +81,17 @@ public class FhirServerTestConfiguration {
   @Bean
   public PathlingContext pathlingContext(SparkSession sparkSession) {
     return PathlingContext.create(sparkSession);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  @Primary
+  @Nonnull
+  static FhirContext fhirContext(@Nonnull final PathlingContext pathlingContext) {
+    final FhirContext fhirContext = pathlingContext.getFhirContext();
+    // Register the ViewDefinition custom resource type for SQL on FHIR support.
+    fhirContext.registerCustomType(ViewDefinitionResource.class);
+    return fhirContext;
   }
 
   @Bean

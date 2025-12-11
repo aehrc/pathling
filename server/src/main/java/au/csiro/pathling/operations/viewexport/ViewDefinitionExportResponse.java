@@ -98,8 +98,8 @@ public class ViewDefinitionExportResponse implements OperationResponse<Binary> {
     // Ensure the base URL ends with a slash for proper URL construction.
     final String normalizedBaseUrl =
         serverBaseUrl.endsWith("/")
-            ? serverBaseUrl
-            : serverBaseUrl + "/";
+        ? serverBaseUrl
+        : serverBaseUrl + "/";
 
     manifest.put("transactionTime", InstantType.now().getValueAsString());
     manifest.put("request", kickOffRequestUrl);
