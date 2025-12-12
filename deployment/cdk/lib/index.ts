@@ -18,18 +18,8 @@
 import * as cdk from "aws-cdk-lib";
 import { RemovalPolicy, Stack } from "aws-cdk-lib";
 import * as apprunner from "aws-cdk-lib/aws-apprunner";
-import {
-  Effect,
-  PolicyStatement,
-  Role,
-  ServicePrincipal,
-} from "aws-cdk-lib/aws-iam";
-import {
-  BlockPublicAccess,
-  Bucket,
-  BucketEncryption,
-  IBucket,
-} from "aws-cdk-lib/aws-s3";
+import { Effect, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import { BlockPublicAccess, Bucket, BucketEncryption, IBucket } from "aws-cdk-lib/aws-s3";
 import { paramCase } from "change-case";
 import { Construct } from "constructs";
 
@@ -135,9 +125,9 @@ export class PathlingStack extends Stack {
     };
 
     // Convert to App Runner format.
-    const runtimeEnvironmentVariables = Object.entries(environmentVariables).map(
-      ([name, value]) => ({ name, value }),
-    );
+    const runtimeEnvironmentVariables = Object.entries(
+      environmentVariables,
+    ).map(([name, value]) => ({ name, value }));
 
     // Create App Runner service using L1 construct.
     const service = new apprunner.CfnService(this, "Service", {
@@ -151,7 +141,6 @@ export class PathlingStack extends Stack {
             runtimeEnvironmentVariables,
           },
         },
-        autoDeploymentsEnabled: true,
       },
       instanceConfiguration: {
         cpu,

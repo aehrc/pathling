@@ -85,20 +85,22 @@ public class JobProvider {
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
    */
   public JobProvider(@Nonnull final ServerConfiguration configuration,
-      @Nonnull final JobRegistry jobRegistry, SparkSession sparkSession, @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}") String databasePath) {
+      @Nonnull final JobRegistry jobRegistry, SparkSession sparkSession,
+      @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
+      String databasePath) {
     this.configuration = configuration;
     this.jobRegistry = jobRegistry;
     this.sparkSession = sparkSession;
     this.databasePath = new Path(databasePath, "jobs").toString();
   }
-  
-  
+
+
   public void deleteJob(String jobId) {
     final Job<?> job = getJob(jobId);
     handleJobDeleteRequest(job);
   }
-  
-  
+
+
   /**
    * Queries a running job for its progress, completion status and final result.
    *
@@ -112,19 +114,19 @@ public class JobProvider {
   public IBaseResource job(@Nullable @OperationParam(name = "id") final String id,
       @jakarta.validation.constraints.NotNull final HttpServletRequest request,
       @Nullable final HttpServletResponse response) {
-    
+
     final Job<?> job = getJob(id);
 
     if (configuration.getAuth().isEnabled()) {
-     // Check for the required authority associated with the operation that initiated the job.
-     checkHasAuthority(PathlingAuthority.operationAccess(job.getOperation()));
-     // Check that the user requesting the job status is the same user that started the job.
-     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-     final Optional<String> currentUserId = getCurrentUserId(authentication);
-     if (!job.getOwnerId().equals(currentUserId)) {
-       throw new AccessDeniedError("The requested job is not owned by the current user");
-     }
-   }
+      // Check for the required authority associated with the operation that initiated the job.
+      checkHasAuthority(PathlingAuthority.operationAccess(job.getOperation()));
+      // Check that the user requesting the job status is the same user that started the job.
+      final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+      final Optional<String> currentUserId = getCurrentUserId(authentication);
+      if (!job.getOwnerId().equals(currentUserId)) {
+        throw new AccessDeniedError("The requested job is not owned by the current user");
+      }
+    }
     return handleJobGetRequest(request, response, job);
   }
 
@@ -154,11 +156,11 @@ public class JobProvider {
       handle if a delete request was initiated and another delete request is being called before the old one finishes
       -> just return success as well but don't schedule a new deletion internally OR return a 404
      */
-    if(job.isMarkedAsDeleted()) {
+    if (job.isMarkedAsDeleted()) {
       throw new ResourceNotFoundException("Already deleted this job.");
     }
     job.setMarkedAsDeleted(true);
-    if(!job.getResult().isDone()) {
+    if (!job.getResult().isDone()) {
       job.getResult().cancel(false);
       // Currently, only the files up until "now" will be deleted. Anything that is created between
       // the cancel request and the job actually being cancelled by spark will remain on the disk
@@ -169,14 +171,15 @@ public class JobProvider {
       throw new InternalErrorException("Failed to delete files associated with the job.", e);
     } finally {
       boolean removed = jobRegistry.remove(job);
-      if(removed) {
+      if (removed) {
         log.debug("Removed job {} from registry.", job.getId());
-      }
-      else {
-        log.warn("Failed to remove job {} from registry. This might in wrong caching results.", job.getId());
+      } else {
+        log.warn("Failed to remove job {} from registry. This might in wrong caching results.",
+            job.getId());
       }
     }
-    throw new ProcessingNotCompletedException("The job and its resources will be deleted.", buildDeletionOutcome());
+    throw new ProcessingNotCompletedException("The job and its resources will be deleted.",
+        buildDeletionOutcome());
   }
 
   public void deleteJobFiles(String jobId) throws IOException {
@@ -185,7 +188,7 @@ public class JobProvider {
     Path jobDirToDel = new Path(databasePath, jobId);
     log.debug("Deleting dir {}", jobDirToDel);
     boolean deleted = fs.delete(jobDirToDel, true);
-    if(!deleted) {
+    if (!deleted) {
       log.warn("Failed to delete dir {}", jobDirToDel);
     }
     log.debug("Deleted dir {}", jobDirToDel);
@@ -193,12 +196,13 @@ public class JobProvider {
 
   private IBaseResource handleJobGetRequest(@NotNull HttpServletRequest request,
       @Nullable HttpServletResponse response, @NotNull Job<?> job) {
-    if(job.getResult().isCancelled()) {
+    if (job.getResult().isCancelled()) {
       // a DELETE request was initiated before the job completed
       // Depending on the async task is running, the task may periodically check the isCancelled state and abort.
       // Otherwise, the job actually finishes but the user will never see the result (unless they 
       // initiate a new request and the cache-layer determined that is can reuse the result)
-      throw new ResourceNotFoundException("A DELETE request cancelled this job or deleted all files associated with this job.");
+      throw new ResourceNotFoundException(
+          "A DELETE request cancelled this job or deleted all files associated with this job.");
     }
     if (job.getResult().isDone()) {
       // If the job is done, we return the Parameters resource.
@@ -215,7 +219,9 @@ public class JobProvider {
         if (cause != null && cause.getCause() != null) {
           cause = cause.getCause();
         }
-        throw ErrorHandlingInterceptor.convertError(cause != null ? cause : e);
+        throw ErrorHandlingInterceptor.convertError(cause != null
+                                                    ? cause
+                                                    : e);
       }
     } else {
       // If the job is not done, we return a 202 along with an OperationOutcome and progress header.
@@ -232,8 +238,7 @@ public class JobProvider {
           // which have not yet been submitted.
           response.setHeader(PROGRESS_HEADER, progress + "%");
           job.setLastProgress(progress);
-        }
-        else {
+        } else {
           // instead show last percentage again
           response.setHeader(PROGRESS_HEADER, job.getLastProgress() + "%");
         }
