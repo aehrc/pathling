@@ -209,9 +209,13 @@ public class JobProvider {
         Thread.currentThread().interrupt();
         throw new InternalErrorException("Job was interrupted", e);
       } catch (final ExecutionException e) {
-        // This needs to go down two levels of causes: one for the ExecutionException added by the
-        // Future, and another one for the RuntimeException added by the AsyncAspect.
-        throw ErrorHandlingInterceptor.convertError(e.getCause().getCause());
+        // Unwrap the cause chain safely. The Future wraps exceptions in ExecutionException,
+        // and AsyncAspect wraps them in IllegalStateException.
+        Throwable cause = e.getCause();
+        if (cause != null && cause.getCause() != null) {
+          cause = cause.getCause();
+        }
+        throw ErrorHandlingInterceptor.convertError(cause != null ? cause : e);
       }
     } else {
       // If the job is not done, we return a 202 along with an OperationOutcome and progress header.
