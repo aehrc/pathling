@@ -17,7 +17,18 @@
 
 package au.csiro.pathling.sql;
 
+import static org.apache.spark.sql.functions.aggregate;
+import static org.apache.spark.sql.functions.array;
+import static org.apache.spark.sql.functions.concat;
+import static org.apache.spark.sql.functions.exists;
+import static org.apache.spark.sql.functions.filter;
+import static org.apache.spark.sql.functions.ifnull;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.not;
+import static org.apache.spark.sql.functions.when;
+
 import jakarta.annotation.Nonnull;
+import java.util.function.BinaryOperator;
 import lombok.experimental.UtilityClass;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
@@ -45,5 +56,50 @@ public class SqlFunctions {
   public static Column toFhirInstant(@Nonnull final Column col) {
     return functions.date_format(functions.to_utc_timestamp(col, functions.current_timezone()),
         FHIR_INSTANT_FORMAT);
+  }
+
+  /**
+   * Deduplicates an array using custom equality comparator.
+   * Implements manual deduplication with aggregate() for types requiring
+   * custom equality semantics (Quantity, Coding, temporal types).
+   *
+   * @param arrayColumn the array column to deduplicate
+   * @param equalityComparator a function that compares two elements for equality
+   * @return deduplicated array column
+   */
+  @Nonnull
+  public static Column arrayDistinctWithEquality(
+      @Nonnull final Column arrayColumn,
+      @Nonnull final BinaryOperator<Column> equalityComparator) {
+
+    final Column emptyTypedArray = filter(arrayColumn, x -> lit(false));
+
+    return aggregate(
+        arrayColumn,
+        emptyTypedArray,
+        (acc, elem) -> when(
+            not(exists(acc, x -> ifnull(equalityComparator.apply(x, elem), lit(false)))),
+            concat(acc, array(elem))
+        ).otherwise(acc)
+    );
+  }
+
+  /**
+   * Merges and deduplicates two arrays using custom equality comparator.
+   * Concatenates the arrays and then deduplicates using the provided equality function.
+   *
+   * @param leftArray the left array column
+   * @param rightArray the right array column
+   * @param equalityComparator a function that compares two elements for equality
+   * @return merged and deduplicated array column
+   */
+  @Nonnull
+  public static Column arrayUnionWithEquality(
+      @Nonnull final Column leftArray,
+      @Nonnull final Column rightArray,
+      @Nonnull final BinaryOperator<Column> equalityComparator) {
+
+    final Column combined = concat(leftArray, rightArray);
+    return arrayDistinctWithEquality(combined, equalityComparator);
   }
 }

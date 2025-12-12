@@ -17,30 +17,13 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static org.apache.spark.sql.functions.aggregate;
-import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.array_distinct;
 import static org.apache.spark.sql.functions.array_union;
-import static org.apache.spark.sql.functions.concat;
-import static org.apache.spark.sql.functions.exists;
-import static org.apache.spark.sql.functions.filter;
-import static org.apache.spark.sql.functions.ifnull;
-import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.not;
-import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
-import au.csiro.pathling.fhirpath.collection.BooleanCollection;
-import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.DateCollection;
-import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
-import au.csiro.pathling.fhirpath.collection.IntegerCollection;
-import au.csiro.pathling.fhirpath.collection.QuantityCollection;
-import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import au.csiro.pathling.fhirpath.comparison.ColumnEquality;
+import au.csiro.pathling.sql.SqlFunctions;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
@@ -50,11 +33,12 @@ import org.apache.spark.sql.Column;
  * Merges two collections into a single collection, eliminating any duplicate values using equality
  * semantics. There is no expectation of order in the resulting collection.
  * <p>
- * Supports primitive types that use native Spark equality (Boolean, Integer, Decimal, String) and
- * types with custom equality semantics (Quantity, Coding, Time, Date, DateTime).
+ * Type compatibility is determined through FHIRPath type reconciliation. Collections with
+ * compatible types are merged after type promotion (e.g., Date → DateTime, Integer → Decimal).
  * <p>
- * Date and DateTime are compatible types and can be unioned together with implicit type promotion
- * from Date to DateTime.
+ * Equality semantics are determined by the collection's comparator. Types using default SQL
+ * equality leverage Spark's native array operations, while types with custom equality
+ * (Quantity, Coding, temporal types) use element-wise comparison.
  *
  * @author Piotr Szul
  * @see <a href="https://hl7.org/fhirpath/#union-collections">union</a>
@@ -65,32 +49,9 @@ public class UnionOperator extends SameTypeBinaryOperator {
   @Override
   protected Collection handleOneEmpty(@Nonnull final Collection nonEmpty,
       @Nonnull final BinaryOperatorInput input) {
-    // For union, if one operand is empty, return the non-empty operand with duplicates eliminated
-    // Per FHIRPath spec: "Unioning an empty collection to a non-empty collection will return
-    // the non-empty collection with duplicates eliminated."
-
-    // Check if the collection type is supported
-    if (!(nonEmpty instanceof BooleanCollection || nonEmpty instanceof IntegerCollection
-        || nonEmpty instanceof DecimalCollection || nonEmpty instanceof StringCollection
-        || nonEmpty instanceof QuantityCollection || nonEmpty instanceof CodingCollection
-        || nonEmpty instanceof TimeCollection || nonEmpty instanceof DateCollection
-        || nonEmpty instanceof DateTimeCollection)) {
-      throw new UnsupportedFhirPathFeatureError(
-          "Union operator is not supported for type: " + nonEmpty.getFhirType());
-    }
-
-    // QuantityCollection, CodingCollection, TimeCollection, DateCollection, and DateTimeCollection
-    // require custom equality for deduplication
-    if (nonEmpty instanceof QuantityCollection || nonEmpty instanceof CodingCollection
-        || nonEmpty instanceof TimeCollection || nonEmpty instanceof DateCollection
-        || nonEmpty instanceof DateTimeCollection) {
-      final Column array = getArrayForUnion(nonEmpty);
-      return nonEmpty.copyWithColumn(deduplicateWithEquality(array, nonEmpty));
-    }
-
-    // Primitive types use native Spark equality
     final Column array = getArrayForUnion(nonEmpty);
-    return nonEmpty.copyWithColumn(array_distinct(array));
+    final Column deduplicatedArray = deduplicateArray(array, nonEmpty.getComparator());
+    return nonEmpty.copyWithColumn(deduplicatedArray);
   }
 
   @Nonnull
@@ -98,33 +59,10 @@ public class UnionOperator extends SameTypeBinaryOperator {
   protected Collection handleEquivalentTypes(@Nonnull final Collection left,
       @Nonnull final Collection right, @Nonnull final BinaryOperatorInput input) {
 
-    // Check if the collection type is supported
-    if (!(left instanceof BooleanCollection || left instanceof IntegerCollection
-        || left instanceof DecimalCollection || left instanceof StringCollection
-        || left instanceof QuantityCollection || left instanceof CodingCollection
-        || left instanceof TimeCollection || left instanceof DateCollection
-        || left instanceof DateTimeCollection)) {
-      throw new UnsupportedFhirPathFeatureError(
-          "Union operator is not supported for type: " + left.getFhirType());
-    }
-
-    // QuantityCollection, CodingCollection, TimeCollection, DateCollection, and DateTimeCollection
-    // require custom equality for deduplication
-    if (left instanceof QuantityCollection || left instanceof CodingCollection
-        || left instanceof TimeCollection || left instanceof DateCollection
-        || left instanceof DateTimeCollection) {
-      final Column leftArray = getArrayForUnion(left);
-      final Column rightArray = getArrayForUnion(right);
-      final Column combined = concat(leftArray, rightArray);
-      return left.copyWithColumn(deduplicateWithEquality(combined, left));
-    }
-
-    // Primitive types use native Spark equality
     final Column leftArray = getArrayForUnion(left);
     final Column rightArray = getArrayForUnion(right);
-    final Column unionResult = array_union(leftArray, rightArray);
+    final Column unionResult = unionArrays(leftArray, rightArray, left.getComparator());
 
-    // Return a collection of the same type as the input
     return left.copyWithColumn(unionResult);
   }
 
@@ -145,28 +83,39 @@ public class UnionOperator extends SameTypeBinaryOperator {
   }
 
   /**
-   * Deduplicates an array using the collection's custom equality semantics. This is used for types
-   * that require custom comparison logic (e.g., Quantity) instead of native Spark equality.
+   * Deduplicates an array using the appropriate strategy based on comparator type.
    *
    * @param arrayColumn the array column to deduplicate
-   * @param collection the collection providing the equality comparator
+   * @param comparator the equality comparator to use
    * @return deduplicated array column
    */
   @Nonnull
-  private Column deduplicateWithEquality(@Nonnull final Column arrayColumn,
-      @Nonnull final Collection collection) {
-    final ColumnEquality comparator = collection.getComparator();
-    // Create a typed empty array by filtering arrayColumn with a condition that always returns false
-    final Column emptyTypedArray = filter(arrayColumn, x -> lit(false));
-    return aggregate(
-        arrayColumn,
-        emptyTypedArray,  // accumulator starts as typed empty array
-        (acc, elem) -> when(
-            // make sure not to de-duplicate non-comparable values (if non-comparable both should be retained)
-            not(exists(acc, x -> ifnull(comparator.equalsTo(x, elem), lit(false)))),
-            concat(acc, array(elem))
-        ).otherwise(acc)
-    );
+  private Column deduplicateArray(@Nonnull final Column arrayColumn,
+      @Nonnull final ColumnEquality comparator) {
+    if (comparator.usesDefaultSqlEquality()) {
+      return array_distinct(arrayColumn);
+    } else {
+      return SqlFunctions.arrayDistinctWithEquality(arrayColumn, comparator::equalsTo);
+    }
+  }
+
+  /**
+   * Merges and deduplicates two arrays using the appropriate strategy.
+   *
+   * @param leftArray the left array column
+   * @param rightArray the right array column
+   * @param comparator the equality comparator to use
+   * @return merged and deduplicated array column
+   */
+  @Nonnull
+  private Column unionArrays(@Nonnull final Column leftArray,
+      @Nonnull final Column rightArray,
+      @Nonnull final ColumnEquality comparator) {
+    if (comparator.usesDefaultSqlEquality()) {
+      return array_union(leftArray, rightArray);
+    } else {
+      return SqlFunctions.arrayUnionWithEquality(leftArray, rightArray, comparator::equalsTo);
+    }
   }
 
   @Nonnull

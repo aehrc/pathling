@@ -116,16 +116,6 @@ public class TimeCollection extends Collection implements StringCoercible, Mater
     return TimeCollection.build(DefaultRepresentation.literal(value.getValueAsString()));
   }
 
-  /**
-   * Converts this time collection to a string collection using element-wise transformation.
-   *
-   * @return StringCollection representation of this time collection
-   */
-  @Nonnull
-  public StringCollection asStringCollection() {
-    return map(ColumnRepresentation::asString, StringCollection::build);
-  }
-
   @Nonnull
   @Override
   public StringCollection asStringPath() {

@@ -165,18 +165,6 @@ public class CodingCollection extends Collection implements StringCoercible {
   public Optional<TerminologyConcepts> toConcepts() {
     return Optional.of(TerminologyConcepts.set(this.getColumn(), this));
   }
-
-
-  /**
-   * Converts this quantity to a string collection using element-wise transformation.
-   *
-   * @return StringCollection representation of this quantity collection
-   */
-  @Nonnull
-  public StringCollection asStringCollection() {
-    return
-        map(r -> r.transformWithUdf(CodingToLiteral.FUNCTION_NAME), StringCollection::build);
-  }
   
   @Nonnull
   @Override
