@@ -21,6 +21,7 @@ import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
+import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
@@ -114,6 +115,14 @@ public class BulkSubmitStatusProvider {
 
     log.debug("Submission {} completed with state: {}", submission.submissionId(),
         submission.state());
+
+    // Check for error state and throw exception with error details.
+    if (submission.state() == SubmissionState.COMPLETED_WITH_ERRORS) {
+      final String errorMessage = submission.errorMessage() != null
+                                  ? submission.errorMessage()
+                                  : "Unknown error";
+      throw new InternalErrorException("Submission failed: " + errorMessage);
+    }
 
     // Get the result if available.
     final SubmissionResult result = submissionRegistry.getResult(submission.submissionId())

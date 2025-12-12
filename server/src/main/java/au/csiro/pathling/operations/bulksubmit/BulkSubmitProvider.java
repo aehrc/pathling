@@ -156,13 +156,15 @@ public class BulkSubmitProvider implements PreAsyncValidation<BulkSubmitRequest>
       @Nonnull final Optional<Submission> existingSubmission,
       @Nonnull final Optional<String> ownerId
   ) {
-    // For "in-progress" status, create or update the submission in PENDING state.
+    // For "in-progress" status, create or update the submission.
+    // Per the Argonaut spec, processing should begin immediately when a manifest URL is provided.
     Submission submission;
     if (existingSubmission.isPresent()) {
       submission = existingSubmission.get();
-      if (submission.state() != SubmissionState.PENDING) {
+      if (submission.state() != SubmissionState.PENDING
+          && submission.state() != SubmissionState.PROCESSING) {
         throw new InvalidRequestException(
-            "Cannot update submission %s: current state is %s, not PENDING."
+            "Cannot update submission %s: current state is %s."
                 .formatted(request.submissionId(), submission.state())
         );
       }
@@ -180,7 +182,7 @@ public class BulkSubmitProvider implements PreAsyncValidation<BulkSubmitRequest>
             request.submissionId());
       }
     } else {
-      // Create new submission in PENDING state.
+      // Create new submission.
       submission = Submission.createPending(
           request.submissionId(),
           request.submitter(),
@@ -198,6 +200,20 @@ public class BulkSubmitProvider implements PreAsyncValidation<BulkSubmitRequest>
       log.info("Created new submission: {}", request.submissionId());
     }
 
+    // Per the Argonaut spec, processing should begin immediately when a manifest URL is provided.
+    if (request.manifestUrl() != null && submission.state() == SubmissionState.PENDING) {
+      submission = submission.withState(SubmissionState.PROCESSING);
+      submissionRegistry.put(submission);
+      log.info("Submission {} starting processing for manifest: {}", request.submissionId(),
+          request.manifestUrl());
+      if (executor != null) {
+        executor.execute(submission);
+      } else {
+        log.warn("BulkSubmitExecutor not available - submission {} will not be processed",
+            request.submissionId());
+      }
+    }
+
     return createAcknowledgementResponse(request.submissionId(), "in-progress");
   }
 
@@ -207,16 +223,20 @@ public class BulkSubmitProvider implements PreAsyncValidation<BulkSubmitRequest>
       @Nonnull final Optional<Submission> existingSubmission,
       @Nonnull final Optional<String> ownerId
   ) {
-    // For "complete" status, update the submission and trigger processing.
+    // For "complete" status, the provider is signalling that no more manifests will be added.
+    // Processing may already be in progress from a previous "in-progress" request with manifest.
     Submission submission;
+    boolean alreadyProcessing = false;
     if (existingSubmission.isPresent()) {
       final Submission existing = existingSubmission.get();
-      if (existing.state() != SubmissionState.PENDING) {
+      if (existing.state() != SubmissionState.PENDING
+          && existing.state() != SubmissionState.PROCESSING) {
         throw new InvalidRequestException(
-            "Cannot complete submission %s: current state is %s, not PENDING."
+            "Cannot complete submission %s: current state is %s."
                 .formatted(request.submissionId(), existing.state())
         );
       }
+      alreadyProcessing = existing.state() == SubmissionState.PROCESSING;
       // Use request manifest details if provided, otherwise use stored details from in-progress.
       if (request.manifestUrl() != null) {
         submission = existing.withManifestDetails(
@@ -252,16 +272,20 @@ public class BulkSubmitProvider implements PreAsyncValidation<BulkSubmitRequest>
       );
     }
 
-    // Set the state to PROCESSING before storing and executing.
-    submission = submission.withState(SubmissionState.PROCESSING);
-    submissionRegistry.put(submission);
-    log.info("Submission {} marked complete, starting processing", request.submissionId());
+    // Only start processing if not already in progress.
+    if (!alreadyProcessing) {
+      submission = submission.withState(SubmissionState.PROCESSING);
+      submissionRegistry.put(submission);
+      log.info("Submission {} marked complete, starting processing", request.submissionId());
 
-    // Execute the submission processing.
-    if (executor != null) {
-      executor.execute(submission);
+      if (executor != null) {
+        executor.execute(submission);
+      } else {
+        log.warn("BulkSubmitExecutor not available - submission {} will not be processed",
+            request.submissionId());
+      }
     } else {
-      log.warn("BulkSubmitExecutor not available - submission {} will not be processed",
+      log.info("Submission {} marked complete, processing already in progress",
           request.submissionId());
     }
 

@@ -39,6 +39,7 @@ import java.util.Optional;
  * @param completedAt The timestamp when the submission completed processing (ISO-8601 format).
  * @param ownerId The identifier of the user who owns this submission, or null if not applicable.
  * @param metadata Optional metadata associated with the submission.
+ * @param errorMessage Error message if the submission failed.
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
  */
@@ -52,7 +53,8 @@ public record Submission(
     @Nonnull String createdAt,
     @Nullable String completedAt,
     @Nullable String ownerId,
-    @Nullable SubmissionMetadata metadata
+    @Nullable SubmissionMetadata metadata,
+    @Nullable String errorMessage
 ) {
 
   private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_INSTANT;
@@ -91,6 +93,7 @@ public record Submission(
         now(),
         null,
         ownerId.orElse(null),
+        null,
         null
     );
   }
@@ -118,7 +121,8 @@ public record Submission(
         createdAt,
         newCompletedAt,
         ownerId,
-        metadata
+        metadata,
+        errorMessage
     );
   }
 
@@ -146,7 +150,31 @@ public record Submission(
         createdAt,
         completedAt,
         ownerId,
-        metadata
+        metadata,
+        errorMessage
+    );
+  }
+
+  /**
+   * Creates a copy of this submission with an error message and COMPLETED_WITH_ERRORS state.
+   *
+   * @param errorMessage The error message describing what went wrong.
+   * @return A new submission with the error message and updated state.
+   */
+  @Nonnull
+  public Submission withError(@Nonnull final String errorMessage) {
+    return new Submission(
+        submissionId,
+        submitter,
+        SubmissionState.COMPLETED_WITH_ERRORS,
+        manifestUrl,
+        replacesManifestUrl,
+        fhirBaseUrl,
+        createdAt,
+        now(),
+        ownerId,
+        metadata,
+        errorMessage
     );
   }
 

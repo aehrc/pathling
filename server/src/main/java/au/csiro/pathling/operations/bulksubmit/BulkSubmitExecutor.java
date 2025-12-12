@@ -156,12 +156,9 @@ public class BulkSubmitExecutor {
       log.error("Failed to process submission {}: {}", submission.submissionId(), e.getMessage(),
           e);
 
-      // Update submission state to COMPLETED_WITH_ERRORS.
-      submissionRegistry.updateState(
-          submission.submitter(),
-          submission.submissionId(),
-          SubmissionState.COMPLETED_WITH_ERRORS
-      );
+      // Update submission with error message.
+      final Submission updatedSubmission = submission.withError(e.getMessage());
+      submissionRegistry.put(updatedSubmission);
     }
   }
 
