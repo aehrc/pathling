@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.operations.bulksubmit;
 
+import au.csiro.pathling.config.BulkSubmitConfiguration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.io.SaveMode;
 import au.csiro.pathling.operations.bulkimport.ImportExecutor;
@@ -63,6 +65,9 @@ public class BulkSubmitExecutor {
   private final SubmissionRegistry submissionRegistry;
 
   @Nonnull
+  private final ServerConfiguration serverConfiguration;
+
+  @Nonnull
   private final ObjectMapper objectMapper;
 
   @Nonnull
@@ -73,13 +78,16 @@ public class BulkSubmitExecutor {
    *
    * @param importExecutor The import executor for processing files.
    * @param submissionRegistry The submission registry for tracking state.
+   * @param serverConfiguration The server configuration.
    */
   public BulkSubmitExecutor(
       @Nonnull final ImportExecutor importExecutor,
-      @Nonnull final SubmissionRegistry submissionRegistry
+      @Nonnull final SubmissionRegistry submissionRegistry,
+      @Nonnull final ServerConfiguration serverConfiguration
   ) {
     this.importExecutor = importExecutor;
     this.submissionRegistry = submissionRegistry;
+    this.serverConfiguration = serverConfiguration;
     this.objectMapper = new ObjectMapper();
     this.httpClient = HttpClient.newBuilder()
         .connectTimeout(HTTP_TIMEOUT)
@@ -123,9 +131,13 @@ public class BulkSubmitExecutor {
           ImportFormat.NDJSON
       );
 
-      // Execute the import.
+      // Execute the import with the bulk submit allowable sources.
       final String jobId = submission.submissionId();
-      importExecutor.execute(importRequest, jobId);
+      final BulkSubmitConfiguration bulkSubmitConfig = serverConfiguration.getBulkSubmit();
+      final List<String> allowableSources = bulkSubmitConfig != null
+                                            ? bulkSubmitConfig.getAllowableSources()
+                                            : List.of();
+      importExecutor.execute(importRequest, jobId, allowableSources);
 
       // Build output file list.
       for (final Map.Entry<String, Collection<String>> entry : fileUrls.entrySet()) {

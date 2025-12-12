@@ -28,12 +28,14 @@ import au.csiro.pathling.library.io.source.ParquetSource;
 import au.csiro.pathling.security.PathlingAuthority;
 import au.csiro.pathling.security.ResourceAccess.AccessType;
 import au.csiro.pathling.security.SecurityAspect;
+import au.csiro.pathling.errors.AccessDeniedError;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -76,7 +78,7 @@ public class ImportExecutor {
   }
 
   /**
-   * Executes the import operation.
+   * Executes the import operation using the configured {@link AccessRules} for URL validation.
    *
    * @param importRequest the import request containing the source files and configuration
    * @param jobId the job identifier for tracking this import operation
@@ -85,15 +87,37 @@ public class ImportExecutor {
   @Nonnull
   public ImportResponse execute(@Nonnull final ImportRequest importRequest,
       @SuppressWarnings("unused") final String jobId) {
+    return execute(importRequest, jobId, null);
+  }
+
+  /**
+   * Executes the import operation with custom allowable sources for URL validation.
+   *
+   * <p>When custom allowable sources are provided, they are used instead of the configured
+   * {@link AccessRules}. This allows callers (such as the bulk submit operation) to use their own
+   * allowable sources configuration.
+   *
+   * @param importRequest the import request containing the source files and configuration
+   * @param jobId the job identifier for tracking this import operation
+   * @param customAllowableSources optional list of URL prefixes to use for validation; if null, the
+   * configured {@link AccessRules} will be used
+   * @return the import response containing details of the imported data
+   */
+  @Nonnull
+  public ImportResponse execute(@Nonnull final ImportRequest importRequest,
+      @SuppressWarnings("unused") final String jobId,
+      @Nullable final List<String> customAllowableSources) {
     log.info("Received $import request");
-    final WriteDetails writeDetails = readAndWriteFilesFrom(importRequest);
+    final WriteDetails writeDetails = readAndWriteFilesFrom(importRequest, customAllowableSources);
     log.info("Import completed successfully");
     return new ImportResponse(importRequest.originalRequest(), importRequest, writeDetails);
   }
 
 
-  private WriteDetails readAndWriteFilesFrom(final ImportRequest request) {
-    final Map<String, Collection<String>> resourcesWithAuthority = checkAuthority(request);
+  private WriteDetails readAndWriteFilesFrom(final ImportRequest request,
+      @Nullable final List<String> customAllowableSources) {
+    final Map<String, Collection<String>> resourcesWithAuthority = checkAuthority(request,
+        customAllowableSources);
 
     // Create the appropriate data source based on the import format.
     final DataSource dataSource = switch (request.importFormat()) {
@@ -109,7 +133,8 @@ public class ImportExecutor {
         .delta(databasePath);
   }
 
-  private @NotNull Map<String, Collection<String>> checkAuthority(final ImportRequest request) {
+  private @NotNull Map<String, Collection<String>> checkAuthority(final ImportRequest request,
+      @Nullable final List<String> customAllowableSources) {
     if (serverConfiguration.getAuth().isEnabled()) {
       // Check global write authority.
       SecurityAspect.checkHasAuthority(PathlingAuthority.fromAuthority("pathling:write"));
@@ -123,10 +148,29 @@ public class ImportExecutor {
     }
 
     // Validate file access rules.
-    request.input().values().stream()
-        .flatMap(Collection::stream)
-        .forEach(file -> accessRules.ifPresent(ar -> ar.checkCanImportFrom(file)));
+    if (customAllowableSources != null) {
+      // Use custom allowable sources provided by the caller.
+      request.input().values().stream()
+          .flatMap(Collection::stream)
+          .forEach(file -> checkCustomAllowableSources(file, customAllowableSources));
+    } else {
+      // Use the configured access rules.
+      request.input().values().stream()
+          .flatMap(Collection::stream)
+          .forEach(file -> accessRules.ifPresent(ar -> ar.checkCanImportFrom(file)));
+    }
 
     return request.input();
+  }
+
+  private void checkCustomAllowableSources(@Nonnull final String url,
+      @Nonnull final List<String> allowableSources) {
+    if (allowableSources.isEmpty()) {
+      return;
+    }
+    final boolean allowed = allowableSources.stream().anyMatch(url::startsWith);
+    if (!allowed) {
+      throw new AccessDeniedError("URL: '" + url + "' is not an allowed source.");
+    }
   }
 }

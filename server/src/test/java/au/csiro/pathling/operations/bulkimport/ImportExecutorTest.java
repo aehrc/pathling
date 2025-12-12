@@ -509,6 +509,109 @@ class ImportExecutorTest {
   }
 
   // ========================================
+  // Custom Allowable Sources Tests
+  // ========================================
+
+  @Test
+  void testCustomAllowableSourcesSuccess() {
+    // Given - custom allowable sources that permit the file URL.
+    final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final List<String> customAllowableSources = List.of("file://");
+
+    final ImportRequest request = new ImportRequest(
+        "http://example.com/fhir/$import",
+        "https://example.org/source",
+        Map.of("Patient", List.of(patientUrl)),
+        SaveMode.OVERWRITE,
+        ImportFormat.NDJSON
+    );
+
+    // When
+    final ImportResponse response = importExecutor.execute(request, JOB_ID, customAllowableSources);
+
+    // Then
+    assertThat(response).isNotNull();
+    assertThat(response.getInputUrls()).containsExactly(patientUrl);
+  }
+
+  @Test
+  void testCustomAllowableSourcesFailure() {
+    // Given - custom allowable sources that do not permit the file URL.
+    final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final List<String> customAllowableSources = List.of("https://trusted.org/");
+
+    final ImportRequest request = new ImportRequest(
+        "http://example.com/fhir/$import",
+        "https://example.org/source",
+        Map.of("Patient", List.of(patientUrl)),
+        SaveMode.OVERWRITE,
+        ImportFormat.NDJSON
+    );
+
+    // When/Then - should fail because the URL doesn't match custom allowable sources.
+    assertThatThrownBy(() -> importExecutor.execute(request, JOB_ID, customAllowableSources))
+        .isInstanceOf(AccessDeniedError.class)
+        .hasMessageContaining(patientUrl)
+        .hasMessageContaining("not an allowed source");
+  }
+
+  @Test
+  void testCustomAllowableSourcesOverridesAccessRules() {
+    // Given - AccessRules configured to deny file:// but custom sources allow it.
+    final ImportConfiguration importConfiguration = serverConfiguration.getImport();
+    assertNotNull(importConfiguration);
+    importConfiguration.setAllowableSources(List.of("s3://only-this-bucket/"));
+
+    final ImportExecutor executorWithRules = new ImportExecutor(
+        Optional.of(new AccessRules(serverConfiguration)),
+        pathlingContext,
+        "file://" + uniqueTempDir.toAbsolutePath(),
+        serverConfiguration
+    );
+
+    final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final List<String> customAllowableSources = List.of("file://");
+
+    final ImportRequest request = new ImportRequest(
+        "http://example.com/fhir/$import",
+        "https://example.org/source",
+        Map.of("Patient", List.of(patientUrl)),
+        SaveMode.OVERWRITE,
+        ImportFormat.NDJSON
+    );
+
+    // When - use custom allowable sources that should override AccessRules.
+    final ImportResponse response = executorWithRules.execute(request, JOB_ID,
+        customAllowableSources);
+
+    // Then - should succeed because custom sources take precedence.
+    assertThat(response).isNotNull();
+    assertThat(response.getInputUrls()).containsExactly(patientUrl);
+  }
+
+  @Test
+  void testEmptyCustomAllowableSourcesAllowsAll() {
+    // Given - empty custom allowable sources should allow any URL (no validation).
+    final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
+    final List<String> emptyAllowableSources = List.of();
+
+    final ImportRequest request = new ImportRequest(
+        "http://example.com/fhir/$import",
+        "https://example.org/source",
+        Map.of("Patient", List.of(patientUrl)),
+        SaveMode.OVERWRITE,
+        ImportFormat.NDJSON
+    );
+
+    // When
+    final ImportResponse response = importExecutor.execute(request, JOB_ID, emptyAllowableSources);
+
+    // Then - should succeed because empty list bypasses validation.
+    assertThat(response).isNotNull();
+    assertThat(response.getInputUrls()).containsExactly(patientUrl);
+  }
+
+  // ========================================
   // Edge Cases
   // ========================================
 
