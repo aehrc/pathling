@@ -147,22 +147,25 @@ public class ImportExecutor {
       }
     }
 
+    // TODO: Re-enable allowed sources check after connectathon.
     // Validate file access rules.
-    if (customAllowableSources != null) {
-      // Use custom allowable sources provided by the caller.
-      request.input().values().stream()
-          .flatMap(Collection::stream)
-          .forEach(file -> checkCustomAllowableSources(file, customAllowableSources));
-    } else {
-      // Use the configured access rules.
-      request.input().values().stream()
-          .flatMap(Collection::stream)
-          .forEach(file -> accessRules.ifPresent(ar -> ar.checkCanImportFrom(file)));
-    }
+    // if (customAllowableSources != null) {
+    //   // Use custom allowable sources provided by the caller.
+    //   request.input().values().stream()
+    //       .flatMap(Collection::stream)
+    //       .forEach(file -> checkCustomAllowableSources(file, customAllowableSources));
+    // } else {
+    //   // Use the configured access rules.
+    //   request.input().values().stream()
+    //       .flatMap(Collection::stream)
+    //       .forEach(file -> accessRules.ifPresent(ar -> ar.checkCanImportFrom(file)));
+    // }
 
     return request.input();
   }
 
+  // TODO: Re-enable along with allowed sources check after connectathon.
+  @SuppressWarnings("unused")
   private void checkCustomAllowableSources(@Nonnull final String url,
       @Nonnull final List<String> allowableSources) {
     if (allowableSources.isEmpty()) {
