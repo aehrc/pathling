@@ -162,93 +162,9 @@ mvn test -pl <module-name>
 
 ### Building and testing the server module
 
-The `server` module is structured differently from other modules as it does not
-have the main `pom.xml` as a parent. This means it must be built and tested
-separately from the main Maven reactor.
-
-#### Prerequisites
-
-Before building the server, ensure that:
-
-1. The server's `pom.xml` references the correct Pathling version
-2. An up to date version of `library-runtime` is available in your local Maven
-   repository
-
-To install the required dependencies:
-
-```bash
-mvn clean install -pl library-runtime -am
-```
-
-#### Building the server
-
-All server build and test commands must be run from inside the `server`
-directory:
-
-```bash
-cd server
-mvn clean install
-```
-
-#### Running tests
-
-The server test suite includes both unit tests and integration tests:
-
-```bash
-cd server
-mvn test                    # Run unit tests
-mvn verify                  # Run unit and integration tests
-```
-
-To run specific tests:
-
-```bash
-cd server
-mvn test -Dtest=ImportExecutorTest
-mvn verify -Dit.test=ImportPnpOperationIT -Dtest=foo -Dsurefire.failIfNoSpecifiedTests=false
-```
-
-The last command runs only the specified integration test without running unit tests.
-The `-Dtest=foo` parameter specifies a non-existent unit test pattern, and
-`-Dsurefire.failIfNoSpecifiedTests=false` prevents failure when no unit tests
-match.
-
-#### Docker image
-
-The server includes a `docker` profile for building and deploying Docker images.
-
-To build a Docker image locally:
-
-```bash
-cd server
-mvn clean install -Pdocker
-```
-
-To push the image to a remote registry:
-
-```bash
-cd server
-mvn clean deploy -Pdocker
-```
-
-##### Configuring Docker repository and tag
-
-You can customise the Docker repository and tag using Maven properties:
-
-```bash
-cd server
-mvn clean install -Pdocker \
-  -Dpathling.fhirServerDockerRepo=myregistry/pathling \
-  -Dpathling.fhirServerDockerTag=v1.0.0
-```
-
-The default repository is `aehrc/pathling` and the default tag is `latest`.
-
-##### Multi-architecture builds
-
-The Docker build automatically creates multi-architecture images for both
-`linux/amd64` and `linux/arm64` platforms. This is configured in the Jib
-plugin and cannot be overridden via command-line properties.
+The `server` module is versioned independently and has its own
+[CONTRIBUTING.md](server/CONTRIBUTING.md) with detailed build, test, and
+deployment instructions.
 
 ### Testing Python and R libraries
 
