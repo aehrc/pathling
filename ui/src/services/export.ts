@@ -1,0 +1,216 @@
+/**
+ * Service for FHIR bulk export operations.
+ *
+ * @author John Grimes
+ */
+
+import type Client from "fhirclient/lib/Client";
+import type { ExportRequest, ExportManifest } from "../types/export";
+
+interface KickOffResult {
+  jobId: string;
+  pollUrl: string;
+}
+
+interface PollResult {
+  status: "in_progress" | "completed";
+  progress?: number;
+  manifest?: ExportManifest;
+}
+
+/**
+ * Builds the export URL based on the export request parameters.
+ */
+function buildExportUrl(request: ExportRequest): string {
+  let basePath: string;
+
+  switch (request.level) {
+    case "system":
+      basePath = "/$export";
+      break;
+    case "patient-type":
+      basePath = "/Patient/$export";
+      break;
+    case "patient-instance":
+      basePath = `/Patient/${request.patientId}/$export`;
+      break;
+    case "group":
+      basePath = `/Group/${request.groupId}/$export`;
+      break;
+  }
+
+  const params = new URLSearchParams();
+
+  if (request.resourceTypes && request.resourceTypes.length > 0) {
+    params.set("_type", request.resourceTypes.join(","));
+  }
+
+  if (request.since) {
+    params.set("_since", request.since);
+  }
+
+  if (request.until) {
+    params.set("_until", request.until);
+  }
+
+  if (request.elements) {
+    params.set("_elements", request.elements);
+  }
+
+  const queryString = params.toString();
+  return queryString ? `${basePath}?${queryString}` : basePath;
+}
+
+/**
+ * Kicks off a bulk export job.
+ */
+export async function kickOffExport(
+  client: Client,
+  request: ExportRequest
+): Promise<KickOffResult> {
+  const url = buildExportUrl(request);
+
+  const response = await client.request({
+    url,
+    headers: {
+      Accept: "application/fhir+json",
+      Prefer: "respond-async",
+    },
+  });
+
+  // The fhirclient library follows redirects and returns the final response.
+  // We need to get the Content-Location header from the original 202 response.
+  // However, due to how fhirclient works, we need to handle this differently.
+  // The response object should contain the headers.
+  const contentLocation = response?.headers?.get?.("Content-Location");
+
+  if (!contentLocation) {
+    // If using fhirclient, the response might be different.
+    // Try to extract from the response URL or throw an error.
+    throw new Error(
+      "Export kick-off failed: No Content-Location header received"
+    );
+  }
+
+  const jobId = extractJobId(contentLocation);
+  return { jobId, pollUrl: contentLocation };
+}
+
+/**
+ * Alternative kick-off method using fetch directly for better header access.
+ */
+export async function kickOffExportWithFetch(
+  fhirBaseUrl: string,
+  accessToken: string,
+  request: ExportRequest
+): Promise<KickOffResult> {
+  const url = `${fhirBaseUrl}${buildExportUrl(request)}`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Accept: "application/fhir+json",
+      Prefer: "respond-async",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (response.status !== 202) {
+    const errorBody = await response.text();
+    throw new Error(`Export kick-off failed: ${response.status} - ${errorBody}`);
+  }
+
+  const contentLocation = response.headers.get("Content-Location");
+  if (!contentLocation) {
+    throw new Error(
+      "Export kick-off failed: No Content-Location header received"
+    );
+  }
+
+  const jobId = extractJobId(contentLocation);
+  return { jobId, pollUrl: contentLocation };
+}
+
+/**
+ * Polls the job status endpoint.
+ */
+export async function pollJobStatus(
+  fhirBaseUrl: string,
+  accessToken: string,
+  pollUrl: string
+): Promise<PollResult> {
+  // Handle both absolute and relative URLs.
+  const url = pollUrl.startsWith("http") ? pollUrl : `${fhirBaseUrl}${pollUrl}`;
+
+  const response = await fetch(url, {
+    headers: {
+      Accept: "application/fhir+json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (response.status === 202) {
+    const progressHeader = response.headers.get("X-Progress");
+    const progress = progressHeader ? parseProgress(progressHeader) : undefined;
+    return { status: "in_progress", progress };
+  }
+
+  if (response.status === 200) {
+    const manifest = (await response.json()) as ExportManifest;
+    return { status: "completed", manifest };
+  }
+
+  const errorBody = await response.text();
+  throw new Error(`Job poll failed: ${response.status} - ${errorBody}`);
+}
+
+/**
+ * Cancels an export job.
+ */
+export async function cancelJob(
+  fhirBaseUrl: string,
+  accessToken: string,
+  pollUrl: string
+): Promise<void> {
+  const url = pollUrl.startsWith("http") ? pollUrl : `${fhirBaseUrl}${pollUrl}`;
+
+  const response = await fetch(url, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Job cancellation failed: ${response.status} - ${errorBody}`);
+  }
+}
+
+/**
+ * Extracts the job ID from a poll URL.
+ */
+function extractJobId(pollUrl: string): string {
+  const url = new URL(pollUrl, window.location.origin);
+  const jobId = url.searchParams.get("id");
+  if (!jobId) {
+    // Try to extract from path if not in query params.
+    const match = pollUrl.match(/job[s]?\/([a-f0-9-]+)/i);
+    if (match) {
+      return match[1];
+    }
+    throw new Error("Could not extract job ID from poll URL");
+  }
+  return jobId;
+}
+
+/**
+ * Parses the X-Progress header value (e.g., "45%" -> 45).
+ */
+function parseProgress(progressHeader: string): number {
+  const match = progressHeader.match(/(\d+)/);
+  if (match) {
+    return parseInt(match[1], 10);
+  }
+  return 0;
+}
