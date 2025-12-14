@@ -4,7 +4,7 @@
  * @author John Grimes
  */
 
-import type { ExportRequest, ExportManifest } from "../types/export";
+import type { ExportManifest, ExportRequest } from "../types/export";
 
 interface KickOffResult {
   jobId: string;
@@ -66,7 +66,7 @@ function buildExportUrl(request: ExportRequest): string {
 export async function kickOffExportWithFetch(
   fhirBaseUrl: string,
   accessToken: string | undefined,
-  request: ExportRequest
+  request: ExportRequest,
 ): Promise<KickOffResult> {
   const url = `${fhirBaseUrl}${buildExportUrl(request)}`;
 
@@ -85,13 +85,15 @@ export async function kickOffExportWithFetch(
 
   if (response.status !== 202) {
     const errorBody = await response.text();
-    throw new Error(`Export kick-off failed: ${response.status} - ${errorBody}`);
+    throw new Error(
+      `Export kick-off failed: ${response.status} - ${errorBody}`,
+    );
   }
 
   const contentLocation = response.headers.get("Content-Location");
   if (!contentLocation) {
     throw new Error(
-      "Export kick-off failed: No Content-Location header received"
+      "Export kick-off failed: No Content-Location header received",
     );
   }
 
@@ -105,7 +107,7 @@ export async function kickOffExportWithFetch(
 export async function pollJobStatus(
   fhirBaseUrl: string,
   accessToken: string | undefined,
-  pollUrl: string
+  pollUrl: string,
 ): Promise<PollResult> {
   // Handle both absolute and relative URLs.
   const url = pollUrl.startsWith("http") ? pollUrl : `${fhirBaseUrl}${pollUrl}`;
@@ -152,7 +154,7 @@ export async function pollJobStatus(
 export async function cancelJob(
   fhirBaseUrl: string,
   accessToken: string | undefined,
-  pollUrl: string
+  pollUrl: string,
 ): Promise<void> {
   const url = pollUrl.startsWith("http") ? pollUrl : `${fhirBaseUrl}${pollUrl}`;
 
@@ -168,7 +170,9 @@ export async function cancelJob(
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`Job cancellation failed: ${response.status} - ${errorBody}`);
+    throw new Error(
+      `Job cancellation failed: ${response.status} - ${errorBody}`,
+    );
   }
 }
 

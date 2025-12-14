@@ -4,40 +4,28 @@
  * @author John Grimes
  */
 
-import { useEffect, useCallback, useRef } from "react";
+import { InfoCircledIcon, LockClosedIcon } from "@radix-ui/react-icons";
 import { Box, Button, Callout, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
-import { LockClosedIcon, InfoCircledIcon } from "@radix-ui/react-icons";
-import { useSettings } from "../contexts/SettingsContext";
-import { useAuth } from "../contexts/AuthContext";
-import { useJobs } from "../contexts/JobContext";
+import { useCallback, useEffect, useRef } from "react";
 import { ExportForm } from "../components/export/ExportForm";
 import { ExportJobList } from "../components/export/ExportJobList";
-import { initiateAuth, checkServerCapabilities } from "../services/auth";
+import { useAuth } from "../contexts/AuthContext";
+import { useJobs } from "../contexts/JobContext";
+import { useSettings } from "../contexts/SettingsContext";
+import { checkServerCapabilities, initiateAuth } from "../services/auth";
 import {
-  kickOffExportWithFetch,
-  pollJobStatus,
   cancelJob as cancelJobApi,
+  kickOffExportWithFetch,
+  pollJobStatus
 } from "../services/export";
 import type { ExportRequest } from "../types/export";
 
 export function Dashboard() {
   const { fhirBaseUrl } = useSettings();
-  const {
-    isAuthenticated,
-    client,
-    authRequired,
-    setLoading,
-    setError,
-    setAuthRequired,
-  } = useAuth();
-  const {
-    jobs,
-    addJob,
-    updateJobProgress,
-    updateJobManifest,
-    updateJobError,
-    updateJobStatus,
-  } = useJobs();
+  const { isAuthenticated, client, authRequired, setLoading, setError, setAuthRequired } =
+    useAuth();
+  const { jobs, addJob, updateJobProgress, updateJobManifest, updateJobError, updateJobStatus } =
+    useJobs();
 
   const pollIntervalRef = useRef<Map<string, number>>(new Map());
 
@@ -56,7 +44,7 @@ export function Dashboard() {
   // Poll active jobs for progress updates.
   useEffect(() => {
     const activeJobs = jobs.filter(
-      (job) => job.status === "pending" || job.status === "in_progress"
+      (job) => job.status === "pending" || job.status === "in_progress",
     );
 
     activeJobs.forEach((job) => {
@@ -88,10 +76,7 @@ export function Dashboard() {
             updateJobStatus(job.id, "in_progress");
           }
         } catch (err) {
-          updateJobError(
-            job.id,
-            err instanceof Error ? err.message : "Unknown error"
-          );
+          updateJobError(job.id, err instanceof Error ? err.message : "Unknown error");
           // Stop polling on error.
           const intervalId = pollIntervalRef.current.get(job.id);
           if (intervalId) {
@@ -151,11 +136,7 @@ export function Dashboard() {
       try {
         const accessToken = client?.state.tokenResponse?.access_token;
 
-        const { jobId, pollUrl } = await kickOffExportWithFetch(
-          fhirBaseUrl,
-          accessToken,
-          request
-        );
+        const { jobId, pollUrl } = await kickOffExportWithFetch(fhirBaseUrl, accessToken, request);
 
         addJob({
           id: jobId,
@@ -167,12 +148,10 @@ export function Dashboard() {
           error: null,
         });
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to start export"
-        );
+        setError(err instanceof Error ? err.message : "Failed to start export");
       }
     },
-    [client, fhirBaseUrl, addJob, setError]
+    [client, fhirBaseUrl, addJob, setError],
   );
 
   const handleCancel = useCallback(
@@ -188,13 +167,10 @@ export function Dashboard() {
         await cancelJobApi(fhirBaseUrl, accessToken, job.pollUrl);
         updateJobStatus(jobId, "cancelled");
       } catch (err) {
-        updateJobError(
-          jobId,
-          err instanceof Error ? err.message : "Failed to cancel job"
-        );
+        updateJobError(jobId, err instanceof Error ? err.message : "Failed to cancel job");
       }
     },
-    [client, fhirBaseUrl, jobs, updateJobStatus, updateJobError]
+    [client, fhirBaseUrl, jobs, updateJobStatus, updateJobError],
   );
 
   const handleDownload = useCallback(
@@ -223,12 +199,10 @@ export function Dashboard() {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(downloadUrl);
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Download failed"
-        );
+        setError(err instanceof Error ? err.message : "Download failed");
       }
     },
-    [client, setError]
+    [client, setError],
   );
 
   // Show loading state while checking server capabilities.
@@ -259,8 +233,7 @@ export function Dashboard() {
             <InfoCircledIcon />
           </Callout.Icon>
           <Callout.Text>
-            You need to authenticate with the FHIR server before you can start
-            exporting data.
+            You need to authenticate with the FHIR server before you can start exporting data.
           </Callout.Text>
         </Callout.Root>
 
@@ -283,19 +256,11 @@ export function Dashboard() {
 
       <Flex gap="6" direction={{ initial: "column", md: "row" }}>
         <Box style={{ flex: 1 }}>
-          <ExportForm
-            onSubmit={handleExport}
-            isSubmitting={false}
-            disabled={false}
-          />
+          <ExportForm onSubmit={handleExport} isSubmitting={false} disabled={false} />
         </Box>
 
         <Box style={{ flex: 1 }}>
-          <ExportJobList
-            jobs={jobs}
-            onCancel={handleCancel}
-            onDownload={handleDownload}
-          />
+          <ExportJobList jobs={jobs} onCancel={handleCancel} onDownload={handleDownload} />
         </Box>
       </Flex>
     </Box>

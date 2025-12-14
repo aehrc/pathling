@@ -4,20 +4,8 @@
  * @author John Grimes
  */
 
-import {
-  Badge,
-  Box,
-  Button,
-  Card,
-  Flex,
-  Progress,
-  Text,
-} from "@radix-ui/themes";
-import {
-  Cross2Icon,
-  DownloadIcon,
-  ReloadIcon,
-} from "@radix-ui/react-icons";
+import { Cross2Icon, DownloadIcon, ReloadIcon } from "@radix-ui/react-icons";
+import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
 import type { ExportJob } from "../../types/export";
 
 interface ExportJobCardProps {
@@ -72,12 +60,8 @@ export function ExportJobCard({ job, onCancel, onDownload }: ExportJobCardProps)
         <Flex justify="between" align="start">
           <Box>
             <Flex align="center" gap="2" mb="1">
-              <Text weight="medium">
-                {formatLevel(job.request.level)} Export
-              </Text>
-              <Badge color={STATUS_COLORS[job.status]}>
-                {STATUS_LABELS[job.status]}
-              </Badge>
+              <Text weight="medium">{formatLevel(job.request.level)} Export</Text>
+              <Badge color={STATUS_COLORS[job.status]}>{STATUS_LABELS[job.status]}</Badge>
             </Flex>
             <Text size="1" color="gray">
               Started: {formatDate(job.createdAt)}
@@ -89,12 +73,7 @@ export function ExportJobCard({ job, onCancel, onDownload }: ExportJobCardProps)
             )}
           </Box>
           {isActive && (
-            <Button
-              size="1"
-              variant="soft"
-              color="red"
-              onClick={() => onCancel(job.id)}
-            >
+            <Button size="1" variant="soft" color="red" onClick={() => onCancel(job.id)}>
               <Cross2Icon />
               Cancel
             </Button>
@@ -147,9 +126,7 @@ export function ExportJobCard({ job, onCancel, onDownload }: ExportJobCardProps)
                   <Button
                     size="1"
                     variant="soft"
-                    onClick={() =>
-                      onDownload(output.url, `${output.type}.ndjson`)
-                    }
+                    onClick={() => onDownload(output.url, `${output.type}.ndjson`)}
                   >
                     <DownloadIcon />
                     Download
