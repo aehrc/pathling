@@ -102,13 +102,15 @@ pathling:
   # This section configures the CORS functionality of the server.
   # For more information, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
   cors:
-    allowedOrigins: [ ]
-    allowedOriginPatterns: [ ]
+    allowedOriginPatterns:
+      - "http://localhost:*"
+      - "https://localhost:*"
     allowedMethods:
       - OPTIONS
       - GET
       - POST
     allowedHeaders:
+      - Accept
       - Content-Type
       - Authorization
       - Prefer

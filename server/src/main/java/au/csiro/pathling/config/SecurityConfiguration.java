@@ -23,8 +23,10 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -35,6 +37,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 /**
  * Web security configuration for Pathling.
@@ -123,10 +126,9 @@ public class SecurityConfiguration {
    *
    * @return CORS configuration source
    */
+  @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     final CorsConfiguration cors = new CorsConfiguration();
-    
-    cors.setAllowedOrigins(configuration.getCors().getAllowedOrigins());
     cors.setAllowedOriginPatterns(configuration.getCors().getAllowedOriginPatterns());
     cors.setAllowedMethods(configuration.getCors().getAllowedMethods());
     cors.setAllowedHeaders(configuration.getCors().getAllowedHeaders());
@@ -137,6 +139,22 @@ public class SecurityConfiguration {
     final UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", cors);
     return source;
+  }
+
+  /**
+   * Registers a CORS filter as a servlet filter with highest priority. This ensures CORS preflight
+   * requests are handled before reaching the HAPI FHIR servlet, which does not handle OPTIONS
+   * requests.
+   *
+   * @return a filter registration bean for the CORS filter
+   */
+  @Bean
+  public FilterRegistrationBean<CorsFilter> corsFilterRegistration() {
+    final FilterRegistrationBean<CorsFilter> registration = new FilterRegistrationBean<>(
+        new CorsFilter(corsConfigurationSource()));
+    registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+    registration.addUrlPatterns("/fhir/*");
+    return registration;
   }
 
 }

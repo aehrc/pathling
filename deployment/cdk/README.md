@@ -35,7 +35,7 @@ new PathlingStack(app, "PathlingStack", {
 | `additionalJavaOptions` | No | - | Additional JVM options |
 | `cacheSize` | No | `"1G"` | Varnish cache size |
 | `maxAzs` | No | - | Maximum availability zones for the VPC |
-| `allowedOrigins` | No | `"https://go.pathling.app"` | CORS allowed origins |
+| `allowedOriginPatterns` | No | `"https://go.pathling.app"` | CORS allowed origin patterns |
 | `sentryDsn` | No | - | Sentry DSN for error reporting |
 | `sentryEnvironment` | No | `domainName` | Sentry environment name |
 | `additionalConfiguration` | No | `{}` | Additional Pathling configuration |

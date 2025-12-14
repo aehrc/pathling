@@ -68,7 +68,7 @@ import org.springframework.test.context.TestPropertySource;
     "pathling.auth.audience=https://pathling.acme.com/fhir",
     "pathling.cors.maxAge=800",
     "pathling.cors.allowedMethods=GET,POST",
-    "pathling.cors.allowedOrigins=http://foo.bar,http://boo.bar",
+    "pathling.cors.allowedOriginPatterns=http://foo.bar,http://boo.bar",
     "pathling.cors.allowedHeaders=X-Mine,X-Other"
 })
 @Tag("Tranche2")

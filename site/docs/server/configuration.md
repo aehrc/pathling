@@ -313,17 +313,10 @@ See the
 specification for more information about the meaning of the different headers
 that are controlled by this configuration.
 
-- `pathling.cors.allowedOrigins` - (default: `[empty]`) This is a
-  comma-delimited list of domain names that controls which domains are permitted
-  to access the server per the `Access-Control-Allow-Origin` header. The value
-  `*` can be used with this parameter, but only when `pathling.auth.enabled` is
-  set to false. To use wildcards when authorization is enabled, please use
-  `pathling.cors.allowedOriginPatterns`.
 - `pathling.cors.allowedOriginPatterns` - (default: `[empty]`) This is a
-  comma-delimited list of domain names that controls which domains are permitted
-  to access the server per the `Access-Control-Allow-Origin` header. It differs
-  from `pathling.cors.allowedOrigins` in that it supports wildcard patterns,
-  e.g. `https://*.somedomain.com`.
+  comma-delimited list of domain name patterns that controls which domains are
+  permitted to access the server per the `Access-Control-Allow-Origin` header.
+  Supports wildcard patterns, e.g. `https://*.somedomain.com`.
 - `pathling.cors.allowedMethods` - (default: `OPTIONS,GET,POST`) This is a
   comma-delimited list of HTTP methods permitted via the
   `Access-Control-Allow-Methods` header.

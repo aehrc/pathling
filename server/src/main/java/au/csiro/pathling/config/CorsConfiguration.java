@@ -12,9 +12,6 @@ import lombok.Data;
 public class CorsConfiguration {
 
   @NotNull
-  private List<String> allowedOrigins;
-
-  @NotNull
   private List<String> allowedOriginPatterns;
 
   @NotNull

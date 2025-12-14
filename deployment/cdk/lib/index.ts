@@ -35,7 +35,7 @@ export interface PathlingStackProps extends cdk.StackProps {
   memory?: string;
   maxHeapSize?: string;
   additionalJavaOptions?: string;
-  allowedOrigins?: string;
+  allowedOriginPatterns?: string;
   sentryDsn?: string;
   sentryEnvironment?: string;
   additionalConfiguration?: { [key: string]: string };
@@ -54,7 +54,7 @@ export class PathlingStack extends Stack {
       memory = "4 GB",
       maxHeapSize = "2800m",
       additionalJavaOptions,
-      allowedOrigins = "https://go.pathling.app",
+      allowedOriginPatterns = "https://go.pathling.app",
       sentryDsn,
       sentryEnvironment,
       additionalConfiguration = {},
@@ -115,7 +115,7 @@ export class PathlingStack extends Stack {
       JAVA_TOOL_OPTIONS: jvmOptions,
       "pathling.import.allowableSources": `s3://${bucket.bucketName}/staging/`,
       "pathling.storage.warehouseUrl": `s3://${bucket.bucketName}/warehouse`,
-      "pathling.cors.allowedOrigins": allowedOrigins,
+      "pathling.cors.allowedOriginPatterns": allowedOriginPatterns,
       "logging.level.au.csiro.pathling": "debug",
       ...(sentryDsn ? { "pathling.sentryDsn": sentryDsn } : {}),
       ...(sentryEnvironment

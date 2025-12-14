@@ -30,12 +30,16 @@ import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.ApacheProxyAddressStrategy;
 import ca.uhn.fhir.rest.server.FifoMemoryPagingProvider;
 import ca.uhn.fhir.rest.server.RestfulServer;
+import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
+import org.springframework.web.cors.CorsConfiguration;
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.io.Serial;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -266,6 +270,9 @@ public class FhirServer extends RestfulServer {
       // Register view definition export provider.
       registerProvider(viewDefinitionExportProvider);
 
+      // CORS configuration.
+      configureCors();
+
       // Authorization-related configuration.
       configureAuthorization();
 
@@ -306,6 +313,60 @@ public class FhirServer extends RestfulServer {
     // This removes the information-leaking X-Powered-By header from responses.
   }
 
+  @Override
+  protected void service(final HttpServletRequest request, final HttpServletResponse response)
+      throws ServletException, IOException {
+    // Handle CORS preflight requests by returning 200 with appropriate headers.
+    if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+      handleCorsPreflight(request, response);
+      return;
+    }
+    super.service(request, response);
+  }
+
+  private void handleCorsPreflight(final HttpServletRequest request,
+      final HttpServletResponse response) {
+    final String origin = request.getHeader("Origin");
+    if (origin != null) {
+      // Check if origin is allowed.
+      final List<String> allowedPatterns = configuration.getCors().getAllowedOriginPatterns();
+      if (isOriginAllowed(origin, allowedPatterns)) {
+        response.setHeader("Access-Control-Allow-Origin", origin);
+        response.setHeader("Access-Control-Allow-Methods",
+            String.join(", ", configuration.getCors().getAllowedMethods()));
+        response.setHeader("Access-Control-Allow-Headers",
+            String.join(", ", configuration.getCors().getAllowedHeaders()));
+        response.setHeader("Access-Control-Expose-Headers",
+            String.join(", ", configuration.getCors().getExposedHeaders()));
+        response.setHeader("Access-Control-Max-Age",
+            String.valueOf(configuration.getCors().getMaxAge()));
+        if (configuration.getAuth().isEnabled()) {
+          response.setHeader("Access-Control-Allow-Credentials", "true");
+        }
+        response.setHeader("Vary", "Origin, Access-Control-Request-Method, "
+            + "Access-Control-Request-Headers");
+      }
+    }
+    response.setStatus(HttpServletResponse.SC_OK);
+  }
+
+  private boolean isOriginAllowed(final String origin, final List<String> allowedPatterns) {
+    if (allowedPatterns == null || allowedPatterns.isEmpty()) {
+      return false;
+    }
+    for (final String pattern : allowedPatterns) {
+      if ("*".equals(pattern) || origin.matches(convertPatternToRegex(pattern))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private String convertPatternToRegex(final String pattern) {
+    // Convert simple wildcard patterns to regex.
+    return pattern.replace(".", "\\.").replace("*", ".*");
+  }
+
   private void configureAuthorization() {
     if (configuration.getAuth().isEnabled()) {
       final String issuer = checkPresent(configuration.getAuth().getIssuer());
@@ -313,6 +374,21 @@ public class FhirServer extends RestfulServer {
           new SmartConfigurationInterceptor(issuer, checkPresent(oidcConfiguration));
       registerInterceptor(smartConfigurationInterceptor);
     }
+  }
+
+  private void configureCors() {
+    final CorsConfiguration corsConfig = new CorsConfiguration();
+    corsConfig.setAllowedOriginPatterns(configuration.getCors().getAllowedOriginPatterns());
+    corsConfig.setAllowedMethods(configuration.getCors().getAllowedMethods());
+    corsConfig.setAllowedHeaders(configuration.getCors().getAllowedHeaders());
+    corsConfig.setExposedHeaders(configuration.getCors().getExposedHeaders());
+    corsConfig.setMaxAge(configuration.getCors().getMaxAge());
+    corsConfig.setAllowCredentials(configuration.getAuth().isEnabled());
+
+    final CorsInterceptor corsInterceptor = new CorsInterceptor(corsConfig);
+    registerInterceptor(corsInterceptor);
+    log.info("CORS interceptor registered with allowed origins: {}",
+        configuration.getCors().getAllowedOriginPatterns());
   }
 
 
