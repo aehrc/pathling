@@ -19,7 +19,7 @@ import {
 import { InfoCircledIcon, CheckCircledIcon } from "@radix-ui/react-icons";
 import { useSettings } from "../contexts/SettingsContext";
 import { useAuth } from "../contexts/AuthContext";
-import { discoverSmartConfig } from "../services/auth";
+import { checkServerCapabilities } from "../services/auth";
 
 export function Settings() {
   const navigate = useNavigate();
@@ -47,21 +47,16 @@ export function Settings() {
     setSuccess(false);
 
     try {
-      const isValid = await discoverSmartConfig(normalizedUrl);
-      if (isValid) {
-        setFhirBaseUrl(normalizedUrl);
-        setSuccess(true);
-        // If changing the endpoint, log out.
-        if (isAuthenticated && normalizedUrl !== fhirBaseUrl) {
-          logout();
-        }
-        // Navigate to dashboard after a brief delay.
-        setTimeout(() => navigate("/"), 1000);
-      } else {
-        setError(
-          "Could not connect to the FHIR server. Please check the URL."
-        );
+      // Check if the server is reachable by fetching its capabilities.
+      await checkServerCapabilities(normalizedUrl);
+      setFhirBaseUrl(normalizedUrl);
+      setSuccess(true);
+      // If changing the endpoint, log out.
+      if (isAuthenticated && normalizedUrl !== fhirBaseUrl) {
+        logout();
       }
+      // Navigate to dashboard after a brief delay.
+      setTimeout(() => navigate("/"), 1000);
     } catch (err) {
       setError(
         `Failed to validate FHIR server: ${err instanceof Error ? err.message : "Unknown error"}`
@@ -107,8 +102,8 @@ export function Settings() {
               }}
             />
             <Text size="1" color="gray" mt="1">
-              Enter the base URL of a FHIR server that supports SMART on FHIR
-              authentication.
+              Enter the base URL of a FHIR server that supports the bulk export
+              operation.
             </Text>
           </Box>
 

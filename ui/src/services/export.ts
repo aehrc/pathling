@@ -4,7 +4,6 @@
  * @author John Grimes
  */
 
-import type Client from "fhirclient/lib/Client";
 import type { ExportRequest, ExportManifest } from "../types/export";
 
 interface KickOffResult {
@@ -62,57 +61,26 @@ function buildExportUrl(request: ExportRequest): string {
 }
 
 /**
- * Kicks off a bulk export job.
- */
-export async function kickOffExport(
-  client: Client,
-  request: ExportRequest
-): Promise<KickOffResult> {
-  const url = buildExportUrl(request);
-
-  const response = await client.request({
-    url,
-    headers: {
-      Accept: "application/fhir+json",
-      Prefer: "respond-async",
-    },
-  });
-
-  // The fhirclient library follows redirects and returns the final response.
-  // We need to get the Content-Location header from the original 202 response.
-  // However, due to how fhirclient works, we need to handle this differently.
-  // The response object should contain the headers.
-  const contentLocation = response?.headers?.get?.("Content-Location");
-
-  if (!contentLocation) {
-    // If using fhirclient, the response might be different.
-    // Try to extract from the response URL or throw an error.
-    throw new Error(
-      "Export kick-off failed: No Content-Location header received"
-    );
-  }
-
-  const jobId = extractJobId(contentLocation);
-  return { jobId, pollUrl: contentLocation };
-}
-
-/**
- * Alternative kick-off method using fetch directly for better header access.
+ * Kicks off a bulk export job using fetch for better header access.
  */
 export async function kickOffExportWithFetch(
   fhirBaseUrl: string,
-  accessToken: string,
+  accessToken: string | undefined,
   request: ExportRequest
 ): Promise<KickOffResult> {
   const url = `${fhirBaseUrl}${buildExportUrl(request)}`;
 
+  const headers: HeadersInit = {
+    Accept: "application/fhir+json",
+    Prefer: "respond-async",
+  };
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
   const response = await fetch(url, {
     method: "GET",
-    headers: {
-      Accept: "application/fhir+json",
-      Prefer: "respond-async",
-      Authorization: `Bearer ${accessToken}`,
-    },
+    headers,
   });
 
   if (response.status !== 202) {
@@ -136,18 +104,20 @@ export async function kickOffExportWithFetch(
  */
 export async function pollJobStatus(
   fhirBaseUrl: string,
-  accessToken: string,
+  accessToken: string | undefined,
   pollUrl: string
 ): Promise<PollResult> {
   // Handle both absolute and relative URLs.
   const url = pollUrl.startsWith("http") ? pollUrl : `${fhirBaseUrl}${pollUrl}`;
 
-  const response = await fetch(url, {
-    headers: {
-      Accept: "application/fhir+json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  const headers: HeadersInit = {
+    Accept: "application/fhir+json",
+  };
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  const response = await fetch(url, { headers });
 
   if (response.status === 202) {
     const progressHeader = response.headers.get("X-Progress");
@@ -169,16 +139,19 @@ export async function pollJobStatus(
  */
 export async function cancelJob(
   fhirBaseUrl: string,
-  accessToken: string,
+  accessToken: string | undefined,
   pollUrl: string
 ): Promise<void> {
   const url = pollUrl.startsWith("http") ? pollUrl : `${fhirBaseUrl}${pollUrl}`;
 
+  const headers: HeadersInit = {};
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
   const response = await fetch(url, {
     method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
+    headers,
   });
 
   if (!response.ok) {

@@ -18,12 +18,14 @@ interface AuthState {
   isLoading: boolean;
   client: Client | null;
   error: string | null;
+  authRequired: boolean | null; // null = unknown, true = required, false = not required
 }
 
 interface AuthContextValue extends AuthState {
   setClient: (client: Client) => void;
   setError: (error: string) => void;
   setLoading: (loading: boolean) => void;
+  setAuthRequired: (required: boolean) => void;
   logout: () => void;
 }
 
@@ -35,15 +37,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading: false,
     client: null,
     error: null,
+    authRequired: null,
   });
 
   const setClient = useCallback((client: Client) => {
-    setState({
+    setState((prev) => ({
+      ...prev,
       isAuthenticated: true,
       isLoading: false,
       client,
       error: null,
-    });
+    }));
+  }, []);
+
+  const setAuthRequired = useCallback((required: boolean) => {
+    setState((prev) => ({
+      ...prev,
+      authRequired: required,
+    }));
   }, []);
 
   const setError = useCallback((error: string) => {
@@ -63,12 +74,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    setState({
+    setState((prev) => ({
+      ...prev,
       isAuthenticated: false,
       isLoading: false,
       client: null,
       error: null,
-    });
+    }));
     // Clear any stored session data.
     sessionStorage.removeItem("SMART_KEY");
   }, []);
@@ -80,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setClient,
         setError,
         setLoading,
+        setAuthRequired,
         logout,
       }}
     >

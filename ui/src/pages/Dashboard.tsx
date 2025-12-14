@@ -5,14 +5,14 @@
  */
 
 import { useEffect, useCallback, useRef } from "react";
-import { Box, Button, Callout, Flex, Heading } from "@radix-ui/themes";
+import { Box, Button, Callout, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
 import { LockClosedIcon, InfoCircledIcon } from "@radix-ui/react-icons";
 import { useSettings } from "../contexts/SettingsContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useJobs } from "../contexts/JobContext";
 import { ExportForm } from "../components/export/ExportForm";
 import { ExportJobList } from "../components/export/ExportJobList";
-import { initiateAuth } from "../services/auth";
+import { initiateAuth, checkServerCapabilities } from "../services/auth";
 import {
   kickOffExportWithFetch,
   pollJobStatus,
@@ -22,7 +22,14 @@ import type { ExportRequest } from "../types/export";
 
 export function Dashboard() {
   const { fhirBaseUrl } = useSettings();
-  const { isAuthenticated, client, setLoading, setError } = useAuth();
+  const {
+    isAuthenticated,
+    client,
+    authRequired,
+    setLoading,
+    setError,
+    setAuthRequired,
+  } = useAuth();
   const {
     jobs,
     addJob,
@@ -33,6 +40,18 @@ export function Dashboard() {
   } = useJobs();
 
   const pollIntervalRef = useRef<Map<string, number>>(new Map());
+
+  // Check server capabilities when FHIR URL changes.
+  useEffect(() => {
+    if (!fhirBaseUrl) return;
+
+    const checkCapabilities = async () => {
+      const capabilities = await checkServerCapabilities(fhirBaseUrl);
+      setAuthRequired(capabilities.authRequired);
+    };
+
+    checkCapabilities();
+  }, [fhirBaseUrl, setAuthRequired]);
 
   // Poll active jobs for progress updates.
   useEffect(() => {
@@ -47,11 +66,10 @@ export function Dashboard() {
       }
 
       const poll = async () => {
-        if (!client || !fhirBaseUrl) return;
+        if (!fhirBaseUrl) return;
 
         try {
-          const accessToken = client.state.tokenResponse?.access_token;
-          if (!accessToken) return;
+          const accessToken = client?.state.tokenResponse?.access_token;
 
           const result = await pollJobStatus(fhirBaseUrl, accessToken, job.pollUrl);
 
@@ -127,13 +145,10 @@ export function Dashboard() {
 
   const handleExport = useCallback(
     async (request: ExportRequest) => {
-      if (!client || !fhirBaseUrl) return;
+      if (!fhirBaseUrl) return;
 
       try {
-        const accessToken = client.state.tokenResponse?.access_token;
-        if (!accessToken) {
-          throw new Error("No access token available");
-        }
+        const accessToken = client?.state.tokenResponse?.access_token;
 
         const { jobId, pollUrl } = await kickOffExportWithFetch(
           fhirBaseUrl,
@@ -161,14 +176,13 @@ export function Dashboard() {
 
   const handleCancel = useCallback(
     async (jobId: string) => {
-      if (!client || !fhirBaseUrl) return;
+      if (!fhirBaseUrl) return;
 
       const job = jobs.find((j) => j.id === jobId);
       if (!job) return;
 
       try {
-        const accessToken = client.state.tokenResponse?.access_token;
-        if (!accessToken) return;
+        const accessToken = client?.state.tokenResponse?.access_token;
 
         await cancelJobApi(fhirBaseUrl, accessToken, job.pollUrl);
         updateJobStatus(jobId, "cancelled");
@@ -184,17 +198,15 @@ export function Dashboard() {
 
   const handleDownload = useCallback(
     async (url: string, filename: string) => {
-      if (!client) return;
-
       try {
-        const accessToken = client.state.tokenResponse?.access_token;
-        if (!accessToken) return;
+        const accessToken = client?.state.tokenResponse?.access_token;
 
-        const response = await fetch(url, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
+        const headers: HeadersInit = {};
+        if (accessToken) {
+          headers.Authorization = `Bearer ${accessToken}`;
+        }
+
+        const response = await fetch(url, { headers });
 
         if (!response.ok) {
           throw new Error(`Download failed: ${response.status}`);
@@ -218,7 +230,23 @@ export function Dashboard() {
     [client, setError]
   );
 
-  if (!isAuthenticated) {
+  // Show loading state while checking server capabilities.
+  if (authRequired === null) {
+    return (
+      <Box>
+        <Heading size="6" mb="4">
+          Bulk Export
+        </Heading>
+        <Flex align="center" gap="2">
+          <Spinner />
+          <Text>Checking server capabilities...</Text>
+        </Flex>
+      </Box>
+    );
+  }
+
+  // Show login prompt if authentication is required but not authenticated.
+  if (authRequired && !isAuthenticated) {
     return (
       <Box>
         <Heading size="6" mb="4">
@@ -245,6 +273,7 @@ export function Dashboard() {
     );
   }
 
+  // Show export form (either auth not required or user is authenticated).
   return (
     <Box>
       <Heading size="6" mb="4">
@@ -256,7 +285,7 @@ export function Dashboard() {
           <ExportForm
             onSubmit={handleExport}
             isSubmitting={false}
-            disabled={!isAuthenticated}
+            disabled={false}
           />
         </Box>
 
