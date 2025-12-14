@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -425,6 +426,7 @@ class ImportExecutorTest {
   }
 
   @Test
+  @Disabled("Allowed sources check is temporarily disabled for connectathon")
   void testAccessRulesValidationFailure() {
     // Given - configure to only allow s3:// URLs
     final ImportConfiguration importConfiguration = serverConfiguration.getImport();
@@ -475,6 +477,7 @@ class ImportExecutorTest {
   }
 
   @Test
+  @Disabled("Allowed sources check is temporarily disabled for connectathon")
   void testAccessRulesPartialFailure() {
     // Given - allow file:// but one URL uses s3://
     final ImportConfiguration importConfiguration = serverConfiguration.getImport();
@@ -535,6 +538,7 @@ class ImportExecutorTest {
   }
 
   @Test
+  @Disabled("Allowed sources check is temporarily disabled for connectathon")
   void testCustomAllowableSourcesFailure() {
     // Given - custom allowable sources that do not permit the file URL.
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
