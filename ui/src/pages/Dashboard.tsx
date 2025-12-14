@@ -118,10 +118,11 @@ export function Dashboard() {
     });
 
     return () => {
-      // Cleanup on unmount.
+      // Cleanup on unmount or when dependencies change.
       pollIntervalRef.current.forEach((intervalId) => {
         clearInterval(intervalId);
       });
+      pollIntervalRef.current.clear();
     };
   }, [
     jobs,

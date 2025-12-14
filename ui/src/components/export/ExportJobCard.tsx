@@ -130,7 +130,7 @@ export function ExportJobCard({ job, onCancel, onDownload }: ExportJobCardProps)
           </Text>
         )}
 
-        {job.status === "completed" && job.manifest && (
+        {job.status === "completed" && job.manifest?.output && (
           <Box>
             <Text size="2" weight="medium" mb="2">
               Output Files ({job.manifest.output.length})

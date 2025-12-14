@@ -125,8 +125,20 @@ export async function pollJobStatus(
     return { status: "in_progress", progress };
   }
 
+  // Handle 200 (fresh response). Note: 304 responses have no body.
   if (response.status === 200) {
-    const manifest = (await response.json()) as ExportManifest;
+    const responseBody = await response.json();
+
+    // Handle Binary resource wrapper - some servers return the manifest wrapped in a
+    // FHIR Binary resource with base64-encoded data.
+    let manifest: ExportManifest;
+    if (responseBody.resourceType === "Binary" && responseBody.data) {
+      const decodedData = atob(responseBody.data);
+      manifest = JSON.parse(decodedData) as ExportManifest;
+    } else {
+      manifest = responseBody as ExportManifest;
+    }
+
     return { status: "completed", manifest };
   }
 
