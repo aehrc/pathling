@@ -1,320 +1,236 @@
 /**
- * Main dashboard page for managing bulk exports.
+ * Dashboard page displaying server information from the CapabilityStatement.
  *
  * @author John Grimes
  */
 
-import { InfoCircledIcon, LockClosedIcon } from "@radix-ui/react-icons";
-import { Box, Button, Callout, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
-import { useCallback, useEffect, useRef } from "react";
-import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
-import { ExportForm } from "../components/export/ExportForm";
-import { ExportJobList } from "../components/export/ExportJobList";
-import { useAuth } from "../contexts/AuthContext";
-import { useJobs } from "../contexts/JobContext";
-import { useSettings } from "../contexts/SettingsContext";
-import { checkServerCapabilities, initiateAuth } from "../services/auth";
+import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import {
-  cancelJob as cancelJobApi,
-  kickOffExportWithFetch,
-  pollJobStatus,
-} from "../services/export";
-import { UnauthorizedError } from "../types/errors";
-import type { ExportRequest } from "../types/export";
+  Badge,
+  Box,
+  Button,
+  Card,
+  Flex,
+  Heading,
+  Separator,
+  Spinner,
+  Table,
+  Text,
+} from "@radix-ui/themes";
+import {
+  CheckCircledIcon,
+  CrossCircledIcon,
+  DownloadIcon,
+  UploadIcon,
+} from "@radix-ui/react-icons";
+import { useSettings } from "../contexts/SettingsContext";
+import { checkServerCapabilities, type ServerCapabilities } from "../services/auth";
 
 export function Dashboard() {
   const { fhirBaseUrl } = useSettings();
-  const {
-    isAuthenticated,
-    client,
-    authRequired,
-    setLoading,
-    setError,
-    setAuthRequired,
-    clearSessionAndPromptLogin,
-  } = useAuth();
-  const { jobs, addJob, updateJobProgress, updateJobManifest, updateJobError, updateJobStatus } =
-    useJobs();
+  const [capabilities, setCapabilities] = useState<ServerCapabilities | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const pollIntervalRef = useRef<Map<string, number>>(new Map());
-  const unauthorizedHandledRef = useRef(false);
-
-  // Handle 401 errors by clearing session and prompting for re-authentication.
-  const handleUnauthorizedError = useCallback(() => {
-    if (unauthorizedHandledRef.current) return;
-    unauthorizedHandledRef.current = true;
-
-    // Stop all polling jobs.
-    pollIntervalRef.current.forEach((intervalId) => {
-      clearInterval(intervalId);
-    });
-    pollIntervalRef.current.clear();
-
-    clearSessionAndPromptLogin();
-  }, [clearSessionAndPromptLogin]);
-
-  // Reset the unauthorized flag when user becomes authenticated.
-  useEffect(() => {
-    if (isAuthenticated) {
-      unauthorizedHandledRef.current = false;
-    }
-  }, [isAuthenticated]);
-
-  // Check server capabilities when FHIR URL changes.
   useEffect(() => {
     if (!fhirBaseUrl) return;
 
-    const checkCapabilities = async () => {
-      const capabilities = await checkServerCapabilities(fhirBaseUrl);
-      setAuthRequired(capabilities.authRequired);
+    const fetchCapabilities = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const caps = await checkServerCapabilities(fhirBaseUrl);
+        setCapabilities(caps);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load server info");
+      } finally {
+        setLoading(false);
+      }
     };
 
-    checkCapabilities();
-  }, [fhirBaseUrl, setAuthRequired]);
+    fetchCapabilities();
+  }, [fhirBaseUrl]);
 
-  // Poll active jobs for progress updates.
-  useEffect(() => {
-    const activeJobs = jobs.filter(
-      (job) => job.status === "pending" || job.status === "in_progress",
-    );
-
-    activeJobs.forEach((job) => {
-      // Skip if already polling this job.
-      if (pollIntervalRef.current.has(job.id)) {
-        return;
-      }
-
-      const poll = async () => {
-        if (!fhirBaseUrl) return;
-
-        try {
-          const accessToken = client?.state.tokenResponse?.access_token;
-
-          const result = await pollJobStatus(fhirBaseUrl, accessToken, job.pollUrl);
-
-          if (result.status === "completed" && result.manifest) {
-            updateJobManifest(job.id, result.manifest);
-            // Stop polling.
-            const intervalId = pollIntervalRef.current.get(job.id);
-            if (intervalId) {
-              clearInterval(intervalId);
-              pollIntervalRef.current.delete(job.id);
-            }
-          } else if (result.status === "in_progress") {
-            if (result.progress !== undefined) {
-              updateJobProgress(job.id, result.progress);
-            }
-            updateJobStatus(job.id, "in_progress");
-          }
-        } catch (err) {
-          if (err instanceof UnauthorizedError) {
-            handleUnauthorizedError();
-          } else {
-            updateJobError(job.id, err instanceof Error ? err.message : "Unknown error");
-          }
-          // Stop polling on error.
-          const intervalId = pollIntervalRef.current.get(job.id);
-          if (intervalId) {
-            clearInterval(intervalId);
-            pollIntervalRef.current.delete(job.id);
-          }
-        }
-      };
-
-      // Initial poll.
-      poll();
-      // Set up interval polling.
-      const intervalId = window.setInterval(poll, 3000);
-      pollIntervalRef.current.set(job.id, intervalId);
-    });
-
-    // Cleanup intervals for jobs that are no longer active.
-    pollIntervalRef.current.forEach((intervalId, jobId) => {
-      const job = jobs.find((j) => j.id === jobId);
-      if (!job || (job.status !== "pending" && job.status !== "in_progress")) {
-        clearInterval(intervalId);
-        pollIntervalRef.current.delete(jobId);
-      }
-    });
-
-    return () => {
-      // Cleanup on unmount or when dependencies change.
-      pollIntervalRef.current.forEach((intervalId) => {
-        clearInterval(intervalId);
-      });
-      pollIntervalRef.current.clear();
-    };
-  }, [
-    jobs,
-    client,
-    fhirBaseUrl,
-    updateJobProgress,
-    updateJobManifest,
-    updateJobError,
-    updateJobStatus,
-    handleUnauthorizedError,
-  ]);
-
-  const handleLogin = async () => {
-    if (!fhirBaseUrl) return;
-    setLoading(true);
-    try {
-      await initiateAuth(fhirBaseUrl);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
-    }
-  };
-
-  const handleExport = useCallback(
-    async (request: ExportRequest) => {
-      if (!fhirBaseUrl) return;
-
-      try {
-        const accessToken = client?.state.tokenResponse?.access_token;
-
-        const { jobId, pollUrl } = await kickOffExportWithFetch(fhirBaseUrl, accessToken, request);
-
-        addJob({
-          id: jobId,
-          pollUrl,
-          status: "pending",
-          progress: null,
-          request,
-          manifest: null,
-          error: null,
-        });
-      } catch (err) {
-        if (err instanceof UnauthorizedError) {
-          handleUnauthorizedError();
-        } else {
-          setError(err instanceof Error ? err.message : "Failed to start export");
-        }
-      }
-    },
-    [client, fhirBaseUrl, addJob, setError, handleUnauthorizedError],
-  );
-
-  const handleCancel = useCallback(
-    async (jobId: string) => {
-      if (!fhirBaseUrl) return;
-
-      const job = jobs.find((j) => j.id === jobId);
-      if (!job) return;
-
-      try {
-        const accessToken = client?.state.tokenResponse?.access_token;
-
-        await cancelJobApi(fhirBaseUrl, accessToken, job.pollUrl);
-        updateJobStatus(jobId, "cancelled");
-      } catch (err) {
-        if (err instanceof UnauthorizedError) {
-          handleUnauthorizedError();
-        } else {
-          updateJobError(jobId, err instanceof Error ? err.message : "Failed to cancel job");
-        }
-      }
-    },
-    [client, fhirBaseUrl, jobs, updateJobStatus, updateJobError, handleUnauthorizedError],
-  );
-
-  const handleDownload = useCallback(
-    async (url: string, filename: string) => {
-      try {
-        const accessToken = client?.state.tokenResponse?.access_token;
-
-        const headers: HeadersInit = {};
-        if (accessToken) {
-          headers.Authorization = `Bearer ${accessToken}`;
-        }
-
-        const response = await fetch(url, { headers });
-
-        if (response.status === 401) {
-          handleUnauthorizedError();
-          return;
-        }
-
-        if (!response.ok) {
-          throw new Error(`Download failed: ${response.status}`);
-        }
-
-        const blob = await response.blob();
-        const downloadUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(downloadUrl);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Download failed");
-      }
-    },
-    [client, setError, handleUnauthorizedError],
-  );
-
-  // Show loading state while checking server capabilities.
-  if (authRequired === null) {
+  if (loading) {
     return (
       <Box>
         <Heading size="6" mb="4">
-          Bulk Export
+          Dashboard
         </Heading>
         <Flex align="center" gap="2">
           <Spinner />
-          <Text>Checking server capabilities...</Text>
+          <Text>Loading server information...</Text>
         </Flex>
-        <SessionExpiredDialog />
       </Box>
     );
   }
 
-  // Show login prompt if authentication is required but not authenticated.
-  if (authRequired && !isAuthenticated) {
+  if (error) {
     return (
       <Box>
         <Heading size="6" mb="4">
-          Bulk Export
+          Dashboard
         </Heading>
-
-        <Callout.Root>
-          <Callout.Icon>
-            <InfoCircledIcon />
-          </Callout.Icon>
-          <Callout.Text>
-            You need to authenticate with the FHIR server before you can start exporting data.
-          </Callout.Text>
-        </Callout.Root>
-
-        <Box mt="4">
-          <Button size="3" onClick={handleLogin}>
-            <LockClosedIcon />
-            Login with SMART on FHIR
-          </Button>
-        </Box>
-        <SessionExpiredDialog />
+        <Text color="red">{error}</Text>
       </Box>
     );
   }
 
-  // Show export form (either auth not required or user is authenticated).
+  if (!capabilities) {
+    return (
+      <Box>
+        <Heading size="6" mb="4">
+          Dashboard
+        </Heading>
+        <Text color="gray">No server information available.</Text>
+      </Box>
+    );
+  }
+
   return (
     <Box>
       <Heading size="6" mb="4">
-        Bulk Export
+        Dashboard
       </Heading>
 
-      <Flex gap="6" direction={{ initial: "column", md: "row" }}>
-        <Box style={{ flex: 1 }}>
-          <ExportForm onSubmit={handleExport} isSubmitting={false} disabled={false} />
+      <Flex gap="6" direction={{ initial: "column", lg: "row" }}>
+        <Box style={{ flex: 2 }}>
+          <Card mb="4">
+            <Heading size="4" mb="3">
+              Server Information
+            </Heading>
+
+            <Flex direction="column" gap="2">
+              <Flex justify="between">
+                <Text weight="medium">Server Name</Text>
+                <Text>{capabilities.serverName || "Unknown"}</Text>
+              </Flex>
+
+              {capabilities.serverVersion && (
+                <Flex justify="between">
+                  <Text weight="medium">Version</Text>
+                  <Text>{capabilities.serverVersion}</Text>
+                </Flex>
+              )}
+
+              <Flex justify="between">
+                <Text weight="medium">FHIR Version</Text>
+                <Text>{capabilities.fhirVersion || "Unknown"}</Text>
+              </Flex>
+
+              {capabilities.publisher && (
+                <Flex justify="between">
+                  <Text weight="medium">Publisher</Text>
+                  <Text>{capabilities.publisher}</Text>
+                </Flex>
+              )}
+
+              <Flex justify="between">
+                <Text weight="medium">Authentication</Text>
+                <Flex align="center" gap="1">
+                  {capabilities.authRequired ? (
+                    <>
+                      <CheckCircledIcon color="var(--green-9)" />
+                      <Text color="green">SMART on FHIR</Text>
+                    </>
+                  ) : (
+                    <>
+                      <CrossCircledIcon color="var(--gray-9)" />
+                      <Text color="gray">Not required</Text>
+                    </>
+                  )}
+                </Flex>
+              </Flex>
+            </Flex>
+
+            {capabilities.description && (
+              <>
+                <Separator my="3" size="4" />
+                <Text size="2" color="gray">
+                  {capabilities.description}
+                </Text>
+              </>
+            )}
+          </Card>
+
+          {capabilities.operations && capabilities.operations.length > 0 && (
+            <Card mb="4">
+              <Heading size="4" mb="3">
+                System Operations
+              </Heading>
+              <Flex gap="2" wrap="wrap">
+                {capabilities.operations.map((op) => (
+                  <Badge key={op.name} size="2" variant="soft">
+                    ${op.name}
+                  </Badge>
+                ))}
+              </Flex>
+            </Card>
+          )}
+
+          {capabilities.resources && capabilities.resources.length > 0 && (
+            <Card>
+              <Heading size="4" mb="3">
+                Supported Resources
+              </Heading>
+              <Table.Root>
+                <Table.Header>
+                  <Table.Row>
+                    <Table.ColumnHeaderCell>Resource</Table.ColumnHeaderCell>
+                    <Table.ColumnHeaderCell>Interactions</Table.ColumnHeaderCell>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
+                  {capabilities.resources.map((resource) => (
+                    <Table.Row key={resource.type}>
+                      <Table.Cell>
+                        <Text weight="medium">{resource.type}</Text>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Flex gap="1" wrap="wrap">
+                          {resource.operations.map((op) => (
+                            <Badge
+                              key={op}
+                              size="1"
+                              variant="soft"
+                              color={op.startsWith("$") ? "blue" : "gray"}
+                            >
+                              {op}
+                            </Badge>
+                          ))}
+                        </Flex>
+                      </Table.Cell>
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table.Root>
+            </Card>
+          )}
         </Box>
 
         <Box style={{ flex: 1 }}>
-          <ExportJobList jobs={jobs} onCancel={handleCancel} onDownload={handleDownload} />
+          <Card>
+            <Heading size="4" mb="3">
+              Quick Actions
+            </Heading>
+            <Flex direction="column" gap="3">
+              <Link to="/export" style={{ textDecoration: "none" }}>
+                <Button size="3" style={{ width: "100%" }}>
+                  <DownloadIcon />
+                  Bulk Export
+                </Button>
+              </Link>
+              <Link to="/import" style={{ textDecoration: "none" }}>
+                <Button size="3" variant="soft" style={{ width: "100%" }}>
+                  <UploadIcon />
+                  Import Data
+                </Button>
+              </Link>
+            </Flex>
+          </Card>
         </Box>
       </Flex>
-      <SessionExpiredDialog />
     </Box>
   );
 }

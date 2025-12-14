@@ -58,7 +58,7 @@ export function ExportForm({ onSubmit, isSubmitting, disabled }: ExportFormProps
 
   const toggleResourceType = (type: string) => {
     setSelectedTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
     );
   };
 
@@ -79,10 +79,7 @@ export function ExportForm({ onSubmit, isSubmitting, disabled }: ExportFormProps
           <Text as="label" size="2" weight="medium" mb="1">
             Export Level
           </Text>
-          <Select.Root
-            value={level}
-            onValueChange={(value) => setLevel(value as ExportLevel)}
-          >
+          <Select.Root value={level} onValueChange={(value) => setLevel(value as ExportLevel)}>
             <Select.Trigger style={{ width: "100%" }} />
             <Select.Content>
               {EXPORT_LEVELS.map((l) => (
@@ -126,28 +123,24 @@ export function ExportForm({ onSubmit, isSubmitting, disabled }: ExportFormProps
               Resource Types
             </Text>
             <Flex gap="2">
-              <Text
-                size="1"
-                color="blue"
-                style={{ cursor: "pointer" }}
-                onClick={selectAllTypes}
-              >
+              <Text size="1" color="blue" style={{ cursor: "pointer" }} onClick={selectAllTypes}>
                 Select All
               </Text>
               <Text size="1" color="gray">
                 |
               </Text>
-              <Text
-                size="1"
-                color="blue"
-                style={{ cursor: "pointer" }}
-                onClick={clearAllTypes}
-              >
+              <Text size="1" color="blue" style={{ cursor: "pointer" }} onClick={clearAllTypes}>
                 Clear
               </Text>
             </Flex>
           </Flex>
-          <ScrollArea style={{ height: 150, border: "1px solid var(--gray-5)", borderRadius: "var(--radius-2)" }}>
+          <ScrollArea
+            style={{
+              height: 150,
+              border: "1px solid var(--gray-5)",
+              borderRadius: "var(--radius-2)",
+            }}
+          >
             <Box p="2">
               <Flex wrap="wrap" gap="2">
                 {RESOURCE_TYPES.map((type) => (

@@ -15,13 +15,29 @@ const SMART_SERVICE_CODE = "SMART-on-FHIR";
 export interface ServerCapabilities {
   authRequired: boolean;
   serverName?: string;
+  serverVersion?: string;
+  fhirVersion?: string;
+  publisher?: string;
+  description?: string;
+  resources?: ResourceCapability[];
+  operations?: OperationCapability[];
+}
+
+export interface ResourceCapability {
+  type: string;
+  operations: string[];
+}
+
+export interface OperationCapability {
+  name: string;
+  definition?: string;
 }
 
 /**
- * Fetches the CapabilityStatement and determines if authentication is required.
+ * Fetches the CapabilityStatement and extracts server information.
  */
 export async function checkServerCapabilities(
-  fhirBaseUrl: string
+  fhirBaseUrl: string,
 ): Promise<ServerCapabilities> {
   try {
     const response = await fetch(`${fhirBaseUrl}/metadata`, {
@@ -32,41 +48,101 @@ export async function checkServerCapabilities(
     }
 
     const capability = await response.json();
-    const serverName = capability.software?.name || capability.name;
 
-    // Check if any rest entry has SMART-on-FHIR security configured.
+    const serverName =
+      capability.implementation?.description || capability.name;
+    const serverVersion = capability.software?.version;
+    const fhirVersion = capability.fhirVersion;
+    const publisher = capability.publisher;
+    const description = capability.description;
+
+    // Extract resource capabilities.
+    const resources: ResourceCapability[] = [];
+    const operations: OperationCapability[] = [];
+
     const restEntries = capability.rest || [];
-    for (const rest of restEntries) {
-      const security = rest.security;
-      if (!security) continue;
+    let authRequired = false;
 
-      // Check security.service for SMART-on-FHIR.
-      const services = security.service || [];
-      for (const service of services) {
-        const codings = service.coding || [];
-        for (const coding of codings) {
+    for (const rest of restEntries) {
+      // Check security for auth requirement.
+      const security = rest.security;
+      if (security) {
+        const services = security.service || [];
+        for (const service of services) {
+          const codings = service.coding || [];
+          for (const coding of codings) {
+            if (
+              coding.system === SMART_SERVICE_SYSTEM &&
+              coding.code === SMART_SERVICE_CODE
+            ) {
+              authRequired = true;
+            }
+          }
+        }
+
+        // Also check for OAuth extension as a fallback.
+        const extensions = security.extension || [];
+        for (const ext of extensions) {
           if (
-            coding.system === SMART_SERVICE_SYSTEM &&
-            coding.code === SMART_SERVICE_CODE
+            ext.url?.includes("oauth-uris") ||
+            ext.url?.includes("smart-configuration")
           ) {
-            return { authRequired: true, serverName };
+            authRequired = true;
           }
         }
       }
 
-      // Also check for OAuth extension as a fallback.
-      const extensions = security.extension || [];
-      for (const ext of extensions) {
-        if (
-          ext.url?.includes("oauth-uris") ||
-          ext.url?.includes("smart-configuration")
-        ) {
-          return { authRequired: true, serverName };
+      // Extract resources.
+      const restResources = rest.resource || [];
+      for (const resource of restResources) {
+        const ops: string[] = [];
+
+        // Standard interactions.
+        const interactions = resource.interaction || [];
+        for (const interaction of interactions) {
+          if (interaction.code) {
+            ops.push(interaction.code);
+          }
+        }
+
+        // Resource-level operations.
+        const resourceOps = resource.operation || [];
+        for (const op of resourceOps) {
+          if (op.name) {
+            ops.push(`$${op.name}`);
+          }
+        }
+
+        if (resource.type) {
+          resources.push({
+            type: resource.type,
+            operations: ops,
+          });
+        }
+      }
+
+      // Extract system-level operations.
+      const systemOps = rest.operation || [];
+      for (const op of systemOps) {
+        if (op.name) {
+          operations.push({
+            name: op.name,
+            definition: op.definition,
+          });
         }
       }
     }
 
-    return { authRequired: false, serverName };
+    return {
+      authRequired,
+      serverName,
+      serverVersion,
+      fhirVersion,
+      publisher,
+      description,
+      resources,
+      operations,
+    };
   } catch (error) {
     console.error("Failed to check server capabilities:", error);
     // Default to requiring auth if we can't determine.

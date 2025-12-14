@@ -6,7 +6,7 @@
 
 import { Box, Flex, Heading, Text } from "@radix-ui/themes";
 import { ExportJobCard } from "./ExportJobCard";
-import type { ExportJob } from "../../types/export";
+import type { ExportJob } from "../../types/job";
 
 interface ExportJobListProps {
   jobs: ExportJob[];
@@ -32,12 +32,7 @@ export function ExportJobList({ jobs, onCancel, onDownload }: ExportJobListProps
       </Heading>
       <Flex direction="column" gap="3">
         {jobs.map((job) => (
-          <ExportJobCard
-            key={job.id}
-            job={job}
-            onCancel={onCancel}
-            onDownload={onDownload}
-          />
+          <ExportJobCard key={job.id} job={job} onCancel={onCancel} onDownload={onDownload} />
         ))}
       </Flex>
     </Box>

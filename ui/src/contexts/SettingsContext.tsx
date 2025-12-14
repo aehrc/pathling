@@ -5,13 +5,7 @@
  * @author John Grimes
  */
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 
 const STORAGE_KEY = "pathling-export-settings";
 
@@ -62,9 +56,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <SettingsContext.Provider
-      value={{ ...settings, setFhirBaseUrl, clearSettings }}
-    >
+    <SettingsContext.Provider value={{ ...settings, setFhirBaseUrl, clearSettings }}>
       {children}
     </SettingsContext.Provider>
   );

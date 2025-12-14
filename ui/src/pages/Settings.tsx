@@ -6,16 +6,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import {
-  Box,
-  Button,
-  Card,
-  Flex,
-  Heading,
-  Text,
-  TextField,
-  Callout,
-} from "@radix-ui/themes";
+import { Box, Button, Card, Flex, Heading, Text, TextField, Callout } from "@radix-ui/themes";
 import { InfoCircledIcon, CheckCircledIcon } from "@radix-ui/react-icons";
 import { useSettings } from "../contexts/SettingsContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -59,7 +50,7 @@ export function Settings() {
       setTimeout(() => navigate("/"), 1000);
     } catch (err) {
       setError(
-        `Failed to validate FHIR server: ${err instanceof Error ? err.message : "Unknown error"}`
+        `Failed to validate FHIR server: ${err instanceof Error ? err.message : "Unknown error"}`,
       );
     } finally {
       setIsValidating(false);
@@ -102,8 +93,7 @@ export function Settings() {
               }}
             />
             <Text size="1" color="gray" mt="1">
-              Enter the base URL of a FHIR server that supports the bulk export
-              operation.
+              Enter the base URL of a FHIR server that supports the bulk export operation.
             </Text>
           </Box>
 

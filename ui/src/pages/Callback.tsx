@@ -23,8 +23,7 @@ export function Callback() {
         setClient(client);
         navigate("/", { replace: true });
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Authentication failed";
+        const message = err instanceof Error ? err.message : "Authentication failed";
         setLocalError(message);
         setError(message);
       }
@@ -47,11 +46,7 @@ export function Callback() {
           </Callout.Text>
         </Callout.Root>
         <Box mt="4">
-          <Text
-            color="blue"
-            style={{ cursor: "pointer" }}
-            onClick={() => navigate("/settings")}
-          >
+          <Text color="blue" style={{ cursor: "pointer" }} onClick={() => navigate("/settings")}>
             Go to Settings
           </Text>
         </Box>
@@ -60,13 +55,7 @@ export function Callback() {
   }
 
   return (
-    <Flex
-      align="center"
-      justify="center"
-      style={{ minHeight: "100vh" }}
-      direction="column"
-      gap="4"
-    >
+    <Flex align="center" justify="center" style={{ minHeight: "100vh" }} direction="column" gap="4">
       <Spinner size="3" />
       <Text color="gray">Completing authentication...</Text>
     </Flex>

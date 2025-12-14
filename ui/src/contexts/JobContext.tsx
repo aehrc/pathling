@@ -1,39 +1,35 @@
 /**
- * Context for managing export job state using useReducer.
+ * Context for managing job state (both export and import) using useReducer.
  *
  * @author John Grimes
  */
 
-import {
-  createContext,
-  useContext,
-  useReducer,
-  useCallback,
-  type ReactNode,
-} from "react";
-import type { ExportJob, ExportManifest } from "../types/export";
-
-type JobStatus = "pending" | "in_progress" | "completed" | "failed" | "cancelled";
+import { createContext, useContext, useReducer, useCallback, useMemo, type ReactNode } from "react";
+import type { Job, ExportJob, ImportJob, JobStatus } from "../types/job";
+import type { ExportManifest } from "../types/export";
+import type { ImportManifest } from "../types/import";
 
 interface JobState {
-  jobs: ExportJob[];
+  jobs: Job[];
 }
 
 type JobAction =
-  | { type: "ADD_JOB"; payload: ExportJob }
-  | { type: "UPDATE_JOB"; payload: { id: string; updates: Partial<ExportJob> } }
+  | { type: "ADD_JOB"; payload: Job }
+  | { type: "UPDATE_JOB"; payload: { id: string; updates: Partial<Job> } }
   | { type: "REMOVE_JOB"; payload: string }
   | { type: "CLEAR_JOBS" };
 
 interface JobContextValue extends JobState {
-  addJob: (job: Omit<ExportJob, "createdAt">) => void;
+  addJob: (job: Omit<Job, "createdAt">) => void;
   updateJobStatus: (id: string, status: JobStatus) => void;
   updateJobProgress: (id: string, progress: number) => void;
-  updateJobManifest: (id: string, manifest: ExportManifest) => void;
+  updateJobManifest: (id: string, manifest: ExportManifest | ImportManifest) => void;
   updateJobError: (id: string, error: string) => void;
   removeJob: (id: string) => void;
   clearJobs: () => void;
-  getJob: (id: string) => ExportJob | undefined;
+  getJob: (id: string) => Job | undefined;
+  getExportJobs: () => ExportJob[];
+  getImportJobs: () => ImportJob[];
 }
 
 const JobContext = createContext<JobContextValue | null>(null);
@@ -49,10 +45,8 @@ function jobReducer(state: JobState, action: JobAction): JobState {
       return {
         ...state,
         jobs: state.jobs.map((job) =>
-          job.id === action.payload.id
-            ? { ...job, ...action.payload.updates }
-            : job
-        ),
+          job.id === action.payload.id ? { ...job, ...action.payload.updates } : job,
+        ) as Job[],
       };
     case "REMOVE_JOB":
       return {
@@ -72,10 +66,10 @@ function jobReducer(state: JobState, action: JobAction): JobState {
 export function JobProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(jobReducer, { jobs: [] });
 
-  const addJob = useCallback((job: Omit<ExportJob, "createdAt">) => {
+  const addJob = useCallback((job: Omit<Job, "createdAt">) => {
     dispatch({
       type: "ADD_JOB",
-      payload: { ...job, createdAt: new Date() },
+      payload: { ...job, createdAt: new Date() } as Job,
     });
   }, []);
 
@@ -93,15 +87,15 @@ export function JobProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const updateJobManifest = useCallback(
-    (id: string, manifest: ExportManifest) => {
-      dispatch({
-        type: "UPDATE_JOB",
-        payload: { id, updates: { manifest, status: "completed" } },
-      });
-    },
-    []
-  );
+  const updateJobManifest = useCallback((id: string, manifest: ExportManifest | ImportManifest) => {
+    dispatch({
+      type: "UPDATE_JOB",
+      payload: {
+        id,
+        updates: { manifest, status: "completed" } as Partial<Job>,
+      },
+    });
+  }, []);
 
   const updateJobError = useCallback((id: string, error: string) => {
     dispatch({
@@ -122,7 +116,17 @@ export function JobProvider({ children }: { children: ReactNode }) {
     (id: string) => {
       return state.jobs.find((job) => job.id === id);
     },
-    [state.jobs]
+    [state.jobs],
+  );
+
+  const getExportJobs = useMemo(
+    () => () => state.jobs.filter((job): job is ExportJob => job.type === "export"),
+    [state.jobs],
+  );
+
+  const getImportJobs = useMemo(
+    () => () => state.jobs.filter((job): job is ImportJob => job.type === "import"),
+    [state.jobs],
   );
 
   return (
@@ -137,6 +141,8 @@ export function JobProvider({ children }: { children: ReactNode }) {
         removeJob,
         clearJobs,
         getJob,
+        getExportJobs,
+        getImportJobs,
       }}
     >
       {children}
