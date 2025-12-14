@@ -7,6 +7,7 @@
 import { InfoCircledIcon, LockClosedIcon } from "@radix-ui/react-icons";
 import { Box, Button, Callout, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
 import { useCallback, useEffect, useRef } from "react";
+import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { ExportForm } from "../components/export/ExportForm";
 import { ExportJobList } from "../components/export/ExportJobList";
 import { useAuth } from "../contexts/AuthContext";
@@ -16,18 +17,48 @@ import { checkServerCapabilities, initiateAuth } from "../services/auth";
 import {
   cancelJob as cancelJobApi,
   kickOffExportWithFetch,
-  pollJobStatus
+  pollJobStatus,
 } from "../services/export";
+import { UnauthorizedError } from "../types/errors";
 import type { ExportRequest } from "../types/export";
 
 export function Dashboard() {
   const { fhirBaseUrl } = useSettings();
-  const { isAuthenticated, client, authRequired, setLoading, setError, setAuthRequired } =
-    useAuth();
+  const {
+    isAuthenticated,
+    client,
+    authRequired,
+    setLoading,
+    setError,
+    setAuthRequired,
+    clearSessionAndPromptLogin,
+  } = useAuth();
   const { jobs, addJob, updateJobProgress, updateJobManifest, updateJobError, updateJobStatus } =
     useJobs();
 
   const pollIntervalRef = useRef<Map<string, number>>(new Map());
+  const unauthorizedHandledRef = useRef(false);
+
+  // Handle 401 errors by clearing session and prompting for re-authentication.
+  const handleUnauthorizedError = useCallback(() => {
+    if (unauthorizedHandledRef.current) return;
+    unauthorizedHandledRef.current = true;
+
+    // Stop all polling jobs.
+    pollIntervalRef.current.forEach((intervalId) => {
+      clearInterval(intervalId);
+    });
+    pollIntervalRef.current.clear();
+
+    clearSessionAndPromptLogin();
+  }, [clearSessionAndPromptLogin]);
+
+  // Reset the unauthorized flag when user becomes authenticated.
+  useEffect(() => {
+    if (isAuthenticated) {
+      unauthorizedHandledRef.current = false;
+    }
+  }, [isAuthenticated]);
 
   // Check server capabilities when FHIR URL changes.
   useEffect(() => {
@@ -76,7 +107,11 @@ export function Dashboard() {
             updateJobStatus(job.id, "in_progress");
           }
         } catch (err) {
-          updateJobError(job.id, err instanceof Error ? err.message : "Unknown error");
+          if (err instanceof UnauthorizedError) {
+            handleUnauthorizedError();
+          } else {
+            updateJobError(job.id, err instanceof Error ? err.message : "Unknown error");
+          }
           // Stop polling on error.
           const intervalId = pollIntervalRef.current.get(job.id);
           if (intervalId) {
@@ -117,6 +152,7 @@ export function Dashboard() {
     updateJobManifest,
     updateJobError,
     updateJobStatus,
+    handleUnauthorizedError,
   ]);
 
   const handleLogin = async () => {
@@ -148,10 +184,14 @@ export function Dashboard() {
           error: null,
         });
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to start export");
+        if (err instanceof UnauthorizedError) {
+          handleUnauthorizedError();
+        } else {
+          setError(err instanceof Error ? err.message : "Failed to start export");
+        }
       }
     },
-    [client, fhirBaseUrl, addJob, setError],
+    [client, fhirBaseUrl, addJob, setError, handleUnauthorizedError],
   );
 
   const handleCancel = useCallback(
@@ -167,10 +207,14 @@ export function Dashboard() {
         await cancelJobApi(fhirBaseUrl, accessToken, job.pollUrl);
         updateJobStatus(jobId, "cancelled");
       } catch (err) {
-        updateJobError(jobId, err instanceof Error ? err.message : "Failed to cancel job");
+        if (err instanceof UnauthorizedError) {
+          handleUnauthorizedError();
+        } else {
+          updateJobError(jobId, err instanceof Error ? err.message : "Failed to cancel job");
+        }
       }
     },
-    [client, fhirBaseUrl, jobs, updateJobStatus, updateJobError],
+    [client, fhirBaseUrl, jobs, updateJobStatus, updateJobError, handleUnauthorizedError],
   );
 
   const handleDownload = useCallback(
@@ -184,6 +228,11 @@ export function Dashboard() {
         }
 
         const response = await fetch(url, { headers });
+
+        if (response.status === 401) {
+          handleUnauthorizedError();
+          return;
+        }
 
         if (!response.ok) {
           throw new Error(`Download failed: ${response.status}`);
@@ -202,7 +251,7 @@ export function Dashboard() {
         setError(err instanceof Error ? err.message : "Download failed");
       }
     },
-    [client, setError],
+    [client, setError, handleUnauthorizedError],
   );
 
   // Show loading state while checking server capabilities.
@@ -216,6 +265,7 @@ export function Dashboard() {
           <Spinner />
           <Text>Checking server capabilities...</Text>
         </Flex>
+        <SessionExpiredDialog />
       </Box>
     );
   }
@@ -243,6 +293,7 @@ export function Dashboard() {
             Login with SMART on FHIR
           </Button>
         </Box>
+        <SessionExpiredDialog />
       </Box>
     );
   }
@@ -263,6 +314,7 @@ export function Dashboard() {
           <ExportJobList jobs={jobs} onCancel={handleCancel} onDownload={handleDownload} />
         </Box>
       </Flex>
+      <SessionExpiredDialog />
     </Box>
   );
 }

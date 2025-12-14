@@ -5,6 +5,7 @@
  */
 
 import type { ExportManifest, ExportRequest } from "../types/export";
+import { UnauthorizedError } from "../types/errors";
 
 interface KickOffResult {
   jobId: string;
@@ -83,6 +84,9 @@ export async function kickOffExportWithFetch(
     headers,
   });
 
+  if (response.status === 401) {
+    throw new UnauthorizedError();
+  }
   if (response.status !== 202) {
     const errorBody = await response.text();
     throw new Error(
@@ -144,6 +148,9 @@ export async function pollJobStatus(
     return { status: "completed", manifest };
   }
 
+  if (response.status === 401) {
+    throw new UnauthorizedError();
+  }
   const errorBody = await response.text();
   throw new Error(`Job poll failed: ${response.status} - ${errorBody}`);
 }
@@ -168,6 +175,9 @@ export async function cancelJob(
     headers,
   });
 
+  if (response.status === 401) {
+    throw new UnauthorizedError();
+  }
   if (!response.ok) {
     const errorBody = await response.text();
     throw new Error(

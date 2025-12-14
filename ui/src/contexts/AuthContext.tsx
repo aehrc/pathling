@@ -4,13 +4,7 @@
  * @author John Grimes
  */
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 import type Client from "fhirclient/lib/Client";
 
 interface AuthState {
@@ -19,6 +13,7 @@ interface AuthState {
   client: Client | null;
   error: string | null;
   authRequired: boolean | null; // null = unknown, true = required, false = not required
+  sessionExpired: boolean;
 }
 
 interface AuthContextValue extends AuthState {
@@ -26,6 +21,8 @@ interface AuthContextValue extends AuthState {
   setError: (error: string) => void;
   setLoading: (loading: boolean) => void;
   setAuthRequired: (required: boolean) => void;
+  setSessionExpired: (expired: boolean) => void;
+  clearSessionAndPromptLogin: () => void;
   logout: () => void;
 }
 
@@ -38,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     client: null,
     error: null,
     authRequired: null,
+    sessionExpired: false,
   });
 
   const setClient = useCallback((client: Client) => {
@@ -73,6 +71,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const setSessionExpired = useCallback((expired: boolean) => {
+    setState((prev) => ({
+      ...prev,
+      sessionExpired: expired,
+    }));
+  }, []);
+
+  const clearSessionAndPromptLogin = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      isAuthenticated: false,
+      isLoading: false,
+      client: null,
+      error: null,
+      sessionExpired: true,
+    }));
+    sessionStorage.removeItem("SMART_KEY");
+  }, []);
+
   const logout = useCallback(() => {
     setState((prev) => ({
       ...prev,
@@ -80,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading: false,
       client: null,
       error: null,
+      sessionExpired: false,
     }));
     // Clear any stored session data.
     sessionStorage.removeItem("SMART_KEY");
@@ -93,6 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError,
         setLoading,
         setAuthRequired,
+        setSessionExpired,
+        clearSessionAndPromptLogin,
         logout,
       }}
     >
