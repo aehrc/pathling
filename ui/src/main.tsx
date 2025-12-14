@@ -14,7 +14,12 @@ import "./index.css";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { JobProvider } from "./contexts/JobContext";
+import { ToastProvider } from "./contexts/ToastContext";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { setupGlobalErrorHandlers } from "./utils/errorHandler";
 import App from "./App";
+
+setupGlobalErrorHandlers();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,17 +33,21 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <Theme accentColor="blue" grayColor="slate" radius="medium">
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <SettingsProvider>
-            <AuthProvider>
-              <JobProvider>
-                <App />
-              </JobProvider>
-            </AuthProvider>
-          </SettingsProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
+      <ToastProvider>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <SettingsProvider>
+              <AuthProvider>
+                <JobProvider>
+                  <ErrorBoundary>
+                    <App />
+                  </ErrorBoundary>
+                </JobProvider>
+              </AuthProvider>
+            </SettingsProvider>
+          </BrowserRouter>
+        </QueryClientProvider>
+      </ToastProvider>
     </Theme>
-  </StrictMode>
+  </StrictMode>,
 );
