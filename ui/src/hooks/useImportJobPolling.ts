@@ -6,8 +6,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useEffect } from "react";
+import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import { useSettings } from "../contexts/SettingsContext";
 import { pollImportStatus } from "../services/import";
 import { UnauthorizedError } from "../types/errors";
 import type { ImportManifest } from "../types/import";
@@ -36,7 +36,7 @@ export function useImportJobPolling({
   onComplete,
   onError,
 }: UseImportJobPollingOptions) {
-  const { fhirBaseUrl } = useSettings();
+  const { fhirBaseUrl } = config;
   const { client, clearSessionAndPromptLogin } = useAuth();
   const unauthorizedHandledRef = useRef(false);
 

@@ -10,9 +10,9 @@ import { useCallback, useEffect, useRef } from "react";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { ImportForm } from "../components/import/ImportForm";
 import { ImportJobList } from "../components/import/ImportJobList";
+import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useJobs } from "../contexts/JobContext";
-import { useSettings } from "../contexts/SettingsContext";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
 import { initiateAuth } from "../services/auth";
 import { cancelImport, kickOffImport } from "../services/import";
@@ -20,7 +20,7 @@ import { UnauthorizedError } from "../types/errors";
 import type { ImportRequest } from "../types/import";
 
 export function Import() {
-  const { fhirBaseUrl } = useSettings();
+  const { fhirBaseUrl } = config;
   const { isAuthenticated, client, setLoading, setError, clearSessionAndPromptLogin } = useAuth();
   const { addJob, updateJobStatus, updateJobError, getImportJobs } = useJobs();
 

@@ -11,7 +11,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Theme } from "@radix-ui/themes";
 import "@radix-ui/themes/styles.css";
 import "./index.css";
-import { SettingsProvider } from "./contexts/SettingsContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { JobProvider } from "./contexts/JobContext";
 import { ToastProvider } from "./contexts/ToastContext";
@@ -36,15 +35,13 @@ createRoot(document.getElementById("root")!).render(
       <ToastProvider>
         <QueryClientProvider client={queryClient}>
           <BrowserRouter basename="/admin">
-            <SettingsProvider>
-              <AuthProvider>
-                <JobProvider>
-                  <ErrorBoundary>
-                    <App />
-                  </ErrorBoundary>
-                </JobProvider>
-              </AuthProvider>
-            </SettingsProvider>
+            <AuthProvider>
+              <JobProvider>
+                <ErrorBoundary>
+                  <App />
+                </ErrorBoundary>
+              </JobProvider>
+            </AuthProvider>
           </BrowserRouter>
         </QueryClientProvider>
       </ToastProvider>

@@ -7,13 +7,13 @@
 
 import { LockClosedIcon } from "@radix-ui/react-icons";
 import { AlertDialog, Button, Flex } from "@radix-ui/themes";
+import { config } from "../../config";
 import { useAuth } from "../../contexts/AuthContext";
-import { useSettings } from "../../contexts/SettingsContext";
 import { initiateAuth } from "../../services/auth";
 
 export function SessionExpiredDialog() {
   const { sessionExpired, setSessionExpired, setLoading, setError } = useAuth();
-  const { fhirBaseUrl } = useSettings();
+  const { fhirBaseUrl } = config;
 
   const handleLogin = async () => {
     if (!fhirBaseUrl) return;

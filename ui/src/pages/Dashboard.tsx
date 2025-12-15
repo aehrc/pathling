@@ -23,11 +23,11 @@ import {
   Text,
 } from "@radix-ui/themes";
 import { Link } from "react-router";
-import { useSettings } from "../contexts/SettingsContext";
+import { config } from "../config";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
 
 export function Dashboard() {
-  const { fhirBaseUrl } = useSettings();
+  const { fhirBaseUrl } = config;
   const { data: capabilities, isLoading, error } = useServerCapabilities(fhirBaseUrl);
 
   if (isLoading) {

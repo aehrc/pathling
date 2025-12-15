@@ -6,8 +6,8 @@
 
 import { Outlet, Link, useLocation } from "react-router";
 import { Box, Container, Flex, Heading, Text } from "@radix-ui/themes";
-import { DownloadIcon, GearIcon, HomeIcon, UploadIcon } from "@radix-ui/react-icons";
-import { useSettings } from "../../contexts/SettingsContext";
+import { DownloadIcon, HomeIcon, UploadIcon } from "@radix-ui/react-icons";
+import { config } from "../../config";
 import { useAuth } from "../../contexts/AuthContext";
 
 interface NavLinkProps {
@@ -35,9 +35,16 @@ function NavLink({ to, icon, label, isActive }: NavLinkProps) {
   );
 }
 
+function getHostname(url: string): string {
+  try {
+    return new URL(url, window.location.origin).hostname;
+  } catch {
+    return url;
+  }
+}
+
 export function Layout() {
   const location = useLocation();
-  const { fhirBaseUrl } = useSettings();
   const { isAuthenticated, logout } = useAuth();
 
   return (
@@ -73,20 +80,12 @@ export function Layout() {
                   label="Import"
                   isActive={location.pathname === "/import"}
                 />
-                <NavLink
-                  to="/settings"
-                  icon={<GearIcon />}
-                  label="Settings"
-                  isActive={location.pathname === "/settings"}
-                />
               </Flex>
             </Flex>
             <Flex align="center" gap="4">
-              {fhirBaseUrl && (
-                <Text size="2" color="gray">
-                  {new URL(fhirBaseUrl).hostname}
-                </Text>
-              )}
+              <Text size="2" color="gray">
+                {getHostname(config.fhirBaseUrl)}
+              </Text>
               {isAuthenticated && (
                 <Text size="2" color="blue" style={{ cursor: "pointer" }} onClick={logout}>
                   Logout

@@ -10,9 +10,9 @@ import { useCallback, useEffect, useRef } from "react";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { ExportForm } from "../components/export/ExportForm";
 import { ExportJobList } from "../components/export/ExportJobList";
+import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useJobs } from "../contexts/JobContext";
-import { useSettings } from "../contexts/SettingsContext";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
 import { initiateAuth } from "../services/auth";
 import { cancelJob as cancelJobApi, kickOffExportWithFetch } from "../services/export";
@@ -20,7 +20,7 @@ import { UnauthorizedError } from "../types/errors";
 import type { ExportRequest } from "../types/export";
 
 export function Export() {
-  const { fhirBaseUrl } = useSettings();
+  const { fhirBaseUrl } = config;
   const { isAuthenticated, client, setLoading, setError, clearSessionAndPromptLogin } = useAuth();
   const { addJob, updateJobStatus, updateJobError, getExportJobs } = useJobs();
 
