@@ -6,8 +6,10 @@
 
 import { Cross2Icon, ReloadIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
-import type { ImportJob } from "../../types/job";
+import { useJobs } from "../../contexts/JobContext";
+import { useImportJobPolling } from "../../hooks/useImportJobPolling";
 import { IMPORT_FORMATS, IMPORT_MODES } from "../../types/import";
+import type { ImportJob } from "../../types/job";
 
 interface ImportJobCardProps {
   job: ImportJob;
@@ -48,6 +50,19 @@ function getModeLabel(mode: string): string {
 }
 
 export function ImportJobCard({ job, onCancel }: ImportJobCardProps) {
+  const { updateJobProgress, updateJobManifest, updateJobError, updateJobStatus } = useJobs();
+
+  // Poll job status while active.
+  useImportJobPolling({
+    jobId: job.id,
+    pollUrl: job.pollUrl,
+    status: job.status,
+    onProgress: updateJobProgress,
+    onStatusChange: updateJobStatus,
+    onComplete: updateJobManifest,
+    onError: updateJobError,
+  });
+
   const isActive = job.status === "pending" || job.status === "in_progress";
   const showProgress = isActive && job.progress !== null;
 

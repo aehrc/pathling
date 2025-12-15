@@ -6,6 +6,8 @@
 
 import { Cross2Icon, DownloadIcon, ReloadIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
+import { useJobs } from "../../contexts/JobContext";
+import { useExportJobPolling } from "../../hooks/useExportJobPolling";
 import type { ExportJob } from "../../types/job";
 
 interface ExportJobCardProps {
@@ -53,6 +55,19 @@ function formatLevel(level: ExportJob["request"]["level"]): string {
 }
 
 export function ExportJobCard({ job, onCancel, onDownload }: ExportJobCardProps) {
+  const { updateJobProgress, updateJobManifest, updateJobError, updateJobStatus } = useJobs();
+
+  // Poll job status while active.
+  useExportJobPolling({
+    jobId: job.id,
+    pollUrl: job.pollUrl,
+    status: job.status,
+    onProgress: updateJobProgress,
+    onStatusChange: updateJobStatus,
+    onComplete: updateJobManifest,
+    onError: updateJobError,
+  });
+
   const isActive = job.status === "pending" || job.status === "in_progress";
   const showProgress = isActive && job.progress !== null;
 

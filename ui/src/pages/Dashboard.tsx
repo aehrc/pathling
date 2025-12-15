@@ -4,8 +4,12 @@
  * @author John Grimes
  */
 
-import { useEffect, useState } from "react";
-import { Link } from "react-router";
+import {
+  CheckCircledIcon,
+  CrossCircledIcon,
+  DownloadIcon,
+  UploadIcon,
+} from "@radix-ui/react-icons";
 import {
   Badge,
   Box,
@@ -18,41 +22,15 @@ import {
   Table,
   Text,
 } from "@radix-ui/themes";
-import {
-  CheckCircledIcon,
-  CrossCircledIcon,
-  DownloadIcon,
-  UploadIcon,
-} from "@radix-ui/react-icons";
+import { Link } from "react-router";
 import { useSettings } from "../contexts/SettingsContext";
-import { checkServerCapabilities, type ServerCapabilities } from "../services/auth";
+import { useServerCapabilities } from "../hooks/useServerCapabilities";
 
 export function Dashboard() {
   const { fhirBaseUrl } = useSettings();
-  const [capabilities, setCapabilities] = useState<ServerCapabilities | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: capabilities, isLoading, error } = useServerCapabilities(fhirBaseUrl);
 
-  useEffect(() => {
-    if (!fhirBaseUrl) return;
-
-    const fetchCapabilities = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const caps = await checkServerCapabilities(fhirBaseUrl);
-        setCapabilities(caps);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load server info");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCapabilities();
-  }, [fhirBaseUrl]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <Box>
         <Heading size="6" mb="4">
@@ -72,7 +50,7 @@ export function Dashboard() {
         <Heading size="6" mb="4">
           Dashboard
         </Heading>
-        <Text color="red">{error}</Text>
+        <Text color="red">{error.message}</Text>
       </Box>
     );
   }

@@ -13,50 +13,28 @@ import { ExportJobList } from "../components/export/ExportJobList";
 import { useAuth } from "../contexts/AuthContext";
 import { useJobs } from "../contexts/JobContext";
 import { useSettings } from "../contexts/SettingsContext";
-import { checkServerCapabilities, initiateAuth } from "../services/auth";
-import {
-  cancelJob as cancelJobApi,
-  kickOffExportWithFetch,
-  pollJobStatus,
-} from "../services/export";
+import { useServerCapabilities } from "../hooks/useServerCapabilities";
+import { initiateAuth } from "../services/auth";
+import { cancelJob as cancelJobApi, kickOffExportWithFetch } from "../services/export";
 import { UnauthorizedError } from "../types/errors";
 import type { ExportRequest } from "../types/export";
 
 export function Export() {
   const { fhirBaseUrl } = useSettings();
-  const {
-    isAuthenticated,
-    client,
-    authRequired,
-    setLoading,
-    setError,
-    setAuthRequired,
-    clearSessionAndPromptLogin,
-  } = useAuth();
-  const {
-    addJob,
-    updateJobProgress,
-    updateJobManifest,
-    updateJobError,
-    updateJobStatus,
-    getExportJobs,
-  } = useJobs();
+  const { isAuthenticated, client, setLoading, setError, clearSessionAndPromptLogin } = useAuth();
+  const { addJob, updateJobStatus, updateJobError, getExportJobs } = useJobs();
 
   const jobs = getExportJobs();
-  const pollIntervalRef = useRef<Map<string, number>>(new Map());
   const unauthorizedHandledRef = useRef(false);
+
+  // Fetch server capabilities to determine if auth is required.
+  const { data: capabilities, isLoading: isLoadingCapabilities } =
+    useServerCapabilities(fhirBaseUrl);
 
   // Handle 401 errors by clearing session and prompting for re-authentication.
   const handleUnauthorizedError = useCallback(() => {
     if (unauthorizedHandledRef.current) return;
     unauthorizedHandledRef.current = true;
-
-    // Stop all polling jobs.
-    pollIntervalRef.current.forEach((intervalId) => {
-      clearInterval(intervalId);
-    });
-    pollIntervalRef.current.clear();
-
     clearSessionAndPromptLogin();
   }, [clearSessionAndPromptLogin]);
 
@@ -66,101 +44,6 @@ export function Export() {
       unauthorizedHandledRef.current = false;
     }
   }, [isAuthenticated]);
-
-  // Check server capabilities when FHIR URL changes.
-  useEffect(() => {
-    if (!fhirBaseUrl) return;
-
-    const checkCapabilities = async () => {
-      const capabilities = await checkServerCapabilities(fhirBaseUrl);
-      setAuthRequired(capabilities.authRequired);
-    };
-
-    checkCapabilities();
-  }, [fhirBaseUrl, setAuthRequired]);
-
-  // Poll active jobs for progress updates.
-  useEffect(() => {
-    const activeJobs = jobs.filter(
-      (job) => job.status === "pending" || job.status === "in_progress",
-    );
-
-    activeJobs.forEach((job) => {
-      // Skip if already polling this job.
-      if (pollIntervalRef.current.has(job.id)) {
-        return;
-      }
-
-      const poll = async () => {
-        if (!fhirBaseUrl) return;
-
-        try {
-          const accessToken = client?.state.tokenResponse?.access_token;
-
-          const result = await pollJobStatus(fhirBaseUrl, accessToken, job.pollUrl);
-
-          if (result.status === "completed" && result.manifest) {
-            updateJobManifest(job.id, result.manifest);
-            // Stop polling.
-            const intervalId = pollIntervalRef.current.get(job.id);
-            if (intervalId) {
-              clearInterval(intervalId);
-              pollIntervalRef.current.delete(job.id);
-            }
-          } else if (result.status === "in_progress") {
-            if (result.progress !== undefined) {
-              updateJobProgress(job.id, result.progress);
-            }
-            updateJobStatus(job.id, "in_progress");
-          }
-        } catch (err) {
-          if (err instanceof UnauthorizedError) {
-            handleUnauthorizedError();
-          } else {
-            updateJobError(job.id, err instanceof Error ? err.message : "Unknown error");
-          }
-          // Stop polling on error.
-          const intervalId = pollIntervalRef.current.get(job.id);
-          if (intervalId) {
-            clearInterval(intervalId);
-            pollIntervalRef.current.delete(job.id);
-          }
-        }
-      };
-
-      // Initial poll.
-      poll();
-      // Set up interval polling.
-      const intervalId = window.setInterval(poll, 3000);
-      pollIntervalRef.current.set(job.id, intervalId);
-    });
-
-    // Cleanup intervals for jobs that are no longer active.
-    pollIntervalRef.current.forEach((intervalId, jobId) => {
-      const job = jobs.find((j) => j.id === jobId);
-      if (!job || (job.status !== "pending" && job.status !== "in_progress")) {
-        clearInterval(intervalId);
-        pollIntervalRef.current.delete(jobId);
-      }
-    });
-
-    return () => {
-      // Cleanup on unmount or when dependencies change.
-      pollIntervalRef.current.forEach((intervalId) => {
-        clearInterval(intervalId);
-      });
-      pollIntervalRef.current.clear();
-    };
-  }, [
-    jobs,
-    client,
-    fhirBaseUrl,
-    updateJobProgress,
-    updateJobManifest,
-    updateJobError,
-    updateJobStatus,
-    handleUnauthorizedError,
-  ]);
 
   const handleLogin = async () => {
     if (!fhirBaseUrl) return;
@@ -263,7 +146,7 @@ export function Export() {
   );
 
   // Show loading state while checking server capabilities.
-  if (authRequired === null) {
+  if (isLoadingCapabilities) {
     return (
       <Box>
         <Heading size="6" mb="4">
@@ -279,7 +162,7 @@ export function Export() {
   }
 
   // Show login prompt if authentication is required but not authenticated.
-  if (authRequired && !isAuthenticated) {
+  if (capabilities?.authRequired && !isAuthenticated) {
     return (
       <Box>
         <Heading size="6" mb="4">
