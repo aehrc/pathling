@@ -159,7 +159,7 @@ export async function initiateAuth(fhirBaseUrl: string): Promise<void> {
     iss: fhirBaseUrl,
     clientId: CLIENT_ID,
     scope: "openid profile user/*.read",
-    redirectUri: `${window.location.origin}/callback`,
+    redirectUri: `${window.location.origin}/admin/callback`,
   });
 }
 

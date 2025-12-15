@@ -35,7 +35,7 @@ createRoot(document.getElementById("root")!).render(
     <Theme accentColor="blue" grayColor="slate" radius="medium">
       <ToastProvider>
         <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
+          <BrowserRouter basename="/admin">
             <SettingsProvider>
               <AuthProvider>
                 <JobProvider>
