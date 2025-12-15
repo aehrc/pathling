@@ -50,6 +50,7 @@ export function useExportJobPolling({
     },
     enabled: !!fhirBaseUrl && isActive,
     refetchInterval: isActive ? 3000 : false,
+    staleTime: Infinity,
     retry: (failureCount, error) => {
       if (error instanceof UnauthorizedError) {
         return false;
