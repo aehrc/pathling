@@ -63,7 +63,9 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   private static boolean isTypeSpecifierFunction(@Nonnull final String functionName) {
-    return "ofType".equals(functionName) || "getReferenceKey".equals(functionName);
+    return "ofType".equals(functionName)
+        || "getReferenceKey".equals(functionName)
+        || "is".equals(functionName);
   }
 
   /**
@@ -102,7 +104,9 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
     // (and all the arguments are type specifiers) or regular function
     // (none of the arguments are type specifiers).
     final FhirPathVisitor<FhirPath> paramListVisitor =
-        isTypeSpecifierFunction(functionIdentifier) ? new TypeSpecifierVisitor() : new Visitor();
+        isTypeSpecifierFunction(functionIdentifier)
+            ? TypeSpecifierVisitor.defaultVisitor()
+            : new Visitor();
 
     final List<FhirPath> arguments =
         Optional.ofNullable(paramList)

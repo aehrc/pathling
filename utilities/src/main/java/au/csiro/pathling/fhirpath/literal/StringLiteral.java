@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.literal;
 
 import static java.util.Map.entry;
 
+import au.csiro.pathling.utilities.Strings;
 import jakarta.annotation.Nonnull;
 import java.util.Map;
 import org.apache.commons.text.translate.AggregateTranslator;
@@ -73,5 +74,17 @@ public abstract class StringLiteral {
   @Nonnull
   public static String unescapeFhirPathString(@Nonnull final String value) {
     return UNESCAPE_FHIR.translate(value);
+  }
+
+  /**
+   * Unquotes a FHIRPath quoted identifier, handling both the tick quotes and any escaped
+   * characters.
+   *
+   * @param quotedIdentifier The identifier to unquote
+   * @return the unquoted identifier
+   */
+  @Nonnull
+  public static String unquoteFhirIdentifier(@Nonnull final String quotedIdentifier) {
+    return unescapeFhirPathString(Strings.unTickQuote(quotedIdentifier));
   }
 }

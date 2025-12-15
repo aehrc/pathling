@@ -48,6 +48,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -519,6 +520,46 @@ public class Collection implements Equatable {
           default -> Optional.empty();
         };
     return maybeCollection.orElse(EmptyCollection.getInstance());
+  }
+
+  /**
+   * Checks if this collection's single item is of the specified type.
+   *
+   * <p>This method implements the FHIRPath {@code is()} function behavior:
+   *
+   * <ul>
+   *   <li>Throws an error if the collection contains more than one item
+   *   <li>Returns an empty collection if this collection is statically empty
+   *   <li>Returns a BooleanCollection with:
+   *       <ul>
+   *         <li>{@code null} values where the input is empty at runtime
+   *         <li>{@code true} where the value matches the specified type
+   *         <li>{@code false} where the value does not match the specified type
+   *       </ul>
+   * </ul>
+   *
+   * <p>The implementation leverages {@link #asBooleanSingleton()} to enforce the singular
+   * constraint and {@link #filterByType(TypeSpecifier)} to determine type matches. The result is
+   * computed lazily using Spark SQL operations, allowing efficient evaluation across large
+   * datasets.
+   *
+   * @param type the type specifier to check against
+   * @return a collection with boolean values indicating type match, or empty based on emptiness
+   * @throws au.csiro.pathling.errors.InvalidUserInputError if the collection contains more than one
+   *     item
+   * @see <a href="https://hl7.org/fhirpath/#istype--type-specifier">FHIRPath is() function</a>
+   */
+  @Nonnull
+  public Collection isOfType(@Nonnull final TypeSpecifier type) {
+    // Static check for EmptyCollection - return empty immediately
+    if (this instanceof EmptyCollection) {
+      return EmptyCollection.getInstance();
+    } else {
+      // Convert to boolean singleton (enforces singular constraint), then check if
+      // filtering by type produces a non-null value
+      return asBooleanSingleton()
+          .mapColumn(c -> functions.when(c, filterByType(type).getColumnValue().isNotNull()));
+    }
   }
 
   /**

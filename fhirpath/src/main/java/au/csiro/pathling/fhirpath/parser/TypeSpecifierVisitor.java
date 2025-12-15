@@ -66,6 +66,9 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.UnitContext;
 import au.csiro.pathling.fhirpath.path.ParserPaths.TypeNamespacePath;
 import au.csiro.pathling.fhirpath.path.ParserPaths.TypeSpecifierPath;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+
+import static java.util.Objects.nonNull;
 
 /**
  * A special visitor for the type specifiers arguments in the FHIRPath function invocations.
@@ -76,31 +79,107 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   private final boolean isNamespace;
 
-  private TypeSpecifierVisitor(final boolean isNamespace) {
+  @Nullable final String namespace;
+
+  private TypeSpecifierVisitor(final boolean isNamespace, @Nullable final String namespace) {
     this.isNamespace = isNamespace;
+    this.namespace = namespace;
   }
 
-  TypeSpecifierVisitor() {
-    this(false);
+  /**
+   * Creates a visitor for parsing unqualified type specifiers.
+   *
+   * <p>This is the default visitor used for parsing type specifiers that may or may not have a
+   * namespace qualifier (e.g., {@code String}, {@code FHIR.Patient}).
+   *
+   * @return a new visitor instance for unqualified type specifiers
+   */
+  @Nonnull
+  static TypeSpecifierVisitor defaultVisitor() {
+    return new TypeSpecifierVisitor(false, null);
   }
 
+  /**
+   * Creates a visitor for parsing namespace identifiers.
+   *
+   * <p>This visitor is used when parsing the left-hand side of a qualified type specifier (e.g.,
+   * the {@code FHIR} part of {@code FHIR.Patient}).
+   *
+   * @return a new visitor instance for namespace identifiers
+   */
+  @Nonnull
+  static TypeSpecifierVisitor namespaceVisitor() {
+    return new TypeSpecifierVisitor(true, null);
+  }
+
+  /**
+   * Creates a visitor for parsing type names within a specific namespace.
+   *
+   * <p>This visitor is used when parsing the right-hand side of a qualified type specifier (e.g.,
+   * the {@code Patient} part of {@code FHIR.Patient}), where the namespace has already been
+   * determined.
+   *
+   * @param namespace the namespace for the type specifier
+   * @return a new visitor instance for qualified type names
+   */
+  @Nonnull
+  static TypeSpecifierVisitor qualifiedVisitor(@Nonnull final String namespace) {
+    return new TypeSpecifierVisitor(false, namespace);
+  }
+
+  /**
+   * Visits an identifier context and returns the appropriate type specifier path.
+   *
+   * <p>This method handles both regular and delimited (backtick-quoted) identifiers, and produces
+   * different results based on the visitor's state:
+   *
+   * <ul>
+   *   <li>If {@code isNamespace} is true, returns a {@link TypeNamespacePath}
+   *   <li>If a {@code namespace} is set, returns a qualified {@link TypeSpecifierPath}
+   *   <li>Otherwise, returns an unqualified {@link TypeSpecifierPath}
+   * </ul>
+   *
+   * @param ctx the identifier context
+   * @return the appropriate type specifier or namespace path
+   */
   @Override
   public FhirPath visitIdentifier(final IdentifierContext ctx) {
-    return isNamespace
-        ? new TypeNamespacePath(ctx.getText())
-        : new TypeSpecifierPath(new TypeSpecifier(ctx.getText()));
+    final String identifier = IdentifierHelper.getIdentifierValue(ctx);
+
+    if (isNamespace) {
+      return new TypeNamespacePath(identifier);
+    } else {
+      return nonNull(namespace)
+          ? new TypeSpecifierPath(new TypeSpecifier(namespace, identifier))
+          : new TypeSpecifierPath(new TypeSpecifier(identifier));
+    }
   }
 
+  /**
+   * Visits an invocation expression to parse qualified type specifiers.
+   *
+   * <p>This method handles expressions like {@code FHIR.Patient} or {@code System.String} by:
+   *
+   * <ol>
+   *   <li>Parsing the left-hand side as a namespace using {@link #namespaceVisitor()}
+   *   <li>Parsing the right-hand side as a type name within that namespace using {@link
+   *       #qualifiedVisitor(String)}
+   * </ol>
+   *
+   * <p>This method should only be called when {@code isNamespace} is false. If called when {@code
+   * isNamespace} is true, it throws an error as nested namespace qualifications are not valid.
+   *
+   * @param ctx the invocation expression context
+   * @return a qualified type specifier path
+   * @throws InvalidUserInputError if invoked when already parsing a namespace
+   */
   @Override
   public FhirPath visitInvocationExpression(final InvocationExpressionContext ctx) {
-    // If we are not already in a namespace and there is an invocation, we need to parse the
-    // right-hand side of the invocation within the namespace.
     if (!isNamespace) {
       final TypeNamespacePath typeNamespacePath =
-          (TypeNamespacePath) ctx.expression().accept(new TypeSpecifierVisitor(true));
+          (TypeNamespacePath) ctx.expression().accept(TypeSpecifierVisitor.namespaceVisitor());
       final String namespace = typeNamespacePath.getValue();
-      final String typeName = ctx.invocation().getText();
-      return new TypeSpecifierPath(new TypeSpecifier(namespace, typeName));
+      return ctx.invocation().accept(TypeSpecifierVisitor.qualifiedVisitor(namespace));
     } else {
       throw newUnexpectedExpressionException("InvocationExpression");
     }
