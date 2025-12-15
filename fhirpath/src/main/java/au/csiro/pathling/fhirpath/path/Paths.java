@@ -25,7 +25,6 @@ import au.csiro.pathling.fhirpath.collection.EmptyCollection;
 import au.csiro.pathling.fhirpath.function.FunctionInput;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.NoSuchFunctionError;
-import au.csiro.pathling.fhirpath.operator.BinaryOperatorInput;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import au.csiro.pathling.fhirpath.operator.FhirPathBinaryOperator;
 import au.csiro.pathling.fhirpath.operator.UnaryOperator;
@@ -55,7 +54,7 @@ public final class Paths {
    *
    * <pre>`where($this.name = 'foo')` is converted to `where(name = 'foo')`</pre>
    *
-   * <p>but:
+   * but:
    *
    * <pre>`where($this = 'foo')` remains `where($this = 'foo')`</pre>
    *
@@ -103,9 +102,8 @@ public final class Paths {
     @Override
     public Collection apply(
         @Nonnull final Collection input, @Nonnull final EvaluationContext context) {
-      return operator.invoke(
-          new BinaryOperatorInput(
-              context, leftPath.apply(input, context), rightPath.apply(input, context)));
+      // Delegate to the operator to decide how to evaluate paths
+      return operator.invokeWithPaths(context, input, leftPath, rightPath);
     }
 
     @Nonnull

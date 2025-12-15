@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import au.csiro.pathling.fhirpath.operator.CollectionOperations;
 import au.csiro.pathling.fhirpath.operator.FhirPathBinaryOperator;
+import au.csiro.pathling.fhirpath.operator.IsOperator;
 import au.csiro.pathling.fhirpath.operator.MethodDefinedOperator;
 import au.csiro.pathling.fhirpath.operator.MethodInvocationError;
 import au.csiro.pathling.fhirpath.operator.PolarityOperator;
@@ -204,18 +205,41 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
   @Nonnull
   public FhirPath visitPolarityExpression(final PolarityExpressionContext ctx) {
     return new Paths.EvalUnaryOperator(
-        ctx.expression().accept(this), PolarityOperator.fromSymbol(ctx.children.get(0).toString()));
+        ctx.expression().accept(this),
+        PolarityOperator.fromSymbol(ctx.children.getFirst().toString()));
   }
 
   @Override
   @Nonnull
   public FhirPath visitUnionExpression(final UnionExpressionContext ctx) {
-    throw new UnsupportedFhirPathFeatureError("Union expressions are not supported");
+    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1), "|");
   }
 
   @Override
   @Nonnull
   public FhirPath visitTypeExpression(final TypeExpressionContext ctx) {
-    throw new UnsupportedFhirPathFeatureError("Type expressions are not supported");
+    requireNonNull(ctx);
+
+    // Determine which operator: 'is' or 'as'
+    final String operatorText = ctx.children.get(1).toString();
+
+    // Only 'is' is implemented for now
+    if (!operatorText.equals("is")) {
+      throw new UnsupportedFhirPathFeatureError(
+          "Type operator '" + operatorText + "' is not yet supported");
+    }
+
+    // Parse the left expression (the value to check)
+    final FhirPath leftPath = new Visitor().visit(ctx.expression());
+
+    // Parse the type specifier using TypeSpecifierVisitor
+    // This returns a TypeSpecifierPath, which will be passed to the operator
+    final FhirPath rightPath = TypeSpecifierVisitor.defaultVisitor().visit(ctx.typeSpecifier());
+
+    // Create the IsOperator
+    final FhirPathBinaryOperator operator = new IsOperator();
+
+    // Use the standard EvalOperator - it will call invokeWithPaths()
+    return new EvalOperator(leftPath, rightPath, operator);
   }
 }

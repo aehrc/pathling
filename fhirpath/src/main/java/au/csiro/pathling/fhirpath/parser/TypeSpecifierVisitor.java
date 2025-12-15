@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
+import static java.util.Objects.nonNull;
+
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
@@ -67,8 +69,7 @@ import au.csiro.pathling.fhirpath.path.ParserPaths.TypeNamespacePath;
 import au.csiro.pathling.fhirpath.path.ParserPaths.TypeSpecifierPath;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-
-import static java.util.Objects.nonNull;
+import java.util.List;
 
 /**
  * A special visitor for the type specifiers arguments in the FHIRPath function invocations.
@@ -377,12 +378,31 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   public FhirPath visitTypeSpecifier(final TypeSpecifierContext ctx) {
-    throw newUnexpectedExpressionException("TypeSpecifier");
+    // Delegate to visiting the qualified identifier within the type specifier
+    return visitChildren(ctx);
   }
 
   @Override
   public FhirPath visitQualifiedIdentifier(final QualifiedIdentifierContext ctx) {
-    throw newUnexpectedExpressionException("QualifiedIdentifier");
+    // A qualified identifier is a sequence of identifiers separated by dots
+    // For example: "FHIR.Patient" or "System.String" or just "String"
+    // We need to parse this as either a namespace + type or just a type
+
+    final List<IdentifierContext> identifiers = ctx.identifier();
+
+    if (identifiers.size() == 1) {
+      // Unqualified identifier: just the type name
+      return visitIdentifier(identifiers.getFirst());
+    } else if (identifiers.size() == 2) {
+      // Qualified identifier: namespace.typename
+      final String actualNamespace = IdentifierHelper.getIdentifierValue(identifiers.get(0));
+      final String actualTypeName = IdentifierHelper.getIdentifierValue(identifiers.get(1));
+      return new TypeSpecifierPath(new TypeSpecifier(actualNamespace, actualTypeName));
+    } else {
+      // More than 2 identifiers is not supported for type specifiers
+      throw new InvalidUserInputError(
+          "Type specifier can have at most two parts (namespace.type), got: " + ctx.getText());
+    }
   }
 
   @Nonnull
