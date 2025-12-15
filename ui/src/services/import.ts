@@ -4,8 +4,9 @@
  * @author John Grimes
  */
 
-import type { ImportRequest, ImportManifest } from "../types/import";
+import type { Binary, Parameters } from "fhir/r4";
 import { UnauthorizedError } from "../types/errors";
+import type { ImportManifest, ImportRequest } from "../types/import";
 
 interface KickOffResult {
   jobId: string;
@@ -91,15 +92,15 @@ export async function pollImportStatus(
   }
 
   if (response.status === 200) {
-    const responseBody = await response.json();
+    const responseBody: unknown = await response.json();
 
     // Handle Binary resource wrapper - some servers return the manifest wrapped in a
     // FHIR Binary resource with base64-encoded data.
     let manifest: ImportManifest;
-    if (responseBody.resourceType === "Binary" && responseBody.data) {
+    if (isBinaryResource(responseBody)) {
       const decodedData = atob(responseBody.data);
       manifest = JSON.parse(decodedData) as ImportManifest;
-    } else if (responseBody.resourceType === "Parameters") {
+    } else if (isParametersResource(responseBody)) {
       // Parse FHIR Parameters response format.
       manifest = parseParametersManifest(responseBody);
     } else {
@@ -178,14 +179,7 @@ function parseProgress(progressHeader: string): number {
 /**
  * Parses a FHIR Parameters response into an ImportManifest.
  */
-function parseParametersManifest(params: {
-  parameter?: Array<{
-    name: string;
-    valueInstant?: string;
-    valueUrl?: string;
-    part?: Array<{ name: string; valueUrl?: string }>;
-  }>;
-}): ImportManifest {
+function parseParametersManifest(params: Parameters): ImportManifest {
   const manifest: ImportManifest = {
     transactionTime: "",
     request: "",
@@ -207,4 +201,30 @@ function parseParametersManifest(params: {
   }
 
   return manifest;
+}
+
+/**
+ * Type guard to check if a response is a FHIR Binary resource with data.
+ */
+function isBinaryResource(value: unknown): value is Binary & { data: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "resourceType" in value &&
+    (value as { resourceType: string }).resourceType === "Binary" &&
+    "data" in value &&
+    typeof (value as { data: unknown }).data === "string"
+  );
+}
+
+/**
+ * Type guard to check if a response is a FHIR Parameters resource.
+ */
+function isParametersResource(value: unknown): value is Parameters {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "resourceType" in value &&
+    (value as { resourceType: string }).resourceType === "Parameters"
+  );
 }

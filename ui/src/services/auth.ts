@@ -4,6 +4,7 @@
  * @author John Grimes
  */
 
+import type { CapabilityStatement } from "fhir/r4";
 import FHIR from "fhirclient";
 import type Client from "fhirclient/lib/Client";
 
@@ -47,7 +48,7 @@ export async function checkServerCapabilities(
       throw new Error(`Failed to fetch metadata: ${response.status}`);
     }
 
-    const capability = await response.json();
+    const capability: CapabilityStatement = await response.json();
 
     const serverName =
       capability.implementation?.description || capability.name;

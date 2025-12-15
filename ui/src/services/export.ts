@@ -4,8 +4,9 @@
  * @author John Grimes
  */
 
-import type { ExportManifest, ExportRequest } from "../types/export";
+import type { Binary } from "fhir/r4";
 import { UnauthorizedError } from "../types/errors";
+import type { ExportManifest, ExportRequest } from "../types/export";
 
 interface KickOffResult {
   jobId: string;
@@ -133,12 +134,12 @@ export async function pollJobStatus(
 
   // Handle 200 (fresh response). Note: 304 responses have no body.
   if (response.status === 200) {
-    const responseBody = await response.json();
+    const responseBody: unknown = await response.json();
 
     // Handle Binary resource wrapper - some servers return the manifest wrapped in a
     // FHIR Binary resource with base64-encoded data.
     let manifest: ExportManifest;
-    if (responseBody.resourceType === "Binary" && responseBody.data) {
+    if (isBinaryResource(responseBody)) {
       const decodedData = atob(responseBody.data);
       manifest = JSON.parse(decodedData) as ExportManifest;
     } else {
@@ -212,4 +213,18 @@ function parseProgress(progressHeader: string): number {
     return parseInt(match[1], 10);
   }
   return 0;
+}
+
+/**
+ * Type guard to check if a response is a FHIR Binary resource with data.
+ */
+function isBinaryResource(value: unknown): value is Binary & { data: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "resourceType" in value &&
+    (value as { resourceType: string }).resourceType === "Binary" &&
+    "data" in value &&
+    typeof (value as { data: unknown }).data === "string"
+  );
 }
