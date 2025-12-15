@@ -139,4 +139,16 @@ public class ImportPnpProvider implements PreAsyncValidation<ImportPnpRequest> {
     return validator.validateParametersRequest(servletRequestDetails, (Parameters) params[0]);
   }
 
+  @Override
+  @Nonnull
+  public String computeCacheKeyComponent(@Nonnull final ImportPnpRequest request) {
+    // Build a deterministic cache key from request parameters.
+    // Exclude originalRequest as it's already captured in the request URL.
+    return "exportUrl=" + request.exportUrl()
+        + "|exportType=" + request.exportType()
+        + "|inputSource=" + request.inputSource()
+        + "|saveMode=" + request.saveMode()
+        + "|format=" + request.importFormat();
+  }
+
 }

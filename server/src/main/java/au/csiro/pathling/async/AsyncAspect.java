@@ -145,7 +145,19 @@ public class AsyncAspect {
       @Nonnull final SparkSession spark
   ) {
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    final RequestTag requestTag = requestTagFactory.createTag(requestDetails, authentication);
+
+    // Compute operation-specific cache key if the operation provides it.
+    String operationCacheKey = "";
+    final Object target = joinPoint.getTarget();
+    if (target instanceof PreAsyncValidation<?> && preAsyncValidationResult.result() != null) {
+      @SuppressWarnings("unchecked")
+      final PreAsyncValidation<Object> preAsyncValidation = (PreAsyncValidation<Object>) target;
+      operationCacheKey = preAsyncValidation.computeCacheKeyComponent(
+          preAsyncValidationResult.result());
+    }
+
+    final RequestTag requestTag = requestTagFactory.createTag(requestDetails, authentication,
+        operationCacheKey);
     final Job<?> job = jobRegistry.getOrCreate(requestTag, jobId -> {
       final DiagnosticContext diagnosticContext = DiagnosticContext.fromSentryScope();
       final String operation = requestDetails.getOperation().replaceFirst("\\$", "");

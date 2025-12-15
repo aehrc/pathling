@@ -347,4 +347,29 @@ public class BulkSubmitProvider implements PreAsyncValidation<BulkSubmitRequest>
     return validator.validateRequest(servletRequestDetails, (Parameters) params[0]);
   }
 
+  @Override
+  @Nonnull
+  public String computeCacheKeyComponent(@Nonnull final BulkSubmitRequest request) {
+    // Build a deterministic cache key from request parameters.
+    // Exclude originalRequest as it's already captured in the request URL.
+    // Exclude metadata as it's complex to serialize and not essential for job identity.
+    final StringBuilder key = new StringBuilder();
+    key.append("submitter=").append(request.submitter().system())
+        .append(":").append(request.submitter().value());
+    key.append("|submissionId=").append(request.submissionId());
+    key.append("|status=").append(request.submissionStatus());
+
+    if (request.manifestUrl() != null) {
+      key.append("|manifestUrl=").append(request.manifestUrl());
+    }
+    if (request.fhirBaseUrl() != null) {
+      key.append("|fhirBaseUrl=").append(request.fhirBaseUrl());
+    }
+    if (request.replacesManifestUrl() != null) {
+      key.append("|replaces=").append(request.replacesManifestUrl());
+    }
+
+    return key.toString();
+  }
+
 }

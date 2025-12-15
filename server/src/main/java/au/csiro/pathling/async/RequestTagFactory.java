@@ -70,7 +70,7 @@ public final class RequestTagFactory {
    */
   @Autowired
   public RequestTagFactory(@Nonnull final CacheableDatabase database,
-                           @Nonnull final ServerConfiguration configuration) {
+      @Nonnull final ServerConfiguration configuration) {
     this(database, getSalientHeaderNames(configuration));
   }
 
@@ -79,16 +79,33 @@ public final class RequestTagFactory {
    *
    * @param requestDetails the request details
    * @param authentication the authentication object
+   * @param operationCacheKey the operation-specific cache key component
    * @return the request tag
    */
   @Nonnull
-  public RequestTag createTag(@Nonnull final ServletRequestDetails requestDetails, @Nullable
-  final Authentication authentication) {
+  public RequestTag createTag(@Nonnull final ServletRequestDetails requestDetails,
+      @Nullable final Authentication authentication,
+      @Nonnull final String operationCacheKey) {
     // TODO - implement auth correctly in E-Tag
     final Optional<String> currentCacheKey = state.getCacheKey();
     final Map<String, List<String>> salientHeaders = requestDetails.getHeaders().entrySet().stream()
         .filter(entry -> salientHeaderNames.contains(entry.getKey().toLowerCase()))
         .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
-    return new RequestTag(requestDetails.getCompleteUrl(), salientHeaders, currentCacheKey);
+    return new RequestTag(requestDetails.getCompleteUrl(), salientHeaders, currentCacheKey,
+        operationCacheKey);
+  }
+
+  /**
+   * Creates a {@link RequestTag} object from the provided request details, with an empty operation
+   * cache key.
+   *
+   * @param requestDetails the request details
+   * @param authentication the authentication object
+   * @return the request tag
+   */
+  @Nonnull
+  public RequestTag createTag(@Nonnull final ServletRequestDetails requestDetails,
+      @Nullable final Authentication authentication) {
+    return createTag(requestDetails, authentication, "");
   }
 }

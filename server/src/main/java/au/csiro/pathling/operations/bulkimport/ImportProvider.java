@@ -37,7 +37,10 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Parameters;
 import org.springframework.security.core.Authentication;
@@ -56,19 +59,19 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
 
   @Nonnull
   private final ImportExecutor executor;
-  
+
   @Nonnull
   private final ImportOperationValidator importOperationValidator;
-  
+
   @Nonnull
   private final RequestTagFactory requestTagFactory;
-  
+
   @Nonnull
   private final JobRegistry jobRegistry;
-  
+
   @Nonnull
   private final ImportResultRegistry importResultRegistry;
-  
+
   @Nonnull
   private final ObjectMapper objectMapper;
 
@@ -153,6 +156,27 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
           (Parameters) params[0]
       );
     }
+  }
+
+  @Override
+  @Nonnull
+  public String computeCacheKeyComponent(@Nonnull final ImportRequest request) {
+    // Build a deterministic cache key from request parameters.
+    // Exclude originalRequest as it's already captured in the request URL.
+    final String sortedInput = request.input().entrySet().stream()
+        .sorted(Entry.comparingByKey())
+        .map(entry -> entry.getKey() + ":" + sortedCollection(entry.getValue()))
+        .collect(Collectors.joining(","));
+
+    return "inputSource=" + request.inputSource()
+        + "|input={" + sortedInput + "}"
+        + "|saveMode=" + request.saveMode()
+        + "|format=" + request.importFormat();
+  }
+
+  @Nonnull
+  private static String sortedCollection(@Nonnull final Collection<String> collection) {
+    return "[" + collection.stream().sorted().collect(Collectors.joining(",")) + "]";
   }
 
   /**

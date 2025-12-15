@@ -42,13 +42,21 @@ public class RequestTag implements JobTag {
   @Nonnull
   Optional<String> cacheKey;
 
-  //toString() is overridden to exclude the varyHeaders field, which can contain sensitive data.
+  /**
+   * Operation-specific cache key component, computed from request body parameters. Empty for
+   * operations that don't override {@link PreAsyncValidation#computeCacheKeyComponent}.
+   */
+  @Nonnull
+  String operationCacheKey;
+
+  // toString() is overridden to exclude the varyHeaders field, which can contain sensitive data.
   @Override
   public String toString() {
     return "RequestTag(" +
         "requestUrl='" + requestUrl + "'" +
         ", varyHeaders=List@" + Integer.toHexString(varyHeaders.hashCode()) +
         ", cacheKey=" + cacheKey +
+        ", operationCacheKey='" + operationCacheKey + "'" +
         ')';
   }
 }

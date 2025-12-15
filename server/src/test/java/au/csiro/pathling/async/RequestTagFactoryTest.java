@@ -96,7 +96,8 @@ class RequestTagFactoryTest {
     assertEquals(new RequestTag("uri:requestUri-A",
             Map.of("x-single-value", List.of("singleValue"),
                 "x-multi-values", List.of("multiValue1", "multiValue2")),
-            Optional.of("cacheKey_A")),
+            Optional.of("cacheKey_A"),
+            ""),
         requestTag);
   }
 
@@ -118,7 +119,8 @@ class RequestTagFactoryTest {
     assertEquals(new RequestTag("uri:requestUri-B",
             Map.of("Y-SingleValue", List.of("singleValue"),
                 "Y-MultiValues", List.of("multiValue1", "multiValue2")),
-            Optional.empty()),
+            Optional.empty(),
+            ""),
         requestTag);
   }
 

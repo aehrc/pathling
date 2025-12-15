@@ -54,6 +54,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -267,6 +268,45 @@ public class ViewDefinitionExportProvider
     );
 
     return new PreAsyncValidationResult<>(request, Collections.emptyList());
+  }
+
+  @Override
+  @Nonnull
+  public String computeCacheKeyComponent(
+      @Nonnull final ViewDefinitionExportRequest request) {
+    // Build a deterministic cache key from request parameters.
+    // Exclude originalRequest and serverBaseUrl as they're infrastructure details.
+    final StringBuilder key = new StringBuilder();
+
+    // Serialize views deterministically using JSON.
+    final String viewsJson = request.views().stream()
+        .map(v -> (v.name() != null
+                   ? v.name()
+                   : "") + ":" + gson.toJson(v.view()))
+        .sorted()
+        .collect(Collectors.joining(","));
+    key.append("views=[").append(viewsJson).append("]");
+
+    if (request.clientTrackingId() != null) {
+      key.append("|clientTrackingId=").append(request.clientTrackingId());
+    }
+
+    key.append("|format=").append(request.format());
+    key.append("|header=").append(request.includeHeader());
+
+    // Sort patient IDs for determinism.
+    if (!request.patientIds().isEmpty()) {
+      final String sortedPatientIds = request.patientIds().stream()
+          .sorted()
+          .collect(Collectors.joining(","));
+      key.append("|patientIds=[").append(sortedPatientIds).append("]");
+    }
+
+    if (request.since() != null) {
+      key.append("|since=").append(request.since().getValueAsString());
+    }
+
+    return key.toString();
   }
 
   /**
