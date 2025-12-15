@@ -26,6 +26,7 @@
     <pathling.deltaVersion>4.0.0</pathling.deltaVersion>
     <pathling.nettyVersion>4.1.114.Final</pathling.nettyVersion>
     <pathling.testSetup.skip>false</pathling.testSetup.skip>
+    <pathling.ui.skip>false</pathling.ui.skip>
     <pathling.jacksonVersion>2.18.1</pathling.jacksonVersion>
     <pathling.testDataVersion>1.0.0</pathling.testDataVersion>
     <pathling.slf4jVersion>2.0.17</pathling.slf4jVersion>
@@ -397,6 +398,37 @@
         <version>3.6.2</version>
         <executions>
           <execution>
+            <id>ui-install</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <skip>${pathling.ui.skip}</skip>
+              <executable>bun</executable>
+              <workingDirectory>${project.basedir}/../ui</workingDirectory>
+              <arguments>
+                <argument>install</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>ui-build</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <skip>${pathling.ui.skip}</skip>
+              <executable>bun</executable>
+              <workingDirectory>${project.basedir}/../ui</workingDirectory>
+              <arguments>
+                <argument>run</argument>
+                <argument>build</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>import-test-data</id>
             <phase>process-test-classes</phase>
             <goals>
@@ -424,6 +456,29 @@
                 <argument>skipSetup=${pathling.testSetup.skip}</argument>
               </arguments>
               <classpathScope>test</classpathScope>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.3.1</version>
+        <executions>
+          <execution>
+            <id>copy-ui-resources</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <skip>${pathling.ui.skip}</skip>
+              <outputDirectory>${project.build.outputDirectory}/static/admin</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${project.basedir}/../ui/dist</directory>
+                </resource>
+              </resources>
             </configuration>
           </execution>
         </executions>

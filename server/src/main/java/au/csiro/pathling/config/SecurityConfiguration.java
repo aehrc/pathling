@@ -96,6 +96,7 @@ public class SecurityConfiguration {
       http.authorizeHttpRequests(authz -> authz
               // The following requests do not require authentication.
               .requestMatchers("/actuator/**").permitAll()
+              .requestMatchers("/admin/**").permitAll()
               .requestMatchers(HttpMethod.GET, "/fhir/metadata").permitAll()
               .requestMatchers(HttpMethod.GET, "/fhir/OperationDefinition/**").permitAll()
               .requestMatchers(HttpMethod.GET, "/fhir/.well-known/**").permitAll()
