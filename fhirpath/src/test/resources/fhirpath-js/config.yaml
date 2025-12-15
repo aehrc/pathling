@@ -231,6 +231,52 @@ excludeSet:
           recognize the element as existing.
         any:
           - "Patient.name.given[3].is(FHIR.string)"
+      - title: "'is' operator precedence differs from fhirpath.js"
+        type: wontfix
+        comment: |
+          Per FHIRPath spec section 3.5.7 (Operator precedence), 'is' operator (level #06)
+          has higher precedence than comparison operators (level #08), so '1 > 2 is Boolean'
+          should parse as '1 > (2 is Boolean)' not '(1 > 2) is Boolean'.
+          Pathling follows the spec; fhirpath.js appears to deviate.
+        any:
+          - "1 > 2 is Boolean"
+      - title: "'is' operator on fields accessed through polymorphic collections"
+        type: wontfix
+        comment: |
+          Tests require traversing Observation.value (polymorphic) before applying 'is'.
+          Pathling requires ofType() for polymorphic field traversal.
+        any:
+          - "Observation.value.value is decimal"
+          - "Observation.value.value is Element"
+          - "Observation.value.system is uri"
+          - "Observation.value.unit is string"
+          - "Observation.value.unit is decimal"
+      - title: "'is' operator with extensions on primitive types not supported"
+        type: feature
+        outcome: failure
+        id: "#437"
+        comment: |
+          Pathling does not support accessing extensions on primitive elements.
+          These tests involve the 'is' operator on extension values or primitive elements
+          with extensions, which return null instead of the expected type check result.
+        any:
+          - "Patient.contact.name.family.extension('http://hl7.org/fhir/StructureDefinition/humanname-own-prefix').value is string"
+          - "Patient.contact.name.family.extension('http://hl7.org/fhir/StructureDefinition/humanname-own-prefix').url is System.String"
+          - "Patient.name.given[3] is FHIR.string"
+      - title: "Type hierarchy checking not yet implemented"
+        type: feature
+        outcome: failure
+        id: "#2524"
+        comment: |
+          The is, as, and ofType operations currently only support exact type matching
+          and do not check FHIR type hierarchy (e.g., checking if a value is a subtype
+          of the specified type). This will be implemented using HAPI FHIR implementation
+          classes and Class.isAssignableFrom() to check inheritance.
+        any:
+          - "Observation is DomainResource"
+          - "Observation is Resource"
+          - "Observation.value is Element"
+          - "Patient.contact is Element"
   - title: Collections exclusions
     glob: "fhirpath-js/cases/6.4_collections.yaml"
     exclude:
