@@ -216,6 +216,21 @@ excludeSet:
         any:
           - "1 year != 1 'a'"
           - "1 month != 1 'mo'"
+  - title: Types exclusions
+    glob: "fhirpath-js/cases/6.3_types.yaml"
+    exclude:
+      - title: "Primitive elements with extensions but no value not supported"
+        type: feature
+        outcome: failure
+        id: "#437"
+        comment: |
+          Pathling does not support accessing primitive elements that have extensions
+          but no value. In this test, Patient.name.given[3] exists only as an extension
+          in _given[3] but has no value in the given array. The is() function should
+          return true for such elements, but Pathling returns null because it doesn't
+          recognize the element as existing.
+        any:
+          - "Patient.name.given[3].is(FHIR.string)"
   - title: Collections exclusions
     glob: "fhirpath-js/cases/6.4_collections.yaml"
     exclude:
@@ -442,4 +457,25 @@ excludeSet:
           - "7 days = 1 week"
           - "6 days < 1 week"
           - "8 days > 1 week"
-  
+      - title: "FHIR and System type namespace distinction not preserved"
+        type: wontfix
+        outcome: failure
+        id: "#2383"
+        comment: |
+          In strict FHIRPath semantics, FHIR primitive types (e.g., FHIR.boolean)
+          and System types (e.g., System.Boolean) exist in separate namespaces
+          and should NOT be considered equivalent.
+
+          However, Pathling intentionally maps FHIR primitives to System types
+          (see FhirPathType enum) for query execution efficiency. This means
+          FHIR.boolean and System.Boolean are treated as the same type internally.
+
+          While "Boolean" correctly resolves to "System.Boolean", the is() function
+          returns true when comparing FHIR.boolean values against System.Boolean
+          because Pathling does not maintain strict namespace separation.
+
+          This is a known architectural trade-off and not considered a bug.
+        any:
+          - "Patient.active.is(Boolean).not()"
+          - "Patient.active.is(System.Boolean).not()"
+

@@ -115,7 +115,7 @@ public class ChoiceElementCollection extends MixedCollection {
         .map(parent::traverseElement)
         .orElse(EmptyCollection.getInstance());
   }
-
+  
   /**
    * {@inheritDoc}
    * <p>

@@ -48,6 +48,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -373,8 +374,8 @@ public class Collection implements Equatable {
    * </p>
    *
    * @param newColumn The new {@link Column} to use as the collection's data
-   * @return A new {@link Collection} with the specified {@link Column} but preserving FHIR type
-   *     and extension information
+   * @return A new {@link Collection} with the specified {@link Column} but preserving FHIR type and
+   * extension information
    * @throws CollectionConstructionError if there was a problem constructing the collection
    */
   @Nonnull
@@ -399,9 +400,8 @@ public class Collection implements Equatable {
    * Checks if this collection is statically known to be empty.
    * <p>
    * This method performs a static type check to determine if the collection is an
-   * {@link EmptyCollection}. It does not evaluate the actual data or count elements
-   * at runtime. A collection that is not statically empty may still contain zero
-   * elements when evaluated.
+   * {@link EmptyCollection}. It does not evaluate the actual data or count elements at runtime. A
+   * collection that is not statically empty may still contain zero elements when evaluated.
    * </p>
    *
    * @return {@code true} if this collection is an {@link EmptyCollection}, {@code false} otherwise
@@ -414,13 +414,12 @@ public class Collection implements Equatable {
    * Checks if this collection is statically known to be non-empty.
    * <p>
    * This method performs a static type check to determine if the collection is not an
-   * {@link EmptyCollection}. It does not evaluate the actual data or count elements
-   * at runtime. A collection that is statically non-empty may still contain zero
-   * elements when evaluated.
+   * {@link EmptyCollection}. It does not evaluate the actual data or count elements at runtime. A
+   * collection that is statically non-empty may still contain zero elements when evaluated.
    * </p>
    *
    * @return {@code true} if this collection is not an {@link EmptyCollection}, {@code false}
-   *     otherwise
+   * otherwise
    */
   public boolean isNotEmpty() {
     return !isEmpty();
@@ -530,6 +529,44 @@ public class Collection implements Equatable {
     return maybeCollection.orElse(EmptyCollection.getInstance());
   }
 
+  /**
+   * Checks if this collection's single item is of the specified type.
+   * <p>
+   * This method implements the FHIRPath {@code is()} function behavior:
+   * <ul>
+   *   <li>Throws an error if the collection contains more than one item</li>
+   *   <li>Returns an empty collection if this collection is statically empty</li>
+   *   <li>Returns a BooleanCollection with:
+   *     <ul>
+   *       <li>{@code null} values where the input is empty at runtime</li>
+   *       <li>{@code true} where the value matches the specified type</li>
+   *       <li>{@code false} where the value does not match the specified type</li>
+   *     </ul>
+   *   </li>
+   * </ul>
+   * <p>
+   * The implementation leverages {@link #asBooleanSingleton()} to enforce the singular constraint
+   * and {@link #filterByType(TypeSpecifier)} to determine type matches. The result is computed
+   * lazily using Spark SQL operations, allowing efficient evaluation across large datasets.
+   *
+   * @param type the type specifier to check against
+   * @return a collection with boolean values indicating type match, or empty based on emptiness
+   * @throws au.csiro.pathling.errors.InvalidUserInputError if the collection contains more than
+   *     one item
+   * @see <a href="https://hl7.org/fhirpath/#istype--type-specifier">FHIRPath is() function</a>
+   */
+  @Nonnull
+  public Collection isOfType(@Nonnull final TypeSpecifier type) {
+    // Static check for EmptyCollection - return empty immediately
+    if (this instanceof EmptyCollection) {
+      return EmptyCollection.getInstance();
+    } else {
+      // Convert to boolean singleton (enforces singular constraint), then check if
+      // filtering by type produces a non-null value
+      return asBooleanSingleton().mapColumn(c -> functions.when(c,
+          filterByType(type).getColumnValue().isNotNull()));
+    }
+  }
 
   /**
    * Gets a user-friendly representation of the current collection that can be used to refer to it
