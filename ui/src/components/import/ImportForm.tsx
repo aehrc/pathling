@@ -12,7 +12,7 @@ import {
   Flex,
   Heading,
   IconButton,
-  RadioGroup,
+  RadioCards,
   Select,
   Text,
   TextField,
@@ -68,9 +68,11 @@ export function ImportForm({ onSubmit, isSubmitting, disabled }: ImportFormProps
         <Heading size="4">New Import</Heading>
 
         <Box>
-          <Text as="label" size="2" weight="medium" mb="1">
-            Input Format
-          </Text>
+          <Box mb="2">
+            <Text as="label" size="2" weight="medium">
+              Input Format
+            </Text>
+          </Box>
           <Select.Root
             value={inputFormat}
             onValueChange={(value) => setInputFormat(value as ImportFormat)}
@@ -87,9 +89,11 @@ export function ImportForm({ onSubmit, isSubmitting, disabled }: ImportFormProps
         </Box>
 
         <Box>
-          <Text as="label" size="2" weight="medium" mb="1">
-            Input Source
-          </Text>
+          <Box mb="2">
+            <Text as="label" size="2" weight="medium">
+              Input Source
+            </Text>
+          </Box>
           <TextField.Root
             placeholder="e.g., https://example.com/data-source"
             value={inputSource}
@@ -101,26 +105,23 @@ export function ImportForm({ onSubmit, isSubmitting, disabled }: ImportFormProps
         </Box>
 
         <Box>
-          <Text as="label" size="2" weight="medium" mb="2">
-            Import Mode
-          </Text>
-          <RadioGroup.Root value={mode} onValueChange={(v) => setMode(v as ImportMode)}>
-            <Flex direction="column" gap="2">
-              {IMPORT_MODES.map((modeOption) => (
-                <Flex key={modeOption.value} align="start" gap="2">
-                  <RadioGroup.Item value={modeOption.value} />
-                  <Box>
-                    <Text size="2" weight="medium">
-                      {modeOption.label}
-                    </Text>
-                    <Text size="1" color="gray" as="div">
-                      {modeOption.description}
-                    </Text>
-                  </Box>
+          <Box mb="2">
+            <Text as="label" size="2" weight="medium">
+              Import Mode
+            </Text>
+          </Box>
+          <RadioCards.Root value={mode} onValueChange={(v) => setMode(v as ImportMode)} columns="2" gap="2">
+            {IMPORT_MODES.map((modeOption) => (
+              <RadioCards.Item value={modeOption.value} key={modeOption.value}>
+                <Flex direction="column" width="100%">
+                  <Text weight="medium">{modeOption.label}</Text>
+                  <Text size="1" color="gray">
+                    {modeOption.description}
+                  </Text>
                 </Flex>
-              ))}
-            </Flex>
-          </RadioGroup.Root>
+              </RadioCards.Item>
+            ))}
+          </RadioCards.Root>
         </Box>
 
         <Box>

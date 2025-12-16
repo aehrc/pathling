@@ -11,7 +11,7 @@ import {
   Card,
   Flex,
   Heading,
-  RadioGroup,
+  RadioCards,
   Select,
   Text,
   TextField,
@@ -54,9 +54,11 @@ export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFor
         <Heading size="4">New Import</Heading>
 
         <Box>
-          <Text as="label" size="2" weight="medium" mb="1">
-            Export URL
-          </Text>
+          <Box mb="2">
+            <Text as="label" size="2" weight="medium">
+              Export URL
+            </Text>
+          </Box>
           <TextField.Root
             placeholder="e.g., https://example.org/fhir/$export"
             value={exportUrl}
@@ -68,9 +70,11 @@ export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFor
         </Box>
 
         <Box>
-          <Text as="label" size="2" weight="medium" mb="1">
-            Input Source
-          </Text>
+          <Box mb="2">
+            <Text as="label" size="2" weight="medium">
+              Input Source
+            </Text>
+          </Box>
           <TextField.Root
             placeholder="e.g., https://example.org/fhir"
             value={inputSource}
@@ -82,55 +86,51 @@ export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFor
         </Box>
 
         <Box>
-          <Text as="label" size="2" weight="medium" mb="2">
-            Export Type
-          </Text>
-          <RadioGroup.Root value={exportType} onValueChange={(v) => setExportType(v as ExportType)}>
-            <Flex direction="column" gap="2">
-              {EXPORT_TYPES.map((option) => (
-                <Flex key={option.value} align="start" gap="2">
-                  <RadioGroup.Item value={option.value} />
-                  <Box>
-                    <Text size="2" weight="medium">
-                      {option.label}
-                    </Text>
-                    <Text size="1" color="gray" as="div">
-                      {option.description}
-                    </Text>
-                  </Box>
+          <Box mb="2">
+            <Text as="label" size="2" weight="medium">
+              Export Type
+            </Text>
+          </Box>
+          <RadioCards.Root value={exportType} onValueChange={(v) => setExportType(v as ExportType)} columns="2" gap="2">
+            {EXPORT_TYPES.map((option) => (
+              <RadioCards.Item value={option.value} key={option.value}>
+                <Flex direction="column" width="100%">
+                  <Text weight="medium">{option.label}</Text>
+                  <Text size="1" color="gray">
+                    {option.description}
+                  </Text>
                 </Flex>
-              ))}
-            </Flex>
-          </RadioGroup.Root>
+              </RadioCards.Item>
+            ))}
+          </RadioCards.Root>
         </Box>
 
         <Box>
-          <Text as="label" size="2" weight="medium" mb="2">
-            Save Mode
-          </Text>
-          <RadioGroup.Root value={saveMode} onValueChange={(v) => setSaveMode(v as PnpSaveMode)}>
-            <Flex direction="column" gap="2">
-              {PNP_SAVE_MODES.map((option) => (
-                <Flex key={option.value} align="start" gap="2">
-                  <RadioGroup.Item value={option.value} />
-                  <Box>
-                    <Text size="2" weight="medium">
-                      {option.label}
-                    </Text>
-                    <Text size="1" color="gray" as="div">
-                      {option.description}
-                    </Text>
-                  </Box>
+          <Box mb="2">
+            <Text as="label" size="2" weight="medium">
+              Save Mode
+            </Text>
+          </Box>
+          <RadioCards.Root value={saveMode} onValueChange={(v) => setSaveMode(v as PnpSaveMode)} columns="2" gap="2">
+            {PNP_SAVE_MODES.map((option) => (
+              <RadioCards.Item value={option.value} key={option.value}>
+                <Flex direction="column" width="100%">
+                  <Text weight="medium">{option.label}</Text>
+                  <Text size="1" color="gray">
+                    {option.description}
+                  </Text>
                 </Flex>
-              ))}
-            </Flex>
-          </RadioGroup.Root>
+              </RadioCards.Item>
+            ))}
+          </RadioCards.Root>
         </Box>
 
         <Box>
-          <Text as="label" size="2" weight="medium" mb="1">
-            Input Format
-          </Text>
+          <Box mb="2">
+            <Text as="label" size="2" weight="medium">
+              Input Format
+            </Text>
+          </Box>
           <Select.Root
             value={inputFormat}
             onValueChange={(value) => setInputFormat(value as ImportFormat)}
