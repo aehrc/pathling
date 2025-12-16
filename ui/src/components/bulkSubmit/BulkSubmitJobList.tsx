@@ -18,8 +18,7 @@ export function BulkSubmitJobList({ jobs, onAbort }: BulkSubmitJobListProps) {
     return (
       <Box py="6">
         <Text color="gray" align="center" as="div">
-          No submissions yet. Create a new submission or start monitoring an
-          existing one.
+          No submissions yet. Create a new submission or start monitoring an existing one.
         </Text>
       </Box>
     );

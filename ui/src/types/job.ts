@@ -4,7 +4,11 @@
  * @author John Grimes
  */
 
-import type { BulkSubmitRequest, StatusManifest, SubmitterIdentifier } from "./bulkSubmit";
+import type {
+  BulkSubmitRequest,
+  StatusManifest,
+  SubmitterIdentifier,
+} from "./bulkSubmit";
 import type { ExportRequest, ExportManifest } from "./export";
 import type { ImportRequest, ImportManifest } from "./import";
 import type { ImportPnpRequest } from "./importPnp";

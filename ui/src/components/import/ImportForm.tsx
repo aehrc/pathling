@@ -110,7 +110,12 @@ export function ImportForm({ onSubmit, isSubmitting, disabled }: ImportFormProps
               Import Mode
             </Text>
           </Box>
-          <RadioCards.Root value={mode} onValueChange={(v) => setMode(v as ImportMode)} columns="2" gap="2">
+          <RadioCards.Root
+            value={mode}
+            onValueChange={(v) => setMode(v as ImportMode)}
+            columns="2"
+            gap="2"
+          >
             {IMPORT_MODES.map((modeOption) => (
               <RadioCards.Item value={modeOption.value} key={modeOption.value}>
                 <Flex direction="column" width="100%">

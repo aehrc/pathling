@@ -91,7 +91,12 @@ export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFor
               Export Type
             </Text>
           </Box>
-          <RadioCards.Root value={exportType} onValueChange={(v) => setExportType(v as ExportType)} columns="2" gap="2">
+          <RadioCards.Root
+            value={exportType}
+            onValueChange={(v) => setExportType(v as ExportType)}
+            columns="2"
+            gap="2"
+          >
             {EXPORT_TYPES.map((option) => (
               <RadioCards.Item value={option.value} key={option.value}>
                 <Flex direction="column" width="100%">
@@ -111,7 +116,12 @@ export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFor
               Save Mode
             </Text>
           </Box>
-          <RadioCards.Root value={saveMode} onValueChange={(v) => setSaveMode(v as PnpSaveMode)} columns="2" gap="2">
+          <RadioCards.Root
+            value={saveMode}
+            onValueChange={(v) => setSaveMode(v as PnpSaveMode)}
+            columns="2"
+            gap="2"
+          >
             {PNP_SAVE_MODES.map((option) => (
               <RadioCards.Item value={option.value} key={option.value}>
                 <Flex direction="column" width="100%">

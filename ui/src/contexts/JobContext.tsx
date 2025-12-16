@@ -5,7 +5,14 @@
  */
 
 import { createContext, useContext, useReducer, useCallback, useMemo, type ReactNode } from "react";
-import type { Job, ExportJob, ImportJob, ImportPnpJob, BulkSubmitJob, JobStatus } from "../types/job";
+import type {
+  Job,
+  ExportJob,
+  ImportJob,
+  ImportPnpJob,
+  BulkSubmitJob,
+  JobStatus,
+} from "../types/job";
 import type { StatusManifest } from "../types/bulkSubmit";
 import type { ExportManifest } from "../types/export";
 import type { ImportManifest } from "../types/import";
@@ -24,7 +31,10 @@ interface JobContextValue extends JobState {
   addJob: (job: Omit<Job, "createdAt">) => void;
   updateJobStatus: (id: string, status: JobStatus) => void;
   updateJobProgress: (id: string, progress: number) => void;
-  updateJobManifest: (id: string, manifest: ExportManifest | ImportManifest | StatusManifest) => void;
+  updateJobManifest: (
+    id: string,
+    manifest: ExportManifest | ImportManifest | StatusManifest,
+  ) => void;
   updateJobError: (id: string, error: string) => void;
   removeJob: (id: string) => void;
   clearJobs: () => void;

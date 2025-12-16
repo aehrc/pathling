@@ -32,9 +32,7 @@ export function BulkSubmitMonitorForm({
   };
 
   const isValid =
-    submitterSystem.trim() !== "" &&
-    submitterValue.trim() !== "" &&
-    submissionId.trim() !== "";
+    submitterSystem.trim() !== "" && submitterValue.trim() !== "" && submissionId.trim() !== "";
 
   return (
     <Card>
@@ -84,11 +82,7 @@ export function BulkSubmitMonitorForm({
           />
         </Box>
 
-        <Button
-          size="3"
-          onClick={handleSubmit}
-          disabled={disabled || isSubmitting || !isValid}
-        >
+        <Button size="3" onClick={handleSubmit} disabled={disabled || isSubmitting || !isValid}>
           <MagnifyingGlassIcon />
           {isSubmitting ? "Starting..." : "Start Monitoring"}
         </Button>

@@ -15,16 +15,14 @@ interface BulkSubmitJobCardProps {
   onAbort: (id: string) => void;
 }
 
-const STATUS_COLORS: Record<
-  BulkSubmitJob["status"],
-  "blue" | "green" | "red" | "orange" | "gray"
-> = {
-  pending: "blue",
-  in_progress: "blue",
-  completed: "green",
-  failed: "red",
-  cancelled: "gray",
-};
+const STATUS_COLORS: Record<BulkSubmitJob["status"], "blue" | "green" | "red" | "orange" | "gray"> =
+  {
+    pending: "blue",
+    in_progress: "blue",
+    completed: "green",
+    failed: "red",
+    cancelled: "gray",
+  };
 
 const STATUS_LABELS: Record<BulkSubmitJob["status"], string> = {
   pending: "Pending",
@@ -64,9 +62,7 @@ export function BulkSubmitJobCard({ job, onAbort }: BulkSubmitJobCardProps) {
           <Box>
             <Flex align="center" gap="2" mb="1">
               <Text weight="medium">Submission</Text>
-              <Badge color={STATUS_COLORS[job.status]}>
-                {STATUS_LABELS[job.status]}
-              </Badge>
+              <Badge color={STATUS_COLORS[job.status]}>{STATUS_LABELS[job.status]}</Badge>
             </Flex>
             <Text size="1" color="gray" as="div">
               Started: {formatDate(job.createdAt)}
@@ -84,12 +80,7 @@ export function BulkSubmitJobCard({ job, onAbort }: BulkSubmitJobCardProps) {
             )}
           </Box>
           {isActive && (
-            <Button
-              size="1"
-              variant="soft"
-              color="red"
-              onClick={() => onAbort(job.id)}
-            >
+            <Button size="1" variant="soft" color="red" onClick={() => onAbort(job.id)}>
               <Cross2Icon />
               Abort
             </Button>

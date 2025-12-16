@@ -34,21 +34,14 @@ function generateSubmissionId(): string {
   return crypto.randomUUID();
 }
 
-export function BulkSubmitForm({
-  onSubmit,
-  isSubmitting,
-  disabled,
-}: BulkSubmitFormProps) {
+export function BulkSubmitForm({ onSubmit, isSubmitting, disabled }: BulkSubmitFormProps) {
   const [submitterSystem, setSubmitterSystem] = useState("");
   const [submitterValue, setSubmitterValue] = useState("");
   const [submissionId, setSubmissionId] = useState(generateSubmissionId);
-  const [submissionStatus, setSubmissionStatus] =
-    useState<BulkSubmitStatus>("complete");
+  const [submissionStatus, setSubmissionStatus] = useState<BulkSubmitStatus>("complete");
   const [manifestUrl, setManifestUrl] = useState("");
   const [fhirBaseUrl, setFhirBaseUrl] = useState("");
-  const [fileRequestHeaders, setFileRequestHeaders] = useState<
-    FileRequestHeader[]
-  >([]);
+  const [fileRequestHeaders, setFileRequestHeaders] = useState<FileRequestHeader[]>([]);
   const [metadataLabel, setMetadataLabel] = useState("");
   const [metadataDescription, setMetadataDescription] = useState("");
 
@@ -85,10 +78,7 @@ export function BulkSubmitForm({
   };
 
   const addFileRequestHeader = useCallback(() => {
-    setFileRequestHeaders((prev) => [
-      ...prev,
-      { headerName: "", headerValue: "" },
-    ]);
+    setFileRequestHeaders((prev) => [...prev, { headerName: "", headerValue: "" }]);
   }, []);
 
   const removeFileRequestHeader = useCallback((index: number) => {
@@ -98,9 +88,7 @@ export function BulkSubmitForm({
   const updateFileRequestHeader = useCallback(
     (index: number, field: "headerName" | "headerValue", value: string) => {
       setFileRequestHeaders((prev) =>
-        prev.map((header, i) =>
-          i === index ? { ...header, [field]: value } : header,
-        ),
+        prev.map((header, i) => (i === index ? { ...header, [field]: value } : header)),
       );
     },
     [],
@@ -244,19 +232,14 @@ export function BulkSubmitForm({
               <Text as="label" size="2" weight="medium">
                 File Request Headers
               </Text>
-              <IconButton
-                size="1"
-                variant="soft"
-                onClick={addFileRequestHeader}
-              >
+              <IconButton size="1" variant="soft" onClick={addFileRequestHeader}>
                 <PlusIcon />
               </IconButton>
             </Flex>
           </Box>
           {fileRequestHeaders.length === 0 ? (
             <Text size="1" color="gray">
-              No custom headers configured. Click + to add headers for
-              authenticated file downloads.
+              No custom headers configured. Click + to add headers for authenticated file downloads.
             </Text>
           ) : (
             <Flex direction="column" gap="2">
@@ -266,17 +249,13 @@ export function BulkSubmitForm({
                     style={{ flex: 1 }}
                     placeholder="Header name"
                     value={header.headerName}
-                    onChange={(e) =>
-                      updateFileRequestHeader(index, "headerName", e.target.value)
-                    }
+                    onChange={(e) => updateFileRequestHeader(index, "headerName", e.target.value)}
                   />
                   <TextField.Root
                     style={{ flex: 2 }}
                     placeholder="Header value"
                     value={header.headerValue}
-                    onChange={(e) =>
-                      updateFileRequestHeader(index, "headerValue", e.target.value)
-                    }
+                    onChange={(e) => updateFileRequestHeader(index, "headerValue", e.target.value)}
                   />
                   <IconButton
                     size="1"
@@ -315,11 +294,7 @@ export function BulkSubmitForm({
           </Text>
         </Box>
 
-        <Button
-          size="3"
-          onClick={handleSubmit}
-          disabled={disabled || isSubmitting || !isValid}
-        >
+        <Button size="3" onClick={handleSubmit} disabled={disabled || isSubmitting || !isValid}>
           <PaperPlaneIcon />
           {isSubmitting ? "Submitting..." : "Submit"}
         </Button>
