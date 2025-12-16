@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
-import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
 import au.csiro.pathling.config.BulkSubmitConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -69,13 +68,12 @@ class BulkSubmitValidatorTest {
         "respond-async", false);
 
     assertThatNoException().isThrownBy(() -> {
-      final PreAsyncValidationResult<BulkSubmitRequest> result =
-          validator.validateRequest(mockRequest, params);
-      assertThat(result.result()).isNotNull();
-      assertThat(result.result().submissionId()).isEqualTo("test-submission-id");
-      assertThat(result.result().submitter().system()).isEqualTo(SUBMITTER_SYSTEM);
-      assertThat(result.result().submitter().value()).isEqualTo(SUBMITTER_VALUE);
-      assertThat(result.result().isInProgress()).isTrue();
+      final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+      assertThat(result).isNotNull();
+      assertThat(result.submissionId()).isEqualTo("test-submission-id");
+      assertThat(result.submitter().system()).isEqualTo(SUBMITTER_SYSTEM);
+      assertThat(result.submitter().value()).isEqualTo(SUBMITTER_VALUE);
+      assertThat(result.isInProgress()).isTrue();
     });
   }
 
@@ -86,12 +84,11 @@ class BulkSubmitValidatorTest {
         "respond-async", false);
 
     assertThatNoException().isThrownBy(() -> {
-      final PreAsyncValidationResult<BulkSubmitRequest> result =
-          validator.validateRequest(mockRequest, params);
-      assertThat(result.result()).isNotNull();
-      assertThat(result.result().isComplete()).isTrue();
-      assertThat(result.result().manifestUrl()).isEqualTo("https://example.org/manifest.json");
-      assertThat(result.result().fhirBaseUrl()).isEqualTo("https://example.org/fhir");
+      final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+      assertThat(result).isNotNull();
+      assertThat(result.isComplete()).isTrue();
+      assertThat(result.manifestUrl()).isEqualTo("https://example.org/manifest.json");
+      assertThat(result.fhirBaseUrl()).isEqualTo("https://example.org/fhir");
     });
   }
 
@@ -102,10 +99,9 @@ class BulkSubmitValidatorTest {
         "respond-async", false);
 
     assertThatNoException().isThrownBy(() -> {
-      final PreAsyncValidationResult<BulkSubmitRequest> result =
-          validator.validateRequest(mockRequest, params);
-      assertThat(result.result()).isNotNull();
-      assertThat(result.result().isAborted()).isTrue();
+      final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+      assertThat(result).isNotNull();
+      assertThat(result.isAborted()).isTrue();
     });
   }
 
@@ -118,7 +114,7 @@ class BulkSubmitValidatorTest {
     final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
         "respond-async", false);
 
-    assertThatCode(() -> validator.validateRequest(mockRequest, params))
+    assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
         .isInstanceOf(InvalidUserInputError.class)
         .hasMessageContaining("submissionId");
   }
@@ -132,7 +128,7 @@ class BulkSubmitValidatorTest {
     final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
         "respond-async", false);
 
-    assertThatCode(() -> validator.validateRequest(mockRequest, params))
+    assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
         .isInstanceOf(InvalidUserInputError.class)
         .hasMessageContaining("submitter");
   }
@@ -146,7 +142,7 @@ class BulkSubmitValidatorTest {
     final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
         "respond-async", false);
 
-    assertThatCode(() -> validator.validateRequest(mockRequest, params))
+    assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
         .isInstanceOf(InvalidUserInputError.class)
         .hasMessageContaining("submissionStatus");
   }
@@ -161,7 +157,7 @@ class BulkSubmitValidatorTest {
     final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
         "respond-async", false);
 
-    assertThatCode(() -> validator.validateRequest(mockRequest, params))
+    assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
         .isInstanceOf(InvalidUserInputError.class)
         .hasMessageContaining("Invalid submissionStatus");
   }
@@ -180,11 +176,10 @@ class BulkSubmitValidatorTest {
 
     // Validation should succeed - the check for manifest details happens in BulkSubmitProvider.
     assertThatNoException().isThrownBy(() -> {
-      final PreAsyncValidationResult<BulkSubmitRequest> result =
-          validator.validateRequest(mockRequest, params);
-      assertThat(result.result()).isNotNull();
-      assertThat(result.result().isComplete()).isTrue();
-      assertThat(result.result().manifestUrl()).isNull();
+      final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+      assertThat(result).isNotNull();
+      assertThat(result.isComplete()).isTrue();
+      assertThat(result.manifestUrl()).isNull();
     });
   }
 
@@ -200,7 +195,7 @@ class BulkSubmitValidatorTest {
     final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
         "respond-async", false);
 
-    assertThatCode(() -> validator.validateRequest(mockRequest, params))
+    assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
         .isInstanceOf(InvalidUserInputError.class)
         .hasMessageContaining("fhirBaseUrl");
   }
@@ -216,7 +211,7 @@ class BulkSubmitValidatorTest {
     final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
         "respond-async", false);
 
-    assertThatCode(() -> validator.validateRequest(mockRequest, params))
+    assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
         .isInstanceOf(InvalidUserInputError.class)
         .hasMessageContaining("not in the list of allowed submitters");
   }
@@ -234,7 +229,7 @@ class BulkSubmitValidatorTest {
     final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
         "respond-async", false);
 
-    assertThatCode(() -> validator.validateRequest(mockRequest, params))
+    assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
         .isInstanceOf(InvalidUserInputError.class)
         .hasMessageContaining("does not match any allowed source prefixes");
   }
@@ -247,9 +242,8 @@ class BulkSubmitValidatorTest {
         "respond-async", false);
 
     assertThatNoException().isThrownBy(() -> {
-      final PreAsyncValidationResult<BulkSubmitRequest> result =
-          validator.validateRequest(mockRequest, params);
-      assertThat(result.result()).isNotNull();
+      final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+      assertThat(result).isNotNull();
     });
   }
 

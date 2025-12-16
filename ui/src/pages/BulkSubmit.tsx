@@ -64,16 +64,12 @@ export function BulkSubmit() {
       try {
         const accessToken = client?.state.tokenResponse?.access_token;
 
-        const { submissionId, pollUrl } = await kickOffBulkSubmit(
-          fhirBaseUrl,
-          accessToken,
-          request,
-        );
+        const { submissionId } = await kickOffBulkSubmit(fhirBaseUrl, accessToken, request);
 
         addJob({
           id: crypto.randomUUID(),
           type: "bulk-submit",
-          pollUrl,
+          pollUrl: `${fhirBaseUrl}/$bulk-submit-status`,
           status: "pending",
           progress: null,
           request,

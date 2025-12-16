@@ -15,7 +15,7 @@ import type {
 
 interface KickOffResult {
   submissionId: string;
-  pollUrl: string;
+  status: string;
 }
 
 interface PollResult {
@@ -24,7 +24,8 @@ interface PollResult {
 }
 
 /**
- * Sends a bulk submit request to create or update a submission.
+ * Sends a bulk submit request to create or update a submission. This is a synchronous operation
+ * that returns an acknowledgement with the submission status.
  */
 export async function kickOffBulkSubmit(
   fhirBaseUrl: string,
@@ -36,7 +37,6 @@ export async function kickOffBulkSubmit(
   const headers: HeadersInit = {
     "Content-Type": "application/fhir+json",
     Accept: "application/fhir+json",
-    Prefer: "respond-async",
   };
   if (accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;
@@ -53,19 +53,22 @@ export async function kickOffBulkSubmit(
   if (response.status === 401) {
     throw new UnauthorizedError();
   }
-  if (response.status !== 202) {
+  if (!response.ok) {
     const errorBody = await response.text();
     throw new Error(`Bulk submit failed: ${response.status} - ${errorBody}`);
   }
 
-  const contentLocation = response.headers.get("Content-Location");
-  if (!contentLocation) {
-    throw new Error("Bulk submit failed: No Content-Location header received");
-  }
+  // Parse the Parameters response to extract submissionId and status.
+  const responseBody = (await response.json()) as Parameters;
+  const submissionId =
+    responseBody.parameter?.find((p) => p.name === "submissionId")?.valueString ??
+    request.submissionId;
+  const status =
+    responseBody.parameter?.find((p) => p.name === "status")?.valueString ?? "unknown";
 
   return {
-    submissionId: request.submissionId,
-    pollUrl: contentLocation,
+    submissionId,
+    status,
   };
 }
 

@@ -18,22 +18,17 @@
 package au.csiro.pathling.operations.bulksubmit;
 
 import au.csiro.pathling.ParamUtil;
-import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
 import au.csiro.pathling.config.BulkSubmitConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.operations.OperationValidation;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Identifier;
-import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.springframework.stereotype.Component;
@@ -67,14 +62,14 @@ public class BulkSubmitValidator {
   }
 
   /**
-   * Validates a $bulk-submit request from a FHIR Parameters resource.
+   * Validates and extracts a $bulk-submit request from a FHIR Parameters resource.
    *
    * @param requestDetails The request details.
    * @param parameters The FHIR Parameters resource.
-   * @return The validation result containing the BulkSubmitRequest and any issues.
+   * @return The validated BulkSubmitRequest.
    */
   @Nonnull
-  public PreAsyncValidationResult<BulkSubmitRequest> validateRequest(
+  public BulkSubmitRequest validateAndExtract(
       @Nonnull final RequestDetails requestDetails,
       @Nonnull final Parameters parameters
   ) {
@@ -101,8 +96,8 @@ public class BulkSubmitValidator {
     // Extract manifestUrl (conditionally required).
     final String manifestUrl = extractOptionalUrl(parameters, "manifestUrl");
 
-    // Extract fhirBaseUrl (conditionally required). Accept both fhirBaseUrl and FHIRBaseUrl per spec
-    // inconsistency.
+    // Extract fhirBaseUrl (conditionally required). Accept both fhirBaseUrl and FHIRBaseUrl per
+    // spec inconsistency.
     String fhirBaseUrl = extractOptionalUrl(parameters, "fhirBaseUrl");
     if (fhirBaseUrl == null) {
       fhirBaseUrl = extractOptionalUrl(parameters, "FHIRBaseUrl");
@@ -130,7 +125,7 @@ public class BulkSubmitValidator {
     // Extract metadata (optional).
     final SubmissionMetadata metadata = extractMetadata(parameters);
 
-    final BulkSubmitRequest request = new BulkSubmitRequest(
+    return new BulkSubmitRequest(
         requestDetails.getCompleteUrl(),
         submissionId,
         submitter,
@@ -140,14 +135,6 @@ public class BulkSubmitValidator {
         replacesManifestUrl,
         metadata
     );
-
-    final List<OperationOutcome.OperationOutcomeIssueComponent> issues = Stream.of(
-            OperationValidation.validateAcceptHeader(requestDetails, true),
-            OperationValidation.validatePreferHeader(requestDetails, true))
-        .flatMap(Collection::stream)
-        .toList();
-
-    return new PreAsyncValidationResult<>(request, issues);
   }
 
   @Nonnull
