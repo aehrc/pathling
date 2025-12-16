@@ -9,6 +9,7 @@ import { Box, Container, Flex, Text } from "@radix-ui/themes";
 import { Link, Outlet, useLocation } from "react-router";
 import { config } from "../../config";
 import { useAuth } from "../../contexts/AuthContext";
+import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 
 interface NavLinkProps {
   to: string;
@@ -46,6 +47,7 @@ function getHostname(url: string): string {
 export function Layout() {
   const location = useLocation();
   const { isAuthenticated, logout } = useAuth();
+  useDocumentTitle();
 
   return (
     <Box style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
