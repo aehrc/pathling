@@ -30,12 +30,12 @@ public class BulkExportDeleteInterceptor {
       HttpServletRequest request,
       HttpServletResponse response,
       ServletRequestDetails requestDetails) {
-    if(!request.getMethod().equals("DELETE") || !request.getPathInfo().matches(".*/\\$job$")) {
+    if (!request.getMethod().equals("DELETE") || !request.getPathInfo().matches(".*/\\$job$")) {
       return true;
     }
-    
+
     jobProvider.deleteJob(request.getParameter("id"));
-    
+
     return false;
   }
 }
