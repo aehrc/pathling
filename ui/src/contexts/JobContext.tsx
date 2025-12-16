@@ -5,7 +5,8 @@
  */
 
 import { createContext, useContext, useReducer, useCallback, useMemo, type ReactNode } from "react";
-import type { Job, ExportJob, ImportJob, ImportPnpJob, JobStatus } from "../types/job";
+import type { Job, ExportJob, ImportJob, ImportPnpJob, BulkSubmitJob, JobStatus } from "../types/job";
+import type { StatusManifest } from "../types/bulkSubmit";
 import type { ExportManifest } from "../types/export";
 import type { ImportManifest } from "../types/import";
 
@@ -23,7 +24,7 @@ interface JobContextValue extends JobState {
   addJob: (job: Omit<Job, "createdAt">) => void;
   updateJobStatus: (id: string, status: JobStatus) => void;
   updateJobProgress: (id: string, progress: number) => void;
-  updateJobManifest: (id: string, manifest: ExportManifest | ImportManifest) => void;
+  updateJobManifest: (id: string, manifest: ExportManifest | ImportManifest | StatusManifest) => void;
   updateJobError: (id: string, error: string) => void;
   removeJob: (id: string) => void;
   clearJobs: () => void;
@@ -31,6 +32,7 @@ interface JobContextValue extends JobState {
   getExportJobs: () => ExportJob[];
   getImportJobs: () => ImportJob[];
   getImportPnpJobs: () => ImportPnpJob[];
+  getBulkSubmitJobs: () => BulkSubmitJob[];
 }
 
 const JobContext = createContext<JobContextValue | null>(null);
@@ -88,15 +90,18 @@ export function JobProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const updateJobManifest = useCallback((id: string, manifest: ExportManifest | ImportManifest) => {
-    dispatch({
-      type: "UPDATE_JOB",
-      payload: {
-        id,
-        updates: { manifest, status: "completed" } as Partial<Job>,
-      },
-    });
-  }, []);
+  const updateJobManifest = useCallback(
+    (id: string, manifest: ExportManifest | ImportManifest | StatusManifest) => {
+      dispatch({
+        type: "UPDATE_JOB",
+        payload: {
+          id,
+          updates: { manifest, status: "completed" } as Partial<Job>,
+        },
+      });
+    },
+    [],
+  );
 
   const updateJobError = useCallback((id: string, error: string) => {
     dispatch({
@@ -135,6 +140,11 @@ export function JobProvider({ children }: { children: ReactNode }) {
     [state.jobs],
   );
 
+  const getBulkSubmitJobs = useMemo(
+    () => () => state.jobs.filter((job): job is BulkSubmitJob => job.type === "bulk-submit"),
+    [state.jobs],
+  );
+
   return (
     <JobContext.Provider
       value={{
@@ -150,6 +160,7 @@ export function JobProvider({ children }: { children: ReactNode }) {
         getExportJobs,
         getImportJobs,
         getImportPnpJobs,
+        getBulkSubmitJobs,
       }}
     >
       {children}

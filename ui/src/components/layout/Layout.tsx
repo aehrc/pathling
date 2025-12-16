@@ -4,7 +4,7 @@
  * @author John Grimes
  */
 
-import { DownloadIcon, HomeIcon, UploadIcon } from "@radix-ui/react-icons";
+import { DownloadIcon, HomeIcon, PaperPlaneIcon, UploadIcon } from "@radix-ui/react-icons";
 import { Box, Container, Flex, Text } from "@radix-ui/themes";
 import { Link, Outlet, useLocation } from "react-router";
 import { config } from "../../config";
@@ -87,6 +87,12 @@ export function Layout() {
                   icon={<UploadIcon />}
                   label="Import"
                   isActive={location.pathname === "/import"}
+                />
+                <NavLink
+                  to="/bulk-submit"
+                  icon={<PaperPlaneIcon />}
+                  label="Bulk Submit"
+                  isActive={location.pathname === "/bulk-submit"}
                 />
               </Flex>
             </Flex>

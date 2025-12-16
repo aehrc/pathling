@@ -4,11 +4,12 @@
  * @author John Grimes
  */
 
+import type { BulkSubmitRequest, StatusManifest, SubmitterIdentifier } from "./bulkSubmit";
 import type { ExportRequest, ExportManifest } from "./export";
 import type { ImportRequest, ImportManifest } from "./import";
 import type { ImportPnpRequest } from "./importPnp";
 
-export type JobType = "export" | "import" | "import-pnp";
+export type JobType = "export" | "import" | "import-pnp" | "bulk-submit";
 
 export type JobStatus =
   | "pending"
@@ -45,4 +46,12 @@ export interface ImportPnpJob extends BaseJob {
   manifest: ImportManifest | null;
 }
 
-export type Job = ExportJob | ImportJob | ImportPnpJob;
+export interface BulkSubmitJob extends BaseJob {
+  type: "bulk-submit";
+  request: BulkSubmitRequest;
+  submitter: SubmitterIdentifier;
+  submissionId: string;
+  manifest: StatusManifest | null;
+}
+
+export type Job = ExportJob | ImportJob | ImportPnpJob | BulkSubmitJob;

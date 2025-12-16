@@ -6,10 +6,11 @@
 
 import { Routes, Route } from "react-router";
 import { Layout } from "./components/layout/Layout";
+import { BulkSubmit } from "./pages/BulkSubmit";
+import { Callback } from "./pages/Callback";
 import { Dashboard } from "./pages/Dashboard";
 import { Export } from "./pages/Export";
 import { Import } from "./pages/Import";
-import { Callback } from "./pages/Callback";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/export" element={<Export />} />
         <Route path="/import" element={<Import />} />
+        <Route path="/bulk-submit" element={<BulkSubmit />} />
       </Route>
     </Routes>
   );
