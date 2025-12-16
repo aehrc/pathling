@@ -98,16 +98,6 @@ public class BulkSubmitValidator {
     // Extract submissionStatus (required).
     final String submissionStatus = extractSubmissionStatus(parameters);
 
-    // Modify the complete URL to include submissionId and status as query parameters. This ensures
-    // different $bulk-submit requests (e.g., in-progress vs complete) get different async job
-    // cache tags, so each is processed independently rather than returning a cached response.
-    final String originalUrl = requestDetails.getCompleteUrl();
-    final String separator = originalUrl.contains("?")
-                             ? "&"
-                             : "?";
-    requestDetails.setCompleteUrl(originalUrl + separator + "_submissionId=" + submissionId
-        + "&_submissionStatus=" + submissionStatus);
-
     // Extract manifestUrl (conditionally required).
     final String manifestUrl = extractOptionalUrl(parameters, "manifestUrl");
 
