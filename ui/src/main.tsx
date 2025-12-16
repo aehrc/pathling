@@ -4,7 +4,7 @@
  * @author John Grimes
  */
 
-import { StrictMode } from "react";
+import { StrictMode, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -29,9 +29,22 @@ const queryClient = new QueryClient({
   },
 });
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <Theme accentColor="blue" grayColor="slate" radius="medium">
+const darkModeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+function subscribeToColorScheme(callback: () => void): () => void {
+  darkModeQuery.addEventListener("change", callback);
+  return () => darkModeQuery.removeEventListener("change", callback);
+}
+
+function getColorScheme(): "light" | "dark" {
+  return darkModeQuery.matches ? "dark" : "light";
+}
+
+function Root() {
+  const appearance = useSyncExternalStore(subscribeToColorScheme, getColorScheme);
+
+  return (
+    <Theme accentColor="blue" grayColor="slate" radius="medium" appearance={appearance}>
       <ToastProvider>
         <QueryClientProvider client={queryClient}>
           <BrowserRouter basename="/admin">
@@ -46,5 +59,11 @@ createRoot(document.getElementById("root")!).render(
         </QueryClientProvider>
       </ToastProvider>
     </Theme>
+  );
+}
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <Root />
   </StrictMode>,
 );
