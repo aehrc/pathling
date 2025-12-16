@@ -39,6 +39,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -111,9 +112,19 @@ public class ImportProvider implements PreAsyncValidation<ImportRequest> {
   @Nullable
   public Parameters importOperation(@ResourceParam final Parameters parameters,
       @Nonnull final ServletRequestDetails requestDetails) {
+    log.debug("Received $import request");
 
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication);
+
+    // Compute the operation cache key to match how AsyncAspect stores the job.
+    final PreAsyncValidationResult<ImportRequest> validationResult = preAsyncValidate(
+        requestDetails, new Object[]{parameters});
+    final String operationCacheKey = computeCacheKeyComponent(
+        Objects.requireNonNull(validationResult.result(),
+            "Validation result should not be null for a valid request"));
+    final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication,
+        operationCacheKey);
+
     final Job<ImportRequest> ownJob = jobRegistry.get(ownTag);
     if (ownJob == null) {
       throw new InvalidRequestException("Missing 'Prefer: respond-async' header value.");

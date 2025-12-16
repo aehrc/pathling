@@ -33,6 +33,7 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Parameters;
@@ -105,7 +106,16 @@ public class BulkSubmitProvider implements PreAsyncValidation<BulkSubmitRequest>
       @Nonnull final ServletRequestDetails requestDetails
   ) {
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication);
+
+    // Compute the operation cache key to match how AsyncAspect stores the job.
+    final PreAsyncValidationResult<BulkSubmitRequest> validationResult = preAsyncValidate(
+        requestDetails, new Object[]{parameters});
+    final String operationCacheKey = computeCacheKeyComponent(
+        Objects.requireNonNull(validationResult.result(),
+            "Validation result should not be null for a valid request"));
+    final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication,
+        operationCacheKey);
+
     final Job<BulkSubmitRequest> ownJob = jobRegistry.get(ownTag);
 
     if (ownJob == null) {

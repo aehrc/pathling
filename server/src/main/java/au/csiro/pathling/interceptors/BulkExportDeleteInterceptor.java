@@ -6,12 +6,16 @@ import ca.uhn.fhir.interceptor.api.Pointcut;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
+ * Interceptor for handling DELETE requests to the $job endpoint.
+ *
  * @author Felix Naumann
  */
 @Component
+@ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
 public class BulkExportDeleteInterceptor {
 
 

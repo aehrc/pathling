@@ -52,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -168,7 +169,17 @@ public class ViewDefinitionExportProvider
       @Nonnull final ServletRequestDetails requestDetails
   ) {
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication);
+
+    // Compute the operation cache key to match how AsyncAspect stores the job.
+    final PreAsyncValidationResult<ViewDefinitionExportRequest> validationResult = preAsyncValidate(
+        requestDetails, new Object[]{viewNames, viewResources, clientTrackingId, format,
+            includeHeader, patientIds, groupIds, since});
+    final String operationCacheKey = computeCacheKeyComponent(
+        Objects.requireNonNull(validationResult.result(),
+            "Validation result should not be null for a valid request"));
+    final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication,
+        operationCacheKey);
+
     final Job<ViewDefinitionExportRequest> ownJob = jobRegistry.get(ownTag);
     if (ownJob == null) {
       throw new InvalidRequestException("Missing 'Prefer: respond-async' header value.");

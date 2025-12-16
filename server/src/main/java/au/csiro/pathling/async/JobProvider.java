@@ -114,6 +114,7 @@ public class JobProvider {
   public IBaseResource job(@Nullable @OperationParam(name = "id") final String id,
       @jakarta.validation.constraints.NotNull final HttpServletRequest request,
       @Nullable final HttpServletResponse response) {
+    log.debug("Received $job request with id: {}", id);
 
     final Job<?> job = getJob(id);
 

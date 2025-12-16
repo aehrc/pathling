@@ -132,7 +132,7 @@ public class FhirServer extends RestfulServer {
   private final transient EntityTagInterceptor entityTagInterceptor;
 
   @Nonnull
-  private final transient BulkExportDeleteInterceptor bulkExportDeleteInterceptor;
+  private final transient Optional<BulkExportDeleteInterceptor> bulkExportDeleteInterceptor;
 
   @Nonnull
   private final transient ConformanceProvider conformanceProvider;
@@ -169,7 +169,7 @@ public class FhirServer extends RestfulServer {
    * @param bulkSubmitStatusProvider the optional bulk submit status provider
    * @param errorReportingInterceptor the error reporting interceptor
    * @param entityTagInterceptor the entity tag interceptor
-   * @param bulkExportDeleteInterceptor the bulk export delete interceptor
+   * @param bulkExportDeleteInterceptor the optional bulk export delete interceptor
    * @param conformanceProvider the conformance provider
    * @param searchProviderFactory the search provider factory
    * @param updateProviderFactory the update provider factory
@@ -191,7 +191,7 @@ public class FhirServer extends RestfulServer {
       @Nonnull final Optional<BulkSubmitStatusProvider> bulkSubmitStatusProvider,
       @Nonnull final ErrorReportingInterceptor errorReportingInterceptor,
       @Nonnull final EntityTagInterceptor entityTagInterceptor,
-      @Nonnull final BulkExportDeleteInterceptor bulkExportDeleteInterceptor,
+      @Nonnull final Optional<BulkExportDeleteInterceptor> bulkExportDeleteInterceptor,
       @Nonnull final ConformanceProvider conformanceProvider,
       @Nonnull final SearchProviderFactory searchProviderFactory,
       @Nonnull final UpdateProviderFactory updateProviderFactory,
@@ -281,7 +281,7 @@ public class FhirServer extends RestfulServer {
 
       registerInterceptor(new ResponseHighlighterInterceptor());
 
-      registerInterceptor(bulkExportDeleteInterceptor);
+      bulkExportDeleteInterceptor.ifPresent(this::registerInterceptor);
 
       // Configure paging.
       final FifoMemoryPagingProvider pagingProvider = new FifoMemoryPagingProvider(SEARCH_MAP_SIZE);
