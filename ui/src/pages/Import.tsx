@@ -144,7 +144,7 @@ export function Import() {
         <Box mt="4">
           <Button size="3" onClick={handleLogin}>
             <LockClosedIcon />
-            Login with SMART on FHIR
+            Login to {capabilities?.serverName ?? window.location.hostname}
           </Button>
         </Box>
         <SessionExpiredDialog />
