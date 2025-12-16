@@ -4,9 +4,9 @@
  * @author John Grimes
  */
 
-import { Outlet, Link, useLocation } from "react-router";
-import { Box, Container, Flex, Heading, Text } from "@radix-ui/themes";
 import { DownloadIcon, HomeIcon, UploadIcon } from "@radix-ui/react-icons";
+import { Box, Container, Flex, Text } from "@radix-ui/themes";
+import { Link, Outlet, useLocation } from "react-router";
 import { config } from "../../config";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -57,11 +57,17 @@ export function Layout() {
       >
         <Container size="4">
           <Flex justify="between" align="center" py="3">
-            <Flex align="center" gap="4">
-              <Heading size="5" weight="bold">
-                Pathling
-              </Heading>
-              <Flex gap="4" ml="6">
+            <Flex align="center" gap="5">
+              <picture>
+                <source srcSet="/admin/logo-colour-dark.svg" media="(prefers-color-scheme: dark)" />
+                <img
+                  src="/admin/logo-colour.svg"
+                  alt="Pathling"
+                  height={50}
+                  style={{ display: "block" }}
+                />
+              </picture>
+              <Flex gap="5" ml="8" style={{ position: "relative", top: "10px" }}>
                 <NavLink
                   to="/"
                   icon={<HomeIcon />}
@@ -82,7 +88,7 @@ export function Layout() {
                 />
               </Flex>
             </Flex>
-            <Flex align="center" gap="4">
+            <Flex align="center" gap="5" style={{ position: "relative", top: "10px" }}>
               <Text size="2" color="gray">
                 {getHostname(config.fhirBaseUrl)}
               </Text>

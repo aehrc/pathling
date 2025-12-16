@@ -44,7 +44,7 @@ function Root() {
   const appearance = useSyncExternalStore(subscribeToColorScheme, getColorScheme);
 
   return (
-    <Theme accentColor="blue" grayColor="slate" radius="medium" appearance={appearance}>
+    <Theme accentColor="teal" grayColor="slate" radius="medium" appearance={appearance}>
       <ToastProvider>
         <QueryClientProvider client={queryClient}>
           <BrowserRouter basename="/admin">
