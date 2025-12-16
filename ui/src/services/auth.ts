@@ -155,8 +155,13 @@ export async function checkServerCapabilities(
  * Initiates SMART on FHIR standalone launch authorization.
  */
 export async function initiateAuth(fhirBaseUrl: string): Promise<void> {
+  // Convert relative URLs to absolute URLs for fhirclient compatibility.
+  const absoluteUrl = fhirBaseUrl.startsWith("http")
+    ? fhirBaseUrl
+    : `${window.location.origin}${fhirBaseUrl}`;
+
   await FHIR.oauth2.authorize({
-    iss: fhirBaseUrl,
+    iss: absoluteUrl,
     clientId: CLIENT_ID,
     scope: "openid profile user/*.read",
     redirectUri: `${window.location.origin}/admin/callback`,

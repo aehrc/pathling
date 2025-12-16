@@ -173,9 +173,7 @@ export function Export() {
           <Callout.Icon>
             <InfoCircledIcon />
           </Callout.Icon>
-          <Callout.Text>
-            You need to authenticate with the FHIR server before you can start exporting data.
-          </Callout.Text>
+          <Callout.Text>You need to login before you can start exporting data.</Callout.Text>
         </Callout.Root>
 
         <Box mt="4">

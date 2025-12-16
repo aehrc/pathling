@@ -4,10 +4,10 @@
  * @author John Grimes
  */
 
+import { CrossCircledIcon } from "@radix-ui/react-icons";
+import { Box, Callout, Flex, Spinner, Text } from "@radix-ui/themes";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { Box, Callout, Flex, Spinner, Text } from "@radix-ui/themes";
-import { CrossCircledIcon } from "@radix-ui/react-icons";
 import { useAuth } from "../contexts/AuthContext";
 import { completeAuth } from "../services/auth";
 
@@ -45,11 +45,6 @@ export function Callback() {
             {error}
           </Callout.Text>
         </Callout.Root>
-        <Box mt="4">
-          <Text color="blue" style={{ cursor: "pointer" }} onClick={() => navigate("/settings")}>
-            Go to Settings
-          </Text>
-        </Box>
       </Box>
     );
   }
