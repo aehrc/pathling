@@ -155,19 +155,19 @@ function buildBulkSubmitParameters(request: BulkSubmitRequest): Parameters {
   if (request.manifestUrl) {
     params.parameter!.push({
       name: "manifestUrl",
-      valueUrl: request.manifestUrl,
+      valueString: request.manifestUrl,
     });
   }
   if (request.fhirBaseUrl) {
     params.parameter!.push({
       name: "fhirBaseUrl",
-      valueUrl: request.fhirBaseUrl,
+      valueString: request.fhirBaseUrl,
     });
   }
   if (request.replacesManifestUrl) {
     params.parameter!.push({
       name: "replacesManifestUrl",
-      valueUrl: request.replacesManifestUrl,
+      valueString: request.replacesManifestUrl,
     });
   }
   if (request.fileRequestHeaders && request.fileRequestHeaders.length > 0) {
