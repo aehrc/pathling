@@ -6,10 +6,10 @@
 
 import { Box, Flex, Heading, Text } from "@radix-ui/themes";
 import { ImportJobCard } from "./ImportJobCard";
-import type { ImportJob } from "../../types/job";
+import type { ImportJob, ImportPnpJob } from "../../types/job";
 
 interface ImportJobListProps {
-  jobs: ImportJob[];
+  jobs: (ImportJob | ImportPnpJob)[];
   onCancel: (id: string) => void;
 }
 

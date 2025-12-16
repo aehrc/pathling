@@ -9,10 +9,11 @@ import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes
 import { useJobs } from "../../contexts/JobContext";
 import { useImportJobPolling } from "../../hooks/useImportJobPolling";
 import { IMPORT_FORMATS, IMPORT_MODES } from "../../types/import";
-import type { ImportJob } from "../../types/job";
+import { EXPORT_TYPES, PNP_SAVE_MODES } from "../../types/importPnp";
+import type { ImportJob, ImportPnpJob } from "../../types/job";
 
 interface ImportJobCardProps {
-  job: ImportJob;
+  job: ImportJob | ImportPnpJob;
   onCancel: (id: string) => void;
 }
 
@@ -49,6 +50,16 @@ function getModeLabel(mode: string): string {
   return found?.label ?? mode;
 }
 
+function getPnpSaveModeLabel(mode: string): string {
+  const found = PNP_SAVE_MODES.find((m) => m.value === mode);
+  return found?.label ?? mode;
+}
+
+function getExportTypeLabel(type: string): string {
+  const found = EXPORT_TYPES.find((t) => t.value === type);
+  return found?.label ?? type;
+}
+
 export function ImportJobCard({ job, onCancel }: ImportJobCardProps) {
   const { updateJobProgress, updateJobManifest, updateJobError, updateJobStatus } = useJobs();
 
@@ -78,16 +89,34 @@ export function ImportJobCard({ job, onCancel }: ImportJobCardProps) {
             <Text size="1" color="gray">
               Started: {formatDate(job.createdAt)}
             </Text>
-            <Text size="1" color="gray" as="div">
-              Mode: {getModeLabel(job.request.mode)} | Format:{" "}
-              {getFormatLabel(job.request.inputFormat)}
-            </Text>
-            <Text size="1" color="gray" as="div">
-              Source: {job.request.inputSource}
-            </Text>
-            <Text size="1" color="gray" as="div">
-              Files: {job.request.input.map((i) => i.type).join(", ")}
-            </Text>
+            {job.type === "import" && (
+              <>
+                <Text size="1" color="gray" as="div">
+                  Mode: {getModeLabel(job.request.mode)} | Format:{" "}
+                  {getFormatLabel(job.request.inputFormat)}
+                </Text>
+                <Text size="1" color="gray" as="div">
+                  Source: {job.request.inputSource}
+                </Text>
+                <Text size="1" color="gray" as="div">
+                  Files: {job.request.input.map((i) => i.type).join(", ")}
+                </Text>
+              </>
+            )}
+            {job.type === "import-pnp" && (
+              <>
+                <Text size="1" color="gray" as="div">
+                  Export URL: {job.request.exportUrl}
+                </Text>
+                <Text size="1" color="gray" as="div">
+                  Export Type: {getExportTypeLabel(job.request.exportType)} | Save Mode:{" "}
+                  {getPnpSaveModeLabel(job.request.saveMode)}
+                </Text>
+                <Text size="1" color="gray" as="div">
+                  Format: {getFormatLabel(job.request.inputFormat)}
+                </Text>
+              </>
+            )}
           </Box>
           {isActive && (
             <Button size="1" variant="soft" color="red" onClick={() => onCancel(job.id)}>

@@ -7,6 +7,7 @@
 import type { Binary, Parameters } from "fhir/r4";
 import { UnauthorizedError } from "../types/errors";
 import type { ImportManifest, ImportRequest } from "../types/import";
+import type { ImportPnpRequest } from "../types/importPnp";
 
 interface KickOffResult {
   jobId: string;
@@ -146,6 +147,70 @@ export async function cancelImport(
       `Import cancellation failed: ${response.status} - ${errorBody}`,
     );
   }
+}
+
+/**
+ * Kicks off a ping and pull import job by posting parameters to the $import-pnp endpoint.
+ */
+export async function kickOffImportPnp(
+  fhirBaseUrl: string,
+  accessToken: string | undefined,
+  request: ImportPnpRequest,
+): Promise<KickOffResult> {
+  const url = `${fhirBaseUrl}/$import-pnp`;
+
+  const headers: HeadersInit = {
+    "Content-Type": "application/fhir+json",
+    Accept: "application/fhir+json",
+    Prefer: "respond-async",
+  };
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  const parameters = buildPnpParameters(request);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(parameters),
+  });
+
+  if (response.status === 401) {
+    throw new UnauthorizedError();
+  }
+  if (response.status !== 202) {
+    const errorBody = await response.text();
+    throw new Error(
+      `Import PnP kick-off failed: ${response.status} - ${errorBody}`,
+    );
+  }
+
+  const contentLocation = response.headers.get("Content-Location");
+  if (!contentLocation) {
+    throw new Error(
+      "Import PnP kick-off failed: No Content-Location header received",
+    );
+  }
+
+  const jobId = extractJobId(contentLocation);
+  return { jobId, pollUrl: contentLocation };
+}
+
+/**
+ * Builds a FHIR Parameters resource from an ImportPnpRequest.
+ */
+function buildPnpParameters(request: ImportPnpRequest): Parameters {
+  return {
+    resourceType: "Parameters",
+    parameter: [
+      { name: "exportUrl", valueUrl: request.exportUrl },
+      { name: "exportType", valueCoding: { code: request.exportType } },
+      { name: "inputSource", valueString: request.inputSource },
+      { name: "mode", valueCoding: { code: request.saveMode } },
+      { name: "inputFormat", valueCoding: { code: request.inputFormat } },
+    ],
+  };
 }
 
 /**

@@ -6,8 +6,9 @@
 
 import type { ExportRequest, ExportManifest } from "./export";
 import type { ImportRequest, ImportManifest } from "./import";
+import type { ImportPnpRequest } from "./importPnp";
 
-export type JobType = "export" | "import";
+export type JobType = "export" | "import" | "import-pnp";
 
 export type JobStatus =
   | "pending"
@@ -38,4 +39,10 @@ export interface ImportJob extends BaseJob {
   manifest: ImportManifest | null;
 }
 
-export type Job = ExportJob | ImportJob;
+export interface ImportPnpJob extends BaseJob {
+  type: "import-pnp";
+  request: ImportPnpRequest;
+  manifest: ImportManifest | null;
+}
+
+export type Job = ExportJob | ImportJob | ImportPnpJob;

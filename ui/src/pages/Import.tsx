@@ -5,26 +5,29 @@
  */
 
 import { InfoCircledIcon, LockClosedIcon } from "@radix-ui/react-icons";
-import { Box, Button, Callout, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
+import { Box, Button, Callout, Flex, Heading, Spinner, Tabs, Text } from "@radix-ui/themes";
 import { useCallback, useEffect, useRef } from "react";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { ImportForm } from "../components/import/ImportForm";
 import { ImportJobList } from "../components/import/ImportJobList";
+import { ImportPnpForm } from "../components/import/ImportPnpForm";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useJobs } from "../contexts/JobContext";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
 import { initiateAuth } from "../services/auth";
-import { cancelImport, kickOffImport } from "../services/import";
+import { cancelImport, kickOffImport, kickOffImportPnp } from "../services/import";
 import { UnauthorizedError } from "../types/errors";
 import type { ImportRequest } from "../types/import";
+import type { ImportPnpRequest } from "../types/importPnp";
 
 export function Import() {
   const { fhirBaseUrl } = config;
   const { isAuthenticated, client, setLoading, setError, clearSessionAndPromptLogin } = useAuth();
-  const { addJob, updateJobStatus, updateJobError, getImportJobs } = useJobs();
+  const { addJob, updateJobStatus, updateJobError, getImportJobs, getImportPnpJobs } = useJobs();
 
-  const jobs = getImportJobs();
+  const importJobs = getImportJobs();
+  const importPnpJobs = getImportPnpJobs();
   const unauthorizedHandledRef = useRef(false);
 
   // Fetch server capabilities to determine if auth is required.
@@ -85,11 +88,41 @@ export function Import() {
     [client, fhirBaseUrl, addJob, setError, handleUnauthorizedError],
   );
 
+  const handleImportPnp = useCallback(
+    async (request: ImportPnpRequest) => {
+      if (!fhirBaseUrl) return;
+
+      try {
+        const accessToken = client?.state.tokenResponse?.access_token;
+
+        const { jobId, pollUrl } = await kickOffImportPnp(fhirBaseUrl, accessToken, request);
+
+        addJob({
+          id: jobId,
+          type: "import-pnp",
+          pollUrl,
+          status: "pending",
+          progress: null,
+          request,
+          manifest: null,
+          error: null,
+        });
+      } catch (err) {
+        if (err instanceof UnauthorizedError) {
+          handleUnauthorizedError();
+        } else {
+          setError(err instanceof Error ? err.message : "Failed to start import");
+        }
+      }
+    },
+    [client, fhirBaseUrl, addJob, setError, handleUnauthorizedError],
+  );
+
   const handleCancel = useCallback(
     async (jobId: string) => {
       if (!fhirBaseUrl) return;
 
-      const job = jobs.find((j) => j.id === jobId);
+      const job = [...importJobs, ...importPnpJobs].find((j) => j.id === jobId);
       if (!job) return;
 
       try {
@@ -105,7 +138,15 @@ export function Import() {
         }
       }
     },
-    [client, fhirBaseUrl, jobs, updateJobStatus, updateJobError, handleUnauthorizedError],
+    [
+      client,
+      fhirBaseUrl,
+      importJobs,
+      importPnpJobs,
+      updateJobStatus,
+      updateJobError,
+      handleUnauthorizedError,
+    ],
   );
 
   // Show loading state while checking server capabilities.
@@ -157,15 +198,36 @@ export function Import() {
         Import
       </Heading>
 
-      <Flex gap="6" direction={{ initial: "column", md: "row" }}>
-        <Box style={{ flex: 1 }}>
-          <ImportForm onSubmit={handleImport} isSubmitting={false} disabled={false} />
-        </Box>
+      <Tabs.Root defaultValue="urls">
+        <Tabs.List>
+          <Tabs.Trigger value="urls">Import from URLs</Tabs.Trigger>
+          <Tabs.Trigger value="fhir-server">Import from a FHIR server</Tabs.Trigger>
+        </Tabs.List>
 
-        <Box style={{ flex: 1 }}>
-          <ImportJobList jobs={jobs} onCancel={handleCancel} />
+        <Box pt="4">
+          <Tabs.Content value="urls">
+            <Flex gap="6" direction={{ initial: "column", md: "row" }}>
+              <Box style={{ flex: 1 }}>
+                <ImportForm onSubmit={handleImport} isSubmitting={false} disabled={false} />
+              </Box>
+              <Box style={{ flex: 1 }}>
+                <ImportJobList jobs={importJobs} onCancel={handleCancel} />
+              </Box>
+            </Flex>
+          </Tabs.Content>
+
+          <Tabs.Content value="fhir-server">
+            <Flex gap="6" direction={{ initial: "column", md: "row" }}>
+              <Box style={{ flex: 1 }}>
+                <ImportPnpForm onSubmit={handleImportPnp} isSubmitting={false} disabled={false} />
+              </Box>
+              <Box style={{ flex: 1 }}>
+                <ImportJobList jobs={importPnpJobs} onCancel={handleCancel} />
+              </Box>
+            </Flex>
+          </Tabs.Content>
         </Box>
-      </Flex>
+      </Tabs.Root>
       <SessionExpiredDialog />
     </Box>
   );

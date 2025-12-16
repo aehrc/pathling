@@ -5,7 +5,7 @@
  */
 
 import { createContext, useContext, useReducer, useCallback, useMemo, type ReactNode } from "react";
-import type { Job, ExportJob, ImportJob, JobStatus } from "../types/job";
+import type { Job, ExportJob, ImportJob, ImportPnpJob, JobStatus } from "../types/job";
 import type { ExportManifest } from "../types/export";
 import type { ImportManifest } from "../types/import";
 
@@ -30,6 +30,7 @@ interface JobContextValue extends JobState {
   getJob: (id: string) => Job | undefined;
   getExportJobs: () => ExportJob[];
   getImportJobs: () => ImportJob[];
+  getImportPnpJobs: () => ImportPnpJob[];
 }
 
 const JobContext = createContext<JobContextValue | null>(null);
@@ -129,6 +130,11 @@ export function JobProvider({ children }: { children: ReactNode }) {
     [state.jobs],
   );
 
+  const getImportPnpJobs = useMemo(
+    () => () => state.jobs.filter((job): job is ImportPnpJob => job.type === "import-pnp"),
+    [state.jobs],
+  );
+
   return (
     <JobContext.Provider
       value={{
@@ -143,6 +149,7 @@ export function JobProvider({ children }: { children: ReactNode }) {
         getJob,
         getExportJobs,
         getImportJobs,
+        getImportPnpJobs,
       }}
     >
       {children}
