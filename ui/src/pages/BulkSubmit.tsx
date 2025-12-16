@@ -16,7 +16,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useJobs } from "../contexts/JobContext";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
 import { initiateAuth } from "../services/auth";
-import { abortBulkSubmit, kickOffBulkSubmit } from "../services/bulkSubmit";
+import { abortBulkSubmit, checkBulkSubmitStatus, kickOffBulkSubmit } from "../services/bulkSubmit";
 import { UnauthorizedError } from "../types/errors";
 import type { BulkSubmitRequest, SubmitterIdentifier } from "../types/bulkSubmit";
 import type { BulkSubmitJob } from "../types/job";
@@ -64,20 +64,29 @@ export function BulkSubmit() {
       try {
         const accessToken = client?.state.tokenResponse?.access_token;
 
-        const { submissionId } = await kickOffBulkSubmit(fhirBaseUrl, accessToken, request);
+        const { submissionId, status } = await kickOffBulkSubmit(fhirBaseUrl, accessToken, request);
 
-        addJob({
-          id: crypto.randomUUID(),
-          type: "bulk-submit",
-          pollUrl: `${fhirBaseUrl}/$bulk-submit-status`,
-          status: "pending",
-          progress: null,
-          request,
-          submitter: request.submitter,
-          submissionId,
-          manifest: null,
-          error: null,
-        } as Omit<BulkSubmitJob, "createdAt">);
+        // If the submission is still in progress, get the poll URL for status checking.
+        if (status === "in-progress" || status === "processing") {
+          const { jobId, pollUrl } = await checkBulkSubmitStatus(fhirBaseUrl, accessToken, {
+            submissionId,
+            submitter: request.submitter,
+          });
+
+          addJob({
+            id: jobId,
+            type: "bulk-submit",
+            pollUrl,
+            status: "pending",
+            progress: null,
+            request,
+            submitter: request.submitter,
+            submissionId,
+            manifest: null,
+            error: null,
+          } as Omit<BulkSubmitJob, "createdAt">);
+        }
+        // If already complete, no polling needed - job is done.
       } catch (err) {
         if (err instanceof UnauthorizedError) {
           handleUnauthorizedError();
@@ -93,25 +102,40 @@ export function BulkSubmit() {
     async (submissionId: string, submitter: SubmitterIdentifier) => {
       if (!fhirBaseUrl) return;
 
-      // Create a job to monitor an existing submission.
-      addJob({
-        id: crypto.randomUUID(),
-        type: "bulk-submit",
-        pollUrl: `${fhirBaseUrl}/$bulk-submit-status`,
-        status: "pending",
-        progress: null,
-        request: {
+      try {
+        const accessToken = client?.state.tokenResponse?.access_token;
+
+        // Get the poll URL for monitoring the existing submission.
+        const { jobId, pollUrl } = await checkBulkSubmitStatus(fhirBaseUrl, accessToken, {
           submissionId,
           submitter,
-          submissionStatus: "complete",
-        },
-        submitter,
-        submissionId,
-        manifest: null,
-        error: null,
-      } as Omit<BulkSubmitJob, "createdAt">);
+        });
+
+        addJob({
+          id: jobId,
+          type: "bulk-submit",
+          pollUrl,
+          status: "pending",
+          progress: null,
+          request: {
+            submissionId,
+            submitter,
+            submissionStatus: "complete",
+          },
+          submitter,
+          submissionId,
+          manifest: null,
+          error: null,
+        } as Omit<BulkSubmitJob, "createdAt">);
+      } catch (err) {
+        if (err instanceof UnauthorizedError) {
+          handleUnauthorizedError();
+        } else {
+          setError(err instanceof Error ? err.message : "Failed to monitor submission");
+        }
+      }
     },
-    [fhirBaseUrl, addJob],
+    [client, fhirBaseUrl, addJob, setError, handleUnauthorizedError],
   );
 
   const handleAbort = useCallback(

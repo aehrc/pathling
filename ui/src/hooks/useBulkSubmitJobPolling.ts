@@ -8,16 +8,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useRef, useEffect } from "react";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import { pollBulkSubmitStatus } from "../services/bulkSubmit";
+import { pollBulkSubmitJobStatus } from "../services/bulkSubmit";
 import { UnauthorizedError } from "../types/errors";
-import type { StatusManifest, SubmitterIdentifier } from "../types/bulkSubmit";
+import type { StatusManifest } from "../types/bulkSubmit";
 import type { JobStatus } from "../types/job";
 
 interface UseBulkSubmitJobPollingOptions {
   jobId: string;
-  submissionId: string;
-  submitter: SubmitterIdentifier;
+  pollUrl: string;
   status: JobStatus;
+  onProgress: (id: string, progress: number) => void;
   onStatusChange: (id: string, status: JobStatus) => void;
   onComplete: (id: string, manifest: StatusManifest) => void;
   onError: (id: string, error: string) => void;
@@ -25,13 +25,14 @@ interface UseBulkSubmitJobPollingOptions {
 
 /**
  * Polls a bulk submit job's status at 3-second intervals until completion or error.
+ * Uses the poll URL from the Content-Location header, matching the export/import pattern.
  * Handles 401 errors by triggering re-authentication.
  */
 export function useBulkSubmitJobPolling({
   jobId,
-  submissionId,
-  submitter,
+  pollUrl,
   status,
+  onProgress,
   onStatusChange,
   onComplete,
   onError,
@@ -46,12 +47,9 @@ export function useBulkSubmitJobPolling({
     queryKey: ["bulkSubmitJob", jobId],
     queryFn: async () => {
       const accessToken = client?.state.tokenResponse?.access_token;
-      return pollBulkSubmitStatus(fhirBaseUrl!, accessToken, {
-        submissionId,
-        submitter,
-      });
+      return pollBulkSubmitJobStatus(fhirBaseUrl!, accessToken, pollUrl);
     },
-    enabled: !!fhirBaseUrl && isActive,
+    enabled: !!fhirBaseUrl && !!pollUrl && isActive,
     refetchInterval: isActive ? 3000 : false,
     staleTime: Infinity,
     retry: (failureCount, error) => {
@@ -69,10 +67,13 @@ export function useBulkSubmitJobPolling({
       if (result.status === "completed" && result.manifest) {
         onComplete(jobId, result.manifest);
       } else if (result.status === "in_progress") {
+        if (result.progress !== undefined) {
+          onProgress(jobId, result.progress);
+        }
         onStatusChange(jobId, "in_progress");
       }
     }
-  }, [query.data, jobId, onComplete, onStatusChange]);
+  }, [query.data, jobId, onComplete, onProgress, onStatusChange]);
 
   // Handle errors via callbacks.
   useEffect(() => {

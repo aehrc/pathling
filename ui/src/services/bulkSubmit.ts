@@ -18,8 +18,14 @@ interface KickOffResult {
   status: string;
 }
 
+interface CheckStatusResult {
+  jobId: string;
+  pollUrl: string;
+}
+
 interface PollResult {
   status: "in_progress" | "completed";
+  progress?: number;
   manifest?: StatusManifest;
 }
 
@@ -73,13 +79,14 @@ export async function kickOffBulkSubmit(
 }
 
 /**
- * Polls the bulk submit status endpoint.
+ * Checks bulk submit status once and returns the poll URL from the Content-Location header.
+ * This should be called once after kickOffBulkSubmit returns "in-progress" status.
  */
-export async function pollBulkSubmitStatus(
+export async function checkBulkSubmitStatus(
   fhirBaseUrl: string,
   accessToken: string | undefined,
   request: BulkSubmitStatusRequest,
-): Promise<PollResult> {
+): Promise<CheckStatusResult> {
   const url = `${fhirBaseUrl}/$bulk-submit-status`;
 
   const headers: HeadersInit = {
@@ -99,8 +106,51 @@ export async function pollBulkSubmitStatus(
     body: JSON.stringify(parameters),
   });
 
+  if (response.status === 401) {
+    throw new UnauthorizedError();
+  }
+  if (response.status !== 202) {
+    const errorBody = await response.text();
+    throw new Error(
+      `Bulk submit status check failed: ${response.status} - ${errorBody}`,
+    );
+  }
+
+  const contentLocation = response.headers.get("Content-Location");
+  if (!contentLocation) {
+    throw new Error(
+      "Bulk submit status check failed: No Content-Location header received",
+    );
+  }
+
+  const jobId = extractJobId(contentLocation);
+  return { jobId, pollUrl: contentLocation };
+}
+
+/**
+ * Polls the job status endpoint using the URL from Content-Location.
+ */
+export async function pollBulkSubmitJobStatus(
+  fhirBaseUrl: string,
+  accessToken: string | undefined,
+  pollUrl: string,
+): Promise<PollResult> {
+  // Handle both absolute and relative URLs.
+  const url = pollUrl.startsWith("http") ? pollUrl : `${fhirBaseUrl}${pollUrl}`;
+
+  const headers: HeadersInit = {
+    Accept: "application/fhir+json",
+  };
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  const response = await fetch(url, { headers });
+
   if (response.status === 202) {
-    return { status: "in_progress" };
+    const progressHeader = response.headers.get("X-Progress");
+    const progress = progressHeader ? parseProgress(progressHeader) : undefined;
+    return { status: "in_progress", progress };
   }
 
   if (response.status === 200) {
@@ -114,7 +164,35 @@ export async function pollBulkSubmitStatus(
   }
 
   const errorBody = await response.text();
-  throw new Error(`Status poll failed: ${response.status} - ${errorBody}`);
+  throw new Error(`Job poll failed: ${response.status} - ${errorBody}`);
+}
+
+/**
+ * Extracts the job ID from a poll URL.
+ */
+function extractJobId(pollUrl: string): string {
+  const url = new URL(pollUrl, window.location.origin);
+  const jobId = url.searchParams.get("id");
+  if (!jobId) {
+    // Try to extract from path if not in query params.
+    const match = pollUrl.match(/job[s]?\/([a-f0-9-]+)/i);
+    if (match) {
+      return match[1];
+    }
+    throw new Error("Could not extract job ID from poll URL");
+  }
+  return jobId;
+}
+
+/**
+ * Parses the X-Progress header value (e.g., "45%" -> 45).
+ */
+function parseProgress(progressHeader: string): number {
+  const match = progressHeader.match(/(\d+)/);
+  if (match) {
+    return parseInt(match[1], 10);
+  }
+  return 0;
 }
 
 /**

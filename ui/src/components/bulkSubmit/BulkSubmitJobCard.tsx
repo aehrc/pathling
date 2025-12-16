@@ -40,14 +40,14 @@ function formatDate(date: Date): string {
 }
 
 export function BulkSubmitJobCard({ job, onAbort }: BulkSubmitJobCardProps) {
-  const { updateJobManifest, updateJobError, updateJobStatus } = useJobs();
+  const { updateJobProgress, updateJobManifest, updateJobError, updateJobStatus } = useJobs();
 
   // Poll job status while active.
   useBulkSubmitJobPolling({
     jobId: job.id,
-    submissionId: job.submissionId,
-    submitter: job.submitter,
+    pollUrl: job.pollUrl,
     status: job.status,
+    onProgress: updateJobProgress,
     onStatusChange: updateJobStatus,
     onComplete: updateJobManifest,
     onError: updateJobError,
