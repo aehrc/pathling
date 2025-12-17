@@ -150,7 +150,7 @@ export function Export() {
     return (
       <Box>
         <Heading size="6" mb="4">
-          Bulk Export
+          Bulk export
         </Heading>
         <Flex align="center" gap="2">
           <Spinner />
@@ -166,7 +166,7 @@ export function Export() {
     return (
       <Box>
         <Heading size="6" mb="4">
-          Bulk Export
+          Bulk export
         </Heading>
 
         <Callout.Root>
@@ -191,7 +191,7 @@ export function Export() {
   return (
     <Box>
       <Heading size="6" mb="4">
-        Bulk Export
+        Bulk export
       </Heading>
 
       <Flex gap="6" direction={{ initial: "column", md: "row" }}>

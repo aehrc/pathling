@@ -37,7 +37,7 @@ export function BulkSubmitMonitorForm({
   return (
     <Card>
       <Flex direction="column" gap="4">
-        <Heading size="4">Monitor Submission</Heading>
+        <Heading size="4">Monitor submission</Heading>
 
         <Text size="2" color="gray">
           Enter the details of an existing submission to monitor its status.
@@ -46,7 +46,7 @@ export function BulkSubmitMonitorForm({
         <Box>
           <Box mb="2">
             <Text as="label" size="2" weight="medium">
-              Submitter System
+              Submitter system
             </Text>
           </Box>
           <TextField.Root
@@ -59,7 +59,7 @@ export function BulkSubmitMonitorForm({
         <Box>
           <Box mb="2">
             <Text as="label" size="2" weight="medium">
-              Submitter Value
+              Submitter value
             </Text>
           </Box>
           <TextField.Root
@@ -84,7 +84,7 @@ export function BulkSubmitMonitorForm({
 
         <Button size="3" onClick={handleSubmit} disabled={disabled || isSubmitting || !isValid}>
           <MagnifyingGlassIcon />
-          {isSubmitting ? "Starting..." : "Start Monitoring"}
+          {isSubmitting ? "Starting..." : "Start monitoring"}
         </Button>
       </Flex>
     </Card>

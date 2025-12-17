@@ -201,7 +201,7 @@ export function Import() {
       <Tabs.Root defaultValue="urls">
         <Tabs.List>
           <Tabs.Trigger value="urls">Import from URLs</Tabs.Trigger>
-          <Tabs.Trigger value="fhir-server">Import from a FHIR server</Tabs.Trigger>
+          <Tabs.Trigger value="fhir-server">Import from FHIR server</Tabs.Trigger>
         </Tabs.List>
 
         <Box pt="4">

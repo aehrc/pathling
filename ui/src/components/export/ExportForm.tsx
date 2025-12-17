@@ -29,8 +29,8 @@ interface ExportFormProps {
 
 const EXPORT_LEVELS: { value: ExportLevel; label: string }[] = [
   { value: "system", label: "System (all resources)" },
-  { value: "patient-type", label: "Patient Type (all patients)" },
-  { value: "patient-instance", label: "Patient Instance (single patient)" },
+  { value: "patient-type", label: "Patient type (all patients)" },
+  { value: "patient-instance", label: "Patient instance (single patient)" },
   { value: "group", label: "Group (group members)" },
 ];
 
@@ -73,11 +73,11 @@ export function ExportForm({ onSubmit, isSubmitting, disabled }: ExportFormProps
   return (
     <Card>
       <Flex direction="column" gap="4">
-        <Heading size="4">New Export</Heading>
+        <Heading size="4">New export</Heading>
 
         <Box>
           <Text as="label" size="2" weight="medium" mb="1">
-            Export Level
+            Export level
           </Text>
           <Select.Root value={level} onValueChange={(value) => setLevel(value as ExportLevel)}>
             <Select.Trigger style={{ width: "100%" }} />
@@ -120,11 +120,11 @@ export function ExportForm({ onSubmit, isSubmitting, disabled }: ExportFormProps
         <Box>
           <Flex justify="between" align="center" mb="2">
             <Text as="label" size="2" weight="medium">
-              Resource Types
+              Resource types
             </Text>
             <Flex gap="2">
               <Text size="1" color="blue" style={{ cursor: "pointer" }} onClick={selectAllTypes}>
-                Select All
+                Select all
               </Text>
               <Text size="1" color="gray">
                 |
@@ -214,7 +214,7 @@ export function ExportForm({ onSubmit, isSubmitting, disabled }: ExportFormProps
           }
         >
           <PlayIcon />
-          {isSubmitting ? "Starting Export..." : "Start Export"}
+          {isSubmitting ? "Starting export..." : "Start export"}
         </Button>
       </Flex>
     </Card>

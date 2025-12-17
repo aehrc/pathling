@@ -5,8 +5,8 @@
  */
 
 import { Box, Flex, Heading, Text } from "@radix-ui/themes";
-import { ImportJobCard } from "./ImportJobCard";
 import type { ImportJob, ImportPnpJob } from "../../types/job";
+import { ImportJobCard } from "./ImportJobCard";
 
 interface ImportJobListProps {
   jobs: (ImportJob | ImportPnpJob)[];
@@ -18,7 +18,7 @@ export function ImportJobList({ jobs, onCancel }: ImportJobListProps) {
     return (
       <Box py="6">
         <Text color="gray" align="center" as="div">
-          No import jobs yet. Start a new import using the form above.
+          No import jobs yet. Start a new import using the form.
         </Text>
       </Box>
     );
@@ -27,7 +27,7 @@ export function ImportJobList({ jobs, onCancel }: ImportJobListProps) {
   return (
     <Box>
       <Heading size="4" mb="3">
-        Import Jobs
+        Import jobs
       </Heading>
       <Flex direction="column" gap="3">
         {jobs.map((job) => (

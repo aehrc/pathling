@@ -17,8 +17,8 @@ import { useJobs } from "../contexts/JobContext";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
 import { initiateAuth } from "../services/auth";
 import { abortBulkSubmit, checkBulkSubmitStatus, kickOffBulkSubmit } from "../services/bulkSubmit";
-import { UnauthorizedError } from "../types/errors";
 import type { BulkSubmitRequest, SubmitterIdentifier } from "../types/bulkSubmit";
+import { UnauthorizedError } from "../types/errors";
 import type { BulkSubmitJob } from "../types/job";
 
 export function BulkSubmit() {
@@ -166,7 +166,7 @@ export function BulkSubmit() {
     return (
       <Box>
         <Heading size="6" mb="4">
-          Bulk Submit
+          Bulk submit
         </Heading>
         <Flex align="center" gap="2">
           <Spinner />
@@ -182,7 +182,7 @@ export function BulkSubmit() {
     return (
       <Box>
         <Heading size="6" mb="4">
-          Bulk Submit
+          Bulk submit
         </Heading>
 
         <Callout.Root>
@@ -207,13 +207,13 @@ export function BulkSubmit() {
   return (
     <Box>
       <Heading size="6" mb="4">
-        Bulk Submit
+        Bulk submit
       </Heading>
 
       <Tabs.Root defaultValue="create">
         <Tabs.List>
-          <Tabs.Trigger value="create">Create Submission</Tabs.Trigger>
-          <Tabs.Trigger value="monitor">Monitor Submission</Tabs.Trigger>
+          <Tabs.Trigger value="create">Create submission</Tabs.Trigger>
+          <Tabs.Trigger value="monitor">Monitor submission</Tabs.Trigger>
         </Tabs.List>
 
         <Box pt="4">

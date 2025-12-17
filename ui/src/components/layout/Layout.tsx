@@ -91,7 +91,7 @@ export function Layout() {
                 <NavLink
                   to="/bulk-submit"
                   icon={<PaperPlaneIcon />}
-                  label="Bulk Submit"
+                  label="Bulk submit"
                   isActive={location.pathname === "/bulk-submit"}
                 />
               </Flex>

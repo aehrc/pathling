@@ -67,7 +67,7 @@ export const SUBMISSION_STATUSES: {
 }[] = [
   {
     value: "in-progress",
-    label: "In Progress",
+    label: "In progress",
     description: "Export is still running on the source server",
   },
   {

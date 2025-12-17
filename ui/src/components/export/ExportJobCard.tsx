@@ -26,7 +26,7 @@ const STATUS_COLORS: Record<ExportJob["status"], "blue" | "green" | "red" | "ora
 
 const STATUS_LABELS: Record<ExportJob["status"], string> = {
   pending: "Pending",
-  in_progress: "In Progress",
+  in_progress: "In progress",
   completed: "Completed",
   failed: "Failed",
   cancelled: "Cancelled",
@@ -44,9 +44,9 @@ function formatLevel(level: ExportJob["request"]["level"]): string {
     case "system":
       return "System";
     case "patient-type":
-      return "Patient Type";
+      return "Patient type";
     case "patient-instance":
-      return "Patient Instance";
+      return "Patient instance";
     case "group":
       return "Group";
     default:
@@ -129,7 +129,7 @@ export function ExportJobCard({ job, onCancel, onDownload }: ExportJobCardProps)
         {job.status === "completed" && job.manifest?.output && (
           <Box>
             <Text size="2" weight="medium" mb="2">
-              Output Files ({job.manifest.output.length})
+              Output files ({job.manifest.output.length})
             </Text>
             <Flex direction="column" gap="1">
               {job.manifest.output.map((output, index) => (

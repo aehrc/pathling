@@ -120,7 +120,7 @@ export function BulkSubmitJobCard({ job, onAbort }: BulkSubmitJobCardProps) {
         {job.status === "completed" && job.manifest && (
           <Box>
             <Text size="2" weight="medium" mb="2">
-              Output Files ({job.manifest.output.length})
+              Output files ({job.manifest.output.length})
             </Text>
             <Flex direction="column" gap="1">
               {job.manifest.output.map((output, index) => (

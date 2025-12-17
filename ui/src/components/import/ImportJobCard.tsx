@@ -27,7 +27,7 @@ const STATUS_COLORS: Record<ImportJob["status"], "blue" | "green" | "red" | "ora
 
 const STATUS_LABELS: Record<ImportJob["status"], string> = {
   pending: "Pending",
-  in_progress: "In Progress",
+  in_progress: "In progress",
   completed: "Completed",
   failed: "Failed",
   cancelled: "Cancelled",
@@ -158,7 +158,7 @@ export function ImportJobCard({ job, onCancel }: ImportJobCardProps) {
         {job.status === "completed" && job.manifest?.output && (
           <Box>
             <Text size="2" weight="medium" mb="2">
-              Imported Files ({job.manifest.output.length})
+              Imported files ({job.manifest.output.length})
             </Text>
             <Flex direction="column" gap="1">
               {job.manifest.output.map((output, index) => (

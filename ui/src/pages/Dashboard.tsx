@@ -76,12 +76,12 @@ export function Dashboard() {
         <Box style={{ flex: 2 }}>
           <Card mb="4">
             <Heading size="4" mb="3">
-              Server Information
+              Server information
             </Heading>
 
             <Flex direction="column" gap="2">
               <Flex justify="between">
-                <Text weight="medium">Server Name</Text>
+                <Text weight="medium">Server name</Text>
                 <Text>{capabilities.serverName || "Unknown"}</Text>
               </Flex>
 
@@ -93,7 +93,7 @@ export function Dashboard() {
               )}
 
               <Flex justify="between">
-                <Text weight="medium">FHIR Version</Text>
+                <Text weight="medium">FHIR version</Text>
                 <Text>{capabilities.fhirVersion || "Unknown"}</Text>
               </Flex>
 
@@ -135,7 +135,7 @@ export function Dashboard() {
           {capabilities.operations && capabilities.operations.length > 0 && (
             <Card mb="4">
               <Heading size="4" mb="3">
-                System Operations
+                System operations
               </Heading>
               <Flex gap="2" wrap="wrap">
                 {capabilities.operations.map((op) => (
@@ -150,7 +150,7 @@ export function Dashboard() {
           {capabilities.resources && capabilities.resources.length > 0 && (
             <Card>
               <Heading size="4" mb="3">
-                Supported Resources
+                Supported resources
               </Heading>
               <Table.Root>
                 <Table.Header>
@@ -190,19 +190,19 @@ export function Dashboard() {
         <Box style={{ flex: 1 }}>
           <Card>
             <Heading size="4" mb="3">
-              Quick Actions
+              Quick actions
             </Heading>
             <Flex direction="column" gap="3">
               <Link to="/export" style={{ textDecoration: "none" }}>
                 <Button size="3" style={{ width: "100%" }}>
                   <DownloadIcon />
-                  Bulk Export
+                  Bulk export
                 </Button>
               </Link>
               <Link to="/import" style={{ textDecoration: "none" }}>
                 <Button size="3" variant="soft" style={{ width: "100%" }}>
                   <UploadIcon />
-                  Import Data
+                  Import data
                 </Button>
               </Link>
             </Flex>

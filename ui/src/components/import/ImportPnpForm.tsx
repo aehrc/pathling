@@ -51,7 +51,7 @@ export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFor
   return (
     <Card>
       <Flex direction="column" gap="4">
-        <Heading size="4">New Import</Heading>
+        <Heading size="4">New import</Heading>
 
         <Box>
           <Box mb="2">
@@ -72,7 +72,7 @@ export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFor
         <Box>
           <Box mb="2">
             <Text as="label" size="2" weight="medium">
-              Input Source
+              Input source
             </Text>
           </Box>
           <TextField.Root
@@ -88,7 +88,7 @@ export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFor
         <Box>
           <Box mb="2">
             <Text as="label" size="2" weight="medium">
-              Export Type
+              Export type
             </Text>
           </Box>
           <RadioCards.Root
@@ -113,7 +113,7 @@ export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFor
         <Box>
           <Box mb="2">
             <Text as="label" size="2" weight="medium">
-              Save Mode
+              Save mode
             </Text>
           </Box>
           <RadioCards.Root
@@ -138,7 +138,7 @@ export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFor
         <Box>
           <Box mb="2">
             <Text as="label" size="2" weight="medium">
-              Input Format
+              Input format
             </Text>
           </Box>
           <Select.Root
@@ -158,7 +158,7 @@ export function ImportPnpForm({ onSubmit, isSubmitting, disabled }: ImportPnpFor
 
         <Button size="3" onClick={handleSubmit} disabled={disabled || isSubmitting || !isValid}>
           <UploadIcon />
-          {isSubmitting ? "Starting Import..." : "Start Import"}
+          {isSubmitting ? "Starting import..." : "Start import"}
         </Button>
       </Flex>
     </Card>

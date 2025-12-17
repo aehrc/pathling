@@ -65,12 +65,12 @@ export function ImportForm({ onSubmit, isSubmitting, disabled }: ImportFormProps
   return (
     <Card>
       <Flex direction="column" gap="4">
-        <Heading size="4">New Import</Heading>
+        <Heading size="4">New import</Heading>
 
         <Box>
           <Box mb="2">
             <Text as="label" size="2" weight="medium">
-              Input Format
+              Input format
             </Text>
           </Box>
           <Select.Root
@@ -91,7 +91,7 @@ export function ImportForm({ onSubmit, isSubmitting, disabled }: ImportFormProps
         <Box>
           <Box mb="2">
             <Text as="label" size="2" weight="medium">
-              Input Source
+              Input source
             </Text>
           </Box>
           <TextField.Root
@@ -107,7 +107,7 @@ export function ImportForm({ onSubmit, isSubmitting, disabled }: ImportFormProps
         <Box>
           <Box mb="2">
             <Text as="label" size="2" weight="medium">
-              Import Mode
+              Import mode
             </Text>
           </Box>
           <RadioCards.Root
@@ -132,11 +132,11 @@ export function ImportForm({ onSubmit, isSubmitting, disabled }: ImportFormProps
         <Box>
           <Flex justify="between" align="center" mb="2">
             <Text as="label" size="2" weight="medium">
-              Input Files
+              Input files
             </Text>
             <Button size="1" variant="soft" onClick={addInput}>
               <PlusIcon />
-              Add Input
+              Add input
             </Button>
           </Flex>
           <Flex direction="column" gap="2">
@@ -145,7 +145,7 @@ export function ImportForm({ onSubmit, isSubmitting, disabled }: ImportFormProps
                 <Box style={{ width: 160 }}>
                   {index === 0 && (
                     <Text size="1" color="gray" mb="1" as="div">
-                      Resource Type
+                      Resource type
                     </Text>
                   )}
                   <Select.Root
@@ -193,7 +193,7 @@ export function ImportForm({ onSubmit, isSubmitting, disabled }: ImportFormProps
 
         <Button size="3" onClick={handleSubmit} disabled={disabled || isSubmitting || !isValid}>
           <UploadIcon />
-          {isSubmitting ? "Starting Import..." : "Start Import"}
+          {isSubmitting ? "Starting import..." : "Start import"}
         </Button>
       </Flex>
     </Card>

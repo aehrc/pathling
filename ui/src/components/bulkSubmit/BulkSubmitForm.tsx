@@ -108,12 +108,12 @@ export function BulkSubmitForm({ onSubmit, isSubmitting, disabled }: BulkSubmitF
   return (
     <Card>
       <Flex direction="column" gap="4">
-        <Heading size="4">New Submission</Heading>
+        <Heading size="4">New submission</Heading>
 
         <Box>
           <Box mb="2">
             <Text as="label" size="2" weight="medium">
-              Submitter System
+              Submitter system
             </Text>
           </Box>
           <TextField.Root
@@ -129,7 +129,7 @@ export function BulkSubmitForm({ onSubmit, isSubmitting, disabled }: BulkSubmitF
         <Box>
           <Box mb="2">
             <Text as="label" size="2" weight="medium">
-              Submitter Value
+              Submitter value
             </Text>
           </Box>
           <TextField.Root
@@ -166,7 +166,7 @@ export function BulkSubmitForm({ onSubmit, isSubmitting, disabled }: BulkSubmitF
         <Box>
           <Box mb="2">
             <Text as="label" size="2" weight="medium">
-              Submission Status
+              Submission status
             </Text>
           </Box>
           <RadioCards.Root
@@ -213,7 +213,7 @@ export function BulkSubmitForm({ onSubmit, isSubmitting, disabled }: BulkSubmitF
         <Box>
           <Box mb="2">
             <Text as="label" size="2" weight="medium">
-              FHIR Base URL
+              FHIR base URL
             </Text>
           </Box>
           <TextField.Root
@@ -230,7 +230,7 @@ export function BulkSubmitForm({ onSubmit, isSubmitting, disabled }: BulkSubmitF
           <Box mb="2">
             <Flex justify="between" align="center">
               <Text as="label" size="2" weight="medium">
-                File Request Headers
+                File request headers
               </Text>
               <IconButton size="1" variant="soft" onClick={addFileRequestHeader}>
                 <PlusIcon />
@@ -274,7 +274,7 @@ export function BulkSubmitForm({ onSubmit, isSubmitting, disabled }: BulkSubmitF
         <Box>
           <Box mb="2">
             <Text as="label" size="2" weight="medium">
-              Metadata (Optional)
+              Metadata (optional)
             </Text>
           </Box>
           <Flex direction="column" gap="2">
