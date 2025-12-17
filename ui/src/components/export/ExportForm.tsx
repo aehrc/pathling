@@ -4,20 +4,20 @@
  * @author John Grimes
  */
 
-import { useState } from "react";
+import { PlayIcon } from "@radix-ui/react-icons";
 import {
   Box,
   Button,
   Card,
+  CheckboxCards,
   Flex,
   Heading,
+  ScrollArea,
   Select,
   Text,
-  TextField,
-  Checkbox,
-  ScrollArea,
+  TextField
 } from "@radix-ui/themes";
-import { PlayIcon } from "@radix-ui/react-icons";
+import { useState } from "react";
 import type { ExportLevel, ExportRequest } from "../../types/export";
 
 interface ExportFormProps {
@@ -34,12 +34,7 @@ const EXPORT_LEVELS: { value: ExportLevel; label: string }[] = [
   { value: "group", label: "Group (group members)" },
 ];
 
-export function ExportForm({
-  onSubmit,
-  isSubmitting,
-  disabled,
-  resourceTypes,
-}: ExportFormProps) {
+export function ExportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: ExportFormProps) {
   const [level, setLevel] = useState<ExportLevel>("system");
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [since, setSince] = useState("");
@@ -59,12 +54,6 @@ export function ExportForm({
       groupId: level === "group" ? groupId : undefined,
     };
     onSubmit(request);
-  };
-
-  const toggleResourceType = (type: string) => {
-    setSelectedTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
-    );
   };
 
   const selectAllTypes = () => {
@@ -141,23 +130,25 @@ export function ExportForm({
           </Flex>
           <ScrollArea
             style={{
-              height: 150,
+              maxHeight: 200,
               border: "1px solid var(--gray-5)",
               borderRadius: "var(--radius-2)",
             }}
           >
             <Box p="2">
-              <Flex wrap="wrap" gap="2">
+              <CheckboxCards.Root
+                size="1"
+                value={selectedTypes}
+                onValueChange={setSelectedTypes}
+                gap="2"
+                style={{ display: "flex", flexWrap: "wrap" }}
+              >
                 {resourceTypes.map((type) => (
-                  <Flex key={type} align="center" gap="1" pr="2">
-                    <Checkbox
-                      checked={selectedTypes.includes(type)}
-                      onCheckedChange={() => toggleResourceType(type)}
-                    />
-                    <Text size="2">{type}</Text>
-                  </Flex>
+                  <CheckboxCards.Item key={type} value={type}>
+                    <Text size="1">{type}</Text>
+                  </CheckboxCards.Item>
                 ))}
-              </Flex>
+              </CheckboxCards.Root>
             </Box>
           </ScrollArea>
           <Text size="1" color="gray" mt="1">
