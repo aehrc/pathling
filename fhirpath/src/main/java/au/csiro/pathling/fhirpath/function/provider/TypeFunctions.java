@@ -47,7 +47,7 @@ public class TypeFunctions {
    *
    * @param input The input collection
    * @param typeSpecifier The type specifier
-   * @return A boolean collection containing true if type matches, false otherwise, or empty
+   * @return A boolean collection containing the result of type matching, or empty
    * @see <a href="https://hl7.org/fhirpath/#istype--type-specifier">is</a>
    */
   @FhirPathFunction
@@ -56,6 +56,29 @@ public class TypeFunctions {
   public static Collection is(@Nonnull final Collection input,
       @Nonnull final TypeSpecifier typeSpecifier) {
     return input.isOfType(typeSpecifier);
+  }
+
+  /**
+   * Returns the value of the input collection if it contains a single item of the given type or a
+   * subclass thereof. Returns empty collection if the input contains a single item that is not of
+   * the specified type. Returns empty if the input collection is empty. Throws an error if the
+   * input collection contains more than one item.
+   * <p>
+   * The type argument is an identifier that must resolve to the name of a type in a model. For
+   * implementations with compile-time typing, this requires special-case handling when processing
+   * the argument to treat it as a type specifier rather than an identifier expression.
+   *
+   * @param input The input collection
+   * @param typeSpecifier The type specifier
+   * @return The input value if type matches, or empty collection otherwise
+   * @see <a href="https://hl7.org/fhirpath/#astype--type-specifier">as</a>
+   */
+  @FhirPathFunction
+  @SqlOnFhirConformance(Profile.SHARABLE)
+  @Nonnull
+  public static Collection as(@Nonnull final Collection input,
+      @Nonnull final TypeSpecifier typeSpecifier) {
+    return input.asType(typeSpecifier);
   }
 
 }

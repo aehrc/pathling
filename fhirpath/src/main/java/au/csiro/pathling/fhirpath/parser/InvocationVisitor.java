@@ -65,7 +65,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   private static boolean isTypeSpecifierFunction(@Nonnull final String functionName) {
     return "ofType".equals(functionName) || "getReferenceKey".equals(functionName)
-        || "is".equals(functionName);
+        || "is".equals(functionName) || "as".equals(functionName);
   }
 
   /**
