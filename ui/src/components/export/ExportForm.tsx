@@ -144,12 +144,12 @@ export function ExportForm({ onSubmit, isSubmitting, disabled }: ExportFormProps
             <Box p="2">
               <Flex wrap="wrap" gap="2">
                 {RESOURCE_TYPES.map((type) => (
-                  <Flex key={type} align="center" gap="1">
+                  <Flex key={type} align="center" gap="1" pr="2">
                     <Checkbox
                       checked={selectedTypes.includes(type)}
                       onCheckedChange={() => toggleResourceType(type)}
                     />
-                    <Text size="1">{type}</Text>
+                    <Text size="2">{type}</Text>
                   </Flex>
                 ))}
               </Flex>
