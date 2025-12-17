@@ -19,12 +19,12 @@ import {
 } from "@radix-ui/themes";
 import { PlayIcon } from "@radix-ui/react-icons";
 import type { ExportLevel, ExportRequest } from "../../types/export";
-import { RESOURCE_TYPES } from "../../types/export";
 
 interface ExportFormProps {
   onSubmit: (request: ExportRequest) => void;
   isSubmitting: boolean;
   disabled: boolean;
+  resourceTypes: string[];
 }
 
 const EXPORT_LEVELS: { value: ExportLevel; label: string }[] = [
@@ -34,7 +34,12 @@ const EXPORT_LEVELS: { value: ExportLevel; label: string }[] = [
   { value: "group", label: "Group (group members)" },
 ];
 
-export function ExportForm({ onSubmit, isSubmitting, disabled }: ExportFormProps) {
+export function ExportForm({
+  onSubmit,
+  isSubmitting,
+  disabled,
+  resourceTypes,
+}: ExportFormProps) {
   const [level, setLevel] = useState<ExportLevel>("system");
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [since, setSince] = useState("");
@@ -63,7 +68,7 @@ export function ExportForm({ onSubmit, isSubmitting, disabled }: ExportFormProps
   };
 
   const selectAllTypes = () => {
-    setSelectedTypes([...RESOURCE_TYPES]);
+    setSelectedTypes([...resourceTypes]);
   };
 
   const clearAllTypes = () => {
@@ -143,7 +148,7 @@ export function ExportForm({ onSubmit, isSubmitting, disabled }: ExportFormProps
           >
             <Box p="2">
               <Flex wrap="wrap" gap="2">
-                {RESOURCE_TYPES.map((type) => (
+                {resourceTypes.map((type) => (
                   <Flex key={type} align="center" gap="1" pr="2">
                     <Checkbox
                       checked={selectedTypes.includes(type)}

@@ -20,17 +20,22 @@ import {
 import { Cross2Icon, PlusIcon, UploadIcon } from "@radix-ui/react-icons";
 import type { ImportFormat, ImportInput, ImportMode, ImportRequest } from "../../types/import";
 import { IMPORT_FORMATS, IMPORT_MODES } from "../../types/import";
-import { RESOURCE_TYPES } from "../../types/export";
 
 interface ImportFormProps {
   onSubmit: (request: ImportRequest) => void;
   isSubmitting: boolean;
   disabled: boolean;
+  resourceTypes: string[];
 }
 
 const DEFAULT_INPUT: ImportInput = { type: "Patient", url: "" };
 
-export function ImportForm({ onSubmit, isSubmitting, disabled }: ImportFormProps) {
+export function ImportForm({
+  onSubmit,
+  isSubmitting,
+  disabled,
+  resourceTypes,
+}: ImportFormProps) {
   const [inputFormat, setInputFormat] = useState<ImportFormat>("application/fhir+ndjson");
   const [inputSource, setInputSource] = useState("");
   const [mode, setMode] = useState<ImportMode>("overwrite");
@@ -154,7 +159,7 @@ export function ImportForm({ onSubmit, isSubmitting, disabled }: ImportFormProps
                   >
                     <Select.Trigger style={{ width: "100%" }} />
                     <Select.Content>
-                      {RESOURCE_TYPES.map((type) => (
+                      {resourceTypes.map((type) => (
                         <Select.Item key={type} value={type}>
                           {type}
                         </Select.Item>

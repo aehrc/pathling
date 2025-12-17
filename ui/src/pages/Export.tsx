@@ -6,7 +6,7 @@
 
 import { InfoCircledIcon, LockClosedIcon } from "@radix-ui/react-icons";
 import { Box, Button, Callout, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { ExportForm } from "../components/export/ExportForm";
 import { ExportJobList } from "../components/export/ExportJobList";
@@ -30,6 +30,12 @@ export function Export() {
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
+
+  // Extract resource types from capabilities.
+  const resourceTypes = useMemo(() => {
+    if (!capabilities?.resources) return [];
+    return capabilities.resources.map((r) => r.type).sort();
+  }, [capabilities]);
 
   // Handle 401 errors by clearing session and prompting for re-authentication.
   const handleUnauthorizedError = useCallback(() => {
@@ -196,7 +202,12 @@ export function Export() {
 
       <Flex gap="6" direction={{ initial: "column", md: "row" }}>
         <Box style={{ flex: 1 }}>
-          <ExportForm onSubmit={handleExport} isSubmitting={false} disabled={false} />
+          <ExportForm
+            onSubmit={handleExport}
+            isSubmitting={false}
+            disabled={false}
+            resourceTypes={resourceTypes}
+          />
         </Box>
 
         <Box style={{ flex: 1 }}>

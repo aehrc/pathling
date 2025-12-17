@@ -39,33 +39,3 @@ export interface ExportManifest {
   deleted?: ExportManifestOutput[];
   error?: ExportManifestError[];
 }
-
-// Common FHIR resource types for export selection.
-export const RESOURCE_TYPES = [
-  "AllergyIntolerance",
-  "CarePlan",
-  "CareTeam",
-  "Claim",
-  "Condition",
-  "Coverage",
-  "Device",
-  "DiagnosticReport",
-  "DocumentReference",
-  "Encounter",
-  "ExplanationOfBenefit",
-  "Goal",
-  "Immunization",
-  "Location",
-  "Medication",
-  "MedicationRequest",
-  "MedicationStatement",
-  "Observation",
-  "Organization",
-  "Patient",
-  "Practitioner",
-  "PractitionerRole",
-  "Procedure",
-  "Provenance",
-  "RelatedPerson",
-  "ServiceRequest",
-] as const;
