@@ -48,19 +48,10 @@ class BulkSubmitResultBuilderTest {
 
   @Test
   void buildStatusManifestWithOutputFiles() {
-    final Submission submission = createCompletedSubmission();
-    final SubmissionResult result = new SubmissionResult(
-        SUBMISSION_ID,
-        ISO_FORMATTER.format(Instant.now()),
-        List.of(
-            new OutputFile("Patient", "https://fhir.example.org/output/Patient.ndjson", 100L),
-            new OutputFile("Observation", "https://fhir.example.org/output/Observation.ndjson",
-                500L)
-        ),
-        false
-    );
+    // Create submission with manifest job containing output files.
+    final Submission submission = createCompletedSubmissionWithOutputFiles();
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, result, SERVER_BASE_URL);
+    final Binary binary = resultBuilder.buildStatusManifest(submission, null, SERVER_BASE_URL);
 
     assertThat(binary.getContentType()).isEqualTo("application/json");
     final String json = new String(binary.getData(), StandardCharsets.UTF_8);
@@ -85,19 +76,14 @@ class BulkSubmitResultBuilderTest {
   }
 
   @Test
-  void buildStatusManifestWithAccessTokenRequired() {
+  void buildStatusManifestAlwaysSetsRequiresAccessTokenFalse() {
+    // With the new manifest job aggregation, requiresAccessToken is always false.
     final Submission submission = createCompletedSubmission();
-    final SubmissionResult result = new SubmissionResult(
-        SUBMISSION_ID,
-        ISO_FORMATTER.format(Instant.now()),
-        List.of(),
-        true
-    );
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, result, SERVER_BASE_URL);
+    final Binary binary = resultBuilder.buildStatusManifest(submission, null, SERVER_BASE_URL);
 
     final String json = new String(binary.getData(), StandardCharsets.UTF_8);
-    assertThat(json).contains("\"requiresAccessToken\" : true");
+    assertThat(json).contains("\"requiresAccessToken\" : false");
   }
 
   @Test
@@ -132,30 +118,58 @@ class BulkSubmitResultBuilderTest {
   // ========================================
 
   private Submission createCompletedSubmission() {
+    final ManifestJob completedJob = ManifestJob.createPending(
+            "manifest-job-1",
+            "https://example.org/manifest.json",
+            "https://example.org/fhir"
+        )
+        .withState(ManifestJobState.COMPLETED);
+
     return Submission.createPending(
             SUBMISSION_ID,
             new SubmitterIdentifier("https://example.org/submitters", "test-submitter"),
             Optional.empty()
         )
-        .withManifestDetails(
+        .withManifestJob(completedJob)
+        .withState(SubmissionState.COMPLETED);
+  }
+
+  private Submission createCompletedSubmissionWithOutputFiles() {
+    final ManifestJob completedJob = ManifestJob.createPending(
+            "manifest-job-1",
             "https://example.org/manifest.json",
-            "https://example.org/fhir",
-            null
+            "https://example.org/fhir"
         )
+        .withState(ManifestJobState.COMPLETED)
+        .withOutputFiles(List.of(
+            new OutputFile("Patient", "https://fhir.example.org/output/Patient.ndjson", 100L),
+            new OutputFile("Observation", "https://fhir.example.org/output/Observation.ndjson",
+                500L)
+        ));
+
+    return Submission.createPending(
+            SUBMISSION_ID,
+            new SubmitterIdentifier("https://example.org/submitters", "test-submitter"),
+            Optional.empty()
+        )
+        .withManifestJob(completedJob)
         .withState(SubmissionState.COMPLETED);
   }
 
   private Submission createProcessingSubmission() {
+    final ManifestJob processingJob = ManifestJob.createPending(
+            "manifest-job-1",
+            "https://example.org/manifest.json",
+            "https://example.org/fhir"
+        )
+        .withState(ManifestJobState.PROCESSING);
+
     return Submission.createPending(
             SUBMISSION_ID,
             new SubmitterIdentifier("https://example.org/submitters", "test-submitter"),
             Optional.empty()
         )
-        .withManifestDetails(
-            "https://example.org/manifest.json",
-            "https://example.org/fhir",
-            null
-        )
+        .withManifestJob(processingJob)
         .withState(SubmissionState.PROCESSING);
   }
 

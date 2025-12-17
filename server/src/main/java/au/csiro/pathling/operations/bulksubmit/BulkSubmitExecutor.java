@@ -40,8 +40,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -69,7 +67,6 @@ import org.springframework.stereotype.Component;
 public class BulkSubmitExecutor {
 
   private static final Duration HTTP_TIMEOUT = Duration.ofMinutes(5);
-  private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_INSTANT;
 
   @Nonnull
   private final ImportExecutor importExecutor;
@@ -102,9 +99,10 @@ public class BulkSubmitExecutor {
    * @param submissionRegistry The submission registry for tracking state.
    * @param serverConfiguration The server configuration.
    * @param resultBuilder The builder for creating status manifests.
-   * @param jobRegistry The job registry for tracking async jobs (may be null if async is disabled).
+   * @param jobRegistry The job registry for tracking async jobs (may be null if async is
+   * disabled).
    * @param sparkSession The Spark session for setting job groups (may be null if async is
-   *     disabled).
+   * disabled).
    */
   public BulkSubmitExecutor(
       @Nonnull final ImportExecutor importExecutor,
@@ -127,15 +125,17 @@ public class BulkSubmitExecutor {
   }
 
   /**
-   * Executes the bulk submission processing asynchronously. Creates a Job in the JobRegistry for
-   * progress tracking if async support is enabled.
+   * Executes processing for a specific manifest job asynchronously. Creates a Job in the
+   * JobRegistry for progress tracking if async support is enabled.
    *
-   * @param submission The submission to process.
+   * @param submission The submission containing the manifest job.
+   * @param manifestJob The manifest job to process.
    * @param fileRequestHeaders Custom HTTP headers to include when downloading files.
    * @param fhirServerBase The FHIR server base URL for building result manifests.
    */
-  public void execute(
+  public void executeManifestJob(
       @Nonnull final Submission submission,
+      @Nonnull final ManifestJob manifestJob,
       @Nonnull final List<FileRequestHeader> fileRequestHeaders,
       @Nonnull final String fhirServerBase
   ) {
@@ -149,12 +149,18 @@ public class BulkSubmitExecutor {
 
       // Create and register the Job.
       final Optional<String> ownerId = Optional.ofNullable(submission.ownerId());
-      final Job<Object> job = new Job<>(jobId, "bulk-submit", resultFuture, ownerId);
+      final Job<Object> job = new Job<>(jobId, "bulk-submit-manifest", resultFuture, ownerId);
       jobRegistry.register(job);
 
-      // Store the job ID in the submission.
-      submissionRegistry.updateJobId(submission.submitter(), submission.submissionId(), jobId);
-      log.info("Created job {} for submission {}", jobId, submission.submissionId());
+      // Store the job ID in the manifest job.
+      submissionRegistry.updateManifestJob(
+          submission.submitter(),
+          submission.submissionId(),
+          manifestJob.manifestJobId(),
+          mj -> mj.withJobId(jobId)
+      );
+      log.info("Created job {} for manifest job {} in submission {}",
+          jobId, manifestJob.manifestJobId(), submission.submissionId());
     } else {
       jobId = null;
       resultFuture = null;
@@ -162,21 +168,33 @@ public class BulkSubmitExecutor {
 
     // Execute asynchronously to not block the request thread.
     CompletableFuture.runAsync(
-        () -> executeInternal(submission, fileRequestHeaders, fhirServerBase, jobId, resultFuture)
+        () -> executeManifestJobInternal(
+            submission, manifestJob, fileRequestHeaders, fhirServerBase, jobId, resultFuture
+        )
     );
   }
 
-  private void executeInternal(
+  private void executeManifestJobInternal(
       @Nonnull final Submission submission,
+      @Nonnull final ManifestJob manifestJob,
       @Nonnull final List<FileRequestHeader> fileRequestHeaders,
       @Nonnull final String fhirServerBase,
       @Nullable final String jobId,
       @Nullable final CompletableFuture<IBaseResource> resultFuture
   ) {
-    log.info("Starting processing for submission: {}", submission.submissionId());
+    log.info("Starting processing for manifest job: {} in submission: {}",
+        manifestJob.manifestJobId(), submission.submissionId());
 
     final List<OutputFile> outputFiles = new ArrayList<>();
     Path stagingDir = null;
+
+    // Update manifest job to PROCESSING state.
+    submissionRegistry.updateManifestJob(
+        submission.submitter(),
+        submission.submissionId(),
+        manifestJob.manifestJobId(),
+        mj -> mj.withState(ManifestJobState.PROCESSING)
+    );
 
     // Set Spark job group for progress tracking if a job ID was provided.
     if (jobId != null && sparkSession != null) {
@@ -186,7 +204,7 @@ public class BulkSubmitExecutor {
 
     try {
       // Fetch and parse the manifest.
-      final JsonNode manifest = fetchManifest(submission, fileRequestHeaders);
+      final JsonNode manifest = fetchManifest(manifestJob, fileRequestHeaders);
 
       // Extract file URLs from the manifest.
       final Map<String, Collection<String>> fileUrls = extractUrlsFromManifest(manifest);
@@ -196,16 +214,16 @@ public class BulkSubmitExecutor {
       }
 
       // Create staging directory and download files.
-      stagingDir = createStagingDirectory(submission.submissionId());
+      stagingDir = createStagingDirectory(submission.submissionId(), manifestJob.manifestJobId());
       final Map<String, Collection<String>> localFilePaths = downloadFiles(
           fileUrls, stagingDir, fileRequestHeaders
       );
 
       // Create ImportRequest with local file paths and delegate to ImportExecutor.
       final ImportRequest importRequest = new ImportRequest(
-          submission.submissionId(),
-          submission.fhirBaseUrl() != null
-          ? submission.fhirBaseUrl()
+          manifestJob.manifestJobId(),
+          manifestJob.fhirBaseUrl() != null
+          ? manifestJob.fhirBaseUrl()
           : "unknown",
           localFilePaths,
           SaveMode.MERGE,
@@ -226,42 +244,39 @@ public class BulkSubmitExecutor {
         outputFiles.add(new OutputFile(resourceType, "", count));
       }
 
-      // Update submission state to COMPLETED.
-      submissionRegistry.updateState(
+      // Update manifest job state to COMPLETED with output files.
+      submissionRegistry.updateManifestJob(
           submission.submitter(),
           submission.submissionId(),
-          SubmissionState.COMPLETED
+          manifestJob.manifestJobId(),
+          mj -> mj.withState(ManifestJobState.COMPLETED).withOutputFiles(outputFiles)
       );
 
-      // Store the result.
-      final SubmissionResult submissionResult = new SubmissionResult(
-          submission.submissionId(),
-          ISO_FORMATTER.format(Instant.now()),
-          outputFiles,
-          false
-      );
-      submissionRegistry.putResult(submissionResult);
+      log.info("Manifest job {} completed successfully", manifestJob.manifestJobId());
 
-      log.info("Submission {} completed successfully", submission.submissionId());
-
-      // Complete the job with the status manifest if async is enabled.
+      // Complete the async job if enabled.
       if (resultFuture != null) {
-        final Submission completedSubmission = submissionRegistry.get(
+        // Build a simple status manifest for this manifest job.
+        final Submission updatedSubmission = submissionRegistry.get(
             submission.submitter(), submission.submissionId()
-        ).orElse(submission.withState(SubmissionState.COMPLETED));
+        ).orElse(submission);
         final IBaseResource statusManifest = resultBuilder.buildStatusManifest(
-            completedSubmission, submissionResult, fhirServerBase
+            updatedSubmission, null, fhirServerBase
         );
         resultFuture.complete(statusManifest);
       }
 
     } catch (final Exception e) {
-      log.error("Failed to process submission {}: {}", submission.submissionId(), e.getMessage(),
-          e);
+      log.error("Failed to process manifest job {}: {}",
+          manifestJob.manifestJobId(), e.getMessage(), e);
 
-      // Update submission with error message.
-      final Submission updatedSubmission = submission.withError(e.getMessage());
-      submissionRegistry.put(updatedSubmission);
+      // Update manifest job with error message.
+      submissionRegistry.updateManifestJob(
+          submission.submitter(),
+          submission.submissionId(),
+          manifestJob.manifestJobId(),
+          mj -> mj.withError(e.getMessage())
+      );
 
       // Complete the job with an exception if async is enabled.
       if (resultFuture != null) {
@@ -282,13 +297,10 @@ public class BulkSubmitExecutor {
 
   @Nonnull
   private JsonNode fetchManifest(
-      @Nonnull final Submission submission,
+      @Nonnull final ManifestJob manifestJob,
       @Nonnull final List<FileRequestHeader> fileRequestHeaders
   ) throws IOException {
-    final String manifestUrl = submission.manifestUrl();
-    if (manifestUrl == null) {
-      throw new InvalidUserInputError("Manifest URL is required");
-    }
+    final String manifestUrl = manifestJob.manifestUrl();
 
     log.info("Fetching manifest from: {}", manifestUrl);
 
@@ -363,13 +375,16 @@ public class BulkSubmitExecutor {
   }
 
   @Nonnull
-  private Path createStagingDirectory(@Nonnull final String submissionId) throws IOException {
+  private Path createStagingDirectory(
+      @Nonnull final String submissionId,
+      @Nonnull final String manifestJobId
+  ) throws IOException {
     final BulkSubmitConfiguration config = serverConfiguration.getBulkSubmit();
     final String baseStagingDir = config != null
                                   ? config.getStagingDirectory()
                                   : "/usr/local/staging/bulk-submit-fetch";
 
-    final Path stagingDir = Path.of(baseStagingDir, submissionId);
+    final Path stagingDir = Path.of(baseStagingDir, submissionId, manifestJobId);
     Files.createDirectories(stagingDir);
     log.info("Created staging directory: {}", stagingDir);
     return stagingDir;

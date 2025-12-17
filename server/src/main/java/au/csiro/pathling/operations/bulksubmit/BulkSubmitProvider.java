@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.bulksubmit;
 
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
@@ -26,8 +27,8 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Parameters;
 import org.springframework.security.core.Authentication;
@@ -109,7 +110,7 @@ public class BulkSubmitProvider {
     } else if (request.isComplete()) {
       return handleCompleteSubmission(request, existingSubmission, ownerId, fhirServerBase);
     } else if (request.isAborted()) {
-      return handleAbortedSubmission(request, existingSubmission);
+      return handleAbortedSubmission();
     } else {
       throw new InvalidRequestException("Unknown submission status: " + request.submissionStatus());
     }
@@ -122,8 +123,7 @@ public class BulkSubmitProvider {
       @Nonnull final Optional<String> ownerId,
       @Nonnull final String fhirServerBase
   ) {
-    // For "in-progress" status, create or update the submission.
-    // Per the Argonaut spec, processing should begin immediately when a manifest URL is provided.
+    // For "in-progress" status, create or update the submission and process manifest if provided.
     Submission submission;
     if (existingSubmission.isPresent()) {
       submission = existingSubmission.get();
@@ -134,19 +134,6 @@ public class BulkSubmitProvider {
                 .formatted(request.submissionId(), submission.state())
         );
       }
-      // Update with new manifest details if provided.
-      if (request.manifestUrl() != null) {
-        submission = submission.withManifestDetails(
-            request.manifestUrl(),
-            request.fhirBaseUrl(),
-            request.metadata()
-        );
-        submissionRegistry.put(submission);
-        log.info("Updated submission {} with manifest details", request.submissionId());
-      } else {
-        log.debug("Received in-progress notification for submission: {}",
-            request.submissionId());
-      }
     } else {
       // Create new submission.
       submission = Submission.createPending(
@@ -154,30 +141,43 @@ public class BulkSubmitProvider {
           request.submitter(),
           ownerId
       );
-      // Store manifest details if provided.
-      if (request.manifestUrl() != null) {
-        submission = submission.withManifestDetails(
-            request.manifestUrl(),
-            request.fhirBaseUrl(),
-            request.metadata()
-        );
-      }
       submissionRegistry.put(submission);
       log.info("Created new submission: {}", request.submissionId());
     }
 
-    // Per the Argonaut spec, processing should begin immediately when a manifest URL is provided.
-    if (request.manifestUrl() != null && submission.state() == SubmissionState.PENDING) {
-      submission = submission.withState(SubmissionState.PROCESSING);
-      submissionRegistry.put(submission);
-      log.info("Submission {} starting processing for manifest: {}", request.submissionId(),
-          request.manifestUrl());
-      if (executor != null) {
-        executor.execute(submission, request.fileRequestHeaders(), fhirServerBase);
-      } else {
-        log.warn("BulkSubmitExecutor not available - submission {} will not be processed",
-            request.submissionId());
+    // If manifest URL provided, create a manifest job and start processing.
+    if (request.manifestUrl() != null) {
+      final ManifestJob manifestJob = ManifestJob.createPending(
+          UUID.randomUUID().toString(),
+          request.manifestUrl(),
+          request.fhirBaseUrl()
+      );
+
+      // Add manifest job to submission.
+      submission = submission.withManifestJob(manifestJob);
+      if (request.metadata() != null) {
+        submission = submission.withMetadata(request.metadata());
       }
+
+      // Transition to PROCESSING if not already.
+      if (submission.state() == SubmissionState.PENDING) {
+        submission = submission.withState(SubmissionState.PROCESSING);
+      }
+      submissionRegistry.put(submission);
+
+      log.info("Added manifest job {} to submission {} for manifest: {}",
+          manifestJob.manifestJobId(), request.submissionId(), request.manifestUrl());
+
+      // Start processing the manifest job.
+      if (executor != null) {
+        executor.executeManifestJob(submission, manifestJob, request.fileRequestHeaders(),
+            fhirServerBase);
+      } else {
+        log.warn("BulkSubmitExecutor not available - manifest job {} will not be processed",
+            manifestJob.manifestJobId());
+      }
+    } else {
+      log.debug("Received in-progress notification for submission: {}", request.submissionId());
     }
 
     return createAcknowledgementResponse(request.submissionId(), "in-progress");
@@ -191,103 +191,90 @@ public class BulkSubmitProvider {
       @Nonnull final String fhirServerBase
   ) {
     // For "complete" status, the provider is signalling that no more manifests will be added.
-    // Processing may already be in progress from a previous "in-progress" request with manifest.
     Submission submission;
-    boolean alreadyProcessing = false;
     if (existingSubmission.isPresent()) {
-      final Submission existing = existingSubmission.get();
-      if (existing.state() != SubmissionState.PENDING
-          && existing.state() != SubmissionState.PROCESSING) {
+      submission = existingSubmission.get();
+      if (submission.state() != SubmissionState.PENDING
+          && submission.state() != SubmissionState.PROCESSING) {
         throw new InvalidRequestException(
             "Cannot complete submission %s: current state is %s."
-                .formatted(request.submissionId(), existing.state())
-        );
-      }
-      alreadyProcessing = existing.state() == SubmissionState.PROCESSING;
-      // Use request manifest details if provided, otherwise use stored details from in-progress.
-      if (request.manifestUrl() != null) {
-        submission = existing.withManifestDetails(
-            request.manifestUrl(),
-            request.fhirBaseUrl(),
-            request.metadata()
-        );
-      } else if (existing.manifestUrl() != null) {
-        // Use existing manifest details from previous in-progress request.
-        submission = existing;
-      } else {
-        throw new InvalidRequestException(
-            "Cannot complete submission %s: no manifest URL provided."
-                .formatted(request.submissionId())
+                .formatted(request.submissionId(), submission.state())
         );
       }
     } else {
-      // No prior in-progress notification - must have manifest details in this request.
-      if (request.manifestUrl() == null) {
-        throw new InvalidRequestException(
-            "Cannot complete submission %s: no prior submission found and no manifest URL provided."
-                .formatted(request.submissionId())
-        );
-      }
+      // No prior in-progress notification - create submission now.
       submission = Submission.createPending(
           request.submissionId(),
           request.submitter(),
           ownerId
-      ).withManifestDetails(
-          request.manifestUrl(),
-          request.fhirBaseUrl(),
-          request.metadata()
       );
-    }
-
-    // Only start processing if not already in progress.
-    if (!alreadyProcessing) {
-      submission = submission.withState(SubmissionState.PROCESSING);
       submissionRegistry.put(submission);
-      log.info("Submission {} marked complete, starting processing", request.submissionId());
-
-      if (executor != null) {
-        executor.execute(submission, request.fileRequestHeaders(), fhirServerBase);
-      } else {
-        log.warn("BulkSubmitExecutor not available - submission {} will not be processed",
-            request.submissionId());
-      }
-    } else {
-      log.info("Submission {} marked complete, processing already in progress",
-          request.submissionId());
+      log.info("Created new submission: {}", request.submissionId());
     }
 
-    return createAcknowledgementResponse(request.submissionId(), "processing");
-  }
-
-  @Nonnull
-  private Parameters handleAbortedSubmission(
-      @Nonnull final BulkSubmitRequest request,
-      @Nonnull final Optional<Submission> existingSubmission
-  ) {
-    // For "aborted" status, mark the submission as aborted.
-    if (existingSubmission.isEmpty()) {
-      throw new InvalidRequestException(
-          "Cannot abort submission %s: submission not found.".formatted(request.submissionId())
+    // If manifest URL provided with complete request, create a manifest job and start processing.
+    if (request.manifestUrl() != null) {
+      final ManifestJob manifestJob = ManifestJob.createPending(
+          UUID.randomUUID().toString(),
+          request.manifestUrl(),
+          request.fhirBaseUrl()
       );
+
+      submission = submission.withManifestJob(manifestJob);
+      if (request.metadata() != null) {
+        submission = submission.withMetadata(request.metadata());
+      }
+
+      // Transition to PROCESSING if not already.
+      if (submission.state() == SubmissionState.PENDING) {
+        submission = submission.withState(SubmissionState.PROCESSING);
+      }
+      submissionRegistry.put(submission);
+
+      log.info("Added final manifest job {} to submission {} for manifest: {}",
+          manifestJob.manifestJobId(), request.submissionId(), request.manifestUrl());
+
+      // Start processing the manifest job.
+      if (executor != null) {
+        executor.executeManifestJob(submission, manifestJob, request.fileRequestHeaders(),
+            fhirServerBase);
+      }
+
+      // Re-fetch submission to check for outstanding jobs.
+      submission = submissionRegistry.get(request.submitter(), request.submissionId())
+          .orElse(submission);
     }
 
-    final Submission existing = existingSubmission.get();
-    if (existing.state() == SubmissionState.COMPLETED
-        || existing.state() == SubmissionState.COMPLETED_WITH_ERRORS) {
-      throw new InvalidRequestException(
-          "Cannot abort submission %s: submission has already completed."
+    // Check if any manifest jobs are still outstanding.
+    if (submission.hasOutstandingJobs()) {
+      throw new InvalidUserInputError(
+          "Cannot complete submission %s: import jobs are still outstanding."
               .formatted(request.submissionId())
       );
     }
 
-    submissionRegistry.updateState(
-        request.submitter(),
-        request.submissionId(),
-        SubmissionState.ABORTED
-    );
-    log.info("Submission {} aborted", request.submissionId());
+    // All jobs have completed - determine final state.
+    if (submission.manifestJobs().isEmpty()) {
+      throw new InvalidRequestException(
+          "Cannot complete submission %s: no manifests have been submitted."
+              .formatted(request.submissionId())
+      );
+    }
 
-    return createAcknowledgementResponse(request.submissionId(), "aborted");
+    final SubmissionState finalState = submission.hasFailedJobs()
+                                       ? SubmissionState.COMPLETED_WITH_ERRORS
+                                       : SubmissionState.COMPLETED;
+    submission = submission.withState(finalState);
+    submissionRegistry.put(submission);
+    log.info("Submission {} completed with state: {}", request.submissionId(), finalState);
+
+    return createAcknowledgementResponse(request.submissionId(), finalState.name().toLowerCase());
+  }
+
+  @Nonnull
+  private Parameters handleAbortedSubmission() {
+    // Abort is not supported.
+    throw new InvalidUserInputError("Abort is not supported.");
   }
 
   @Nonnull

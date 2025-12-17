@@ -235,6 +235,25 @@ class BulkSubmitValidatorTest {
   }
 
   @Test
+  void replacesManifestUrlNotSupported() {
+    // Providing replacesManifestUrl should result in an error since it is not supported.
+    final Parameters params = minimalInProgressParams();
+    params.addParameter().setName("manifestUrl")
+        .setValue(new StringType("https://example.org/manifest.json"));
+    params.addParameter().setName("fhirBaseUrl")
+        .setValue(new StringType("https://example.org/fhir"));
+    params.addParameter().setName("replacesManifestUrl")
+        .setValue(new StringType("https://example.org/old-manifest.json"));
+
+    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
+        "respond-async", false);
+
+    assertThatCode(() -> validator.validateAndExtract(mockRequest, params))
+        .isInstanceOf(InvalidUserInputError.class)
+        .hasMessageContaining("replacesManifestUrl is not supported");
+  }
+
+  @Test
   void acceptsApplicationJsonHeader() {
     final Parameters params = minimalInProgressParams();
     // Client sends application/json instead of application/fhir+json.

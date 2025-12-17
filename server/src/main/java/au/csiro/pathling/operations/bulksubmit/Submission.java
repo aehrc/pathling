@@ -21,10 +21,16 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 /**
  * Represents a bulk submission throughout its lifecycle.
+ * <p>
+ * A submission can contain multiple manifest jobs, each representing a manifest URL submitted via
+ * an in-progress request. All manifest jobs within a submission share the same submitter and
+ * submission ID.
  * <p>
  * Timestamps are stored as ISO-8601 strings for JSON serialisation compatibility with the shaded
  * Jackson library.
@@ -32,15 +38,12 @@ import java.util.Optional;
  * @param submissionId The unique identifier for this submission.
  * @param submitter The identifier of the submitting system.
  * @param state The current state of the submission.
- * @param manifestUrl The URL of the manifest file containing the data to import.
- * @param replacesManifestUrl The URL of a previous manifest that this submission replaces.
- * @param fhirBaseUrl The base URL of the FHIR server that produced the manifest.
+ * @param manifestJobs The list of manifest jobs associated with this submission.
  * @param createdAt The timestamp when the submission was created (ISO-8601 format).
  * @param completedAt The timestamp when the submission completed processing (ISO-8601 format).
  * @param ownerId The identifier of the user who owns this submission, or null if not applicable.
  * @param metadata Optional metadata associated with the submission.
  * @param errorMessage Error message if the submission failed.
- * @param jobId The ID of the async Job processing this submission, for progress tracking.
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
  */
@@ -48,15 +51,12 @@ public record Submission(
     @Nonnull String submissionId,
     @Nonnull SubmitterIdentifier submitter,
     @Nonnull SubmissionState state,
-    @Nullable String manifestUrl,
-    @Nullable String replacesManifestUrl,
-    @Nullable String fhirBaseUrl,
+    @Nonnull List<ManifestJob> manifestJobs,
     @Nonnull String createdAt,
     @Nullable String completedAt,
     @Nullable String ownerId,
     @Nullable SubmissionMetadata metadata,
-    @Nullable String errorMessage,
-    @Nullable String jobId
+    @Nullable String errorMessage
 ) {
 
   private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_INSTANT;
@@ -89,13 +89,10 @@ public record Submission(
         submissionId,
         submitter,
         SubmissionState.PENDING,
-        null,
-        null,
-        null,
+        new ArrayList<>(),
         now(),
         null,
         ownerId.orElse(null),
-        null,
         null,
         null
     );
@@ -118,45 +115,89 @@ public record Submission(
         submissionId,
         submitter,
         newState,
-        manifestUrl,
-        replacesManifestUrl,
-        fhirBaseUrl,
+        manifestJobs,
         createdAt,
         newCompletedAt,
         ownerId,
         metadata,
-        errorMessage,
-        jobId
+        errorMessage
     );
   }
 
   /**
-   * Creates a copy of this submission with manifest details, keeping the current state.
+   * Creates a copy of this submission with an additional manifest job.
    *
-   * @param manifestUrl The URL of the manifest file.
-   * @param fhirBaseUrl The base URL of the FHIR server.
-   * @param metadata Optional submission metadata.
-   * @return A new submission with manifest details.
+   * @param manifestJob The manifest job to add.
+   * @return A new submission with the manifest job added.
    */
   @Nonnull
-  public Submission withManifestDetails(
-      @Nonnull final String manifestUrl,
-      @Nullable final String fhirBaseUrl,
-      @Nullable final SubmissionMetadata metadata
-  ) {
+  public Submission withManifestJob(@Nonnull final ManifestJob manifestJob) {
+    final List<ManifestJob> newManifestJobs = new ArrayList<>(this.manifestJobs);
+    newManifestJobs.add(manifestJob);
     return new Submission(
         submissionId,
         submitter,
-        this.state,
-        manifestUrl,
-        replacesManifestUrl,
-        fhirBaseUrl,
+        state,
+        newManifestJobs,
         createdAt,
         completedAt,
         ownerId,
         metadata,
-        errorMessage,
-        jobId
+        errorMessage
+    );
+  }
+
+  /**
+   * Creates a copy of this submission with an updated manifest job.
+   *
+   * @param manifestJobId The ID of the manifest job to update.
+   * @param updatedJob The updated manifest job.
+   * @return A new submission with the manifest job updated.
+   */
+  @Nonnull
+  public Submission withUpdatedManifestJob(
+      @Nonnull final String manifestJobId,
+      @Nonnull final ManifestJob updatedJob
+  ) {
+    final List<ManifestJob> newManifestJobs = new ArrayList<>();
+    for (final ManifestJob job : this.manifestJobs) {
+      if (job.manifestJobId().equals(manifestJobId)) {
+        newManifestJobs.add(updatedJob);
+      } else {
+        newManifestJobs.add(job);
+      }
+    }
+    return new Submission(
+        submissionId,
+        submitter,
+        state,
+        newManifestJobs,
+        createdAt,
+        completedAt,
+        ownerId,
+        metadata,
+        errorMessage
+    );
+  }
+
+  /**
+   * Creates a copy of this submission with metadata.
+   *
+   * @param metadata The metadata to set.
+   * @return A new submission with the metadata set.
+   */
+  @Nonnull
+  public Submission withMetadata(@Nullable final SubmissionMetadata metadata) {
+    return new Submission(
+        submissionId,
+        submitter,
+        state,
+        manifestJobs,
+        createdAt,
+        completedAt,
+        ownerId,
+        metadata,
+        errorMessage
     );
   }
 
@@ -172,40 +213,58 @@ public record Submission(
         submissionId,
         submitter,
         SubmissionState.COMPLETED_WITH_ERRORS,
-        manifestUrl,
-        replacesManifestUrl,
-        fhirBaseUrl,
+        manifestJobs,
         createdAt,
         now(),
         ownerId,
         metadata,
-        errorMessage,
-        jobId
+        errorMessage
     );
   }
 
   /**
-   * Creates a copy of this submission with a job ID for progress tracking.
+   * Returns whether this submission has any manifest jobs that are not in a terminal state.
    *
-   * @param jobId The ID of the async Job processing this submission.
-   * @return A new submission with the job ID set.
+   * @return true if there are outstanding jobs, false otherwise.
+   */
+  public boolean hasOutstandingJobs() {
+    return manifestJobs.stream().anyMatch(job -> !job.isTerminal());
+  }
+
+  /**
+   * Returns whether any manifest jobs in this submission have failed.
+   *
+   * @return true if any job has failed, false otherwise.
+   */
+  public boolean hasFailedJobs() {
+    return manifestJobs.stream()
+        .anyMatch(job -> job.state() == ManifestJobState.FAILED);
+  }
+
+  /**
+   * Returns all job IDs from manifest jobs that have an associated async job.
+   *
+   * @return A list of job IDs.
    */
   @Nonnull
-  public Submission withJobId(@Nonnull final String jobId) {
-    return new Submission(
-        submissionId,
-        submitter,
-        state,
-        manifestUrl,
-        replacesManifestUrl,
-        fhirBaseUrl,
-        createdAt,
-        completedAt,
-        ownerId,
-        metadata,
-        errorMessage,
-        jobId
-    );
+  public List<String> getAllJobIds() {
+    return manifestJobs.stream()
+        .map(ManifestJob::jobId)
+        .filter(jobId -> jobId != null)
+        .toList();
+  }
+
+  /**
+   * Finds a manifest job by its ID.
+   *
+   * @param manifestJobId The ID of the manifest job to find.
+   * @return The manifest job if found, or empty if not found.
+   */
+  @Nonnull
+  public Optional<ManifestJob> findManifestJob(@Nonnull final String manifestJobId) {
+    return manifestJobs.stream()
+        .filter(job -> job.manifestJobId().equals(manifestJobId))
+        .findFirst();
   }
 
   /**

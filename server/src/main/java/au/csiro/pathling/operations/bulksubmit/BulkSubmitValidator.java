@@ -118,10 +118,10 @@ public class BulkSubmitValidator {
       validateUrl(fhirBaseUrl, "fhirBaseUrl", config);
     }
 
-    // Extract replacesManifestUrl (optional).
+    // Extract replacesManifestUrl - not supported.
     final String replacesManifestUrl = extractOptionalUrl(parameters, "replacesManifestUrl");
     if (replacesManifestUrl != null) {
-      validateUrl(replacesManifestUrl, "replacesManifestUrl", config);
+      throw new InvalidUserInputError("replacesManifestUrl is not supported.");
     }
 
     // Extract metadata (optional).

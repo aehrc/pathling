@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -104,23 +105,55 @@ public class SubmissionRegistry {
   }
 
   /**
-   * Updates the job ID for a submission.
+   * Adds a manifest job to a submission.
    *
    * @param submitter The submitter identifier.
    * @param submissionId The submission ID.
-   * @param jobId The job ID to associate with the submission.
+   * @param manifestJob The manifest job to add.
    * @return The updated submission, or empty if the submission was not found.
    */
   @Nonnull
-  public Optional<Submission> updateJobId(
+  public Optional<Submission> addManifestJob(
       @Nonnull final SubmitterIdentifier submitter,
       @Nonnull final String submissionId,
-      @Nonnull final String jobId
+      @Nonnull final ManifestJob manifestJob
   ) {
     return get(submitter, submissionId).map(submission -> {
-      final Submission updated = submission.withJobId(jobId);
+      final Submission updated = submission.withManifestJob(manifestJob);
       put(updated);
+      log.debug("Added manifest job {} to submission {}", manifestJob.manifestJobId(),
+          submissionId);
       return updated;
+    });
+  }
+
+  /**
+   * Updates a manifest job within a submission.
+   *
+   * @param submitter The submitter identifier.
+   * @param submissionId The submission ID.
+   * @param manifestJobId The ID of the manifest job to update.
+   * @param updater A function that transforms the manifest job.
+   * @return The updated submission, or empty if the submission or manifest job was not found.
+   */
+  @Nonnull
+  public Optional<Submission> updateManifestJob(
+      @Nonnull final SubmitterIdentifier submitter,
+      @Nonnull final String submissionId,
+      @Nonnull final String manifestJobId,
+      @Nonnull final Function<ManifestJob, ManifestJob> updater
+  ) {
+    return get(submitter, submissionId).flatMap(submission -> {
+      final Optional<ManifestJob> existingJob = submission.findManifestJob(manifestJobId);
+      if (existingJob.isEmpty()) {
+        log.warn("Manifest job {} not found in submission {}", manifestJobId, submissionId);
+        return Optional.empty();
+      }
+      final ManifestJob updatedJob = updater.apply(existingJob.get());
+      final Submission updated = submission.withUpdatedManifestJob(manifestJobId, updatedJob);
+      put(updated);
+      log.debug("Updated manifest job {} in submission {}", manifestJobId, submissionId);
+      return Optional.of(updated);
     });
   }
 

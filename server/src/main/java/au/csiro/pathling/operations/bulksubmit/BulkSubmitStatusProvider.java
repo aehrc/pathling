@@ -29,6 +29,7 @@ import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -68,7 +69,7 @@ public class BulkSubmitStatusProvider {
    * @param submissionRegistry The registry for tracking submissions.
    * @param resultBuilder The builder for generating result manifests.
    * @param jobRegistry The job registry for looking up async jobs (may be null if async is
-   *     disabled).
+   * disabled).
    */
   public BulkSubmitStatusProvider(
       @Nonnull final SubmissionRegistry submissionRegistry,
@@ -126,12 +127,23 @@ public class BulkSubmitStatusProvider {
       return handleCompletedSubmission(submission, requestDetails.getFhirServerBase());
     }
 
-    // If async is enabled and the submission has a job ID, redirect to the job endpoint.
-    if (jobRegistry != null && submission.jobId() != null) {
-      return redirectToJob(submission.jobId(), requestDetails);
+    // Get all job IDs from manifest jobs.
+    final List<String> jobIds = submission.getAllJobIds();
+
+    // If async is enabled and we have job IDs, redirect to the first running job.
+    if (jobRegistry != null && !jobIds.isEmpty()) {
+      // Find the first job that is still running, or the first job if all are done.
+      for (final String jobId : jobIds) {
+        final Job<?> job = jobRegistry.get(jobId);
+        if (job != null && !job.getResult().isDone()) {
+          return redirectToJob(jobId, requestDetails);
+        }
+      }
+      // All jobs are done, use the first job ID.
+      return redirectToJob(jobIds.get(0), requestDetails);
     }
 
-    // If no job ID yet (executor hasn't started), wait briefly for it to be created.
+    // If no job IDs yet (executor hasn't started), wait briefly for one to be created.
     final String jobId = waitForJobId(submitterIdentifier, submissionId.getValue());
     if (jobId != null) {
       return redirectToJob(jobId, requestDetails);
@@ -178,26 +190,28 @@ public class BulkSubmitStatusProvider {
       @Nonnull final ServletRequestDetails requestDetails
   ) {
     // Check if the job has completed.
-    final Job<?> job = jobRegistry.get(jobId);
-    if (job != null && job.getResult().isDone()) {
-      // Job is done, return the result directly.
-      try {
-        final IBaseResource result = job.getResult().get();
-        if (result instanceof Binary binary) {
-          return binary;
+    if (jobRegistry != null) {
+      final Job<?> job = jobRegistry.get(jobId);
+      if (job != null && job.getResult().isDone()) {
+        // Job is done, return the result directly.
+        try {
+          final IBaseResource result = job.getResult().get();
+          if (result instanceof final Binary binary) {
+            return binary;
+          }
+          // Unexpected result type - should not happen.
+          throw new InternalErrorException("Unexpected job result type: " + result.getClass());
+        } catch (final InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new InternalErrorException("Interrupted while getting job result", e);
+        } catch (final ExecutionException e) {
+          // Job failed, unwrap and rethrow the cause.
+          final Throwable cause = e.getCause();
+          if (cause instanceof final RuntimeException runtimeException) {
+            throw runtimeException;
+          }
+          throw new InternalErrorException("Job execution failed", cause);
         }
-        // Unexpected result type - should not happen.
-        throw new InternalErrorException("Unexpected job result type: " + result.getClass());
-      } catch (final InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new InternalErrorException("Interrupted while getting job result", e);
-      } catch (final ExecutionException e) {
-        // Job failed, unwrap and rethrow the cause.
-        final Throwable cause = e.getCause();
-        if (cause instanceof RuntimeException runtimeException) {
-          throw runtimeException;
-        }
-        throw new InternalErrorException("Job execution failed", cause);
       }
     }
 
@@ -217,7 +231,7 @@ public class BulkSubmitStatusProvider {
       @Nonnull final SubmitterIdentifier submitterIdentifier,
       @Nonnull final String submissionId
   ) {
-    // Wait briefly for the job ID to be created by BulkSubmitExecutor.
+    // Wait briefly for a job ID to be created by BulkSubmitExecutor.
     for (int i = 0; i < MAX_JOB_WAIT_ATTEMPTS; i++) {
       try {
         Thread.sleep(JOB_WAIT_INTERVAL_MS);
@@ -228,8 +242,11 @@ public class BulkSubmitStatusProvider {
 
       final Submission submission = submissionRegistry.get(submitterIdentifier, submissionId)
           .orElse(null);
-      if (submission != null && submission.jobId() != null) {
-        return submission.jobId();
+      if (submission != null) {
+        final List<String> jobIds = submission.getAllJobIds();
+        if (!jobIds.isEmpty()) {
+          return jobIds.get(0);
+        }
       }
 
       // If submission completed while we were waiting, stop waiting.

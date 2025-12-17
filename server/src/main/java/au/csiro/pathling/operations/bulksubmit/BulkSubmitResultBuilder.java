@@ -24,6 +24,8 @@ import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Binary;
 import org.springframework.stereotype.Component;
@@ -52,9 +54,12 @@ public class BulkSubmitResultBuilder {
 
   /**
    * Builds a status manifest for a completed or errored submission.
+   * <p>
+   * Aggregates output files from all completed manifest jobs within the submission.
    *
    * @param submission The submission.
-   * @param result The submission result (may be null if processing failed early).
+   * @param result The submission result (deprecated, output files are now aggregated from manifest
+   * jobs).
    * @param serverBaseUrl The server base URL for constructing result URLs.
    * @return A Binary resource containing the manifest JSON.
    */
@@ -76,28 +81,28 @@ public class BulkSubmitResultBuilder {
       extensions.add(submissionIdExt);
       manifest.set("extension", extensions);
 
-      // Add transaction time.
-      if (result != null) {
-        manifest.put("transactionTime", result.transactionTime());
-      } else if (submission.completedAt() != null) {
-        manifest.put("transactionTime", submission.completedAt());
+      // Aggregate output files from all completed manifest jobs.
+      final List<OutputFile> aggregatedOutputFiles = aggregateOutputFiles(submission);
+
+      // Determine transaction time from submission or latest manifest job completion.
+      final String transactionTime = getTransactionTime(submission);
+      if (transactionTime != null) {
+        manifest.put("transactionTime", transactionTime);
       }
 
-      // Add requiresAccessToken.
-      manifest.put("requiresAccessToken", result != null && result.requiresAccessToken());
+      // Add requiresAccessToken (always false for now).
+      manifest.put("requiresAccessToken", false);
 
-      // Add output array.
+      // Add output array with aggregated files from all manifest jobs.
       final ArrayNode outputArray = objectMapper.createArrayNode();
-      if (result != null) {
-        for (final OutputFile outputFile : result.outputFiles()) {
-          final ObjectNode outputNode = objectMapper.createObjectNode();
-          outputNode.put("type", outputFile.type());
-          outputNode.put("url", outputFile.url());
-          if (outputFile.count() != null) {
-            outputNode.put("count", outputFile.count());
-          }
-          outputArray.add(outputNode);
+      for (final OutputFile outputFile : aggregatedOutputFiles) {
+        final ObjectNode outputNode = objectMapper.createObjectNode();
+        outputNode.put("type", outputFile.type());
+        outputNode.put("url", outputFile.url());
+        if (outputFile.count() != null) {
+          outputNode.put("count", outputFile.count());
         }
+        outputArray.add(outputNode);
       }
       manifest.set("output", outputArray);
 
@@ -117,6 +122,44 @@ public class BulkSubmitResultBuilder {
       log.error("Failed to build status manifest", e);
       throw new RuntimeException("Failed to build status manifest", e);
     }
+  }
+
+  /**
+   * Aggregates output files from all completed manifest jobs in the submission.
+   *
+   * @param submission The submission containing manifest jobs.
+   * @return A list of all output files from completed manifest jobs.
+   */
+  @Nonnull
+  private List<OutputFile> aggregateOutputFiles(@Nonnull final Submission submission) {
+    final List<OutputFile> allOutputFiles = new ArrayList<>();
+    for (final ManifestJob job : submission.manifestJobs()) {
+      if (job.state() == ManifestJobState.COMPLETED) {
+        allOutputFiles.addAll(job.outputFiles());
+      }
+    }
+    return allOutputFiles;
+  }
+
+  /**
+   * Determines the transaction time for the status manifest.
+   *
+   * @param submission The submission.
+   * @return The transaction time, or null if not available.
+   */
+  @Nullable
+  private String getTransactionTime(@Nonnull final Submission submission) {
+    // Use submission's completedAt if available.
+    if (submission.completedAt() != null) {
+      return submission.completedAt();
+    }
+
+    // Otherwise, find the latest completedAt from manifest jobs.
+    return submission.manifestJobs().stream()
+        .map(ManifestJob::completedAt)
+        .filter(completedAt -> completedAt != null)
+        .max(String::compareTo)
+        .orElse(null);
   }
 
   /**
