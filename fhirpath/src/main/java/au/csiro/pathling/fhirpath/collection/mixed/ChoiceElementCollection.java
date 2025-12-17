@@ -109,7 +109,7 @@ public class ChoiceElementCollection extends MixedCollection {
     // It is used to traverse the choice element.
     return elementDefinition.map(parent::traverseElement).orElse(EmptyCollection.getInstance());
   }
-  
+
   /**
    * {@inheritDoc}
    *
@@ -119,5 +119,17 @@ public class ChoiceElementCollection extends MixedCollection {
   @Override
   public BooleanCollection asBooleanSingleton() {
     return parent.asBooleanSingleton();
+  }
+  
+  @Override
+  @Nonnull
+  public Collection asSingular() {
+    return new ChoiceElementCollection(choiceDefinition, parent.asSingular());
+  }
+  
+  @Override
+  @Nonnull
+  public Collection asPlural() {
+    return new ChoiceElementCollection(choiceDefinition, parent.asPlural());
   }
 }

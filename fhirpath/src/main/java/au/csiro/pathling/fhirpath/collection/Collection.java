@@ -563,6 +563,43 @@ public class Collection implements Equatable {
   }
 
   /**
+   * Returns the value if this collection's single item is of the specified type.
+   * <p>
+   * This method implements the FHIRPath {@code as()} function behavior:
+   * <ul>
+   *   <li>Throws an error if the collection contains more than one item</li>
+   *   <li>Returns an empty collection if this collection is statically empty</li>
+   *   <li>Returns:
+   *     <ul>
+   *       <li>The input value where it matches the specified type</li>
+   *       <li>Empty collection where the value does not match the specified type</li>
+   *       <li>Empty collection where the input is empty at runtime</li>
+   *     </ul>
+   *   </li>
+   * </ul>
+   * <p>
+   * The implementation leverages {@link #asSingular()} to enforce the singular constraint and
+   * {@link #filterByType(TypeSpecifier)} to determine type matches. The result is computed lazily
+   * using Spark SQL operations, allowing efficient evaluation across large datasets.
+   *
+   * @param type the type specifier to check against
+   * @return the value if it matches the type, or empty collection otherwise
+   * @throws au.csiro.pathling.errors.InvalidUserInputError if the collection contains more than
+   *     one item
+   * @see <a href="https://hl7.org/fhirpath/#astype--type-specifier">FHIRPath as() function</a>
+   */
+  @Nonnull
+  public Collection asType(@Nonnull final TypeSpecifier type) {
+    // Static check for EmptyCollection - return empty immediately
+    if (this instanceof EmptyCollection) {
+      return EmptyCollection.getInstance();
+    } else {
+      // Enforce singular constraint first, then filter by type
+      return asSingular().filterByType(type);
+    }
+  }
+
+  /**
    * Gets a user-friendly representation of the current collection that can be used to refer to it
    * in user errors.
    *
