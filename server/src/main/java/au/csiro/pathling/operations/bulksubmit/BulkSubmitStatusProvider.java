@@ -17,20 +17,26 @@
 
 package au.csiro.pathling.operations.bulksubmit;
 
-import au.csiro.pathling.async.AsyncSupported;
-import au.csiro.pathling.async.PreAsyncValidation;
+import au.csiro.pathling.async.Job;
+import au.csiro.pathling.async.JobRegistry;
+import au.csiro.pathling.async.ProcessingNotCompletedException;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
-import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
-import java.util.List;
+import jakarta.annotation.Nullable;
+import jakarta.servlet.http.HttpServletResponse;
+import java.util.concurrent.ExecutionException;
 import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.Identifier;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.StringType;
 import org.springframework.stereotype.Component;
 
@@ -42,21 +48,10 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Slf4j
-public class BulkSubmitStatusProvider
-    implements PreAsyncValidation<BulkSubmitStatusProvider.BulkSubmitStatusRequest> {
+public class BulkSubmitStatusProvider {
 
-  /**
-   * Holds the validated parameters for a bulk submit status request.
-   *
-   * @param submissionId The submission ID to check status for.
-   * @param submitter The submitter identifier.
-   */
-  record BulkSubmitStatusRequest(
-      @Nonnull String submissionId,
-      @Nonnull SubmitterIdentifier submitter
-  ) {
-
-  }
+  private static final int MAX_JOB_WAIT_ATTEMPTS = 10;
+  private static final long JOB_WAIT_INTERVAL_MS = 500;
 
   @Nonnull
   private final SubmissionRegistry submissionRegistry;
@@ -64,35 +59,41 @@ public class BulkSubmitStatusProvider
   @Nonnull
   private final BulkSubmitResultBuilder resultBuilder;
 
+  @Nullable
+  private final JobRegistry jobRegistry;
+
   /**
    * Creates a new BulkSubmitStatusProvider.
    *
    * @param submissionRegistry The registry for tracking submissions.
    * @param resultBuilder The builder for generating result manifests.
+   * @param jobRegistry The job registry for looking up async jobs (may be null if async is
+   *     disabled).
    */
   public BulkSubmitStatusProvider(
       @Nonnull final SubmissionRegistry submissionRegistry,
-      @Nonnull final BulkSubmitResultBuilder resultBuilder
+      @Nonnull final BulkSubmitResultBuilder resultBuilder,
+      @Nullable final JobRegistry jobRegistry
   ) {
     this.submissionRegistry = submissionRegistry;
     this.resultBuilder = resultBuilder;
+    this.jobRegistry = jobRegistry;
   }
 
   /**
    * The $bulk-submit-status operation endpoint.
    * <p>
-   * When called with {@code Prefer: respond-async}, this operation integrates with the async Job
-   * framework. The method blocks until the submission completes, while the framework handles
-   * returning 202 Accepted with a Content-Location header pointing to the $job polling endpoint.
+   * This operation returns a 202 Accepted response with a Content-Location header pointing to the
+   * $job endpoint for polling progress. The Job is created by BulkSubmitExecutor when processing
+   * begins. Clients should poll the $job endpoint to track progress and retrieve the final result.
    *
    * @param submissionId The submission ID to check status for.
    * @param submitter The submitter identifier.
    * @param requestDetails The servlet request details.
-   * @return A Binary resource containing the status manifest JSON.
+   * @return A Binary resource containing the status manifest JSON (when complete).
    */
   @Operation(name = "$bulk-submit-status")
   @OperationAccess("bulk-submit")
-  @AsyncSupported
   @Nonnull
   public Binary bulkSubmitStatusOperation(
       @OperationParam(name = "submissionId") final StringType submissionId,
@@ -115,24 +116,43 @@ public class BulkSubmitStatusProvider
         submitter.getValue()
     );
 
-    // Block until the submission completes. The async framework handles returning 202 with
-    // Content-Location pointing to $job while this method is running.
-    Submission submission = getSubmission(submitterIdentifier, submissionId.getValue());
-    while (submission.state() == SubmissionState.PENDING
-        || submission.state() == SubmissionState.PROCESSING) {
-      log.debug("Submission {} still processing, waiting...", submission.submissionId());
-      try {
-        Thread.sleep(1000);
-      } catch (final InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new RuntimeException("Status check interrupted", e);
-      }
-      submission = getSubmission(submitterIdentifier, submissionId.getValue());
+    // Look up the submission.
+    final Submission submission = getSubmission(submitterIdentifier, submissionId.getValue());
+
+    // If the submission has completed or failed, return the result directly.
+    if (submission.state() == SubmissionState.COMPLETED
+        || submission.state() == SubmissionState.COMPLETED_WITH_ERRORS
+        || submission.state() == SubmissionState.ABORTED) {
+      return handleCompletedSubmission(submission, requestDetails.getFhirServerBase());
     }
 
-    log.debug("Submission {} completed with state: {}", submission.submissionId(),
-        submission.state());
+    // If async is enabled and the submission has a job ID, redirect to the job endpoint.
+    if (jobRegistry != null && submission.jobId() != null) {
+      return redirectToJob(submission.jobId(), requestDetails);
+    }
 
+    // If no job ID yet (executor hasn't started), wait briefly for it to be created.
+    final String jobId = waitForJobId(submitterIdentifier, submissionId.getValue());
+    if (jobId != null) {
+      return redirectToJob(jobId, requestDetails);
+    }
+
+    // If we still don't have a job ID, return 202 with Retry-After.
+    log.warn("No job ID available for submission {}, returning 202 with Retry-After",
+        submissionId.getValue());
+    final HttpServletResponse response = requestDetails.getServletResponse();
+    response.setHeader("Retry-After", "5");
+    throw new ProcessingNotCompletedException(
+        "Submission processing has not yet started",
+        buildRetryOutcome()
+    );
+  }
+
+  @Nonnull
+  private Binary handleCompletedSubmission(
+      @Nonnull final Submission submission,
+      @Nonnull final String fhirServerBase
+  ) {
     // Check for error state and throw exception with error details.
     if (submission.state() == SubmissionState.COMPLETED_WITH_ERRORS) {
       final String errorMessage = submission.errorMessage() != null
@@ -141,12 +161,85 @@ public class BulkSubmitStatusProvider
       throw new InternalErrorException("Submission failed: " + errorMessage);
     }
 
-    // Get the result if available.
+    if (submission.state() == SubmissionState.ABORTED) {
+      throw new InternalErrorException("Submission was aborted");
+    }
+
+    // Get the result and build the manifest.
     final SubmissionResult result = submissionRegistry.getResult(submission.submissionId())
         .orElse(null);
 
-    return resultBuilder.buildStatusManifest(submission, result,
-        requestDetails.getFhirServerBase());
+    return resultBuilder.buildStatusManifest(submission, result, fhirServerBase);
+  }
+
+  @Nonnull
+  private Binary redirectToJob(
+      @Nonnull final String jobId,
+      @Nonnull final ServletRequestDetails requestDetails
+  ) {
+    // Check if the job has completed.
+    final Job<?> job = jobRegistry.get(jobId);
+    if (job != null && job.getResult().isDone()) {
+      // Job is done, return the result directly.
+      try {
+        final IBaseResource result = job.getResult().get();
+        if (result instanceof Binary binary) {
+          return binary;
+        }
+        // Unexpected result type - should not happen.
+        throw new InternalErrorException("Unexpected job result type: " + result.getClass());
+      } catch (final InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new InternalErrorException("Interrupted while getting job result", e);
+      } catch (final ExecutionException e) {
+        // Job failed, unwrap and rethrow the cause.
+        final Throwable cause = e.getCause();
+        if (cause instanceof RuntimeException runtimeException) {
+          throw runtimeException;
+        }
+        throw new InternalErrorException("Job execution failed", cause);
+      }
+    }
+
+    // Job is still running, return 202 with Content-Location.
+    final HttpServletResponse response = requestDetails.getServletResponse();
+    final String jobUrl = requestDetails.getFhirServerBase() + "/$job?id=" + jobId;
+    response.setHeader("Content-Location", jobUrl);
+
+    throw new ProcessingNotCompletedException(
+        "Processing",
+        buildProcessingOutcome(jobUrl)
+    );
+  }
+
+  @Nullable
+  private String waitForJobId(
+      @Nonnull final SubmitterIdentifier submitterIdentifier,
+      @Nonnull final String submissionId
+  ) {
+    // Wait briefly for the job ID to be created by BulkSubmitExecutor.
+    for (int i = 0; i < MAX_JOB_WAIT_ATTEMPTS; i++) {
+      try {
+        Thread.sleep(JOB_WAIT_INTERVAL_MS);
+      } catch (final InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return null;
+      }
+
+      final Submission submission = submissionRegistry.get(submitterIdentifier, submissionId)
+          .orElse(null);
+      if (submission != null && submission.jobId() != null) {
+        return submission.jobId();
+      }
+
+      // If submission completed while we were waiting, stop waiting.
+      if (submission != null && (submission.state() == SubmissionState.COMPLETED
+          || submission.state() == SubmissionState.COMPLETED_WITH_ERRORS
+          || submission.state() == SubmissionState.ABORTED)) {
+        return null;
+      }
+    }
+    return null;
   }
 
   @Nonnull
@@ -160,38 +253,26 @@ public class BulkSubmitStatusProvider
         ));
   }
 
-  @Override
   @Nonnull
-  public PreAsyncValidationResult<BulkSubmitStatusRequest> preAsyncValidate(
-      @Nonnull final ServletRequestDetails servletRequestDetails,
-      @Nonnull final Object[] params
-  ) throws InvalidRequestException {
-    final StringType submissionIdParam = (StringType) params[0];
-    final Identifier submitterParam = (Identifier) params[1];
-
-    // Validate parameters early to fail fast before async processing.
-    if (submissionIdParam == null || submissionIdParam.isEmpty()) {
-      throw new InvalidRequestException("Missing required parameter: submissionId");
-    }
-    if (submitterParam == null || submitterParam.getSystem() == null
-        || submitterParam.getValue() == null) {
-      throw new InvalidRequestException("Missing required parameter: submitter");
-    }
-
-    final BulkSubmitStatusRequest request = new BulkSubmitStatusRequest(
-        submissionIdParam.getValue(),
-        new SubmitterIdentifier(submitterParam.getSystem(), submitterParam.getValue())
-    );
-
-    return new PreAsyncValidationResult<>(request, List.of());
+  private static OperationOutcome buildProcessingOutcome(@Nonnull final String jobUrl) {
+    final OperationOutcome outcome = new OperationOutcome();
+    outcome.addIssue()
+        .setCode(IssueType.INFORMATIONAL)
+        .setSeverity(IssueSeverity.INFORMATION)
+        .setDiagnostics("Job accepted for processing, see the Content-Location header for the "
+            + "URL at which status can be queried: " + jobUrl);
+    return outcome;
   }
 
-  @Override
   @Nonnull
-  public String computeCacheKeyComponent(@Nonnull final BulkSubmitStatusRequest request) {
-    // Include submissionId and submitter in the cache key so each unique submission gets its own
-    // job. This prevents different clients' requests from sharing the same cached job.
-    return request.submitter().toKey() + "/" + request.submissionId();
+  private static OperationOutcome buildRetryOutcome() {
+    final OperationOutcome outcome = new OperationOutcome();
+    outcome.addIssue()
+        .setCode(IssueType.INFORMATIONAL)
+        .setSeverity(IssueSeverity.INFORMATION)
+        .setDiagnostics("Submission processing has not yet started. Please retry after a few "
+            + "seconds.");
+    return outcome;
   }
 
 }

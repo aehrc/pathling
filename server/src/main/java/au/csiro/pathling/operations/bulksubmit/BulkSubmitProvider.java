@@ -89,13 +89,15 @@ public class BulkSubmitProvider {
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     final BulkSubmitRequest request = validator.validateAndExtract(requestDetails, parameters);
     final Optional<String> ownerId = getCurrentUserId(authentication);
-    return handleSubmission(request, ownerId);
+    final String fhirServerBase = requestDetails.getFhirServerBase();
+    return handleSubmission(request, ownerId, fhirServerBase);
   }
 
   @Nonnull
   private Parameters handleSubmission(
       @Nonnull final BulkSubmitRequest request,
-      @Nonnull final Optional<String> ownerId
+      @Nonnull final Optional<String> ownerId,
+      @Nonnull final String fhirServerBase
   ) {
     final Optional<Submission> existingSubmission = submissionRegistry.get(
         request.submitter(),
@@ -103,9 +105,9 @@ public class BulkSubmitProvider {
     );
 
     if (request.isInProgress()) {
-      return handleInProgressSubmission(request, existingSubmission, ownerId);
+      return handleInProgressSubmission(request, existingSubmission, ownerId, fhirServerBase);
     } else if (request.isComplete()) {
-      return handleCompleteSubmission(request, existingSubmission, ownerId);
+      return handleCompleteSubmission(request, existingSubmission, ownerId, fhirServerBase);
     } else if (request.isAborted()) {
       return handleAbortedSubmission(request, existingSubmission);
     } else {
@@ -117,7 +119,8 @@ public class BulkSubmitProvider {
   private Parameters handleInProgressSubmission(
       @Nonnull final BulkSubmitRequest request,
       @Nonnull final Optional<Submission> existingSubmission,
-      @Nonnull final Optional<String> ownerId
+      @Nonnull final Optional<String> ownerId,
+      @Nonnull final String fhirServerBase
   ) {
     // For "in-progress" status, create or update the submission.
     // Per the Argonaut spec, processing should begin immediately when a manifest URL is provided.
@@ -170,7 +173,7 @@ public class BulkSubmitProvider {
       log.info("Submission {} starting processing for manifest: {}", request.submissionId(),
           request.manifestUrl());
       if (executor != null) {
-        executor.execute(submission, request.fileRequestHeaders());
+        executor.execute(submission, request.fileRequestHeaders(), fhirServerBase);
       } else {
         log.warn("BulkSubmitExecutor not available - submission {} will not be processed",
             request.submissionId());
@@ -184,7 +187,8 @@ public class BulkSubmitProvider {
   private Parameters handleCompleteSubmission(
       @Nonnull final BulkSubmitRequest request,
       @Nonnull final Optional<Submission> existingSubmission,
-      @Nonnull final Optional<String> ownerId
+      @Nonnull final Optional<String> ownerId,
+      @Nonnull final String fhirServerBase
   ) {
     // For "complete" status, the provider is signalling that no more manifests will be added.
     // Processing may already be in progress from a previous "in-progress" request with manifest.
@@ -242,7 +246,7 @@ public class BulkSubmitProvider {
       log.info("Submission {} marked complete, starting processing", request.submissionId());
 
       if (executor != null) {
-        executor.execute(submission, request.fileRequestHeaders());
+        executor.execute(submission, request.fileRequestHeaders(), fhirServerBase);
       } else {
         log.warn("BulkSubmitExecutor not available - submission {} will not be processed",
             request.submissionId());

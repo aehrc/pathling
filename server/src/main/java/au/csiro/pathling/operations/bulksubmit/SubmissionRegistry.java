@@ -104,6 +104,27 @@ public class SubmissionRegistry {
   }
 
   /**
+   * Updates the job ID for a submission.
+   *
+   * @param submitter The submitter identifier.
+   * @param submissionId The submission ID.
+   * @param jobId The job ID to associate with the submission.
+   * @return The updated submission, or empty if the submission was not found.
+   */
+  @Nonnull
+  public Optional<Submission> updateJobId(
+      @Nonnull final SubmitterIdentifier submitter,
+      @Nonnull final String submissionId,
+      @Nonnull final String jobId
+  ) {
+    return get(submitter, submissionId).map(submission -> {
+      final Submission updated = submission.withJobId(jobId);
+      put(updated);
+      return updated;
+    });
+  }
+
+  /**
    * Lists all submissions for a given submitter.
    *
    * @param submitter The submitter identifier.

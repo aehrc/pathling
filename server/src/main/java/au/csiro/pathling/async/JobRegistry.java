@@ -92,6 +92,22 @@ public class JobRegistry {
     return (Job<T>) jobsById.get(id);
   }
 
+  /**
+   * Registers a job directly in the registry without using tags. This is useful for jobs created
+   * outside the normal async request flow, such as bulk submit processing jobs.
+   *
+   * @param job The job to register.
+   * @param <T> The type of the job's pre-async validation result.
+   */
+  public synchronized <T> void register(@Nonnull final Job<T> job) {
+    final Job<?> existing = jobsById.get(job.getId());
+    if (existing != null) {
+      log.warn("Replacing existing job with id: {}", job.getId());
+    }
+    jobsById.put(job.getId(), job);
+    log.debug("Registered job: {}", job.getId());
+  }
+
   public synchronized <T> boolean remove(@Nonnull Job<T> job) {
     boolean removed = jobsById.remove(job.getId(), job);
     if (!removed) {

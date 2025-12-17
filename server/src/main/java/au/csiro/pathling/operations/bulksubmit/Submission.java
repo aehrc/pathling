@@ -40,6 +40,7 @@ import java.util.Optional;
  * @param ownerId The identifier of the user who owns this submission, or null if not applicable.
  * @param metadata Optional metadata associated with the submission.
  * @param errorMessage Error message if the submission failed.
+ * @param jobId The ID of the async Job processing this submission, for progress tracking.
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
  */
@@ -54,7 +55,8 @@ public record Submission(
     @Nullable String completedAt,
     @Nullable String ownerId,
     @Nullable SubmissionMetadata metadata,
-    @Nullable String errorMessage
+    @Nullable String errorMessage,
+    @Nullable String jobId
 ) {
 
   private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_INSTANT;
@@ -94,6 +96,7 @@ public record Submission(
         null,
         ownerId.orElse(null),
         null,
+        null,
         null
     );
   }
@@ -122,7 +125,8 @@ public record Submission(
         newCompletedAt,
         ownerId,
         metadata,
-        errorMessage
+        errorMessage,
+        jobId
     );
   }
 
@@ -151,7 +155,8 @@ public record Submission(
         completedAt,
         ownerId,
         metadata,
-        errorMessage
+        errorMessage,
+        jobId
     );
   }
 
@@ -174,7 +179,32 @@ public record Submission(
         now(),
         ownerId,
         metadata,
-        errorMessage
+        errorMessage,
+        jobId
+    );
+  }
+
+  /**
+   * Creates a copy of this submission with a job ID for progress tracking.
+   *
+   * @param jobId The ID of the async Job processing this submission.
+   * @return A new submission with the job ID set.
+   */
+  @Nonnull
+  public Submission withJobId(@Nonnull final String jobId) {
+    return new Submission(
+        submissionId,
+        submitter,
+        state,
+        manifestUrl,
+        replacesManifestUrl,
+        fhirBaseUrl,
+        createdAt,
+        completedAt,
+        ownerId,
+        metadata,
+        errorMessage,
+        jobId
     );
   }
 

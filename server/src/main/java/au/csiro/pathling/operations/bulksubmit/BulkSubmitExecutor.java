@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.operations.bulksubmit;
 
+import au.csiro.pathling.async.Job;
+import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.config.BulkSubmitConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -27,6 +29,7 @@ import au.csiro.pathling.operations.bulkimport.ImportRequest;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.JsonNode;
 import au.csiro.pathling.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -45,10 +48,14 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.springframework.stereotype.Component;
 
 /**
@@ -74,6 +81,15 @@ public class BulkSubmitExecutor {
   private final ServerConfiguration serverConfiguration;
 
   @Nonnull
+  private final BulkSubmitResultBuilder resultBuilder;
+
+  @Nullable
+  private final JobRegistry jobRegistry;
+
+  @Nullable
+  private final SparkSession sparkSession;
+
+  @Nonnull
   private final ObjectMapper objectMapper;
 
   @Nonnull
@@ -85,15 +101,25 @@ public class BulkSubmitExecutor {
    * @param importExecutor The import executor for processing files.
    * @param submissionRegistry The submission registry for tracking state.
    * @param serverConfiguration The server configuration.
+   * @param resultBuilder The builder for creating status manifests.
+   * @param jobRegistry The job registry for tracking async jobs (may be null if async is disabled).
+   * @param sparkSession The Spark session for setting job groups (may be null if async is
+   *     disabled).
    */
   public BulkSubmitExecutor(
       @Nonnull final ImportExecutor importExecutor,
       @Nonnull final SubmissionRegistry submissionRegistry,
-      @Nonnull final ServerConfiguration serverConfiguration
+      @Nonnull final ServerConfiguration serverConfiguration,
+      @Nonnull final BulkSubmitResultBuilder resultBuilder,
+      @Nullable final JobRegistry jobRegistry,
+      @Nullable final SparkSession sparkSession
   ) {
     this.importExecutor = importExecutor;
     this.submissionRegistry = submissionRegistry;
     this.serverConfiguration = serverConfiguration;
+    this.resultBuilder = resultBuilder;
+    this.jobRegistry = jobRegistry;
+    this.sparkSession = sparkSession;
     this.objectMapper = new ObjectMapper();
     this.httpClient = HttpClient.newBuilder()
         .connectTimeout(HTTP_TIMEOUT)
@@ -101,27 +127,62 @@ public class BulkSubmitExecutor {
   }
 
   /**
-   * Executes the bulk submission processing asynchronously.
+   * Executes the bulk submission processing asynchronously. Creates a Job in the JobRegistry for
+   * progress tracking if async support is enabled.
    *
    * @param submission The submission to process.
    * @param fileRequestHeaders Custom HTTP headers to include when downloading files.
+   * @param fhirServerBase The FHIR server base URL for building result manifests.
    */
   public void execute(
       @Nonnull final Submission submission,
-      @Nonnull final List<FileRequestHeader> fileRequestHeaders
+      @Nonnull final List<FileRequestHeader> fileRequestHeaders,
+      @Nonnull final String fhirServerBase
   ) {
+    // Create a Job for progress tracking if async is enabled.
+    final String jobId;
+    final CompletableFuture<IBaseResource> resultFuture;
+
+    if (jobRegistry != null && sparkSession != null) {
+      jobId = UUID.randomUUID().toString();
+      resultFuture = new CompletableFuture<>();
+
+      // Create and register the Job.
+      final Optional<String> ownerId = Optional.ofNullable(submission.ownerId());
+      final Job<Object> job = new Job<>(jobId, "bulk-submit", resultFuture, ownerId);
+      jobRegistry.register(job);
+
+      // Store the job ID in the submission.
+      submissionRegistry.updateJobId(submission.submitter(), submission.submissionId(), jobId);
+      log.info("Created job {} for submission {}", jobId, submission.submissionId());
+    } else {
+      jobId = null;
+      resultFuture = null;
+    }
+
     // Execute asynchronously to not block the request thread.
-    CompletableFuture.runAsync(() -> executeInternal(submission, fileRequestHeaders));
+    CompletableFuture.runAsync(
+        () -> executeInternal(submission, fileRequestHeaders, fhirServerBase, jobId, resultFuture)
+    );
   }
 
   private void executeInternal(
       @Nonnull final Submission submission,
-      @Nonnull final List<FileRequestHeader> fileRequestHeaders
+      @Nonnull final List<FileRequestHeader> fileRequestHeaders,
+      @Nonnull final String fhirServerBase,
+      @Nullable final String jobId,
+      @Nullable final CompletableFuture<IBaseResource> resultFuture
   ) {
     log.info("Starting processing for submission: {}", submission.submissionId());
 
     final List<OutputFile> outputFiles = new ArrayList<>();
     Path stagingDir = null;
+
+    // Set Spark job group for progress tracking if a job ID was provided.
+    if (jobId != null && sparkSession != null) {
+      sparkSession.sparkContext().setJobGroup(jobId, jobId, true);
+      log.debug("Set Spark job group to {}", jobId);
+    }
 
     try {
       // Fetch and parse the manifest.
@@ -152,12 +213,11 @@ public class BulkSubmitExecutor {
       );
 
       // Execute the import with the bulk submit allowable sources.
-      final String jobId = submission.submissionId();
       final BulkSubmitConfiguration bulkSubmitConfig = serverConfiguration.getBulkSubmit();
       final List<String> allowableSources = bulkSubmitConfig != null
                                             ? bulkSubmitConfig.getAllowableSources()
                                             : List.of();
-      importExecutor.execute(importRequest, jobId, allowableSources);
+      importExecutor.execute(importRequest, submission.submissionId(), allowableSources);
 
       // Build output file list.
       for (final Map.Entry<String, Collection<String>> entry : fileUrls.entrySet()) {
@@ -174,15 +234,26 @@ public class BulkSubmitExecutor {
       );
 
       // Store the result.
-      final SubmissionResult result = new SubmissionResult(
+      final SubmissionResult submissionResult = new SubmissionResult(
           submission.submissionId(),
           ISO_FORMATTER.format(Instant.now()),
           outputFiles,
           false
       );
-      submissionRegistry.putResult(result);
+      submissionRegistry.putResult(submissionResult);
 
       log.info("Submission {} completed successfully", submission.submissionId());
+
+      // Complete the job with the status manifest if async is enabled.
+      if (resultFuture != null) {
+        final Submission completedSubmission = submissionRegistry.get(
+            submission.submitter(), submission.submissionId()
+        ).orElse(submission.withState(SubmissionState.COMPLETED));
+        final IBaseResource statusManifest = resultBuilder.buildStatusManifest(
+            completedSubmission, submissionResult, fhirServerBase
+        );
+        resultFuture.complete(statusManifest);
+      }
 
     } catch (final Exception e) {
       log.error("Failed to process submission {}: {}", submission.submissionId(), e.getMessage(),
@@ -191,7 +262,17 @@ public class BulkSubmitExecutor {
       // Update submission with error message.
       final Submission updatedSubmission = submission.withError(e.getMessage());
       submissionRegistry.put(updatedSubmission);
+
+      // Complete the job with an exception if async is enabled.
+      if (resultFuture != null) {
+        resultFuture.completeExceptionally(e);
+      }
     } finally {
+      // Clear Spark job group.
+      if (sparkSession != null) {
+        sparkSession.sparkContext().clearJobGroup();
+      }
+
       // Clean up staging directory.
       if (stagingDir != null) {
         cleanupStagingDirectory(stagingDir);
