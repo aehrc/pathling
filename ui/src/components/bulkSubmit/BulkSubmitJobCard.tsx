@@ -5,7 +5,7 @@
  */
 
 import { Cross2Icon, ReloadIcon } from "@radix-ui/react-icons";
-import { Badge, Box, Button, Card, Flex, Text } from "@radix-ui/themes";
+import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
 import { useJobs } from "../../contexts/JobContext";
 import { useBulkSubmitJobPolling } from "../../hooks/useBulkSubmitJobPolling";
 import type { BulkSubmitJob } from "../../types/job";
@@ -54,6 +54,7 @@ export function BulkSubmitJobCard({ job, onAbort }: BulkSubmitJobCardProps) {
   });
 
   const isActive = job.status === "pending" || job.status === "in_progress";
+  const showProgress = isActive && job.progress !== null;
 
   return (
     <Card>
@@ -87,7 +88,21 @@ export function BulkSubmitJobCard({ job, onAbort }: BulkSubmitJobCardProps) {
           )}
         </Flex>
 
-        {isActive && (
+        {showProgress && (
+          <Box>
+            <Flex justify="between" mb="1">
+              <Text size="1" color="gray">
+                Progress
+              </Text>
+              <Text size="1" color="gray">
+                {job.progress}%
+              </Text>
+            </Flex>
+            <Progress value={job.progress ?? 0} />
+          </Box>
+        )}
+
+        {isActive && !showProgress && (
           <Flex align="center" gap="2">
             <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
             <Text size="2" color="gray">
