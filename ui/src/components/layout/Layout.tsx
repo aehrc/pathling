@@ -57,7 +57,7 @@ export function Layout() {
           backgroundColor: "var(--color-background)",
         }}
       >
-        <Container size="4">
+        <Container size="4" px={{ initial: "4", md: "0" }}>
           <Flex justify="between" align="center" py="3">
             <Flex align="center" gap="5">
               <picture>
@@ -110,7 +110,7 @@ export function Layout() {
         </Container>
       </Box>
       <Box style={{ flex: 1 }}>
-        <Container size="4" py="6">
+        <Container size="4" py="6" px={{ initial: "4", md: "0" }}>
           <Outlet />
         </Container>
       </Box>
