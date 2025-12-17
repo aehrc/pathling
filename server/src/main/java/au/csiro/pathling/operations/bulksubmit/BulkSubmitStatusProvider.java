@@ -18,13 +18,16 @@
 package au.csiro.pathling.operations.bulksubmit;
 
 import au.csiro.pathling.async.AsyncSupported;
+import au.csiro.pathling.async.PreAsyncValidation;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Binary;
 import org.hl7.fhir.r4.model.Identifier;
@@ -39,7 +42,21 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Slf4j
-public class BulkSubmitStatusProvider {
+public class BulkSubmitStatusProvider
+    implements PreAsyncValidation<BulkSubmitStatusProvider.BulkSubmitStatusRequest> {
+
+  /**
+   * Holds the validated parameters for a bulk submit status request.
+   *
+   * @param submissionId The submission ID to check status for.
+   * @param submitter The submitter identifier.
+   */
+  record BulkSubmitStatusRequest(
+      @Nonnull String submissionId,
+      @Nonnull SubmitterIdentifier submitter
+  ) {
+
+  }
 
   @Nonnull
   private final SubmissionRegistry submissionRegistry;
@@ -141,6 +158,40 @@ public class BulkSubmitStatusProvider {
         .orElseThrow(() -> new ResourceNotFoundException(
             "Submission not found: " + submissionId
         ));
+  }
+
+  @Override
+  @Nonnull
+  public PreAsyncValidationResult<BulkSubmitStatusRequest> preAsyncValidate(
+      @Nonnull final ServletRequestDetails servletRequestDetails,
+      @Nonnull final Object[] params
+  ) throws InvalidRequestException {
+    final StringType submissionIdParam = (StringType) params[0];
+    final Identifier submitterParam = (Identifier) params[1];
+
+    // Validate parameters early to fail fast before async processing.
+    if (submissionIdParam == null || submissionIdParam.isEmpty()) {
+      throw new InvalidRequestException("Missing required parameter: submissionId");
+    }
+    if (submitterParam == null || submitterParam.getSystem() == null
+        || submitterParam.getValue() == null) {
+      throw new InvalidRequestException("Missing required parameter: submitter");
+    }
+
+    final BulkSubmitStatusRequest request = new BulkSubmitStatusRequest(
+        submissionIdParam.getValue(),
+        new SubmitterIdentifier(submitterParam.getSystem(), submitterParam.getValue())
+    );
+
+    return new PreAsyncValidationResult<>(request, List.of());
+  }
+
+  @Override
+  @Nonnull
+  public String computeCacheKeyComponent(@Nonnull final BulkSubmitStatusRequest request) {
+    // Include submissionId and submitter in the cache key so each unique submission gets its own
+    // job. This prevents different clients' requests from sharing the same cached job.
+    return request.submitter().toKey() + "/" + request.submissionId();
   }
 
 }
