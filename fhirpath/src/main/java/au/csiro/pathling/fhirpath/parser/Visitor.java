@@ -24,6 +24,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.operator.FhirPathBinaryOperator;
+import au.csiro.pathling.fhirpath.operator.AsOperator;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import au.csiro.pathling.fhirpath.operator.CollectionOperations;
 import au.csiro.pathling.fhirpath.operator.IsOperator;
@@ -234,13 +235,7 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
     // Determine which operator: 'is' or 'as'
     final String operatorText = ctx.children.get(1).toString();
 
-    // Only 'is' is implemented for now
-    if (!operatorText.equals("is")) {
-      throw new UnsupportedFhirPathFeatureError(
-          "Type operator '" + operatorText + "' is not yet supported");
-    }
-
-    // Parse the left expression (the value to check)
+    // Parse the left expression (the value to check/cast)
     final FhirPath leftPath = new Visitor().visit(ctx.expression());
 
     // Parse the type specifier using TypeSpecifierVisitor
@@ -248,8 +243,13 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
     final FhirPath rightPath = TypeSpecifierVisitor.defaultVisitor()
         .visit(ctx.typeSpecifier());
 
-    // Create the IsOperator
-    final FhirPathBinaryOperator operator = new IsOperator();
+    // Create the appropriate operator based on operator text
+    final FhirPathBinaryOperator operator = switch (operatorText) {
+      case "is" -> new IsOperator();
+      case "as" -> new AsOperator();
+      default -> throw new UnsupportedFhirPathFeatureError(
+          "Unknown type operator: " + operatorText);
+    };
 
     // Use the standard EvalOperator - it will call invokeWithPaths()
     return new EvalOperator(leftPath, rightPath, operator);

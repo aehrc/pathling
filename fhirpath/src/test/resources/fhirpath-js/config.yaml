@@ -528,6 +528,7 @@ excludeSet:
           - "Patient.active.is(Boolean).not()"
           - "Patient.active.is(System.Boolean).not()"
           - "1 year.as(FHIR.Quantity)"
+          - "1 year as FHIR.Quantity"
       - title: "Mixed-type collections handled as empty instead of error"
         type: wontfix
         outcome: failure
@@ -541,6 +542,7 @@ excludeSet:
           This is a test harness limitation, not a functional issue.
         any:
           - "mixedTypeVals.as(Integer)"
+          - "mixedTypeVals as Integer"
       - title: "Operator precedence of is/as causes union type errors"
         type: wontfix
         outcome: error
