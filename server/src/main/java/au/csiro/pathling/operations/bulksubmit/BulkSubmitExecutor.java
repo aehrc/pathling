@@ -33,15 +33,21 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -98,20 +104,28 @@ public class BulkSubmitExecutor {
    * Executes the bulk submission processing asynchronously.
    *
    * @param submission The submission to process.
+   * @param fileRequestHeaders Custom HTTP headers to include when downloading files.
    */
-  public void execute(@Nonnull final Submission submission) {
+  public void execute(
+      @Nonnull final Submission submission,
+      @Nonnull final List<FileRequestHeader> fileRequestHeaders
+  ) {
     // Execute asynchronously to not block the request thread.
-    CompletableFuture.runAsync(() -> executeInternal(submission));
+    CompletableFuture.runAsync(() -> executeInternal(submission, fileRequestHeaders));
   }
 
-  private void executeInternal(@Nonnull final Submission submission) {
+  private void executeInternal(
+      @Nonnull final Submission submission,
+      @Nonnull final List<FileRequestHeader> fileRequestHeaders
+  ) {
     log.info("Starting processing for submission: {}", submission.submissionId());
 
     final List<OutputFile> outputFiles = new ArrayList<>();
+    Path stagingDir = null;
 
     try {
       // Fetch and parse the manifest.
-      final JsonNode manifest = fetchManifest(submission);
+      final JsonNode manifest = fetchManifest(submission, fileRequestHeaders);
 
       // Extract file URLs from the manifest.
       final Map<String, Collection<String>> fileUrls = extractUrlsFromManifest(manifest);
@@ -120,13 +134,19 @@ public class BulkSubmitExecutor {
         throw new InvalidUserInputError("No files found in manifest");
       }
 
-      // Create ImportRequest and delegate to ImportExecutor.
+      // Create staging directory and download files.
+      stagingDir = createStagingDirectory(submission.submissionId());
+      final Map<String, Collection<String>> localFilePaths = downloadFiles(
+          fileUrls, stagingDir, fileRequestHeaders
+      );
+
+      // Create ImportRequest with local file paths and delegate to ImportExecutor.
       final ImportRequest importRequest = new ImportRequest(
           submission.submissionId(),
           submission.fhirBaseUrl() != null
           ? submission.fhirBaseUrl()
           : "unknown",
-          fileUrls,
+          localFilePaths,
           SaveMode.MERGE,
           ImportFormat.NDJSON
       );
@@ -171,11 +191,19 @@ public class BulkSubmitExecutor {
       // Update submission with error message.
       final Submission updatedSubmission = submission.withError(e.getMessage());
       submissionRegistry.put(updatedSubmission);
+    } finally {
+      // Clean up staging directory.
+      if (stagingDir != null) {
+        cleanupStagingDirectory(stagingDir);
+      }
     }
   }
 
   @Nonnull
-  private JsonNode fetchManifest(@Nonnull final Submission submission) throws IOException {
+  private JsonNode fetchManifest(
+      @Nonnull final Submission submission,
+      @Nonnull final List<FileRequestHeader> fileRequestHeaders
+  ) throws IOException {
     final String manifestUrl = submission.manifestUrl();
     if (manifestUrl == null) {
       throw new InvalidUserInputError("Manifest URL is required");
@@ -183,11 +211,17 @@ public class BulkSubmitExecutor {
 
     log.info("Fetching manifest from: {}", manifestUrl);
 
-    final HttpRequest request = HttpRequest.newBuilder()
+    final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
         .uri(URI.create(manifestUrl))
         .timeout(HTTP_TIMEOUT)
-        .GET()
-        .build();
+        .GET();
+
+    // Apply custom headers.
+    for (final FileRequestHeader header : fileRequestHeaders) {
+      requestBuilder.header(header.name(), header.value());
+    }
+
+    final HttpRequest request = requestBuilder.build();
 
     try {
       final HttpResponse<InputStream> response = httpClient.send(
@@ -245,6 +279,109 @@ public class BulkSubmitExecutor {
 
     log.info("Extracted URLs for resource types: {}", result.keySet());
     return result;
+  }
+
+  @Nonnull
+  private Path createStagingDirectory(@Nonnull final String submissionId) throws IOException {
+    final BulkSubmitConfiguration config = serverConfiguration.getBulkSubmit();
+    final String baseStagingDir = config != null
+                                  ? config.getStagingDirectory()
+                                  : "/usr/local/staging/bulk-submit-fetch";
+
+    final Path stagingDir = Path.of(baseStagingDir, submissionId);
+    Files.createDirectories(stagingDir);
+    log.info("Created staging directory: {}", stagingDir);
+    return stagingDir;
+  }
+
+  @Nonnull
+  private Map<String, Collection<String>> downloadFiles(
+      @Nonnull final Map<String, Collection<String>> fileUrls,
+      @Nonnull final Path stagingDir,
+      @Nonnull final List<FileRequestHeader> fileRequestHeaders
+  ) throws IOException {
+    final Map<String, Collection<String>> localPaths = new HashMap<>();
+    final AtomicInteger fileCounter = new AtomicInteger(0);
+
+    for (final Map.Entry<String, Collection<String>> entry : fileUrls.entrySet()) {
+      final String resourceType = entry.getKey();
+      final Collection<String> urls = entry.getValue();
+      final Collection<String> localFiles = new ArrayList<>();
+
+      for (final String url : urls) {
+        final int fileNum = fileCounter.incrementAndGet();
+        final String fileName = resourceType + "-" + fileNum + ".ndjson";
+        final Path localPath = stagingDir.resolve(fileName);
+
+        downloadFile(url, localPath, fileRequestHeaders);
+        localFiles.add(localPath.toUri().toString());
+      }
+
+      localPaths.put(resourceType, localFiles);
+    }
+
+    return localPaths;
+  }
+
+  private void downloadFile(
+      @Nonnull final String url,
+      @Nonnull final Path destPath,
+      @Nonnull final List<FileRequestHeader> fileRequestHeaders
+  ) throws IOException {
+    log.debug("Downloading file from {} to {}", url, destPath);
+
+    final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+        .uri(URI.create(url))
+        .timeout(HTTP_TIMEOUT)
+        .GET();
+
+    // Apply custom headers.
+    for (final FileRequestHeader header : fileRequestHeaders) {
+      requestBuilder.header(header.name(), header.value());
+    }
+
+    final HttpRequest request = requestBuilder.build();
+
+    try {
+      final HttpResponse<InputStream> response = httpClient.send(
+          request,
+          HttpResponse.BodyHandlers.ofInputStream()
+      );
+
+      if (response.statusCode() != 200) {
+        throw new IOException("Failed to download file from " + url + ": HTTP "
+            + response.statusCode());
+      }
+
+      try (final InputStream body = response.body()) {
+        Files.copy(body, destPath, StandardCopyOption.REPLACE_EXISTING);
+      }
+
+      log.debug("Downloaded file to {}", destPath);
+    } catch (final InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IOException("File download was interrupted: " + url, e);
+    }
+  }
+
+  private void cleanupStagingDirectory(@Nonnull final Path stagingDir) {
+    try {
+      if (Files.exists(stagingDir)) {
+        try (final Stream<Path> walk = Files.walk(stagingDir)) {
+          walk.sorted(Comparator.reverseOrder())
+              .forEach(path -> {
+                try {
+                  Files.delete(path);
+                } catch (final IOException e) {
+                  log.warn("Failed to delete {}: {}", path, e.getMessage());
+                }
+              });
+        }
+        log.info("Cleaned up staging directory: {}", stagingDir);
+      }
+    } catch (final IOException e) {
+      log.warn("Failed to clean up staging directory {}: {}", stagingDir, e.getMessage());
+    }
   }
 
 }

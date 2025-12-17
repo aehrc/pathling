@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.bulksubmit;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.List;
 
 /**
  * Represents a request to the $bulk-submit operation.
@@ -31,6 +32,7 @@ import jakarta.annotation.Nullable;
  * @param fhirBaseUrl The base URL of the FHIR server that produced the manifest.
  * @param replacesManifestUrl The URL of a previous manifest that this submission replaces.
  * @param metadata Optional metadata associated with the submission.
+ * @param fileRequestHeaders Custom HTTP headers to include when downloading files.
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
  */
@@ -42,7 +44,8 @@ public record BulkSubmitRequest(
     @Nullable String manifestUrl,
     @Nullable String fhirBaseUrl,
     @Nullable String replacesManifestUrl,
-    @Nullable SubmissionMetadata metadata
+    @Nullable SubmissionMetadata metadata,
+    @Nonnull List<FileRequestHeader> fileRequestHeaders
 ) {
 
   /**

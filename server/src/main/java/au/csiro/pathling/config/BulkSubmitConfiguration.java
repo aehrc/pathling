@@ -45,6 +45,12 @@ public class BulkSubmitConfiguration {
   private List<String> allowableSources = new ArrayList<>();
 
   /**
+   * The directory to use for staging downloaded files before import.
+   */
+  @Nonnull
+  private String stagingDirectory = "/usr/local/staging/bulk-submit-fetch";
+
+  /**
    * Checks if a submitter is allowed to use the $bulk-submit operation.
    *
    * @param submitter The submitter to check.

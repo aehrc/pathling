@@ -18,7 +18,9 @@
 package au.csiro.pathling.operations.bulksubmit;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.head;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,6 +31,7 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +48,6 @@ import org.junit.jupiter.api.parallel.ResourceLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -64,6 +66,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @ResourceLock(value = "wiremock", mode = ResourceAccessMode.READ_WRITE)
 @ActiveProfiles("integration-test")
 @TestPropertySource(properties = {
+    "pathling.async.enabled=true",
     "pathling.bulk-submit.allowable-sources[0]=http://localhost",
     "pathling.bulk-submit.allowed-submitters[0].system=http://example.org/submitters",
     "pathling.bulk-submit.allowed-submitters[0].value=test-submitter"
@@ -83,6 +86,9 @@ class BulkSubmitOperationIT {
 
   @TempDir
   private static Path warehouseDir;
+
+  @TempDir
+  private static Path stagingDir;
 
   @BeforeAll
   static void setupWireMock() {
@@ -104,12 +110,14 @@ class BulkSubmitOperationIT {
     // Copy only Condition data - exclude Patient and Observation which will be imported.
     TestDataSetup.copyTestDataToTempDir(warehouseDir, "Condition");
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.toAbsolutePath());
+    registry.add("pathling.bulk-submit.staging-directory", stagingDir::toString);
   }
 
   @BeforeEach
   void setup() {
     webTestClient = webTestClient.mutate()
         .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
+        .responseTimeout(Duration.ofMinutes(2))
         .build();
 
     // Reset WireMock stubs before each test.
@@ -225,6 +233,72 @@ class BulkSubmitOperationIT {
     return params.toString();
   }
 
+  /**
+   * Builds a $bulk-submit request with file request headers.
+   *
+   * @param submissionId The submission ID.
+   * @param status The submission status.
+   * @param manifestUrl The manifest URL.
+   * @param fhirBaseUrl The FHIR base URL.
+   * @param headerName The header name to include.
+   * @param headerValue The header value to include.
+   * @return JSON string representation of the Parameters resource.
+   */
+  private String buildBulkSubmitRequestWithHeaders(final String submissionId, final String status,
+      final String manifestUrl, final String fhirBaseUrl, final String headerName,
+      final String headerValue) {
+    return """
+        {
+          "resourceType": "Parameters",
+          "parameter": [
+            {
+              "name": "submitter",
+              "valueIdentifier": {
+                "system": "%s",
+                "value": "%s"
+              }
+            },
+            {"name": "submissionId", "valueString": "%s"},
+            {"name": "submissionStatus", "valueCoding": {"code": "%s"}},
+            {"name": "manifestUrl", "valueString": "%s"},
+            {"name": "fhirBaseUrl", "valueString": "%s"},
+            {
+              "name": "fileRequestHeader",
+              "part": [
+                {"name": "headerName", "valueString": "%s"},
+                {"name": "headerValue", "valueString": "%s"}
+              ]
+            }
+          ]
+        }
+        """.formatted(SUBMITTER_SYSTEM, SUBMITTER_VALUE, submissionId, status, manifestUrl,
+        fhirBaseUrl, headerName, headerValue);
+  }
+
+  /**
+   * Builds a $bulk-submit-status request.
+   *
+   * @param submissionId The submission ID to check status for.
+   * @return JSON string representation of the Parameters resource.
+   */
+  private String buildBulkSubmitStatusRequest(final String submissionId) {
+    return """
+        {
+          "resourceType": "Parameters",
+          "parameter": [
+            {"name": "submissionId", "valueString": "%s"},
+            {
+              "name": "submitter",
+              "valueIdentifier": {
+                "system": "%s",
+                "value": "%s"
+              }
+            }
+          ]
+        }
+        """.formatted(submissionId, SUBMITTER_SYSTEM, SUBMITTER_VALUE);
+  }
+
   @Test
   void testDirectCompleteWorkflow() {
     TestDataSetup.copyTestDataToTempDir(warehouseDir, "Condition");
@@ -236,33 +310,32 @@ class BulkSubmitOperationIT {
     final String uri = "http://localhost:" + port + "/fhir/$bulk-submit";
 
     // Send complete directly with manifest URL.
+    // Per Argonaut spec, $bulk-submit is synchronous and returns 200 OK.
     final String requestBody = buildBulkSubmitRequest(submissionId, "complete", manifestUrl,
         fhirBaseUrl);
 
-    final var result = webTestClient.post()
+    webTestClient.post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
-        .header("Prefer", "respond-async")
         .bodyValue(requestBody)
         .exchange()
-        .expectStatus().isAccepted()
-        .expectHeader().exists(HttpHeaders.CONTENT_LOCATION)
-        .returnResult(String.class);
+        .expectStatus().isOk();
 
-    final String contentLocation = result.getResponseHeaders()
-        .getFirst(HttpHeaders.CONTENT_LOCATION);
-    assertThat(contentLocation).isNotNull();
+    log.info("Direct complete submission accepted");
 
-    log.info("Direct complete submission created with Content-Location: {}", contentLocation);
+    // Poll $bulk-submit-status until completion.
+    final String statusUri = "http://localhost:" + port + "/fhir/$bulk-submit-status";
+    final String statusRequest = buildBulkSubmitStatusRequest(submissionId);
 
-    // Poll the job status until completion.
     await().atMost(60, TimeUnit.SECONDS)
         .pollInterval(2, TimeUnit.SECONDS)
         .untilAsserted(() -> {
-          webTestClient.get()
-              .uri(contentLocation)
+          webTestClient.post()
+              .uri(statusUri)
+              .header("Content-Type", "application/fhir+json")
               .header("Accept", "application/fhir+json")
+              .bodyValue(statusRequest)
               .exchange()
               .expectStatus().isOk();
         });
@@ -281,68 +354,114 @@ class BulkSubmitOperationIT {
     final String uri = "http://localhost:" + port + "/fhir/$bulk-submit";
 
     // Step 1: Send in-progress notification.
+    // Per Argonaut spec, $bulk-submit is synchronous and returns 200 OK.
     final String inProgressRequest = buildBulkSubmitRequest(submissionId, "in-progress", null,
         null);
 
-    final var inProgressResult = webTestClient.post()
+    webTestClient.post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
-        .header("Prefer", "respond-async")
         .bodyValue(inProgressRequest)
         .exchange()
-        .expectStatus().isAccepted()
-        .expectHeader().exists(HttpHeaders.CONTENT_LOCATION)
-        .returnResult(String.class);
+        .expectStatus().isOk();
 
-    final String inProgressContentLocation = inProgressResult.getResponseHeaders()
-        .getFirst(HttpHeaders.CONTENT_LOCATION);
-    assertThat(inProgressContentLocation).isNotNull();
-    log.info("In-progress notification accepted: {}", inProgressContentLocation);
-
-    // Wait for the in-progress job to complete (returns quickly).
-    await().atMost(10, TimeUnit.SECONDS)
-        .pollInterval(500, TimeUnit.MILLISECONDS)
-        .untilAsserted(() -> {
-          webTestClient.get()
-              .uri(inProgressContentLocation)
-              .header("Accept", "application/fhir+json")
-              .exchange()
-              .expectStatus().isOk();
-        });
+    log.info("In-progress notification accepted for submission: {}", submissionId);
 
     // Step 2: Send complete notification with manifest URL.
     final String completeRequest = buildBulkSubmitRequest(submissionId, "complete", manifestUrl,
         fhirBaseUrl);
 
-    final var completeResult = webTestClient.post()
+    webTestClient.post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
-        .header("Prefer", "respond-async")
         .bodyValue(completeRequest)
         .exchange()
-        .expectStatus().isAccepted()
-        .expectHeader().exists(HttpHeaders.CONTENT_LOCATION)
-        .returnResult(String.class);
+        .expectStatus().isOk();
 
-    final String completeContentLocation = completeResult.getResponseHeaders()
-        .getFirst(HttpHeaders.CONTENT_LOCATION);
-    assertThat(completeContentLocation).isNotNull();
-    log.info("Complete notification accepted: {}", completeContentLocation);
+    log.info("Complete notification accepted for submission: {}", submissionId);
 
-    // Poll the complete job until it finishes.
+    // Poll $bulk-submit-status until completion.
+    final String statusUri = "http://localhost:" + port + "/fhir/$bulk-submit-status";
+    final String statusRequest = buildBulkSubmitStatusRequest(submissionId);
+
     await().atMost(60, TimeUnit.SECONDS)
         .pollInterval(2, TimeUnit.SECONDS)
         .untilAsserted(() -> {
-          webTestClient.get()
-              .uri(completeContentLocation)
+          webTestClient.post()
+              .uri(statusUri)
+              .header("Content-Type", "application/fhir+json")
               .header("Accept", "application/fhir+json")
+              .bodyValue(statusRequest)
               .exchange()
               .expectStatus().isOk();
         });
 
     log.info("In-progress → complete workflow finished successfully");
+  }
+
+  @Test
+  void testFileRequestHeadersArePassedToServer() {
+    // This test verifies that fileRequestHeader parameters from the kickoff request are included
+    // when fetching manifest and data files.
+    TestDataSetup.copyTestDataToTempDir(warehouseDir, "Condition");
+    setupSuccessfulManifestStubs();
+
+    final String submissionId = UUID.randomUUID().toString();
+    final String manifestUrl = "http://localhost:" + wireMockServer.port() + "/manifest.json";
+    final String fhirBaseUrl = "http://localhost:" + wireMockServer.port() + "/fhir";
+    final String uri = "http://localhost:" + port + "/fhir/$bulk-submit";
+
+    // Send complete with a custom Authorization header.
+    // Per Argonaut spec, $bulk-submit is synchronous and returns 200 OK.
+    final String requestBody = buildBulkSubmitRequestWithHeaders(
+        submissionId,
+        "complete",
+        manifestUrl,
+        fhirBaseUrl,
+        "Authorization",
+        "Bearer test-token-12345"
+    );
+
+    webTestClient.post()
+        .uri(uri)
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .bodyValue(requestBody)
+        .exchange()
+        .expectStatus().isOk();
+
+    log.info("Submission with custom header accepted: {}", submissionId);
+
+    // Poll $bulk-submit-status until completion.
+    final String statusUri = "http://localhost:" + port + "/fhir/$bulk-submit-status";
+    final String statusRequest = buildBulkSubmitStatusRequest(submissionId);
+
+    await().atMost(60, TimeUnit.SECONDS)
+        .pollInterval(2, TimeUnit.SECONDS)
+        .untilAsserted(() -> {
+          webTestClient.post()
+              .uri(statusUri)
+              .header("Content-Type", "application/fhir+json")
+              .header("Accept", "application/fhir+json")
+              .bodyValue(statusRequest)
+              .exchange()
+              .expectStatus().isOk();
+        });
+
+    // Verify that the Authorization header was included in the manifest request.
+    wireMockServer.verify(getRequestedFor(urlEqualTo("/manifest.json"))
+        .withHeader("Authorization", equalTo("Bearer test-token-12345")));
+
+    // Verify that the Authorization header was included in the data file requests.
+    wireMockServer.verify(getRequestedFor(urlEqualTo("/data/Patient.ndjson"))
+        .withHeader("Authorization", equalTo("Bearer test-token-12345")));
+
+    wireMockServer.verify(getRequestedFor(urlEqualTo("/data/Observation.ndjson"))
+        .withHeader("Authorization", equalTo("Bearer test-token-12345")));
+
+    log.info("Verified that custom headers were passed to manifest and data file requests");
   }
 
 }

@@ -5,13 +5,13 @@
  */
 
 import type { Binary, Parameters } from "fhir/r4";
-import { UnauthorizedError } from "../types/errors";
 import type {
   BulkSubmitRequest,
   BulkSubmitStatusRequest,
   StatusManifest,
   SubmitterIdentifier,
 } from "../types/bulkSubmit";
+import { UnauthorizedError } from "../types/errors";
 
 interface KickOffResult {
   submissionId: string;
@@ -67,10 +67,11 @@ export async function kickOffBulkSubmit(
   // Parse the Parameters response to extract submissionId and status.
   const responseBody = (await response.json()) as Parameters;
   const submissionId =
-    responseBody.parameter?.find((p) => p.name === "submissionId")?.valueString ??
-    request.submissionId;
+    responseBody.parameter?.find((p) => p.name === "submissionId")
+      ?.valueString ?? request.submissionId;
   const status =
-    responseBody.parameter?.find((p) => p.name === "status")?.valueString ?? "unknown";
+    responseBody.parameter?.find((p) => p.name === "status")?.valueString ??
+    "unknown";
 
   return {
     submissionId,
@@ -265,7 +266,10 @@ function buildBulkSubmitParameters(request: BulkSubmitRequest): Parameters {
   if (request.metadata) {
     const metadataParts = [];
     if (request.metadata.label) {
-      metadataParts.push({ name: "label", valueString: request.metadata.label });
+      metadataParts.push({
+        name: "label",
+        valueString: request.metadata.label,
+      });
     }
     if (request.metadata.description) {
       metadataParts.push({

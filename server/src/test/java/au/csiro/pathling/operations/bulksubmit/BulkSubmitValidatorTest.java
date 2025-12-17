@@ -247,6 +247,77 @@ class BulkSubmitValidatorTest {
     });
   }
 
+  @Test
+  void extractsSingleFileRequestHeader() {
+    final Parameters params = minimalInProgressParams();
+    addFileRequestHeader(params, "Authorization", "Bearer test-token");
+
+    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
+        "respond-async", false);
+
+    final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+    assertThat(result.fileRequestHeaders()).hasSize(1);
+    assertThat(result.fileRequestHeaders().get(0).name()).isEqualTo("Authorization");
+    assertThat(result.fileRequestHeaders().get(0).value()).isEqualTo("Bearer test-token");
+  }
+
+  @Test
+  void extractsMultipleFileRequestHeaders() {
+    final Parameters params = minimalInProgressParams();
+    addFileRequestHeader(params, "Authorization", "Bearer test-token");
+    addFileRequestHeader(params, "X-Custom-Header", "custom-value");
+
+    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
+        "respond-async", false);
+
+    final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+    assertThat(result.fileRequestHeaders()).hasSize(2);
+    assertThat(result.fileRequestHeaders()).extracting(FileRequestHeader::name)
+        .containsExactly("Authorization", "X-Custom-Header");
+    assertThat(result.fileRequestHeaders()).extracting(FileRequestHeader::value)
+        .containsExactly("Bearer test-token", "custom-value");
+  }
+
+  @Test
+  void ignoresFileRequestHeaderWithMissingName() {
+    // Headers with missing names should be silently ignored.
+    final Parameters params = minimalInProgressParams();
+    final Parameters.ParametersParameterComponent headerParam =
+        params.addParameter().setName("fileRequestHeader");
+    headerParam.addPart().setName("headerValue").setValue(new StringType("some-value"));
+
+    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
+        "respond-async", false);
+
+    final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+    assertThat(result.fileRequestHeaders()).isEmpty();
+  }
+
+  @Test
+  void ignoresFileRequestHeaderWithMissingValue() {
+    // Headers with missing values should be silently ignored.
+    final Parameters params = minimalInProgressParams();
+    final Parameters.ParametersParameterComponent headerParam =
+        params.addParameter().setName("fileRequestHeader");
+    headerParam.addPart().setName("headerName").setValue(new StringType("Authorization"));
+
+    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
+        "respond-async", false);
+
+    final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+    assertThat(result.fileRequestHeaders()).isEmpty();
+  }
+
+  @Test
+  void returnsEmptyListWhenNoFileRequestHeaders() {
+    final Parameters params = minimalInProgressParams();
+    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
+        "respond-async", false);
+
+    final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+    assertThat(result.fileRequestHeaders()).isEmpty();
+  }
+
   // ========================================
   // Helper Methods
   // ========================================
@@ -290,6 +361,13 @@ class BulkSubmitValidatorTest {
     final Coding coding = new Coding();
     coding.setCode(status);
     params.addParameter().setName("submissionStatus").setValue(coding);
+  }
+
+  private void addFileRequestHeader(Parameters params, String name, String value) {
+    final Parameters.ParametersParameterComponent headerParam =
+        params.addParameter().setName("fileRequestHeader");
+    headerParam.addPart().setName("headerName").setValue(new StringType(name));
+    headerParam.addPart().setName("headerValue").setValue(new StringType(value));
   }
 
 }

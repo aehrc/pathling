@@ -25,11 +25,13 @@ import ca.uhn.fhir.rest.api.server.RequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
 import org.springframework.stereotype.Component;
 
@@ -125,6 +127,9 @@ public class BulkSubmitValidator {
     // Extract metadata (optional).
     final SubmissionMetadata metadata = extractMetadata(parameters);
 
+    // Extract fileRequestHeaders (optional).
+    final List<FileRequestHeader> fileRequestHeaders = extractFileRequestHeaders(parameters);
+
     return new BulkSubmitRequest(
         requestDetails.getCompleteUrl(),
         submissionId,
@@ -133,7 +138,8 @@ public class BulkSubmitValidator {
         manifestUrl,
         fhirBaseUrl,
         replacesManifestUrl,
-        metadata
+        metadata,
+        fileRequestHeaders
     );
   }
 
@@ -257,6 +263,50 @@ public class BulkSubmitValidator {
   private SubmissionMetadata extractMetadata(@Nonnull final Parameters parameters) {
     // Metadata extraction is simplified for now - can be expanded later.
     return null;
+  }
+
+  @Nonnull
+  private List<FileRequestHeader> extractFileRequestHeaders(
+      @Nonnull final Parameters parameters) {
+    return parameters.getParameter().stream()
+        .filter(param -> "fileRequestHeader".equals(param.getName()))
+        .map(this::extractSingleFileRequestHeader)
+        .filter(Objects::nonNull)
+        .toList();
+  }
+
+  @Nullable
+  private FileRequestHeader extractSingleFileRequestHeader(
+      @Nonnull final ParametersParameterComponent param) {
+    final List<ParametersParameterComponent> parts = param.getPart();
+
+    final String headerName = ParamUtil.extractFromPart(
+        parts,
+        "headerName",
+        StringType.class,
+        StringType::getValue,
+        true,
+        null,
+        false,
+        null
+    );
+
+    final String headerValue = ParamUtil.extractFromPart(
+        parts,
+        "headerValue",
+        StringType.class,
+        StringType::getValue,
+        true,
+        null,
+        false,
+        null
+    );
+
+    if (headerName == null || headerName.isBlank() || headerValue == null) {
+      return null;
+    }
+
+    return new FileRequestHeader(headerName, headerValue);
   }
 
 }

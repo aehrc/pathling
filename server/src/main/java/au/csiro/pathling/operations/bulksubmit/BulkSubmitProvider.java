@@ -26,6 +26,7 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Parameters;
@@ -169,7 +170,7 @@ public class BulkSubmitProvider {
       log.info("Submission {} starting processing for manifest: {}", request.submissionId(),
           request.manifestUrl());
       if (executor != null) {
-        executor.execute(submission);
+        executor.execute(submission, request.fileRequestHeaders());
       } else {
         log.warn("BulkSubmitExecutor not available - submission {} will not be processed",
             request.submissionId());
@@ -241,7 +242,7 @@ public class BulkSubmitProvider {
       log.info("Submission {} marked complete, starting processing", request.submissionId());
 
       if (executor != null) {
-        executor.execute(submission);
+        executor.execute(submission, request.fileRequestHeaders());
       } else {
         log.warn("BulkSubmitExecutor not available - submission {} will not be processed",
             request.submissionId());
