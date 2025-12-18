@@ -43,11 +43,18 @@ export interface BulkSubmitStatusRequest {
   submitter: SubmitterIdentifier;
 }
 
+// Extension element in output file.
+export interface OutputExtension {
+  url: string;
+  valueUrl?: string;
+}
+
 // Output file in status manifest.
 export interface OutputFile {
   type: string;
   url: string;
   count?: number;
+  extension?: OutputExtension[];
 }
 
 // Status manifest returned when submission completes.

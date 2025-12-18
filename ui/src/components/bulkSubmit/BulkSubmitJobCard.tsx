@@ -8,6 +8,7 @@ import { Cross2Icon, ReloadIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
 import { useJobs } from "../../contexts/JobContext";
 import { useBulkSubmitJobPolling } from "../../hooks/useBulkSubmitJobPolling";
+import type { OutputFile } from "../../types/bulkSubmit";
 import type { BulkSubmitJob } from "../../types/job";
 
 interface BulkSubmitJobCardProps {
@@ -39,9 +40,18 @@ function formatDate(date: Date): string {
   }).format(date);
 }
 
+function getManifestUrl(output: OutputFile): string | undefined {
+  return output.extension?.find((ext) => ext.url === "manifestUrl")?.valueUrl;
+}
+
 export function BulkSubmitJobCard({ job, onAbort }: BulkSubmitJobCardProps) {
-  const { updateJobProgress, updateJobManifest, updateJobError, updateJobStatus, updateJobPollUrl } =
-    useJobs();
+  const {
+    updateJobProgress,
+    updateJobManifest,
+    updateJobError,
+    updateJobStatus,
+    updateJobPollUrl,
+  } = useJobs();
 
   // Poll job status while active.
   useBulkSubmitJobPolling({
@@ -128,18 +138,28 @@ export function BulkSubmitJobCard({ job, onAbort }: BulkSubmitJobCardProps) {
               Output files ({job.manifest.output.length})
             </Text>
             <Flex direction="column" gap="1">
-              {job.manifest.output.map((output, index) => (
-                <Flex key={index} justify="between">
-                  <Text size="2" color="gray">
-                    {output.type}
-                  </Text>
-                  {output.count !== undefined && (
-                    <Text size="2" color="gray">
-                      {output.count} resources
-                    </Text>
-                  )}
-                </Flex>
-              ))}
+              {job.manifest.output.map((output, index) => {
+                const manifestUrl = getManifestUrl(output);
+                return (
+                  <Box key={index}>
+                    <Flex justify="between">
+                      <Text size="2" color="gray">
+                        {output.type}
+                      </Text>
+                      {output.count !== undefined && (
+                        <Text size="2" color="gray">
+                          {output.count} resources
+                        </Text>
+                      )}
+                    </Flex>
+                    {manifestUrl && (
+                      <Text size="1" color="gray" as="div" style={{ marginLeft: "0.5rem" }}>
+                        from: {manifestUrl}
+                      </Text>
+                    )}
+                  </Box>
+                );
+              })}
             </Flex>
             {job.manifest.error && job.manifest.error.length > 0 && (
               <Box mt="2">

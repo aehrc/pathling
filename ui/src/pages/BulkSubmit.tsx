@@ -209,11 +209,7 @@ export function BulkSubmit() {
 
       <Flex gap="6" direction={{ initial: "column", md: "row" }}>
         <Box style={{ flex: 1 }}>
-          <BulkSubmitMonitorForm
-            onMonitor={handleMonitor}
-            isSubmitting={false}
-            disabled={false}
-          />
+          <BulkSubmitMonitorForm onMonitor={handleMonitor} isSubmitting={false} disabled={false} />
         </Box>
         <Box style={{ flex: 1 }}>
           <BulkSubmitJobList jobs={bulkSubmitJobs} onAbort={handleAbort} />

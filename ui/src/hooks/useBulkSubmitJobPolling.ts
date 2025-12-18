@@ -5,12 +5,15 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { useRef, useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import { checkBulkSubmitStatus, pollBulkSubmitJobStatus } from "../services/bulkSubmit";
-import { UnauthorizedError } from "../types/errors";
+import {
+  checkBulkSubmitStatus,
+  pollBulkSubmitJobStatus,
+} from "../services/bulkSubmit";
 import type { StatusManifest, SubmitterIdentifier } from "../types/bulkSubmit";
+import { UnauthorizedError } from "../types/errors";
 import type { JobStatus } from "../types/job";
 
 interface UseBulkSubmitJobPollingOptions {
@@ -96,6 +99,8 @@ export function useBulkSubmitJobPolling({
       const result = statusQuery.data;
       if (result.status === "completed" && result.manifest) {
         onComplete(jobId, result.manifest);
+      } else if (result.status === "aborted") {
+        onStatusChange(jobId, "cancelled");
       } else if (result.status === "pending") {
         onPollUrlObtained(jobId, result.pollUrl);
         onStatusChange(jobId, "in_progress");
@@ -123,14 +128,26 @@ export function useBulkSubmitJobPolling({
   useEffect(() => {
     const error = statusQuery.error || jobQuery.error;
     if (error) {
-      if (error instanceof UnauthorizedError && !unauthorizedHandledRef.current) {
+      if (
+        error instanceof UnauthorizedError &&
+        !unauthorizedHandledRef.current
+      ) {
         unauthorizedHandledRef.current = true;
         clearSessionAndPromptLogin();
       } else if (!(error instanceof UnauthorizedError)) {
-        onError(jobId, error instanceof Error ? error.message : "Unknown error");
+        onError(
+          jobId,
+          error instanceof Error ? error.message : "Unknown error",
+        );
       }
     }
-  }, [statusQuery.error, jobQuery.error, jobId, onError, clearSessionAndPromptLogin]);
+  }, [
+    statusQuery.error,
+    jobQuery.error,
+    jobId,
+    onError,
+    clearSessionAndPromptLogin,
+  ]);
 
   return isWaitingForJob ? statusQuery : jobQuery;
 }

@@ -21,7 +21,8 @@ interface KickOffResult {
 type CheckStatusResult =
   | { status: "pending"; jobId: string; pollUrl: string }
   | { status: "retry"; retryAfter: number }
-  | { status: "completed"; manifest: StatusManifest };
+  | { status: "completed"; manifest: StatusManifest }
+  | { status: "aborted" };
 
 interface PollResult {
   status: "in_progress" | "completed";
@@ -113,6 +114,15 @@ export async function checkBulkSubmitStatus(
 
   if (response.status === 401) {
     throw new UnauthorizedError();
+  }
+
+  // Handle 500 response - check if submission was aborted.
+  if (response.status === 500) {
+    const errorBody = await response.text();
+    if (errorBody.toLowerCase().includes("aborted")) {
+      return { status: "aborted" };
+    }
+    throw new Error(`Bulk submit status check failed: ${response.status} - ${errorBody}`);
   }
 
   // Handle 200 response - submission is already complete.
