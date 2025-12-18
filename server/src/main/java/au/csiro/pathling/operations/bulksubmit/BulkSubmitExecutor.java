@@ -23,6 +23,8 @@ import au.csiro.pathling.config.BulkSubmitConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.io.SaveMode;
+import au.csiro.pathling.operations.bulkexport.ExportResult;
+import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
 import au.csiro.pathling.operations.bulkimport.ImportExecutor;
 import au.csiro.pathling.operations.bulkimport.ImportFormat;
 import au.csiro.pathling.operations.bulkimport.ImportRequest;
@@ -42,7 +44,6 @@ import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,14 +51,15 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Executes bulk submission processing by fetching manifests and delegating to ImportExecutor.
+ * Executes bulk submission processing by fetching manifests and downloading files. Import is
+ * deferred until the submission is marked as complete.
  *
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
@@ -75,6 +77,9 @@ public class BulkSubmitExecutor {
   private final SubmissionRegistry submissionRegistry;
 
   @Nonnull
+  private final ExportResultRegistry exportResultRegistry;
+
+  @Nonnull
   private final ServerConfiguration serverConfiguration;
 
   @Nonnull
@@ -87,6 +92,9 @@ public class BulkSubmitExecutor {
   private final SparkSession sparkSession;
 
   @Nonnull
+  private final String databasePath;
+
+  @Nonnull
   private final ObjectMapper objectMapper;
 
   @Nonnull
@@ -97,27 +105,34 @@ public class BulkSubmitExecutor {
    *
    * @param importExecutor The import executor for processing files.
    * @param submissionRegistry The submission registry for tracking state.
+   * @param exportResultRegistry The registry for tracking downloadable results.
    * @param serverConfiguration The server configuration.
    * @param resultBuilder The builder for creating status manifests.
    * @param jobRegistry The job registry for tracking async jobs (may be null if async is
    * disabled).
    * @param sparkSession The Spark session for setting job groups (may be null if async is
    * disabled).
+   * @param databasePath The path to the database storage location.
    */
   public BulkSubmitExecutor(
       @Nonnull final ImportExecutor importExecutor,
       @Nonnull final SubmissionRegistry submissionRegistry,
+      @Nonnull final ExportResultRegistry exportResultRegistry,
       @Nonnull final ServerConfiguration serverConfiguration,
       @Nonnull final BulkSubmitResultBuilder resultBuilder,
       @Nullable final JobRegistry jobRegistry,
-      @Nullable final SparkSession sparkSession
+      @Nullable final SparkSession sparkSession,
+      @Nonnull @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
+      final String databasePath
   ) {
     this.importExecutor = importExecutor;
     this.submissionRegistry = submissionRegistry;
+    this.exportResultRegistry = exportResultRegistry;
     this.serverConfiguration = serverConfiguration;
     this.resultBuilder = resultBuilder;
     this.jobRegistry = jobRegistry;
     this.sparkSession = sparkSession;
+    this.databasePath = databasePath;
     this.objectMapper = new ObjectMapper();
     this.httpClient = HttpClient.newBuilder()
         .connectTimeout(HTTP_TIMEOUT)
@@ -125,15 +140,16 @@ public class BulkSubmitExecutor {
   }
 
   /**
-   * Executes processing for a specific manifest job asynchronously. Creates a Job in the
-   * JobRegistry for progress tracking if async support is enabled.
+   * Downloads files for a specific manifest job asynchronously. Creates a Job in the JobRegistry
+   * for progress tracking if async support is enabled. This method only downloads the files; the
+   * actual import is deferred until the submission is marked as complete.
    *
    * @param submission The submission containing the manifest job.
    * @param manifestJob The manifest job to process.
    * @param fileRequestHeaders Custom HTTP headers to include when downloading files.
    * @param fhirServerBase The FHIR server base URL for building result manifests.
    */
-  public void executeManifestJob(
+  public void downloadManifestJob(
       @Nonnull final Submission submission,
       @Nonnull final ManifestJob manifestJob,
       @Nonnull final List<FileRequestHeader> fileRequestHeaders,
@@ -168,13 +184,13 @@ public class BulkSubmitExecutor {
 
     // Execute asynchronously to not block the request thread.
     CompletableFuture.runAsync(
-        () -> executeManifestJobInternal(
+        () -> downloadManifestJobInternal(
             submission, manifestJob, fileRequestHeaders, fhirServerBase, jobId, resultFuture
         )
     );
   }
 
-  private void executeManifestJobInternal(
+  private void downloadManifestJobInternal(
       @Nonnull final Submission submission,
       @Nonnull final ManifestJob manifestJob,
       @Nonnull final List<FileRequestHeader> fileRequestHeaders,
@@ -182,10 +198,8 @@ public class BulkSubmitExecutor {
       @Nullable final String jobId,
       @Nullable final CompletableFuture<IBaseResource> resultFuture
   ) {
-    log.info("Starting processing for manifest job: {} in submission: {}",
+    log.info("Starting download for manifest job: {} in submission: {}",
         manifestJob.manifestJobId(), submission.submissionId());
-
-    Path stagingDir = null;
 
     // Update manifest job to PROCESSING state.
     submissionRegistry.updateManifestJob(
@@ -212,56 +226,44 @@ public class BulkSubmitExecutor {
         throw new InvalidUserInputError("No files found in manifest");
       }
 
-      // Create staging directory and download files.
-      stagingDir = createStagingDirectory(submission.submissionId(), manifestJob.manifestJobId());
-      final Map<String, Collection<String>> localFilePaths = downloadFiles(
-          fileUrls, stagingDir, fileRequestHeaders
+      // Create persistent directory for downloaded files (same structure as export).
+      final Path downloadDir = createDownloadDirectory(submission.submissionId());
+
+      // Download files to persistent storage.
+      final List<DownloadedFile> downloadedFiles = downloadFilesToPersistentStorage(
+          fileUrls, downloadDir, manifestJob.manifestJobId(), fileRequestHeaders
       );
 
-      // Create ImportRequest with local file paths and delegate to ImportExecutor.
-      final ImportRequest importRequest = new ImportRequest(
-          manifestJob.manifestJobId(),
-          manifestJob.fhirBaseUrl() != null
-          ? manifestJob.fhirBaseUrl()
-          : "unknown",
-          localFilePaths,
-          SaveMode.MERGE,
-          ImportFormat.NDJSON
-      );
+      // Register submission in ExportResultRegistry so files can be served via $result.
+      final Optional<String> ownerId = Optional.ofNullable(submission.ownerId());
+      exportResultRegistry.put(submission.submissionId(), new ExportResult(ownerId));
+      log.info("Registered submission {} in export result registry", submission.submissionId());
 
-      // Execute the import with the bulk submit allowable sources.
-      final BulkSubmitConfiguration bulkSubmitConfig = serverConfiguration.getBulkSubmit();
-      final List<String> allowableSources = bulkSubmitConfig != null
-                                            ? bulkSubmitConfig.getAllowableSources()
-                                            : List.of();
-      importExecutor.execute(importRequest, submission.submissionId(), allowableSources);
-
-      // Update manifest job state to COMPLETED.
+      // Update manifest job with downloaded files and DOWNLOADED state.
       submissionRegistry.updateManifestJob(
           submission.submitter(),
           submission.submissionId(),
           manifestJob.manifestJobId(),
-          mj -> mj.withState(ManifestJobState.COMPLETED)
+          mj -> mj.withDownloadedFiles(downloadedFiles).withState(ManifestJobState.DOWNLOADED)
       );
 
-      log.info("Manifest job {} completed successfully", manifestJob.manifestJobId());
+      log.info("Manifest job {} download completed successfully with {} files",
+          manifestJob.manifestJobId(), downloadedFiles.size());
 
       // Complete the async job if enabled.
       if (resultFuture != null) {
-        // Build a simple status manifest for this manifest job.
         final Submission updatedSubmission = submissionRegistry.get(
             submission.submitter(), submission.submissionId()
         ).orElse(submission);
-        // Construct the status request URL.
         final String requestUrl = buildStatusRequestUrl(fhirServerBase, submission);
         final IBaseResource statusManifest = resultBuilder.buildStatusManifest(
-            updatedSubmission, requestUrl
+            updatedSubmission, requestUrl, fhirServerBase
         );
         resultFuture.complete(statusManifest);
       }
 
     } catch (final Exception e) {
-      log.error("Failed to process manifest job {}: {}",
+      log.error("Failed to download manifest job {}: {}",
           manifestJob.manifestJobId(), e.getMessage(), e);
 
       // Update manifest job with error message.
@@ -281,10 +283,85 @@ public class BulkSubmitExecutor {
       if (sparkSession != null) {
         sparkSession.sparkContext().clearJobGroup();
       }
+      // Note: Downloaded files are NOT cleaned up - they persist until explicit deletion.
+    }
+  }
 
-      // Clean up staging directory.
-      if (stagingDir != null) {
-        cleanupStagingDirectory(stagingDir);
+  /**
+   * Imports all downloaded files from a submission. This method runs the import asynchronously in
+   * the background (fire-and-forget) and returns immediately.
+   *
+   * @param submission The submission to import.
+   */
+  public void importSubmission(@Nonnull final Submission submission) {
+    log.info("Starting background import for submission: {}", submission.submissionId());
+
+    // Execute import asynchronously (fire-and-forget).
+    CompletableFuture.runAsync(() -> importSubmissionInternal(submission));
+  }
+
+  private void importSubmissionInternal(@Nonnull final Submission submission) {
+    try {
+      // Collect all downloaded file paths from all manifest jobs.
+      final Map<String, Collection<String>> allFilePaths = new HashMap<>();
+
+      for (final ManifestJob job : submission.manifestJobs()) {
+        if (job.downloadedFiles() != null) {
+          for (final DownloadedFile file : job.downloadedFiles()) {
+            allFilePaths.computeIfAbsent(file.resourceType(), k -> new ArrayList<>())
+                .add(file.localPath());
+          }
+        }
+      }
+
+      if (allFilePaths.isEmpty()) {
+        log.warn("No files to import for submission {}", submission.submissionId());
+        return;
+      }
+
+      // Create ImportRequest with aggregated file paths.
+      final ImportRequest importRequest = new ImportRequest(
+          submission.submissionId(),
+          "bulk-submit",
+          allFilePaths,
+          SaveMode.MERGE,
+          ImportFormat.NDJSON
+      );
+
+      // Execute the import with the bulk submit allowable sources.
+      final BulkSubmitConfiguration bulkSubmitConfig = serverConfiguration.getBulkSubmit();
+      final List<String> allowableSources = bulkSubmitConfig != null
+                                            ? bulkSubmitConfig.getAllowableSources()
+                                            : List.of();
+      importExecutor.execute(importRequest, submission.submissionId(), allowableSources);
+
+      // Update all manifest jobs to COMPLETED state.
+      for (final ManifestJob job : submission.manifestJobs()) {
+        if (job.state() == ManifestJobState.DOWNLOADED) {
+          submissionRegistry.updateManifestJob(
+              submission.submitter(),
+              submission.submissionId(),
+              job.manifestJobId(),
+              mj -> mj.withState(ManifestJobState.COMPLETED)
+          );
+        }
+      }
+
+      log.info("Import completed successfully for submission {}", submission.submissionId());
+
+    } catch (final Exception e) {
+      log.error("Failed to import submission {}: {}", submission.submissionId(), e.getMessage(), e);
+
+      // Update all DOWNLOADED manifest jobs to FAILED state.
+      for (final ManifestJob job : submission.manifestJobs()) {
+        if (job.state() == ManifestJobState.DOWNLOADED) {
+          submissionRegistry.updateManifestJob(
+              submission.submitter(),
+              submission.submissionId(),
+              job.manifestJobId(),
+              mj -> mj.withError("Import failed: " + e.getMessage())
+          );
+        }
       }
     }
   }
@@ -368,49 +445,65 @@ public class BulkSubmitExecutor {
     return result;
   }
 
+  /**
+   * Creates the persistent download directory for a submission. Files are stored in the same
+   * location as export results: {databasePath}/jobs/{submissionId}/.
+   *
+   * @param submissionId The submission ID.
+   * @return The path to the download directory.
+   * @throws IOException If the directory cannot be created.
+   */
   @Nonnull
-  private Path createStagingDirectory(
-      @Nonnull final String submissionId,
-      @Nonnull final String manifestJobId
-  ) throws IOException {
-    final BulkSubmitConfiguration config = serverConfiguration.getBulkSubmit();
-    final String baseStagingDir = config != null
-                                  ? config.getStagingDirectory()
-                                  : "/usr/local/staging/bulk-submit-fetch";
-
-    final Path stagingDir = Path.of(baseStagingDir, submissionId, manifestJobId);
-    Files.createDirectories(stagingDir);
-    log.info("Created staging directory: {}", stagingDir);
-    return stagingDir;
+  private Path createDownloadDirectory(@Nonnull final String submissionId) throws IOException {
+    final Path downloadDir = Path.of(URI.create(databasePath).getPath(), "jobs", submissionId);
+    Files.createDirectories(downloadDir);
+    log.info("Created download directory: {}", downloadDir);
+    return downloadDir;
   }
 
+  /**
+   * Downloads files to persistent storage and returns metadata about the downloaded files. Files
+   * are named using the pattern {ResourceType}.{manifestJobId}-{index}.ndjson to comply with the
+   * resourceNameWithQualifierMapper pattern used by FileSource.
+   *
+   * @param fileUrls Map of resource type to collection of URLs.
+   * @param downloadDir The directory to download files to.
+   * @param manifestJobId The manifest job ID (used in file naming).
+   * @param fileRequestHeaders Custom HTTP headers to include when downloading files.
+   * @return List of downloaded file metadata.
+   * @throws IOException If a file cannot be downloaded.
+   */
   @Nonnull
-  private Map<String, Collection<String>> downloadFiles(
+  private List<DownloadedFile> downloadFilesToPersistentStorage(
       @Nonnull final Map<String, Collection<String>> fileUrls,
-      @Nonnull final Path stagingDir,
+      @Nonnull final Path downloadDir,
+      @Nonnull final String manifestJobId,
       @Nonnull final List<FileRequestHeader> fileRequestHeaders
   ) throws IOException {
-    final Map<String, Collection<String>> localPaths = new HashMap<>();
+    final List<DownloadedFile> downloadedFiles = new ArrayList<>();
     final AtomicInteger fileCounter = new AtomicInteger(0);
 
     for (final Map.Entry<String, Collection<String>> entry : fileUrls.entrySet()) {
       final String resourceType = entry.getKey();
       final Collection<String> urls = entry.getValue();
-      final Collection<String> localFiles = new ArrayList<>();
 
       for (final String url : urls) {
         final int fileNum = fileCounter.incrementAndGet();
-        final String fileName = resourceType + "-" + fileNum + ".ndjson";
-        final Path localPath = stagingDir.resolve(fileName);
+        // Use dot-separator format: {ResourceType}.{qualifier}.ndjson
+        final String fileName = resourceType + "." + manifestJobId + "-" + fileNum + ".ndjson";
+        final Path localPath = downloadDir.resolve(fileName);
 
         downloadFile(url, localPath, fileRequestHeaders);
-        localFiles.add(localPath.toUri().toString());
-      }
 
-      localPaths.put(resourceType, localFiles);
+        downloadedFiles.add(new DownloadedFile(
+            resourceType,
+            fileName,
+            localPath.toUri().toString()
+        ));
+      }
     }
 
-    return localPaths;
+    return downloadedFiles;
   }
 
   private void downloadFile(
@@ -451,26 +544,6 @@ public class BulkSubmitExecutor {
     } catch (final InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new IOException("File download was interrupted: " + url, e);
-    }
-  }
-
-  private void cleanupStagingDirectory(@Nonnull final Path stagingDir) {
-    try {
-      if (Files.exists(stagingDir)) {
-        try (final Stream<Path> walk = Files.walk(stagingDir)) {
-          walk.sorted(Comparator.reverseOrder())
-              .forEach(path -> {
-                try {
-                  Files.delete(path);
-                } catch (final IOException e) {
-                  log.warn("Failed to delete {}: {}", path, e.getMessage());
-                }
-              });
-        }
-        log.info("Cleaned up staging directory: {}", stagingDir);
-      }
-    } catch (final IOException e) {
-      log.warn("Failed to clean up staging directory {}: {}", stagingDir, e.getMessage());
     }
   }
 

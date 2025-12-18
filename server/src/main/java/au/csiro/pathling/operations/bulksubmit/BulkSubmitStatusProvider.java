@@ -122,12 +122,13 @@ public class BulkSubmitStatusProvider {
 
     // Build the request URL for the status manifest.
     final String requestUrl = buildRequestUrl(requestDetails);
+    final String fhirServerBase = requestDetails.getFhirServerBase();
 
     // If the submission has completed or failed, return the result directly.
     if (submission.state() == SubmissionState.COMPLETED
         || submission.state() == SubmissionState.COMPLETED_WITH_ERRORS
         || submission.state() == SubmissionState.ABORTED) {
-      return handleCompletedSubmission(submission, requestUrl);
+      return handleCompletedSubmission(submission, requestUrl, fhirServerBase);
     }
 
     // Get all job IDs from manifest jobs.
@@ -166,7 +167,8 @@ public class BulkSubmitStatusProvider {
   @Nonnull
   private Binary handleCompletedSubmission(
       @Nonnull final Submission submission,
-      @Nonnull final String requestUrl
+      @Nonnull final String requestUrl,
+      @Nonnull final String fhirServerBase
   ) {
     // Check for error state and throw exception with error details.
     if (submission.state() == SubmissionState.COMPLETED_WITH_ERRORS) {
@@ -180,7 +182,7 @@ public class BulkSubmitStatusProvider {
       throw new InternalErrorException("Submission was aborted");
     }
 
-    return resultBuilder.buildStatusManifest(submission, requestUrl);
+    return resultBuilder.buildStatusManifest(submission, requestUrl, fhirServerBase);
   }
 
   @Nonnull

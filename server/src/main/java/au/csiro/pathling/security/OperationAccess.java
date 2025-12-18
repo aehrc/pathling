@@ -28,7 +28,9 @@ import java.lang.annotation.Target;
 /**
  * Identifies methods that require certain granted authority to be executed.
  * <p>
- * Used by {@link SecurityAspect} to enforce resource access authorization.
+ * Used by {@link SecurityAspect} to enforce resource access authorization. When multiple operation
+ * names are specified, access is granted if the user has permission for ANY of the listed
+ * operations.
  */
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
@@ -37,9 +39,10 @@ import java.lang.annotation.Target;
 public @interface OperationAccess {
 
   /**
-   * The name of the operation being accessed.
+   * The name(s) of the operation(s) being accessed. If multiple values are provided, access is
+   * granted if the user has permission for any of the listed operations.
    *
-   * @return The name of the operation.
+   * @return The name(s) of the operation(s).
    */
-  String value();
+  String[] value();
 }

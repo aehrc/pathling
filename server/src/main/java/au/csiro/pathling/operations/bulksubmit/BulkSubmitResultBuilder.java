@@ -55,15 +55,20 @@ public class BulkSubmitResultBuilder {
    * <p>
    * This method is used for both completed (HTTP 200) and in-progress (HTTP 202) responses. The
    * manifest structure is the same in both cases, as per the Argonaut bulk submit specification.
+   * <p>
+   * Once files have been downloaded, the output array includes entries with URLs pointing to the
+   * $result operation where clients can download the files.
    *
    * @param submission The submission.
    * @param requestUrl The URL of the status request endpoint.
+   * @param fhirServerBase The FHIR server base URL for building result file URLs.
    * @return A Binary resource containing the manifest JSON.
    */
   @Nonnull
   public Binary buildStatusManifest(
       @Nonnull final Submission submission,
-      @Nonnull final String requestUrl
+      @Nonnull final String requestUrl,
+      @Nonnull final String fhirServerBase
   ) {
     try {
       final ObjectNode manifest = objectMapper.createObjectNode();
@@ -89,8 +94,19 @@ public class BulkSubmitResultBuilder {
       // Add requiresAccessToken (always false for now).
       manifest.put("requiresAccessToken", false);
 
-      // Add empty output array (bulk submit imports data, no output files to download).
+      // Build output array with downloaded files.
       final ArrayNode outputArray = objectMapper.createArrayNode();
+      for (final ManifestJob job : submission.manifestJobs()) {
+        if (job.downloadedFiles() != null) {
+          for (final DownloadedFile file : job.downloadedFiles()) {
+            final ObjectNode outputEntry = objectMapper.createObjectNode();
+            outputEntry.put("type", file.resourceType());
+            outputEntry.put("url", buildResultUrl(fhirServerBase, submission.submissionId(),
+                file.fileName()));
+            outputArray.add(outputEntry);
+          }
+        }
+      }
       manifest.set("output", outputArray);
 
       // Add empty error array (errors are communicated via submission state).
@@ -109,6 +125,23 @@ public class BulkSubmitResultBuilder {
       log.error("Failed to build status manifest", e);
       throw new RuntimeException("Failed to build status manifest", e);
     }
+  }
+
+  /**
+   * Builds a URL for downloading a result file via the $result operation.
+   *
+   * @param fhirServerBase The FHIR server base URL.
+   * @param submissionId The submission ID (used as the job ID).
+   * @param fileName The name of the file.
+   * @return The complete $result URL.
+   */
+  @Nonnull
+  private static String buildResultUrl(
+      @Nonnull final String fhirServerBase,
+      @Nonnull final String submissionId,
+      @Nonnull final String fileName
+  ) {
+    return fhirServerBase + "/$result?job=" + submissionId + "&file=" + fileName;
   }
 
   /**

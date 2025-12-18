@@ -21,6 +21,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /**
  * Represents a single manifest import job within a bulk submission.
@@ -37,6 +38,7 @@ import java.time.format.DateTimeFormatter;
  * @param createdAt ISO-8601 timestamp when created.
  * @param completedAt ISO-8601 timestamp when finished.
  * @param errorMessage Error message if failed.
+ * @param downloadedFiles List of files downloaded from the manifest.
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
  */
@@ -48,7 +50,8 @@ public record ManifestJob(
     @Nullable String jobId,
     @Nonnull String createdAt,
     @Nullable String completedAt,
-    @Nullable String errorMessage
+    @Nullable String errorMessage,
+    @Nullable List<DownloadedFile> downloadedFiles
 ) {
 
   private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_INSTANT;
@@ -85,6 +88,7 @@ public record ManifestJob(
         null,
         now(),
         null,
+        null,
         null
     );
   }
@@ -108,7 +112,8 @@ public record ManifestJob(
         jobId,
         createdAt,
         newCompletedAt,
-        errorMessage
+        errorMessage,
+        downloadedFiles
     );
   }
 
@@ -128,7 +133,8 @@ public record ManifestJob(
         jobId,
         createdAt,
         completedAt,
-        errorMessage
+        errorMessage,
+        downloadedFiles
     );
   }
 
@@ -148,7 +154,29 @@ public record ManifestJob(
         jobId,
         createdAt,
         now(),
-        errorMessage
+        errorMessage,
+        downloadedFiles
+    );
+  }
+
+  /**
+   * Creates a copy of this manifest job with the list of downloaded files.
+   *
+   * @param downloadedFiles The list of files downloaded from the manifest.
+   * @return A new manifest job with the downloaded files set.
+   */
+  @Nonnull
+  public ManifestJob withDownloadedFiles(@Nonnull final List<DownloadedFile> downloadedFiles) {
+    return new ManifestJob(
+        manifestJobId,
+        manifestUrl,
+        fhirBaseUrl,
+        state,
+        jobId,
+        createdAt,
+        completedAt,
+        errorMessage,
+        downloadedFiles
     );
   }
 

@@ -68,7 +68,7 @@ public class ExportResultProvider {
    * @param response the {@link HttpServletResponse} for sending the file content
    */
   @SuppressWarnings({"unused", "TypeMayBeWeakened"})
-  @OperationAccess("export")
+  @OperationAccess({"export", "bulk-submit"})
   @Operation(name = "$result", idempotent = true, manualResponse = true)
   public void result(
       @Nonnull @OperationParam(name = "job") final String jobId,

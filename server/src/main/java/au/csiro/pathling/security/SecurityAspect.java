@@ -66,15 +66,36 @@ public class SecurityAspect {
   }
 
   /**
-   * Checks if the current user is authorised to access the operation.
+   * Checks if the current user is authorised to access the operation. If multiple operation names
+   * are specified in the annotation, access is granted if the user has permission for ANY of the
+   * listed operations.
    *
    * @param operationAccess the operation access required.
    * @throws AccessDeniedError if unauthorised.
    */
   @Before("@annotation(operationAccess)")
   public void checkRequiredAuthority(@Nonnull final OperationAccess operationAccess) {
-    log.debug("Checking access to operation: {}", operationAccess.value());
-    checkHasAuthority(PathlingAuthority.operationAccess(operationAccess.value()));
+    final String[] operationNames = operationAccess.value();
+    log.debug("Checking access to operation(s): {}", (Object) operationNames);
+
+    if (operationNames.length == 1) {
+      // Single operation - use existing check.
+      checkHasAuthority(PathlingAuthority.operationAccess(operationNames[0]));
+    } else {
+      // Multiple operations - check if ANY is authorized.
+      boolean hasAnyAuthority = false;
+      for (final String operationName : operationNames) {
+        if (hasAuthority(PathlingAuthority.operationAccess(operationName))) {
+          hasAnyAuthority = true;
+          break;
+        }
+      }
+      if (!hasAnyAuthority) {
+        throw new AccessDeniedError(
+            String.format("Missing authority for any of: %s", String.join(", ", operationNames)),
+            operationNames[0]);
+      }
+    }
   }
 
   public static boolean hasAuthority(@Nonnull final PathlingAuthority requiredAuthority) {

@@ -242,6 +242,29 @@ public record Submission(
   }
 
   /**
+   * Returns whether all manifest jobs have completed downloading their files. Jobs in DOWNLOADED,
+   * COMPLETED, or FAILED states are considered to have finished downloading.
+   *
+   * @return true if all jobs have finished downloading, false otherwise.
+   */
+  public boolean allDownloadsComplete() {
+    return manifestJobs.stream()
+        .allMatch(job -> job.state() == ManifestJobState.DOWNLOADED
+            || job.state() == ManifestJobState.COMPLETED
+            || job.state() == ManifestJobState.FAILED);
+  }
+
+  /**
+   * Returns whether all manifest jobs are in the DOWNLOADED state and ready for import.
+   *
+   * @return true if all jobs are downloaded and ready, false otherwise.
+   */
+  public boolean allJobsReadyForImport() {
+    return !manifestJobs.isEmpty() && manifestJobs.stream()
+        .allMatch(job -> job.state() == ManifestJobState.DOWNLOADED);
+  }
+
+  /**
    * Returns all job IDs from manifest jobs that have an associated async job.
    *
    * @return A list of job IDs.

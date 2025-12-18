@@ -32,8 +32,9 @@ import org.junit.jupiter.api.Test;
  */
 class BulkSubmitResultBuilderTest {
 
+  private static final String FHIR_SERVER_BASE = "https://fhir.example.org/fhir";
   private static final String REQUEST_URL =
-      "https://fhir.example.org/fhir/$bulk-submit-status?submissionId=test-submission-123"
+      FHIR_SERVER_BASE + "/$bulk-submit-status?submissionId=test-submission-123"
           + "&submitter=https://example.org/submitters|test-submitter";
   private static final String SUBMISSION_ID = "test-submission-123";
 
@@ -49,7 +50,8 @@ class BulkSubmitResultBuilderTest {
     // The manifest should include the request URL.
     final Submission submission = createCompletedSubmission();
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL);
+    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL,
+        FHIR_SERVER_BASE);
 
     assertThat(binary.getContentType()).isEqualTo("application/json");
     final String json = new String(binary.getData(), StandardCharsets.UTF_8);
@@ -57,11 +59,12 @@ class BulkSubmitResultBuilderTest {
   }
 
   @Test
-  void buildStatusManifestHasEmptyOutputArray() {
-    // Bulk submit imports data, so there are no output files to download.
+  void buildStatusManifestHasEmptyOutputArrayWhenNoDownloads() {
+    // When there are no downloaded files, the output array is empty.
     final Submission submission = createCompletedSubmission();
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL);
+    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL,
+        FHIR_SERVER_BASE);
 
     final String json = new String(binary.getData(), StandardCharsets.UTF_8);
     assertThat(json).contains("\"output\" : [ ]");
@@ -70,10 +73,28 @@ class BulkSubmitResultBuilderTest {
   }
 
   @Test
+  void buildStatusManifestIncludesDownloadedFilesInOutput() {
+    // When files have been downloaded, the output array contains result URLs.
+    final Submission submission = createSubmissionWithDownloadedFiles();
+
+    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL,
+        FHIR_SERVER_BASE);
+
+    final String json = new String(binary.getData(), StandardCharsets.UTF_8);
+    assertThat(json).contains("\"output\" : [ {");
+    assertThat(json).contains("\"type\" : \"Patient\"");
+    assertThat(json).contains("\"url\" : \"" + FHIR_SERVER_BASE + "/$result?job="
+        + SUBMISSION_ID + "&file=Patient.manifest-job-1-1.ndjson\"");
+    assertThat(json).contains("\"type\" : \"Observation\"");
+    assertThat(json).contains("\"error\" : [ ]");
+  }
+
+  @Test
   void buildStatusManifestSetsRequiresAccessTokenFalse() {
     final Submission submission = createCompletedSubmission();
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL);
+    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL,
+        FHIR_SERVER_BASE);
 
     final String json = new String(binary.getData(), StandardCharsets.UTF_8);
     assertThat(json).contains("\"requiresAccessToken\" : false");
@@ -84,7 +105,8 @@ class BulkSubmitResultBuilderTest {
     // The manifest should include the submission ID in an extension.
     final Submission submission = createCompletedSubmission();
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL);
+    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL,
+        FHIR_SERVER_BASE);
 
     final String json = new String(binary.getData(), StandardCharsets.UTF_8);
     assertThat(json).contains(
@@ -97,7 +119,8 @@ class BulkSubmitResultBuilderTest {
     // For completed submissions, the transactionTime should be included.
     final Submission submission = createCompletedSubmission();
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL);
+    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL,
+        FHIR_SERVER_BASE);
 
     final String json = new String(binary.getData(), StandardCharsets.UTF_8);
     assertThat(json).contains("\"transactionTime\"");
@@ -108,7 +131,8 @@ class BulkSubmitResultBuilderTest {
     // The same manifest structure is used for in-progress submissions (HTTP 202).
     final Submission submission = createProcessingSubmission();
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL);
+    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL,
+        FHIR_SERVER_BASE);
 
     assertThat(binary.getContentType()).isEqualTo("application/json");
     final String json = new String(binary.getData(), StandardCharsets.UTF_8);
@@ -128,7 +152,8 @@ class BulkSubmitResultBuilderTest {
         Optional.empty()
     );
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL);
+    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL,
+        FHIR_SERVER_BASE);
 
     final String json = new String(binary.getData(), StandardCharsets.UTF_8);
     assertThat(json).contains(SUBMISSION_ID);
@@ -172,6 +197,29 @@ class BulkSubmitResultBuilderTest {
             Optional.empty()
         )
         .withManifestJob(processingJob)
+        .withState(SubmissionState.PROCESSING);
+  }
+
+  private Submission createSubmissionWithDownloadedFiles() {
+    final ManifestJob downloadedJob = ManifestJob.createPending(
+            "manifest-job-1",
+            "https://example.org/manifest.json",
+            "https://example.org/fhir"
+        )
+        .withDownloadedFiles(java.util.List.of(
+            new DownloadedFile("Patient", "Patient.manifest-job-1-1.ndjson",
+                "file:///tmp/Patient.manifest-job-1-1.ndjson"),
+            new DownloadedFile("Observation", "Observation.manifest-job-1-2.ndjson",
+                "file:///tmp/Observation.manifest-job-1-2.ndjson")
+        ))
+        .withState(ManifestJobState.DOWNLOADED);
+
+    return Submission.createPending(
+            SUBMISSION_ID,
+            new SubmitterIdentifier("https://example.org/submitters", "test-submitter"),
+            Optional.empty()
+        )
+        .withManifestJob(downloadedJob)
         .withState(SubmissionState.PROCESSING);
   }
 

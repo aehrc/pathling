@@ -168,9 +168,9 @@ public class BulkSubmitProvider {
       log.info("Added manifest job {} to submission {} for manifest: {}",
           manifestJob.manifestJobId(), request.submissionId(), request.manifestUrl());
 
-      // Start processing the manifest job.
+      // Start downloading the manifest files.
       if (executor != null) {
-        executor.executeManifestJob(submission, manifestJob, request.fileRequestHeaders(),
+        executor.downloadManifestJob(submission, manifestJob, request.fileRequestHeaders(),
             fhirServerBase);
       } else {
         log.warn("BulkSubmitExecutor not available - manifest job {} will not be processed",
@@ -212,48 +212,16 @@ public class BulkSubmitProvider {
       log.info("Created new submission: {}", request.submissionId());
     }
 
-    // If manifest URL provided with complete request, create a manifest job and start processing.
+    // If manifest URL provided with complete request, this is an error - cannot add manifests
+    // when completing. The client must submit all manifests via in-progress requests first.
     if (request.manifestUrl() != null) {
-      final ManifestJob manifestJob = ManifestJob.createPending(
-          UUID.randomUUID().toString(),
-          request.manifestUrl(),
-          request.fhirBaseUrl()
-      );
-
-      submission = submission.withManifestJob(manifestJob);
-      if (request.metadata() != null) {
-        submission = submission.withMetadata(request.metadata());
-      }
-
-      // Transition to PROCESSING if not already.
-      if (submission.state() == SubmissionState.PENDING) {
-        submission = submission.withState(SubmissionState.PROCESSING);
-      }
-      submissionRegistry.put(submission);
-
-      log.info("Added final manifest job {} to submission {} for manifest: {}",
-          manifestJob.manifestJobId(), request.submissionId(), request.manifestUrl());
-
-      // Start processing the manifest job.
-      if (executor != null) {
-        executor.executeManifestJob(submission, manifestJob, request.fileRequestHeaders(),
-            fhirServerBase);
-      }
-
-      // Re-fetch submission to check for outstanding jobs.
-      submission = submissionRegistry.get(request.submitter(), request.submissionId())
-          .orElse(submission);
-    }
-
-    // Check if any manifest jobs are still outstanding.
-    if (submission.hasOutstandingJobs()) {
-      throw new InvalidUserInputError(
-          "Cannot complete submission %s: import jobs are still outstanding."
-              .formatted(request.submissionId())
+      throw new InvalidRequestException(
+          "Cannot add manifest when completing submission. "
+              + "Submit manifests via in-progress requests first."
       );
     }
 
-    // All jobs have completed - determine final state.
+    // Check that we have manifests to process.
     if (submission.manifestJobs().isEmpty()) {
       throw new InvalidRequestException(
           "Cannot complete submission %s: no manifests have been submitted."
@@ -261,12 +229,35 @@ public class BulkSubmitProvider {
       );
     }
 
-    final SubmissionState finalState = submission.hasFailedJobs()
-                                       ? SubmissionState.COMPLETED_WITH_ERRORS
-                                       : SubmissionState.COMPLETED;
+    // Check if all downloads have completed.
+    if (!submission.allDownloadsComplete()) {
+      throw new InvalidUserInputError(
+          "Cannot complete submission %s: downloads are still in progress."
+              .formatted(request.submissionId())
+      );
+    }
+
+    // Check if any downloads failed.
+    if (submission.hasFailedJobs()) {
+      final SubmissionState finalState = SubmissionState.COMPLETED_WITH_ERRORS;
+      submission = submission.withState(finalState);
+      submissionRegistry.put(submission);
+      log.info("Submission {} completed with errors", request.submissionId());
+      return createAcknowledgementResponse(request.submissionId(), finalState.name().toLowerCase());
+    }
+
+    // All downloads successful - start the background import.
+    final SubmissionState finalState = SubmissionState.COMPLETED;
     submission = submission.withState(finalState);
     submissionRegistry.put(submission);
-    log.info("Submission {} completed with state: {}", request.submissionId(), finalState);
+
+    if (executor != null) {
+      executor.importSubmission(submission);
+      log.info("Submission {} marked complete, background import started", request.submissionId());
+    } else {
+      log.warn("BulkSubmitExecutor not available - import will not be executed for submission {}",
+          request.submissionId());
+    }
 
     return createAcknowledgementResponse(request.submissionId(), finalState.name().toLowerCase());
   }

@@ -31,12 +31,17 @@ public enum ManifestJobState {
   PENDING,
 
   /**
-   * The manifest is being processed (files are being downloaded and imported).
+   * The manifest is being processed (files are being downloaded).
    */
   PROCESSING,
 
   /**
-   * The manifest was processed successfully.
+   * The files have been downloaded successfully and are awaiting import.
+   */
+  DOWNLOADED,
+
+  /**
+   * The manifest was imported successfully.
    */
   COMPLETED,
 
