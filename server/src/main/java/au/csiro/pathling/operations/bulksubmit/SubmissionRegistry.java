@@ -42,9 +42,6 @@ public class SubmissionRegistry {
   @Nonnull
   private final ConcurrentMap<String, Submission> submissions = new ConcurrentHashMap<>();
 
-  @Nonnull
-  private final ConcurrentMap<String, SubmissionResult> results = new ConcurrentHashMap<>();
-
   /**
    * Creates or updates a submission in the registry.
    *
@@ -173,28 +170,7 @@ public class SubmissionRegistry {
   }
 
   /**
-   * Stores a result for a completed submission.
-   *
-   * @param result The submission result to store.
-   */
-  public void putResult(@Nonnull final SubmissionResult result) {
-    results.put(result.submissionId(), result);
-    log.debug("Stored result for submission: {}", result.submissionId());
-  }
-
-  /**
-   * Retrieves the result for a submission.
-   *
-   * @param submissionId The submission ID.
-   * @return The result if found, or empty if not found.
-   */
-  @Nonnull
-  public Optional<SubmissionResult> getResult(@Nonnull final String submissionId) {
-    return Optional.ofNullable(results.get(submissionId));
-  }
-
-  /**
-   * Removes a submission and its result from the registry.
+   * Removes a submission from the registry.
    *
    * @param submitter The submitter identifier.
    * @param submissionId The submission ID.
@@ -206,7 +182,6 @@ public class SubmissionRegistry {
   ) {
     final String key = submitter.toKey() + "/" + submissionId;
     final Submission removed = submissions.remove(key);
-    results.remove(submissionId);
     if (removed != null) {
       log.debug("Removed submission: {}", key);
       return true;

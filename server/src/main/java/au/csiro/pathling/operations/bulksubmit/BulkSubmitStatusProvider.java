@@ -120,11 +120,14 @@ public class BulkSubmitStatusProvider {
     // Look up the submission.
     final Submission submission = getSubmission(submitterIdentifier, submissionId.getValue());
 
+    // Build the request URL for the status manifest.
+    final String requestUrl = buildRequestUrl(requestDetails);
+
     // If the submission has completed or failed, return the result directly.
     if (submission.state() == SubmissionState.COMPLETED
         || submission.state() == SubmissionState.COMPLETED_WITH_ERRORS
         || submission.state() == SubmissionState.ABORTED) {
-      return handleCompletedSubmission(submission, requestDetails.getFhirServerBase());
+      return handleCompletedSubmission(submission, requestUrl);
     }
 
     // Get all job IDs from manifest jobs.
@@ -163,7 +166,7 @@ public class BulkSubmitStatusProvider {
   @Nonnull
   private Binary handleCompletedSubmission(
       @Nonnull final Submission submission,
-      @Nonnull final String fhirServerBase
+      @Nonnull final String requestUrl
   ) {
     // Check for error state and throw exception with error details.
     if (submission.state() == SubmissionState.COMPLETED_WITH_ERRORS) {
@@ -177,11 +180,7 @@ public class BulkSubmitStatusProvider {
       throw new InternalErrorException("Submission was aborted");
     }
 
-    // Get the result and build the manifest.
-    final SubmissionResult result = submissionRegistry.getResult(submission.submissionId())
-        .orElse(null);
-
-    return resultBuilder.buildStatusManifest(submission, result, fhirServerBase);
+    return resultBuilder.buildStatusManifest(submission, requestUrl);
   }
 
   @Nonnull
@@ -290,6 +289,31 @@ public class BulkSubmitStatusProvider {
         .setDiagnostics("Submission processing has not yet started. Please retry after a few "
             + "seconds.");
     return outcome;
+  }
+
+  /**
+   * Builds the request URL for the status manifest from the servlet request details.
+   *
+   * @param requestDetails The servlet request details.
+   * @return The complete request URL.
+   */
+  @Nonnull
+  private static String buildRequestUrl(@Nonnull final ServletRequestDetails requestDetails) {
+    final String requestPath = requestDetails.getRequestPath();
+    final String queryString = requestDetails.getServletRequest().getQueryString();
+    final String fhirServerBase = requestDetails.getFhirServerBase();
+
+    final StringBuilder url = new StringBuilder(fhirServerBase);
+    if (requestPath != null && !requestPath.isEmpty()) {
+      if (!fhirServerBase.endsWith("/") && !requestPath.startsWith("/")) {
+        url.append("/");
+      }
+      url.append(requestPath);
+    }
+    if (queryString != null && !queryString.isEmpty()) {
+      url.append("?").append(queryString);
+    }
+    return url.toString();
   }
 
 }

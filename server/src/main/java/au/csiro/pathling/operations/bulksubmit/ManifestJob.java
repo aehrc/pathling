@@ -21,8 +21,6 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Represents a single manifest import job within a bulk submission.
@@ -39,7 +37,6 @@ import java.util.List;
  * @param createdAt ISO-8601 timestamp when created.
  * @param completedAt ISO-8601 timestamp when finished.
  * @param errorMessage Error message if failed.
- * @param outputFiles Output files from this manifest.
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
  */
@@ -51,8 +48,7 @@ public record ManifestJob(
     @Nullable String jobId,
     @Nonnull String createdAt,
     @Nullable String completedAt,
-    @Nullable String errorMessage,
-    @Nonnull List<OutputFile> outputFiles
+    @Nullable String errorMessage
 ) {
 
   private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_INSTANT;
@@ -89,8 +85,7 @@ public record ManifestJob(
         null,
         now(),
         null,
-        null,
-        new ArrayList<>()
+        null
     );
   }
 
@@ -113,8 +108,7 @@ public record ManifestJob(
         jobId,
         createdAt,
         newCompletedAt,
-        errorMessage,
-        outputFiles
+        errorMessage
     );
   }
 
@@ -134,8 +128,7 @@ public record ManifestJob(
         jobId,
         createdAt,
         completedAt,
-        errorMessage,
-        outputFiles
+        errorMessage
     );
   }
 
@@ -155,29 +148,7 @@ public record ManifestJob(
         jobId,
         createdAt,
         now(),
-        errorMessage,
-        outputFiles
-    );
-  }
-
-  /**
-   * Creates a copy of this manifest job with output files.
-   *
-   * @param outputFiles The output files from processing this manifest.
-   * @return A new manifest job with the output files set.
-   */
-  @Nonnull
-  public ManifestJob withOutputFiles(@Nonnull final List<OutputFile> outputFiles) {
-    return new ManifestJob(
-        manifestJobId,
-        manifestUrl,
-        fhirBaseUrl,
-        state,
-        jobId,
-        createdAt,
-        completedAt,
-        errorMessage,
-        outputFiles
+        errorMessage
     );
   }
 

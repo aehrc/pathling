@@ -185,7 +185,6 @@ public class BulkSubmitExecutor {
     log.info("Starting processing for manifest job: {} in submission: {}",
         manifestJob.manifestJobId(), submission.submissionId());
 
-    final List<OutputFile> outputFiles = new ArrayList<>();
     Path stagingDir = null;
 
     // Update manifest job to PROCESSING state.
@@ -237,19 +236,12 @@ public class BulkSubmitExecutor {
                                             : List.of();
       importExecutor.execute(importRequest, submission.submissionId(), allowableSources);
 
-      // Build output file list.
-      for (final Map.Entry<String, Collection<String>> entry : fileUrls.entrySet()) {
-        final String resourceType = entry.getKey();
-        final long count = entry.getValue().size();
-        outputFiles.add(new OutputFile(resourceType, "", count));
-      }
-
-      // Update manifest job state to COMPLETED with output files.
+      // Update manifest job state to COMPLETED.
       submissionRegistry.updateManifestJob(
           submission.submitter(),
           submission.submissionId(),
           manifestJob.manifestJobId(),
-          mj -> mj.withState(ManifestJobState.COMPLETED).withOutputFiles(outputFiles)
+          mj -> mj.withState(ManifestJobState.COMPLETED)
       );
 
       log.info("Manifest job {} completed successfully", manifestJob.manifestJobId());
@@ -260,8 +252,10 @@ public class BulkSubmitExecutor {
         final Submission updatedSubmission = submissionRegistry.get(
             submission.submitter(), submission.submissionId()
         ).orElse(submission);
+        // Construct the status request URL.
+        final String requestUrl = buildStatusRequestUrl(fhirServerBase, submission);
         final IBaseResource statusManifest = resultBuilder.buildStatusManifest(
-            updatedSubmission, null, fhirServerBase
+            updatedSubmission, requestUrl
         );
         resultFuture.complete(statusManifest);
       }
@@ -478,6 +472,24 @@ public class BulkSubmitExecutor {
     } catch (final IOException e) {
       log.warn("Failed to clean up staging directory {}: {}", stagingDir, e.getMessage());
     }
+  }
+
+  /**
+   * Builds the status request URL for a submission.
+   *
+   * @param fhirServerBase The FHIR server base URL.
+   * @param submission The submission.
+   * @return The status request URL.
+   */
+  @Nonnull
+  private static String buildStatusRequestUrl(
+      @Nonnull final String fhirServerBase,
+      @Nonnull final Submission submission
+  ) {
+    return fhirServerBase + "/$bulk-submit-status?submissionId="
+        + submission.submissionId()
+        + "&submitter=" + submission.submitter().system()
+        + "|" + submission.submitter().value();
   }
 
 }

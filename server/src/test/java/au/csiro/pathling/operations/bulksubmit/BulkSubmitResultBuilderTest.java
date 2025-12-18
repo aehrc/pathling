@@ -20,9 +20,6 @@ package au.csiro.pathling.operations.bulksubmit;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.Optional;
 import org.hl7.fhir.r4.model.Binary;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,9 +32,10 @@ import org.junit.jupiter.api.Test;
  */
 class BulkSubmitResultBuilderTest {
 
-  private static final String SERVER_BASE_URL = "https://fhir.example.org/fhir";
+  private static final String REQUEST_URL =
+      "https://fhir.example.org/fhir/$bulk-submit-status?submissionId=test-submission-123"
+          + "&submitter=https://example.org/submitters|test-submitter";
   private static final String SUBMISSION_ID = "test-submission-123";
-  private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_INSTANT;
 
   private BulkSubmitResultBuilder resultBuilder;
 
@@ -47,27 +45,23 @@ class BulkSubmitResultBuilderTest {
   }
 
   @Test
-  void buildStatusManifestWithOutputFiles() {
-    // Create submission with manifest job containing output files.
-    final Submission submission = createCompletedSubmissionWithOutputFiles();
+  void buildStatusManifestIncludesRequestUrl() {
+    // The manifest should include the request URL.
+    final Submission submission = createCompletedSubmission();
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, null, SERVER_BASE_URL);
+    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL);
 
     assertThat(binary.getContentType()).isEqualTo("application/json");
     final String json = new String(binary.getData(), StandardCharsets.UTF_8);
-    assertThat(json).contains("\"transactionTime\"");
-    assertThat(json).contains("\"requiresAccessToken\" : false");
-    assertThat(json).contains("\"output\"");
-    assertThat(json).contains("Patient");
-    assertThat(json).contains("Observation");
-    assertThat(json).contains(SUBMISSION_ID);
+    assertThat(json).contains("\"request\" : \"" + REQUEST_URL + "\"");
   }
 
   @Test
-  void buildStatusManifestWithoutResult() {
+  void buildStatusManifestHasEmptyOutputArray() {
+    // Bulk submit imports data, so there are no output files to download.
     final Submission submission = createCompletedSubmission();
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, null, SERVER_BASE_URL);
+    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL);
 
     final String json = new String(binary.getData(), StandardCharsets.UTF_8);
     assertThat(json).contains("\"output\" : [ ]");
@@ -76,41 +70,71 @@ class BulkSubmitResultBuilderTest {
   }
 
   @Test
-  void buildStatusManifestAlwaysSetsRequiresAccessTokenFalse() {
-    // With the new manifest job aggregation, requiresAccessToken is always false.
+  void buildStatusManifestSetsRequiresAccessTokenFalse() {
     final Submission submission = createCompletedSubmission();
 
-    final Binary binary = resultBuilder.buildStatusManifest(submission, null, SERVER_BASE_URL);
+    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL);
 
     final String json = new String(binary.getData(), StandardCharsets.UTF_8);
     assertThat(json).contains("\"requiresAccessToken\" : false");
   }
 
   @Test
-  void buildProcessingResponse() {
+  void buildStatusManifestIncludesSubmissionIdExtension() {
+    // The manifest should include the submission ID in an extension.
+    final Submission submission = createCompletedSubmission();
+
+    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL);
+
+    final String json = new String(binary.getData(), StandardCharsets.UTF_8);
+    assertThat(json).contains(
+        "\"url\" : \"http://hl7.org/fhir/uv/bulkdata/StructureDefinition/bulk-submit-submission-id\"");
+    assertThat(json).contains("\"valueString\" : \"" + SUBMISSION_ID + "\"");
+  }
+
+  @Test
+  void buildStatusManifestIncludesTransactionTimeWhenCompleted() {
+    // For completed submissions, the transactionTime should be included.
+    final Submission submission = createCompletedSubmission();
+
+    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL);
+
+    final String json = new String(binary.getData(), StandardCharsets.UTF_8);
+    assertThat(json).contains("\"transactionTime\"");
+  }
+
+  @Test
+  void buildStatusManifestForProcessingSubmission() {
+    // The same manifest structure is used for in-progress submissions (HTTP 202).
     final Submission submission = createProcessingSubmission();
 
-    final Binary binary = resultBuilder.buildProcessingResponse(submission, SERVER_BASE_URL);
+    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL);
 
     assertThat(binary.getContentType()).isEqualTo("application/json");
     final String json = new String(binary.getData(), StandardCharsets.UTF_8);
     assertThat(json).contains(SUBMISSION_ID);
-    assertThat(json).contains("\"status\" : \"processing\"");
-    assertThat(json).contains("\"message\" : \"Submission is being processed\"");
+    assertThat(json).contains("\"request\" : \"" + REQUEST_URL + "\"");
+    assertThat(json).contains("\"requiresAccessToken\" : false");
+    assertThat(json).contains("\"output\" : [ ]");
+    assertThat(json).contains("\"error\" : [ ]");
   }
 
   @Test
-  void buildProcessingResponseForPendingSubmission() {
+  void buildStatusManifestForPendingSubmission() {
+    // Pending submissions use the same manifest structure.
     final Submission submission = Submission.createPending(
         SUBMISSION_ID,
         new SubmitterIdentifier("https://example.org/submitters", "test-submitter"),
         Optional.empty()
     );
 
-    final Binary binary = resultBuilder.buildProcessingResponse(submission, SERVER_BASE_URL);
+    final Binary binary = resultBuilder.buildStatusManifest(submission, REQUEST_URL);
 
     final String json = new String(binary.getData(), StandardCharsets.UTF_8);
-    assertThat(json).contains("\"status\" : \"pending\"");
+    assertThat(json).contains(SUBMISSION_ID);
+    assertThat(json).contains("\"request\" : \"" + REQUEST_URL + "\"");
+    // Pending submissions don't have transactionTime yet.
+    assertThat(json).doesNotContain("\"transactionTime\"");
   }
 
   // ========================================
@@ -124,28 +148,6 @@ class BulkSubmitResultBuilderTest {
             "https://example.org/fhir"
         )
         .withState(ManifestJobState.COMPLETED);
-
-    return Submission.createPending(
-            SUBMISSION_ID,
-            new SubmitterIdentifier("https://example.org/submitters", "test-submitter"),
-            Optional.empty()
-        )
-        .withManifestJob(completedJob)
-        .withState(SubmissionState.COMPLETED);
-  }
-
-  private Submission createCompletedSubmissionWithOutputFiles() {
-    final ManifestJob completedJob = ManifestJob.createPending(
-            "manifest-job-1",
-            "https://example.org/manifest.json",
-            "https://example.org/fhir"
-        )
-        .withState(ManifestJobState.COMPLETED)
-        .withOutputFiles(List.of(
-            new OutputFile("Patient", "https://fhir.example.org/output/Patient.ndjson", 100L),
-            new OutputFile("Observation", "https://fhir.example.org/output/Observation.ndjson",
-                500L)
-        ));
 
     return Submission.createPending(
             SUBMISSION_ID,
