@@ -291,6 +291,43 @@ public record Submission(
   }
 
   /**
+   * Finds a manifest job by its manifest URL.
+   *
+   * @param manifestUrl The URL of the manifest.
+   * @return The manifest job if found, or empty if not found.
+   */
+  @Nonnull
+  public Optional<ManifestJob> findManifestJobByUrl(@Nonnull final String manifestUrl) {
+    return manifestJobs.stream()
+        .filter(job -> job.manifestUrl().equals(manifestUrl))
+        .findFirst();
+  }
+
+  /**
+   * Creates a copy of this submission without the specified manifest job.
+   *
+   * @param manifestJobId The ID of the manifest job to remove.
+   * @return A new submission without the manifest job.
+   */
+  @Nonnull
+  public Submission withoutManifestJob(@Nonnull final String manifestJobId) {
+    final List<ManifestJob> newManifestJobs = manifestJobs.stream()
+        .filter(job -> !job.manifestJobId().equals(manifestJobId))
+        .toList();
+    return new Submission(
+        submissionId,
+        submitter,
+        state,
+        new ArrayList<>(newManifestJobs),
+        createdAt,
+        completedAt,
+        ownerId,
+        metadata,
+        errorMessage
+    );
+  }
+
+  /**
    * Returns a unique key for this submission based on submitter and submission ID.
    *
    * @return A composite key for registry storage.

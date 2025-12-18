@@ -201,16 +201,17 @@ class BulkSubmitResultBuilderTest {
   }
 
   private Submission createSubmissionWithDownloadedFiles() {
+    final String manifestUrl = "https://example.org/manifest.json";
     final ManifestJob downloadedJob = ManifestJob.createPending(
             "manifest-job-1",
-            "https://example.org/manifest.json",
+            manifestUrl,
             "https://example.org/fhir"
         )
         .withDownloadedFiles(java.util.List.of(
             new DownloadedFile("Patient", "Patient.manifest-job-1-1.ndjson",
-                "file:///tmp/Patient.manifest-job-1-1.ndjson"),
+                "file:///tmp/Patient.manifest-job-1-1.ndjson", manifestUrl),
             new DownloadedFile("Observation", "Observation.manifest-job-1-2.ndjson",
-                "file:///tmp/Observation.manifest-job-1-2.ndjson")
+                "file:///tmp/Observation.manifest-job-1-2.ndjson", manifestUrl)
         ))
         .withState(ManifestJobState.DOWNLOADED);
 

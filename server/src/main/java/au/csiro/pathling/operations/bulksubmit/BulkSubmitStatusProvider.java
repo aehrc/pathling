@@ -60,6 +60,9 @@ public class BulkSubmitStatusProvider {
   @Nonnull
   private final BulkSubmitResultBuilder resultBuilder;
 
+  @Nonnull
+  private final BulkSubmitValidator validator;
+
   @Nullable
   private final JobRegistry jobRegistry;
 
@@ -68,16 +71,19 @@ public class BulkSubmitStatusProvider {
    *
    * @param submissionRegistry The registry for tracking submissions.
    * @param resultBuilder The builder for generating result manifests.
+   * @param validator The validator for request validation.
    * @param jobRegistry The job registry for looking up async jobs (may be null if async is
    * disabled).
    */
   public BulkSubmitStatusProvider(
       @Nonnull final SubmissionRegistry submissionRegistry,
       @Nonnull final BulkSubmitResultBuilder resultBuilder,
+      @Nonnull final BulkSubmitValidator validator,
       @Nullable final JobRegistry jobRegistry
   ) {
     this.submissionRegistry = submissionRegistry;
     this.resultBuilder = resultBuilder;
+    this.validator = validator;
     this.jobRegistry = jobRegistry;
   }
 
@@ -101,6 +107,10 @@ public class BulkSubmitStatusProvider {
       @OperationParam(name = "submitter") final Identifier submitter,
       @Nonnull final ServletRequestDetails requestDetails
   ) {
+    // Validate required headers per spec.
+    validator.validateAcceptHeader(requestDetails);
+    validator.validatePreferAsyncHeader(requestDetails);
+
     if (submissionId == null || submissionId.isEmpty()) {
       throw new ca.uhn.fhir.rest.server.exceptions.InvalidRequestException(
           "Missing required parameter: submissionId"
@@ -216,10 +226,14 @@ public class BulkSubmitStatusProvider {
       }
     }
 
-    // Job is still running, return 202 with Content-Location.
+    // Job is still running, return 202 with Content-Location and X-Progress.
     final HttpServletResponse response = requestDetails.getServletResponse();
     final String jobUrl = requestDetails.getFhirServerBase() + "/$job?id=" + jobId;
     response.setHeader("Content-Location", jobUrl);
+
+    // Add X-Progress header showing percentage complete.
+    final int progress = calculateProgressForJob(jobId);
+    response.setHeader("X-Progress", progress + "%");
 
     throw new ProcessingNotCompletedException(
         "Processing",
@@ -269,6 +283,40 @@ public class BulkSubmitStatusProvider {
         .orElseThrow(() -> new ResourceNotFoundException(
             "Submission not found: " + submissionId
         ));
+  }
+
+  /**
+   * Calculates progress percentage for a job by looking up its submission.
+   *
+   * @param jobId The job ID to calculate progress for.
+   * @return Progress percentage (0-100).
+   */
+  private int calculateProgressForJob(@Nonnull final String jobId) {
+    return submissionRegistry.getByJobId(jobId)
+        .map(this::calculateProgress)
+        .orElse(0);
+  }
+
+  /**
+   * Calculates progress percentage based on manifest job states.
+   *
+   * @param submission The submission to calculate progress for.
+   * @return Progress percentage (0-100).
+   */
+  private int calculateProgress(@Nonnull final Submission submission) {
+    final List<ManifestJob> jobs = submission.manifestJobs();
+    if (jobs.isEmpty()) {
+      return 0;
+    }
+
+    final long completedJobs = jobs.stream()
+        .filter(job -> job.state() == ManifestJobState.DOWNLOADED
+            || job.state() == ManifestJobState.COMPLETED
+            || job.state() == ManifestJobState.FAILED
+            || job.state() == ManifestJobState.ABORTED)
+        .count();
+
+    return (int) ((completedJobs * 100) / jobs.size());
   }
 
   @Nonnull

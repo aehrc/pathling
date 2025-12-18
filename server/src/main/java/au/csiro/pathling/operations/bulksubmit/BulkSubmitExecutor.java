@@ -231,7 +231,8 @@ public class BulkSubmitExecutor {
 
       // Download files to persistent storage.
       final List<DownloadedFile> downloadedFiles = downloadFilesToPersistentStorage(
-          fileUrls, downloadDir, manifestJob.manifestJobId(), fileRequestHeaders
+          fileUrls, downloadDir, manifestJob.manifestJobId(), manifestJob.manifestUrl(),
+          fileRequestHeaders
       );
 
       // Register submission in ExportResultRegistry so files can be served via $result.
@@ -285,6 +286,82 @@ public class BulkSubmitExecutor {
       }
       // Note: Downloaded files are NOT cleaned up - they persist until explicit deletion.
     }
+  }
+
+  /**
+   * Aborts a submission by cancelling any running async jobs and updating manifest job states. Note
+   * that downloaded files are NOT deleted - cleanup is handled by a separate mechanism.
+   *
+   * @param submission The submission to abort.
+   */
+  public void abortSubmission(@Nonnull final Submission submission) {
+    log.info("Aborting submission: {}", submission.submissionId());
+
+    // Cancel any running async jobs.
+    for (final ManifestJob job : submission.manifestJobs()) {
+      if (job.jobId() != null && jobRegistry != null) {
+        final Job<?> asyncJob = jobRegistry.get(job.jobId());
+        if (asyncJob != null && !asyncJob.getResult().isDone()) {
+          asyncJob.getResult().cancel(true);
+          log.debug("Cancelled async job {} for manifest job {}", job.jobId(),
+              job.manifestJobId());
+        }
+      }
+    }
+
+    // Remove from export registry so files are no longer served.
+    exportResultRegistry.remove(submission.submissionId());
+    log.debug("Removed submission {} from export result registry", submission.submissionId());
+
+    // Update all non-terminal manifest jobs to ABORTED state.
+    for (final ManifestJob job : submission.manifestJobs()) {
+      if (!job.isTerminal()) {
+        submissionRegistry.updateManifestJob(
+            submission.submitter(),
+            submission.submissionId(),
+            job.manifestJobId(),
+            mj -> mj.withState(ManifestJobState.ABORTED)
+        );
+        log.debug("Marked manifest job {} as ABORTED", job.manifestJobId());
+      }
+    }
+
+    log.info("Submission {} aborted successfully", submission.submissionId());
+  }
+
+  /**
+   * Aborts a single manifest job within a submission. Cancels the async job if running and updates
+   * the manifest job state. Downloaded files are NOT deleted.
+   *
+   * @param submission The submission containing the manifest job.
+   * @param manifestJob The manifest job to abort.
+   */
+  public void abortManifestJob(
+      @Nonnull final Submission submission,
+      @Nonnull final ManifestJob manifestJob
+  ) {
+    log.info("Aborting manifest job {} in submission {}", manifestJob.manifestJobId(),
+        submission.submissionId());
+
+    // Cancel the async job if running.
+    if (manifestJob.jobId() != null && jobRegistry != null) {
+      final Job<?> asyncJob = jobRegistry.get(manifestJob.jobId());
+      if (asyncJob != null && !asyncJob.getResult().isDone()) {
+        asyncJob.getResult().cancel(true);
+        log.debug("Cancelled async job {} for manifest job {}", manifestJob.jobId(),
+            manifestJob.manifestJobId());
+      }
+    }
+
+    // Update manifest job to ABORTED state.
+    submissionRegistry.updateManifestJob(
+        submission.submitter(),
+        submission.submissionId(),
+        manifestJob.manifestJobId(),
+        mj -> mj.withState(ManifestJobState.ABORTED)
+    );
+
+    log.info("Manifest job {} aborted successfully", manifestJob.manifestJobId());
   }
 
   /**
@@ -469,6 +546,7 @@ public class BulkSubmitExecutor {
    * @param fileUrls Map of resource type to collection of URLs.
    * @param downloadDir The directory to download files to.
    * @param manifestJobId The manifest job ID (used in file naming).
+   * @param manifestUrl The URL of the manifest from which these files are being downloaded.
    * @param fileRequestHeaders Custom HTTP headers to include when downloading files.
    * @return List of downloaded file metadata.
    * @throws IOException If a file cannot be downloaded.
@@ -478,6 +556,7 @@ public class BulkSubmitExecutor {
       @Nonnull final Map<String, Collection<String>> fileUrls,
       @Nonnull final Path downloadDir,
       @Nonnull final String manifestJobId,
+      @Nonnull final String manifestUrl,
       @Nonnull final List<FileRequestHeader> fileRequestHeaders
   ) throws IOException {
     final List<DownloadedFile> downloadedFiles = new ArrayList<>();
@@ -498,7 +577,8 @@ public class BulkSubmitExecutor {
         downloadedFiles.add(new DownloadedFile(
             resourceType,
             fileName,
-            localPath.toUri().toString()
+            localPath.toUri().toString(),
+            manifestUrl
         ));
       }
     }

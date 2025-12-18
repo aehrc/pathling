@@ -118,11 +118,8 @@ public class BulkSubmitValidator {
       validateUrl(fhirBaseUrl, "fhirBaseUrl", config);
     }
 
-    // Extract replacesManifestUrl - not supported.
+    // Extract replacesManifestUrl (optional).
     final String replacesManifestUrl = extractOptionalUrl(parameters, "replacesManifestUrl");
-    if (replacesManifestUrl != null) {
-      throw new InvalidUserInputError("replacesManifestUrl is not supported.");
-    }
 
     // Extract metadata (optional).
     final SubmissionMetadata metadata = extractMetadata(parameters);
@@ -307,6 +304,30 @@ public class BulkSubmitValidator {
     }
 
     return new FileRequestHeader(headerName, headerValue);
+  }
+
+  /**
+   * Validates that the Accept header includes application/fhir+json.
+   *
+   * @param requestDetails The request details.
+   */
+  public void validateAcceptHeader(@Nonnull final RequestDetails requestDetails) {
+    final String accept = requestDetails.getHeader("Accept");
+    if (accept != null && !accept.contains("application/fhir+json")) {
+      throw new InvalidUserInputError("Accept header must include application/fhir+json");
+    }
+  }
+
+  /**
+   * Validates that the Prefer header includes respond-async.
+   *
+   * @param requestDetails The request details.
+   */
+  public void validatePreferAsyncHeader(@Nonnull final RequestDetails requestDetails) {
+    final String prefer = requestDetails.getHeader("Prefer");
+    if (prefer == null || !prefer.contains("respond-async")) {
+      throw new InvalidUserInputError("Prefer header must include respond-async");
+    }
   }
 
 }

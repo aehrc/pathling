@@ -48,7 +48,12 @@ public enum ManifestJobState {
   /**
    * The manifest processing failed with an error.
    */
-  FAILED;
+  FAILED,
+
+  /**
+   * The manifest job was explicitly aborted.
+   */
+  ABORTED;
 
   /**
    * Returns whether this state is a terminal state (processing has finished).
@@ -56,7 +61,7 @@ public enum ManifestJobState {
    * @return true if the state is terminal, false otherwise.
    */
   public boolean isTerminal() {
-    return this == COMPLETED || this == FAILED;
+    return this == COMPLETED || this == FAILED || this == ABORTED;
   }
 
 }

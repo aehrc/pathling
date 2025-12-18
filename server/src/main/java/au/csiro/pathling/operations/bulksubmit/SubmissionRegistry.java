@@ -189,4 +189,18 @@ public class SubmissionRegistry {
     return false;
   }
 
+  /**
+   * Finds a submission by a job ID associated with one of its manifest jobs.
+   *
+   * @param jobId The job ID to search for.
+   * @return The submission if found, or empty if not found.
+   */
+  @Nonnull
+  public Optional<Submission> getByJobId(@Nonnull final String jobId) {
+    return submissions.values().stream()
+        .filter(submission -> submission.manifestJobs().stream()
+            .anyMatch(job -> jobId.equals(job.jobId())))
+        .findFirst();
+  }
+
 }

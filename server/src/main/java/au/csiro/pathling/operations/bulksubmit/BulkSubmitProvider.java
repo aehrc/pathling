@@ -110,7 +110,7 @@ public class BulkSubmitProvider {
     } else if (request.isComplete()) {
       return handleCompleteSubmission(request, existingSubmission, ownerId, fhirServerBase);
     } else if (request.isAborted()) {
-      return handleAbortedSubmission();
+      return handleAbortedSubmission(request, existingSubmission);
     } else {
       throw new InvalidRequestException("Unknown submission status: " + request.submissionStatus());
     }
@@ -143,6 +143,29 @@ public class BulkSubmitProvider {
       );
       submissionRegistry.put(submission);
       log.info("Created new submission: {}", request.submissionId());
+    }
+
+    // Handle replacesManifestUrl - abort the old manifest job if specified.
+    if (request.replacesManifestUrl() != null) {
+      final Optional<ManifestJob> jobToReplace = submission.findManifestJobByUrl(
+          request.replacesManifestUrl()
+      );
+      if (jobToReplace.isEmpty()) {
+        throw new InvalidRequestException(
+            "Cannot replace manifest: no job found for URL " + request.replacesManifestUrl()
+        );
+      }
+
+      // Abort the old job.
+      if (executor != null) {
+        executor.abortManifestJob(submission, jobToReplace.get());
+      }
+
+      // Remove the old job from submission.
+      submission = submission.withoutManifestJob(jobToReplace.get().manifestJobId());
+      submissionRegistry.put(submission);
+      log.info("Replaced manifest job for URL {} in submission {}",
+          request.replacesManifestUrl(), request.submissionId());
     }
 
     // If manifest URL provided, create a manifest job and start processing.
@@ -263,9 +286,38 @@ public class BulkSubmitProvider {
   }
 
   @Nonnull
-  private Parameters handleAbortedSubmission() {
-    // Abort is not supported.
-    throw new InvalidUserInputError("Abort is not supported.");
+  private Parameters handleAbortedSubmission(
+      @Nonnull final BulkSubmitRequest request,
+      @Nonnull final Optional<Submission> existingSubmission
+  ) {
+    // Validate that submission exists.
+    final Submission submission = existingSubmission.orElseThrow(
+        () -> new ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException(
+            "Submission not found: " + request.submissionId()
+        )
+    );
+
+    // Validate that submission can be aborted.
+    if (submission.state() == SubmissionState.COMPLETED
+        || submission.state() == SubmissionState.COMPLETED_WITH_ERRORS
+        || submission.state() == SubmissionState.ABORTED) {
+      throw new InvalidRequestException(
+          "Cannot abort submission %s: current state is %s."
+              .formatted(request.submissionId(), submission.state())
+      );
+    }
+
+    // Abort the submission.
+    if (executor != null) {
+      executor.abortSubmission(submission);
+    }
+
+    // Update submission state to ABORTED.
+    final Submission abortedSubmission = submission.withState(SubmissionState.ABORTED);
+    submissionRegistry.put(abortedSubmission);
+    log.info("Submission {} aborted", request.submissionId());
+
+    return createAcknowledgementResponse(request.submissionId(), "aborted");
   }
 
   @Nonnull

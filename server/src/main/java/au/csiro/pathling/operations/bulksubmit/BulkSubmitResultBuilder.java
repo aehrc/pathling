@@ -103,6 +103,15 @@ public class BulkSubmitResultBuilder {
             outputEntry.put("type", file.resourceType());
             outputEntry.put("url", buildResultUrl(fhirServerBase, submission.submissionId(),
                 file.fileName()));
+
+            // Add manifestUrl extension per spec.
+            final ArrayNode outputExtensions = objectMapper.createArrayNode();
+            final ObjectNode manifestUrlExt = objectMapper.createObjectNode();
+            manifestUrlExt.put("url", "manifestUrl");
+            manifestUrlExt.put("valueUrl", file.manifestUrl());
+            outputExtensions.add(manifestUrlExt);
+            outputEntry.set("extension", outputExtensions);
+
             outputArray.add(outputEntry);
           }
         }

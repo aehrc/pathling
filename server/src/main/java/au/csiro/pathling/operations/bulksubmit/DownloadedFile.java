@@ -25,12 +25,14 @@ import jakarta.annotation.Nonnull;
  * @param resourceType The FHIR resource type contained in the file.
  * @param fileName The name of the file (used in the $result URL).
  * @param localPath The local filesystem path where the file is stored.
+ * @param manifestUrl The URL of the manifest from which this file was downloaded.
  * @author John Grimes
  */
 public record DownloadedFile(
     @Nonnull String resourceType,
     @Nonnull String fileName,
-    @Nonnull String localPath
+    @Nonnull String localPath,
+    @Nonnull String manifestUrl
 ) {
 
 }
