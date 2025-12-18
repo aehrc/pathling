@@ -31,6 +31,7 @@ interface JobContextValue extends JobState {
   addJob: (job: Omit<Job, "createdAt">) => void;
   updateJobStatus: (id: string, status: JobStatus) => void;
   updateJobProgress: (id: string, progress: number) => void;
+  updateJobPollUrl: (id: string, pollUrl: string) => void;
   updateJobManifest: (
     id: string,
     manifest: ExportManifest | ImportManifest | StatusManifest,
@@ -100,6 +101,13 @@ export function JobProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateJobPollUrl = useCallback((id: string, pollUrl: string) => {
+    dispatch({
+      type: "UPDATE_JOB",
+      payload: { id, updates: { pollUrl } },
+    });
+  }, []);
+
   const updateJobManifest = useCallback(
     (id: string, manifest: ExportManifest | ImportManifest | StatusManifest) => {
       dispatch({
@@ -162,6 +170,7 @@ export function JobProvider({ children }: { children: ReactNode }) {
         addJob,
         updateJobStatus,
         updateJobProgress,
+        updateJobPollUrl,
         updateJobManifest,
         updateJobError,
         removeJob,

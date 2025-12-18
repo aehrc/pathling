@@ -133,8 +133,8 @@ export function Import() {
 
       try {
         const accessToken = client?.state.tokenResponse?.access_token;
-
-        await cancelImport(fhirBaseUrl, accessToken, job.pollUrl);
+        // Import jobs always have a pollUrl.
+        await cancelImport(fhirBaseUrl, accessToken, job.pollUrl!);
         updateJobStatus(jobId, "cancelled");
       } catch (err) {
         if (err instanceof UnauthorizedError) {

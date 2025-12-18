@@ -58,21 +58,3 @@ export interface StatusManifest {
   output: OutputFile[];
   error?: OutputFile[];
 }
-
-// Submission status options for the form.
-export const SUBMISSION_STATUSES: {
-  value: BulkSubmitStatus;
-  label: string;
-  description: string;
-}[] = [
-  {
-    value: "in-progress",
-    label: "In progress",
-    description: "Export is still running on the source server",
-  },
-  {
-    value: "complete",
-    label: "Complete",
-    description: "Export finished, manifest URL is ready",
-  },
-];

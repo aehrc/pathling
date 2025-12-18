@@ -5,10 +5,9 @@
  */
 
 import { InfoCircledIcon, LockClosedIcon } from "@radix-ui/react-icons";
-import { Box, Button, Callout, Flex, Heading, Spinner, Tabs, Text } from "@radix-ui/themes";
+import { Box, Button, Callout, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
 import { useCallback, useEffect, useRef } from "react";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
-import { BulkSubmitForm } from "../components/bulkSubmit/BulkSubmitForm";
 import { BulkSubmitJobList } from "../components/bulkSubmit/BulkSubmitJobList";
 import { BulkSubmitMonitorForm } from "../components/bulkSubmit/BulkSubmitMonitorForm";
 import { config } from "../config";
@@ -16,8 +15,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { useJobs } from "../contexts/JobContext";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
 import { initiateAuth } from "../services/auth";
-import { abortBulkSubmit, checkBulkSubmitStatus, kickOffBulkSubmit } from "../services/bulkSubmit";
-import type { BulkSubmitRequest, SubmitterIdentifier } from "../types/bulkSubmit";
+import { abortBulkSubmit, checkBulkSubmitStatus } from "../services/bulkSubmit";
+import type { SubmitterIdentifier } from "../types/bulkSubmit";
 import { UnauthorizedError } from "../types/errors";
 import type { BulkSubmitJob } from "../types/job";
 
@@ -57,47 +56,6 @@ export function BulkSubmit() {
     }
   };
 
-  const handleSubmit = useCallback(
-    async (request: BulkSubmitRequest) => {
-      if (!fhirBaseUrl) return;
-
-      try {
-        const accessToken = client?.state.tokenResponse?.access_token;
-
-        const { submissionId, status } = await kickOffBulkSubmit(fhirBaseUrl, accessToken, request);
-
-        // If the submission is still in progress, get the poll URL for status checking.
-        if (status === "in-progress" || status === "processing") {
-          const { jobId, pollUrl } = await checkBulkSubmitStatus(fhirBaseUrl, accessToken, {
-            submissionId,
-            submitter: request.submitter,
-          });
-
-          addJob({
-            id: jobId,
-            type: "bulk-submit",
-            pollUrl,
-            status: "pending",
-            progress: null,
-            request,
-            submitter: request.submitter,
-            submissionId,
-            manifest: null,
-            error: null,
-          } as Omit<BulkSubmitJob, "createdAt">);
-        }
-        // If already complete, no polling needed - job is done.
-      } catch (err) {
-        if (err instanceof UnauthorizedError) {
-          handleUnauthorizedError();
-        } else {
-          setError(err instanceof Error ? err.message : "Failed to submit");
-        }
-      }
-    },
-    [client, fhirBaseUrl, addJob, setError, handleUnauthorizedError],
-  );
-
   const handleMonitor = useCallback(
     async (submissionId: string, submitter: SubmitterIdentifier) => {
       if (!fhirBaseUrl) return;
@@ -105,28 +63,67 @@ export function BulkSubmit() {
       try {
         const accessToken = client?.state.tokenResponse?.access_token;
 
-        // Get the poll URL for monitoring the existing submission.
-        const { jobId, pollUrl } = await checkBulkSubmitStatus(fhirBaseUrl, accessToken, {
+        // Get the status of the submission.
+        const result = await checkBulkSubmitStatus(fhirBaseUrl, accessToken, {
           submissionId,
           submitter,
         });
 
-        addJob({
-          id: jobId,
-          type: "bulk-submit",
-          pollUrl,
-          status: "pending",
-          progress: null,
-          request: {
-            submissionId,
+        if (result.status === "completed") {
+          // Submission is already complete, create a completed job with the manifest.
+          addJob({
+            id: crypto.randomUUID(),
+            type: "bulk-submit",
+            pollUrl: null,
+            status: "completed",
+            progress: null,
+            request: {
+              submissionId,
+              submitter,
+              submissionStatus: "complete",
+            },
             submitter,
-            submissionStatus: "complete",
-          },
-          submitter,
-          submissionId,
-          manifest: null,
-          error: null,
-        } as Omit<BulkSubmitJob, "createdAt">);
+            submissionId,
+            manifest: result.manifest,
+            error: null,
+          } as Omit<BulkSubmitJob, "createdAt">);
+        } else if (result.status === "pending") {
+          // Job is running, create a pending job to poll for progress.
+          addJob({
+            id: result.jobId,
+            type: "bulk-submit",
+            pollUrl: result.pollUrl,
+            status: "pending",
+            progress: null,
+            request: {
+              submissionId,
+              submitter,
+              submissionStatus: "complete",
+            },
+            submitter,
+            submissionId,
+            manifest: null,
+            error: null,
+          } as Omit<BulkSubmitJob, "createdAt">);
+        } else {
+          // Job hasn't started yet, create a pending job that will poll for status.
+          addJob({
+            id: crypto.randomUUID(),
+            type: "bulk-submit",
+            pollUrl: null,
+            status: "pending",
+            progress: null,
+            request: {
+              submissionId,
+              submitter,
+              submissionStatus: "complete",
+            },
+            submitter,
+            submissionId,
+            manifest: null,
+            error: null,
+          } as Omit<BulkSubmitJob, "createdAt">);
+        }
       } catch (err) {
         if (err instanceof UnauthorizedError) {
           handleUnauthorizedError();
@@ -203,47 +200,25 @@ export function BulkSubmit() {
     );
   }
 
-  // Show bulk submit forms.
+  // Show bulk submit form.
   return (
     <Box>
       <Heading size="6" mb="4">
         Bulk submit
       </Heading>
 
-      <Tabs.Root defaultValue="create">
-        <Tabs.List>
-          <Tabs.Trigger value="create">Create submission</Tabs.Trigger>
-          <Tabs.Trigger value="monitor">Monitor submission</Tabs.Trigger>
-        </Tabs.List>
-
-        <Box pt="4">
-          <Tabs.Content value="create">
-            <Flex gap="6" direction={{ initial: "column", md: "row" }}>
-              <Box style={{ flex: 1 }}>
-                <BulkSubmitForm onSubmit={handleSubmit} isSubmitting={false} disabled={false} />
-              </Box>
-              <Box style={{ flex: 1 }}>
-                <BulkSubmitJobList jobs={bulkSubmitJobs} onAbort={handleAbort} />
-              </Box>
-            </Flex>
-          </Tabs.Content>
-
-          <Tabs.Content value="monitor">
-            <Flex gap="6" direction={{ initial: "column", md: "row" }}>
-              <Box style={{ flex: 1 }}>
-                <BulkSubmitMonitorForm
-                  onMonitor={handleMonitor}
-                  isSubmitting={false}
-                  disabled={false}
-                />
-              </Box>
-              <Box style={{ flex: 1 }}>
-                <BulkSubmitJobList jobs={bulkSubmitJobs} onAbort={handleAbort} />
-              </Box>
-            </Flex>
-          </Tabs.Content>
+      <Flex gap="6" direction={{ initial: "column", md: "row" }}>
+        <Box style={{ flex: 1 }}>
+          <BulkSubmitMonitorForm
+            onMonitor={handleMonitor}
+            isSubmitting={false}
+            disabled={false}
+          />
         </Box>
-      </Tabs.Root>
+        <Box style={{ flex: 1 }}>
+          <BulkSubmitJobList jobs={bulkSubmitJobs} onAbort={handleAbort} />
+        </Box>
+      </Flex>
       <SessionExpiredDialog />
     </Box>
   );

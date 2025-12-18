@@ -57,10 +57,10 @@ function formatLevel(level: ExportJob["request"]["level"]): string {
 export function ExportJobCard({ job, onCancel, onDownload }: ExportJobCardProps) {
   const { updateJobProgress, updateJobManifest, updateJobError, updateJobStatus } = useJobs();
 
-  // Poll job status while active.
+  // Poll job status while active. Export jobs always have a pollUrl.
   useExportJobPolling({
     jobId: job.id,
-    pollUrl: job.pollUrl,
+    pollUrl: job.pollUrl!,
     status: job.status,
     onProgress: updateJobProgress,
     onStatusChange: updateJobStatus,

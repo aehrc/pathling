@@ -40,20 +40,25 @@ function formatDate(date: Date): string {
 }
 
 export function BulkSubmitJobCard({ job, onAbort }: BulkSubmitJobCardProps) {
-  const { updateJobProgress, updateJobManifest, updateJobError, updateJobStatus } = useJobs();
+  const { updateJobProgress, updateJobManifest, updateJobError, updateJobStatus, updateJobPollUrl } =
+    useJobs();
 
   // Poll job status while active.
   useBulkSubmitJobPolling({
     jobId: job.id,
     pollUrl: job.pollUrl,
+    submissionId: job.submissionId,
+    submitter: job.submitter,
     status: job.status,
     onProgress: updateJobProgress,
     onStatusChange: updateJobStatus,
+    onPollUrlObtained: updateJobPollUrl,
     onComplete: updateJobManifest,
     onError: updateJobError,
   });
 
   const isActive = job.status === "pending" || job.status === "in_progress";
+  const isWaitingForJob = job.pollUrl === null;
   const showProgress = isActive && job.progress !== null;
 
   return (
@@ -106,7 +111,7 @@ export function BulkSubmitJobCard({ job, onAbort }: BulkSubmitJobCardProps) {
           <Flex align="center" gap="2">
             <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
             <Text size="2" color="gray">
-              Processing...
+              {isWaitingForJob ? "Waiting for job to start..." : "Processing..."}
             </Text>
           </Flex>
         )}

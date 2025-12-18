@@ -63,10 +63,10 @@ function getExportTypeLabel(type: string): string {
 export function ImportJobCard({ job, onCancel }: ImportJobCardProps) {
   const { updateJobProgress, updateJobManifest, updateJobError, updateJobStatus } = useJobs();
 
-  // Poll job status while active.
+  // Poll job status while active. Import jobs always have a pollUrl.
   useImportJobPolling({
     jobId: job.id,
-    pollUrl: job.pollUrl,
+    pollUrl: job.pollUrl!,
     status: job.status,
     onProgress: updateJobProgress,
     onStatusChange: updateJobStatus,

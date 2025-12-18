@@ -18,10 +18,10 @@ interface KickOffResult {
   status: string;
 }
 
-interface CheckStatusResult {
-  jobId: string;
-  pollUrl: string;
-}
+type CheckStatusResult =
+  | { status: "pending"; jobId: string; pollUrl: string }
+  | { status: "retry"; retryAfter: number }
+  | { status: "completed"; manifest: StatusManifest };
 
 interface PollResult {
   status: "in_progress" | "completed";
@@ -80,8 +80,12 @@ export async function kickOffBulkSubmit(
 }
 
 /**
- * Checks bulk submit status once and returns the poll URL from the Content-Location header.
- * This should be called once after kickOffBulkSubmit returns "in-progress" status.
+ * Checks bulk submit status and returns the result. The server can return three different
+ * responses:
+ *
+ * 1. 202 with Content-Location header - Job is running, poll the URL for progress
+ * 2. 202 with Retry-After header - Job hasn't started yet, client should retry
+ * 3. 200 with Binary resource - Submission is already complete
  */
 export async function checkBulkSubmitStatus(
   fhirBaseUrl: string,
@@ -110,22 +114,32 @@ export async function checkBulkSubmitStatus(
   if (response.status === 401) {
     throw new UnauthorizedError();
   }
-  if (response.status !== 202) {
-    const errorBody = await response.text();
-    throw new Error(
-      `Bulk submit status check failed: ${response.status} - ${errorBody}`,
-    );
+
+  // Handle 200 response - submission is already complete.
+  if (response.status === 200) {
+    const responseBody: unknown = await response.json();
+    const manifest = parseBinaryManifest(responseBody);
+    return { status: "completed", manifest };
   }
 
-  const contentLocation = response.headers.get("Content-Location");
-  if (!contentLocation) {
-    throw new Error(
-      "Bulk submit status check failed: No Content-Location header received",
-    );
+  // Handle 202 response - check for Content-Location or Retry-After.
+  if (response.status === 202) {
+    const contentLocation = response.headers.get("Content-Location");
+    if (contentLocation) {
+      const jobId = extractJobId(contentLocation);
+      return { status: "pending", jobId, pollUrl: contentLocation };
+    }
+
+    // No Content-Location means job hasn't started yet.
+    const retryAfter = response.headers.get("Retry-After");
+    const retrySeconds = retryAfter ? parseInt(retryAfter, 10) : 5;
+    return { status: "retry", retryAfter: retrySeconds };
   }
 
-  const jobId = extractJobId(contentLocation);
-  return { jobId, pollUrl: contentLocation };
+  const errorBody = await response.text();
+  throw new Error(
+    `Bulk submit status check failed: ${response.status} - ${errorBody}`,
+  );
 }
 
 /**

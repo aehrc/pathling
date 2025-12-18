@@ -25,7 +25,7 @@ export type JobStatus =
 interface BaseJob {
   id: string;
   type: JobType;
-  pollUrl: string;
+  pollUrl: string | null;
   status: JobStatus;
   progress: number | null;
   error: string | null;

@@ -100,8 +100,8 @@ export function Export() {
 
       try {
         const accessToken = client?.state.tokenResponse?.access_token;
-
-        await cancelJobApi(fhirBaseUrl, accessToken, job.pollUrl);
+        // Export jobs always have a pollUrl.
+        await cancelJobApi(fhirBaseUrl, accessToken, job.pollUrl!);
         updateJobStatus(jobId, "cancelled");
       } catch (err) {
         if (err instanceof UnauthorizedError) {
