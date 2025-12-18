@@ -50,7 +50,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Order(100)
 public class SecurityAspect {
-  
+
   /**
    * Checks if the current user is authorised to access the resource.
    *
@@ -115,7 +115,7 @@ public class SecurityAspect {
     return authToken.getAuthorities() != null && requiredAuthority
         .subsumedByAny(authorities);
   }
-  
+
   /**
    * Checks for the supplied authority and raises an error if it is not present.
    *
@@ -124,7 +124,7 @@ public class SecurityAspect {
   public static void checkHasAuthority(@Nonnull final PathlingAuthority requiredAuthority) {
     final Authentication authentication = SecurityContextHolder
         .getContext().getAuthentication();
-    final AbstractAuthenticationToken authToken = (authentication instanceof AbstractAuthenticationToken abstractAuthenticationToken) 
+    final AbstractAuthenticationToken authToken = (authentication instanceof AbstractAuthenticationToken abstractAuthenticationToken)
                                                   ? abstractAuthenticationToken
                                                   : null;
     if (authToken == null) {
