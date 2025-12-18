@@ -18,6 +18,7 @@
 package au.csiro.pathling.test.yaml.executor;
 
 import static au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase.ANY_ERROR;
+import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import au.csiro.pathling.errors.UnsupportedFhirPathFeatureError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
@@ -37,6 +39,7 @@ import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator;
 import au.csiro.pathling.fhirpath.execution.FhirPathEvaluator.FhirPathEvaluatorBuilder;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.test.yaml.FhirTypedLiteral;
 import au.csiro.pathling.test.yaml.YamlSupport;
 import au.csiro.pathling.test.yaml.YamlTestDefinition.TestCase;
 import au.csiro.pathling.test.yaml.format.ExcludeRule;
@@ -48,6 +51,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -498,9 +502,23 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
       } else if (singleValue instanceof Boolean) {
         col = BooleanCollection.fromValue((Boolean) singleValue);
       } else if (singleValue instanceof Double || singleValue instanceof Float) {
-        // Decimal values (Double/Float) map to DecimalCollection - convert to string representation 
+        // Decimal values (Double/Float) map to DecimalCollection - convert to string representation
         // for proper decimal handling.
         col = DecimalCollection.fromLiteral(singleValue.toString());
+      } else if (singleValue instanceof final FhirTypedLiteral typedLiteral) {
+        // Handle typed literals (Coding, Quantity, etc.)
+        if (typedLiteral.getType() == FHIRDefinedType.QUANTITY) {
+          col = nonNull(typedLiteral.getLiteral())
+                ? QuantityCollection.fromLiteral(typedLiteral.getLiteral())
+                : QuantityCollection.build(DefaultRepresentation.empty());
+        } else if (typedLiteral.getType() == FHIRDefinedType.CODING) {
+          col = nonNull(typedLiteral.getLiteral())
+                ? CodingCollection.fromLiteral(typedLiteral.getLiteral())
+                : CodingCollection.build(DefaultRepresentation.empty());
+        } else {
+          throw new IllegalArgumentException(
+              "Unsupported FhirTypedLiteral type for variable: " + key);
+        }
       } else {
         // Unsupported type - throw an informative error.
         throw new IllegalArgumentException(

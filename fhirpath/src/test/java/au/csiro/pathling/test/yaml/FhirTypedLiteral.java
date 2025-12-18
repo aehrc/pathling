@@ -106,4 +106,17 @@ public class FhirTypedLiteral {
     return of(Enumerations.FHIRDefinedType.BOOLEAN, literal);
   }
 
+  /**
+   * Creates a Quantity typed literal from a FHIRPath quantity literal string.
+   *
+   * <p>Use FHIRPath syntax with quoted units (e.g., "10.5 'mg'", "70 'kg'")
+   *
+   * @param literal the FHIRPath quantity literal string
+   * @return A new FhirTypedLiteral
+   */
+  @Nonnull
+  public static FhirTypedLiteral toQuantity(@Nullable final String literal) {
+    return of(Enumerations.FHIRDefinedType.QUANTITY, literal);
+  }
+
 }

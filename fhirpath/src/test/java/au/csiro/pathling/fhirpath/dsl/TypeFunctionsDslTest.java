@@ -20,7 +20,6 @@ package au.csiro.pathling.fhirpath.dsl;
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import java.util.stream.Stream;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.DynamicTest;
 
 /**
@@ -40,10 +39,7 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
             .stringEmpty("emptyString")
             .stringArray("stringArray", "one", "two", "three")
             .coding("codingValue", "http://example.org/codesystem|code2|display1")
-            .element("quantityValue",
-                qt -> qt.fhirType(FHIRDefinedType.QUANTITY)
-                    .decimal("value", 11.5)
-                    .string("unit", "mg"))
+            .quantity("quantityValue", "11.5 'mg'")
             // Heterogeneous collection
             .elementArray("heteroattr",
                 val1 -> val1.choice("value")
@@ -120,6 +116,7 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
             .stringEmpty("emptyString")
             .stringArray("stringArray", "one", "two", "three")
             .coding("codingValue", "http://example.org/codesystem|code2|display1")
+            .quantity("quantityValue", "11.5 'mg'")
             // Heterogeneous collection
             .elementArray("heteroattr",
                 val1 -> val1.choice("value")
@@ -152,14 +149,18 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
 
         .group("as() function - complex types")
         // Complex type matching
-        .testEquals(11.5, "(11.5 'mg').as(Quantity).value",
+        .testEquals("mg", "quantityValue.as(FHIR.Quantity).unit",
+            "as() allows traversal after conversion to Quantity")
+        .testEquals(11.5, "quantityValue.as(Quantity).value",
             "as() returns Quantity value and allows traversal")
-        .testEquals("mg", "(11.5 'mg').as(FHIR.Quantity).unit",
-            "as() works with explicit FHIR namespace")
+        .testEquals("mg", "quantityValue.as(FHIR.Quantity).unit",
+            "as() works with FHIR namespace for Quantity")
+        .testEquals("mg", "quantityValue.as(System.Quantity).unit",
+            "as() works with System namespace for Quantity")
         .testEquals("code2", "codingValue.as(FHIR.Coding).code",
             "as() returns Coding value and allows traversal")
         .testEquals("code2", "codingValue.as(System.Coding).code",
-            "as() works with System namespace")
+            "as() works with System namespace for Coding")
 
         .group("as() function - namespace variations")
         // Test namespace handling

@@ -210,6 +210,60 @@ public class FhirPathModelBuilder {
     return this;
   }
 
+  /**
+   * Adds a Quantity field from a FHIRPath quantity literal string.
+   *
+   * <p>Use FHIRPath syntax with quoted units: {@code "10.5 'mg'"}, {@code "70 'kg'"}
+   *
+   * @param name the field name
+   * @param value the FHIRPath quantity literal string
+   * @return this builder for chaining
+   */
+  @Contract("_, _ -> this")
+  @Nonnull
+  public FhirPathModelBuilder quantity(@Nonnull final String name,
+      @Nullable final String value) {
+    model.put(name, FhirTypedLiteral.toQuantity(value));
+    return this;
+  }
+
+  /**
+   * Adds an empty/null Quantity field.
+   *
+   * @param name the field name
+   * @return this builder for chaining
+   */
+  @Contract("_ -> this")
+  @Nonnull
+  @SuppressWarnings("unused")
+  public FhirPathModelBuilder quantityEmpty(@Nonnull final String name) {
+    model.put(name, FhirTypedLiteral.toQuantity(null));
+    return this;
+  }
+
+  /**
+   * Adds an array of Quantity fields from FHIRPath quantity literal strings.
+   *
+   * <p>Example:
+   * <pre>{@code
+   * .quantityArray("measurements", "10.5 'mg'", "20 'kg'", "30.5 'cm'")
+   * }</pre>
+   *
+   * @param name the field name
+   * @param values varargs array of FHIRPath quantity literal strings
+   * @return this builder for chaining
+   */
+  @Contract("_, _ -> this")
+  @Nonnull
+  @SuppressWarnings("unused")
+  public FhirPathModelBuilder quantityArray(@Nonnull final String name,
+      @Nonnull final String... values) {
+    model.put(name, Stream.of(values)
+        .map(FhirTypedLiteral::toQuantity)
+        .toList());
+    return this;
+  }
+
   public FhirPathModelBuilder element(final String name,
       @Nonnull final Consumer<FhirPathModelBuilder> builderConsumer) {
     final FhirPathModelBuilder builder = new FhirPathModelBuilder();
