@@ -4,7 +4,7 @@
  * @author John Grimes
  */
 
-import { useState } from "react";
+import { Cross2Icon, PlusIcon, UploadIcon } from "@radix-ui/react-icons";
 import {
   Box,
   Button,
@@ -17,7 +17,7 @@ import {
   Text,
   TextField,
 } from "@radix-ui/themes";
-import { Cross2Icon, PlusIcon, UploadIcon } from "@radix-ui/react-icons";
+import { useState } from "react";
 import type { ImportFormat, ImportInput, ImportMode, ImportRequest } from "../../types/import";
 import { IMPORT_FORMATS, IMPORT_MODES } from "../../types/import";
 
@@ -30,12 +30,7 @@ interface ImportFormProps {
 
 const DEFAULT_INPUT: ImportInput = { type: "Patient", url: "" };
 
-export function ImportForm({
-  onSubmit,
-  isSubmitting,
-  disabled,
-  resourceTypes,
-}: ImportFormProps) {
+export function ImportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: ImportFormProps) {
   const [inputFormat, setInputFormat] = useState<ImportFormat>("application/fhir+ndjson");
   const [inputSource, setInputSource] = useState("");
   const [mode, setMode] = useState<ImportMode>("overwrite");
