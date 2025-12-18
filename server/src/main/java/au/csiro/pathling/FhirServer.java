@@ -17,6 +17,7 @@ import au.csiro.pathling.operations.bulkexport.PatientExportProvider;
 import au.csiro.pathling.operations.bulkexport.SystemExportProvider;
 import au.csiro.pathling.operations.bulkimport.ImportPnpProvider;
 import au.csiro.pathling.operations.bulkimport.ImportProvider;
+import au.csiro.pathling.operations.bulksubmit.BulkSubmitErrorProvider;
 import au.csiro.pathling.operations.bulksubmit.BulkSubmitProvider;
 import au.csiro.pathling.operations.bulksubmit.BulkSubmitStatusProvider;
 import au.csiro.pathling.operations.update.BatchProvider;
@@ -126,6 +127,9 @@ public class FhirServer extends RestfulServer {
   private final transient Optional<BulkSubmitStatusProvider> bulkSubmitStatusProvider;
 
   @Nonnull
+  private final transient Optional<BulkSubmitErrorProvider> bulkSubmitErrorProvider;
+
+  @Nonnull
   private final transient ErrorReportingInterceptor errorReportingInterceptor;
 
   @Nonnull
@@ -167,6 +171,7 @@ public class FhirServer extends RestfulServer {
    * @param importPnpProvider the import PnP provider
    * @param bulkSubmitProvider the optional bulk submit provider
    * @param bulkSubmitStatusProvider the optional bulk submit status provider
+   * @param bulkSubmitErrorProvider the optional bulk submit error provider
    * @param errorReportingInterceptor the error reporting interceptor
    * @param entityTagInterceptor the entity tag interceptor
    * @param bulkExportDeleteInterceptor the optional bulk export delete interceptor
@@ -189,6 +194,7 @@ public class FhirServer extends RestfulServer {
       @Nonnull final ImportPnpProvider importPnpProvider,
       @Nonnull final Optional<BulkSubmitProvider> bulkSubmitProvider,
       @Nonnull final Optional<BulkSubmitStatusProvider> bulkSubmitStatusProvider,
+      @Nonnull final Optional<BulkSubmitErrorProvider> bulkSubmitErrorProvider,
       @Nonnull final ErrorReportingInterceptor errorReportingInterceptor,
       @Nonnull final EntityTagInterceptor entityTagInterceptor,
       @Nonnull final Optional<BulkExportDeleteInterceptor> bulkExportDeleteInterceptor,
@@ -212,6 +218,7 @@ public class FhirServer extends RestfulServer {
     this.importPnpProvider = importPnpProvider;
     this.bulkSubmitProvider = bulkSubmitProvider;
     this.bulkSubmitStatusProvider = bulkSubmitStatusProvider;
+    this.bulkSubmitErrorProvider = bulkSubmitErrorProvider;
     this.errorReportingInterceptor = errorReportingInterceptor;
     this.entityTagInterceptor = entityTagInterceptor;
     this.bulkExportDeleteInterceptor = bulkExportDeleteInterceptor;
@@ -250,6 +257,7 @@ public class FhirServer extends RestfulServer {
       // Register bulk submit providers.
       bulkSubmitProvider.ifPresent(this::registerProvider);
       bulkSubmitStatusProvider.ifPresent(this::registerProvider);
+      bulkSubmitErrorProvider.ifPresent(this::registerProvider);
 
       // Register search providers for all supported resource types.
       for (final ResourceType resourceType : supportedResourceTypes()) {

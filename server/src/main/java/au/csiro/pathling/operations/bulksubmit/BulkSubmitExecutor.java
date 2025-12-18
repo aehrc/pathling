@@ -275,9 +275,18 @@ public class BulkSubmitExecutor {
           mj -> mj.withError(e.getMessage())
       );
 
-      // Complete the job with an exception if async is enabled.
+      // Complete the job normally with a status manifest containing errors.
+      // Per the bulk submit spec, errors should be reported in the manifest error section,
+      // not as HTTP exceptions.
       if (resultFuture != null) {
-        resultFuture.completeExceptionally(e);
+        final Submission updatedSubmission = submissionRegistry.get(
+            submission.submitter(), submission.submissionId()
+        ).orElse(submission);
+        final String requestUrl = buildStatusRequestUrl(fhirServerBase, submission);
+        final IBaseResource statusManifest = resultBuilder.buildStatusManifest(
+            updatedSubmission, requestUrl, fhirServerBase
+        );
+        resultFuture.complete(statusManifest);
       }
     } finally {
       // Clear Spark job group.
@@ -490,6 +499,7 @@ public class BulkSubmitExecutor {
    *
    * @param manifest The parsed manifest JSON.
    * @return A map of resource type to collection of file URLs.
+   * @throws InvalidUserInputError If manifest entries are missing required fields.
    */
   @Nonnull
   private Map<String, Collection<String>> extractUrlsFromManifest(
@@ -502,6 +512,9 @@ public class BulkSubmitExecutor {
       return result;
     }
 
+    final List<String> errors = new ArrayList<>();
+    int entryIndex = 0;
+
     for (final JsonNode fileNode : outputNode) {
       final String type = fileNode.has("type")
                           ? fileNode.get("type").asText()
@@ -510,12 +523,22 @@ public class BulkSubmitExecutor {
                          ? fileNode.get("url").asText()
                          : null;
 
-      if (type == null || url == null) {
-        log.warn("Skipping manifest entry with missing type or url");
-        continue;
+      if (type == null && url == null) {
+        errors.add("Output entry " + entryIndex + " is missing both 'type' and 'url' fields");
+      } else if (type == null) {
+        errors.add("Output entry " + entryIndex + " (url: " + url + ") is missing 'type' field");
+      } else if (url == null) {
+        errors.add("Output entry " + entryIndex + " (type: " + type + ") is missing 'url' field");
+      } else {
+        result.computeIfAbsent(type, k -> new ArrayList<>()).add(url);
       }
 
-      result.computeIfAbsent(type, k -> new ArrayList<>()).add(url);
+      entryIndex++;
+    }
+
+    // If there were errors, throw with all error details.
+    if (!errors.isEmpty()) {
+      throw new InvalidUserInputError("Invalid manifest entries: " + String.join("; ", errors));
     }
 
     log.info("Extracted URLs for resource types: {}", result.keySet());

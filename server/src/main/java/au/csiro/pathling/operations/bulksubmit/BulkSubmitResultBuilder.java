@@ -118,8 +118,27 @@ public class BulkSubmitResultBuilder {
       }
       manifest.set("output", outputArray);
 
-      // Add empty error array (errors are communicated via submission state).
+      // Build error array from failed manifest jobs.
       final ArrayNode errorArray = objectMapper.createArrayNode();
+      for (final ManifestJob job : submission.manifestJobs()) {
+        if (job.state() == ManifestJobState.FAILED && job.errorMessage() != null) {
+          final ObjectNode errorEntry = objectMapper.createObjectNode();
+          errorEntry.put("type", "OperationOutcome");
+          // Build inline OperationOutcome URL for this error.
+          errorEntry.put("url", buildErrorUrl(fhirServerBase, submission.submissionId(),
+              job.manifestJobId()));
+
+          // Add manifestUrl extension per spec.
+          final ArrayNode errorExtensions = objectMapper.createArrayNode();
+          final ObjectNode manifestUrlExt = objectMapper.createObjectNode();
+          manifestUrlExt.put("url", "manifestUrl");
+          manifestUrlExt.put("valueUrl", job.manifestUrl());
+          errorExtensions.add(manifestUrlExt);
+          errorEntry.set("extension", errorExtensions);
+
+          errorArray.add(errorEntry);
+        }
+      }
       manifest.set("error", errorArray);
 
       final String json = objectMapper.writerWithDefaultPrettyPrinter()
@@ -151,6 +170,24 @@ public class BulkSubmitResultBuilder {
       @Nonnull final String fileName
   ) {
     return fhirServerBase + "/$result?job=" + submissionId + "&file=" + fileName;
+  }
+
+  /**
+   * Builds a URL for downloading an error OperationOutcome via the $bulk-submit-error operation.
+   *
+   * @param fhirServerBase The FHIR server base URL.
+   * @param submissionId The submission ID.
+   * @param manifestJobId The manifest job ID that failed.
+   * @return The complete error URL.
+   */
+  @Nonnull
+  private static String buildErrorUrl(
+      @Nonnull final String fhirServerBase,
+      @Nonnull final String submissionId,
+      @Nonnull final String manifestJobId
+  ) {
+    return fhirServerBase + "/$bulk-submit-error?submissionId=" + submissionId
+        + "&manifestJobId=" + manifestJobId;
   }
 
   /**

@@ -203,4 +203,18 @@ public class SubmissionRegistry {
         .findFirst();
   }
 
+  /**
+   * Finds a submission by its submission ID only, without requiring the submitter. This is used
+   * when the submitter is not known (e.g., when serving error details via URL).
+   *
+   * @param submissionId The submission ID to search for.
+   * @return The submission if found, or empty if not found.
+   */
+  @Nonnull
+  public Optional<Submission> getBySubmissionId(@Nonnull final String submissionId) {
+    return submissions.values().stream()
+        .filter(submission -> submission.submissionId().equals(submissionId))
+        .findFirst();
+  }
+
 }
