@@ -5,17 +5,7 @@
  */
 
 import { CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
-import {
-  Badge,
-  Box,
-  Card,
-  Flex,
-  Heading,
-  Separator,
-  Spinner,
-  Table,
-  Text,
-} from "@radix-ui/themes";
+import { Badge, Box, Card, Flex, Heading, Separator, Spinner, Table, Text } from "@radix-ui/themes";
 import { config } from "../config";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
 
@@ -25,47 +15,23 @@ export function Dashboard() {
 
   if (isLoading) {
     return (
-      <Box>
-        <Heading size="6" mb="4">
-          Dashboard
-        </Heading>
-        <Flex align="center" gap="2">
-          <Spinner />
-          <Text>Loading server information...</Text>
-        </Flex>
-      </Box>
+      <Flex align="center" gap="2">
+        <Spinner />
+        <Text>Loading server information...</Text>
+      </Flex>
     );
   }
 
   if (error) {
-    return (
-      <Box>
-        <Heading size="6" mb="4">
-          Dashboard
-        </Heading>
-        <Text color="red">{error.message}</Text>
-      </Box>
-    );
+    return <Text color="red">{error.message}</Text>;
   }
 
   if (!capabilities) {
-    return (
-      <Box>
-        <Heading size="6" mb="4">
-          Dashboard
-        </Heading>
-        <Text color="gray">No server information available.</Text>
-      </Box>
-    );
+    return <Text color="gray">No server information available.</Text>;
   }
 
   return (
-    <Box>
-      <Heading size="6" mb="4">
-        Dashboard
-      </Heading>
-
-      <Flex gap="6" direction={{ initial: "column", lg: "row" }}>
+    <Flex gap="6" direction={{ initial: "column", lg: "row" }}>
         <Box style={{ flex: 1 }}>
           <Card mb="4">
             <Heading size="4" mb="3">
@@ -182,6 +148,5 @@ export function Dashboard() {
           </Box>
         )}
       </Flex>
-    </Box>
   );
 }

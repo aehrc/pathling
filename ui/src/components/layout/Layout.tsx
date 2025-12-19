@@ -4,7 +4,7 @@
  * @author John Grimes
  */
 
-import { DownloadIcon, HomeIcon, PaperPlaneIcon, ReaderIcon, UploadIcon } from "@radix-ui/react-icons";
+import { DownloadIcon, PaperPlaneIcon, ReaderIcon, UploadIcon } from "@radix-ui/react-icons";
 import { Box, Container, Flex, Text } from "@radix-ui/themes";
 import { Link, Outlet, useLocation } from "react-router";
 import { config } from "../../config";
@@ -60,22 +60,18 @@ export function Layout() {
         <Container size="4" px={{ initial: "4", md: "0" }}>
           <Flex justify="between" align="center" py="3">
             <Flex align="center" gap="5">
-              <picture>
-                <source srcSet="/admin/logo-colour-dark.svg" media="(prefers-color-scheme: dark)" />
-                <img
-                  src="/admin/logo-colour.svg"
-                  alt="Pathling"
-                  height={50}
-                  style={{ display: "block" }}
-                />
-              </picture>
+              <Link to="/">
+                <picture>
+                  <source srcSet="/admin/logo-colour-dark.svg" media="(prefers-color-scheme: dark)" />
+                  <img
+                    src="/admin/logo-colour.svg"
+                    alt="Pathling"
+                    height={50}
+                    style={{ display: "block" }}
+                  />
+                </picture>
+              </Link>
               <Flex gap="5" ml="8" style={{ position: "relative", top: "10px" }}>
-                <NavLink
-                  to="/"
-                  icon={<HomeIcon />}
-                  label="Dashboard"
-                  isActive={location.pathname === "/"}
-                />
                 <NavLink
                   to="/resources"
                   icon={<ReaderIcon />}

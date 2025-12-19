@@ -4,9 +4,9 @@
  * @author John Grimes
  */
 
-import { InfoCircledIcon, LockClosedIcon } from "@radix-ui/react-icons";
-import { Box, Button, Callout, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
+import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
 import { useCallback, useEffect, useRef } from "react";
+import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { BulkSubmitJobList } from "../components/bulkSubmit/BulkSubmitJobList";
 import { BulkSubmitMonitorForm } from "../components/bulkSubmit/BulkSubmitMonitorForm";
@@ -14,7 +14,6 @@ import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useJobs } from "../contexts/JobContext";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
-import { initiateAuth } from "../services/auth";
 import { abortBulkSubmit, checkBulkSubmitStatus } from "../services/bulkSubmit";
 import type { SubmitterIdentifier } from "../types/bulkSubmit";
 import { UnauthorizedError } from "../types/errors";
@@ -22,7 +21,7 @@ import type { BulkSubmitJob } from "../types/job";
 
 export function BulkSubmit() {
   const { fhirBaseUrl } = config;
-  const { isAuthenticated, client, setLoading, setError, clearSessionAndPromptLogin } = useAuth();
+  const { isAuthenticated, client, setError, clearSessionAndPromptLogin } = useAuth();
   const { addJob, updateJobStatus, updateJobError, getBulkSubmitJobs } = useJobs();
 
   const bulkSubmitJobs = getBulkSubmitJobs();
@@ -45,16 +44,6 @@ export function BulkSubmit() {
       unauthorizedHandledRef.current = false;
     }
   }, [isAuthenticated]);
-
-  const handleLogin = async () => {
-    if (!fhirBaseUrl) return;
-    setLoading(true);
-    try {
-      await initiateAuth(fhirBaseUrl);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
-    }
-  };
 
   const handleMonitor = useCallback(
     async (submissionId: string, submitter: SubmitterIdentifier) => {
@@ -161,52 +150,24 @@ export function BulkSubmit() {
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
     return (
-      <Box>
-        <Heading size="6" mb="4">
-          Bulk submit
-        </Heading>
+      <>
         <Flex align="center" gap="2">
           <Spinner />
           <Text>Checking server capabilities...</Text>
         </Flex>
         <SessionExpiredDialog />
-      </Box>
+      </>
     );
   }
 
   // Show login prompt if authentication is required but not authenticated.
   if (capabilities?.authRequired && !isAuthenticated) {
-    return (
-      <Box>
-        <Heading size="6" mb="4">
-          Bulk submit
-        </Heading>
-
-        <Callout.Root>
-          <Callout.Icon>
-            <InfoCircledIcon />
-          </Callout.Icon>
-          <Callout.Text>You need to login before you can monitor submissions.</Callout.Text>
-        </Callout.Root>
-
-        <Box mt="4">
-          <Button size="3" onClick={handleLogin}>
-            <LockClosedIcon />
-            Login to {capabilities?.serverName ?? window.location.hostname}
-          </Button>
-        </Box>
-        <SessionExpiredDialog />
-      </Box>
-    );
+    return <LoginRequired />;
   }
 
   // Show bulk submit form.
   return (
-    <Box>
-      <Heading size="6" mb="4">
-        Bulk submit
-      </Heading>
-
+    <>
       <Flex gap="6" direction={{ initial: "column", md: "row" }}>
         <Box style={{ flex: 1 }}>
           <BulkSubmitMonitorForm onMonitor={handleMonitor} isSubmitting={false} disabled={false} />
@@ -216,6 +177,6 @@ export function BulkSubmit() {
         </Box>
       </Flex>
       <SessionExpiredDialog />
-    </Box>
+    </>
   );
 }

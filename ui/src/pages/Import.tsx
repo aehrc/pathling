@@ -4,9 +4,9 @@
  * @author John Grimes
  */
 
-import { InfoCircledIcon, LockClosedIcon } from "@radix-ui/react-icons";
-import { Box, Button, Callout, Flex, Heading, Spinner, Tabs, Text } from "@radix-ui/themes";
+import { Box, Flex, Spinner, Tabs, Text } from "@radix-ui/themes";
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { ImportForm } from "../components/import/ImportForm";
 import { ImportJobList } from "../components/import/ImportJobList";
@@ -15,7 +15,6 @@ import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useJobs } from "../contexts/JobContext";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
-import { initiateAuth } from "../services/auth";
 import { cancelImport, kickOffImport, kickOffImportPnp } from "../services/import";
 import { UnauthorizedError } from "../types/errors";
 import type { ImportRequest } from "../types/import";
@@ -23,7 +22,7 @@ import type { ImportPnpRequest } from "../types/importPnp";
 
 export function Import() {
   const { fhirBaseUrl } = config;
-  const { isAuthenticated, client, setLoading, setError, clearSessionAndPromptLogin } = useAuth();
+  const { isAuthenticated, client, setError, clearSessionAndPromptLogin } = useAuth();
   const { addJob, updateJobStatus, updateJobError, getImportJobs, getImportPnpJobs } = useJobs();
 
   const importJobs = getImportJobs();
@@ -53,16 +52,6 @@ export function Import() {
       unauthorizedHandledRef.current = false;
     }
   }, [isAuthenticated]);
-
-  const handleLogin = async () => {
-    if (!fhirBaseUrl) return;
-    setLoading(true);
-    try {
-      await initiateAuth(fhirBaseUrl);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
-    }
-  };
 
   const handleImport = useCallback(
     async (request: ImportRequest) => {
@@ -158,52 +147,24 @@ export function Import() {
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
     return (
-      <Box>
-        <Heading size="6" mb="4">
-          Import
-        </Heading>
+      <>
         <Flex align="center" gap="2">
           <Spinner />
           <Text>Checking server capabilities...</Text>
         </Flex>
         <SessionExpiredDialog />
-      </Box>
+      </>
     );
   }
 
   // Show login prompt if authentication is required but not authenticated.
   if (capabilities?.authRequired && !isAuthenticated) {
-    return (
-      <Box>
-        <Heading size="6" mb="4">
-          Import
-        </Heading>
-
-        <Callout.Root>
-          <Callout.Icon>
-            <InfoCircledIcon />
-          </Callout.Icon>
-          <Callout.Text>You need to login before you can start importing data.</Callout.Text>
-        </Callout.Root>
-
-        <Box mt="4">
-          <Button size="3" onClick={handleLogin}>
-            <LockClosedIcon />
-            Login to {capabilities?.serverName ?? window.location.hostname}
-          </Button>
-        </Box>
-        <SessionExpiredDialog />
-      </Box>
-    );
+    return <LoginRequired />;
   }
 
   // Show import form (either auth not required or user is authenticated).
   return (
-    <Box>
-      <Heading size="6" mb="4">
-        Import
-      </Heading>
-
+    <>
       <Tabs.Root defaultValue="urls">
         <Tabs.List>
           <Tabs.Trigger value="urls">Import from URLs</Tabs.Trigger>
@@ -240,6 +201,6 @@ export function Import() {
         </Box>
       </Tabs.Root>
       <SessionExpiredDialog />
-    </Box>
+    </>
   );
 }

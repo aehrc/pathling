@@ -4,9 +4,9 @@
  * @author John Grimes
  */
 
-import { InfoCircledIcon, LockClosedIcon } from "@radix-ui/react-icons";
-import { Box, Button, Callout, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
+import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { ResourceResultList } from "../components/resources/ResourceResultList";
 import { ResourceSearchForm } from "../components/resources/ResourceSearchForm";
@@ -14,13 +14,12 @@ import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useResourceSearch } from "../hooks/useResourceSearch";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
-import { initiateAuth } from "../services/auth";
 import { UnauthorizedError } from "../types/errors";
 import type { SearchRequest } from "../types/search";
 
 export function Resources() {
   const { fhirBaseUrl } = config;
-  const { isAuthenticated, setLoading, setError, clearSessionAndPromptLogin } = useAuth();
+  const { isAuthenticated, clearSessionAndPromptLogin } = useAuth();
 
   const [searchRequest, setSearchRequest] = useState<SearchRequest | null>(null);
   const unauthorizedHandledRef = useRef(false);
@@ -61,16 +60,6 @@ export function Resources() {
     }
   }, [searchError, handleUnauthorizedError]);
 
-  const handleLogin = async () => {
-    if (!fhirBaseUrl) return;
-    setLoading(true);
-    try {
-      await initiateAuth(fhirBaseUrl);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
-    }
-  };
-
   const handleSearch = useCallback((request: SearchRequest) => {
     setSearchRequest(request);
   }, []);
@@ -78,43 +67,19 @@ export function Resources() {
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
     return (
-      <Box>
-        <Heading size="6" mb="4">
-          Resource browser
-        </Heading>
+      <>
         <Flex align="center" gap="2">
           <Spinner />
           <Text>Checking server capabilities...</Text>
         </Flex>
         <SessionExpiredDialog />
-      </Box>
+      </>
     );
   }
 
   // Show login prompt if authentication is required but not authenticated.
   if (capabilities?.authRequired && !isAuthenticated) {
-    return (
-      <Box>
-        <Heading size="6" mb="4">
-          Resource browser
-        </Heading>
-
-        <Callout.Root>
-          <Callout.Icon>
-            <InfoCircledIcon />
-          </Callout.Icon>
-          <Callout.Text>You need to login before you can browse resources.</Callout.Text>
-        </Callout.Root>
-
-        <Box mt="4">
-          <Button size="3" onClick={handleLogin}>
-            <LockClosedIcon />
-            Login to {capabilities?.serverName ?? window.location.hostname}
-          </Button>
-        </Box>
-        <SessionExpiredDialog />
-      </Box>
-    );
+    return <LoginRequired />;
   }
 
   // Determine actual error to display (ignore unauthorized since it's handled separately).
@@ -123,11 +88,7 @@ export function Resources() {
 
   // Show search form and results.
   return (
-    <Box>
-      <Heading size="6" mb="4">
-        Resource browser
-      </Heading>
-
+    <>
       <Flex gap="6" direction={{ initial: "column", md: "row" }}>
         <Box style={{ flex: 1 }}>
           <ResourceSearchForm
@@ -149,6 +110,6 @@ export function Resources() {
         </Box>
       </Flex>
       <SessionExpiredDialog />
-    </Box>
+    </>
   );
 }

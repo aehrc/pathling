@@ -4,9 +4,9 @@
  * @author John Grimes
  */
 
-import { InfoCircledIcon, LockClosedIcon } from "@radix-ui/react-icons";
-import { Box, Button, Callout, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
+import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { ExportForm } from "../components/export/ExportForm";
 import { ExportJobList } from "../components/export/ExportJobList";
@@ -14,14 +14,13 @@ import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useJobs } from "../contexts/JobContext";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
-import { initiateAuth } from "../services/auth";
 import { cancelJob as cancelJobApi, kickOffExportWithFetch } from "../services/export";
 import { UnauthorizedError } from "../types/errors";
 import type { ExportRequest } from "../types/export";
 
 export function Export() {
   const { fhirBaseUrl } = config;
-  const { isAuthenticated, client, setLoading, setError, clearSessionAndPromptLogin } = useAuth();
+  const { isAuthenticated, client, setError, clearSessionAndPromptLogin } = useAuth();
   const { addJob, updateJobStatus, updateJobError, getExportJobs } = useJobs();
 
   const jobs = getExportJobs();
@@ -50,16 +49,6 @@ export function Export() {
       unauthorizedHandledRef.current = false;
     }
   }, [isAuthenticated]);
-
-  const handleLogin = async () => {
-    if (!fhirBaseUrl) return;
-    setLoading(true);
-    try {
-      await initiateAuth(fhirBaseUrl);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
-    }
-  };
 
   const handleExport = useCallback(
     async (request: ExportRequest) => {
@@ -154,52 +143,24 @@ export function Export() {
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
     return (
-      <Box>
-        <Heading size="6" mb="4">
-          Bulk export
-        </Heading>
+      <>
         <Flex align="center" gap="2">
           <Spinner />
           <Text>Checking server capabilities...</Text>
         </Flex>
         <SessionExpiredDialog />
-      </Box>
+      </>
     );
   }
 
   // Show login prompt if authentication is required but not authenticated.
   if (capabilities?.authRequired && !isAuthenticated) {
-    return (
-      <Box>
-        <Heading size="6" mb="4">
-          Bulk export
-        </Heading>
-
-        <Callout.Root>
-          <Callout.Icon>
-            <InfoCircledIcon />
-          </Callout.Icon>
-          <Callout.Text>You need to login before you can start exporting data.</Callout.Text>
-        </Callout.Root>
-
-        <Box mt="4">
-          <Button size="3" onClick={handleLogin}>
-            <LockClosedIcon />
-            Login to {capabilities?.serverName ?? window.location.hostname}
-          </Button>
-        </Box>
-        <SessionExpiredDialog />
-      </Box>
-    );
+    return <LoginRequired />;
   }
 
   // Show export form (either auth not required or user is authenticated).
   return (
-    <Box>
-      <Heading size="6" mb="4">
-        Bulk export
-      </Heading>
-
+    <>
       <Flex gap="6" direction={{ initial: "column", md: "row" }}>
         <Box style={{ flex: 1 }}>
           <ExportForm
@@ -215,6 +176,6 @@ export function Export() {
         </Box>
       </Flex>
       <SessionExpiredDialog />
-    </Box>
+    </>
   );
 }
