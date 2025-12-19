@@ -11,6 +11,7 @@ import { Callback } from "./pages/Callback";
 import { Dashboard } from "./pages/Dashboard";
 import { Export } from "./pages/Export";
 import { Import } from "./pages/Import";
+import { Resources } from "./pages/Resources";
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/export" element={<Export />} />
         <Route path="/import" element={<Import />} />
         <Route path="/bulk-submit" element={<BulkSubmit />} />
+        <Route path="/resources" element={<Resources />} />
       </Route>
     </Routes>
   );
