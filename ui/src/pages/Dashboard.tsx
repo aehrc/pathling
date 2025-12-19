@@ -4,16 +4,10 @@
  * @author John Grimes
  */
 
-import {
-  CheckCircledIcon,
-  CrossCircledIcon,
-  DownloadIcon,
-  UploadIcon,
-} from "@radix-ui/react-icons";
+import { CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
 import {
   Badge,
   Box,
-  Button,
   Card,
   Flex,
   Heading,
@@ -22,7 +16,6 @@ import {
   Table,
   Text,
 } from "@radix-ui/themes";
-import { Link } from "react-router";
 import { config } from "../config";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
 
@@ -73,7 +66,7 @@ export function Dashboard() {
       </Heading>
 
       <Flex gap="6" direction={{ initial: "column", lg: "row" }}>
-        <Box style={{ flex: 2 }}>
+        <Box style={{ flex: 1 }}>
           <Card mb="4">
             <Heading size="4" mb="3">
               Server information
@@ -133,7 +126,7 @@ export function Dashboard() {
           </Card>
 
           {capabilities.operations && capabilities.operations.length > 0 && (
-            <Card mb="4">
+            <Card>
               <Heading size="4" mb="3">
                 System operations
               </Heading>
@@ -146,8 +139,10 @@ export function Dashboard() {
               </Flex>
             </Card>
           )}
+        </Box>
 
-          {capabilities.resources && capabilities.resources.length > 0 && (
+        {capabilities.resources && capabilities.resources.length > 0 && (
+          <Box style={{ flex: 1 }}>
             <Card>
               <Heading size="4" mb="3">
                 Supported resources
@@ -184,30 +179,8 @@ export function Dashboard() {
                 </Table.Body>
               </Table.Root>
             </Card>
-          )}
-        </Box>
-
-        <Box style={{ flex: 1 }}>
-          <Card>
-            <Heading size="4" mb="3">
-              Quick actions
-            </Heading>
-            <Flex direction="column" gap="3">
-              <Link to="/export" style={{ textDecoration: "none" }}>
-                <Button size="3" style={{ width: "100%" }}>
-                  <DownloadIcon />
-                  Bulk export
-                </Button>
-              </Link>
-              <Link to="/import" style={{ textDecoration: "none" }}>
-                <Button size="3" variant="soft" style={{ width: "100%" }}>
-                  <UploadIcon />
-                  Import data
-                </Button>
-              </Link>
-            </Flex>
-          </Card>
-        </Box>
+          </Box>
+        )}
       </Flex>
     </Box>
   );
