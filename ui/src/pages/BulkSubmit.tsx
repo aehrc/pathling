@@ -186,7 +186,7 @@ export function BulkSubmit() {
           <Callout.Icon>
             <InfoCircledIcon />
           </Callout.Icon>
-          <Callout.Text>You need to login before you can submit data.</Callout.Text>
+          <Callout.Text>You need to login before you can monitor submissions.</Callout.Text>
         </Callout.Root>
 
         <Box mt="4">
