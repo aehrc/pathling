@@ -38,6 +38,7 @@ import java.util.List;
  * @param createdAt ISO-8601 timestamp when created.
  * @param completedAt ISO-8601 timestamp when finished.
  * @param errorMessage Error message if failed.
+ * @param errorFileName Name of the NDJSON file containing error OperationOutcome resources.
  * @param downloadedFiles List of files downloaded from the manifest.
  * @author John Grimes
  * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
@@ -51,6 +52,7 @@ public record ManifestJob(
     @Nonnull String createdAt,
     @Nullable String completedAt,
     @Nullable String errorMessage,
+    @Nullable String errorFileName,
     @Nullable List<DownloadedFile> downloadedFiles
 ) {
 
@@ -89,6 +91,7 @@ public record ManifestJob(
         now(),
         null,
         null,
+        null,
         null
     );
   }
@@ -113,6 +116,7 @@ public record ManifestJob(
         createdAt,
         newCompletedAt,
         errorMessage,
+        errorFileName,
         downloadedFiles
     );
   }
@@ -134,18 +138,23 @@ public record ManifestJob(
         createdAt,
         completedAt,
         errorMessage,
+        errorFileName,
         downloadedFiles
     );
   }
 
   /**
-   * Creates a copy of this manifest job with an error message and FAILED state.
+   * Creates a copy of this manifest job with an error message, error file name, and FAILED state.
    *
    * @param errorMessage The error message describing what went wrong.
-   * @return A new manifest job with the error message and FAILED state.
+   * @param errorFileName The name of the NDJSON file containing error OperationOutcome resources.
+   * @return A new manifest job with the error details and FAILED state.
    */
   @Nonnull
-  public ManifestJob withError(@Nonnull final String errorMessage) {
+  public ManifestJob withError(
+      @Nonnull final String errorMessage,
+      @Nullable final String errorFileName
+  ) {
     return new ManifestJob(
         manifestJobId,
         manifestUrl,
@@ -155,6 +164,7 @@ public record ManifestJob(
         createdAt,
         now(),
         errorMessage,
+        errorFileName,
         downloadedFiles
     );
   }
@@ -176,6 +186,7 @@ public record ManifestJob(
         createdAt,
         completedAt,
         errorMessage,
+        errorFileName,
         downloadedFiles
     );
   }

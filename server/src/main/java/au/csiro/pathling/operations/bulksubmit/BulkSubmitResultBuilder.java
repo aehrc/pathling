@@ -118,15 +118,15 @@ public class BulkSubmitResultBuilder {
       }
       manifest.set("output", outputArray);
 
-      // Build error array from failed manifest jobs.
+      // Build error array from failed manifest jobs that have error files.
       final ArrayNode errorArray = objectMapper.createArrayNode();
       for (final ManifestJob job : submission.manifestJobs()) {
-        if (job.state() == ManifestJobState.FAILED && job.errorMessage() != null) {
+        if (job.state() == ManifestJobState.FAILED && job.errorFileName() != null) {
           final ObjectNode errorEntry = objectMapper.createObjectNode();
           errorEntry.put("type", "OperationOutcome");
-          // Build inline OperationOutcome URL for this error.
-          errorEntry.put("url", buildErrorUrl(fhirServerBase, submission.submissionId(),
-              job.manifestJobId()));
+          // Use $result URL to serve the error NDJSON file.
+          errorEntry.put("url", buildResultUrl(fhirServerBase, submission.submissionId(),
+              job.errorFileName()));
 
           // Add manifestUrl extension per spec.
           final ArrayNode errorExtensions = objectMapper.createArrayNode();
@@ -170,24 +170,6 @@ public class BulkSubmitResultBuilder {
       @Nonnull final String fileName
   ) {
     return fhirServerBase + "/$result?job=" + submissionId + "&file=" + fileName;
-  }
-
-  /**
-   * Builds a URL for downloading an error OperationOutcome via the $bulk-submit-error operation.
-   *
-   * @param fhirServerBase The FHIR server base URL.
-   * @param submissionId The submission ID.
-   * @param manifestJobId The manifest job ID that failed.
-   * @return The complete error URL.
-   */
-  @Nonnull
-  private static String buildErrorUrl(
-      @Nonnull final String fhirServerBase,
-      @Nonnull final String submissionId,
-      @Nonnull final String manifestJobId
-  ) {
-    return fhirServerBase + "/$bulk-submit-error?submissionId=" + submissionId
-        + "&manifestJobId=" + manifestJobId;
   }
 
   /**

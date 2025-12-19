@@ -51,9 +51,16 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import ca.uhn.fhir.context.FhirContext;
+import java.io.BufferedWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.StandardOpenOption;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
+import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -100,6 +107,9 @@ public class BulkSubmitExecutor {
   @Nonnull
   private final HttpClient httpClient;
 
+  @Nonnull
+  private final FhirContext fhirContext;
+
   /**
    * Creates a new BulkSubmitExecutor.
    *
@@ -113,6 +123,7 @@ public class BulkSubmitExecutor {
    * @param sparkSession The Spark session for setting job groups (may be null if async is
    * disabled).
    * @param databasePath The path to the database storage location.
+   * @param fhirContext The FHIR context for serialising resources.
    */
   public BulkSubmitExecutor(
       @Nonnull final ImportExecutor importExecutor,
@@ -123,7 +134,8 @@ public class BulkSubmitExecutor {
       @Nullable final JobRegistry jobRegistry,
       @Nullable final SparkSession sparkSession,
       @Nonnull @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-      final String databasePath
+      final String databasePath,
+      @Nonnull final FhirContext fhirContext
   ) {
     this.importExecutor = importExecutor;
     this.submissionRegistry = submissionRegistry;
@@ -137,6 +149,7 @@ public class BulkSubmitExecutor {
     this.httpClient = HttpClient.newBuilder()
         .connectTimeout(HTTP_TIMEOUT)
         .build();
+    this.fhirContext = fhirContext;
   }
 
   /**
@@ -267,12 +280,29 @@ public class BulkSubmitExecutor {
       log.error("Failed to download manifest job {}: {}",
           manifestJob.manifestJobId(), e.getMessage(), e);
 
-      // Update manifest job with error message.
+      // Write error to NDJSON file and update manifest job.
+      String errorFileName = null;
+      try {
+        // Register in export registry so error file can be served via $result.
+        final Optional<String> ownerId = Optional.ofNullable(submission.ownerId());
+        exportResultRegistry.put(submission.submissionId(), new ExportResult(ownerId));
+
+        errorFileName = writeErrorFile(
+            submission.submissionId(),
+            manifestJob.manifestJobId(),
+            e.getMessage()
+        );
+      } catch (final IOException ioEx) {
+        log.error("Failed to write error file for manifest job {}: {}",
+            manifestJob.manifestJobId(), ioEx.getMessage(), ioEx);
+      }
+
+      final String finalErrorFileName = errorFileName;
       submissionRegistry.updateManifestJob(
           submission.submitter(),
           submission.submissionId(),
           manifestJob.manifestJobId(),
-          mj -> mj.withError(e.getMessage())
+          mj -> mj.withError(e.getMessage(), finalErrorFileName)
       );
 
       // Complete the job normally with a status manifest containing errors.
@@ -438,14 +468,27 @@ public class BulkSubmitExecutor {
     } catch (final Exception e) {
       log.error("Failed to import submission {}: {}", submission.submissionId(), e.getMessage(), e);
 
-      // Update all DOWNLOADED manifest jobs to FAILED state.
+      // Update all DOWNLOADED manifest jobs to FAILED state with error files.
       for (final ManifestJob job : submission.manifestJobs()) {
         if (job.state() == ManifestJobState.DOWNLOADED) {
+          String errorFileName = null;
+          try {
+            errorFileName = writeErrorFile(
+                submission.submissionId(),
+                job.manifestJobId(),
+                "Import failed: " + e.getMessage()
+            );
+          } catch (final IOException ioEx) {
+            log.error("Failed to write error file for manifest job {}: {}",
+                job.manifestJobId(), ioEx.getMessage(), ioEx);
+          }
+
+          final String finalErrorFileName = errorFileName;
           submissionRegistry.updateManifestJob(
               submission.submitter(),
               submission.submissionId(),
               job.manifestJobId(),
-              mj -> mj.withError("Import failed: " + e.getMessage())
+              mj -> mj.withError("Import failed: " + e.getMessage(), finalErrorFileName)
           );
         }
       }
@@ -648,6 +691,47 @@ public class BulkSubmitExecutor {
       Thread.currentThread().interrupt();
       throw new IOException("File download was interrupted: " + url, e);
     }
+  }
+
+  /**
+   * Writes an error OperationOutcome to an NDJSON file.
+   *
+   * @param submissionId The submission ID.
+   * @param manifestJobId The manifest job ID.
+   * @param errorMessage The error message to include in the OperationOutcome.
+   * @return The file name of the written error file.
+   * @throws IOException If the file cannot be written.
+   */
+  @Nonnull
+  private String writeErrorFile(
+      @Nonnull final String submissionId,
+      @Nonnull final String manifestJobId,
+      @Nonnull final String errorMessage
+  ) throws IOException {
+    // Create the download directory if it doesn't exist.
+    final Path downloadDir = createDownloadDirectory(submissionId);
+
+    // Build the OperationOutcome resource.
+    final OperationOutcome outcome = new OperationOutcome();
+    outcome.addIssue()
+        .setCode(IssueType.EXCEPTION)
+        .setSeverity(IssueSeverity.ERROR)
+        .setDiagnostics(errorMessage);
+
+    // Serialise to JSON.
+    final String json = fhirContext.newJsonParser().encodeResourceToString(outcome);
+
+    // Write to NDJSON file (single line per resource).
+    final String fileName = "OperationOutcome." + manifestJobId + "-error.ndjson";
+    final Path filePath = downloadDir.resolve(fileName);
+    try (final BufferedWriter writer = Files.newBufferedWriter(filePath, StandardCharsets.UTF_8,
+        StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+      writer.write(json);
+      writer.newLine();
+    }
+
+    log.info("Wrote error file {} for manifest job {}", fileName, manifestJobId);
+    return fileName;
   }
 
   /**
