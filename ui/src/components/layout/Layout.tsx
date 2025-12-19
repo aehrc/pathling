@@ -77,6 +77,12 @@ export function Layout() {
                   isActive={location.pathname === "/"}
                 />
                 <NavLink
+                  to="/resources"
+                  icon={<ReaderIcon />}
+                  label="Resources"
+                  isActive={location.pathname === "/resources"}
+                />
+                <NavLink
                   to="/export"
                   icon={<DownloadIcon />}
                   label="Export"
@@ -93,12 +99,6 @@ export function Layout() {
                   icon={<PaperPlaneIcon />}
                   label="Bulk submit"
                   isActive={location.pathname === "/bulk-submit"}
-                />
-                <NavLink
-                  to="/resources"
-                  icon={<ReaderIcon />}
-                  label="Resources"
-                  isActive={location.pathname === "/resources"}
                 />
               </Flex>
             </Flex>

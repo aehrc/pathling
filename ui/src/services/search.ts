@@ -27,7 +27,7 @@ export async function searchResources(
 ): Promise<SearchResult> {
   const params = new URLSearchParams();
   params.set("_query", "fhirPath");
-  params.set("_count", "100");
+  params.set("_count", "10");
 
   for (const filter of request.filters) {
     const trimmed = filter.trim();
