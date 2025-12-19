@@ -18,7 +18,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.util.Optional;
-import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.fs.Path;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,14 +74,6 @@ public class ExportResultProvider {
       @Nonnull @OperationParam(name = "file") final String file,
       @Nullable final HttpServletResponse response) {
     requireNonNull(response);
-
-    // Validate that the ID looks reasonable.
-    try {
-      UUID.fromString(jobId);
-    } catch (final IllegalArgumentException e) {
-      response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-      return;
-    }
 
     log.info("Retrieving export result: {}", jobId);
 
