@@ -180,18 +180,14 @@ public class BulkSubmitStatusProvider {
       @Nonnull final String requestUrl,
       @Nonnull final String fhirServerBase
   ) {
-    // Check for error state and throw exception with error details.
-    if (submission.state() == SubmissionState.COMPLETED_WITH_ERRORS) {
-      final String errorMessage = submission.errorMessage() != null
-                                  ? submission.errorMessage()
-                                  : "Unknown error";
-      throw new InternalErrorException("Submission failed: " + errorMessage);
-    }
-
+    // Per the Argonaut spec, even submissions with some failed manifests should return a status
+    // manifest with both output and error arrays populated. Only throw an exception for aborted
+    // submissions.
     if (submission.state() == SubmissionState.ABORTED) {
       throw new InternalErrorException("Submission was aborted");
     }
 
+    // Return the status manifest for both COMPLETED and COMPLETED_WITH_ERRORS states.
     return resultBuilder.buildStatusManifest(submission, requestUrl, fhirServerBase);
   }
 
