@@ -9,7 +9,7 @@ import { Box, Callout, Flex, Spinner, Text } from "@radix-ui/themes";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
-import { completeAuth } from "../services/auth";
+import { completeAuth, getAndClearReturnUrl } from "../services/auth";
 
 export function Callback() {
   const navigate = useNavigate();
@@ -21,7 +21,8 @@ export function Callback() {
       try {
         const client = await completeAuth();
         setClient(client);
-        navigate("/", { replace: true });
+        const returnUrl = getAndClearReturnUrl();
+        navigate(returnUrl, { replace: true });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Authentication failed";
         setLocalError(message);

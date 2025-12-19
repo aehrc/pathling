@@ -12,6 +12,7 @@ const CLIENT_ID = "pathling-export-ui";
 const SMART_SERVICE_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/restful-security-service";
 const SMART_SERVICE_CODE = "SMART-on-FHIR";
+const RETURN_URL_KEY = "pathling_return_url";
 
 export interface ServerCapabilities {
   authRequired: boolean;
@@ -153,8 +154,14 @@ export async function checkServerCapabilities(
 
 /**
  * Initiates SMART on FHIR standalone launch authorization.
+ * Stores the current pathname so we can return to it after auth completes.
  */
 export async function initiateAuth(fhirBaseUrl: string): Promise<void> {
+  // Store the current path to return to after authentication.
+  // Strip the /admin basename since React Router will add it back.
+  const pathname = window.location.pathname.replace(/^\/admin/, "") || "/";
+  sessionStorage.setItem(RETURN_URL_KEY, pathname);
+
   // Convert relative URLs to absolute URLs for fhirclient compatibility.
   const absoluteUrl = fhirBaseUrl.startsWith("http")
     ? fhirBaseUrl
@@ -166,6 +173,16 @@ export async function initiateAuth(fhirBaseUrl: string): Promise<void> {
     scope: "openid profile user/*.read",
     redirectUri: `${window.location.origin}/admin/callback`,
   });
+}
+
+/**
+ * Gets and clears the stored return URL from before authentication.
+ * Returns "/" if no URL was stored.
+ */
+export function getAndClearReturnUrl(): string {
+  const returnUrl = sessionStorage.getItem(RETURN_URL_KEY);
+  sessionStorage.removeItem(RETURN_URL_KEY);
+  return returnUrl || "/";
 }
 
 /**
