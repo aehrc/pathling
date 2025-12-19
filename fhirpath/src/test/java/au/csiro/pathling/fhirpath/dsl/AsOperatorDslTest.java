@@ -20,8 +20,9 @@ package au.csiro.pathling.fhirpath.dsl;
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import java.util.stream.Stream;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.DynamicTest;
+
+import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toQuantity;
 
 /**
  * Tests for FHIRPath 'as' type-casting operator.
@@ -40,10 +41,7 @@ public class AsOperatorDslTest extends FhirPathDslTestBase {
             .stringEmpty("emptyString")
             .stringArray("stringArray", "one", "two", "three")
             .coding("codingValue", "http://example.org/codesystem|code2|display1")
-            .element("quantityValue",
-                qt -> qt.fhirType(FHIRDefinedType.QUANTITY)
-                    .decimal("value", 11.5)
-                    .string("unit", "mg"))
+            .quantity("quantityValue", "11.5 'mg'")
             // Heterogeneous collection
             .elementArray("heteroattr",
                 val1 -> val1.choice("value")
@@ -87,11 +85,11 @@ public class AsOperatorDslTest extends FhirPathDslTestBase {
 
         .group("'as' operator - namespace variations")
         // Test namespace handling
-        .testEquals("11 'mg'", "(11 'mg') as Quantity",
+        .testEquals(toQuantity("11 'mg'"), "(11 'mg') as Quantity",
             "'as' operator works with unqualified type name")
-        .testEquals("12 'cm'", "(12 'cm') as System.Quantity",
+        .testEquals(toQuantity("12 'cm'"), "(12 'cm') as System.Quantity",
             "'as' operator works with System namespace for Quantity")
-        .testEquals("13 'mg'", "(13 'mg') as FHIR.Quantity",
+        .testEquals(toQuantity("13 'mg'"), "(13 'mg') as FHIR.Quantity",
             "'as' operator works for System.Quantity with FHIR namespace")
 
         .group("'as' operator - edge cases")

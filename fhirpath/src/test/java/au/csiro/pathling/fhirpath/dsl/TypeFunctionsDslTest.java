@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.dsl;
 
+import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toQuantity;
+
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import java.util.stream.Stream;
@@ -149,6 +151,8 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
 
         .group("as() function - complex types")
         // Complex type matching
+        .testEquals(toQuantity("11.5 'mg'"), "quantityValue.as(Quantity)",
+            "as() returns Quantity value")
         .testEquals("mg", "quantityValue.as(FHIR.Quantity).unit",
             "as() allows traversal after conversion to Quantity")
         .testEquals(11.5, "quantityValue.as(Quantity).value",
@@ -164,12 +168,12 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
 
         .group("as() function - namespace variations")
         // Test namespace handling
-        .testEquals("11 'mg'", "(11 'mg').as(Quantity)",
+        .testEquals(toQuantity("11 'mg'"), "(11 'mg').as(Quantity)",
             "as() works with unqualified type name")
-        .testEquals("12 'cm'", "(12 'cm').as(System.Quantity)",
+        .testEquals(toQuantity("12 'cm'"), "(12 'cm').as(System.Quantity)",
             "as() works with System namespace for Quantity")
         // THIS IS A SPECIAL CASE: FHIR.Quantity is the same as System.Quantity in our model
-        .testEquals("13 'mg'", "(13 'mg').as(FHIR.Quantity)",
+        .testEquals(toQuantity("13 'mg'"), "(13 'mg').as(FHIR.Quantity)",
             "as() returns works for System.Quantity with FHIR namespace")
         .group("as() function - edge cases")
         // Empty collections

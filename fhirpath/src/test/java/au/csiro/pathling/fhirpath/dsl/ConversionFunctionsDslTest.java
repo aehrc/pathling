@@ -22,6 +22,8 @@ import au.csiro.pathling.test.dsl.FhirPathTest;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
 
+import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toQuantity;
+
 /**
  * Tests for FHIRPath conversion functions.
  *
@@ -659,37 +661,37 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .dateEmpty("emptyDate")
         )
         .group("toQuantity() - Boolean sources")
-        .testEquals("1 '1'", "true.toQuantity()", "toQuantity() converts true to 1.0 '1'")
-        .testEquals("0 '1'", "false.toQuantity()", "toQuantity() converts false to 0.0 '1'")
+        .testEquals(toQuantity("1 '1'"), "true.toQuantity()", "toQuantity() converts true to 1.0 '1'")
+        .testEquals(toQuantity("0 '1'"), "false.toQuantity()", "toQuantity() converts false to 0.0 '1'")
 
         .group("toQuantity() - Integer sources")
-        .testEquals("42 '1'", "42.toQuantity()",
+        .testEquals(toQuantity("42 '1'"), "42.toQuantity()",
             "toQuantity() converts integer to quantity with unitCode '1'")
 
         .group("toQuantity() - Decimal sources")
-        .testEquals("3.14 '1'", "3.14.toQuantity()",
+        .testEquals(toQuantity("3.14 '1'"), "3.14.toQuantity()",
             "toQuantity() converts decimal to quantity with unitCode '1'")
 
         .group("toQuantity() - String sources (UCUM literals)")
-        .testEquals("10 'mg'", "'10 \\'mg\\''.toQuantity()",
+        .testEquals(toQuantity("10 'mg'"), "'10 \\'mg\\''.toQuantity()",
             "toQuantity() parses UCUM quantity string")
-        .testEquals("1.5 'kg'", "'1.5 \\'kg\\''.toQuantity()",
+        .testEquals(toQuantity("1.5 'kg'"), "'1.5 \\'kg\\''.toQuantity()",
             "toQuantity() parses decimal UCUM quantity")
-        .testEquals("-5.2 'cm'", "'-5.2 \\'cm\\''.toQuantity()",
+        .testEquals(toQuantity("-5.2 'cm'"), "'-5.2 \\'cm\\''.toQuantity()",
             "toQuantity() parses negative UCUM quantity")
 
         .group("toQuantity() - String sources (calendar duration literals)")
-        .testEquals("4 days", "'4 days'.toQuantity()",
+        .testEquals(toQuantity("4 days"), "'4 days'.toQuantity()",
             "toQuantity() parses calendar duration (days)")
-        .testEquals("1 year", "'1 year'.toQuantity()",
+        .testEquals(toQuantity("1 year"), "'1 year'.toQuantity()",
             "toQuantity() parses calendar duration (year)")
-        .testEquals("3 months", "'3 months'.toQuantity()",
+        .testEquals(toQuantity("3 months"), "'3 months'.toQuantity()",
             "toQuantity() parses calendar duration (months)")
 
         .group("toQuantity() - String sources (numeric literals)")
-        .testEquals("42 '1'", "'42'.toQuantity()",
+        .testEquals(toQuantity("42 '1'"), "'42'.toQuantity()",
             "toQuantity() converts number string without unitCode to quantity with unitCode '1'")
-        .testEquals("3.14 '1'", "'3.14'.toQuantity()",
+        .testEquals(toQuantity("3.14 '1'"), "'3.14'.toQuantity()",
             "toQuantity() converts decimal string without unitCode to quantity with unitCode '1'")
 
         .group("toQuantity() - String sources (invalid)")
@@ -729,13 +731,13 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             .stringEmpty("emptyStr")
         )
         .group("toQuantity(unitCode) - Numeric sources → exact unitCode match")
-        .testEquals("42 '1'", "42.toQuantity('1')",
+        .testEquals(toQuantity("42 '1'"), "42.toQuantity('1')",
             "toQuantity() with matching unitCode '1' returns quantity for integer")
-        .testEquals("3.14 '1'", "3.14.toQuantity('1')",
+        .testEquals(toQuantity("3.14 '1'"), "3.14.toQuantity('1')",
             "toQuantity() with matching unitCode '1' returns quantity for decimal")
-        .testEquals("1 '1'", "true.toQuantity('1')",
+        .testEquals(toQuantity("1 '1'"), "true.toQuantity('1')",
             "toQuantity() with matching unitCode '1' returns quantity for true")
-        .testEquals("0 '1'", "false.toQuantity('1')",
+        .testEquals(toQuantity("0 '1'"), "false.toQuantity('1')",
             "toQuantity() with matching unitCode '1' returns quantity for false")
 
         .group("toQuantity(unitCode) - Numeric sources → different unitCode (incompatible)")
@@ -747,21 +749,21 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             "toQuantity() with different unitCode returns empty for boolean")
 
         .group("toQuantity(unitCode) - UCUM string sources → exact unitCode match")
-        .testEquals("10 'mg'", "'10 \\'mg\\''.toQuantity('mg')",
+        .testEquals(toQuantity("10 'mg'"), "'10 \\'mg\\''.toQuantity('mg')",
             "toQuantity() with matching UCUM unitCode returns quantity")
-        .testEquals("1.5 'kg'", "'1.5 \\'kg\\''.toQuantity('kg')",
+        .testEquals(toQuantity("1.5 'kg'"), "'1.5 \\'kg\\''.toQuantity('kg')",
             "toQuantity() with matching UCUM unitCode returns quantity for decimal")
-        .testEquals("-5.2 'cm'", "'-5.2 \\'cm\\''.toQuantity('cm')",
+        .testEquals(toQuantity("-5.2 'cm'"), "'-5.2 \\'cm\\''.toQuantity('cm')",
             "toQuantity() with matching UCUM unitCode returns quantity for negative")
 
         .group("toQuantity(unitCode) - UCUM string sources → UCUM conversion (compatible)")
-        .testEquals("0.01 'g'", "'10 \\'mg\\''.toQuantity('g')",
+        .testEquals(toQuantity("0.01 'g'"), "'10 \\'mg\\''.toQuantity('g')",
             "toQuantity() converts mg to g (mass)")
-        .testEquals("10 'mm'", "'1 \\'cm\\''.toQuantity('mm')",
+        .testEquals(toQuantity("10 'mm'"), "'1 \\'cm\\''.toQuantity('mm')",
             "toQuantity() converts cm to mm (length)")
-        .testEquals("1000 'mL'", "'1 \\'L\\''.toQuantity('mL')",
+        .testEquals(toQuantity("1000 'mL'"), "'1 \\'L\\''.toQuantity('mL')",
             "toQuantity() converts L to mL (volume)")
-        .testEquals("273.15 'K'", "'0 \\'Cel\\''.toQuantity('K')",
+        .testEquals(toQuantity("273.15 'K'"), "'0 \\'Cel\\''.toQuantity('K')",
             "toQuantity() converts Celsius to Kelvin (temperature, additive)")
         
 
@@ -774,20 +776,20 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             "toQuantity() returns empty for invalid target unitCode")
 
         .group("toQuantity(unitCode) - Calendar duration sources → exact unitCode match")
-        .testEquals("4 days", "'4 days'.toQuantity('days')",
+        .testEquals(toQuantity("4 days"), "'4 days'.toQuantity('days')",
             "toQuantity() with matching calendar unitCode returns quantity")
 
         .group(
             "toQuantity(unitCode) - Calendar duration sources → calendar-to-calendar conversions")
-        .testEquals("86400 seconds", "'1 day'.toQuantity('seconds')",
+        .testEquals(toQuantity("86400 seconds"), "'1 day'.toQuantity('seconds')",
             "toQuantity() converts calendar day to seconds")
-        .testEquals("86400000 milliseconds", "'1 day'.toQuantity('milliseconds')",
+        .testEquals(toQuantity("86400000 milliseconds"), "'1 day'.toQuantity('milliseconds')",
             "toQuantity() converts calendar day to milliseconds")
 
         .group("toQuantity(unitCode) - Calendar duration sources → calendar-to-UCUM conversions")
-        .testEquals("120 's'", "'2 minutes'.toQuantity('s')",
+        .testEquals(toQuantity("120 's'"), "'2 minutes'.toQuantity('s')",
             "toQuantity() converts calendar minutes to UCUM 's'")
-        .testEquals("1500 'ms'", "'1500 milliseconds'.toQuantity('ms')",
+        .testEquals(toQuantity("1500 'ms'"), "'1500 milliseconds'.toQuantity('ms')",
             "toQuantity() converts calendar milliseconds to UCUM 'ms'")
 
         .group("toQuantity(unitCode) - Calendar duration sources → unsupported conversions")
@@ -795,9 +797,9 @@ public class ConversionFunctionsDslTest extends FhirPathDslTestBase {
             "toQuantity() returns empty for week to months (blocked)")
 
         .group("toQuantity(unitCode) - Numeric string sources → exact unitCode match")
-        .testEquals("42 '1'", "'42'.toQuantity('1')",
+        .testEquals(toQuantity("42 '1'"), "'42'.toQuantity('1')",
             "toQuantity() with matching unitCode '1' returns quantity for numeric string")
-        .testEquals("3.14 '1'", "'3.14'.toQuantity('1')",
+        .testEquals(toQuantity("3.14 '1'"), "'3.14'.toQuantity('1')",
             "toQuantity() with matching unitCode '1' returns quantity for decimal string")
 
         .group("toQuantity(unitCode) - Numeric string sources → different unitCode (incompatible)")

@@ -20,7 +20,6 @@ package au.csiro.pathling.fhirpath.dsl;
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import java.util.stream.Stream;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.DynamicTest;
 
 /**
@@ -40,10 +39,7 @@ public class IsOperatorDslTest extends FhirPathDslTestBase {
             .stringEmpty("emptyString")
             .stringArray("stringArray", "one", "two", "three")
             .coding("codingValue", "http://example.org/codesystem|code2|display1")
-            .element("quantityValue",
-                qt -> qt.fhirType(FHIRDefinedType.QUANTITY)
-                    .decimal("value", 11.5)
-                    .string("unit", "mg"))
+            .quantity("quantityValue", "11.5 'mg'")
             // Heterogeneous collection
             .elementArray("heteroattr",
                 val1 -> val1.choice("value")

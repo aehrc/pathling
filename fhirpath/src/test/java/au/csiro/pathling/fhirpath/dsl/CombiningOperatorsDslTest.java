@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.dsl;
 import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toCoding;
 import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toDate;
 import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toDateTime;
+import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toQuantity;
 import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toTime;
 
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
@@ -228,38 +229,38 @@ public class CombiningOperatorsDslTest extends FhirPathDslTestBase {
     return builder()
         .withSubject(sb -> sb)  // No quantity arrays needed - using literals only
         .group("Quantity union - same dimension different units")
-        .testEquals("1000 'mg'", "1000 'mg' | 1 'g'",
+        .testEquals(toQuantity("1000 'mg'"), "1000 'mg' | 1 'g'",
             "1000mg = 1g, first element retained")
-        .testEquals(List.of("1000 'mg'", "2 'g'"), "1000 'mg' | 2 'g'",
+        .testEquals(List.of(toQuantity("1000 'mg'"), toQuantity("2 'g'")), "1000 'mg' | 2 'g'",
             "1000mg != 2g, keep both")
-        .testEquals(List.of("1000 'mg'", "2000 'mg'", "3 'g'"),
+        .testEquals(List.of(toQuantity("1000 'mg'"), toQuantity("2000 'mg'"), toQuantity("3 'g'")),
             "(1000 'mg' | 2000 'mg') | (1 'g' | 3 'g')",
             "Complex union with mixed units")
         .group("Quantity union - definite time quantities")
-        .testEquals("1000 'ms'", "1000 'ms' | 1 's'",
+        .testEquals(toQuantity("1000 'ms'"), "1000 'ms' | 1 's'",
             "1000ms = 1s, first element retained")
-        .testEquals("2 second", "2 second | 2 's'",
+        .testEquals(toQuantity("2 second"), "2 second | 2 's'",
             "Calendar second = UCUM second, first element retained")
-        .testEquals("1 'd'", "1 'd' | 24 'h'",
+        .testEquals(toQuantity("1 'd'"), "1 'd' | 24 'h'",
             "Definite durations comparable, keep first")
         .group("Quantity union - indefinite calendar durations")
-        .testEquals(List.of("1 year", "12 months"), "1 year | 12 months",
+        .testEquals(List.of(toQuantity("1 year"), toQuantity("12 months")), "1 year | 12 months",
             "Indefinite durations not comparable, keep both")
         .group("Quantity union - unit '1' with decimals/integers")
-        .testEquals("1 '1'", "1 '1' | 1.0",
+        .testEquals(toQuantity("1 '1'"), "1 '1' | 1.0",
             "Decimal promoted to Quantity('1'), first element retained")
-        .testEquals("1 '1'", "1.0 '1' | 1.00 '1'",
+        .testEquals(toQuantity("1 '1'"), "1.0 '1' | 1.00 '1'",
             "Unitless quantities with different precision, first retained")
         .group("Quantity union - incompatible dimensions")
-        .testEquals(List.of("1 'cm'", "1 'cm2'"), "1 'cm' | 1 'cm2'",
+        .testEquals(List.of(toQuantity("1 'cm'"), toQuantity("1 'cm2'")), "1 'cm' | 1 'cm2'",
             "Different dimensions (length vs area), keep both")
         .group("Quantity union - empty collections")
-        .testEquals("1 'mg'", "{} | 1 'mg'", "Empty union quantity")
-        .testEquals("1 'mg'", "(1 'mg' | 1 'mg') | {}",
+        .testEquals(toQuantity("1 'mg'"), "{} | 1 'mg'", "Empty union quantity")
+        .testEquals(toQuantity("1 'mg'"), "(1 'mg' | 1 'mg') | {}",
             "Deduplicate then union with empty")
         .testEmpty("{} | {}", "Empty union empty")
         .group("Quantity union - grouped expressions")
-        .testEquals(List.of("1 'mg'", "2 'mg'", "3 'mg'"),
+        .testEquals(List.of(toQuantity("1 'mg'"), toQuantity("2 'mg'"), toQuantity("3 'mg'")),
             "(1 'mg' | 2 'mg') | (2 'mg' | 3 'mg')",
             "Nested union with deduplication")
         .build();

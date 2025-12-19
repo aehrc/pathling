@@ -51,7 +51,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -62,6 +61,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.opentest4j.TestAbortedException;
 import org.slf4j.Logger;
 import scala.collection.mutable.ArraySeq;
@@ -293,14 +293,9 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     // Evaluate the expression to get the actual result.
     final Collection evalResult = verifyEvaluation(evaluator);
 
-    // Convert Quantity collections to string representation for comparison
-    final Collection flattenedResult = evalResult instanceof QuantityCollection qty
-                                       ? qty.asStringCollection()
-                                       : evalResult;
-
     // Get column representations for both actual and expected results.
-    final ColumnRepresentation actualRepresentation = flattenedResult.getColumn().asCanonical();
     final ColumnRepresentation expectedRepresentation = getResultRepresentation();
+    final ColumnRepresentation actualRepresentation = evalResult.getColumn().asCanonical();
 
     // Create a single row with both actual and expected values for comparison.
     final Row resultRow = evaluator.createInitialDataset().select(
@@ -309,8 +304,43 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     ).first();
 
     // Extract the actual values from the Spark Row.
-    final Object actual = getResult(resultRow, 0);
-    final Object expected = getResult(resultRow, 1);
+    final Object actualRaw = getResult(resultRow, 0);
+    final Object expectedRaw = getResult(resultRow, 1);
+
+    // For Quantity collections, handle both string-based (YAML tests) and struct-based (DSL tests) expectations
+    final Object actual;
+    final Object expected;
+    if (evalResult instanceof final QuantityCollection qty) {
+      if (expectedRaw instanceof String) {
+        // YAML test expects string representation - convert Quantity to string
+        final Row stringRow = evaluator.createInitialDataset().select(
+            qty.asStringCollection().getColumn().getValue().alias("string_result")
+        ).first();
+        actual = getResult(stringRow, 0);
+        expected = expectedRaw;
+      } else if (isArrayOfStrings(expectedRaw)) {
+        // YAML test expects array of strings - convert Quantity array to string array
+        final Row stringRow = evaluator.createInitialDataset().select(
+            qty.asStringCollection().getColumn().getValue().alias("string_result")
+        ).first();
+        actual = getResult(stringRow, 0);
+        expected = expectedRaw;
+      } else if (actualRaw instanceof Row && expectedRaw instanceof Row) {
+        // DSL test expects Quantity struct - normalize to ignore canonical fields and value_scale
+        actual = normalizeQuantityRow((Row) actualRaw);
+        expected = normalizeQuantityRow((Row) expectedRaw);
+      } else if (isArrayOfRows(actualRaw) && isArrayOfRows(expectedRaw)) {
+        // DSL test expects array of Quantity structs - normalize each element
+        actual = normalizeQuantityArray(actualRaw);
+        expected = normalizeQuantityArray(expectedRaw);
+      } else {
+        actual = actualRaw;
+        expected = expectedRaw;
+      }
+    } else {
+      actual = actualRaw;
+      expected = expectedRaw;
+    }
 
     // Log detailed information for debugging.
     log.trace("Result schema: {}", resultRow.schema().treeString());
@@ -320,6 +350,93 @@ public class DefaultYamlTestExecutor implements YamlTestExecutor {
     assertEquals(expected, actual,
         String.format("Expression evaluation mismatch for '%s'. Expected: %s, but got: %s",
             spec.expression(), expected, actual));
+  }
+
+  /**
+   * Checks if an object is an array/sequence of Strings.
+   *
+   * @param obj the object to check
+   * @return true if the object is an array/sequence containing Strings
+   */
+  private static boolean isArrayOfStrings(@Nullable final Object obj) {
+    if (obj instanceof scala.collection.Seq<?> seq) {
+      return !seq.isEmpty() && seq.head() instanceof String;
+    }
+    return false;
+  }
+
+  /**
+   * Checks if an object is an array/sequence of Rows.
+   *
+   * @param obj the object to check
+   * @return true if the object is an array/sequence containing Rows
+   */
+  private static boolean isArrayOfRows(@Nullable final Object obj) {
+    if (obj instanceof scala.collection.Seq<?> seq) {
+      return !seq.isEmpty() && seq.head() instanceof Row;
+    }
+    return false;
+  }
+
+  /**
+   * Normalizes an array of Quantity Rows for comparison.
+   *
+   * @param arrayObj the array object (scala Seq) containing Quantity Rows
+   * @return a normalized array with canonical fields removed from each row
+   */
+  @Nonnull
+  private static Object normalizeQuantityArray(@Nonnull final Object arrayObj) {
+    if (arrayObj instanceof scala.collection.Seq<?> seq) {
+      final java.util.List<java.util.List<Object>> normalized = new java.util.ArrayList<>();
+      final scala.collection.Iterator<?> it = seq.iterator();
+      while (it.hasNext()) {
+        final Object item = it.next();
+        if (item instanceof Row row) {
+          normalized.add(normalizeQuantityRow(row));
+        } else {
+          throw new IllegalArgumentException("Expected Row in array, but got: " + item.getClass());
+        }
+      }
+      return scala.jdk.javaapi.CollectionConverters.asScala(normalized).toSeq();
+    }
+    throw new IllegalArgumentException("Expected Scala Seq, but got: " + arrayObj.getClass());
+  }
+
+  /**
+   * Normalizes a Quantity Row for comparison by removing implementation and derived fields.
+   * This allows comparing quantities based on their core semantic data (value, unit, system, code)
+   * without being affected by representation or canonicalization differences.
+   *
+   * <p>Quantity Row structure: [id, value, value_scale, comparator, unit, system, code,
+   *                              canonicalizedValue, canonicalizedCode, _fid]
+   * <p>The following fields are ignored:
+   * - value_scale (position 2): representation detail of decimal value storage
+   * - canonicalizedValue, canonicalizedCode (positions 7-8): derived canonical forms
+   *
+   * @param quantityRow the Quantity Row to normalize
+   * @return a List representing the normalized quantity (ignored fields set to null)
+   */
+  @Nonnull
+  private static java.util.List<Object> normalizeQuantityRow(@Nonnull final Row quantityRow) {
+    // Quantity rows should have 10 fields
+    final int expectedSize = 10;
+    if (quantityRow.size() < expectedSize) {
+      throw new IllegalArgumentException(
+          "Expected Quantity row to have " + expectedSize + " fields, but got " + quantityRow.size());
+    }
+
+    return java.util.Arrays.asList(
+        quantityRow.isNullAt(0) ? null : quantityRow.get(0),  // id
+        quantityRow.isNullAt(1) ? null : quantityRow.get(1),  // value
+        null,                                                  // value_scale - ignored (representation detail)
+        quantityRow.isNullAt(3) ? null : quantityRow.get(3),  // comparator
+        quantityRow.isNullAt(4) ? null : quantityRow.get(4),  // unit
+        quantityRow.isNullAt(5) ? null : quantityRow.get(5),  // system
+        quantityRow.isNullAt(6) ? null : quantityRow.get(6),  // code
+        null,                                                  // canonicalizedValue - ignored
+        null,                                                  // canonicalizedCode - ignored
+        quantityRow.isNullAt(9) ? null : quantityRow.get(9)   // _fid
+    );
   }
 
   @Nonnull

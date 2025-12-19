@@ -22,7 +22,6 @@ import au.csiro.pathling.test.dsl.FhirPathTest;
 import au.csiro.pathling.test.yaml.FhirTypedLiteral;
 import java.util.List;
 import java.util.stream.Stream;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.DynamicTest;
@@ -101,10 +100,7 @@ public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase 
             .bool("booleanValue", true)
             .stringEmpty("emptyString")
             .coding("codingValue", "http://example.org/codesystem|code2|display1")
-            .element("quantityValue",
-                qt -> qt.fhirType(FHIRDefinedType.QUANTITY)
-                    .decimal("value", 11.5)
-                    .string("unit", "mg"))
+            .quantity("quantityValue", "11.5 'mg'")
             // Array of mixed primitive types
             .elementArray("heteroattr",
                 // only the first element needs to be a full choice type
@@ -123,11 +119,7 @@ public class FilteringAndProjectionFunctionsDslTest extends FhirPathDslTestBase 
             )
             .element("heteroQuantity",
                 val1 -> val1.choice("value")
-                    .element("valueQuantity",
-                        qt -> qt.fhirType(FHIRDefinedType.QUANTITY)
-                            .decimal("value", 10.5)
-                            .string("unit", "mg")
-                    )
+                    .quantity("valueQuantity", "10.5 'mg'")
                     .stringEmpty("valueString")
             )
             .element("monoCode",

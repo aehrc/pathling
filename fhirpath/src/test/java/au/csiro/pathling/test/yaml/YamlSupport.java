@@ -126,13 +126,37 @@ public class YamlSupport {
     private void writeQuantity(@Nonnull final CharSequence quantityLiteral,
         @Nonnull final JsonGenerator gen) throws IOException {
       final FhirPathQuantity quantity = FhirPathQuantity.parse(quantityLiteral.toString());
+      final Optional<FhirPathQuantity> canonical = quantity.asCanonical();
+
       gen.writeStartObject();
+      // id field - always null for literals
+      gen.writeNullField("id");
+      // value and value_scale
       gen.writeNumberField("value", quantity.getValue());
+      gen.writeNumberField("value_scale", quantity.getValue().scale());
+      // comparator - not used in FhirPathQuantity
+      gen.writeNullField("comparator");
+      // unit, system, code
       gen.writeStringField("unit", quantity.getUnitName());
-      quantity.getSystem();
       gen.writeStringField("system", quantity.getSystem());
-      quantity.getCode();
       gen.writeStringField("code", quantity.getCode());
+      // canonicalizedValue as array [value, scale] or null
+      if (canonical.isPresent()) {
+        gen.writeArrayFieldStart("canonicalizedValue");
+        gen.writeNumber(canonical.get().getValue());
+        gen.writeNumber(canonical.get().getValue().scale());
+        gen.writeEndArray();
+      } else {
+        gen.writeNullField("canonicalizedValue");
+      }
+      // canonicalizedCode
+      if (canonical.isPresent()) {
+        gen.writeStringField("canonicalizedCode", canonical.get().getCode());
+      } else {
+        gen.writeNullField("canonicalizedCode");
+      }
+      // _fid field - always null for literals
+      gen.writeNullField("_fid");
       gen.writeEndObject();
     }
   }
