@@ -87,7 +87,8 @@
     <pathling.logbackVersion>1.5.19</pathling.logbackVersion>
     <pathling.slf4jVersion>2.0.17</pathling.slf4jVersion>
     <pathling.derbyVersion>10.16.1.1</pathling.derbyVersion>
-    <pathling.bulkExportVersion>1.0.3</pathling.bulkExportVersion>
+    <pathling.bulkExportVersion>1.0.4-SNAPSHOT</pathling.bulkExportVersion>
+    <pathling.fhirAuthVersion>1.0.0-SNAPSHOT</pathling.fhirAuthVersion>
   </properties>
 
   <modules>
@@ -235,6 +236,11 @@
         <artifactId>bulk-export</artifactId>
         <version>${pathling.bulkExportVersion}</version>
         <classifier>sources</classifier>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.fhir</groupId>
+        <artifactId>fhir-auth</artifactId>
+        <version>${pathling.fhirAuthVersion}</version>
       </dependency>
       <!-- Ensure that consistent and correct versions of Jackson and Jersey are used. -->
       <dependency>

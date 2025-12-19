@@ -173,7 +173,8 @@ public class BulkSubmitProvider {
       final ManifestJob manifestJob = ManifestJob.createPending(
           UUID.randomUUID().toString(),
           request.manifestUrl(),
-          request.fhirBaseUrl()
+          request.fhirBaseUrl(),
+          request.oauthMetadataUrl()
       );
 
       // Add manifest job to submission.

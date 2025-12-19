@@ -31,6 +31,7 @@ import java.util.List;
  * @param manifestUrl The URL of the manifest file (required when status is "complete").
  * @param fhirBaseUrl The base URL of the FHIR server that produced the manifest.
  * @param replacesManifestUrl The URL of a previous manifest that this submission replaces.
+ * @param oauthMetadataUrl URL to OAuth 2.0 metadata for token acquisition.
  * @param metadata Optional metadata associated with the submission.
  * @param fileRequestHeaders Custom HTTP headers to include when downloading files.
  * @author John Grimes
@@ -44,6 +45,7 @@ public record BulkSubmitRequest(
     @Nullable String manifestUrl,
     @Nullable String fhirBaseUrl,
     @Nullable String replacesManifestUrl,
+    @Nullable String oauthMetadataUrl,
     @Nullable SubmissionMetadata metadata,
     @Nonnull List<FileRequestHeader> fileRequestHeaders
 ) {

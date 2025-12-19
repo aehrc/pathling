@@ -42,6 +42,10 @@
       <groupId>au.csiro.pathling</groupId>
       <artifactId>utilities</artifactId>
     </dependency>
+    <dependency>
+      <groupId>au.csiro.fhir</groupId>
+      <artifactId>fhir-auth</artifactId>
+    </dependency>
 
     <!-- Apache Spark -->
     <dependency>

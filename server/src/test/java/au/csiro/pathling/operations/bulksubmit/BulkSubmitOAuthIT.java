@@ -18,12 +18,13 @@
 package au.csiro.pathling.operations.bulksubmit;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.head;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import au.csiro.pathling.util.TestDataSetup;
@@ -55,10 +56,12 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 /**
- * Integration test for the $bulk-submit operation.
+ * Integration tests for OAuth2 authentication in the $bulk-submit operation. Tests the SMART
+ * Backend Services flow for authenticated file downloads.
  *
  * @author John Grimes
- * @see <a href="https://hackmd.io/@argonaut/rJoqHZrPle">Argonaut $bulk-submit Specification</a>
+ * @see <a href="https://hl7.org/fhir/smart-app-launch/backend-services.html">SMART Backend
+ * Services</a>
  */
 @Slf4j
 @Tag("IntegrationTest")
@@ -68,13 +71,18 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @TestPropertySource(properties = {
     "pathling.async.enabled=true",
     "pathling.bulk-submit.allowable-sources[0]=http://localhost",
+    // Configure submitter with OAuth credentials for symmetric (client_secret) auth.
     "pathling.bulk-submit.allowed-submitters[0].system=http://example.org/submitters",
-    "pathling.bulk-submit.allowed-submitters[0].value=test-submitter"
+    "pathling.bulk-submit.allowed-submitters[0].value=oauth-submitter",
+    "pathling.bulk-submit.allowed-submitters[0].clientId=test-client-id",
+    "pathling.bulk-submit.allowed-submitters[0].clientSecret=test-client-secret",
+    "pathling.bulk-submit.allowed-submitters[0].scope=system/*.read"
 })
-class BulkSubmitOperationIT {
+class BulkSubmitOAuthIT {
 
   private static final String SUBMITTER_SYSTEM = "http://example.org/submitters";
-  private static final String SUBMITTER_VALUE = "test-submitter";
+  private static final String SUBMITTER_VALUE = "oauth-submitter";
+  private static final String TEST_ACCESS_TOKEN = "test-oauth-access-token-12345";
 
   private static WireMockServer wireMockServer;
 
@@ -83,6 +91,9 @@ class BulkSubmitOperationIT {
 
   @Autowired
   WebTestClient webTestClient;
+
+  @Autowired
+  BulkSubmitAuthProvider authProvider;
 
   @TempDir
   private static Path warehouseDir;
@@ -107,7 +118,7 @@ class BulkSubmitOperationIT {
 
   @DynamicPropertySource
   static void configureProperties(final DynamicPropertyRegistry registry) {
-    // Copy only Condition data - exclude Patient and Observation which will be imported.
+    // Copy only Condition data - exclude Patient which will be imported.
     TestDataSetup.copyTestDataToTempDir(warehouseDir, "Condition");
     registry.add("pathling.storage.warehouseUrl", () -> "file://" + warehouseDir.toAbsolutePath());
     registry.add("pathling.bulk-submit.staging-directory", stagingDir::toString);
@@ -122,6 +133,9 @@ class BulkSubmitOperationIT {
 
     // Reset WireMock stubs before each test.
     wireMockServer.resetAll();
+
+    // Clear the auth provider's token cache to ensure test isolation.
+    authProvider.clearTokenCache();
   }
 
   @AfterEach
@@ -130,24 +144,68 @@ class BulkSubmitOperationIT {
   }
 
   /**
-   * Sets up WireMock stubs for a successful bulk data manifest and data files.
+   * Sets up WireMock stubs for the SMART discovery endpoint.
    */
-  private void setupSuccessfulManifestStubs() {
+  private void setupSmartDiscoveryStub() {
+    final String baseUrl = "http://localhost:" + wireMockServer.port();
+    final String smartConfig = String.format("""
+        {
+          "token_endpoint": "%s/oauth/token",
+          "authorization_endpoint": "%s/oauth/authorize",
+          "capabilities": ["client-confidential-symmetric"]
+        }
+        """, baseUrl, baseUrl);
+
+    wireMockServer.stubFor(get(urlEqualTo("/.well-known/smart-configuration"))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withHeader("Content-Type", "application/json")
+            .withBody(smartConfig)));
+
+    log.info("Set up SMART discovery stub");
+  }
+
+  /**
+   * Sets up WireMock stubs for the OAuth token endpoint.
+   */
+  private void setupTokenEndpointStub() {
+    // Token response with a short expiry for testing.
+    final String tokenResponse = String.format("""
+        {
+          "access_token": "%s",
+          "token_type": "Bearer",
+          "expires_in": 3600,
+          "scope": "system/*.read"
+        }
+        """, TEST_ACCESS_TOKEN);
+
+    wireMockServer.stubFor(post(urlEqualTo("/oauth/token"))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withHeader("Content-Type", "application/json")
+            .withBody(tokenResponse)));
+
+    log.info("Set up OAuth token endpoint stub");
+  }
+
+  /**
+   * Sets up WireMock stubs for a manifest that requires authentication.
+   */
+  private void setupAuthenticatedManifestStubs() {
     final String baseUrl = "http://localhost:" + wireMockServer.port();
 
-    // Stub manifest endpoint.
+    // Manifest with requiresAccessToken: true.
     final String manifest = String.format("""
         {
           "transactionTime": "2025-11-28T00:00:00Z",
           "request": "%s/fhir/$export",
-          "requiresAccessToken": false,
+          "requiresAccessToken": true,
           "output": [
-            {"type": "Patient", "url": "%s/data/Patient.ndjson"},
-            {"type": "Observation", "url": "%s/data/Observation.ndjson"}
+            {"type": "Patient", "url": "%s/data/Patient.ndjson"}
           ],
           "error": []
         }
-        """, baseUrl, baseUrl, baseUrl);
+        """, baseUrl, baseUrl);
 
     wireMockServer.stubFor(get(urlEqualTo("/manifest.json"))
         .willReturn(aResponse()
@@ -155,46 +213,21 @@ class BulkSubmitOperationIT {
             .withHeader("Content-Type", "application/json")
             .withBody(manifest)));
 
-    // Stub Patient NDJSON file.
+    // Patient NDJSON file.
     final String patientNdjson = """
         {"resourceType":"Patient","id":"patient1","name":[{"family":"Smith","given":["John"]}]}
-        {"resourceType":"Patient","id":"patient2","name":[{"family":"Jones","given":["Jane"]}]}
         """;
-    wireMockServer.stubFor(head(urlEqualTo("/data/Patient.ndjson"))
-        .willReturn(aResponse()
-            .withStatus(200)
-            .withHeader("Content-Length", String.valueOf(patientNdjson.getBytes().length))));
     wireMockServer.stubFor(get(urlEqualTo("/data/Patient.ndjson"))
         .willReturn(aResponse()
             .withStatus(200)
             .withHeader("Content-Type", "application/fhir+ndjson")
             .withBody(patientNdjson)));
 
-    // Stub Observation NDJSON file.
-    final String observationNdjson = """
-        {"resourceType":"Observation","id":"obs1","status":"final","code":{"coding":[{"system":"http://loinc.org","code":"8867-4"}]}}
-        """;
-    wireMockServer.stubFor(head(urlEqualTo("/data/Observation.ndjson"))
-        .willReturn(aResponse()
-            .withStatus(200)
-            .withHeader("Content-Length", String.valueOf(observationNdjson.getBytes().length))));
-    wireMockServer.stubFor(get(urlEqualTo("/data/Observation.ndjson"))
-        .willReturn(aResponse()
-            .withStatus(200)
-            .withHeader("Content-Type", "application/fhir+ndjson")
-            .withBody(observationNdjson)));
-
-    log.info("Set up successful manifest stubs on WireMock server");
+    log.info("Set up authenticated manifest stubs");
   }
 
   /**
    * Builds a $bulk-submit request Parameters resource.
-   *
-   * @param submissionId The submission ID.
-   * @param status The submission status (in-progress, complete, or aborted).
-   * @param manifestUrl Optional manifest URL (null if not provided).
-   * @param fhirBaseUrl Optional FHIR base URL (null if not provided).
-   * @return JSON string representation of the Parameters resource.
    */
   private String buildBulkSubmitRequest(final String submissionId, final String status,
       final String manifestUrl, final String fhirBaseUrl) {
@@ -234,52 +267,7 @@ class BulkSubmitOperationIT {
   }
 
   /**
-   * Builds a $bulk-submit request with file request headers.
-   *
-   * @param submissionId The submission ID.
-   * @param status The submission status.
-   * @param manifestUrl The manifest URL.
-   * @param fhirBaseUrl The FHIR base URL.
-   * @param headerName The header name to include.
-   * @param headerValue The header value to include.
-   * @return JSON string representation of the Parameters resource.
-   */
-  private String buildBulkSubmitRequestWithHeaders(final String submissionId, final String status,
-      final String manifestUrl, final String fhirBaseUrl, final String headerName,
-      final String headerValue) {
-    return """
-        {
-          "resourceType": "Parameters",
-          "parameter": [
-            {
-              "name": "submitter",
-              "valueIdentifier": {
-                "system": "%s",
-                "value": "%s"
-              }
-            },
-            {"name": "submissionId", "valueString": "%s"},
-            {"name": "submissionStatus", "valueCoding": {"code": "%s"}},
-            {"name": "manifestUrl", "valueString": "%s"},
-            {"name": "fhirBaseUrl", "valueString": "%s"},
-            {
-              "name": "fileRequestHeader",
-              "part": [
-                {"name": "headerName", "valueString": "%s"},
-                {"name": "headerValue", "valueString": "%s"}
-              ]
-            }
-          ]
-        }
-        """.formatted(SUBMITTER_SYSTEM, SUBMITTER_VALUE, submissionId, status, manifestUrl,
-        fhirBaseUrl, headerName, headerValue);
-  }
-
-  /**
    * Builds a $bulk-submit-status request.
-   *
-   * @param submissionId The submission ID to check status for.
-   * @return JSON string representation of the Parameters resource.
    */
   private String buildBulkSubmitStatusRequest(final String submissionId) {
     return """
@@ -300,20 +288,26 @@ class BulkSubmitOperationIT {
   }
 
   @Test
-  void testDirectCompleteWorkflow() {
-    // This test verifies the full workflow: send in-progress with manifest, wait for downloads,
-    // then send complete to trigger import.
+  void testOAuthAuthenticationFlowWithSymmetricCredentials() {
+    // This test verifies that when a submitter has OAuth credentials configured, the system:
+    // 1. Discovers the token endpoint via SMART configuration
+    // 2. Acquires an access token using client credentials
+    // 3. Uses the access token in manifest and file requests.
+
     TestDataSetup.copyTestDataToTempDir(warehouseDir, "Condition");
-    setupSuccessfulManifestStubs();
+    setupSmartDiscoveryStub();
+    setupTokenEndpointStub();
+    setupAuthenticatedManifestStubs();
 
     final String submissionId = UUID.randomUUID().toString();
     final String manifestUrl = "http://localhost:" + wireMockServer.port() + "/manifest.json";
-    final String fhirBaseUrl = "http://localhost:" + wireMockServer.port() + "/fhir";
+    final String fhirBaseUrl = "http://localhost:" + wireMockServer.port();
     final String uri = "http://localhost:" + port + "/fhir/$bulk-submit";
 
-    // Step 1: Send in-progress with manifest URL to start downloading.
-    final String inProgressRequest = buildBulkSubmitRequest(submissionId, "in-progress",
-        manifestUrl, fhirBaseUrl);
+    // Send in-progress notification with manifest URL.
+    final String inProgressRequest = buildBulkSubmitRequest(
+        submissionId, "in-progress", manifestUrl, fhirBaseUrl
+    );
 
     webTestClient.post()
         .uri(uri)
@@ -323,13 +317,13 @@ class BulkSubmitOperationIT {
         .exchange()
         .expectStatus().isOk();
 
-    log.info("In-progress with manifest accepted for submission: {}", submissionId);
+    log.info("In-progress notification accepted for submission: {}", submissionId);
 
-    // Step 2: Poll $bulk-submit-status until downloads are complete (202 -> 200).
+    // Poll $bulk-submit-status until downloads are complete.
     final String statusUri = "http://localhost:" + port + "/fhir/$bulk-submit-status";
     final String statusRequest = buildBulkSubmitStatusRequest(submissionId);
 
-    // Wait for downloads to complete - status will return 202 while processing.
+    // Wait for downloads to complete.
     await().atMost(60, TimeUnit.SECONDS)
         .pollInterval(2, TimeUnit.SECONDS)
         .untilAsserted(() -> {
@@ -343,116 +337,82 @@ class BulkSubmitOperationIT {
               .expectStatus().is2xxSuccessful();
         });
 
-    log.info("Downloads complete for submission: {}", submissionId);
+    // Log all requests made to WireMock for debugging.
+    log.info("All WireMock requests: {}", wireMockServer.getAllServeEvents());
 
-    // Step 3: Send complete (without manifest) to trigger import.
-    final String completeRequest = buildBulkSubmitRequest(submissionId, "complete", null, null);
+    // Verify that SMART discovery was called.
+    wireMockServer.verify(getRequestedFor(urlEqualTo("/.well-known/smart-configuration")));
 
-    webTestClient.post()
-        .uri(uri)
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "application/fhir+json")
-        .bodyValue(completeRequest)
-        .exchange()
-        .expectStatus().isOk();
+    // Verify that the token endpoint was called with correct client credentials.
+    wireMockServer.verify(postRequestedFor(urlEqualTo("/oauth/token"))
+        .withHeader("Content-Type", containing("application/x-www-form-urlencoded"))
+        .withRequestBody(containing("grant_type=client_credentials"))
+        .withRequestBody(containing("client_id=test-client-id"))
+        .withRequestBody(containing("client_secret=test-client-secret")));
 
-    log.info("Complete workflow finished successfully");
+    // Verify that the Authorization header was included in the manifest request.
+    wireMockServer.verify(getRequestedFor(urlEqualTo("/manifest.json"))
+        .withHeader("Authorization", equalTo("Bearer " + TEST_ACCESS_TOKEN)));
+
+    // Verify that the Authorization header was included in the data file request.
+    wireMockServer.verify(getRequestedFor(urlEqualTo("/data/Patient.ndjson"))
+        .withHeader("Authorization", equalTo("Bearer " + TEST_ACCESS_TOKEN)));
+
+    log.info("OAuth authentication flow verified successfully");
   }
 
   @Test
-  void testInProgressThenCompleteWorkflow() {
-    // This test verifies sending an initial in-progress without manifest, then another
-    // in-progress with manifest, then complete.
+  void testOAuthWithExplicitMetadataUrl() {
+    // This test verifies that when oauthMetadataUrl is provided explicitly in the request,
+    // the system uses it instead of SMART discovery from fhirBaseUrl.
+
     TestDataSetup.copyTestDataToTempDir(warehouseDir, "Condition");
-    setupSuccessfulManifestStubs();
+    setupTokenEndpointStub();
+    setupAuthenticatedManifestStubs();
+
+    // Set up an alternative discovery endpoint.
+    final String baseUrl = "http://localhost:" + wireMockServer.port();
+    final String alternativeConfig = String.format("""
+        {
+          "token_endpoint": "%s/oauth/token",
+          "authorization_endpoint": "%s/oauth/authorize"
+        }
+        """, baseUrl, baseUrl);
+
+    wireMockServer.stubFor(get(urlEqualTo("/alternative/.well-known/oauth-authorization-server"))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withHeader("Content-Type", "application/json")
+            .withBody(alternativeConfig)));
 
     final String submissionId = UUID.randomUUID().toString();
     final String manifestUrl = "http://localhost:" + wireMockServer.port() + "/manifest.json";
-    final String fhirBaseUrl = "http://localhost:" + wireMockServer.port() + "/fhir";
+    final String fhirBaseUrl = "http://localhost:" + wireMockServer.port();
+    final String oauthMetadataUrl = "http://localhost:" + wireMockServer.port()
+        + "/alternative/.well-known/oauth-authorization-server";
     final String uri = "http://localhost:" + port + "/fhir/$bulk-submit";
 
-    // Step 1: Send initial in-progress notification (without manifest).
-    final String initialInProgressRequest = buildBulkSubmitRequest(submissionId, "in-progress",
-        null, null);
-
-    webTestClient.post()
-        .uri(uri)
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "application/fhir+json")
-        .bodyValue(initialInProgressRequest)
-        .exchange()
-        .expectStatus().isOk();
-
-    log.info("Initial in-progress notification accepted for submission: {}", submissionId);
-
-    // Step 2: Send in-progress with manifest URL to start downloading.
-    final String manifestInProgressRequest = buildBulkSubmitRequest(submissionId, "in-progress",
-        manifestUrl, fhirBaseUrl);
-
-    webTestClient.post()
-        .uri(uri)
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "application/fhir+json")
-        .bodyValue(manifestInProgressRequest)
-        .exchange()
-        .expectStatus().isOk();
-
-    log.info("In-progress with manifest accepted for submission: {}", submissionId);
-
-    // Step 3: Poll $bulk-submit-status until downloads are complete.
-    final String statusUri = "http://localhost:" + port + "/fhir/$bulk-submit-status";
-    final String statusRequest = buildBulkSubmitStatusRequest(submissionId);
-
-    await().atMost(60, TimeUnit.SECONDS)
-        .pollInterval(2, TimeUnit.SECONDS)
-        .untilAsserted(() -> {
-          webTestClient.post()
-              .uri(statusUri)
-              .header("Content-Type", "application/fhir+json")
-              .header("Accept", "application/fhir+json")
-              .header("Prefer", "respond-async")
-              .bodyValue(statusRequest)
-              .exchange()
-              .expectStatus().is2xxSuccessful();
-        });
-
-    log.info("Downloads complete for submission: {}", submissionId);
-
-    // Step 4: Send complete (without manifest) to trigger import.
-    final String completeRequest = buildBulkSubmitRequest(submissionId, "complete", null, null);
-
-    webTestClient.post()
-        .uri(uri)
-        .header("Content-Type", "application/fhir+json")
-        .header("Accept", "application/fhir+json")
-        .bodyValue(completeRequest)
-        .exchange()
-        .expectStatus().isOk();
-
-    log.info("In-progress → complete workflow finished successfully");
-  }
-
-  @Test
-  void testFileRequestHeadersArePassedToServer() {
-    // This test verifies that fileRequestHeader parameters from the kickoff request are included
-    // when fetching manifest and data files.
-    TestDataSetup.copyTestDataToTempDir(warehouseDir, "Condition");
-    setupSuccessfulManifestStubs();
-
-    final String submissionId = UUID.randomUUID().toString();
-    final String manifestUrl = "http://localhost:" + wireMockServer.port() + "/manifest.json";
-    final String fhirBaseUrl = "http://localhost:" + wireMockServer.port() + "/fhir";
-    final String uri = "http://localhost:" + port + "/fhir/$bulk-submit";
-
-    // Step 1: Send in-progress with manifest URL and custom Authorization header.
-    final String requestBody = buildBulkSubmitRequestWithHeaders(
-        submissionId,
-        "in-progress",
-        manifestUrl,
-        fhirBaseUrl,
-        "Authorization",
-        "Bearer test-token-12345"
-    );
+    // Build request with explicit oauthMetadataUrl.
+    final String requestBody = """
+        {
+          "resourceType": "Parameters",
+          "parameter": [
+            {
+              "name": "submitter",
+              "valueIdentifier": {
+                "system": "%s",
+                "value": "%s"
+              }
+            },
+            {"name": "submissionId", "valueString": "%s"},
+            {"name": "submissionStatus", "valueCoding": {"code": "in-progress"}},
+            {"name": "manifestUrl", "valueString": "%s"},
+            {"name": "fhirBaseUrl", "valueString": "%s"},
+            {"name": "oauthMetadataUrl", "valueString": "%s"}
+          ]
+        }
+        """.formatted(SUBMITTER_SYSTEM, SUBMITTER_VALUE, submissionId, manifestUrl, fhirBaseUrl,
+        oauthMetadataUrl);
 
     webTestClient.post()
         .uri(uri)
@@ -462,9 +422,9 @@ class BulkSubmitOperationIT {
         .exchange()
         .expectStatus().isOk();
 
-    log.info("In-progress with custom header accepted: {}", submissionId);
+    log.info("In-progress with oauthMetadataUrl accepted for submission: {}", submissionId);
 
-    // Step 2: Poll $bulk-submit-status until downloads complete.
+    // Poll until downloads complete.
     final String statusUri = "http://localhost:" + port + "/fhir/$bulk-submit-status";
     final String statusRequest = buildBulkSubmitStatusRequest(submissionId);
 
@@ -481,31 +441,105 @@ class BulkSubmitOperationIT {
               .expectStatus().is2xxSuccessful();
         });
 
-    log.info("Downloads complete for submission: {}", submissionId);
+    // Verify that the alternative metadata endpoint was called instead of the standard SMART path.
+    wireMockServer.verify(getRequestedFor(
+        urlEqualTo("/alternative/.well-known/oauth-authorization-server")));
 
-    // Step 3: Send complete (without manifest) to trigger import.
-    final String completeRequest = buildBulkSubmitRequest(submissionId, "complete", null, null);
+    // Verify that the token was acquired and used.
+    wireMockServer.verify(postRequestedFor(urlEqualTo("/oauth/token")));
+    wireMockServer.verify(getRequestedFor(urlEqualTo("/manifest.json"))
+        .withHeader("Authorization", equalTo("Bearer " + TEST_ACCESS_TOKEN)));
+
+    log.info("OAuth with explicit metadata URL verified successfully");
+  }
+
+  @Test
+  void testNoAuthWhenManifestDoesNotRequireToken() {
+    // This test verifies that when the manifest has requiresAccessToken: false,
+    // the system does not include an Authorization header in file requests,
+    // even if the submitter has OAuth credentials configured.
+
+    TestDataSetup.copyTestDataToTempDir(warehouseDir, "Condition");
+    setupSmartDiscoveryStub();
+    setupTokenEndpointStub();
+
+    final String baseUrl = "http://localhost:" + wireMockServer.port();
+
+    // Manifest with requiresAccessToken: false.
+    final String manifest = String.format("""
+        {
+          "transactionTime": "2025-11-28T00:00:00Z",
+          "request": "%s/fhir/$export",
+          "requiresAccessToken": false,
+          "output": [
+            {"type": "Patient", "url": "%s/data/Patient-public.ndjson"}
+          ],
+          "error": []
+        }
+        """, baseUrl, baseUrl);
+
+    wireMockServer.stubFor(get(urlEqualTo("/public-manifest.json"))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withHeader("Content-Type", "application/json")
+            .withBody(manifest)));
+
+    // Patient NDJSON file (public).
+    final String patientNdjson = """
+        {"resourceType":"Patient","id":"patient1","name":[{"family":"Public","given":["User"]}]}
+        """;
+    wireMockServer.stubFor(get(urlEqualTo("/data/Patient-public.ndjson"))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withHeader("Content-Type", "application/fhir+ndjson")
+            .withBody(patientNdjson)));
+
+    final String submissionId = UUID.randomUUID().toString();
+    final String manifestUrl =
+        "http://localhost:" + wireMockServer.port() + "/public-manifest.json";
+    final String fhirBaseUrl = "http://localhost:" + wireMockServer.port();
+    final String uri = "http://localhost:" + port + "/fhir/$bulk-submit";
+
+    final String inProgressRequest = buildBulkSubmitRequest(
+        submissionId, "in-progress", manifestUrl, fhirBaseUrl
+    );
 
     webTestClient.post()
         .uri(uri)
         .header("Content-Type", "application/fhir+json")
         .header("Accept", "application/fhir+json")
-        .bodyValue(completeRequest)
+        .bodyValue(inProgressRequest)
         .exchange()
         .expectStatus().isOk();
 
-    // Verify that the Authorization header was included in the manifest request.
-    wireMockServer.verify(getRequestedFor(urlEqualTo("/manifest.json"))
-        .withHeader("Authorization", equalTo("Bearer test-token-12345")));
+    // Poll until downloads complete.
+    final String statusUri = "http://localhost:" + port + "/fhir/$bulk-submit-status";
+    final String statusRequest = buildBulkSubmitStatusRequest(submissionId);
 
-    // Verify that the Authorization header was included in the data file requests.
-    wireMockServer.verify(getRequestedFor(urlEqualTo("/data/Patient.ndjson"))
-        .withHeader("Authorization", equalTo("Bearer test-token-12345")));
+    await().atMost(60, TimeUnit.SECONDS)
+        .pollInterval(2, TimeUnit.SECONDS)
+        .untilAsserted(() -> {
+          webTestClient.post()
+              .uri(statusUri)
+              .header("Content-Type", "application/fhir+json")
+              .header("Accept", "application/fhir+json")
+              .header("Prefer", "respond-async")
+              .bodyValue(statusRequest)
+              .exchange()
+              .expectStatus().is2xxSuccessful();
+        });
 
-    wireMockServer.verify(getRequestedFor(urlEqualTo("/data/Observation.ndjson"))
-        .withHeader("Authorization", equalTo("Bearer test-token-12345")));
+    // Verify that the manifest was fetched with an Authorization header (for manifest itself,
+    // tokens are always acquired if credentials are available).
+    wireMockServer.verify(getRequestedFor(urlEqualTo("/public-manifest.json"))
+        .withHeader("Authorization", equalTo("Bearer " + TEST_ACCESS_TOKEN)));
 
-    log.info("Verified that custom headers were passed to manifest and data file requests");
+    // Verify that the data file was fetched WITHOUT an Authorization header since
+    // requiresAccessToken: false.
+    wireMockServer.verify(getRequestedFor(urlEqualTo("/data/Patient-public.ndjson"))
+        .withoutHeader("Authorization"));
+
+    log.info("No-auth for public manifest verified successfully");
   }
 
 }

@@ -110,6 +110,9 @@ public class BulkSubmitExecutor {
   @Nonnull
   private final FhirContext fhirContext;
 
+  @Nonnull
+  private final BulkSubmitAuthProvider authProvider;
+
   /**
    * Creates a new BulkSubmitExecutor.
    *
@@ -124,6 +127,7 @@ public class BulkSubmitExecutor {
    * disabled).
    * @param databasePath The path to the database storage location.
    * @param fhirContext The FHIR context for serialising resources.
+   * @param authProvider The authentication provider for OAuth2 token acquisition.
    */
   public BulkSubmitExecutor(
       @Nonnull final ImportExecutor importExecutor,
@@ -135,7 +139,8 @@ public class BulkSubmitExecutor {
       @Nullable final SparkSession sparkSession,
       @Nonnull @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
       final String databasePath,
-      @Nonnull final FhirContext fhirContext
+      @Nonnull final FhirContext fhirContext,
+      @Nonnull final BulkSubmitAuthProvider authProvider
   ) {
     this.importExecutor = importExecutor;
     this.submissionRegistry = submissionRegistry;
@@ -150,6 +155,7 @@ public class BulkSubmitExecutor {
         .connectTimeout(HTTP_TIMEOUT)
         .build();
     this.fhirContext = fhirContext;
+    this.authProvider = authProvider;
   }
 
   /**
@@ -229,8 +235,30 @@ public class BulkSubmitExecutor {
     }
 
     try {
+      // Acquire OAuth2 access token if credentials are configured for this submitter.
+      final String accessToken = acquireAccessToken(
+          submission.submitter(),
+          manifestJob.fhirBaseUrl(),
+          manifestJob.oauthMetadataUrl()
+      );
+
       // Fetch and parse the manifest.
-      final JsonNode manifest = fetchManifest(manifestJob, fileRequestHeaders);
+      final JsonNode manifest = fetchManifest(manifestJob, fileRequestHeaders, accessToken);
+
+      // Check if files require authentication based on the manifest's requiresAccessToken field.
+      final boolean requiresAccessToken = manifest.has("requiresAccessToken")
+                                          && manifest.get("requiresAccessToken").asBoolean(false);
+      final String fileAccessToken = requiresAccessToken ? accessToken : null;
+
+      // Log authentication status for debugging.
+      if (requiresAccessToken) {
+        if (fileAccessToken != null) {
+          log.info("Manifest requires authentication - using OAuth2 access token for file downloads");
+        } else {
+          log.warn("Manifest requires authentication but no OAuth credentials configured for "
+              + "submitter {} - file downloads may fail", submission.submitter().toKey());
+        }
+      }
 
       // Extract file URLs from the manifest.
       final Map<String, Collection<String>> fileUrls = extractUrlsFromManifest(manifest);
@@ -245,7 +273,7 @@ public class BulkSubmitExecutor {
       // Download files to persistent storage.
       final List<DownloadedFile> downloadedFiles = downloadFilesToPersistentStorage(
           fileUrls, downloadDir, manifestJob.manifestJobId(), manifestJob.manifestUrl(),
-          fileRequestHeaders
+          fileRequestHeaders, fileAccessToken
       );
 
       // Register submission in ExportResultRegistry so files can be served via $result.
@@ -498,7 +526,8 @@ public class BulkSubmitExecutor {
   @Nonnull
   private JsonNode fetchManifest(
       @Nonnull final ManifestJob manifestJob,
-      @Nonnull final List<FileRequestHeader> fileRequestHeaders
+      @Nonnull final List<FileRequestHeader> fileRequestHeaders,
+      @Nullable final String accessToken
   ) throws IOException {
     final String manifestUrl = manifestJob.manifestUrl();
 
@@ -512,6 +541,12 @@ public class BulkSubmitExecutor {
     // Apply custom headers.
     for (final FileRequestHeader header : fileRequestHeaders) {
       requestBuilder.header(header.name(), header.value());
+    }
+
+    // Add Authorization header if access token is available.
+    if (accessToken != null) {
+      requestBuilder.header("Authorization", "Bearer " + accessToken);
+      log.debug("Using OAuth2 access token for manifest fetch");
     }
 
     final HttpRequest request = requestBuilder.build();
@@ -614,6 +649,7 @@ public class BulkSubmitExecutor {
    * @param manifestJobId The manifest job ID (used in file naming).
    * @param manifestUrl The URL of the manifest from which these files are being downloaded.
    * @param fileRequestHeaders Custom HTTP headers to include when downloading files.
+   * @param accessToken OAuth2 access token for authenticated downloads (may be null).
    * @return List of downloaded file metadata.
    * @throws IOException If a file cannot be downloaded.
    */
@@ -623,7 +659,8 @@ public class BulkSubmitExecutor {
       @Nonnull final Path downloadDir,
       @Nonnull final String manifestJobId,
       @Nonnull final String manifestUrl,
-      @Nonnull final List<FileRequestHeader> fileRequestHeaders
+      @Nonnull final List<FileRequestHeader> fileRequestHeaders,
+      @Nullable final String accessToken
   ) throws IOException {
     final List<DownloadedFile> downloadedFiles = new ArrayList<>();
     final AtomicInteger fileCounter = new AtomicInteger(0);
@@ -638,7 +675,7 @@ public class BulkSubmitExecutor {
         final String fileName = resourceType + "." + manifestJobId + "-" + fileNum + ".ndjson";
         final Path localPath = downloadDir.resolve(fileName);
 
-        downloadFile(url, localPath, fileRequestHeaders);
+        downloadFile(url, localPath, fileRequestHeaders, accessToken);
 
         downloadedFiles.add(new DownloadedFile(
             resourceType,
@@ -655,7 +692,8 @@ public class BulkSubmitExecutor {
   private void downloadFile(
       @Nonnull final String url,
       @Nonnull final Path destPath,
-      @Nonnull final List<FileRequestHeader> fileRequestHeaders
+      @Nonnull final List<FileRequestHeader> fileRequestHeaders,
+      @Nullable final String accessToken
   ) throws IOException {
     log.debug("Downloading file from {} to {}", url, destPath);
 
@@ -667,6 +705,11 @@ public class BulkSubmitExecutor {
     // Apply custom headers.
     for (final FileRequestHeader header : fileRequestHeaders) {
       requestBuilder.header(header.name(), header.value());
+    }
+
+    // Add Authorization header if access token is available.
+    if (accessToken != null) {
+      requestBuilder.header("Authorization", "Bearer " + accessToken);
     }
 
     final HttpRequest request = requestBuilder.build();
@@ -732,6 +775,46 @@ public class BulkSubmitExecutor {
 
     log.info("Wrote error file {} for manifest job {}", fileName, manifestJobId);
     return fileName;
+  }
+
+  /**
+   * Acquires an OAuth2 access token for the given submitter if credentials are configured.
+   *
+   * @param submitter The submitter identifier.
+   * @param fhirBaseUrl The FHIR base URL for SMART discovery.
+   * @param oauthMetadataUrl Optional explicit URL to OAuth 2.0 metadata.
+   * @return The access token, or null if no credentials are configured.
+   */
+  @Nullable
+  private String acquireAccessToken(
+      @Nonnull final SubmitterIdentifier submitter,
+      @Nullable final String fhirBaseUrl,
+      @Nullable final String oauthMetadataUrl
+  ) {
+    if (fhirBaseUrl == null) {
+      log.debug("No fhirBaseUrl provided - skipping OAuth token acquisition");
+      return null;
+    }
+
+    try {
+      final Optional<String> token = authProvider.acquireToken(
+          submitter,
+          fhirBaseUrl,
+          oauthMetadataUrl
+      );
+      if (token.isPresent()) {
+        log.debug("Successfully acquired OAuth2 access token for submitter: {}", submitter.toKey());
+      } else {
+        log.debug("No OAuth credentials configured for submitter: {}", submitter.toKey());
+      }
+      return token.orElse(null);
+    } catch (final IOException e) {
+      log.warn("Failed to acquire OAuth2 access token for submitter {}: {}",
+          submitter.toKey(), e.getMessage());
+      // Return null to allow the download to proceed without authentication.
+      // This supports scenarios where the manifest and files are publicly accessible.
+      return null;
+    }
   }
 
   /**

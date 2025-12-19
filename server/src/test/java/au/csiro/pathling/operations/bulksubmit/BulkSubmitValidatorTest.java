@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import au.csiro.pathling.config.BulkSubmitConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.SubmitterConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.util.MockUtil;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
@@ -52,7 +53,8 @@ class BulkSubmitValidatorTest {
   void setUp() {
     final BulkSubmitConfiguration bulkSubmitConfig = new BulkSubmitConfiguration();
     bulkSubmitConfig.setAllowedSubmitters(
-        List.of(new SubmitterIdentifier(SUBMITTER_SYSTEM, SUBMITTER_VALUE)));
+        List.of(new SubmitterConfiguration(SUBMITTER_SYSTEM, SUBMITTER_VALUE,
+            null, null, null, null, null, null)));
     bulkSubmitConfig.setAllowableSources(List.of("https://"));
 
     serverConfiguration = new ServerConfiguration();
@@ -221,7 +223,8 @@ class BulkSubmitValidatorTest {
   void invalidManifestUrlPrefix() {
     final BulkSubmitConfiguration config = new BulkSubmitConfiguration();
     config.setAllowedSubmitters(
-        List.of(new SubmitterIdentifier(SUBMITTER_SYSTEM, SUBMITTER_VALUE)));
+        List.of(new SubmitterConfiguration(SUBMITTER_SYSTEM, SUBMITTER_VALUE,
+            null, null, null, null, null, null)));
     config.setAllowableSources(List.of("https://allowed.org/"));
     serverConfiguration.setBulkSubmit(config);
 
@@ -250,6 +253,33 @@ class BulkSubmitValidatorTest {
 
     final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
     assertThat(result.replacesManifestUrl()).isEqualTo("https://example.org/old-manifest.json");
+  }
+
+  @Test
+  void extractsOauthMetadataUrl() {
+    // Validate that oauthMetadataUrl is extracted correctly.
+    final Parameters params = minimalInProgressParams();
+    params.addParameter().setName("oauthMetadataUrl")
+        .setValue(new StringType("https://auth.example.org/.well-known/smart-configuration"));
+
+    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
+        "respond-async", false);
+
+    final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+    assertThat(result.oauthMetadataUrl()).isEqualTo(
+        "https://auth.example.org/.well-known/smart-configuration");
+  }
+
+  @Test
+  void oauthMetadataUrlIsOptional() {
+    // Validate that oauthMetadataUrl is optional and null when not provided.
+    final Parameters params = minimalInProgressParams();
+
+    final RequestDetails mockRequest = MockUtil.mockRequest("application/fhir+json",
+        "respond-async", false);
+
+    final BulkSubmitRequest result = validator.validateAndExtract(mockRequest, params);
+    assertThat(result.oauthMetadataUrl()).isNull();
   }
 
   @Test

@@ -62,6 +62,14 @@
       "type": "string"
     },
     {
+      "name": "oauthMetadataUrl",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "documentation": "URL to OAuth 2.0 metadata (e.g., SMART .well-known/smart-configuration) for token acquisition when downloading authenticated files.",
+      "type": "string"
+    },
+    {
       "name": "fileRequestHeader",
       "use": "in",
       "min": 0,

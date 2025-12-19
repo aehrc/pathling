@@ -121,6 +121,9 @@ public class BulkSubmitValidator {
     // Extract replacesManifestUrl (optional).
     final String replacesManifestUrl = extractOptionalUrl(parameters, "replacesManifestUrl");
 
+    // Extract oauthMetadataUrl (optional).
+    final String oauthMetadataUrl = extractOptionalUrl(parameters, "oauthMetadataUrl");
+
     // Extract metadata (optional).
     final SubmissionMetadata metadata = extractMetadata(parameters);
 
@@ -135,6 +138,7 @@ public class BulkSubmitValidator {
         manifestUrl,
         fhirBaseUrl,
         replacesManifestUrl,
+        oauthMetadataUrl,
         metadata,
         fileRequestHeaders
     );

@@ -65,6 +65,7 @@ POST [fhir base]/$bulk-submit
 | `submissionStatus`    | 1..1        | Coding     | Status of the submission: `in-progress`, `complete`, or `aborted`.                                 |
 | `manifestUrl`         | 0..1        | string     | URL of the bulk export manifest. Provided with `in-progress` to submit manifests for downloading.  |
 | `fhirBaseUrl`         | 0..1        | string     | Base URL of the FHIR server that produced the manifest. Required when `manifestUrl` is provided.   |
+| `oauthMetadataUrl`    | 0..1        | string     | Explicit URL to OAuth 2.0 metadata. If not provided, SMART discovery is used on `fhirBaseUrl`.     |
 | `replacesManifestUrl` | 0..1        | string     | URL of a previous manifest to abort and replace with the new `manifestUrl`.                        |
 | `fileRequestHeader`   | 0..*        | -          | Custom HTTP headers to include when downloading files from the manifest.                           |
 | `metadata`            | 0..1        | -          | Optional metadata including `label` and `description` for the submission.                          |
@@ -166,6 +167,48 @@ POST [fhir base]/$bulk-submit
 }
 ```
 
+### Example request (with explicit OAuth metadata URL)
+
+When the source server's OAuth metadata is not at the standard SMART discovery
+location, you can provide an explicit `oauthMetadataUrl`:
+
+```json
+{
+    "resourceType": "Parameters",
+    "parameter": [
+        {
+            "name": "submitter",
+            "valueIdentifier": {
+                "system": "https://example.com/systems",
+                "value": "hospital-ehr"
+            }
+        },
+        {
+            "name": "submissionId",
+            "valueString": "submission-2025-001"
+        },
+        {
+            "name": "submissionStatus",
+            "valueCoding": {
+                "code": "in-progress"
+            }
+        },
+        {
+            "name": "manifestUrl",
+            "valueString": "https://source-server.example.com/export/manifest.json"
+        },
+        {
+            "name": "fhirBaseUrl",
+            "valueString": "https://source-server.example.com/fhir"
+        },
+        {
+            "name": "oauthMetadataUrl",
+            "valueString": "https://auth.example.com/.well-known/oauth-authorization-server"
+        }
+    ]
+}
+```
+
 ## $bulk-submit-status operation
 
 ```
@@ -227,8 +270,8 @@ This operation retrieves the processing status and results for a submission.
 ## Configuration
 
 The bulk submit operation requires server configuration to specify allowed
-submitters
-and source URLs.
+submitters and source URLs. Submitters can optionally be configured with OAuth2
+credentials for authenticated file downloads.
 
 ### Configuration options
 
@@ -237,16 +280,50 @@ and source URLs.
 | `pathling.bulkSubmit.allowedSubmitters` | List | List of allowed submitter identifiers (system and value) |
 | `pathling.bulkSubmit.allowableSources`  | List | URL prefixes allowed for manifest and file URLs          |
 
+### Submitter configuration
+
+Each submitter in the `allowedSubmitters` list supports the following properties:
+
+| Property              | Type    | Required | Description                                                                 |
+|-----------------------|---------|----------|-----------------------------------------------------------------------------|
+| `system`              | string  | Yes      | The identifier system for the submitter.                                    |
+| `value`               | string  | Yes      | The identifier value for the submitter.                                     |
+| `clientId`            | string  | No       | OAuth2 client ID for authenticated file downloads.                          |
+| `clientSecret`        | string  | No       | OAuth2 client secret for symmetric authentication.                          |
+| `privateKeyJwk`       | string  | No       | Private key in JWK format for asymmetric (JWT) authentication.              |
+| `scope`               | string  | No       | OAuth2 scope to request (e.g., `system/*.read`).                            |
+| `tokenExpiryTolerance`| number  | No       | Seconds before token expiry to refresh (default: 120).                      |
+| `useFormForBasicAuth` | boolean | No       | Send credentials in form body instead of Authorization header (default: true). |
+
+When OAuth credentials are configured, Pathling will:
+
+1. Discover the token endpoint via SMART configuration (from `fhirBaseUrl`) or
+   use the explicit `oauthMetadataUrl` if provided in the request.
+2. Acquire an access token using the configured credentials.
+3. Include the access token in the `Authorization` header when fetching manifests
+   and files (if the manifest specifies `requiresAccessToken: true`).
+
 ### Example configuration
 
 ```yaml
 pathling:
     bulkSubmit:
         allowedSubmitters:
+            # Submitter without OAuth - files must be publicly accessible.
+            -   system: "https://example.com/systems"
+                value: "public-submitter"
+            # Submitter with symmetric (client_secret) OAuth authentication.
             -   system: "https://example.com/systems"
                 value: "hospital-ehr"
+                clientId: "pathling-client"
+                clientSecret: "secret-value"
+                scope: "system/*.read"
+            # Submitter with asymmetric (JWT) OAuth authentication.
             -   system: "https://example.com/systems"
                 value: "clinic-system"
+                clientId: "pathling-jwt-client"
+                privateKeyJwk: '{"kty":"EC","crv":"P-384","d":"...","x":"...","y":"..."}'
+                scope: "system/*.read"
         allowableSources:
             - "https://source-server.example.com/"
             - "s3://my-bucket/"

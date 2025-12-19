@@ -21,6 +21,7 @@ import au.csiro.pathling.operations.bulksubmit.SubmitterIdentifier;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import lombok.Data;
 
 /**
@@ -33,10 +34,11 @@ import lombok.Data;
 public class BulkSubmitConfiguration {
 
   /**
-   * The list of allowed submitters that can use the $bulk-submit operation.
+   * The list of allowed submitters that can use the $bulk-submit operation, including optional
+   * OAuth credentials for authenticated file downloads.
    */
   @Nonnull
-  private List<SubmitterIdentifier> allowedSubmitters = new ArrayList<>();
+  private List<SubmitterConfiguration> allowedSubmitters = new ArrayList<>();
 
   /**
    * URL prefixes that are allowed as sources for manifest and file URLs.
@@ -51,15 +53,28 @@ public class BulkSubmitConfiguration {
   private String stagingDirectory = "/usr/local/staging/bulk-submit-fetch";
 
   /**
+   * Finds the configuration for a specific submitter.
+   *
+   * @param submitter the submitter identifier to look up.
+   * @return the submitter configuration if found, empty otherwise.
+   */
+  @Nonnull
+  public Optional<SubmitterConfiguration> findSubmitterConfig(
+      @Nonnull final SubmitterIdentifier submitter) {
+    return allowedSubmitters.stream()
+        .filter(config -> config.system().equals(submitter.system())
+            && config.value().equals(submitter.value()))
+        .findFirst();
+  }
+
+  /**
    * Checks if a submitter is allowed to use the $bulk-submit operation.
    *
-   * @param submitter The submitter to check.
+   * @param submitter the submitter to check.
    * @return true if the submitter is allowed, false otherwise.
    */
   public boolean isSubmitterAllowed(@Nonnull final SubmitterIdentifier submitter) {
-    return allowedSubmitters.stream()
-        .anyMatch(allowed -> allowed.system().equals(submitter.system())
-            && allowed.value().equals(submitter.value()));
+    return findSubmitterConfig(submitter).isPresent();
   }
 
 }

@@ -33,6 +33,7 @@ import java.util.List;
  * @param manifestJobId Unique identifier for this manifest job.
  * @param manifestUrl The URL of the manifest file.
  * @param fhirBaseUrl The base URL of the FHIR server that produced the manifest.
+ * @param oauthMetadataUrl URL to OAuth 2.0 metadata for token acquisition.
  * @param state Current processing state.
  * @param jobId The async Job ID for progress tracking.
  * @param createdAt ISO-8601 timestamp when created.
@@ -47,6 +48,7 @@ public record ManifestJob(
     @Nonnull String manifestJobId,
     @Nonnull String manifestUrl,
     @Nullable String fhirBaseUrl,
+    @Nullable String oauthMetadataUrl,
     @Nonnull ManifestJobState state,
     @Nullable String jobId,
     @Nonnull String createdAt,
@@ -74,18 +76,21 @@ public record ManifestJob(
    * @param manifestJobId Unique identifier for this manifest job.
    * @param manifestUrl The URL of the manifest file.
    * @param fhirBaseUrl The base URL of the FHIR server that produced the manifest.
+   * @param oauthMetadataUrl URL to OAuth 2.0 metadata for token acquisition.
    * @return A new manifest job in PENDING state.
    */
   @Nonnull
   public static ManifestJob createPending(
       @Nonnull final String manifestJobId,
       @Nonnull final String manifestUrl,
-      @Nullable final String fhirBaseUrl
+      @Nullable final String fhirBaseUrl,
+      @Nullable final String oauthMetadataUrl
   ) {
     return new ManifestJob(
         manifestJobId,
         manifestUrl,
         fhirBaseUrl,
+        oauthMetadataUrl,
         ManifestJobState.PENDING,
         null,
         now(),
@@ -111,6 +116,7 @@ public record ManifestJob(
         manifestJobId,
         manifestUrl,
         fhirBaseUrl,
+        oauthMetadataUrl,
         newState,
         jobId,
         createdAt,
@@ -133,6 +139,7 @@ public record ManifestJob(
         manifestJobId,
         manifestUrl,
         fhirBaseUrl,
+        oauthMetadataUrl,
         state,
         jobId,
         createdAt,
@@ -159,6 +166,7 @@ public record ManifestJob(
         manifestJobId,
         manifestUrl,
         fhirBaseUrl,
+        oauthMetadataUrl,
         ManifestJobState.FAILED,
         jobId,
         createdAt,
@@ -181,6 +189,7 @@ public record ManifestJob(
         manifestJobId,
         manifestUrl,
         fhirBaseUrl,
+        oauthMetadataUrl,
         state,
         jobId,
         createdAt,

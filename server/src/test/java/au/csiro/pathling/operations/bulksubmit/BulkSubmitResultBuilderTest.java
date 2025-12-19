@@ -170,7 +170,8 @@ class BulkSubmitResultBuilderTest {
     final ManifestJob completedJob = ManifestJob.createPending(
             "manifest-job-1",
             "https://example.org/manifest.json",
-            "https://example.org/fhir"
+            "https://example.org/fhir",
+            null
         )
         .withState(ManifestJobState.COMPLETED);
 
@@ -187,7 +188,8 @@ class BulkSubmitResultBuilderTest {
     final ManifestJob processingJob = ManifestJob.createPending(
             "manifest-job-1",
             "https://example.org/manifest.json",
-            "https://example.org/fhir"
+            "https://example.org/fhir",
+            null
         )
         .withState(ManifestJobState.PROCESSING);
 
@@ -205,7 +207,8 @@ class BulkSubmitResultBuilderTest {
     final ManifestJob downloadedJob = ManifestJob.createPending(
             "manifest-job-1",
             manifestUrl,
-            "https://example.org/fhir"
+            "https://example.org/fhir",
+            null
         )
         .withDownloadedFiles(java.util.List.of(
             new DownloadedFile("Patient", "Patient.manifest-job-1-1.ndjson",
