@@ -15,6 +15,7 @@ interface ResourceResultListProps {
   isLoading: boolean;
   error: Error | null;
   hasSearched: boolean;
+  fhirBaseUrl: string;
 }
 
 export function ResourceResultList({
@@ -23,6 +24,7 @@ export function ResourceResultList({
   isLoading,
   error,
   hasSearched,
+  fhirBaseUrl,
 }: ResourceResultListProps) {
   // Initial state before any search.
   if (!hasSearched) {
@@ -96,7 +98,11 @@ export function ResourceResultList({
       </Flex>
       <Flex direction="column" gap="3">
         {resources.map((resource) => (
-          <ResourceCard key={`${resource.resourceType}/${resource.id}`} resource={resource} />
+          <ResourceCard
+            key={`${resource.resourceType}/${resource.id}`}
+            resource={resource}
+            fhirBaseUrl={fhirBaseUrl}
+          />
         ))}
       </Flex>
     </Box>

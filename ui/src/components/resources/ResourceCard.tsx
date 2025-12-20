@@ -4,13 +4,14 @@
  * @author John Grimes
  */
 
-import { ChevronDownIcon, ChevronUpIcon } from "@radix-ui/react-icons";
+import { ChevronDownIcon, ChevronUpIcon, ExternalLinkIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Card, Code, Flex, IconButton, ScrollArea, Text } from "@radix-ui/themes";
 import { useState } from "react";
 import type { Resource } from "fhir/r4";
 
 interface ResourceCardProps {
   resource: Resource;
+  fhirBaseUrl: string;
 }
 
 /**
@@ -92,9 +93,14 @@ function getResourceSummary(resource: Resource): string | null {
   return null;
 }
 
-export function ResourceCard({ resource }: ResourceCardProps) {
+export function ResourceCard({ resource, fhirBaseUrl }: ResourceCardProps) {
   const [expanded, setExpanded] = useState(false);
   const summary = getResourceSummary(resource);
+
+  const handleOpenResource = () => {
+    const url = `${fhirBaseUrl}/${resource.resourceType}/${resource.id}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <Card>
@@ -113,9 +119,14 @@ export function ResourceCard({ resource }: ResourceCardProps) {
               </Text>
             )}
           </Flex>
-          <IconButton size="1" variant="ghost" onClick={() => setExpanded(!expanded)}>
-            {expanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
-          </IconButton>
+          <Flex gap="1">
+            <IconButton size="1" variant="ghost" onClick={handleOpenResource}>
+              <ExternalLinkIcon />
+            </IconButton>
+            <IconButton size="1" variant="ghost" onClick={() => setExpanded(!expanded)}>
+              {expanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
+            </IconButton>
+          </Flex>
         </Flex>
 
         {expanded && (

@@ -106,6 +106,7 @@ export function Resources() {
             isLoading={isSearching}
             error={displayError}
             hasSearched={searchRequest !== null}
+            fhirBaseUrl={fhirBaseUrl}
           />
         </Box>
       </Flex>
