@@ -88,21 +88,45 @@ public class UpdateExecutor {
    */
   public void merge(@Nonnull final ResourceType resourceType,
       @Nonnull final List<IBaseResource> resources) {
+    merge(resourceType.toCode(), resources);
+  }
+
+  /**
+   * Merges a single resource into the Delta table using a string resource code. This method
+   * supports custom resource types like ViewDefinition that are not part of the standard FHIR
+   * ResourceType enum.
+   *
+   * @param resourceCode the type code of the resource (e.g., "Patient", "ViewDefinition")
+   * @param resource the resource to merge
+   */
+  public void merge(@Nonnull final String resourceCode, @Nonnull final IBaseResource resource) {
+    merge(resourceCode, List.of(resource));
+  }
+
+  /**
+   * Merges multiple resources of the same type into the Delta table using a string resource code.
+   * This method supports custom resource types like ViewDefinition that are not part of the
+   * standard FHIR ResourceType enum.
+   *
+   * @param resourceCode the type code of the resources (e.g., "Patient", "ViewDefinition")
+   * @param resources the resources to merge
+   */
+  public void merge(@Nonnull final String resourceCode,
+      @Nonnull final List<IBaseResource> resources) {
     if (resources.isEmpty()) {
       return;
     }
 
     final SparkSession spark = pathlingContext.getSpark();
-    final String resourceCode = resourceType.toCode();
     final Dataset<Row> updates = spark.createDataset(resources,
         fhirEncoders.of(resourceCode)).toDF();
 
     log.debug("Merging {} resource(s) of type {}", resources.size(), resourceCode);
     final String tablePath = getTablePath(resourceCode);
 
-    if (deltaTableExists(tablePath)) {
+    if (deltaTableExists(spark, tablePath)) {
       // Perform a merge operation on the existing table.
-      final DeltaTable table = DeltaTable.forPath(tablePath);
+      final DeltaTable table = DeltaTable.forPath(spark, tablePath);
       table.as("original")
           .merge(updates.as("updates"), "original.id = updates.id")
           .whenMatched()
@@ -159,16 +183,13 @@ public class UpdateExecutor {
   /**
    * Checks if a Delta table exists at the specified path.
    *
+   * @param spark the Spark session
    * @param tablePath the path to check
    * @return true if a Delta table exists at the path
    */
-  private static boolean deltaTableExists(@Nonnull final String tablePath) {
-    try {
-      DeltaTable.forPath(tablePath);
-      return true;
-    } catch (final Exception e) {
-      return false;
-    }
+  private static boolean deltaTableExists(@Nonnull final SparkSession spark,
+      @Nonnull final String tablePath) {
+    return DeltaTable.isDeltaTable(spark, tablePath);
   }
 
 }

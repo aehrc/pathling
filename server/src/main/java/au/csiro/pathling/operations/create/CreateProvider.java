@@ -31,7 +31,6 @@ import jakarta.annotation.Nullable;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.IdType;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -39,7 +38,7 @@ import org.springframework.stereotype.Component;
 /**
  * HAPI resource provider that implements the FHIR create operation for a specific resource type.
  * The create operation always generates a new UUID for the resource, ignoring any client-provided
- * ID.
+ * ID. Supports both standard FHIR resource types and custom resource types like ViewDefinition.
  *
  * @author John Grimes
  * @see <a href="https://hl7.org/fhir/R4/http.html#create">create</a>
@@ -56,7 +55,7 @@ public class CreateProvider implements IResourceProvider {
   private final Class<? extends IBaseResource> resourceClass;
 
   @Nonnull
-  private final ResourceType resourceType;
+  private final String resourceTypeCode;
 
   /**
    * Constructs a new CreateProvider for a specific resource type.
@@ -70,8 +69,7 @@ public class CreateProvider implements IResourceProvider {
       @Nonnull final Class<? extends IBaseResource> resourceClass) {
     this.updateExecutor = updateExecutor;
     this.resourceClass = resourceClass;
-    this.resourceType = ResourceType.fromCode(
-        fhirContext.getResourceDefinition(resourceClass).getName());
+    this.resourceTypeCode = fhirContext.getResourceDefinition(resourceClass).getName();
   }
 
   @Override
@@ -97,11 +95,11 @@ public class CreateProvider implements IResourceProvider {
     final String generatedId = UUID.randomUUID().toString();
     resource.setId(generatedId);
 
-    log.debug("Creating {} with generated ID: {}", resourceType.toCode(), generatedId);
-    updateExecutor.merge(resourceType, resource);
+    log.debug("Creating {} with generated ID: {}", resourceTypeCode, generatedId);
+    updateExecutor.merge(resourceTypeCode, resource);
 
     final MethodOutcome outcome = new MethodOutcome();
-    outcome.setId(new IdType(resourceType.toCode(), generatedId));
+    outcome.setId(new IdType(resourceTypeCode, generatedId));
     outcome.setCreated(true);
     outcome.setResource(resource);
     return outcome;
