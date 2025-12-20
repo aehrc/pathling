@@ -234,7 +234,7 @@ class BatchOperationIT {
   }
 
   @Test
-  void testBatchWithNonPutMethodReturnsError() {
+  void testBatchCreateGeneratesUuid() {
     TestDataSetup.copyTestDataToTempDir(warehouseDir);
 
     final String uri = "http://localhost:" + port + "/fhir";
@@ -246,7 +246,6 @@ class BatchOperationIT {
             {
               "resource": {
                 "resourceType": "Patient",
-                "id": "test-patient",
                 "name": [{"family": "Test"}]
               },
               "request": {
@@ -264,12 +263,54 @@ class BatchOperationIT {
         .header("Accept", "application/fhir+json")
         .bodyValue(requestBody)
         .exchange()
+        .expectStatus().isOk()
+        .expectBody()
+        .jsonPath("$.resourceType").isEqualTo("Bundle")
+        .jsonPath("$.type").isEqualTo("batch-response")
+        .jsonPath("$.entry[0].response.status").isEqualTo("201")
+        .jsonPath("$.entry[0].resource.resourceType").isEqualTo("Patient")
+        .jsonPath("$.entry[0].resource.id").isNotEmpty();
+
+    log.info("Batch create with POST correctly generated UUID");
+  }
+
+  @Test
+  void testBatchWithUnsupportedMethodReturnsError() {
+    TestDataSetup.copyTestDataToTempDir(warehouseDir);
+
+    final String uri = "http://localhost:" + port + "/fhir";
+    final String requestBody = """
+        {
+          "resourceType": "Bundle",
+          "type": "batch",
+          "entry": [
+            {
+              "resource": {
+                "resourceType": "Patient",
+                "id": "test-patient",
+                "name": [{"family": "Test"}]
+              },
+              "request": {
+                "method": "DELETE",
+                "url": "Patient/test-patient"
+              }
+            }
+          ]
+        }
+        """;
+
+    webTestClient.post()
+        .uri(uri)
+        .header("Content-Type", "application/fhir+json")
+        .header("Accept", "application/fhir+json")
+        .bodyValue(requestBody)
+        .exchange()
         .expectStatus().is4xxClientError()
         .expectBody()
         .jsonPath("$.issue[0].diagnostics").value(diagnostics ->
-            assertThat(diagnostics.toString()).containsIgnoringCase("update"));
+            assertThat(diagnostics.toString()).containsIgnoringCase("create"));
 
-    log.info("Batch with non-PUT method correctly returned error");
+    log.info("Batch with unsupported method correctly returned error");
   }
 
   @Test

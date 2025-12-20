@@ -314,6 +314,11 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
       updateInteraction.setCode(TypeRestfulInteraction.UPDATE);
       resource.addInteraction(updateInteraction);
 
+      // Add create interaction to all resource types.
+      final ResourceInteractionComponent createInteraction = new ResourceInteractionComponent();
+      createInteraction.setCode(TypeRestfulInteraction.CREATE);
+      resource.addInteraction(createInteraction);
+
       // Add read interaction to all resource types.
       final ResourceInteractionComponent readInteraction = new ResourceInteractionComponent();
       readInteraction.setCode(TypeRestfulInteraction.READ);
@@ -367,6 +372,10 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     final ResourceInteractionComponent viewDefReadInteraction = new ResourceInteractionComponent();
     viewDefReadInteraction.setCode(TypeRestfulInteraction.READ);
     viewDefResource.addInteraction(viewDefReadInteraction);
+
+    final ResourceInteractionComponent viewDefCreateInteraction = new ResourceInteractionComponent();
+    viewDefCreateInteraction.setCode(TypeRestfulInteraction.CREATE);
+    viewDefResource.addInteraction(viewDefCreateInteraction);
 
     // Add the fhirPath named query with filter parameter for ViewDefinition.
     final CapabilityStatementRestResourceSearchParamComponent viewDefFilterParam =

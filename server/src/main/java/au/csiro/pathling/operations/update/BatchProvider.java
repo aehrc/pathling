@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.exceptions.FHIRException;
@@ -48,7 +49,7 @@ import org.hl7.fhir.r4.model.Resource;
 import org.springframework.stereotype.Component;
 
 /**
- * HAPI provider that implements the FHIR batch operation for update operations.
+ * HAPI provider that implements the FHIR batch operation for create and update operations.
  *
  * @author John Grimes
  * @see <a href="https://hl7.org/fhir/R4/http.html#transaction">batch/transaction</a>
@@ -66,6 +67,8 @@ public class BatchProvider {
   @SuppressWarnings("RegExpRedundantEscape")
   private static final Pattern UPDATE_URL = Pattern.compile(
       "^[A-Za-z]+/[A-Za-z0-9\\-\\.&&[^\\$]][A-Za-z0-9\\-\\.]{0,63}$");
+
+  private static final Pattern CREATE_URL = Pattern.compile("^[A-Za-z]+$");
 
   /**
    * Constructs a new BatchProvider.
@@ -117,8 +120,47 @@ public class BatchProvider {
     if (resource == null || request == null || request.isEmpty()) {
       return;
     }
-    checkUserInput(request.getMethod().toString().equals("PUT"),
-        "Only update requests are supported for use within the batch operation");
+
+    final String method = request.getMethod().toString();
+    if ("POST".equals(method)) {
+      processCreateEntry(resourcesForUpdate, response, entry);
+    } else if ("PUT".equals(method)) {
+      processUpdateEntry(resourcesForUpdate, response, entry);
+    } else {
+      throw new InvalidUserInputError(
+          "Only create (POST) and update (PUT) requests are supported within the batch operation");
+    }
+  }
+
+  private void processCreateEntry(
+      @Nonnull final Map<ResourceType, List<IBaseResource>> resourcesForUpdate,
+      @Nonnull final Bundle response, @Nonnull final BundleEntryComponent entry) {
+    final Resource resource = entry.getResource();
+    final BundleEntryRequestComponent request = entry.getRequest();
+
+    final String urlErrorMessage = "The URL for a create request must refer to the code of a "
+        + "supported resource type, and must look like this: [resource type]";
+    checkUserInput(CREATE_URL.matcher(request.getUrl()).matches(), urlErrorMessage);
+
+    final String resourceTypeCode = request.getUrl();
+    final ResourceType resourceType = validateResourceTypeForCreate(entry, resourceTypeCode,
+        urlErrorMessage);
+
+    // Generate a new UUID, ignoring any client-provided ID.
+    final String generatedId = UUID.randomUUID().toString();
+    resource.setId(generatedId);
+
+    log.debug("Batch creating {} with generated ID: {}", resourceType.toCode(), generatedId);
+    addToResourceMap(resourcesForUpdate, resourceType, resource);
+    addCreateResponse(response, resource);
+  }
+
+  private void processUpdateEntry(
+      @Nonnull final Map<ResourceType, List<IBaseResource>> resourcesForUpdate,
+      @Nonnull final Bundle response, @Nonnull final BundleEntryComponent entry) {
+    final Resource resource = entry.getResource();
+    final BundleEntryRequestComponent request = entry.getRequest();
+
     final String urlErrorMessage = "The URL for an update request must refer to the code of a "
         + "supported resource type, and must look like this: [resource type]/[id]";
     checkUserInput(UPDATE_URL.matcher(request.getUrl()).matches(), urlErrorMessage);
@@ -130,7 +172,7 @@ public class BatchProvider {
         urlErrorMessage);
     final IBaseResource preparedResource = prepareResourceForUpdate(resource, urlId);
     addToResourceMap(resourcesForUpdate, resourceType, preparedResource);
-    addResponse(response, preparedResource);
+    addUpdateResponse(response, preparedResource);
   }
 
   private void update(@Nonnull final Map<ResourceType, List<IBaseResource>> resourcesForUpdate) {
@@ -161,6 +203,23 @@ public class BatchProvider {
     return resourceType;
   }
 
+  @Nonnull
+  private ResourceType validateResourceTypeForCreate(@Nonnull final BundleEntryComponent entry,
+      @Nonnull final String resourceTypeCode, @Nonnull final String urlErrorMessage) {
+    final ResourceType resourceType;
+    try {
+      resourceType = ResourceType.fromCode(resourceTypeCode);
+    } catch (final FHIRException e) {
+      throw new InvalidUserInputError(urlErrorMessage);
+    }
+    checkUserInput(FhirServer.supportedResourceTypes().contains(resourceType),
+        urlErrorMessage);
+    final String resourceEmbeddedType = entry.getResource().fhirType();
+    checkUserInput(resourceTypeCode.equals(resourceEmbeddedType),
+        "Resource type in URL does not match resource type in body");
+    return resourceType;
+  }
+
   private void addToResourceMap(
       @Nonnull final Map<ResourceType, List<IBaseResource>> resourcesForCreation,
       @Nonnull final ResourceType resourceType, @Nonnull final IBaseResource resource) {
@@ -168,13 +227,22 @@ public class BatchProvider {
     resourcesForCreation.get(resourceType).add(resource);
   }
 
-  private void addResponse(@Nonnull final Bundle response,
-      @Nonnull final IBaseResource preparedResource) {
+  private void addCreateResponse(@Nonnull final Bundle response,
+      @Nonnull final IBaseResource createdResource) {
+    final BundleEntryComponent responseEntry = response.addEntry();
+    final BundleEntryResponseComponent responseElement = new BundleEntryResponseComponent();
+    responseElement.setStatus("201");
+    responseEntry.setResponse(responseElement);
+    responseEntry.setResource((Resource) createdResource);
+  }
+
+  private void addUpdateResponse(@Nonnull final Bundle response,
+      @Nonnull final IBaseResource updatedResource) {
     final BundleEntryComponent responseEntry = response.addEntry();
     final BundleEntryResponseComponent responseElement = new BundleEntryResponseComponent();
     responseElement.setStatus("200");
     responseEntry.setResponse(responseElement);
-    responseEntry.setResource((Resource) preparedResource);
+    responseEntry.setResource((Resource) updatedResource);
   }
 
 }
