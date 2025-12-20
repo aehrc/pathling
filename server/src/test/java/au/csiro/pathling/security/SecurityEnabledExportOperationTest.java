@@ -199,10 +199,11 @@ class SecurityEnabledExportOperationTest extends SecurityTestForOperations<Expor
 
     switchToUser("newUser");
 
+    // The result endpoint accepts either export or bulk-submit authority.
     assertThatThrownBy(
         () -> performExportResult(queryParams.get("job"), queryParams.get("file"), null))
         .isExactlyInstanceOf(AccessDeniedError.class)
-        .hasMessage(PATHLING_EXPORT_MSG);
+        .hasMessage("Missing authority for any of: export, bulk-submit");
   }
 
   @Test
