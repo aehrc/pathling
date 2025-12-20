@@ -88,4 +88,20 @@ public class SearchProviderFactory {
         dataSource, fhirEncoders, resourceTypeClass);
   }
 
+  /**
+   * Creates a SearchProvider bean for the given resource type code. This method supports custom
+   * resource types like ViewDefinition that are not part of the standard FHIR ResourceType enum.
+   *
+   * @param resourceTypeCode the type code of the resource (e.g., "Patient", "ViewDefinition")
+   * @return a SearchProvider configured for the specified resource type
+   */
+  @Nonnull
+  public SearchProvider createSearchProvider(@Nonnull final String resourceTypeCode) {
+    final Class<? extends IBaseResource> resourceTypeClass = fhirContext
+        .getResourceDefinition(resourceTypeCode).getImplementingClass();
+
+    return applicationContext.getBean(SearchProvider.class, configuration, fhirContext,
+        dataSource, fhirEncoders, resourceTypeClass);
+  }
+
 }
