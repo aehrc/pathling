@@ -32,7 +32,6 @@ import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.OperationOutcome;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
 /**
@@ -223,7 +222,7 @@ public class ExportOperationValidator {
           SystemExportProvider.OUTPUT_FORMAT_PARAM_NAME, outputFormat,
           FhirServer.OUTPUT_FORMAT.acceptedHeaderValues()));
     }
-    final List<Enumerations.ResourceType> resourceFilter = type.stream()
+    final List<String> resourceFilter = type.stream()
         .map(String::strip)
         .filter(Predicate.not(String::isEmpty))
         .flatMap(string -> Arrays.stream(string.split(",")))
@@ -288,7 +287,7 @@ public class ExportOperationValidator {
     }
 
     // For patient-level exports, filter out non-compartment resource types (silently).
-    final List<Enumerations.ResourceType> resourceFilter = type.stream()
+    final List<String> resourceFilter = type.stream()
         .map(String::strip)
         .filter(Predicate.not(String::isEmpty))
         .flatMap(string -> Arrays.stream(string.split(",")))
@@ -322,31 +321,34 @@ public class ExportOperationValidator {
    * Filters out resource types that are not in the Patient compartment. Non-compartment types are
    * silently ignored as per the lenient behaviour decision.
    *
-   * @param resourceType the resource type to check
+   * @param resourceTypeCode the resource type code to check
    * @return true if the resource type should be included
    */
-  private boolean filterNonCompartmentResources(@Nonnull final ResourceType resourceType) {
-    final boolean inCompartment = patientCompartmentService.isInPatientCompartment(
-        resourceType.toCode());
+  private boolean filterNonCompartmentResources(@Nonnull final String resourceTypeCode) {
+    final boolean inCompartment = patientCompartmentService.isInPatientCompartment(resourceTypeCode);
     if (!inCompartment) {
-      log.info("Resource type '{}' is not in the Patient compartment. Ignoring.",
-          resourceType.toCode());
+      log.info("Resource type '{}' is not in the Patient compartment. Ignoring.", resourceTypeCode);
     }
     return inCompartment;
   }
 
-  private boolean filterUnauthorizedResources(final ResourceType resourceType) {
+  private boolean filterUnauthorizedResources(@Nonnull final String resourceTypeCode) {
     // Check auth for resource types before checking if there are actually resources for that type.
     // Otherwise, this could leak information to unauthorised users (the information "no Encounter
     // resources exist" should not be available).
     if (serverConfiguration.getAuth().isEnabled()) {
       SecurityAspect.checkHasAuthority(
-          PathlingAuthority.resourceAccess(AccessType.READ, resourceType));
+          PathlingAuthority.resourceAccess(AccessType.READ, resourceTypeCode));
     }
     return true; // has auth if no error from the stream chain above
   }
 
-  private Optional<ResourceType> mapTypeQueryParam(final String code, final boolean lenient) {
+  private Optional<String> mapTypeQueryParam(final String code, final boolean lenient) {
+    // Check if this is a custom resource type first.
+    if (FhirServer.isCustomResourceType(code)) {
+      return Optional.of(code);
+    }
+
     try {
       final ResourceType resourceType = Enumerations.ResourceType.fromCode(code);
       final Set<ResourceType> unsupported = FhirServer.unsupportedResourceTypes();
@@ -357,7 +359,7 @@ public class ExportOperationValidator {
       } else if (lenient && unsupported.contains(resourceType)) {
         return Optional.empty();
       }
-      return Optional.of(resourceType);
+      return Optional.of(resourceType.toCode());
     } catch (final FHIRException e) {
       if (lenient) {
         log.info("Failed to map '_type' value '{}' to actual FHIR resource type. Skipping.",
@@ -371,7 +373,7 @@ public class ExportOperationValidator {
     }
   }
 
-  private ExportRequest.FhirElement mapFhirElement(@NotNull final String element) {
+  private ExportRequest.FhirElement mapFhirElement(@Nonnull final String element) {
     final String[] split = element.split("\\.");
     if (split.length == 1) {
       // Only [element name] -> apply to all resources.
@@ -379,15 +381,15 @@ public class ExportOperationValidator {
     } else if (split.length == 2) {
       // [resource type].[element name] -> apply to this resource type only.
       validateTopLevelElement(split[0], split[1]);
-      return new ExportRequest.FhirElement(ResourceType.fromCode(split[0]), split[1]);
+      return new ExportRequest.FhirElement(split[0], split[1]);
     } else {
       throw new InvalidRequestException(
           "Failed to parse '_elements' parameter with value '%s'".formatted(element));
     }
   }
 
-  private void validateTopLevelElement(@NotNull final String resourceType,
-      @NotNull final String element) throws InvalidRequestException {
+  private void validateTopLevelElement(@Nonnull final String resourceType,
+      @Nonnull final String element) throws InvalidRequestException {
     try {
       final RuntimeResourceDefinition resourceDef = fhirContext.getResourceDefinition(resourceType);
       if (resourceDef.getChildByName(element) == null) {

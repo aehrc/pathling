@@ -51,10 +51,27 @@ public class FhirDefinitionContext implements DefinitionContext {
   @Override
   @Nonnull
   public ResourceDefinition findResourceDefinition(@Nonnull final String resourceCode) {
-    final ResourceType resourceType = ResourceType.fromCode(resourceCode);
+    // Try to resolve to a standard ResourceType, but allow custom types (like ViewDefinition).
+    final Optional<ResourceType> resourceType = tryGetResourceType(resourceCode);
     final RuntimeResourceDefinition hapiDefinition = fhirContext.getResourceDefinition(
         resourceCode);
-    return new FhirResourceDefinition(resourceType, requireNonNull(hapiDefinition));
+    return new FhirResourceDefinition(resourceCode, resourceType, requireNonNull(hapiDefinition));
+  }
+
+  /**
+   * Attempts to resolve a resource code to a standard FHIR ResourceType.
+   *
+   * @param resourceCode the resource code to resolve
+   * @return the ResourceType if it's a standard type, otherwise empty
+   */
+  @Nonnull
+  private static Optional<ResourceType> tryGetResourceType(@Nonnull final String resourceCode) {
+    try {
+      return Optional.of(ResourceType.fromCode(resourceCode));
+    } catch (final org.hl7.fhir.exceptions.FHIRException e) {
+      // Custom resource type not in the standard FHIR specification.
+      return Optional.empty();
+    }
   }
 
   /**

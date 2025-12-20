@@ -22,7 +22,6 @@ import au.csiro.pathling.fhirpath.parser.Parser;
 import jakarta.annotation.Nonnull;
 import java.util.List;
 import lombok.Value;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Executes FHIRPath expressions by parsing and evaluating them against FHIR resources.
@@ -62,15 +61,17 @@ public class FhirPathExecutor {
    *       initial dataset and the evaluation result</li>
    * </ol>
    *
-   * @param subjectResource the resource type to evaluate against (e.g., Patient, Observation)
+   * @param subjectResourceCode the resource type code to evaluate against (e.g., "Patient",
+   * "ViewDefinition")
    * @param fhirpathExpression the FHIRPath expression as a string (e.g., "name.given")
    * @return a CollectionDataset containing the initial dataset and the evaluation result
    */
   @Nonnull
-  public CollectionDataset evaluate(@Nonnull final ResourceType subjectResource,
+  public CollectionDataset evaluate(@Nonnull final String subjectResourceCode,
       @Nonnull final String fhirpathExpression) {
     final FhirPath fhirpath = parser.parse(fhirpathExpression);
-    final FhirPathEvaluator evaluator = provider.create(subjectResource, () -> List.of(fhirpath));
+    final FhirPathEvaluator evaluator = provider.create(subjectResourceCode,
+        () -> List.of(fhirpath));
     return CollectionDataset.of(evaluator.createInitialDataset(), evaluator.evaluate(fhirpath));
   }
 }

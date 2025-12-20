@@ -54,7 +54,6 @@ import java.util.UUID;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Binary;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -167,7 +166,7 @@ abstract class SecurityTestForOperations<T> extends SecurityTest {
         ExportOutputFormat.NDJSON,
         null,
         null,
-        type.stream().map(ResourceType::fromCode).toList(),
+        type,
         List.of(),
         lenient,
         ExportLevel.SYSTEM,

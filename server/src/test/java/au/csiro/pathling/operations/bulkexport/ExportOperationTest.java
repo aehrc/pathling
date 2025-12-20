@@ -37,8 +37,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.Binary;
-import org.hl7.fhir.r4.model.Enumerations;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.junit.jupiter.api.BeforeEach;
@@ -155,7 +153,7 @@ class ExportOperationTest {
   @ParameterizedTest
   @MethodSource("provideTypeParameter")
   void testTypeParameterIsMapped(final List<String> types, final boolean lenient,
-      final List<ResourceType> expectedTypes) {
+      final List<String> expectedTypes) {
     final RequestDetails mockReqDetails = MockUtil.mockRequest("application/fhir+json",
         "respond-async",
         lenient);
@@ -182,17 +180,17 @@ class ExportOperationTest {
             EncoderBuilder.UNSUPPORTED_RESOURCES())
         .stream().findFirst().orElseThrow();
     return Stream.of(
-        arguments(List.of("Patient"), false, List.of(ResourceType.PATIENT)),
+        arguments(List.of("Patient"), false, List.of("Patient")),
         arguments(List.of("Patient", "Observation"), false,
-            List.of(ResourceType.PATIENT, ResourceType.OBSERVATION)),
+            List.of("Patient", "Observation")),
         arguments(List.of("Patient2", "Observation"), false, null),
         // invalid resource type and lenient=false -> error
-        arguments(List.of("Patient2", "Observation"), true, List.of(ResourceType.OBSERVATION)),
+        arguments(List.of("Patient2", "Observation"), true, List.of("Observation")),
         // invalid resource type and lenient=true -> pass but ignore invalid resource
-        arguments(List.of(unsupportedResource, "Patient"), true, List.of(ResourceType.PATIENT)),
+        arguments(List.of(unsupportedResource, "Patient"), true, List.of("Patient")),
         arguments(List.of(unsupportedResource, "Patient"), false, null),
         arguments(List.of("NULL", "Patient"), false, null),
-        arguments(List.of("NULL", "Patient"), true, List.of(ResourceType.PATIENT))
+        arguments(List.of("NULL", "Patient"), true, List.of("Patient"))
     );
   }
 
@@ -239,10 +237,9 @@ class ExportOperationTest {
     );
   }
 
-  private static ExportRequest.FhirElement fhirElement(@Nullable final String resourceType,
+  private static ExportRequest.FhirElement fhirElement(@Nullable final String resourceTypeCode,
       final String elementName) {
-    return new ExportRequest.FhirElement(Enumerations.ResourceType.fromCode(resourceType),
-        elementName);
+    return new ExportRequest.FhirElement(resourceTypeCode, elementName);
   }
 
   @ParameterizedTest
@@ -320,7 +317,7 @@ class ExportOperationTest {
     final String base = "http://localhost:8080/fhir/$export?";
     final InstantType now = InstantType.now();
 
-    final var req1 = req(base, NDJSON, now, List.of(Enumerations.ResourceType.PATIENT));
+    final var req1 = req(base, NDJSON, now, List.of("Patient"));
     final var res1 = res(req1,
         write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER))));
     final var json1 = json(mapper, res1.getKickOffRequestUrl(), res1.getWriteDetails());
@@ -387,7 +384,7 @@ class ExportOperationTest {
                 .outputFormat(NDJSON)
                 .since(now)
                 .until(until)
-                .includeResourceType(Enumerations.ResourceType.PATIENT)
+                .includeResourceType("Patient")
                 .build()
         ),
         arguments(base + "_outputFormat=ndjson", "ndjson", now, until,
@@ -397,8 +394,7 @@ class ExportOperationTest {
                 .outputFormat(NDJSON)
                 .since(now)
                 .until(until)
-                .includeResourceTypes(Enumerations.ResourceType.PATIENT,
-                    Enumerations.ResourceType.OBSERVATION)
+                .includeResourceTypes("Patient", "Observation")
                 .build()
         ),
         arguments(base + "_outputFormat=ndjson", "ndjson", now, until, List.of("not_real"), null),

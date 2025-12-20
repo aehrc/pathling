@@ -47,7 +47,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * <p>
  * Subclasses must implement:
  * <ul>
- *   <li>{@link #getSubjectResource()} - to define the primary resource type</li>
+ *   <li>{@link #getSubjectResourceCode()} - to define the primary resource type code</li>
  *   <li>{@link #getFhirContext()} - to provide the FHIR context for resource definitions</li>
  * </ul>
  * <p>
@@ -57,15 +57,16 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public abstract class BaseResourceResolver implements ResourceResolver {
 
   /**
-   * Returns the subject resource type for this resolver.
+   * Returns the subject resource type code for this resolver.
    * <p>
-   * The subject resource is the primary resource type being queried, such as Patient in a query
-   * starting with Patient.name.given.
+   * The subject resource is the primary resource type being queried, such as "Patient" in a query
+   * starting with Patient.name.given. This method supports both standard FHIR resource types and
+   * custom resource types (like ViewDefinition) that are registered with HAPI.
    *
-   * @return The subject resource type
+   * @return The subject resource type code (e.g., "Patient", "ViewDefinition")
    */
   @Nonnull
-  public abstract ResourceType getSubjectResource();
+  public abstract String getSubjectResourceCode();
 
   /**
    * Returns the FHIR context used by this resolver.
@@ -88,8 +89,8 @@ public abstract class BaseResourceResolver implements ResourceResolver {
   @Override
   public @Nonnull Optional<ResourceCollection> resolveResource(
       @Nonnull final String resourceCode) {
-    checkArgument(resourceCode.equals(getSubjectResource().toCode()),
-        "Resource code must match the subject resource code: " + getSubjectResource().toCode());
+    checkArgument(resourceCode.equals(getSubjectResourceCode()),
+        "Resource code must match the subject resource code: " + getSubjectResourceCode());
     return Optional.of(resolveSubjectResource());
   }
 
@@ -101,24 +102,24 @@ public abstract class BaseResourceResolver implements ResourceResolver {
   @Override
   @Nonnull
   public ResourceCollection resolveSubjectResource() {
-    return createResource(getSubjectResource());
+    return createResource(getSubjectResourceCode());
   }
 
   /**
-   * Creates a ResourceCollection for the specified resource type.
+   * Creates a ResourceCollection for the specified resource type code.
    * <p>
    * This method creates a column representation for the resource and builds a ResourceCollection
-   * using the FHIR context and resource type. The column representation uses the resource type code
-   * as the column name.
+   * using the FHIR context and resource type code. The column representation uses the resource type
+   * code as the column name.
    *
-   * @param resourceType The resource type to create a collection for
+   * @param resourceCode The resource type code to create a collection for
    * @return A ResourceCollection for the specified resource type
    */
   @Nonnull
-  protected ResourceCollection createResource(@Nonnull final ResourceType resourceType) {
+  protected ResourceCollection createResource(@Nonnull final String resourceCode) {
     return ResourceCollection.build(
-        new DefaultRepresentation(functions.col(resourceType.toCode())),
-        getFhirContext(), resourceType);
+        new DefaultRepresentation(functions.col(resourceCode)),
+        getFhirContext(), resourceCode);
   }
 
   /**
@@ -145,15 +146,15 @@ public abstract class BaseResourceResolver implements ResourceResolver {
    * This standardized structure is used throughout the resource resolution process.
    *
    * @param dataSource The data source to read from
-   * @param resourceType The resource type to read
+   * @param resourceCode The resource type code to read
    * @return A dataset containing the resource data in a standardized structure
    * @throws IllegalArgumentException if the resource type is not found in the data source
    */
   @Nonnull
   protected static Dataset<Row> getResourceDataset(@Nonnull final DataSource dataSource,
-      @Nonnull final ResourceType resourceType) {
-    final Dataset<Row> dataset = dataSource.read(resourceType.toCode());
-    return toResourceRepresentation(resourceType.toCode(), dataset);
+      @Nonnull final String resourceCode) {
+    final Dataset<Row> dataset = dataSource.read(resourceCode);
+    return toResourceRepresentation(resourceCode, dataset);
   }
 
   /**

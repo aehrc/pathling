@@ -432,5 +432,19 @@ public class FhirServer extends RestfulServer {
     return unsupportedResourceTypes;
   }
 
+  /**
+   * Checks if the given resource code represents a custom resource type that is not part of the
+   * standard FHIR specification but is supported by Pathling. Custom resource types include:
+   * <ul>
+   *   <li>ViewDefinition - from the SQL on FHIR specification</li>
+   * </ul>
+   *
+   * @param resourceCode the resource type code to check
+   * @return true if the resource code is a supported custom type, false otherwise
+   */
+  public static boolean isCustomResourceType(@Nonnull final String resourceCode) {
+    return "ViewDefinition".equals(resourceCode);
+  }
+
 
 }

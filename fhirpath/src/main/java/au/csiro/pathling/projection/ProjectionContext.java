@@ -33,7 +33,6 @@ import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Dependencies and logic relating to the traversal of FHIRPath expressions.
@@ -156,13 +155,13 @@ public record ProjectionContext(
    * constants.
    *
    * @param context the execution context
-   * @param subjectResource the subject resource type
+   * @param subjectResourceCode the subject resource type code (e.g., "Patient", "ViewDefinition")
    * @param constants the list of constant declarations
    * @return a new ProjectionContext
    */
   @Nonnull
   public static ProjectionContext of(@Nonnull final ExecutionContext context,
-      @Nonnull final ResourceType subjectResource,
+      @Nonnull final String subjectResourceCode,
       @Nonnull final List<ConstantDeclaration> constants) {
     // Create a map of variables from the provided constants.
     final Map<String, Collection> variables = constants.stream()
@@ -171,7 +170,7 @@ public record ProjectionContext(
 
     // Create a new FhirPathExecutor.
     final FhirPathEvaluator executor = context.fhirpathEvaluatorFactory()
-        .create(subjectResource, StaticFunctionRegistry.getInstance(), variables);
+        .create(subjectResourceCode, StaticFunctionRegistry.getInstance(), variables);
 
     // Return a new ProjectionContext with the executor and the default input context.
     return new ProjectionContext(executor, executor.createDefaultInputContext());

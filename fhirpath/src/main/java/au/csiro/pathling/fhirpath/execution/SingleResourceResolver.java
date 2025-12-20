@@ -24,7 +24,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A simple implementation of {@link BaseResourceResolver} that provides access to a single FHIR
@@ -39,24 +38,26 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * </ul>
  * <p>
  * This class is useful for simple queries or as a building block for more complex resolvers
- * that need to handle multiple resource types and relationships.
+ * that need to handle multiple resource types and relationships. It supports both standard FHIR
+ * resource types and custom resource types (like ViewDefinition) that are registered with HAPI.
  */
 @EqualsAndHashCode(callSuper = true)
 @Value
 public class SingleResourceResolver extends BaseResourceResolver {
 
   /**
-   * The resource type that this resolver provides access to.
+   * The resource type code that this resolver provides access to (e.g., "Patient",
+   * "ViewDefinition").
    */
   @Nonnull
-  ResourceType subjectResource;
+  String subjectResourceCode;
 
   /**
    * The FHIR context used for resource definitions.
    */
   @Nonnull
   FhirContext fhirContext;
-  
+
   /**
    * The data source from which to read the resource data.
    */
@@ -66,12 +67,12 @@ public class SingleResourceResolver extends BaseResourceResolver {
   /**
    * {@inheritDoc}
    * <p>
-   * This implementation creates a view containing only the subject resource data
-   * from the data source.
+   * This implementation creates a view containing only the subject resource data from the data
+   * source.
    */
   @Override
   @Nonnull
   public Dataset<Row> createView() {
-    return getResourceDataset(dataSource, subjectResource);
+    return getResourceDataset(dataSource, subjectResourceCode);
   }
 }

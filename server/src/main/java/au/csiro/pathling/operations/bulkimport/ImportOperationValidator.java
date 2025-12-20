@@ -164,15 +164,20 @@ public class ImportOperationValidator {
   }
 
   private boolean filterUnsupportedResourceTypes(final InputParams inputParams) {
+    final String resourceType = inputParams.resourceType();
     try {
       final boolean supported = FhirServer.supportedResourceTypes()
-          .contains(ResourceType.fromCode(inputParams.resourceType()));
+          .contains(ResourceType.fromCode(resourceType));
       if (!supported) {
         throw new InvalidUserInputError(
-            "The resource type '%s' is not supported.".formatted(inputParams.resourceType()));
+            "The resource type '%s' is not supported.".formatted(resourceType));
       }
       return true;
     } catch (final FHIRException e) {
+      // Check if this is a custom resource type (e.g., ViewDefinition).
+      if (FhirServer.isCustomResourceType(resourceType)) {
+        return true;
+      }
       throw new InvalidUserInputError("Unknown resource type.", e);
     }
   }
@@ -257,12 +262,19 @@ public class ImportOperationValidator {
   }
 
   private InputParams mapInputParams(final String resourceType, final String url) {
+    final String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8);
+    final String convertedUrl = CacheableDatabase.convertS3ToS3aUrl(decodedUrl);
+    // Normalize standard types, pass through custom types (like ViewDefinition) as-is.
+    final String normalizedType = normalizeResourceType(resourceType);
+    return new InputParams(normalizedType, convertedUrl);
+  }
+
+  private String normalizeResourceType(final String resourceType) {
     try {
-      final String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8);
-      final String convertedUrl = CacheableDatabase.convertS3ToS3aUrl(decodedUrl);
-      return new InputParams(ResourceType.fromCode(resourceType).toCode(), convertedUrl);
+      return ResourceType.fromCode(resourceType).toCode();
     } catch (final FHIRException e) {
-      throw new InvalidUserInputError("Invalid resource type %s".formatted(resourceType), e);
+      // For custom types, return the type as-is. Validation happens in filterUnsupportedResourceTypes.
+      return resourceType;
     }
   }
 

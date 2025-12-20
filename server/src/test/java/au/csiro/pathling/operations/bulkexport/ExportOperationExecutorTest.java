@@ -14,7 +14,6 @@ import static au.csiro.pathling.util.TestConstants.RESOLVE_PATIENT;
 import static au.csiro.pathling.util.TestConstants.WAREHOUSE_PLACEHOLDER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
-import static org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import au.csiro.pathling.config.ServerConfiguration;
@@ -178,7 +177,7 @@ class ExportOperationExecutorTest {
     observation.setStatus(Observation.ObservationStatus.CANCELLED);
 
     exportExecutor = createExecutor(patient);
-    final ExportRequest req = req(BASE, List.of(ResourceType.PATIENT),
+    final ExportRequest req = req(BASE, List.of("Patient"),
         List.of("identifier", "Observation.status"));
     final TestExportResponse actualResponse = execute(req);
     final Patient actualPatient = read_ndjson(parser,
@@ -406,12 +405,12 @@ class ExportOperationExecutorTest {
 
     final String base = "http://localhost:8080/fhir/$export?";
     final ExportRequest req1 = req(base, ExportOutputFormat.NDJSON, date("2024-01-05"),
-        List.of(ResourceType.PATIENT));
+        List.of("Patient"));
     final ExportResponse res1 = res(req1,
         write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER))));
 
     final ExportRequest req2 = req(base, ExportOutputFormat.NDJSON, date("2024-01-07"),
-        List.of(ResourceType.PATIENT));
+        List.of("Patient"));
     final ExportResponse res2 = res(req2,
         write_details(fi("Patient", RESOLVE_PATIENT.apply(WAREHOUSE_PLACEHOLDER))));
 
@@ -440,17 +439,17 @@ class ExportOperationExecutorTest {
     final InstantType now = InstantType.now();
 
     final ExportRequest req1 = req(base, ExportOutputFormat.NDJSON, now,
-        List.of(ResourceType.PATIENT));
+        List.of("Patient"));
     final ExportResponse res1 = res(req1,
         write_details(fi("Patient", RESOLVE_PATIENT.apply(warehouseUrl))));
 
     final ExportRequest req2 = req(base, ExportOutputFormat.NDJSON, now,
-        List.of(ResourceType.ENCOUNTER));
+        List.of("Encounter"));
     final ExportResponse res2 = res(req2,
         write_details(fi("Encounter", RESOLVE_ENCOUNTER.apply(warehouseUrl))));
 
     final ExportRequest req3 = req(base, ExportOutputFormat.NDJSON, now,
-        List.of(ResourceType.ENCOUNTER, ResourceType.PATIENT));
+        List.of("Encounter", "Patient"));
     final ExportResponse res3 = res(req3, write_details(
         fi("Encounter", RESOLVE_ENCOUNTER.apply(warehouseUrl)),
         fi("Patient", RESOLVE_PATIENT.apply(warehouseUrl))));

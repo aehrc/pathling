@@ -29,10 +29,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.InstantType;
 import org.hl7.fhir.r4.model.Resource;
 import org.jetbrains.annotations.NotNull;
@@ -84,14 +82,13 @@ public class ExportOperationUtil {
   public static ExportRequest req(String base,
       ExportOutputFormat outputFormat,
       InstantType since,
-      List<Enumerations.ResourceType> includeResourceTypeFilters) {
+      List<String> includeResourceTypeFilters) {
     String originalRequest =
         base + "_outputFormat=" + ExportOutputFormat.asParam(outputFormat) + "&_since="
             + since.toString();
     if (!includeResourceTypeFilters.isEmpty()) {
       originalRequest +=
-          "&_type=" + includeResourceTypeFilters.stream().map(Enumerations.ResourceType::toCode)
-              .collect(Collectors.joining(","));
+          "&_type=" + String.join(",", includeResourceTypeFilters);
     }
     return new ExportRequest(originalRequest, deriveServerBaseUrl(base), outputFormat, since, null,
         includeResourceTypeFilters, List.of(), false, ExportLevel.SYSTEM, Set.of());
@@ -107,7 +104,7 @@ public class ExportOperationUtil {
   }
 
   public static ExportRequest req(@Nonnull String base,
-      @Nullable List<Enumerations.ResourceType> includeResourceTypeFilters,
+      @Nullable List<String> includeResourceTypeFilters,
       @Nullable List<String> elements) {
     return req(base, null, null, includeResourceTypeFilters, elements);
   }
@@ -116,7 +113,7 @@ public class ExportOperationUtil {
       @Nonnull String base,
       @Nullable InstantType since,
       @Nullable InstantType until,
-      @Nullable List<Enumerations.ResourceType> includeResourceTypeFilters,
+      @Nullable List<String> includeResourceTypeFilters,
       @Nullable List<String> elements) {
     if (since == null) {
       since = InstantType.now();
@@ -129,9 +126,7 @@ public class ExportOperationUtil {
       originalRequest += "&_until=" + until;
     }
     if (includeResourceTypeFilters != null && !includeResourceTypeFilters.isEmpty()) {
-      originalRequest +=
-          "&_type=" + includeResourceTypeFilters.stream().map(Enumerations.ResourceType::toCode)
-              .collect(Collectors.joining(","));
+      originalRequest += "&_type=" + String.join(",", includeResourceTypeFilters);
     }
 
     List<ExportRequest.FhirElement> fhirElements = new ArrayList<>();
@@ -143,9 +138,7 @@ public class ExportOperationUtil {
           fhirElements.add(new ExportRequest.FhirElement(null, split[0]));
         }
         if (split.length == 2) {
-          fhirElements.add(
-              new ExportRequest.FhirElement(Enumerations.ResourceType.fromCode(split[0]),
-                  split[1]));
+          fhirElements.add(new ExportRequest.FhirElement(split[0], split[1]));
         }
       }
     }

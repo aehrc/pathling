@@ -50,7 +50,6 @@ import org.hl7.fhir.r4.model.Coverage;
 import org.hl7.fhir.r4.model.Device;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.IntegerType;
@@ -85,20 +84,20 @@ class SingleResourceFhirPathTest {
 
   @Nonnull
   CollectionDataset evalExpression(@Nonnull final ObjectDataSource dataSource,
-      @Nonnull final ResourceType subjectResource,
+      @Nonnull final String subjectResourceCode,
       @Nonnull final String fhirExpression) {
 
     return createEvaluator(dataSource)
-        .evaluate(subjectResource, fhirExpression)
+        .evaluate(subjectResourceCode, fhirExpression)
         .toCanonical();
 
   }
 
   @Nonnull
   Dataset<Row> selectExpression(@Nonnull final ObjectDataSource dataSource,
-      @Nonnull final ResourceType subjectResource,
+      @Nonnull final String subjectResourceCode,
       @Nonnull final String fhirExpression) {
-    return evalExpression(dataSource, subjectResource, fhirExpression)
+    return evalExpression(dataSource, subjectResourceCode, fhirExpression)
         .toCanonical()
         .toIdValueDataset();
   }
@@ -121,7 +120,7 @@ class SingleResourceFhirPathTest {
     final ObjectDataSource dataSource = new ObjectDataSource(spark, encoders,
         List.of(patient));
 
-    final Dataset<Row> result = selectExpression(dataSource, ResourceType.PATIENT,
+    final Dataset<Row> result = selectExpression(dataSource, "Patient",
         "where(gender='female').name.where(family.where($this='Kay').exists()).given.join(',')");
     final Dataset<Row> expected = DatasetBuilder.of(spark)
         .withColumn("id", DataTypes.StringType)
@@ -150,7 +149,7 @@ class SingleResourceFhirPathTest {
             new Patient().setId("3")
         ));
 
-    final Dataset<Row> result = selectExpression(dataSource, ResourceType.PATIENT,
+    final Dataset<Row> result = selectExpression(dataSource, "Patient",
         "name.given");
     new DatasetAssert(result)
         .hasRowsUnordered(
@@ -164,7 +163,7 @@ class SingleResourceFhirPathTest {
   void resourceExtensionTest() {
     final ObjectDataSource dataSource = getExtensionTestSource();
 
-    final Dataset<Row> resultDataset = selectExpression(dataSource, ResourceType.PATIENT,
+    final Dataset<Row> resultDataset = selectExpression(dataSource, "Patient",
         "extension('urn:ex1').value.ofType(string)");
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
@@ -178,7 +177,7 @@ class SingleResourceFhirPathTest {
   void nestedExtensionTest() {
     final ObjectDataSource dataSource = getExtensionTestSource();
 
-    final Dataset<Row> resultDataset = selectExpression(dataSource, ResourceType.PATIENT,
+    final Dataset<Row> resultDataset = selectExpression(dataSource, "Patient",
         "extension('urn:ex3').extension('urn:ex3_1').value.ofType(string)");
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
@@ -192,7 +191,7 @@ class SingleResourceFhirPathTest {
   @Test
   void nestedExtensionTraversalTest() {
     final ObjectDataSource dataSource = getExtensionTestSource();
-    final Dataset<Row> resultDataset = selectExpression(dataSource, ResourceType.PATIENT,
+    final Dataset<Row> resultDataset = selectExpression(dataSource, "Patient",
         "extension.extension.url");
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
@@ -206,7 +205,7 @@ class SingleResourceFhirPathTest {
   void elementExtensionTest() {
     final ObjectDataSource dataSource = getExtensionTestSource();
 
-    final Dataset<Row> resultDataset = selectExpression(dataSource, ResourceType.PATIENT,
+    final Dataset<Row> resultDataset = selectExpression(dataSource, "Patient",
         "name.extension('urn:name1').value.ofType(string)");
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
@@ -220,7 +219,7 @@ class SingleResourceFhirPathTest {
   void ofTypeExtensionTest() {
     final ObjectDataSource dataSource = getExtensionTestSource();
 
-    final Dataset<Row> resultDataset = selectExpression(dataSource, ResourceType.PATIENT,
+    final Dataset<Row> resultDataset = selectExpression(dataSource, "Patient",
         "extension('urn:ex2').value.ofType(integer)");
     new DatasetAssert(resultDataset)
         .hasRowsUnordered(
@@ -269,7 +268,7 @@ class SingleResourceFhirPathTest {
         )
     );
 
-    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.OBSERVATION,
+    final CollectionDataset evalResult = evalExpression(dataSource, "Observation",
         "value.ofType(integer)");
 
     Assertions.assertThat(evalResult)
@@ -307,7 +306,7 @@ class SingleResourceFhirPathTest {
         )
     );
 
-    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.OBSERVATION,
+    final CollectionDataset evalResult = evalExpression(dataSource, "Observation",
         "component.value.ofType(Quantity).value");
 
     Assertions.assertThat(evalResult)
@@ -332,7 +331,7 @@ class SingleResourceFhirPathTest {
         )
     );
 
-    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.COVERAGE,
+    final CollectionDataset evalResult = evalExpression(dataSource, "Coverage",
         "order - 11");
 
     Assertions.assertThat(evalResult)
@@ -357,7 +356,7 @@ class SingleResourceFhirPathTest {
         )
     );
 
-    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.OBSERVATION,
+    final CollectionDataset evalResult = evalExpression(dataSource, "Observation",
         "extension.value.ofType(Reference).reference");
 
     Assertions.assertThat(evalResult)
@@ -385,7 +384,7 @@ class SingleResourceFhirPathTest {
         )
     );
 
-    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.PATIENT,
+    final CollectionDataset evalResult = evalExpression(dataSource, "Patient",
         "maritalStatus.coding contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S||S");
 
     Assertions.assertThat(evalResult)
@@ -410,7 +409,7 @@ class SingleResourceFhirPathTest {
         )
     );
 
-    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.DEVICE,
+    final CollectionDataset evalResult = evalExpression(dataSource, "Device",
         "udiCarrier.carrierAIDC = 'QUlEMQ=='");
 
     Assertions.assertThat(evalResult)
@@ -428,7 +427,7 @@ class SingleResourceFhirPathTest {
     TerminologyServiceHelpers.setupSubsumes(terminologyService);
     final ObjectDataSource dataSource = codedObservations();
 
-    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.OBSERVATION,
+    final CollectionDataset evalResult = evalExpression(dataSource, "Observation",
         "code.subsumes(http://loinc.org|LA11165-0||Platelet%20anisocytosis)");
 
     Assertions.assertThat(evalResult)
@@ -445,7 +444,7 @@ class SingleResourceFhirPathTest {
     TerminologyServiceHelpers.setupSubsumes(terminologyService);
     final ObjectDataSource dataSource = codedObservations();
 
-    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.OBSERVATION,
+    final CollectionDataset evalResult = evalExpression(dataSource, "Observation",
         "category.subsumes(http://terminology.hl7.org/CodeSystem/v3-ObservationCategory|vital-signs||Vital%20Signs)");
 
     Assertions.assertThat(evalResult)
@@ -463,7 +462,7 @@ class SingleResourceFhirPathTest {
     TerminologyServiceHelpers.setupSubsumes(terminologyService);
     final ObjectDataSource dataSource = codedObservations();
 
-    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.OBSERVATION,
+    final CollectionDataset evalResult = evalExpression(dataSource, "Observation",
         "code.coding.subsumes(http://loinc.org|LA11165-0||Platelet%20anisocytosis)");
 
     Assertions.assertThat(evalResult)
@@ -481,7 +480,7 @@ class SingleResourceFhirPathTest {
     TerminologyServiceHelpers.setupSubsumes(terminologyService);
     final ObjectDataSource dataSource = codedObservations();
 
-    final CollectionDataset evalResult = evalExpression(dataSource, ResourceType.OBSERVATION,
+    final CollectionDataset evalResult = evalExpression(dataSource, "Observation",
         "code.coding.first().subsumes(http://loinc.org|LA11165-0||Platelet%20anisocytosis)");
 
     Assertions.assertThat(evalResult)

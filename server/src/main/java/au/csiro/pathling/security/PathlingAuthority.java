@@ -94,8 +94,21 @@ public class PathlingAuthority {
   @Nonnull
   public static PathlingAuthority resourceAccess(@Nonnull final AccessType accessType,
       @Nonnull final ResourceType resourceType) {
-    return new PathlingAuthority("pathling:" + accessType.getCode() + ":" + resourceType.toCode());
+    return resourceAccess(accessType, resourceType.toCode());
+  }
 
+  /**
+   * Constructs the authority required to access the resource using a string resource type code.
+   * This overload supports both standard FHIR resource types and custom types like ViewDefinition.
+   *
+   * @param accessType the type of access required.
+   * @param resourceTypeCode the resource type code to access.
+   * @return the authority required for access.
+   */
+  @Nonnull
+  public static PathlingAuthority resourceAccess(@Nonnull final AccessType accessType,
+      @Nonnull final String resourceTypeCode) {
+    return new PathlingAuthority("pathling:" + accessType.getCode() + ":" + resourceTypeCode);
   }
 
   /**

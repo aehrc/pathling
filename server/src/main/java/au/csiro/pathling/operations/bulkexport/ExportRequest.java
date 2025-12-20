@@ -4,7 +4,6 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.InstantType;
 
 /**
@@ -19,7 +18,8 @@ import org.hl7.fhir.r4.model.InstantType;
  * @param until Resources will be included in the response if their state has changed before the
  * supplied time.
  * @param includeResourceTypeFilters When provided, resources will be included in the response if
- * their resource type is listed here.
+ * their resource type is listed here. Uses String resource type codes to support both standard
+ * FHIR resource types and custom types like ViewDefinition.
  * @param elements When provided, the listed FHIR resource elements will be the only ones returned
  * in the resources (alongside mandatory elements).
  * @param lenient Lenient handling enabled.
@@ -34,7 +34,7 @@ public record ExportRequest(
     @Nullable ExportOutputFormat outputFormat,
     @Nullable InstantType since,
     @Nullable InstantType until,
-    @Nonnull List<ResourceType> includeResourceTypeFilters,
+    @Nonnull List<String> includeResourceTypeFilters,
     @Nonnull List<FhirElement> elements,
     boolean lenient,
     @Nonnull ExportLevel exportLevel,
@@ -66,12 +66,13 @@ public record ExportRequest(
   /**
    * A small container for resource types and their top level elements.
    *
-   * @param resourceType The resource type for this element.
+   * @param resourceTypeCode The resource type code for this element. Uses String to support both
+   * standard FHIR resource types and custom types.
    * @param elementName The top level element name of the resource or the top level name across all
-   * resources if "resourceType" is null.
+   * resources if "resourceTypeCode" is null.
    */
   public record FhirElement(
-      @Nullable ResourceType resourceType,
+      @Nullable String resourceTypeCode,
       @Nonnull String elementName
   ) {
 

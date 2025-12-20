@@ -43,8 +43,6 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.MapType;
 import org.apache.spark.sql.types.StructField;
-import org.hl7.fhir.r4.model.Enumerations;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -176,7 +174,7 @@ public class ExportExecutor {
     }
     return dataSource.filterByResourceType(resourceType -> {
       if (!SecurityAspect.hasAuthority(
-          PathlingAuthority.resourceAccess(accessType, ResourceType.fromCode(resourceType)))) {
+          PathlingAuthority.resourceAccess(accessType, resourceType))) {
         log.debug("Insufficient {} resource access permissions for {}. Hiding resource from user.",
             accessType.getCode(), resourceType);
         return false;
@@ -267,16 +265,16 @@ public class ExportExecutor {
   private QueryableDataSource applyElementsParams(@Nonnull final ExportRequest exportRequest,
       @Nonnull QueryableDataSource mapped) {
     final Map<String, Set<String>> localElements = exportRequest.elements().stream()
-        .filter(fhirElement -> fhirElement.resourceType() != null)
+        .filter(fhirElement -> fhirElement.resourceTypeCode() != null)
         .collect(Collectors.groupingBy(
-            fhirElement -> fhirElement.resourceType().toCode(),
+            ExportRequest.FhirElement::resourceTypeCode,
             Collectors.mapping(
                 ExportRequest.FhirElement::elementName,
                 Collectors.toSet()
             )
         ));
     final Set<String> globalElements = exportRequest.elements().stream()
-        .filter(fhirElement -> fhirElement.resourceType() == null)
+        .filter(fhirElement -> fhirElement.resourceTypeCode() == null)
         .map(ExportRequest.FhirElement::elementName)
         .collect(Collectors.toCollection(HashSet::new));
     globalElements.add("id"); // id is globally mandatory.
@@ -289,8 +287,7 @@ public class ExportExecutor {
             entry -> {
               final Set<String> allElementsForThisResourceType = new HashSet<>(entry.getValue());
               allElementsForThisResourceType.addAll(getMandatoryElements(
-                  Enumerations.ResourceType.fromCode(
-                      entry.getKey()))); // Add all local mandatory elements to be returned.
+                  entry.getKey())); // Add all local mandatory elements to be returned.
               allElementsForThisResourceType.addAll(globalElements);
               return rowDataset -> rowDataset.select(
                   columnsWithNullification(rowDataset, allElementsForThisResourceType));
@@ -341,18 +338,18 @@ public class ExportExecutor {
       @Nonnull final QueryableDataSource mapped) {
     // Assume that every resource from the _type param is accessible.
     final Map<String, Boolean> perResourceAuth = exportRequest.includeResourceTypeFilters().stream()
-        .collect(Collectors.toMap(ResourceType::toCode, resourceType -> true));
+        .collect(Collectors.toMap(code -> code, code -> true));
     if (serverConfiguration.getAuth().isEnabled()) {
       // Provide actual authority access for each resource type.
       exportRequest.includeResourceTypeFilters().stream()
-          .map(resourceType -> Map.entry(resourceType,
-              PathlingAuthority.resourceAccess(AccessType.READ, resourceType)))
+          .map(resourceTypeCode -> Map.entry(resourceTypeCode,
+              PathlingAuthority.resourceAccess(AccessType.READ, resourceTypeCode)))
           .forEach(entry -> {
             // handling=strict and auth exists -> throw error on wrong auth.
             if (!exportRequest.lenient()) {
               SecurityAspect.checkHasAuthority(entry.getValue());
             } else {
-              perResourceAuth.put(entry.getKey().toCode(),
+              perResourceAuth.put(entry.getKey(),
                   SecurityAspect.hasAuthority(entry.getValue()));
             }
           });
@@ -365,8 +362,7 @@ public class ExportExecutor {
         return true;
       }
       return perResourceAuth.getOrDefault(resourceType, false)
-          && exportRequest.includeResourceTypeFilters()
-          .contains(Enumerations.ResourceType.fromCode(resourceType));
+          && exportRequest.includeResourceTypeFilters().contains(resourceType);
     });
   }
 
@@ -394,15 +390,15 @@ public class ExportExecutor {
   /**
    * Returns the set of mandatory elements for a given resource type.
    *
-   * @param resourceType The resource type.
+   * @param resourceTypeCode The resource type code.
    * @return The set of mandatory element names.
    */
   @Nonnull
-  public Set<String> getMandatoryElements(@Nonnull final Enumerations.ResourceType resourceType) {
+  public Set<String> getMandatoryElements(@Nonnull final String resourceTypeCode) {
     final Set<String> alwaysMandatory = Set.of("id");
 
     final RuntimeResourceDefinition resourceDef = fhirContext.getResourceDefinition(
-        resourceType.toCode());
+        resourceTypeCode);
     final Set<String> mandatoryElements = new HashSet<>();
 
     for (final BaseRuntimeChildDefinition child : resourceDef.getChildren()) {

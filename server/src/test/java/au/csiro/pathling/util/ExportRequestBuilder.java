@@ -1,7 +1,5 @@
 package au.csiro.pathling.util;
 
-import static org.hl7.fhir.r4.model.Enumerations.ResourceType;
-
 import au.csiro.pathling.operations.bulkexport.ExportOutputFormat;
 import au.csiro.pathling.operations.bulkexport.ExportRequest;
 import au.csiro.pathling.operations.bulkexport.ExportRequest.ExportLevel;
@@ -9,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.InstantType;
 
 /**
@@ -41,13 +40,15 @@ public class ExportRequestBuilder {
 
     OptionalStep includeResourceType(ResourceType resourceType);
 
-    OptionalStep includeResourceTypes(List<ResourceType> resourceTypes);
+    OptionalStep includeResourceType(String resourceTypeCode);
 
-    OptionalStep includeResourceTypes(ResourceType... resourceTypes);
+    OptionalStep includeResourceTypes(List<String> resourceTypeCodes);
+
+    OptionalStep includeResourceTypes(String... resourceTypeCodes);
 
     OptionalStep element(String elementName);
 
-    OptionalStep element(ResourceType resourceType, String elementName);
+    OptionalStep element(String resourceTypeCode, String elementName);
 
     OptionalStep elements(List<ExportRequest.FhirElement> elements);
 
@@ -63,7 +64,7 @@ public class ExportRequestBuilder {
     private ExportOutputFormat outputFormat;
     private InstantType since;
     private InstantType until;
-    private final List<ResourceType> includeResourceTypeFilters = new ArrayList<>();
+    private final List<String> includeResourceTypeFilters = new ArrayList<>();
     private final List<ExportRequest.FhirElement> elements = new ArrayList<>();
 
     @Override
@@ -92,19 +93,25 @@ public class ExportRequestBuilder {
 
     @Override
     public OptionalStep includeResourceType(ResourceType resourceType) {
-      this.includeResourceTypeFilters.add(resourceType);
+      this.includeResourceTypeFilters.add(resourceType.toCode());
       return this;
     }
 
     @Override
-    public OptionalStep includeResourceTypes(List<ResourceType> resourceTypes) {
-      this.includeResourceTypeFilters.addAll(resourceTypes);
+    public OptionalStep includeResourceType(String resourceTypeCode) {
+      this.includeResourceTypeFilters.add(resourceTypeCode);
       return this;
     }
 
     @Override
-    public OptionalStep includeResourceTypes(ResourceType... resourceTypes) {
-      this.includeResourceTypeFilters.addAll(Arrays.asList(resourceTypes));
+    public OptionalStep includeResourceTypes(List<String> resourceTypeCodes) {
+      this.includeResourceTypeFilters.addAll(resourceTypeCodes);
+      return this;
+    }
+
+    @Override
+    public OptionalStep includeResourceTypes(String... resourceTypeCodes) {
+      this.includeResourceTypeFilters.addAll(Arrays.asList(resourceTypeCodes));
       return this;
     }
 
@@ -115,8 +122,8 @@ public class ExportRequestBuilder {
     }
 
     @Override
-    public OptionalStep element(ResourceType resourceType, String elementName) {
-      this.elements.add(new ExportRequest.FhirElement(resourceType, elementName));
+    public OptionalStep element(String resourceTypeCode, String elementName) {
+      this.elements.add(new ExportRequest.FhirElement(resourceTypeCode, elementName));
       return this;
     }
 

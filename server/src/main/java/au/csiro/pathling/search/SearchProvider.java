@@ -32,7 +32,6 @@ import jakarta.annotation.Nullable;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -73,7 +72,7 @@ public class SearchProvider implements IResourceProvider {
   private final Class<? extends IBaseResource> resourceClass;
 
   @Nonnull
-  private final ResourceType resourceType;
+  private final String resourceTypeCode;
 
   /**
    * Constructs a new SearchProvider.
@@ -94,8 +93,7 @@ public class SearchProvider implements IResourceProvider {
     this.dataSource = dataSource;
     this.fhirEncoders = fhirEncoders;
     this.resourceClass = resourceClass;
-    this.resourceType = ResourceType.fromCode(
-        fhirContext.getResourceDefinition(resourceClass).getName());
+    this.resourceTypeCode = fhirContext.getResourceDefinition(resourceClass).getName();
   }
 
   @Override
@@ -134,7 +132,7 @@ public class SearchProvider implements IResourceProvider {
   private IBundleProvider buildSearchExecutor(
       @Nonnull final Optional<StringAndListParam> filters) {
     final boolean cacheResults = configuration.getQuery().getCacheResults();
-    return new SearchExecutor(fhirContext, dataSource, fhirEncoders, resourceType, filters,
+    return new SearchExecutor(fhirContext, dataSource, fhirEncoders, resourceTypeCode, filters,
         cacheResults);
   }
 

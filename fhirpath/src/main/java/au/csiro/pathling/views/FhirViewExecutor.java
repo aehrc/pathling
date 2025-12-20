@@ -52,7 +52,6 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Converts a {@link FhirView} to an executable Spark SQL query.
@@ -147,7 +146,7 @@ public class FhirViewExecutor {
     // during evaluation.
 
     // Create the Projection object that represents the view.
-    return new Projection(ResourceType.fromCode(fhirView.getResource()), fhirView.getConstant(),
+    return new Projection(fhirView.getResource(), fhirView.getConstant(),
         selection,
         where);
   }

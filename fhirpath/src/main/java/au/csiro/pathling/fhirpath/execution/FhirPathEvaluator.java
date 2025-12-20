@@ -180,31 +180,33 @@ public class FhirPathEvaluator {
      * Creates a FhirPathEvaluator with the given parameters.
      * <p>
      * This method creates a fully configured evaluator with the specified subject resource type,
-     * function registry, and variables.
+     * function registry, and variables. Supports both standard FHIR resource types and custom
+     * resource types (like ViewDefinition) that are registered with HAPI.
      *
-     * @param subjectResource the subject resource type to evaluate against
+     * @param subjectResourceCode the subject resource type code to evaluate against (e.g.,
+     * "Patient", "ViewDefinition")
      * @param functionRegistry the registry of FHIRPath functions to use
      * @param variables the variables available during evaluation
      * @return a new FhirPathEvaluator configured with the specified parameters
      */
     @Nonnull
-    FhirPathEvaluator create(@Nonnull final ResourceType subjectResource,
+    FhirPathEvaluator create(@Nonnull final String subjectResourceCode,
         @Nonnull final FunctionRegistry functionRegistry,
         @Nonnull final Map<String, Collection> variables);
 
     /**
      * Creates a FhirPathEvaluator with the given subject resource and default parameters.
      * <p>
-     * This method creates an evaluator with the specified subject resource type and default values
-     * for the function registry (StaticFunctionRegistry) and variables (empty map).
+     * This method creates an evaluator with the specified subject resource type code and default
+     * values for the function registry (StaticFunctionRegistry) and variables (empty map).
      *
-     * @param subjectResource the subject resource type to evaluate against
+     * @param subjectResourceCode the subject resource type code to evaluate against
      * @return a new FhirPathEvaluator configured with the specified subject resource and default
      * parameters
      */
     @Nonnull
-    default FhirPathEvaluator create(@Nonnull final ResourceType subjectResource) {
-      return create(subjectResource, StaticFunctionRegistry.getInstance(), Map.of());
+    default FhirPathEvaluator create(@Nonnull final String subjectResourceCode) {
+      return create(subjectResourceCode, StaticFunctionRegistry.getInstance(), Map.of());
     }
   }
 
@@ -220,14 +222,16 @@ public class FhirPathEvaluator {
      * Creates a FhirPathEvaluator with the given parameters.
      * <p>
      * This method creates an evaluator that can handle context paths that are supplied dynamically
-     * at runtime through the contextPathsSupplier.
+     * at runtime through the contextPathsSupplier. Supports both standard FHIR resource types and
+     * custom resource types (like ViewDefinition) that are registered with HAPI.
      *
-     * @param subjectResource the subject resource type to evaluate against
+     * @param subjectResourceCode the subject resource type code to evaluate against (e.g.,
+     * "Patient", "ViewDefinition")
      * @param contextPathsSupplier a supplier that provides the context paths when needed
      * @return a new FhirPathEvaluator configured with the specified parameters
      */
     @Nonnull
-    FhirPathEvaluator create(@Nonnull final ResourceType subjectResource,
+    FhirPathEvaluator create(@Nonnull final String subjectResourceCode,
         @Nonnull final Supplier<List<FhirPath>> contextPathsSupplier);
   }
 }

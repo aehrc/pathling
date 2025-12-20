@@ -38,7 +38,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Patient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -95,7 +94,7 @@ class SearchExecutorTest {
         fhirContext,
         dataSource,
         fhirEncoders,
-        ResourceType.PATIENT,
+        "Patient",
         Optional.empty(),
         false
     );
@@ -118,7 +117,7 @@ class SearchExecutorTest {
         fhirContext,
         dataSource,
         fhirEncoders,
-        ResourceType.PATIENT,
+        "Patient",
         Optional.of(filters),
         false
     );
@@ -145,7 +144,7 @@ class SearchExecutorTest {
         fhirContext,
         dataSource,
         fhirEncoders,
-        ResourceType.PATIENT,
+        "Patient",
         Optional.of(filters),
         false
     );
@@ -176,7 +175,7 @@ class SearchExecutorTest {
         fhirContext,
         dataSource,
         fhirEncoders,
-        ResourceType.PATIENT,
+        "Patient",
         Optional.of(filters),
         false
     );
@@ -199,7 +198,7 @@ class SearchExecutorTest {
         fhirContext,
         dataSource,
         fhirEncoders,
-        ResourceType.PATIENT,
+        "Patient",
         Optional.empty(),
         false
     );
@@ -235,7 +234,7 @@ class SearchExecutorTest {
         fhirContext,
         dataSource,
         fhirEncoders,
-        ResourceType.PATIENT,
+        "Patient",
         Optional.of(filters),
         false
     ))
@@ -254,7 +253,7 @@ class SearchExecutorTest {
         fhirContext,
         dataSource,
         fhirEncoders,
-        ResourceType.PATIENT,
+        "Patient",
         Optional.of(filters),
         false
     ))
@@ -273,7 +272,7 @@ class SearchExecutorTest {
         fhirContext,
         dataSource,
         fhirEncoders,
-        ResourceType.PATIENT,
+        "Patient",
         Optional.of(filters),
         true // cacheResults enabled
     );

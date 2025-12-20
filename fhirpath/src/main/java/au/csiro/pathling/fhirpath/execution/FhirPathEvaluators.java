@@ -29,7 +29,6 @@ import java.util.function.Supplier;
 import lombok.Value;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Utility class for creating FhirPathEvaluator instances.
@@ -56,8 +55,11 @@ public class FhirPathEvaluators {
    *   <li>Not requiring complex joins between different resource types</li>
    *   <li>Performing simple attribute access and filtering operations</li>
    * </ul>
+   * <p>
+   * This method supports both standard FHIR resource types and custom resource types (like
+   * ViewDefinition) that are registered with HAPI.
    *
-   * @param subjectResource the subject resource type (e.g., Patient, Observation)
+   * @param subjectResourceCode the subject resource type code (e.g., "Patient", "ViewDefinition")
    * @param fhirContext the FHIR context for FHIR model operations
    * @param functionRegistry the registry of FHIRPath functions to use during evaluation
    * @param variables the variables available during FHIRPath evaluation
@@ -66,13 +68,13 @@ public class FhirPathEvaluators {
    */
   @Nonnull
   public static FhirPathEvaluator createSingle(
-      @Nonnull final ResourceType subjectResource,
+      @Nonnull final String subjectResourceCode,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final FunctionRegistry functionRegistry,
       @Nonnull final Map<String, Collection> variables,
       @Nonnull final DataSource dataSource) {
     return new FhirPathEvaluator(
-        new SingleResourceResolver(subjectResource, fhirContext, dataSource),
+        new SingleResourceResolver(subjectResourceCode, fhirContext, dataSource),
         functionRegistry,
         variables
     );
@@ -99,11 +101,11 @@ public class FhirPathEvaluators {
 
     @Override
     @Nonnull
-    public FhirPathEvaluator create(@Nonnull final ResourceType subjectResource,
+    public FhirPathEvaluator create(@Nonnull final String subjectResourceCode,
         @Nonnull final FunctionRegistry functionRegistry,
         @Nonnull final Map<String, Collection> variables) {
       return FhirPathEvaluators.createSingle(
-          subjectResource,
+          subjectResourceCode,
           fhirContext,
           functionRegistry,
           variables,
@@ -141,10 +143,10 @@ public class FhirPathEvaluators {
 
     @Nonnull
     @Override
-    public FhirPathEvaluator create(@Nonnull final ResourceType subjectResource,
+    public FhirPathEvaluator create(@Nonnull final String subjectResourceCode,
         @Nonnull final Supplier<List<FhirPath>> contextPathsSupplier) {
       return FhirPathEvaluators.createSingle(
-          subjectResource,
+          subjectResourceCode,
           fhirContext,
           functionRegistry,
           variables,

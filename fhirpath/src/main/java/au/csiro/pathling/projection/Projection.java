@@ -42,7 +42,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * An abstract representation of a projection of FHIR data, with the ability to select columns,
@@ -72,10 +71,10 @@ public class Projection {
   }
 
   /**
-   * The resource type that the projection is based upon.
+   * The resource type code that the projection is based upon (e.g., "Patient", "ViewDefinition").
    */
   @Nonnull
-  ResourceType subjectResource;
+  String subjectResource;
 
   /**
    * The constants that are available to the expressions within the projection.
@@ -104,12 +103,13 @@ public class Projection {
   /**
    * Creates a new unconstrained Projection.
    *
-   * @param subjectResource the resource type that the projection is based upon
+   * @param subjectResource the resource type code that the projection is based upon (e.g.,
+   * "Patient", "ViewDefinition")
    * @param constants the constants available to expressions within the projection
    * @param selection the clause that defines the columns to be included
    * @param where the clause that defines the rows to be included
    */
-  public Projection(@Nonnull final ResourceType subjectResource,
+  public Projection(@Nonnull final String subjectResource,
       @Nonnull final List<ConstantDeclaration> constants,
       @Nonnull final ProjectionClause selection,
       @Nonnull final Optional<ProjectionClause> where) {

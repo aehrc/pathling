@@ -66,7 +66,7 @@ public class SearchExecutor implements IBundleProvider {
   private final FhirEncoders fhirEncoders;
 
   @Nonnull
-  private final ResourceType subjectResource;
+  private final String subjectResourceCode;
 
   @Nonnull
   private final Dataset<Row> result;
@@ -82,25 +82,26 @@ public class SearchExecutor implements IBundleProvider {
    * @param fhirContext the FHIR context for FHIR model operations
    * @param dataSource the data source containing the resources to query
    * @param fhirEncoders the encoders for converting Spark rows to FHIR resources
-   * @param subjectResource the type of resource to search
+   * @param subjectResourceCode the type code of the resource to search (e.g., "Patient",
+   * "ViewDefinition")
    * @param filters the optional filter expressions to apply
    * @param cacheResults whether to cache the result dataset
    */
   public SearchExecutor(@Nonnull final FhirContext fhirContext,
       @Nonnull final DataSource dataSource,
       @Nonnull final FhirEncoders fhirEncoders,
-      @Nonnull final ResourceType subjectResource,
+      @Nonnull final String subjectResourceCode,
       @Nonnull final Optional<StringAndListParam> filters,
       final boolean cacheResults) {
     this.fhirEncoders = fhirEncoders;
-    this.subjectResource = subjectResource;
+    this.subjectResourceCode = subjectResourceCode;
     this.cacheResults = cacheResults;
     this.count = Optional.empty();
 
     final String filterStrings = filters
         .map(SearchExecutor::filtersToString)
         .orElse("none");
-    log.info("Received search request: resource={}, filters=[{}]", subjectResource.toCode(),
+    log.info("Received search request: resource={}, filters=[{}]", subjectResourceCode,
         filterStrings);
 
     this.result = initializeDataset(fhirContext, dataSource, filters);
@@ -113,7 +114,7 @@ public class SearchExecutor implements IBundleProvider {
 
     // Get the flat dataset directly from the data source for encoding.
     // This has the schema that the FhirEncoders expect.
-    final Dataset<Row> flatDataset = dataSource.read(subjectResource.toCode());
+    final Dataset<Row> flatDataset = dataSource.read(subjectResourceCode);
 
     // If there are no filters, return the flat dataset directly.
     if (filters.isEmpty() || filters.get().getValuesAsQueryTokens().isEmpty()) {
@@ -122,7 +123,7 @@ public class SearchExecutor implements IBundleProvider {
 
     // Create a FHIRPath evaluator for the subject resource type.
     final FhirPathEvaluator evaluator = FhirPathEvaluators.createSingle(
-        subjectResource,
+        subjectResourceCode,
         fhirContext,
         StaticFunctionRegistry.getInstance(),
         Map.of(),
@@ -230,7 +231,7 @@ public class SearchExecutor implements IBundleProvider {
 
     // Encode the resources into HAPI FHIR objects and collect.
     @Nullable final ExpressionEncoder<IBaseResource> encoder = fhirEncoders
-        .of(subjectResource.toCode());
+        .of(subjectResourceCode);
     requireNonNull(encoder);
 
     return resources.as(encoder).collectAsList();
