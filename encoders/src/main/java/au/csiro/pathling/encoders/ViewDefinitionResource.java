@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.operations.view;
+package au.csiro.pathling.encoders;
 
 import ca.uhn.fhir.model.api.annotation.Block;
 import ca.uhn.fhir.model.api.annotation.Child;
@@ -33,7 +33,7 @@ import org.hl7.fhir.r4.model.StringType;
  * HAPI FHIR resource class for ViewDefinition from the SQL on FHIR specification.
  * <p>
  * This class allows HAPI to recognise and parse ViewDefinition resources. It mirrors the
- * structure of {@link au.csiro.pathling.views.FhirView} with HAPI annotations so that the JSON
+ * structure of {@code au.csiro.pathling.views.FhirView} with HAPI annotations so that the JSON
  * structure is preserved during serialisation.
  * </p>
  *
@@ -63,6 +63,18 @@ public class ViewDefinitionResource extends DomainResource {
   @Child(name = "constant", min = 0, max = Child.MAX_UNLIMITED)
   private List<ConstantComponent> constant;
 
+  public StringType getNameElement() {
+    return name;
+  }
+
+  public boolean hasNameElement() {
+    return name != null && !name.isEmpty();
+  }
+
+  public void setNameElement(final StringType name) {
+    this.name = name;
+  }
+
   public StringType getName() {
     return name;
   }
@@ -71,12 +83,36 @@ public class ViewDefinitionResource extends DomainResource {
     this.name = name;
   }
 
+  public CodeType getResourceElement() {
+    return resource;
+  }
+
+  public boolean hasResourceElement() {
+    return resource != null && !resource.isEmpty();
+  }
+
+  public void setResourceElement(final CodeType resource) {
+    this.resource = resource;
+  }
+
   public CodeType getResource() {
     return resource;
   }
 
   public void setResource(final CodeType resource) {
     this.resource = resource;
+  }
+
+  public CodeType getStatusElement() {
+    return status;
+  }
+
+  public boolean hasStatusElement() {
+    return status != null && !status.isEmpty();
+  }
+
+  public void setStatusElement(final CodeType status) {
+    this.status = status;
   }
 
   public CodeType getStatus() {
@@ -94,6 +130,10 @@ public class ViewDefinitionResource extends DomainResource {
     return select;
   }
 
+  public boolean hasSelect() {
+    return select != null && !select.isEmpty();
+  }
+
   public void setSelect(final List<SelectComponent> select) {
     this.select = select;
   }
@@ -105,6 +145,10 @@ public class ViewDefinitionResource extends DomainResource {
     return where;
   }
 
+  public boolean hasWhere() {
+    return where != null && !where.isEmpty();
+  }
+
   public void setWhere(final List<WhereComponent> where) {
     this.where = where;
   }
@@ -114,6 +158,10 @@ public class ViewDefinitionResource extends DomainResource {
       constant = new ArrayList<>();
     }
     return constant;
+  }
+
+  public boolean hasConstant() {
+    return constant != null && !constant.isEmpty();
   }
 
   public void setConstant(final List<ConstantComponent> constant) {
@@ -154,6 +202,23 @@ public class ViewDefinitionResource extends DomainResource {
     return null;
   }
 
+  @Override
+  public String fhirType() {
+    // Override to return the correct resource type name for this custom resource.
+    return "ViewDefinition";
+  }
+
+  @Override
+  public boolean isEmpty() {
+    return super.isEmpty()
+        && (name == null || name.isEmpty())
+        && (resource == null || resource.isEmpty())
+        && (status == null || status.isEmpty())
+        && (select == null || select.isEmpty())
+        && (where == null || where.isEmpty())
+        && (constant == null || constant.isEmpty());
+  }
+
   /**
    * Select clause component.
    */
@@ -182,6 +247,10 @@ public class ViewDefinitionResource extends DomainResource {
       return column;
     }
 
+    public boolean hasColumn() {
+      return column != null && !column.isEmpty();
+    }
+
     public void setColumn(final List<ColumnComponent> column) {
       this.column = column;
     }
@@ -193,8 +262,24 @@ public class ViewDefinitionResource extends DomainResource {
       return select;
     }
 
+    public boolean hasSelect() {
+      return select != null && !select.isEmpty();
+    }
+
     public void setSelect(final List<SelectComponent> select) {
       this.select = select;
+    }
+
+    public StringType getForEachElement() {
+      return forEach;
+    }
+
+    public boolean hasForEachElement() {
+      return forEach != null && !forEach.isEmpty();
+    }
+
+    public void setForEachElement(final StringType forEach) {
+      this.forEach = forEach;
     }
 
     public StringType getForEach() {
@@ -203,6 +288,18 @@ public class ViewDefinitionResource extends DomainResource {
 
     public void setForEach(final StringType forEach) {
       this.forEach = forEach;
+    }
+
+    public StringType getForEachOrNullElement() {
+      return forEachOrNull;
+    }
+
+    public boolean hasForEachOrNullElement() {
+      return forEachOrNull != null && !forEachOrNull.isEmpty();
+    }
+
+    public void setForEachOrNullElement(final StringType forEachOrNull) {
+      this.forEachOrNull = forEachOrNull;
     }
 
     public StringType getForEachOrNull() {
@@ -218,6 +315,10 @@ public class ViewDefinitionResource extends DomainResource {
         unionAll = new ArrayList<>();
       }
       return unionAll;
+    }
+
+    public boolean hasUnionAll() {
+      return unionAll != null && !unionAll.isEmpty();
     }
 
     public void setUnionAll(final List<SelectComponent> unionAll) {
@@ -284,12 +385,36 @@ public class ViewDefinitionResource extends DomainResource {
     @Child(name = "tag", min = 0, max = Child.MAX_UNLIMITED)
     private List<TagComponent> tag;
 
+    public StringType getNameElement() {
+      return name;
+    }
+
+    public boolean hasNameElement() {
+      return name != null && !name.isEmpty();
+    }
+
+    public void setNameElement(final StringType name) {
+      this.name = name;
+    }
+
     public StringType getName() {
       return name;
     }
 
     public void setName(final StringType name) {
       this.name = name;
+    }
+
+    public StringType getPathElement() {
+      return path;
+    }
+
+    public boolean hasPathElement() {
+      return path != null && !path.isEmpty();
+    }
+
+    public void setPathElement(final StringType path) {
+      this.path = path;
     }
 
     public StringType getPath() {
@@ -300,6 +425,18 @@ public class ViewDefinitionResource extends DomainResource {
       this.path = path;
     }
 
+    public StringType getDescriptionElement() {
+      return description;
+    }
+
+    public boolean hasDescriptionElement() {
+      return description != null && !description.isEmpty();
+    }
+
+    public void setDescriptionElement(final StringType description) {
+      this.description = description;
+    }
+
     public StringType getDescription() {
       return description;
     }
@@ -308,12 +445,36 @@ public class ViewDefinitionResource extends DomainResource {
       this.description = description;
     }
 
+    public BooleanType getCollectionElement() {
+      return collection;
+    }
+
+    public boolean hasCollectionElement() {
+      return collection != null && !collection.isEmpty();
+    }
+
+    public void setCollectionElement(final BooleanType collection) {
+      this.collection = collection;
+    }
+
     public BooleanType getCollection() {
       return collection;
     }
 
     public void setCollection(final BooleanType collection) {
       this.collection = collection;
+    }
+
+    public StringType getTypeElement() {
+      return type;
+    }
+
+    public boolean hasTypeElement() {
+      return type != null && !type.isEmpty();
+    }
+
+    public void setTypeElement(final StringType type) {
+      this.type = type;
     }
 
     public StringType getType() {
@@ -329,6 +490,10 @@ public class ViewDefinitionResource extends DomainResource {
         tag = new ArrayList<>();
       }
       return tag;
+    }
+
+    public boolean hasTag() {
+      return tag != null && !tag.isEmpty();
     }
 
     public void setTag(final List<TagComponent> tag) {
@@ -373,12 +538,36 @@ public class ViewDefinitionResource extends DomainResource {
     @Child(name = "value", min = 0, max = 1)
     private StringType value;
 
+    public StringType getNameElement() {
+      return name;
+    }
+
+    public boolean hasNameElement() {
+      return name != null && !name.isEmpty();
+    }
+
+    public void setNameElement(final StringType name) {
+      this.name = name;
+    }
+
     public StringType getName() {
       return name;
     }
 
     public void setName(final StringType name) {
       this.name = name;
+    }
+
+    public StringType getValueElement() {
+      return value;
+    }
+
+    public boolean hasValueElement() {
+      return value != null && !value.isEmpty();
+    }
+
+    public void setValueElement(final StringType value) {
+      this.value = value;
     }
 
     public StringType getValue() {
@@ -416,12 +605,36 @@ public class ViewDefinitionResource extends DomainResource {
     @Child(name = "description", min = 0, max = 1)
     private StringType description;
 
+    public StringType getPathElement() {
+      return path;
+    }
+
+    public boolean hasPathElement() {
+      return path != null && !path.isEmpty();
+    }
+
+    public void setPathElement(final StringType path) {
+      this.path = path;
+    }
+
     public StringType getPath() {
       return path;
     }
 
     public void setPath(final StringType path) {
       this.path = path;
+    }
+
+    public StringType getDescriptionElement() {
+      return description;
+    }
+
+    public boolean hasDescriptionElement() {
+      return description != null && !description.isEmpty();
+    }
+
+    public void setDescriptionElement(final StringType description) {
+      this.description = description;
     }
 
     public StringType getDescription() {
@@ -459,6 +672,18 @@ public class ViewDefinitionResource extends DomainResource {
     @Child(name = "value", min = 0, max = 1, type = {StringType.class, BooleanType.class})
     private org.hl7.fhir.r4.model.Type value;
 
+    public StringType getNameElement() {
+      return name;
+    }
+
+    public boolean hasNameElement() {
+      return name != null && !name.isEmpty();
+    }
+
+    public void setNameElement(final StringType name) {
+      this.name = name;
+    }
+
     public StringType getName() {
       return name;
     }
@@ -469,6 +694,10 @@ public class ViewDefinitionResource extends DomainResource {
 
     public org.hl7.fhir.r4.model.Type getValue() {
       return value;
+    }
+
+    public boolean hasValue() {
+      return value != null && !value.isEmpty();
     }
 
     public void setValue(final org.hl7.fhir.r4.model.Type value) {

@@ -11,7 +11,7 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.bulkexport.ExportResultRegistry;
-import au.csiro.pathling.operations.view.ViewDefinitionResource;
+import au.csiro.pathling.encoders.ViewDefinitionResource;
 import ca.uhn.fhir.context.FhirContext;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;

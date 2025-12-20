@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.view;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import au.csiro.pathling.encoders.ViewDefinitionResource;
 import ca.uhn.fhir.context.FhirContext;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

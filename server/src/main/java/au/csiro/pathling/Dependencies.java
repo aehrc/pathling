@@ -20,7 +20,7 @@ package au.csiro.pathling;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.operations.view.ViewDefinitionResource;
+import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
