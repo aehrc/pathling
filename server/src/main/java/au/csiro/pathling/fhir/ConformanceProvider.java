@@ -314,6 +314,11 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
       updateInteraction.setCode(TypeRestfulInteraction.UPDATE);
       resource.addInteraction(updateInteraction);
 
+      // Add read interaction to all resource types.
+      final ResourceInteractionComponent readInteraction = new ResourceInteractionComponent();
+      readInteraction.setCode(TypeRestfulInteraction.READ);
+      resource.addInteraction(readInteraction);
+
       // Add the fhirPath named query with filter parameter for FHIRPath-based search.
       final CapabilityStatementRestResourceSearchParamComponent filterParam =
           new CapabilityStatementRestResourceSearchParamComponent();
@@ -340,10 +345,39 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     final CapabilityStatementRestResourceComponent opDefResource =
         new CapabilityStatementRestResourceComponent(new CodeType(opDefCode));
     opDefResource.setProfile(FHIR_RESOURCE_BASE + opDefCode);
-    final ResourceInteractionComponent readInteraction = new ResourceInteractionComponent();
-    readInteraction.setCode(TypeRestfulInteraction.READ);
-    opDefResource.addInteraction(readInteraction);
+    final ResourceInteractionComponent opDefReadInteraction = new ResourceInteractionComponent();
+    opDefReadInteraction.setCode(TypeRestfulInteraction.READ);
+    opDefResource.addInteraction(opDefReadInteraction);
     resources2.add(opDefResource);
+
+    // Add ViewDefinition as a custom resource type with read, search, and update interactions.
+    final String viewDefCode = "ViewDefinition";
+    final CapabilityStatementRestResourceComponent viewDefResource =
+        new CapabilityStatementRestResourceComponent(new CodeType(viewDefCode));
+    viewDefResource.setProfile("http://hl7.org/fhir/uv/sql-on-fhir/StructureDefinition/ViewDefinition");
+
+    final ResourceInteractionComponent viewDefSearchInteraction = new ResourceInteractionComponent();
+    viewDefSearchInteraction.setCode(TypeRestfulInteraction.SEARCHTYPE);
+    viewDefResource.addInteraction(viewDefSearchInteraction);
+
+    final ResourceInteractionComponent viewDefUpdateInteraction = new ResourceInteractionComponent();
+    viewDefUpdateInteraction.setCode(TypeRestfulInteraction.UPDATE);
+    viewDefResource.addInteraction(viewDefUpdateInteraction);
+
+    final ResourceInteractionComponent viewDefReadInteraction = new ResourceInteractionComponent();
+    viewDefReadInteraction.setCode(TypeRestfulInteraction.READ);
+    viewDefResource.addInteraction(viewDefReadInteraction);
+
+    // Add the fhirPath named query with filter parameter for ViewDefinition.
+    final CapabilityStatementRestResourceSearchParamComponent viewDefFilterParam =
+        new CapabilityStatementRestResourceSearchParamComponent();
+    viewDefFilterParam.setName("filter");
+    viewDefFilterParam.setType(SearchParamType.STRING);
+    viewDefFilterParam.setDocumentation(
+        "FHIRPath expression to filter resources (use with _query=fhirPath)");
+    viewDefResource.addSearchParam(viewDefFilterParam);
+
+    resources2.add(viewDefResource);
 
     return resources2;
   }

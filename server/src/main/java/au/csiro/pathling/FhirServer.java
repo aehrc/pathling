@@ -22,6 +22,7 @@ import au.csiro.pathling.operations.bulksubmit.BulkSubmitStatusProvider;
 import au.csiro.pathling.operations.update.BatchProvider;
 import au.csiro.pathling.operations.update.UpdateProviderFactory;
 import au.csiro.pathling.operations.view.ViewDefinitionRunProvider;
+import au.csiro.pathling.read.ReadProviderFactory;
 import au.csiro.pathling.operations.viewexport.ViewDefinitionExportProvider;
 import au.csiro.pathling.search.SearchProviderFactory;
 import au.csiro.pathling.security.OidcConfiguration;
@@ -144,6 +145,9 @@ public class FhirServer extends RestfulServer {
   private final transient UpdateProviderFactory updateProviderFactory;
 
   @Nonnull
+  private final transient ReadProviderFactory readProviderFactory;
+
+  @Nonnull
   private final transient BatchProvider batchProvider;
 
   @Nonnull
@@ -173,6 +177,7 @@ public class FhirServer extends RestfulServer {
    * @param conformanceProvider the conformance provider
    * @param searchProviderFactory the search provider factory
    * @param updateProviderFactory the update provider factory
+   * @param readProviderFactory the read provider factory
    * @param batchProvider the batch provider
    * @param viewDefinitionRunProvider the view definition run provider
    * @param viewDefinitionExportProvider the view definition export provider
@@ -195,6 +200,7 @@ public class FhirServer extends RestfulServer {
       @Nonnull final ConformanceProvider conformanceProvider,
       @Nonnull final SearchProviderFactory searchProviderFactory,
       @Nonnull final UpdateProviderFactory updateProviderFactory,
+      @Nonnull final ReadProviderFactory readProviderFactory,
       @Nonnull final BatchProvider batchProvider,
       @Nonnull final ViewDefinitionRunProvider viewDefinitionRunProvider,
       @Nonnull final ViewDefinitionExportProvider viewDefinitionExportProvider) {
@@ -218,6 +224,7 @@ public class FhirServer extends RestfulServer {
     this.conformanceProvider = conformanceProvider;
     this.searchProviderFactory = searchProviderFactory;
     this.updateProviderFactory = updateProviderFactory;
+    this.readProviderFactory = readProviderFactory;
     this.batchProvider = batchProvider;
     this.viewDefinitionRunProvider = viewDefinitionRunProvider;
     this.viewDefinitionExportProvider = viewDefinitionExportProvider;
@@ -260,6 +267,14 @@ public class FhirServer extends RestfulServer {
       for (final ResourceType resourceType : supportedResourceTypes()) {
         registerProvider(updateProviderFactory.createUpdateProvider(resourceType));
       }
+
+      // Register read providers for all supported resource types.
+      for (final ResourceType resourceType : supportedResourceTypes()) {
+        registerProvider(readProviderFactory.createReadProvider(resourceType));
+      }
+
+      // Register read provider for ViewDefinition (custom resource type).
+      registerProvider(readProviderFactory.createReadProvider("ViewDefinition"));
 
       // Register batch provider.
       registerProvider(batchProvider);
