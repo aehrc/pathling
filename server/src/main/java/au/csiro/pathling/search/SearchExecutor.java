@@ -47,6 +47,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.instance.model.api.IPrimitiveType;
@@ -111,6 +112,12 @@ public class SearchExecutor implements IBundleProvider {
   private Dataset<Row> initializeDataset(@Nonnull final FhirContext fhirContext,
       @Nonnull final DataSource dataSource,
       @Nonnull final Optional<StringAndListParam> filters) {
+
+    // Check if the resource type has any data. If not, return an empty dataset.
+    if (!dataSource.getResourceTypes().contains(subjectResourceCode)) {
+      log.info("No data found for resource type: {}, returning empty result", subjectResourceCode);
+      return createEmptyDataset();
+    }
 
     // Get the flat dataset directly from the data source for encoding.
     // This has the schema that the FhirEncoders expect.
@@ -199,6 +206,19 @@ public class SearchExecutor implements IBundleProvider {
       dataset.cache();
     }
     return dataset;
+  }
+
+  /**
+   * Creates an empty dataset with the correct schema for the subject resource type.
+   *
+   * @return an empty dataset
+   */
+  @Nonnull
+  private Dataset<Row> createEmptyDataset() {
+    final SparkSession spark = SparkSession.active();
+    final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(subjectResourceCode);
+    requireNonNull(encoder, "No encoder found for resource type: " + subjectResourceCode);
+    return spark.emptyDataset(encoder).toDF();
   }
 
   @Override
