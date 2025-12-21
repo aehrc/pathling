@@ -25,6 +25,7 @@ import static org.hl7.fhir.r4.model.Bundle.BundleType.BATCHRESPONSE;
 import au.csiro.pathling.FhirServer;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.operations.delete.DeleteExecutor;
 import au.csiro.pathling.security.OperationAccess;
 import au.csiro.pathling.security.PathlingAuthority;
 import ca.uhn.fhir.rest.annotation.Transaction;
@@ -62,6 +63,9 @@ public class BatchProvider {
   private final UpdateExecutor updateExecutor;
 
   @Nonnull
+  private final DeleteExecutor deleteExecutor;
+
+  @Nonnull
   private final ServerConfiguration configuration;
 
   @SuppressWarnings("RegExpRedundantEscape")
@@ -74,11 +78,14 @@ public class BatchProvider {
    * Constructs a new BatchProvider.
    *
    * @param updateExecutor the executor for performing update operations
+   * @param deleteExecutor the executor for performing delete operations
    * @param configuration the server configuration
    */
   public BatchProvider(@Nonnull final UpdateExecutor updateExecutor,
+      @Nonnull final DeleteExecutor deleteExecutor,
       @Nonnull final ServerConfiguration configuration) {
     this.updateExecutor = updateExecutor;
+    this.deleteExecutor = deleteExecutor;
     this.configuration = configuration;
   }
 
@@ -117,18 +124,27 @@ public class BatchProvider {
       @Nonnull final Bundle response, @Nonnull final BundleEntryComponent entry) {
     final Resource resource = entry.getResource();
     final BundleEntryRequestComponent request = entry.getRequest();
-    if (resource == null || request == null || request.isEmpty()) {
+    if (request == null || request.isEmpty()) {
       return;
     }
 
     final String method = request.getMethod().toString();
     if ("POST".equals(method)) {
+      if (resource == null) {
+        return;
+      }
       processCreateEntry(resourcesForUpdate, response, entry);
     } else if ("PUT".equals(method)) {
+      if (resource == null) {
+        return;
+      }
       processUpdateEntry(resourcesForUpdate, response, entry);
+    } else if ("DELETE".equals(method)) {
+      processDeleteEntry(response, entry);
     } else {
       throw new InvalidUserInputError(
-          "Only create (POST) and update (PUT) requests are supported within the batch operation");
+          "Only create (POST), update (PUT), and delete (DELETE) requests are supported within "
+              + "the batch operation");
     }
   }
 
@@ -173,6 +189,28 @@ public class BatchProvider {
     final IBaseResource preparedResource = prepareResourceForUpdate(resource, urlId);
     addToResourceMap(resourcesForUpdate, resourceType, preparedResource);
     addUpdateResponse(response, preparedResource);
+  }
+
+  private void processDeleteEntry(@Nonnull final Bundle response,
+      @Nonnull final BundleEntryComponent entry) {
+    final BundleEntryRequestComponent request = entry.getRequest();
+
+    final String urlErrorMessage = "The URL for a delete request must refer to the code of a "
+        + "supported resource type, and must look like this: [resource type]/[id]";
+    checkUserInput(UPDATE_URL.matcher(request.getUrl()).matches(), urlErrorMessage);
+    final List<String> urlComponents = List.of(request.getUrl().split("/"));
+    checkUserInput(urlComponents.size() == 2, urlErrorMessage);
+    final String resourceTypeCode = urlComponents.get(0);
+    final String resourceId = urlComponents.get(1);
+    validateResourceTypeForDelete(resourceTypeCode, urlErrorMessage);
+
+    if (configuration.getAuth().isEnabled()) {
+      checkHasAuthority(PathlingAuthority.operationAccess("delete"));
+    }
+
+    log.debug("Batch deleting {} with ID: {}", resourceTypeCode, resourceId);
+    deleteExecutor.delete(resourceTypeCode, resourceId);
+    addDeleteResponse(response);
   }
 
   private void update(@Nonnull final Map<ResourceType, List<IBaseResource>> resourcesForUpdate) {
@@ -220,6 +258,18 @@ public class BatchProvider {
     return resourceType;
   }
 
+  private void validateResourceTypeForDelete(@Nonnull final String resourceTypeCode,
+      @Nonnull final String urlErrorMessage) {
+    final ResourceType resourceType;
+    try {
+      resourceType = ResourceType.fromCode(resourceTypeCode);
+    } catch (final FHIRException e) {
+      throw new InvalidUserInputError(urlErrorMessage);
+    }
+    checkUserInput(FhirServer.supportedResourceTypes().contains(resourceType),
+        urlErrorMessage);
+  }
+
   private void addToResourceMap(
       @Nonnull final Map<ResourceType, List<IBaseResource>> resourcesForCreation,
       @Nonnull final ResourceType resourceType, @Nonnull final IBaseResource resource) {
@@ -243,6 +293,13 @@ public class BatchProvider {
     responseElement.setStatus("200");
     responseEntry.setResponse(responseElement);
     responseEntry.setResource((Resource) updatedResource);
+  }
+
+  private void addDeleteResponse(@Nonnull final Bundle response) {
+    final BundleEntryComponent responseEntry = response.addEntry();
+    final BundleEntryResponseComponent responseElement = new BundleEntryResponseComponent();
+    responseElement.setStatus("204");
+    responseEntry.setResponse(responseElement);
   }
 
 }

@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.operations.delete.DeleteExecutor;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.util.FhirServerTestConfiguration;
 import io.delta.tables.DeltaTable;
@@ -73,6 +74,7 @@ class BatchProviderCreateTest {
   private Path tempDatabasePath;
   private BatchProvider batchProvider;
   private UpdateExecutor updateExecutor;
+  private DeleteExecutor deleteExecutor;
 
   @BeforeEach
   void setUp() throws IOException {
@@ -83,8 +85,12 @@ class BatchProviderCreateTest {
     updateExecutor = new UpdateExecutor(pathlingContext, fhirEncoders,
         tempDatabasePath.toAbsolutePath().toString());
 
+    // Create DeleteExecutor with the temp database path.
+    deleteExecutor = new DeleteExecutor(pathlingContext,
+        tempDatabasePath.toAbsolutePath().toString());
+
     // Create the BatchProvider.
-    batchProvider = new BatchProvider(updateExecutor, configuration);
+    batchProvider = new BatchProvider(updateExecutor, deleteExecutor, configuration);
   }
 
   @AfterEach
