@@ -1,11 +1,15 @@
 package au.csiro.pathling.util;
 
 import jakarta.annotation.Nonnull;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -45,6 +49,7 @@ public class TestDataImporter implements CommandLineRunner {
 
   public static void main(final String[] args) {
     ConfigurableApplicationContext ctx = new SpringApplicationBuilder(TestDataImporter.class)
+        .web(WebApplicationType.NONE)
         .properties("spring.main.allow-bean-definition-overriding=true")
         .run(args);
     ctx.close();
@@ -59,8 +64,23 @@ public class TestDataImporter implements CommandLineRunner {
       log.info("Skipping test data setup.");
       return;
     }
+
+    final Path deltaPath = Path.of(sourcePath).resolve("delta");
+    if (Files.exists(deltaPath) && containsParquetFiles(deltaPath)) {
+      log.info("Test data already exists at: {}, skipping setup.", deltaPath);
+      return;
+    }
+
     log.info("Setting up test data at: {}", sourcePath);
     testDataSetup.setupTestData(Path.of(sourcePath));
+  }
+
+  private boolean containsParquetFiles(@Nonnull final Path deltaPath) {
+    try (Stream<Path> files = Files.list(deltaPath)) {
+      return files.anyMatch(p -> p.getFileName().toString().endsWith(".parquet"));
+    } catch (final IOException e) {
+      return false;
+    }
   }
 
 }

@@ -34,7 +34,7 @@
 
     <project.majorVersion>1</project.majorVersion>
 
-    <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
+    <pathling.fhirServerDockerRepo>ghcr.io/aehrc/pathling</pathling.fhirServerDockerRepo>
     <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
     <pathling.dockerBaseImage>amazoncorretto:21</pathling.dockerBaseImage>
     <pathling.awsSdkVersion>2.40.3</pathling.awsSdkVersion>
@@ -404,7 +404,7 @@
         <executions>
           <execution>
             <id>ui-install</id>
-            <phase>generate-resources</phase>
+            <phase>prepare-package</phase>
             <goals>
               <goal>exec</goal>
             </goals>
@@ -419,7 +419,7 @@
           </execution>
           <execution>
             <id>ui-build</id>
-            <phase>generate-resources</phase>
+            <phase>prepare-package</phase>
             <goals>
               <goal>exec</goal>
             </goals>
@@ -472,7 +472,7 @@
         <executions>
           <execution>
             <id>copy-ui-resources</id>
-            <phase>generate-resources</phase>
+            <phase>prepare-package</phase>
             <goals>
               <goal>copy-resources</goal>
             </goals>
