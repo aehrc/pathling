@@ -10,6 +10,7 @@
 export interface ViewDefinitionSummary {
   id: string;
   name: string;
+  json: string;
 }
 
 /**

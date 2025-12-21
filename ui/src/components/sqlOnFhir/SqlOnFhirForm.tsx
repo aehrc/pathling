@@ -119,9 +119,21 @@ export function SqlOnFhirForm({ onExecute, isExecuting, disabled }: SqlOnFhirFor
                   </Text>
                 )}
                 {viewDefinitions && viewDefinitions.length > 0 && (
-                  <Text size="1" color="gray" mt="2">
-                    Select a view definition that has been loaded into the server.
-                  </Text>
+                  selectedViewDefinitionId ? (
+                    <Box mt="2">
+                      <TextArea
+                        readOnly
+                        size="2"
+                        rows={8}
+                        value={viewDefinitions.find(vd => vd.id === selectedViewDefinitionId)?.json ?? ""}
+                        style={{ fontFamily: "monospace" }}
+                      />
+                    </Box>
+                  ) : (
+                    <Text size="1" color="gray" mt="2">
+                      Select a view definition that has been loaded into the server.
+                    </Text>
+                  )
                 )}
               </Box>
             </Tabs.Content>

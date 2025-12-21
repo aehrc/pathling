@@ -54,6 +54,7 @@ export async function searchViewDefinitions(
     bundle.entry?.map((e: { resource: { id: string; name?: string } }) => ({
       id: e.resource.id,
       name: e.resource.name || e.resource.id,
+      json: JSON.stringify(e.resource, null, 2),
     })) ?? [];
 
   return viewDefinitions;
