@@ -22,6 +22,7 @@ import au.csiro.pathling.operations.bulksubmit.BulkSubmitStatusProvider;
 import au.csiro.pathling.operations.create.CreateProviderFactory;
 import au.csiro.pathling.operations.update.BatchProvider;
 import au.csiro.pathling.operations.update.UpdateProviderFactory;
+import au.csiro.pathling.operations.view.ViewDefinitionInstanceRunProvider;
 import au.csiro.pathling.operations.view.ViewDefinitionRunProvider;
 import au.csiro.pathling.read.ReadProviderFactory;
 import au.csiro.pathling.operations.viewexport.ViewDefinitionExportProvider;
@@ -158,6 +159,9 @@ public class FhirServer extends RestfulServer {
   private final transient ViewDefinitionRunProvider viewDefinitionRunProvider;
 
   @Nonnull
+  private final transient ViewDefinitionInstanceRunProvider viewDefinitionInstanceRunProvider;
+
+  @Nonnull
   private final transient ViewDefinitionExportProvider viewDefinitionExportProvider;
 
   /**
@@ -185,6 +189,7 @@ public class FhirServer extends RestfulServer {
    * @param readProviderFactory the read provider factory
    * @param batchProvider the batch provider
    * @param viewDefinitionRunProvider the view definition run provider
+   * @param viewDefinitionInstanceRunProvider the view definition instance run provider
    * @param viewDefinitionExportProvider the view definition export provider
    */
   public FhirServer(@Nonnull final FhirContext fhirContext,
@@ -209,6 +214,7 @@ public class FhirServer extends RestfulServer {
       @Nonnull final ReadProviderFactory readProviderFactory,
       @Nonnull final BatchProvider batchProvider,
       @Nonnull final ViewDefinitionRunProvider viewDefinitionRunProvider,
+      @Nonnull final ViewDefinitionInstanceRunProvider viewDefinitionInstanceRunProvider,
       @Nonnull final ViewDefinitionExportProvider viewDefinitionExportProvider) {
     // Pass the FhirContext to the RestfulServer superclass to ensure custom types like
     // ViewDefinitionResource are recognized when parsing request bodies.
@@ -234,6 +240,7 @@ public class FhirServer extends RestfulServer {
     this.readProviderFactory = readProviderFactory;
     this.batchProvider = batchProvider;
     this.viewDefinitionRunProvider = viewDefinitionRunProvider;
+    this.viewDefinitionInstanceRunProvider = viewDefinitionInstanceRunProvider;
     this.viewDefinitionExportProvider = viewDefinitionExportProvider;
   }
 
@@ -299,6 +306,9 @@ public class FhirServer extends RestfulServer {
 
       // Register view definition run provider.
       registerProvider(viewDefinitionRunProvider);
+
+      // Register view definition instance run provider.
+      registerProvider(viewDefinitionInstanceRunProvider);
 
       // Register view definition export provider.
       registerProvider(viewDefinitionExportProvider);

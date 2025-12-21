@@ -22,17 +22,22 @@ import static org.apache.spark.sql.functions.explode;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.encoders.ViewDefinitionResource;
+import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
+import au.csiro.pathling.read.ReadExecutor;
 import au.csiro.pathling.security.OperationAccess;
 import au.csiro.pathling.views.Column;
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
+import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import com.google.gson.Gson;
@@ -40,8 +45,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import jakarta.validation.ConstraintViolationException;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.ConstraintViolationException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -72,20 +77,27 @@ import org.springframework.stereotype.Component;
 import scala.jdk.javaapi.CollectionConverters;
 
 /**
- * Provider for the system-level $viewdefinition-run operation from the SQL on FHIR specification.
+ * Provider for the type-level and instance-level $run operations for ViewDefinition resources.
  * <p>
- * This provides a system-level operation at /fhir/$viewdefinition-run that accepts a ViewDefinition
- * as a parameter.
+ * This provides operations at:
  * </p>
+ * <ul>
+ *   <li>{@code POST /fhir/ViewDefinition/$run} - Type-level operation with viewResource parameter
+ *   </li>
+ *   <li>{@code GET /fhir/ViewDefinition/[id]/$run} - Instance-level operation using stored
+ *   ViewDefinition</li>
+ *   <li>{@code POST /fhir/ViewDefinition/[id]/$run} - Instance-level operation with additional
+ *   parameters</li>
+ * </ul>
  *
  * @author John Grimes
  * @see <a
  * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/OperationDefinition-ViewDefinitionRun.html">ViewDefinitionRun</a>
- * @see ViewDefinitionInstanceRunProvider for type-level and instance-level $run operations
+ * @see ViewDefinitionRunProvider for system-level $viewdefinition-run operation
  */
 @Slf4j
 @Component
-public class ViewDefinitionRunProvider {
+public class ViewDefinitionInstanceRunProvider implements IResourceProvider {
 
   private static final String PATIENT_REFERENCE_PREFIX = "Patient/";
 
@@ -108,10 +120,13 @@ public class ViewDefinitionRunProvider {
   private final ServerConfiguration serverConfiguration;
 
   @Nonnull
+  private final ReadExecutor readExecutor;
+
+  @Nonnull
   private final Gson gson;
 
   /**
-   * Constructs a new ViewDefinitionRunProvider.
+   * Constructs a new ViewDefinitionInstanceRunProvider.
    *
    * @param sparkSession the Spark session
    * @param deltaLake the queryable data source
@@ -119,22 +134,30 @@ public class ViewDefinitionRunProvider {
    * @param fhirEncoders the FHIR encoders
    * @param patientCompartmentService the patient compartment service
    * @param serverConfiguration the server configuration
+   * @param readExecutor the read executor for reading stored ViewDefinitions
    */
   @Autowired
-  public ViewDefinitionRunProvider(
+  public ViewDefinitionInstanceRunProvider(
       @Nonnull final SparkSession sparkSession,
       @Nonnull final QueryableDataSource deltaLake,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final PatientCompartmentService patientCompartmentService,
-      @Nonnull final ServerConfiguration serverConfiguration) {
+      @Nonnull final ServerConfiguration serverConfiguration,
+      @Nonnull final ReadExecutor readExecutor) {
     this.sparkSession = sparkSession;
     this.deltaLake = deltaLake;
     this.fhirContext = fhirContext;
     this.fhirEncoders = fhirEncoders;
     this.patientCompartmentService = patientCompartmentService;
     this.serverConfiguration = serverConfiguration;
+    this.readExecutor = readExecutor;
     this.gson = buildGson();
+  }
+
+  @Override
+  public Class<ViewDefinitionResource> getResourceType() {
+    return ViewDefinitionResource.class;
   }
 
   /**
@@ -146,8 +169,7 @@ public class ViewDefinitionRunProvider {
   }
 
   /**
-   * Executes a ViewDefinition provided inline and returns the results in NDJSON or CSV format with
-   * chunked streaming. This is the system-level operation at /fhir/$viewdefinition-run.
+   * Type-level $run operation that accepts a ViewDefinition inline.
    *
    * @param viewResource the ViewDefinition resource
    * @param format the output format (ndjson or csv)
@@ -159,11 +181,10 @@ public class ViewDefinitionRunProvider {
    * @param inlineResources FHIR resources to use instead of the main data source
    * @param response the HTTP response for streaming output
    */
-  // Suppress parameter count warning - HAPI FHIR operation parameters are defined by the spec.
   @SuppressWarnings("java:S107")
-  @Operation(name = "$viewdefinition-run", idempotent = true, manualResponse = true)
+  @Operation(name = "$run", idempotent = true, manualResponse = true)
   @OperationAccess("view-run")
-  public void run(
+  public void runTypeLevel(
       @Nonnull @OperationParam(name = "viewResource") final IBaseResource viewResource,
       @Nullable @OperationParam(name = "_format") final String format,
       @Nullable @OperationParam(name = "header") final BooleanType includeHeader,
@@ -173,6 +194,54 @@ public class ViewDefinitionRunProvider {
       @Nullable @OperationParam(name = "_since") final InstantType since,
       @Nullable @OperationParam(name = "resource") final List<String> inlineResources,
       @Nullable final HttpServletResponse response) {
+
+    executeView(viewResource, format, includeHeader, limit, patientIds, groupIds, since,
+        inlineResources, response);
+  }
+
+  /**
+   * Instance-level $run operation that uses a stored ViewDefinition by ID. Supports both GET and
+   * POST requests.
+   *
+   * @param viewDefinitionId the ID of the stored ViewDefinition
+   * @param format the output format (ndjson or csv)
+   * @param includeHeader whether to include a header row in CSV output
+   * @param limit the maximum number of rows to return
+   * @param patientIds patient IDs to filter by
+   * @param groupIds group IDs to filter by
+   * @param since filter by meta.lastUpdated >= value
+   * @param inlineResources FHIR resources to use instead of the main data source
+   * @param response the HTTP response for streaming output
+   */
+  @SuppressWarnings("java:S107")
+  @Operation(name = "$run", idempotent = true, manualResponse = true)
+  @OperationAccess("view-run")
+  public void runById(
+      @IdParam final IdType viewDefinitionId,
+      @Nullable @OperationParam(name = "_format") final String format,
+      @Nullable @OperationParam(name = "header") final BooleanType includeHeader,
+      @Nullable @OperationParam(name = "_limit") final IntegerType limit,
+      @Nullable @OperationParam(name = "patient") final List<String> patientIds,
+      @Nullable @OperationParam(name = "group") final List<IdType> groupIds,
+      @Nullable @OperationParam(name = "_since") final InstantType since,
+      @Nullable @OperationParam(name = "resource") final List<String> inlineResources,
+      @Nullable final HttpServletResponse response) {
+
+    // Read the ViewDefinition by ID.
+    final IBaseResource viewResource;
+    try {
+      viewResource = readExecutor.read("ViewDefinition", viewDefinitionId.getIdPart());
+    } catch (final ResourceNotFoundError e) {
+      throw new ResourceNotFoundException(
+          "ViewDefinition with ID '" + viewDefinitionId.getIdPart() + "' not found");
+    } catch (final IllegalArgumentException e) {
+      // Handle case where no ViewDefinition data exists in the data source.
+      if (e.getMessage() != null && e.getMessage().contains("No data found for resource type")) {
+        throw new ResourceNotFoundException(
+            "ViewDefinition with ID '" + viewDefinitionId.getIdPart() + "' not found");
+      }
+      throw e;
+    }
 
     executeView(viewResource, format, includeHeader, limit, patientIds, groupIds, since,
         inlineResources, response);
@@ -270,11 +339,6 @@ public class ViewDefinitionRunProvider {
 
   /**
    * Parses the ViewDefinition resource into a FhirView object.
-   * <p>
-   * This method serialises the HAPI resource back to JSON, then parses it with Gson into the
-   * FhirView class. This approach avoids duplicating the FhirView class hierarchy as HAPI resource
-   * components.
-   * </p>
    */
   @Nonnull
   private FhirView parseViewDefinition(@Nonnull final IBaseResource viewResource) {
@@ -365,16 +429,16 @@ public class ViewDefinitionRunProvider {
         .select(explode(col("member")).as("member"))
         .select(col("member.entity.reference").as("reference"));
 
-    final Set<String> patientIds = new HashSet<>();
+    final Set<String> patientIdsFromGroup = new HashSet<>();
     for (final Row row : memberRefs.collectAsList()) {
       final String reference = row.getString(0);
       if (reference != null && reference.startsWith(PATIENT_REFERENCE_PREFIX)) {
-        patientIds.add(reference.substring(PATIENT_REFERENCE_PREFIX.length()));
+        patientIdsFromGroup.add(reference.substring(PATIENT_REFERENCE_PREFIX.length()));
       }
     }
 
-    log.debug("Extracted {} patient IDs from Group/{}", patientIds.size(), groupId);
-    return patientIds;
+    log.debug("Extracted {} patient IDs from Group/{}", patientIdsFromGroup.size(), groupId);
+    return patientIdsFromGroup;
   }
 
   /**
@@ -431,10 +495,6 @@ public class ViewDefinitionRunProvider {
 
   /**
    * Streams results as CSV. The header is written separately for TTFB optimisation.
-   *
-   * @param outputStream the output stream to write to
-   * @param iterator the row iterator
-   * @param schema the result schema
    */
   private void streamCSV(@Nonnull final OutputStream outputStream,
       @Nonnull final Iterator<Row> iterator,

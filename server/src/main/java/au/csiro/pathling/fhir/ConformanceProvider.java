@@ -100,6 +100,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   public static final String URI_BASE = "https://pathling.csiro.au/fhir";
 
   private static final String EXPORT_OPERATION = "export";
+  private static final String RUN_OPERATION = "run";
 
   /**
    * Base system-level operations available within Pathling.
@@ -123,7 +124,8 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   /**
    * All resource-level operations available within Pathling.
    */
-  private static final List<String> RESOURCE_LEVEL_OPERATIONS = List.of(EXPORT_OPERATION);
+  private static final List<String> RESOURCE_LEVEL_OPERATIONS = List.of(EXPORT_OPERATION,
+      RUN_OPERATION);
 
   /**
    * Resource types that have the export operation available.
@@ -385,6 +387,13 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     viewDefFilterParam.setDocumentation(
         "FHIRPath expression to filter resources (use with _query=fhirPath)");
     viewDefResource.addSearchParam(viewDefFilterParam);
+
+    // Add $run operation to ViewDefinition resource.
+    final CanonicalType runUri = new CanonicalType(getOperationUri(RUN_OPERATION));
+    final CapabilityStatementRestResourceOperationComponent runOp =
+        new CapabilityStatementRestResourceOperationComponent(new StringType(RUN_OPERATION),
+            runUri);
+    viewDefResource.addOperation(runOp);
 
     resources2.add(viewDefResource);
 
