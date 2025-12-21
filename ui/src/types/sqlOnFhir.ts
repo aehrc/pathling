@@ -29,3 +29,11 @@ export interface ViewDefinitionResult {
   columns: string[];
   rows: Record<string, unknown>[];
 }
+
+/**
+ * Result of creating a ViewDefinition.
+ */
+export interface CreateViewDefinitionResult {
+  id: string;
+  name: string;
+}

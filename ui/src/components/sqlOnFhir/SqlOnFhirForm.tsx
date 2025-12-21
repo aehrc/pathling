@@ -4,10 +4,11 @@
  * @author John Grimes
  */
 
-import { PlayIcon } from "@radix-ui/react-icons";
+import { PlayIcon, UploadIcon } from "@radix-ui/react-icons";
 import {
   Box,
   Button,
+  Callout,
   Card,
   Flex,
   Heading,
@@ -19,11 +20,16 @@ import {
 } from "@radix-ui/themes";
 import { useState } from "react";
 import { useViewDefinitions } from "../../hooks/useViewDefinitions";
-import type { ViewDefinitionExecuteRequest } from "../../types/sqlOnFhir";
+import type {
+  CreateViewDefinitionResult,
+  ViewDefinitionExecuteRequest,
+} from "../../types/sqlOnFhir";
 
 interface SqlOnFhirFormProps {
   onExecute: (request: ViewDefinitionExecuteRequest) => void;
+  onSaveToServer: (json: string) => Promise<CreateViewDefinitionResult>;
   isExecuting: boolean;
+  isSaving: boolean;
   disabled: boolean;
 }
 
@@ -41,10 +47,17 @@ const EXAMPLE_VIEW_DEFINITION = `{
   ]
 }`;
 
-export function SqlOnFhirForm({ onExecute, isExecuting, disabled }: SqlOnFhirFormProps) {
+export function SqlOnFhirForm({
+  onExecute,
+  onSaveToServer,
+  isExecuting,
+  isSaving,
+  disabled,
+}: SqlOnFhirFormProps) {
   const [activeTab, setActiveTab] = useState<"stored" | "custom">("stored");
   const [selectedViewDefinitionId, setSelectedViewDefinitionId] = useState<string>("");
   const [customJson, setCustomJson] = useState<string>("");
+  const [saveError, setSaveError] = useState<Error | null>(null);
 
   const { data: viewDefinitions, isLoading: isLoadingViewDefinitions } = useViewDefinitions();
 
@@ -65,6 +78,18 @@ export function SqlOnFhirForm({ onExecute, isExecuting, disabled }: SqlOnFhirFor
   const canExecute =
     (activeTab === "stored" && selectedViewDefinitionId) ||
     (activeTab === "custom" && customJson.trim());
+
+  const handleSaveToServer = async () => {
+    setSaveError(null);
+    try {
+      const result = await onSaveToServer(customJson);
+      // Switch to stored tab and select the new ViewDefinition.
+      setActiveTab("stored");
+      setSelectedViewDefinitionId(result.id);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err : new Error("Failed to save"));
+    }
+  };
 
   return (
     <Card>
@@ -157,6 +182,22 @@ export function SqlOnFhirForm({ onExecute, isExecuting, disabled }: SqlOnFhirFor
                 <Text size="1" color="gray" mt="2">
                   Enter a valid view definition resource in JSON format.
                 </Text>
+                <Box mt="3">
+                  <Button
+                    size="2"
+                    variant="soft"
+                    onClick={handleSaveToServer}
+                    disabled={disabled || isSaving || !customJson.trim()}
+                  >
+                    <UploadIcon />
+                    {isSaving ? "Saving..." : "Save to Server"}
+                  </Button>
+                </Box>
+                {saveError && (
+                  <Callout.Root color="red" mt="2" size="1">
+                    <Callout.Text>{saveError.message}</Callout.Text>
+                  </Callout.Root>
+                )}
               </Box>
             </Tabs.Content>
           </Box>

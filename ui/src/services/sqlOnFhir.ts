@@ -5,7 +5,11 @@
  */
 
 import { UnauthorizedError } from "../types/errors";
-import type { ViewDefinitionResult, ViewDefinitionSummary } from "../types/sqlOnFhir";
+import type {
+  CreateViewDefinitionResult,
+  ViewDefinitionResult,
+  ViewDefinitionSummary,
+} from "../types/sqlOnFhir";
 
 /**
  * Parses an NDJSON response into an array of objects.
@@ -152,4 +156,57 @@ export async function executeInlineViewDefinition(
   const columns = extractColumns(rows);
 
   return { columns, rows };
+}
+
+/**
+ * Creates a ViewDefinition resource on the server.
+ */
+export async function createViewDefinition(
+  fhirBaseUrl: string,
+  accessToken: string | undefined,
+  viewDefinitionJson: string,
+): Promise<CreateViewDefinitionResult> {
+  // Parse and validate the JSON.
+  let viewResource: { resourceType?: string; name?: string; id?: string };
+  try {
+    viewResource = JSON.parse(viewDefinitionJson);
+  } catch {
+    throw new Error("Invalid JSON: Please enter valid view definition JSON");
+  }
+
+  // Validate it's a ViewDefinition resource.
+  if (viewResource.resourceType !== "ViewDefinition") {
+    throw new Error("Invalid resource: resourceType must be 'ViewDefinition'");
+  }
+
+  const headers: HeadersInit = {
+    "Content-Type": "application/fhir+json",
+    Accept: "application/fhir+json",
+  };
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  const response = await fetch(`${fhirBaseUrl}/ViewDefinition`, {
+    method: "POST",
+    headers,
+    body: viewDefinitionJson,
+  });
+
+  if (response.status === 401) {
+    throw new UnauthorizedError();
+  }
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Failed to save view definition: ${response.status} - ${errorBody}`);
+  }
+
+  const createdResource = (await response.json()) as {
+    id: string;
+    name?: string;
+  };
+  return {
+    id: createdResource.id,
+    name: createdResource.name || createdResource.id,
+  };
 }

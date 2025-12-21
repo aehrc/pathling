@@ -5,6 +5,7 @@
  */
 
 import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
@@ -13,18 +14,28 @@ import { SqlOnFhirResultTable } from "../components/sqlOnFhir/SqlOnFhirResultTab
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
-import { executeInlineViewDefinition, executeStoredViewDefinition } from "../services/sqlOnFhir";
+import {
+  createViewDefinition,
+  executeInlineViewDefinition,
+  executeStoredViewDefinition,
+} from "../services/sqlOnFhir";
 import { UnauthorizedError } from "../types/errors";
-import type { ViewDefinitionExecuteRequest, ViewDefinitionResult } from "../types/sqlOnFhir";
+import type {
+  CreateViewDefinitionResult,
+  ViewDefinitionExecuteRequest,
+  ViewDefinitionResult,
+} from "../types/sqlOnFhir";
 
 export function SqlOnFhir() {
   const { fhirBaseUrl } = config;
   const { isAuthenticated, client, clearSessionAndPromptLogin } = useAuth();
+  const queryClient = useQueryClient();
 
   const [executionResult, setExecutionResult] = useState<ViewDefinitionResult | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionError, setExecutionError] = useState<Error | null>(null);
   const [hasExecuted, setHasExecuted] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const unauthorizedHandledRef = useRef(false);
 
   // Fetch server capabilities to determine if auth is required.
@@ -85,6 +96,27 @@ export function SqlOnFhir() {
     [client, fhirBaseUrl, handleUnauthorizedError],
   );
 
+  const handleSaveToServer = useCallback(
+    async (json: string): Promise<CreateViewDefinitionResult> => {
+      setIsSaving(true);
+      try {
+        const accessToken = client?.state.tokenResponse?.access_token;
+        const result = await createViewDefinition(fhirBaseUrl, accessToken, json);
+        // Invalidate the ViewDefinitions cache to refresh the list.
+        await queryClient.invalidateQueries({ queryKey: ["viewDefinitions"] });
+        return result;
+      } catch (err) {
+        if (err instanceof UnauthorizedError) {
+          handleUnauthorizedError();
+        }
+        throw err;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [client, fhirBaseUrl, handleUnauthorizedError, queryClient],
+  );
+
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
     return (
@@ -111,7 +143,13 @@ export function SqlOnFhir() {
     <>
       <Flex gap="6" direction={{ initial: "column", md: "row" }}>
         <Box style={{ flex: 1 }}>
-          <SqlOnFhirForm onExecute={handleExecute} isExecuting={isExecuting} disabled={false} />
+          <SqlOnFhirForm
+            onExecute={handleExecute}
+            onSaveToServer={handleSaveToServer}
+            isExecuting={isExecuting}
+            isSaving={isSaving}
+            disabled={false}
+          />
         </Box>
 
         <Box style={{ flex: 1, overflowX: "auto" }}>
