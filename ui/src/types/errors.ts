@@ -14,3 +14,14 @@ export class UnauthorizedError extends Error {
     this.name = "UnauthorizedError";
   }
 }
+
+/**
+ * Error thrown when an API request receives a 404 Not Found response.
+ * Indicates that the requested resource does not exist.
+ */
+export class NotFoundError extends Error {
+  constructor(message: string = "Resource not found") {
+    super(message);
+    this.name = "NotFoundError";
+  }
+}

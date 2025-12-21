@@ -8,20 +8,33 @@ import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
+import { DeleteConfirmationDialog } from "../components/resources/DeleteConfirmationDialog";
 import { ResourceResultList } from "../components/resources/ResourceResultList";
 import { ResourceSearchForm } from "../components/resources/ResourceSearchForm";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
 import { useResourceSearch } from "../hooks/useResourceSearch";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
+import { deleteResource } from "../services/search";
 import { UnauthorizedError } from "../types/errors";
 import type { SearchRequest } from "../types/search";
 
+interface DeleteTarget {
+  resourceType: string;
+  resourceId: string;
+  summary: string | null;
+}
+
 export function Resources() {
   const { fhirBaseUrl } = config;
-  const { isAuthenticated, clearSessionAndPromptLogin } = useAuth();
+  const { client, isAuthenticated, clearSessionAndPromptLogin } = useAuth();
+  const { showToast } = useToast();
+  const accessToken = client?.state.tokenResponse?.access_token;
 
   const [searchRequest, setSearchRequest] = useState<SearchRequest | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const unauthorizedHandledRef = useRef(false);
 
   // Fetch server capabilities to determine if auth is required.
@@ -63,6 +76,47 @@ export function Resources() {
   const handleSearch = useCallback((request: SearchRequest) => {
     setSearchRequest(request);
   }, []);
+
+  // Handle delete button click - open confirmation dialog.
+  const handleDeleteClick = useCallback(
+    (resourceType: string, resourceId: string, summary: string | null) => {
+      setDeleteTarget({ resourceType, resourceId, summary });
+    },
+    [],
+  );
+
+  // Handle delete confirmation - perform the delete.
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteTarget) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteResource(
+        fhirBaseUrl,
+        accessToken,
+        deleteTarget.resourceType,
+        deleteTarget.resourceId,
+      );
+      showToast(
+        "Resource deleted",
+        `${deleteTarget.resourceType}/${deleteTarget.resourceId}`,
+      );
+      setDeleteTarget(null);
+      // Trigger a refetch of the search results.
+      setSearchRequest((prev) => (prev ? { ...prev } : null));
+    } catch (err) {
+      if (err instanceof UnauthorizedError) {
+        handleUnauthorizedError();
+      } else {
+        showToast(
+          "Delete failed",
+          err instanceof Error ? err.message : "An error occurred",
+        );
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [deleteTarget, fhirBaseUrl, accessToken, showToast, handleUnauthorizedError]);
 
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
@@ -107,10 +161,24 @@ export function Resources() {
             error={displayError}
             hasSearched={searchRequest !== null}
             fhirBaseUrl={fhirBaseUrl}
+            onDelete={handleDeleteClick}
           />
         </Box>
       </Flex>
       <SessionExpiredDialog />
+      {deleteTarget && (
+        <DeleteConfirmationDialog
+          open={!!deleteTarget}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTarget(null);
+          }}
+          resourceType={deleteTarget.resourceType}
+          resourceId={deleteTarget.resourceId}
+          resourceSummary={deleteTarget.summary}
+          onConfirm={handleDeleteConfirm}
+          isDeleting={isDeleting}
+        />
+      )}
     </>
   );
 }

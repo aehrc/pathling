@@ -5,7 +5,7 @@
  */
 
 import type { Bundle, Resource } from "fhir/r4";
-import { UnauthorizedError } from "../types/errors";
+import { NotFoundError, UnauthorizedError } from "../types/errors";
 import type { SearchRequest } from "../types/search";
 
 /**
@@ -64,4 +64,39 @@ export async function searchResources(
     total: bundle.total,
     bundle,
   };
+}
+
+/**
+ * Deletes a FHIR resource by type and ID.
+ */
+export async function deleteResource(
+  fhirBaseUrl: string,
+  accessToken: string | undefined,
+  resourceType: string,
+  resourceId: string,
+): Promise<void> {
+  const url = `${fhirBaseUrl}/${resourceType}/${resourceId}`;
+
+  const headers: HeadersInit = {
+    Accept: "application/fhir+json",
+  };
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  const response = await fetch(url, {
+    method: "DELETE",
+    headers,
+  });
+
+  if (response.status === 401) {
+    throw new UnauthorizedError();
+  }
+  if (response.status === 404) {
+    throw new NotFoundError(`Resource ${resourceType}/${resourceId} not found`);
+  }
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Delete failed: ${response.status} - ${errorBody}`);
+  }
 }

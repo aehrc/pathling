@@ -4,14 +4,15 @@
  * @author John Grimes
  */
 
-import { ChevronDownIcon, ChevronUpIcon, ExternalLinkIcon } from "@radix-ui/react-icons";
-import { Badge, Box, Card, Code, Flex, IconButton, ScrollArea, Text } from "@radix-ui/themes";
+import { ChevronDownIcon, ChevronUpIcon, ExternalLinkIcon, TrashIcon } from "@radix-ui/react-icons";
+import { Badge, Box, Card, Code, Flex, IconButton, ScrollArea, Text, Tooltip } from "@radix-ui/themes";
 import { useState } from "react";
 import type { Resource } from "fhir/r4";
 
 interface ResourceCardProps {
   resource: Resource;
   fhirBaseUrl: string;
+  onDelete: (resourceType: string, resourceId: string, summary: string | null) => void;
 }
 
 /**
@@ -93,13 +94,19 @@ function getResourceSummary(resource: Resource): string | null {
   return null;
 }
 
-export function ResourceCard({ resource, fhirBaseUrl }: ResourceCardProps) {
+export function ResourceCard({ resource, fhirBaseUrl, onDelete }: ResourceCardProps) {
   const [expanded, setExpanded] = useState(false);
   const summary = getResourceSummary(resource);
 
   const handleOpenResource = () => {
     const url = `${fhirBaseUrl}/${resource.resourceType}/${resource.id}`;
     window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleDelete = () => {
+    if (resource.resourceType && resource.id) {
+      onDelete(resource.resourceType, resource.id, summary);
+    }
   };
 
   return (
@@ -120,9 +127,16 @@ export function ResourceCard({ resource, fhirBaseUrl }: ResourceCardProps) {
             )}
           </Flex>
           <Flex gap="1">
-            <IconButton size="1" variant="ghost" onClick={handleOpenResource}>
-              <ExternalLinkIcon />
-            </IconButton>
+            <Tooltip content="Open in FHIR server">
+              <IconButton size="1" variant="ghost" onClick={handleOpenResource}>
+                <ExternalLinkIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip content="Delete resource">
+              <IconButton size="1" variant="ghost" color="red" onClick={handleDelete}>
+                <TrashIcon />
+              </IconButton>
+            </Tooltip>
             <IconButton size="1" variant="ghost" onClick={() => setExpanded(!expanded)}>
               {expanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
             </IconButton>

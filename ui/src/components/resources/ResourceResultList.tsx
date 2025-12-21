@@ -16,6 +16,7 @@ interface ResourceResultListProps {
   error: Error | null;
   hasSearched: boolean;
   fhirBaseUrl: string;
+  onDelete: (resourceType: string, resourceId: string, summary: string | null) => void;
 }
 
 export function ResourceResultList({
@@ -25,6 +26,7 @@ export function ResourceResultList({
   error,
   hasSearched,
   fhirBaseUrl,
+  onDelete,
 }: ResourceResultListProps) {
   // Initial state before any search.
   if (!hasSearched) {
@@ -102,6 +104,7 @@ export function ResourceResultList({
             key={`${resource.resourceType}/${resource.id}`}
             resource={resource}
             fhirBaseUrl={fhirBaseUrl}
+            onDelete={onDelete}
           />
         ))}
       </Flex>
