@@ -19,8 +19,9 @@ package au.csiro.pathling;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
+import au.csiro.pathling.io.DynamicDeltaSource;
+import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.source.QueryableDataSource;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -85,7 +86,8 @@ public class Dependencies {
       @Nonnull final ServerConfiguration serverConfiguration) {
     final String databaseLocation = serverConfiguration.getStorage().getWarehouseUrl() + "/"
         + serverConfiguration.getStorage().getDatabaseName();
-    return pathlingContext.read().delta(databaseLocation);
+    final QueryableDataSource baseSource = pathlingContext.read().delta(databaseLocation);
+    return new DynamicDeltaSource(baseSource, pathlingContext.getSpark(), databaseLocation);
   }
 
   @Bean

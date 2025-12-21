@@ -113,15 +113,16 @@ public class SearchExecutor implements IBundleProvider {
       @Nonnull final DataSource dataSource,
       @Nonnull final Optional<StringAndListParam> filters) {
 
-    // Check if the resource type has any data. If not, return an empty dataset.
-    if (!dataSource.getResourceTypes().contains(subjectResourceCode)) {
+    // Try to read the resource type from the data source. This allows data sources that support
+    // dynamic discovery (like DynamicDeltaSource) to find newly created Delta tables.
+    final Dataset<Row> flatDataset;
+    try {
+      flatDataset = dataSource.read(subjectResourceCode);
+    } catch (final IllegalArgumentException e) {
+      // This happens when the resource type doesn't exist in the data source.
       log.info("No data found for resource type: {}, returning empty result", subjectResourceCode);
       return createEmptyDataset();
     }
-
-    // Get the flat dataset directly from the data source for encoding.
-    // This has the schema that the FhirEncoders expect.
-    final Dataset<Row> flatDataset = dataSource.read(subjectResourceCode);
 
     // If there are no filters, return the flat dataset directly.
     if (filters.isEmpty() || filters.get().getValuesAsQueryTokens().isEmpty()) {
