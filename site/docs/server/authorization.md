@@ -72,6 +72,7 @@ graph TB
 | `pathling:import-pnp`            | Provides access to the ping and pull import operation.                          |
 | `pathling:search`                | Provides access to the search operation.                                        |
 | `pathling:update`                | Provides access to the update operation.                                        |
+| `pathling:delete`                | Provides access to the delete operation.                                        |
 | `pathling:batch`                 | Provides access to the batch operation.                                         |
 | `pathling:bulk-submit`           | Provides access to the bulk submit operation.                                   |
 | `pathling:export`                | Provides access to the export operation.                                        |
@@ -84,5 +85,5 @@ Where expressions within a request reference multiple different resource types
 (e.g. through resource references), authority for read access to all those
 resources must be present within the token.
 
-The import and batch operations require `write` authority for all resource types
-that are referenced within the request.
+The import, delete, and batch operations require `write` authority for all
+resource types that are referenced within the request.

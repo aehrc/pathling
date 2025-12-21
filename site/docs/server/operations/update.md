@@ -1,18 +1,19 @@
 ---
 sidebar_position: 6
-description: Pathling implements the create, update, and batch operations from the FHIR REST API, to allow for the creation and update of individual resources within the server.
+description: Pathling implements the create, update, delete, and batch operations from the FHIR REST API, to allow for the creation, modification, and deletion of individual resources within the server.
 ---
 
-# Create, update, and batch
+# Create, update, delete, and batch
 
 Pathling implements the [create](https://hl7.org/fhir/R4/http.html#create),
-[update](https://hl7.org/fhir/R4/http.html#update), and
+[update](https://hl7.org/fhir/R4/http.html#update),
+[delete](https://hl7.org/fhir/R4/http.html#delete), and
 [batch](https://hl7.org/fhir/R4/http.html#transaction) operations from the FHIR
-REST API, to allow for the creation and update of individual resources within
-the server.
+REST API, to allow for the creation, modification, and deletion of individual
+resources within the server.
 
-The `batch` implementation supports both `create` (POST) and `update` (PUT)
-operations. Other HTTP methods are not supported within batches.
+The `batch` implementation supports `create` (POST), `update` (PUT), and
+`delete` (DELETE) operations.
 
 There are a number of configuration values that affect the encoding of
 resources, see the [Encoding](../configuration#encoding) section of the
@@ -84,21 +85,36 @@ Content-Type: application/fhir+json
 }
 ```
 
+## Delete operation
+
+The delete operation allows you to remove a resource from the server.
+
+```http
+DELETE /fhir/Patient/example-patient-1
+```
+
+The response will be:
+- HTTP status `204 No Content` if the resource was successfully deleted
+- HTTP status `404 Not Found` if the resource does not exist
+
+Note that delete operations are not idempotent in Pathling - attempting to
+delete a resource that has already been deleted will return a `404` error.
+
 ## Batch operation
 
-The batch operation allows you to perform multiple create and/or update
+The batch operation allows you to perform multiple create, update, and/or delete
 operations in a single request.
 
 ### Batch requirements
 
 Each entry in the batch Bundle must include:
 
-- A `request.method` of either `POST` (create) or `PUT` (update)
+- A `request.method` of `POST` (create), `PUT` (update), or `DELETE` (delete)
 - For create (POST): A `request.url` with just the resource type (e.g.,
   `Patient`)
-- For update (PUT): A `request.url` in the format `[resource type]/[id]` (e.g.,
-  `Patient/patient-1`)
-- A `resource` matching the type specified in the URL
+- For update (PUT) and delete (DELETE): A `request.url` in the format
+  `[resource type]/[id]` (e.g., `Patient/patient-1`)
+- A `resource` matching the type specified in the URL (not required for DELETE)
 
 ### Batch update example
 
@@ -237,9 +253,58 @@ The response will include `201` status codes and server-generated IDs:
 }
 ```
 
+### Batch delete example
+
+Delete multiple resources in a single request:
+
+```http
+POST /fhir
+Content-Type: application/fhir+json
+
+{
+    "resourceType": "Bundle",
+    "type": "batch",
+    "entry": [
+        {
+            "request": {
+                "method": "DELETE",
+                "url": "Patient/patient-1"
+            }
+        },
+        {
+            "request": {
+                "method": "DELETE",
+                "url": "Patient/patient-2"
+            }
+        }
+    ]
+}
+```
+
+The response will include `204` status codes for successful deletions:
+
+```json
+{
+    "resourceType": "Bundle",
+    "type": "batch-response",
+    "entry": [
+        {
+            "response": {
+                "status": "204"
+            }
+        },
+        {
+            "response": {
+                "status": "204"
+            }
+        }
+    ]
+}
+```
+
 ### Mixed batch example
 
-You can mix create and update operations in a single batch:
+You can mix create, update, and delete operations in a single batch:
 
 ```http
 POST /fhir
@@ -268,6 +333,12 @@ Content-Type: application/fhir+json
             "request": {
                 "method": "PUT",
                 "url": "Patient/existing-patient"
+            }
+        },
+        {
+            "request": {
+                "method": "DELETE",
+                "url": "Patient/patient-to-delete"
             }
         }
     ]
