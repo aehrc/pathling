@@ -5,17 +5,7 @@
  */
 
 import { ExclamationTriangleIcon, TableIcon } from "@radix-ui/react-icons";
-import {
-  Badge,
-  Box,
-  Callout,
-  Code,
-  Flex,
-  Heading,
-  Spinner,
-  Table,
-  Text,
-} from "@radix-ui/themes";
+import { Badge, Box, Callout, Code, Flex, Heading, Spinner, Table, Text } from "@radix-ui/themes";
 
 interface SqlOnFhirResultTableProps {
   rows: Record<string, unknown>[] | undefined;
@@ -113,7 +103,7 @@ export function SqlOnFhirResultTable({
         <Heading size="4">Results</Heading>
         <Badge color="gray">{rows.length} rows (first 10)</Badge>
       </Flex>
-      <Box style={{ width: "100%", overflowX: "auto" }}>
+      <Box style={{ width: "100%" }}>
         <Table.Root size="1">
           <Table.Header>
             <Table.Row>

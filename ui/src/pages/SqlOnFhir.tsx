@@ -13,10 +13,7 @@ import { SqlOnFhirResultTable } from "../components/sqlOnFhir/SqlOnFhirResultTab
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
-import {
-  executeInlineViewDefinition,
-  executeStoredViewDefinition,
-} from "../services/sqlOnFhir";
+import { executeInlineViewDefinition, executeStoredViewDefinition } from "../services/sqlOnFhir";
 import { UnauthorizedError } from "../types/errors";
 import type { ViewDefinitionExecuteRequest, ViewDefinitionResult } from "../types/sqlOnFhir";
 
@@ -114,14 +111,10 @@ export function SqlOnFhir() {
     <>
       <Flex gap="6" direction={{ initial: "column", md: "row" }}>
         <Box style={{ flex: 1 }}>
-          <SqlOnFhirForm
-            onExecute={handleExecute}
-            isExecuting={isExecuting}
-            disabled={false}
-          />
+          <SqlOnFhirForm onExecute={handleExecute} isExecuting={isExecuting} disabled={false} />
         </Box>
 
-        <Box style={{ flex: 1 }}>
+        <Box style={{ flex: 1, overflowX: "auto" }}>
           <SqlOnFhirResultTable
             rows={executionResult?.rows}
             columns={executionResult?.columns}
