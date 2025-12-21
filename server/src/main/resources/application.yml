@@ -109,6 +109,8 @@ pathling:
       - OPTIONS
       - GET
       - POST
+      - PUT
+      - DELETE
     allowedHeaders:
       - Accept
       - Content-Type
