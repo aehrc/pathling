@@ -4,7 +4,13 @@
  * @author John Grimes
  */
 
-import { DownloadIcon, PaperPlaneIcon, ReaderIcon, UploadIcon } from "@radix-ui/react-icons";
+import {
+  DownloadIcon,
+  PaperPlaneIcon,
+  ReaderIcon,
+  TableIcon,
+  UploadIcon
+} from "@radix-ui/react-icons";
 import { Box, Container, Flex, Text } from "@radix-ui/themes";
 import { Link, Outlet, useLocation } from "react-router";
 import { config } from "../../config";
@@ -62,7 +68,10 @@ export function Layout() {
             <Flex align="center" gap="5">
               <Link to="/">
                 <picture>
-                  <source srcSet="/admin/logo-colour-dark.svg" media="(prefers-color-scheme: dark)" />
+                  <source
+                    srcSet="/admin/logo-colour-dark.svg"
+                    media="(prefers-color-scheme: dark)"
+                  />
                   <img
                     src="/admin/logo-colour.svg"
                     alt="Pathling"
@@ -96,6 +105,12 @@ export function Layout() {
                   label="Bulk submit"
                   isActive={location.pathname === "/bulk-submit"}
                 />
+                <NavLink
+                  to="/sql-on-fhir"
+                  icon={<TableIcon />}
+                  label="SQL on FHIR"
+                  isActive={location.pathname === "/sql-on-fhir"}
+                />
               </Flex>
             </Flex>
             <Flex align="center" gap="5" style={{ position: "relative", top: "10px" }}>
@@ -111,7 +126,7 @@ export function Layout() {
           </Flex>
         </Container>
       </Box>
-      <Box style={{ flex: 1 }}>
+      <Box style={{ flex: 1, overflow: "hidden" }}>
         <Container size="4" py="6" px={{ initial: "4", md: "0" }}>
           <Outlet />
         </Container>

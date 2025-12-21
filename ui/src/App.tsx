@@ -12,6 +12,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { Export } from "./pages/Export";
 import { Import } from "./pages/Import";
 import { Resources } from "./pages/Resources";
+import { SqlOnFhir } from "./pages/SqlOnFhir";
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/import" element={<Import />} />
         <Route path="/bulk-submit" element={<BulkSubmit />} />
         <Route path="/resources" element={<Resources />} />
+        <Route path="/sql-on-fhir" element={<SqlOnFhir />} />
       </Route>
     </Routes>
   );
