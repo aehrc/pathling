@@ -5,6 +5,7 @@
  */
 
 import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
@@ -30,6 +31,7 @@ export function Resources() {
   const { fhirBaseUrl } = config;
   const { client, isAuthenticated, clearSessionAndPromptLogin } = useAuth();
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
   const accessToken = client?.state.tokenResponse?.access_token;
 
   const [searchRequest, setSearchRequest] = useState<SearchRequest | null>(null);
@@ -102,8 +104,8 @@ export function Resources() {
         `${deleteTarget.resourceType}/${deleteTarget.resourceId}`,
       );
       setDeleteTarget(null);
-      // Trigger a refetch of the search results.
-      setSearchRequest((prev) => (prev ? { ...prev } : null));
+      // Invalidate the resource search cache to refresh the list.
+      await queryClient.invalidateQueries({ queryKey: ["resourceSearch"] });
     } catch (err) {
       if (err instanceof UnauthorizedError) {
         handleUnauthorizedError();
@@ -116,7 +118,7 @@ export function Resources() {
     } finally {
       setIsDeleting(false);
     }
-  }, [deleteTarget, fhirBaseUrl, accessToken, showToast, handleUnauthorizedError]);
+  }, [deleteTarget, fhirBaseUrl, accessToken, showToast, handleUnauthorizedError, queryClient]);
 
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
