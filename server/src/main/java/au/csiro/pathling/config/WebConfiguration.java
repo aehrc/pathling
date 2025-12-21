@@ -41,6 +41,8 @@ public class WebConfiguration implements WebMvcConfigurer {
 
   @Override
   public void addViewControllers(@Nonnull final ViewControllerRegistry registry) {
+    // Redirect root to admin UI.
+    registry.addRedirectViewController("/", "/admin/");
     // Redirect /admin to /admin/ for consistent URL handling.
     registry.addRedirectViewController("/admin", "/admin/");
   }
