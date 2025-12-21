@@ -6,6 +6,10 @@
 
 import { ExclamationTriangleIcon, TableIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Callout, Code, Flex, Heading, Spinner, Table, Text } from "@radix-ui/themes";
+import type { ViewExportJob } from "../../types/job";
+import type { ViewExportFormat } from "../../types/viewExport";
+import { ExportControls } from "./ExportControls";
+import { ViewExportCard } from "./ViewExportCard";
 
 interface SqlOnFhirResultTableProps {
   rows: Record<string, unknown>[] | undefined;
@@ -13,6 +17,11 @@ interface SqlOnFhirResultTableProps {
   isLoading: boolean;
   error: Error | null;
   hasExecuted: boolean;
+  onExport?: (format: ViewExportFormat) => void;
+  exportJob?: ViewExportJob | null;
+  onDownload?: (url: string, filename: string) => void;
+  onCancelExport?: () => void;
+  isExporting?: boolean;
 }
 
 /**
@@ -34,6 +43,11 @@ export function SqlOnFhirResultTable({
   isLoading,
   error,
   hasExecuted,
+  onExport,
+  exportJob,
+  onDownload,
+  onCancelExport,
+  isExporting,
 }: SqlOnFhirResultTableProps) {
   // Initial state before any execution.
   if (!hasExecuted) {
@@ -96,12 +110,20 @@ export function SqlOnFhirResultTable({
     );
   }
 
+  // Determine if export is available (only when there's no active job).
+  const canExport = onExport && !isExporting && (!exportJob || exportJob.status === "completed" || exportJob.status === "failed" || exportJob.status === "cancelled");
+
   // Results table.
   return (
     <Box>
-      <Flex align="center" gap="2" mb="4">
-        <Heading size="4">Results</Heading>
-        <Badge color="gray">{rows.length} rows (first 10)</Badge>
+      <Flex align="center" justify="between" mb="4">
+        <Flex align="center" gap="2">
+          <Heading size="4">Results</Heading>
+          <Badge color="gray">{rows.length} rows (first 10)</Badge>
+        </Flex>
+        {onExport && (
+          <ExportControls onExport={onExport} disabled={!canExport} />
+        )}
       </Flex>
       <Box style={{ width: "100%" }}>
         <Table.Root size="1">
@@ -131,6 +153,13 @@ export function SqlOnFhirResultTable({
           </Table.Body>
         </Table.Root>
       </Box>
+      {exportJob && onDownload && onCancelExport && (
+        <ViewExportCard
+          job={exportJob}
+          onCancel={onCancelExport}
+          onDownload={onDownload}
+        />
+      )}
     </Box>
   );
 }

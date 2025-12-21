@@ -11,11 +11,13 @@ import type {
   ImportJob,
   ImportPnpJob,
   BulkSubmitJob,
+  ViewExportJob,
   JobStatus,
 } from "../types/job";
 import type { StatusManifest } from "../types/bulkSubmit";
 import type { ExportManifest } from "../types/export";
 import type { ImportManifest } from "../types/import";
+import type { ViewExportManifest } from "../types/viewExport";
 
 interface JobState {
   jobs: Job[];
@@ -34,7 +36,7 @@ interface JobContextValue extends JobState {
   updateJobPollUrl: (id: string, pollUrl: string) => void;
   updateJobManifest: (
     id: string,
-    manifest: ExportManifest | ImportManifest | StatusManifest,
+    manifest: ExportManifest | ImportManifest | StatusManifest | ViewExportManifest,
   ) => void;
   updateJobError: (id: string, error: string) => void;
   removeJob: (id: string) => void;
@@ -44,6 +46,7 @@ interface JobContextValue extends JobState {
   getImportJobs: () => ImportJob[];
   getImportPnpJobs: () => ImportPnpJob[];
   getBulkSubmitJobs: () => BulkSubmitJob[];
+  getViewExportJobs: () => ViewExportJob[];
 }
 
 const JobContext = createContext<JobContextValue | null>(null);
@@ -109,7 +112,7 @@ export function JobProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateJobManifest = useCallback(
-    (id: string, manifest: ExportManifest | ImportManifest | StatusManifest) => {
+    (id: string, manifest: ExportManifest | ImportManifest | StatusManifest | ViewExportManifest) => {
       dispatch({
         type: "UPDATE_JOB",
         payload: {
@@ -163,6 +166,11 @@ export function JobProvider({ children }: { children: ReactNode }) {
     [state.jobs],
   );
 
+  const getViewExportJobs = useMemo(
+    () => () => state.jobs.filter((job): job is ViewExportJob => job.type === "view-export"),
+    [state.jobs],
+  );
+
   return (
     <JobContext.Provider
       value={{
@@ -180,6 +188,7 @@ export function JobProvider({ children }: { children: ReactNode }) {
         getImportJobs,
         getImportPnpJobs,
         getBulkSubmitJobs,
+        getViewExportJobs,
       }}
     >
       {children}

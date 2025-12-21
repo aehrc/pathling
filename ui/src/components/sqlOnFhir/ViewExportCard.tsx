@@ -1,0 +1,128 @@
+/**
+ * Card component displaying a view export job with progress and download links.
+ *
+ * @author John Grimes
+ */
+
+import { Cross2Icon, DownloadIcon, ReloadIcon } from "@radix-ui/react-icons";
+import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
+import { useJobs } from "../../contexts/JobContext";
+import { useViewExportJobPolling } from "../../hooks/useViewExportJobPolling";
+import { getFormatExtension } from "../../services/sqlOnFhir";
+import type { ViewExportJob } from "../../types/job";
+
+interface ViewExportCardProps {
+  job: ViewExportJob;
+  onCancel: () => void;
+  onDownload: (url: string, filename: string) => void;
+}
+
+const STATUS_COLORS: Record<ViewExportJob["status"], "blue" | "green" | "red" | "gray"> = {
+  pending: "blue",
+  in_progress: "blue",
+  completed: "green",
+  failed: "red",
+  cancelled: "gray",
+};
+
+const STATUS_LABELS: Record<ViewExportJob["status"], string> = {
+  pending: "Pending",
+  in_progress: "Exporting",
+  completed: "Completed",
+  failed: "Failed",
+  cancelled: "Cancelled",
+};
+
+export function ViewExportCard({ job, onCancel, onDownload }: ViewExportCardProps) {
+  const { updateJobProgress, updateJobManifest, updateJobError, updateJobStatus } = useJobs();
+
+  // Poll job status while active.
+  useViewExportJobPolling({
+    jobId: job.id,
+    pollUrl: job.pollUrl!,
+    status: job.status,
+    onProgress: updateJobProgress,
+    onStatusChange: updateJobStatus,
+    onComplete: updateJobManifest,
+    onError: updateJobError,
+  });
+
+  const isActive = job.status === "pending" || job.status === "in_progress";
+  const showProgress = isActive && job.progress !== null;
+  const formatExtension = getFormatExtension(job.request.format);
+
+  return (
+    <Card size="1" mt="3">
+      <Flex direction="column" gap="2">
+        <Flex justify="between" align="center">
+          <Flex align="center" gap="2">
+            <Text size="2" weight="medium">
+              Export
+            </Text>
+            <Badge size="1" color={STATUS_COLORS[job.status]}>
+              {STATUS_LABELS[job.status]}
+            </Badge>
+          </Flex>
+          {isActive && (
+            <Button size="1" variant="ghost" color="red" onClick={onCancel}>
+              <Cross2Icon />
+              Cancel
+            </Button>
+          )}
+        </Flex>
+
+        {showProgress && (
+          <Box>
+            <Flex justify="between" mb="1">
+              <Text size="1" color="gray">
+                Progress
+              </Text>
+              <Text size="1" color="gray">
+                {job.progress}%
+              </Text>
+            </Flex>
+            <Progress size="1" value={job.progress ?? 0} />
+          </Box>
+        )}
+
+        {isActive && !showProgress && (
+          <Flex align="center" gap="2">
+            <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
+            <Text size="2" color="gray">
+              Exporting...
+            </Text>
+          </Flex>
+        )}
+
+        {job.status === "failed" && job.error && (
+          <Text size="2" color="red">
+            Error: {job.error}
+          </Text>
+        )}
+
+        {job.status === "completed" && job.manifest?.output && (
+          <Box>
+            <Text size="2" weight="medium" mb="1">
+              Output files ({job.manifest.output.length})
+            </Text>
+            <Flex direction="column" gap="1">
+              {job.manifest.output.map((output, index) => (
+                <Flex key={index} justify="between" align="center">
+                  <Text size="2">{output.name}{formatExtension}</Text>
+                  <Button
+                    size="1"
+                    variant="soft"
+                    onClick={() => onDownload(output.url, `${output.name}${formatExtension}`)}
+                  >
+                    <DownloadIcon />
+                    Download
+                  </Button>
+                </Flex>
+              ))}
+            </Flex>
+          </Box>
+        )}
+      </Flex>
+    </Card>
+  );
+}
