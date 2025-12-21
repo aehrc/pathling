@@ -301,6 +301,9 @@ public class FhirServer extends RestfulServer {
       // Register create provider for ViewDefinition (custom resource type).
       registerProvider(createProviderFactory.createCreateProvider("ViewDefinition"));
 
+      // Register update provider for ViewDefinition (custom resource type).
+      registerProvider(updateProviderFactory.createUpdateProvider("ViewDefinition"));
+
       // Register batch provider.
       registerProvider(batchProvider);
 

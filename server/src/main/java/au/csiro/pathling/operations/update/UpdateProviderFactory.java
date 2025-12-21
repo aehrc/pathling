@@ -73,4 +73,20 @@ public class UpdateProviderFactory {
         resourceTypeClass);
   }
 
+  /**
+   * Creates an UpdateProvider bean for the given resource type code. This method supports custom
+   * resource types like ViewDefinition that are not part of the standard FHIR ResourceType enum.
+   *
+   * @param resourceTypeCode the type code of the resource (e.g., "Patient", "ViewDefinition")
+   * @return an UpdateProvider configured for the specified resource type
+   */
+  @Nonnull
+  public UpdateProvider createUpdateProvider(@Nonnull final String resourceTypeCode) {
+    final Class<? extends IBaseResource> resourceTypeClass = fhirContext
+        .getResourceDefinition(resourceTypeCode).getImplementingClass();
+
+    return applicationContext.getBean(UpdateProvider.class, updateExecutor, fhirContext,
+        resourceTypeClass);
+  }
+
 }

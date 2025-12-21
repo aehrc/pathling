@@ -31,13 +31,13 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.IdType;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 /**
  * HAPI resource provider that implements the FHIR update operation for a specific resource type.
+ * Supports both standard FHIR resource types and custom resource types like ViewDefinition.
  *
  * @author John Grimes
  * @see <a href="https://hl7.org/fhir/R4/http.html#update">update</a>
@@ -54,7 +54,7 @@ public class UpdateProvider implements IResourceProvider {
   private final Class<? extends IBaseResource> resourceClass;
 
   @Nonnull
-  private final ResourceType resourceType;
+  private final String resourceTypeCode;
 
   /**
    * Constructs a new UpdateProvider for a specific resource type.
@@ -68,8 +68,7 @@ public class UpdateProvider implements IResourceProvider {
       @Nonnull final Class<? extends IBaseResource> resourceClass) {
     this.updateExecutor = updateExecutor;
     this.resourceClass = resourceClass;
-    this.resourceType = ResourceType.fromCode(
-        fhirContext.getResourceDefinition(resourceClass).getName());
+    this.resourceTypeCode = fhirContext.getResourceDefinition(resourceClass).getName();
   }
 
   @Override
@@ -96,8 +95,8 @@ public class UpdateProvider implements IResourceProvider {
     final String resourceId = id.getIdPart();
     final IBaseResource preparedResource = prepareResourceForUpdate(resource, resourceId);
 
-    log.debug("Updating {} with ID: {}", resourceType.toCode(), resourceId);
-    updateExecutor.merge(resourceType, preparedResource);
+    log.debug("Updating {} with ID: {}", resourceTypeCode, resourceId);
+    updateExecutor.merge(resourceTypeCode, preparedResource);
 
     final MethodOutcome outcome = new MethodOutcome();
     outcome.setId(resource.getIdElement());
