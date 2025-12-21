@@ -182,17 +182,6 @@ export function SqlOnFhirForm({
                 <Text size="1" color="gray" mt="2">
                   Enter a valid view definition resource in JSON format.
                 </Text>
-                <Box mt="3">
-                  <Button
-                    size="2"
-                    variant="soft"
-                    onClick={handleSaveToServer}
-                    disabled={disabled || isSaving || !customJson.trim()}
-                  >
-                    <UploadIcon />
-                    {isSaving ? "Saving..." : "Save to Server"}
-                  </Button>
-                </Box>
                 {saveError && (
                   <Callout.Root color="red" mt="2" size="1">
                     <Callout.Text>{saveError.message}</Callout.Text>
@@ -203,10 +192,29 @@ export function SqlOnFhirForm({
           </Box>
         </Tabs.Root>
 
-        <Button size="3" onClick={handleExecute} disabled={disabled || isExecuting || !canExecute}>
-          <PlayIcon />
-          {isExecuting ? "Executing..." : "Execute"}
-        </Button>
+        <Flex gap="3">
+          <Button
+            size="3"
+            onClick={handleExecute}
+            disabled={disabled || isExecuting || !canExecute}
+            style={{ flex: 1 }}
+          >
+            <PlayIcon />
+            {isExecuting ? "Executing..." : "Execute"}
+          </Button>
+          {activeTab === "custom" && (
+            <Button
+              size="3"
+              variant="soft"
+              onClick={handleSaveToServer}
+              disabled={disabled || isSaving || !customJson.trim()}
+              style={{ flex: 1 }}
+            >
+              <UploadIcon />
+              {isSaving ? "Saving..." : "Save to server"}
+            </Button>
+          )}
+        </Flex>
       </Flex>
     </Card>
   );
