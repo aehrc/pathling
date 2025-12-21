@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.operations.bulkimport;
 
+import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
@@ -61,20 +62,26 @@ public class ImportExecutor {
   private final String databasePath;
   private final ServerConfiguration serverConfiguration;
 
+  @Nonnull
+  private final CacheableDatabase cacheableDatabase;
+
   /**
    * @param accessRules a {@link AccessRules} for validating access to URLs
    * @param pathlingContext the Pathling context for Spark and FHIR operations
    * @param databasePath directory to where the data will be imported
    * @param serverConfiguration the server configuration including authentication settings
+   * @param cacheableDatabase the cacheable database for cache invalidation
    */
   public ImportExecutor(@Nonnull final Optional<AccessRules> accessRules,
       final PathlingContext pathlingContext,
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-      final String databasePath, final ServerConfiguration serverConfiguration) {
+      final String databasePath, final ServerConfiguration serverConfiguration,
+      @Nonnull final CacheableDatabase cacheableDatabase) {
     this.accessRules = accessRules;
     this.pathlingContext = pathlingContext;
     this.databasePath = databasePath;
     this.serverConfiguration = serverConfiguration;
+    this.cacheableDatabase = cacheableDatabase;
   }
 
   /**
@@ -128,9 +135,14 @@ public class ImportExecutor {
     };
 
     // Always write to Delta format regardless of source format.
-    return new DataSinkBuilder(pathlingContext, dataSource)
+    final WriteDetails writeDetails = new DataSinkBuilder(pathlingContext, dataSource)
         .saveMode(request.saveMode().getCode())
         .delta(databasePath);
+
+    // Invalidate the cache to ensure subsequent requests see the updated data.
+    cacheableDatabase.invalidate();
+
+    return writeDetails;
   }
 
   private @NotNull Map<String, Collection<String>> checkAuthority(final ImportRequest request,

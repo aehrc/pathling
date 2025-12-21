@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.viewdefinition;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.ViewDefinitionResource;
 import au.csiro.pathling.encoders.ViewDefinitionResource.ColumnComponent;
@@ -70,6 +71,9 @@ class ViewDefinitionCreateTest {
   @Autowired
   private FhirContext fhirContext;
 
+  @Autowired
+  private CacheableDatabase cacheableDatabase;
+
   private Path tempDatabasePath;
   private CreateProvider createProvider;
 
@@ -80,7 +84,7 @@ class ViewDefinitionCreateTest {
 
     // Create UpdateExecutor with the temp database path.
     final UpdateExecutor updateExecutor = new UpdateExecutor(pathlingContext, fhirEncoders,
-        tempDatabasePath.toAbsolutePath().toString());
+        tempDatabasePath.toAbsolutePath().toString(), cacheableDatabase);
 
     // Create the CreateProvider for ViewDefinition.
     createProvider = new CreateProvider(updateExecutor, fhirContext, ViewDefinitionResource.class);

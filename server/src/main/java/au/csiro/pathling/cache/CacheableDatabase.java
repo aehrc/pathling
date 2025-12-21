@@ -179,6 +179,18 @@ public class CacheableDatabase implements Cacheable {
   }
 
   /**
+   * Invalidates the cache by asynchronously refreshing the cache key from the current database
+   * state. This should be called after any operation that modifies the database (create, update,
+   * delete, import).
+   */
+  public void invalidate() {
+    executor.execute(() -> {
+      cacheKey = buildCacheKeyFromStorage();
+      spark.sqlContext().clearCache();
+    });
+  }
+
+  /**
    * Generates a new cache key based upon the latest update time of the specified table.
    *
    * @param table the table to generate the cache key for

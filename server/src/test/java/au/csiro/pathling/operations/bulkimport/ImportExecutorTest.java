@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ImportConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
@@ -49,6 +50,9 @@ class ImportExecutorTest {
   @Autowired
   private ServerConfiguration serverConfiguration;
 
+  @Autowired
+  private CacheableDatabase cacheableDatabase;
+
   @TempDir
   private Path tempDir;
 
@@ -65,7 +69,8 @@ class ImportExecutorTest {
         Optional.empty(), // No access rules for most tests
         pathlingContext,
         databasePath,
-        serverConfiguration
+        serverConfiguration,
+        cacheableDatabase
     );
   }
 
@@ -406,7 +411,8 @@ class ImportExecutorTest {
         Optional.of(new AccessRules(serverConfiguration)),
         pathlingContext,
         "file://" + uniqueTempDir.toAbsolutePath(),
-        serverConfiguration
+        serverConfiguration,
+        cacheableDatabase
     );
 
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
@@ -437,7 +443,8 @@ class ImportExecutorTest {
         Optional.of(new AccessRules(serverConfiguration)),
         pathlingContext,
         "file://" + uniqueTempDir.toAbsolutePath(),
-        serverConfiguration
+        serverConfiguration,
+        cacheableDatabase
     );
 
     final String deniedUrl = "s3://denied-bucket/Patient.ndjson";
@@ -488,7 +495,8 @@ class ImportExecutorTest {
         Optional.of(new AccessRules(serverConfiguration)),
         pathlingContext,
         "file://" + uniqueTempDir.toAbsolutePath(),
-        serverConfiguration
+        serverConfiguration,
+        cacheableDatabase
     );
 
     final String allowedUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();
@@ -570,7 +578,8 @@ class ImportExecutorTest {
         Optional.of(new AccessRules(serverConfiguration)),
         pathlingContext,
         "file://" + uniqueTempDir.toAbsolutePath(),
-        serverConfiguration
+        serverConfiguration,
+        cacheableDatabase
     );
 
     final String patientUrl = "file://" + TEST_DATA_PATH.resolve("Patient.ndjson").toAbsolutePath();

@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.update;
 import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
+import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
 import io.delta.tables.DeltaTable;
@@ -53,20 +54,26 @@ public class UpdateExecutor {
   @Nonnull
   private final String databasePath;
 
+  @Nonnull
+  private final CacheableDatabase cacheableDatabase;
+
   /**
    * Constructs a new UpdateExecutor.
    *
    * @param pathlingContext the Pathling context for Spark operations
    * @param fhirEncoders encoders for converting FHIR resources to Spark Datasets
    * @param databasePath the path to the Delta database
+   * @param cacheableDatabase the cacheable database for cache invalidation
    */
   public UpdateExecutor(@Nonnull final PathlingContext pathlingContext,
       @Nonnull final FhirEncoders fhirEncoders,
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-      @Nonnull final String databasePath) {
+      @Nonnull final String databasePath,
+      @Nonnull final CacheableDatabase cacheableDatabase) {
     this.pathlingContext = pathlingContext;
     this.fhirEncoders = fhirEncoders;
     this.databasePath = databasePath;
+    this.cacheableDatabase = cacheableDatabase;
   }
 
   /**
@@ -142,6 +149,9 @@ public class UpdateExecutor {
           .mode(SaveMode.ErrorIfExists)
           .save(tablePath);
     }
+
+    // Invalidate the cache to ensure subsequent requests see the updated data.
+    cacheableDatabase.invalidate();
   }
 
   /**

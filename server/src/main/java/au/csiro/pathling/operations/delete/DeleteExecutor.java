@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.delete;
 import static au.csiro.pathling.library.io.FileSystemPersistence.safelyJoinPaths;
 import static org.apache.spark.sql.functions.col;
 
+import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.library.PathlingContext;
 import io.delta.tables.DeltaTable;
@@ -44,17 +45,23 @@ public class DeleteExecutor {
   @Nonnull
   private final String databasePath;
 
+  @Nonnull
+  private final CacheableDatabase cacheableDatabase;
+
   /**
    * Constructs a new DeleteExecutor.
    *
    * @param pathlingContext the Pathling context for Spark operations
    * @param databasePath the path to the Delta database
+   * @param cacheableDatabase the cacheable database for cache invalidation
    */
   public DeleteExecutor(@Nonnull final PathlingContext pathlingContext,
       @Value("${pathling.storage.warehouseUrl}/${pathling.storage.databaseName}")
-      @Nonnull final String databasePath) {
+      @Nonnull final String databasePath,
+      @Nonnull final CacheableDatabase cacheableDatabase) {
     this.pathlingContext = pathlingContext;
     this.databasePath = databasePath;
+    this.cacheableDatabase = cacheableDatabase;
   }
 
   /**
@@ -86,6 +93,9 @@ public class DeleteExecutor {
     // Perform deletion.
     log.debug("Deleting {} with ID: {}", resourceCode, resourceId);
     table.delete(col("id").equalTo(resourceId));
+
+    // Invalidate the cache to ensure subsequent requests see the updated data.
+    cacheableDatabase.invalidate();
   }
 
   /**

@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.update;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
@@ -71,6 +72,9 @@ class BatchProviderCreateTest {
   @Autowired
   private ServerConfiguration configuration;
 
+  @Autowired
+  private CacheableDatabase cacheableDatabase;
+
   private Path tempDatabasePath;
   private BatchProvider batchProvider;
   private UpdateExecutor updateExecutor;
@@ -83,11 +87,11 @@ class BatchProviderCreateTest {
 
     // Create UpdateExecutor with the temp database path.
     updateExecutor = new UpdateExecutor(pathlingContext, fhirEncoders,
-        tempDatabasePath.toAbsolutePath().toString());
+        tempDatabasePath.toAbsolutePath().toString(), cacheableDatabase);
 
     // Create DeleteExecutor with the temp database path.
     deleteExecutor = new DeleteExecutor(pathlingContext,
-        tempDatabasePath.toAbsolutePath().toString());
+        tempDatabasePath.toAbsolutePath().toString(), cacheableDatabase);
 
     // Create the BatchProvider.
     batchProvider = new BatchProvider(updateExecutor, deleteExecutor, configuration);

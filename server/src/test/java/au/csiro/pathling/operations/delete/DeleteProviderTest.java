@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.delete;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.ResourceNotFoundError;
@@ -74,6 +75,9 @@ class DeleteProviderTest {
   @Autowired
   private FhirContext fhirContext;
 
+  @Autowired
+  private CacheableDatabase cacheableDatabase;
+
   private Path tempDatabasePath;
   private DeleteProvider deleteProvider;
   private DeleteExecutor deleteExecutor;
@@ -86,11 +90,11 @@ class DeleteProviderTest {
 
     // Create UpdateExecutor to set up test data.
     updateExecutor = new UpdateExecutor(pathlingContext, fhirEncoders,
-        tempDatabasePath.toAbsolutePath().toString());
+        tempDatabasePath.toAbsolutePath().toString(), cacheableDatabase);
 
     // Create DeleteExecutor with the temp database path.
     deleteExecutor = new DeleteExecutor(pathlingContext,
-        tempDatabasePath.toAbsolutePath().toString());
+        tempDatabasePath.toAbsolutePath().toString(), cacheableDatabase);
 
     // Create the DeleteProvider.
     deleteProvider = new DeleteProvider(deleteExecutor, fhirContext, Patient.class);

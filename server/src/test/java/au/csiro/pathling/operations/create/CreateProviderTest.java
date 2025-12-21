@@ -20,6 +20,7 @@ package au.csiro.pathling.operations.create;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.library.PathlingContext;
@@ -73,6 +74,9 @@ class CreateProviderTest {
   @Autowired
   private FhirContext fhirContext;
 
+  @Autowired
+  private CacheableDatabase cacheableDatabase;
+
   private Path tempDatabasePath;
   private CreateProvider createProvider;
   private UpdateExecutor updateExecutor;
@@ -84,7 +88,7 @@ class CreateProviderTest {
 
     // Create UpdateExecutor with the temp database path.
     updateExecutor = new UpdateExecutor(pathlingContext, fhirEncoders,
-        tempDatabasePath.toAbsolutePath().toString());
+        tempDatabasePath.toAbsolutePath().toString(), cacheableDatabase);
 
     // Create the CreateProvider.
     createProvider = new CreateProvider(updateExecutor, fhirContext, Patient.class);

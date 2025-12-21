@@ -3,6 +3,7 @@ package au.csiro.pathling.operations.bulkimport;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.SaveMode;
@@ -45,6 +46,9 @@ class ImportLockTest {
   @Autowired
   private ServerConfiguration serverConfiguration;
 
+  @Autowired
+  private CacheableDatabase cacheableDatabase;
+
   @TempDir
   private Path tempDir;
 
@@ -61,7 +65,8 @@ class ImportLockTest {
         Optional.empty(), // No access rules for tests
         pathlingContext,
         databasePath,
-        serverConfiguration
+        serverConfiguration,
+        cacheableDatabase
     );
   }
 
