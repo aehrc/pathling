@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestResourceOperationComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement;
 import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementRestResourceComponent;
 import org.hl7.fhir.r4.model.CapabilityStatement.ResourceInteractionComponent;
@@ -155,6 +156,25 @@ class ConformanceProviderTest {
               TypeRestfulInteraction.CREATE
           );
     }
+  }
+
+  @Test
+  void capabilityStatementIncludesViewDefinitionExportOperation() {
+    // When: Getting the capability statement.
+    final CapabilityStatement capabilityStatement = conformanceProvider.getServerConformance(null,
+        null);
+
+    // Then: The system-level operations should include viewdefinition-export.
+    final List<CapabilityStatementRestResourceOperationComponent> operations = capabilityStatement
+        .getRest().get(0).getOperation();
+
+    final Set<String> operationNames = operations.stream()
+        .map(CapabilityStatementRestResourceOperationComponent::getName)
+        .collect(Collectors.toSet());
+
+    assertThat(operationNames)
+        .as("System-level operations should include viewdefinition-export")
+        .contains("viewdefinition-export");
   }
 
 }
