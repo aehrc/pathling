@@ -5,7 +5,6 @@
  */
 
 import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
-import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
@@ -14,10 +13,10 @@ import { SqlOnFhirResultTable } from "../components/sqlOnFhir/SqlOnFhirResultTab
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useJobs } from "../contexts/JobContext";
+import { useSaveViewDefinition } from "../hooks/useSaveViewDefinition";
 import { useServerCapabilities } from "../hooks/useServerCapabilities";
 import {
   cancelViewExportJob,
-  createViewDefinition,
   executeInlineViewDefinition,
   executeStoredViewDefinition,
   kickOffViewExport,
@@ -25,7 +24,6 @@ import {
 import { UnauthorizedError } from "../types/errors";
 import type { ViewExportJob } from "../types/job";
 import type {
-  CreateViewDefinitionResult,
   ViewDefinitionExecuteRequest,
   ViewDefinitionResult,
 } from "../types/sqlOnFhir";
@@ -34,14 +32,12 @@ import type { ViewExportFormat } from "../types/viewExport";
 export function SqlOnFhir() {
   const { fhirBaseUrl } = config;
   const { isAuthenticated, client, clearSessionAndPromptLogin } = useAuth();
-  const queryClient = useQueryClient();
   const { addJob, updateJobStatus, getJob } = useJobs();
 
   const [executionResult, setExecutionResult] = useState<ViewDefinitionResult | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionError, setExecutionError] = useState<Error | null>(null);
   const [hasExecuted, setHasExecuted] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportJobId, setExportJobId] = useState<string | null>(null);
   const [lastExecutedRequest, setLastExecutedRequest] = useState<ViewDefinitionExecuteRequest | null>(null);
@@ -109,26 +105,19 @@ export function SqlOnFhir() {
     [client, fhirBaseUrl, handleUnauthorizedError],
   );
 
-  const handleSaveToServer = useCallback(
-    async (json: string): Promise<CreateViewDefinitionResult> => {
-      setIsSaving(true);
-      try {
-        const accessToken = client?.state.tokenResponse?.access_token;
-        const result = await createViewDefinition(fhirBaseUrl, accessToken, json);
-        // Invalidate the ViewDefinitions cache to refresh the list.
-        await queryClient.invalidateQueries({ queryKey: ["viewDefinitions"] });
-        return result;
-      } catch (err) {
-        if (err instanceof UnauthorizedError) {
-          handleUnauthorizedError();
-        }
-        throw err;
-      } finally {
-        setIsSaving(false);
-      }
-    },
-    [client, fhirBaseUrl, handleUnauthorizedError, queryClient],
-  );
+  // Mutation for saving a ViewDefinition to the server.
+  const {
+    mutateAsync: saveViewDefinition,
+    isPending: isSaving,
+    error: saveError,
+  } = useSaveViewDefinition();
+
+  // Handle unauthorized errors from save mutation.
+  useEffect(() => {
+    if (saveError instanceof UnauthorizedError) {
+      handleUnauthorizedError();
+    }
+  }, [saveError, handleUnauthorizedError]);
 
   const handleExport = useCallback(
     async (format: ViewExportFormat) => {
@@ -254,7 +243,7 @@ export function SqlOnFhir() {
         <Box style={{ flex: 1 }}>
           <SqlOnFhirForm
             onExecute={handleExecute}
-            onSaveToServer={handleSaveToServer}
+            onSaveToServer={saveViewDefinition}
             isExecuting={isExecuting}
             isSaving={isSaving}
             disabled={false}
