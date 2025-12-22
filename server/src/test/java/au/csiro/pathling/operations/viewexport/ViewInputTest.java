@@ -46,13 +46,47 @@ class ViewInputTest {
   }
 
   @Test
+  void effectiveNameUsesViewNameWhenExplicitNameNotProvided() {
+    // When explicit name is not provided, use the view's name if available.
+    final FhirView mockView = mock(FhirView.class);
+    when(mockView.getResource()).thenReturn("Condition");
+    when(mockView.getName()).thenReturn("condition_flat");
+    final ViewInput input = new ViewInput(null, mockView);
+
+    assertThat(input.getEffectiveName(0)).isEqualTo("condition_flat");
+  }
+
+  @Test
   void effectiveNameFallsBackToResourceTypeWithIndex() {
-    // When name is null, it should fall back to the view's resource type with index suffix.
+    // When name is null and view name is null, fall back to resource type with index suffix.
     final FhirView mockView = mock(FhirView.class);
     when(mockView.getResource()).thenReturn("Patient");
+    when(mockView.getName()).thenReturn(null);
     final ViewInput input = new ViewInput(null, mockView);
 
     assertThat(input.getEffectiveName(0)).isEqualTo("patient_0");
+  }
+
+  @Test
+  void effectiveNameFallsBackToResourceTypeWhenViewNameIsBlank() {
+    // When view name is blank, fall back to resource type with index suffix.
+    final FhirView mockView = mock(FhirView.class);
+    when(mockView.getResource()).thenReturn("Patient");
+    when(mockView.getName()).thenReturn("   ");
+    final ViewInput input = new ViewInput(null, mockView);
+
+    assertThat(input.getEffectiveName(0)).isEqualTo("patient_0");
+  }
+
+  @Test
+  void effectiveNamePrefersExplicitNameOverViewName() {
+    // Explicit name should take priority over view's name.
+    final FhirView mockView = mock(FhirView.class);
+    when(mockView.getResource()).thenReturn("Condition");
+    when(mockView.getName()).thenReturn("condition_flat");
+    final ViewInput input = new ViewInput("my_export", mockView);
+
+    assertThat(input.getEffectiveName(0)).isEqualTo("my_export");
   }
 
   @Test

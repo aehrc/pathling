@@ -11,11 +11,7 @@ import type {
   ViewDefinitionResult,
   ViewDefinitionSummary,
 } from "../types/sqlOnFhir";
-import type {
-  ViewExportFormat,
-  ViewExportManifest,
-  ViewExportRequest,
-} from "../types/viewExport";
+import type { ViewExportManifest, ViewExportRequest } from "../types/viewExport";
 
 interface KickOffResult {
   jobId: string;
@@ -229,20 +225,6 @@ export async function createViewDefinition(
 }
 
 /**
- * Returns the file extension for a given view export format.
- */
-function getFormatExtension(format: ViewExportFormat): string {
-  switch (format) {
-    case "ndjson":
-      return ".ndjson";
-    case "csv":
-      return ".csv";
-    case "parquet":
-      return ".parquet";
-  }
-}
-
-/**
  * Kicks off a view export job.
  */
 export async function kickOffViewExport(
@@ -446,8 +428,3 @@ function isBinaryResource(value: unknown): value is Binary & { data: string } {
     typeof (value as { data: unknown }).data === "string"
   );
 }
-
-/**
- * Returns the file extension for a given view export format.
- */
-export { getFormatExtension };

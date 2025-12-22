@@ -8,7 +8,6 @@ import { Cross2Icon, DownloadIcon, ReloadIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
 import { useJobs } from "../../contexts/JobContext";
 import { useViewExportJobPolling } from "../../hooks/useViewExportJobPolling";
-import { getFormatExtension } from "../../services/sqlOnFhir";
 import type { ViewExportJob } from "../../types/job";
 
 interface ViewExportCardProps {
@@ -33,6 +32,14 @@ const STATUS_LABELS: Record<ViewExportJob["status"], string> = {
   cancelled: "Cancelled",
 };
 
+/**
+ * Extracts the filename from a result URL's query parameters.
+ */
+function getFilenameFromUrl(url: string): string {
+  const params = new URLSearchParams(new URL(url).search);
+  return params.get("file") ?? "unknown";
+}
+
 export function ViewExportCard({ job, onCancel, onDownload }: ViewExportCardProps) {
   const { updateJobProgress, updateJobManifest, updateJobError, updateJobStatus } = useJobs();
 
@@ -49,7 +56,6 @@ export function ViewExportCard({ job, onCancel, onDownload }: ViewExportCardProp
 
   const isActive = job.status === "pending" || job.status === "in_progress";
   const showProgress = isActive && job.progress !== null;
-  const formatExtension = getFormatExtension(job.request.format);
 
   return (
     <Card size="1" mt="3">
@@ -108,11 +114,11 @@ export function ViewExportCard({ job, onCancel, onDownload }: ViewExportCardProp
             <Flex direction="column" gap="1">
               {job.manifest.output.map((output, index) => (
                 <Flex key={index} justify="between" align="center">
-                  <Text size="2">{output.name}{formatExtension}</Text>
+                  <Text size="2">{getFilenameFromUrl(output.url)}</Text>
                   <Button
                     size="1"
                     variant="soft"
-                    onClick={() => onDownload(output.url, `${output.name}${formatExtension}`)}
+                    onClick={() => onDownload(output.url, getFilenameFromUrl(output.url))}
                   >
                     <DownloadIcon />
                     Download

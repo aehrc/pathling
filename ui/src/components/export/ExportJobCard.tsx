@@ -32,6 +32,14 @@ const STATUS_LABELS: Record<ExportJob["status"], string> = {
   cancelled: "Cancelled",
 };
 
+/**
+ * Extracts the filename from a result URL's query parameters.
+ */
+function getFilenameFromUrl(url: string): string {
+  const params = new URLSearchParams(new URL(url).search);
+  return params.get("file") ?? "unknown";
+}
+
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat("en-AU", {
     dateStyle: "short",
@@ -135,7 +143,7 @@ export function ExportJobCard({ job, onCancel, onDownload }: ExportJobCardProps)
               {job.manifest.output.map((output, index) => (
                 <Flex key={index} justify="between" align="center">
                   <Text size="2">
-                    {output.type}.ndjson
+                    {getFilenameFromUrl(output.url)}
                     {output.count !== undefined && (
                       <Text color="gray"> ({output.count} resources)</Text>
                     )}
@@ -143,7 +151,7 @@ export function ExportJobCard({ job, onCancel, onDownload }: ExportJobCardProps)
                   <Button
                     size="1"
                     variant="soft"
-                    onClick={() => onDownload(output.url, `${output.type}.ndjson`)}
+                    onClick={() => onDownload(output.url, getFilenameFromUrl(output.url))}
                   >
                     <DownloadIcon />
                     Download

@@ -19,8 +19,10 @@ package au.csiro.pathling.views;
 
 import static au.csiro.pathling.views.FhirView.forEach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import au.csiro.pathling.validation.ValidationUtils;
+import com.google.gson.Gson;
 import jakarta.validation.ConstraintViolation;
 import java.util.List;
 import java.util.Set;
@@ -348,5 +350,38 @@ class FhirViewValidationTest {
             "select[0].unionAll[0].column[0].name"
         )
     );
+  }
+
+  // -------------------------------------------------------------------------
+  // Name field parsing tests
+  // -------------------------------------------------------------------------
+
+  @Test
+  void parsesNameFromJson() {
+    // The name field should be parsed from ViewDefinition JSON.
+    final String json = """
+        {
+          "name": "condition_flat",
+          "resource": "Condition",
+          "select": [{"column": [{"name": "id", "path": "id"}]}]
+        }
+        """;
+    final Gson gson = new Gson();
+    final FhirView view = gson.fromJson(json, FhirView.class);
+    assertEquals("condition_flat", view.getName());
+  }
+
+  @Test
+  void nameIsNullWhenNotProvided() {
+    // When name is not in the JSON, it should be null.
+    final String json = """
+        {
+          "resource": "Condition",
+          "select": [{"column": [{"name": "id", "path": "id"}]}]
+        }
+        """;
+    final Gson gson = new Gson();
+    final FhirView view = gson.fromJson(json, FhirView.class);
+    assertNull(view.getName());
   }
 }

@@ -53,6 +53,9 @@ import org.hl7.fhir.instance.model.api.IBase;
 public class FhirViewBuilder {
 
   @Nullable
+  private String name;
+
+  @Nullable
   private String resource;
 
   @Nonnull
@@ -63,6 +66,19 @@ public class FhirViewBuilder {
 
   @Nonnull
   private final List<WhereClause> where = new ArrayList<>();
+
+  /**
+   * Sets the name for this view.
+   * <p>
+   * This is an optional field that provides a computer-friendly name for the view.
+   *
+   * @param name the name for the view
+   * @return this builder instance for method chaining
+   */
+  public FhirViewBuilder name(@Nullable final String name) {
+    this.name = name;
+    return this;
+  }
 
   /**
    * Sets the FHIR resource type for this view.
@@ -179,7 +195,7 @@ public class FhirViewBuilder {
    */
   public FhirView build() {
     checkArgument(resource != null, "Resource must be set");
-    return new FhirView(resource, constant, select, where);
+    return new FhirView(name, resource, constant, select, where);
   }
 
 }

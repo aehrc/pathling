@@ -34,8 +34,8 @@ public record ViewInput(
 ) {
 
   /**
-   * Gets the effective name for this view, using the provided name if available, otherwise
-   * generating one from the view's resource type.
+   * Gets the effective name for this view, using the provided name if available, otherwise falling
+   * back to the view's name, or generating one from the view's resource type.
    *
    * @param index the index of this view in the request (used for disambiguation)
    * @return the effective name for this view
@@ -44,6 +44,11 @@ public record ViewInput(
   public String getEffectiveName(final int index) {
     if (name != null && !name.isBlank()) {
       return name;
+    }
+    // Use the name from the ViewDefinition if available.
+    final String viewName = view.getName();
+    if (viewName != null && !viewName.isBlank()) {
+      return viewName;
     }
     // Generate name from resource type and index.
     return view.getResource().toLowerCase() + "_" + index;

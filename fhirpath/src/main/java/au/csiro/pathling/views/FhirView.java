@@ -226,6 +226,15 @@ public class FhirView {
   }
 
   /**
+   * A computer-friendly name for the view.
+   *
+   * @see <a
+   * href="https://sql-on-fhir.org/ig/2.0.0/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.name">ViewDefinition.name</a>
+   */
+  @Nullable
+  String name;
+
+  /**
    * The FHIR resource that the view is based upon, e.g. 'Patient' or 'Observation'.
    *
    * @see <a
