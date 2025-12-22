@@ -7,7 +7,8 @@
 import { Cross2Icon, DownloadIcon, ReloadIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
 import { useJobs } from "../../contexts/JobContext";
-import { useViewExportJobPolling } from "../../hooks/useViewExportJobPolling";
+import { useJobPolling } from "../../hooks/useJobPolling";
+import { pollViewExportJobStatus } from "../../services/sqlOnFhir";
 import type { ViewExportJob } from "../../types/job";
 
 interface ViewExportCardProps {
@@ -44,10 +45,12 @@ export function ViewExportCard({ job, onCancel, onDownload }: ViewExportCardProp
   const { updateJobProgress, updateJobManifest, updateJobError, updateJobStatus } = useJobs();
 
   // Poll job status while active.
-  useViewExportJobPolling({
+  useJobPolling({
     jobId: job.id,
     pollUrl: job.pollUrl!,
     status: job.status,
+    queryKey: "viewExportJob",
+    pollFn: pollViewExportJobStatus,
     onProgress: updateJobProgress,
     onStatusChange: updateJobStatus,
     onComplete: updateJobManifest,

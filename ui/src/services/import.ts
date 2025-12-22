@@ -8,16 +8,11 @@ import type { Binary, Parameters } from "fhir/r4";
 import { UnauthorizedError } from "../types/errors";
 import type { ImportManifest, ImportRequest } from "../types/import";
 import type { ImportPnpRequest } from "../types/importPnp";
+import type { PollResult } from "../types/polling";
 
 interface KickOffResult {
   jobId: string;
   pollUrl: string;
-}
-
-interface PollResult {
-  status: "in_progress" | "completed";
-  progress?: number;
-  manifest?: ImportManifest;
 }
 
 /**
@@ -73,7 +68,7 @@ export async function pollImportStatus(
   fhirBaseUrl: string,
   accessToken: string | undefined,
   pollUrl: string,
-): Promise<PollResult> {
+): Promise<PollResult<ImportManifest>> {
   // Handle both absolute and relative URLs.
   const url = pollUrl.startsWith("http") ? pollUrl : `${fhirBaseUrl}${pollUrl}`;
 

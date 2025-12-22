@@ -1,5 +1,5 @@
 /**
- * Hook for polling export job status using TanStack Query.
+ * Generic hook for polling job status using TanStack Query.
  *
  * @author John Grimes
  */
@@ -8,34 +8,41 @@ import { useQuery } from "@tanstack/react-query";
 import { useRef, useEffect } from "react";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import { pollJobStatus } from "../services/export";
 import { UnauthorizedError } from "../types/errors";
-import type { ExportManifest } from "../types/export";
 import type { JobStatus } from "../types/job";
+import type { PollResult } from "../types/polling";
 
-interface UseExportJobPollingOptions {
+export interface UseJobPollingOptions<TManifest> {
   jobId: string;
   pollUrl: string;
   status: JobStatus;
+  queryKey: string;
+  pollFn: (
+    fhirBaseUrl: string,
+    accessToken: string | undefined,
+    pollUrl: string,
+  ) => Promise<PollResult<TManifest>>;
   onProgress: (id: string, progress: number) => void;
   onStatusChange: (id: string, status: JobStatus) => void;
-  onComplete: (id: string, manifest: ExportManifest) => void;
+  onComplete: (id: string, manifest: TManifest) => void;
   onError: (id: string, error: string) => void;
 }
 
 /**
- * Polls an export job's status at 3-second intervals until completion or error.
+ * Polls a job's status at 3-second intervals until completion or error.
  * Handles 401 errors by triggering re-authentication.
  */
-export function useExportJobPolling({
+export function useJobPolling<TManifest>({
   jobId,
   pollUrl,
   status,
+  queryKey,
+  pollFn,
   onProgress,
   onStatusChange,
   onComplete,
   onError,
-}: UseExportJobPollingOptions) {
+}: UseJobPollingOptions<TManifest>) {
   const { fhirBaseUrl } = config;
   const { client, clearSessionAndPromptLogin } = useAuth();
   const unauthorizedHandledRef = useRef(false);
@@ -43,10 +50,10 @@ export function useExportJobPolling({
   const isActive = status === "pending" || status === "in_progress";
 
   const query = useQuery({
-    queryKey: ["exportJob", jobId],
+    queryKey: [queryKey, jobId],
     queryFn: async () => {
       const accessToken = client?.state.tokenResponse?.access_token;
-      return pollJobStatus(fhirBaseUrl!, accessToken, pollUrl);
+      return pollFn(fhirBaseUrl!, accessToken, pollUrl);
     },
     enabled: !!fhirBaseUrl && isActive,
     refetchInterval: isActive ? 3000 : false,

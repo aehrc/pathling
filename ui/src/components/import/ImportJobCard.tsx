@@ -7,7 +7,8 @@
 import { Cross2Icon, ReloadIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
 import { useJobs } from "../../contexts/JobContext";
-import { useImportJobPolling } from "../../hooks/useImportJobPolling";
+import { useJobPolling } from "../../hooks/useJobPolling";
+import { pollImportStatus } from "../../services/import";
 import { IMPORT_FORMATS, IMPORT_MODES } from "../../types/import";
 import { EXPORT_TYPES, PNP_SAVE_MODES } from "../../types/importPnp";
 import type { ImportJob, ImportPnpJob } from "../../types/job";
@@ -64,10 +65,12 @@ export function ImportJobCard({ job, onCancel }: ImportJobCardProps) {
   const { updateJobProgress, updateJobManifest, updateJobError, updateJobStatus } = useJobs();
 
   // Poll job status while active. Import jobs always have a pollUrl.
-  useImportJobPolling({
+  useJobPolling({
     jobId: job.id,
     pollUrl: job.pollUrl!,
     status: job.status,
+    queryKey: "importJob",
+    pollFn: pollImportStatus,
     onProgress: updateJobProgress,
     onStatusChange: updateJobStatus,
     onComplete: updateJobManifest,

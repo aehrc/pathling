@@ -6,6 +6,7 @@
 
 import type { Binary } from "fhir/r4";
 import { UnauthorizedError } from "../types/errors";
+import type { PollResult } from "../types/polling";
 import type {
   CreateViewDefinitionResult,
   ViewDefinitionResult,
@@ -16,12 +17,6 @@ import type { ViewExportManifest, ViewExportRequest } from "../types/viewExport"
 interface KickOffResult {
   jobId: string;
   pollUrl: string;
-}
-
-interface PollResult {
-  status: "in_progress" | "completed";
-  progress?: number;
-  manifest?: ViewExportManifest;
 }
 
 /**
@@ -317,7 +312,7 @@ export async function pollViewExportJobStatus(
   fhirBaseUrl: string,
   accessToken: string | undefined,
   pollUrl: string,
-): Promise<PollResult> {
+): Promise<PollResult<ViewExportManifest>> {
   // Handle both absolute and relative URLs.
   const url = pollUrl.startsWith("http") ? pollUrl : `${fhirBaseUrl}${pollUrl}`;
 

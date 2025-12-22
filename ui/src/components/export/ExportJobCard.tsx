@@ -7,7 +7,8 @@
 import { Cross2Icon, DownloadIcon, ReloadIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
 import { useJobs } from "../../contexts/JobContext";
-import { useExportJobPolling } from "../../hooks/useExportJobPolling";
+import { useJobPolling } from "../../hooks/useJobPolling";
+import { pollJobStatus } from "../../services/export";
 import type { ExportJob } from "../../types/job";
 
 interface ExportJobCardProps {
@@ -66,10 +67,12 @@ export function ExportJobCard({ job, onCancel, onDownload }: ExportJobCardProps)
   const { updateJobProgress, updateJobManifest, updateJobError, updateJobStatus } = useJobs();
 
   // Poll job status while active. Export jobs always have a pollUrl.
-  useExportJobPolling({
+  useJobPolling({
     jobId: job.id,
     pollUrl: job.pollUrl!,
     status: job.status,
+    queryKey: "exportJob",
+    pollFn: pollJobStatus,
     onProgress: updateJobProgress,
     onStatusChange: updateJobStatus,
     onComplete: updateJobManifest,
