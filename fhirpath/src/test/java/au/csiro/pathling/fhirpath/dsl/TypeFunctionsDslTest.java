@@ -23,11 +23,14 @@ import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
 import java.math.BigDecimal;
 import java.util.stream.Stream;
+import org.hl7.fhir.r4.model.Address;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Observation.ObservationComponentComponent;
+import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.DynamicTest;
@@ -420,6 +423,204 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
         .testEquals("Normal blood pressure reading",
             "component.where(value.is(String)).value.as(String)",
             "where() with is() extracts components with String values")
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testTypeFunctionsOnFhirComplexTypes() {
+    // Create a Patient with multiple complex type elements
+    final Patient patient = new Patient();
+    patient.setId("example-complex-types");
+
+    // Add multiple HumanName items (for collection testing)
+    patient.addName(new HumanName()
+        .setFamily("Smith")
+        .addGiven("John")
+        .addGiven("David"));
+
+    patient.addName(new HumanName()
+        .setFamily("Jones")
+        .addGiven("Mary")
+        .setUse(HumanName.NameUse.MAIDEN));
+
+    patient.addName(new HumanName()
+        .setFamily("Smith")
+        .addGiven("Jane")
+        .setUse(HumanName.NameUse.NICKNAME));
+
+    // Add multiple Address items (for collection testing)
+    patient.addAddress(new Address()
+        .setCity("Sydney")
+        .setCountry("Australia")
+        .setState("NSW")
+        .setPostalCode("2000")
+        .setUse(Address.AddressUse.HOME));
+
+    patient.addAddress(new Address()
+        .setCity("Melbourne")
+        .setCountry("Australia")
+        .setState("VIC")
+        .setPostalCode("3000")
+        .setUse(Address.AddressUse.WORK));
+
+    return builder()
+        .withResource(patient)
+        .group("ofType() function - filtering HumanName collections")
+        .testEquals("Smith", "name.ofType(FHIR.HumanName).first().family",
+            "ofType(HumanName) returns first HumanName and allows property access")
+        .testEquals("Jones", "name.ofType(FHIR.HumanName)[1].family",
+            "ofType(HumanName) returns second HumanName from collection")
+        .testEquals("Smith", "name.ofType(FHIR.HumanName)[2].family",
+            "ofType(HumanName) returns third HumanName from collection")
+        .testEquals("John", "name.ofType(FHIR.HumanName).first().given.first()",
+            "ofType(HumanName) allows traversal to repeated given names")
+        .testTrue("name.ofType(FHIR.HumanName) = name",
+            "ofType(HumanName) returns all HumanName items from collection")
+
+        .group("ofType() function - filtering Address collections")
+        .testEquals("Sydney", "address.ofType(FHIR.Address).first().city",
+            "ofType(Address) returns first Address and allows property access")
+        .testEquals("Melbourne", "address.ofType(FHIR.Address)[1].city",
+            "ofType(Address) returns second Address from collection")
+        .testEquals("Australia", "address.ofType(FHIR.Address).first().country",
+            "ofType(Address) allows traversal to country property")
+        .testTrue("address.ofType(FHIR.Address) = address",
+            "ofType(Address) returns all Address items from collection")
+
+        .group("ofType() function - namespace variations for complex types")
+        .testEquals("Smith", "name.ofType(FHIR.HumanName).first().family",
+            "ofType(FHIR.HumanName) works with FHIR namespace")
+        .testEquals("Sydney", "address.ofType(FHIR.Address).first().city",
+            "ofType(FHIR.Address) works with FHIR namespace")
+        .testError("name.ofType(System.HumanName)",
+            "ofType(System.HumanName) throws error - complex types only exist in FHIR namespace")
+        .testError("address.ofType(System.Address)",
+            "ofType(System.Address) throws error - complex types only exist in FHIR namespace")
+
+        .group("ofType() function - empty results")
+        .testEmpty("name.ofType(ContactPoint)",
+            "ofType(ContactPoint) returns empty when type not present in name collection")
+        .testEmpty("address.ofType(FHIR.HumanName)",
+            "ofType(HumanName) returns empty when applied to address collection")
+        .testEmpty("name.ofType(Quantity)",
+            "ofType(Quantity) returns empty when primitive type requested on complex type collection")
+
+        .group("is() function - HumanName type checking on singletons")
+        .testTrue("name.first().is(FHIR.HumanName)",
+            "is(HumanName) returns true when first name is HumanName")
+        .testTrue("name[1].is(FHIR.HumanName)",
+            "is(HumanName) returns true when second name is HumanName")
+        .testFalse("name.first().is(FHIR.Address)",
+            "is(Address) returns false when name is HumanName")
+        .testFalse("name.first().is(ContactPoint)",
+            "is(ContactPoint) returns false when name is HumanName")
+        .testFalse("name.first().is(String)",
+            "is(String) returns false when HumanName is not a primitive type")
+
+        .group("is() function - Address type checking on singletons")
+        .testTrue("address.first().is(FHIR.Address)",
+            "is(Address) returns true when first address is Address")
+        .testTrue("address[1].is(FHIR.Address)",
+            "is(Address) returns true when second address is Address")
+        .testFalse("address.first().is(FHIR.HumanName)",
+            "is(HumanName) returns false when address is Address")
+        .testFalse("address.first().is(ContactPoint)",
+            "is(ContactPoint) returns false when address is Address")
+
+        .group("is() function - namespace variations for complex types")
+        .testTrue("name.first().is(FHIR.HumanName)",
+            "is(FHIR.HumanName) works with FHIR namespace")
+        .testTrue("address.first().is(FHIR.Address)",
+            "is(FHIR.Address) works with FHIR namespace")
+        .testError("name.first().is(System.HumanName)",
+            "is(System.HumanName) throws error - complex types only exist in FHIR namespace")
+        .testError("address.first().is(System.Address)",
+            "is(System.Address) throws error - complex types only exist in FHIR namespace")
+
+        .group("is() function - edge cases on complex types")
+        .testError("name.is(FHIR.HumanName)",
+            "is(HumanName) throws error on multi-item collection")
+        .testError("address.is(FHIR.Address)",
+            "is(Address) throws error on multi-item collection")
+        .testEmpty("name.where(family = 'NonExistent').first().is(FHIR.HumanName)",
+            "is(HumanName) returns empty when applied to empty singleton")
+
+        .group("as() function - HumanName type casting with property traversal")
+        .testEquals("Smith", "name.first().as(FHIR.HumanName).family",
+            "as(HumanName) returns HumanName and allows family property access")
+        .testEquals("Jones", "name[1].as(FHIR.HumanName).family",
+            "as(HumanName) works on second name with property traversal")
+        .testEquals("John", "name.first().as(FHIR.HumanName).given.first()",
+            "as(HumanName) allows traversal to repeated given names")
+        .testEquals("Mary", "name[1].as(FHIR.HumanName).given.first()",
+            "as(HumanName) allows property traversal on indexed element")
+
+        .group("as() function - Address type casting with property traversal")
+        .testEquals("Sydney", "address.first().as(FHIR.Address).city",
+            "as(Address) returns Address and allows city property access")
+        .testEquals("Melbourne", "address[1].as(FHIR.Address).city",
+            "as(Address) works on second address with property traversal")
+        .testEquals("Australia", "address.first().as(FHIR.Address).country",
+            "as(Address) allows country property access")
+        .testEquals("NSW", "address.first().as(FHIR.Address).state",
+            "as(Address) allows state property access")
+
+        .group("as() function - failed casts return empty")
+        .testEmpty("name.first().as(FHIR.Address)",
+            "as(Address) returns empty when name is not Address type")
+        .testEmpty("name.first().as(ContactPoint)",
+            "as(ContactPoint) returns empty when name is not ContactPoint type")
+        .testEmpty("address.first().as(FHIR.HumanName)",
+            "as(HumanName) returns empty when address is not HumanName type")
+        .testEmpty("address.first().as(String)",
+            "as(String) returns empty when Address is not a primitive type")
+
+        .group("as() function - namespace variations for complex types")
+        .testEquals("Smith", "name.first().as(FHIR.HumanName).family",
+            "as(FHIR.HumanName) works with FHIR namespace")
+        .testEquals("Sydney", "address.first().as(FHIR.Address).city",
+            "as(FHIR.Address) works with FHIR namespace")
+        .testError("name.first().as(System.HumanName)",
+            "as(System.HumanName) throws error - complex types only exist in FHIR namespace")
+        .testError("address.first().as(System.Address)",
+            "as(System.Address) throws error - complex types only exist in FHIR namespace")
+
+        .group("as() function - edge cases on complex types")
+        .testError("name.as(FHIR.HumanName)",
+            "as(HumanName) throws error on multi-item collection")
+        .testError("address.as(FHIR.Address)",
+            "as(Address) throws error on multi-item collection")
+        .testEmpty("name.where(family = 'NonExistent').first().as(FHIR.HumanName).family",
+            "as(HumanName) on empty singleton returns empty")
+
+        .group("Integration - combining type functions with where()")
+        .testEquals("Smith", "name.where($this.is(FHIR.HumanName)).first().family",
+            "where() with is() filters names by type")
+        .testEquals("Jones", "name.where($this.is(FHIR.HumanName))[1].family",
+            "where() with is() preserves collection order")
+        .testEquals("Smith", "name.where($this.is(FHIR.HumanName) and family = 'Smith').first().family",
+            "where() combines is() with property conditions")
+        .testEquals("Sydney", "address.where($this.is(FHIR.Address)).first().city",
+            "where() with is() filters addresses by type")
+        .testEquals("Sydney", "address.where($this.is(FHIR.Address) and use = 'home').city",
+            "where() combines is() with property conditions on Address")
+
+        .group("Integration - chaining type functions")
+        .testEquals("Smith", "name.ofType(FHIR.HumanName).first().as(FHIR.HumanName).family",
+            "ofType() can be followed by as() for type casting")
+        .testTrue("name.first().is(FHIR.HumanName) and name.first().as(FHIR.HumanName).exists()",
+            "is() returns true corresponds to as() returning value")
+        .testEquals("Sydney", "address.ofType(FHIR.Address).where(city = 'Sydney').first().as(FHIR.Address).city",
+            "ofType(), where(), and as() can be chained together")
+
+        .group("Integration - real-world patterns")
+        .testEquals("Smith", "name.ofType(FHIR.HumanName).where(use = 'nickname').family",
+            "ofType() filters by type then where() filters by property")
+        .testEquals("Melbourne", "address.ofType(FHIR.Address).where(use = 'work').city",
+            "ofType() and where() combination for business logic")
+        .testEquals("Smith", "name.where($this.is(FHIR.HumanName) and family = 'Smith')[1].family",
+            "Filter names by type and property returns multiple matching items")
+
         .build();
   }
 
