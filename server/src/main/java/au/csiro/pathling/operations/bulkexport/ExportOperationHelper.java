@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.bulkexport;
 
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 
+import au.csiro.pathling.async.AsyncJobContext;
 import au.csiro.pathling.async.Job;
 import au.csiro.pathling.async.JobRegistry;
 import au.csiro.pathling.async.RequestTag;
@@ -91,8 +92,19 @@ public class ExportOperationHelper {
   @Nullable
   public Binary executeExport(@Nonnull final ServletRequestDetails requestDetails) {
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication);
-    final Job<ExportRequest> ownJob = jobRegistry.get(ownTag);
+
+    // Try to get the job from the async context first. This is set by AsyncAspect when the
+    // operation runs asynchronously, avoiding the need to access the servlet request which may
+    // have been recycled by Tomcat.
+    @SuppressWarnings("unchecked")
+    final Job<ExportRequest> ownJob = AsyncJobContext.getCurrentJob()
+        .map(job -> (Job<ExportRequest>) job)
+        .orElseGet(() -> {
+          // Fallback for cases where async context is not available.
+          final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication);
+          return jobRegistry.get(ownTag);
+        });
+
     if (ownJob == null) {
       throw new InvalidRequestException("Missing 'Prefer: respond-async' header value.");
     }

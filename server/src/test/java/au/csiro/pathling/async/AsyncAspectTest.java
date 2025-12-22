@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 import au.csiro.pathling.cache.CacheableDatabase;
 import au.csiro.pathling.config.ServerConfiguration;
@@ -36,6 +37,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +46,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -228,5 +231,58 @@ class AsyncAspectTest {
     setAuthenticationPrincipal("principal2");
     final String jobId2 = assertExecutedAsync();
     assertEquals(jobId1, jobId2);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void testAsyncJobContextIsSetDuringAsyncExecution() throws Throwable {
+    // Given: An async request that will be submitted to the executor.
+    final Future<IBaseResource> mockFuture = mock(Future.class);
+    final ArgumentCaptor<Callable<IBaseResource>> callableCaptor =
+        ArgumentCaptor.forClass(Callable.class);
+    when(threadPoolTaskExecutor.submit(callableCaptor.capture())).thenReturn(mockFuture);
+
+    // Set up authentication principal.
+    final JwtClaimAccessor mockJwtPrincipal = mock(JwtClaimAccessor.class);
+    when(mockJwtPrincipal.getSubject()).thenReturn("subject1");
+    setAuthenticationPrincipal(mockJwtPrincipal);
+
+    // When: The async request is executed.
+    final String jobId = assertExecutedAsync();
+
+    // Then: Verify the callable was captured.
+    verify(threadPoolTaskExecutor).submit(callableCaptor.capture());
+    final Callable<IBaseResource> capturedCallable = callableCaptor.getValue();
+    assertNotNull(capturedCallable);
+
+    // When: The callable is executed (simulating async execution).
+    final AtomicReference<Optional<Job<?>>> jobDuringExecution = new AtomicReference<>();
+    final AtomicReference<String> jobIdDuringExecution = new AtomicReference<>();
+
+    // Modify the ProceedingJoinPoint to capture AsyncJobContext state during execution.
+    when(proceedingJoinPoint.proceed()).thenAnswer(invocation -> {
+      jobDuringExecution.set(AsyncJobContext.getCurrentJob());
+      if (jobDuringExecution.get().isPresent()) {
+        jobIdDuringExecution.set(jobDuringExecution.get().get().getId());
+      }
+      return RESULT_RESOURCE;
+    });
+
+    // Set up the StageMap mock to return a non-null keySet for cleanup.
+    when(stageMap.keySet()).thenReturn(new java.util.concurrent.ConcurrentHashMap<Integer, String>().keySet());
+    when(stageMap.entrySet()).thenReturn(java.util.Collections.emptySet());
+
+    // Execute the captured callable.
+    capturedCallable.call();
+
+    // Then: The AsyncJobContext should have had the job set during execution.
+    assertTrue(jobDuringExecution.get().isPresent(),
+        "AsyncJobContext should have the job set during async execution");
+    assertEquals(jobId, jobIdDuringExecution.get(),
+        "Job ID in AsyncJobContext should match the created job ID");
+
+    // And: After execution, the context should be cleared.
+    assertTrue(AsyncJobContext.getCurrentJob().isEmpty(),
+        "AsyncJobContext should be cleared after async execution");
   }
 }

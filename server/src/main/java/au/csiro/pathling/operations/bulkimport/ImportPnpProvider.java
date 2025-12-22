@@ -19,6 +19,7 @@ package au.csiro.pathling.operations.bulkimport;
 
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 
+import au.csiro.pathling.async.AsyncJobContext;
 import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.async.Job;
 import au.csiro.pathling.async.JobRegistry;
@@ -107,16 +108,24 @@ public class ImportPnpProvider implements PreAsyncValidation<ImportPnpRequest> {
 
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-    // Compute the operation cache key to match how AsyncAspect stores the job.
-    final PreAsyncValidationResult<ImportPnpRequest> validationResult = preAsyncValidate(
-        requestDetails, new Object[]{parameters});
-    final String operationCacheKey = computeCacheKeyComponent(
-        Objects.requireNonNull(validationResult.result(),
-            "Validation result should not be null for a valid request"));
-    final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication,
-        operationCacheKey);
+    // Try to get the job from the async context first. This is set by AsyncAspect when the
+    // operation runs asynchronously, avoiding the need to access the servlet request which may
+    // have been recycled by Tomcat.
+    @SuppressWarnings("unchecked")
+    final Job<ImportPnpRequest> ownJob = AsyncJobContext.getCurrentJob()
+        .map(job -> (Job<ImportPnpRequest>) job)
+        .orElseGet(() -> {
+          // Fallback for cases where async context is not available.
+          final PreAsyncValidationResult<ImportPnpRequest> validationResult = preAsyncValidate(
+              requestDetails, new Object[]{parameters});
+          final String operationCacheKey = computeCacheKeyComponent(
+              Objects.requireNonNull(validationResult.result(),
+                  "Validation result should not be null for a valid request"));
+          final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication,
+              operationCacheKey);
+          return jobRegistry.get(ownTag);
+        });
 
-    final Job<ImportPnpRequest> ownJob = jobRegistry.get(ownTag);
     if (ownJob == null) {
       throw new InvalidRequestException("Missing 'Prefer: respond-async' header value.");
     }

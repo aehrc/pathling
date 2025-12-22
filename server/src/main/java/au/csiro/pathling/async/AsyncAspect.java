@@ -166,6 +166,14 @@ public class AsyncAspect {
           diagnosticContext.configureScope(true);
           SecurityContextHolder.getContext().setAuthentication(authentication);
           spark.sparkContext().setJobGroup(jobId, jobId, true);
+
+          // Set the current job in the async context so that the operation can access it without
+          // needing to look it up from the servlet request (which may have been recycled).
+          final Job<?> currentJob = jobRegistry.get(jobId);
+          if (currentJob != null) {
+            AsyncJobContext.setCurrentJob(currentJob);
+          }
+
           return (IBaseResource) joinPoint.proceed();
         } catch (final Throwable e) {
           // Unwrap the actual exception from the aspect proxy wrapper, if needed.
@@ -186,6 +194,7 @@ public class AsyncAspect {
           jobProvider.deleteJobFiles(jobId);
           throw new IllegalStateException("Problem processing request asynchronously", actualEx);
         } finally {
+          AsyncJobContext.clear();
           cleanUpAfterJob(spark, jobId);
         }
       });

@@ -21,6 +21,7 @@ import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.explode;
 
+import au.csiro.pathling.async.AsyncJobContext;
 import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.async.Job;
 import au.csiro.pathling.async.JobRegistry;
@@ -170,17 +171,25 @@ public class ViewDefinitionExportProvider
   ) {
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-    // Compute the operation cache key to match how AsyncAspect stores the job.
-    final PreAsyncValidationResult<ViewDefinitionExportRequest> validationResult = preAsyncValidate(
-        requestDetails, new Object[]{viewNames, viewResources, clientTrackingId, format,
-            includeHeader, patientIds, groupIds, since});
-    final String operationCacheKey = computeCacheKeyComponent(
-        Objects.requireNonNull(validationResult.result(),
-            "Validation result should not be null for a valid request"));
-    final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication,
-        operationCacheKey);
+    // Try to get the job from the async context first. This is set by AsyncAspect when the
+    // operation runs asynchronously, avoiding the need to access the servlet request which may
+    // have been recycled by Tomcat.
+    @SuppressWarnings("unchecked")
+    final Job<ViewDefinitionExportRequest> ownJob = AsyncJobContext.getCurrentJob()
+        .map(job -> (Job<ViewDefinitionExportRequest>) job)
+        .orElseGet(() -> {
+          // Fallback for cases where async context is not available.
+          final PreAsyncValidationResult<ViewDefinitionExportRequest> validationResult =
+              preAsyncValidate(requestDetails, new Object[]{viewNames, viewResources,
+                  clientTrackingId, format, includeHeader, patientIds, groupIds, since});
+          final String operationCacheKey = computeCacheKeyComponent(
+              Objects.requireNonNull(validationResult.result(),
+                  "Validation result should not be null for a valid request"));
+          final RequestTag ownTag = requestTagFactory.createTag(requestDetails, authentication,
+              operationCacheKey);
+          return jobRegistry.get(ownTag);
+        });
 
-    final Job<ViewDefinitionExportRequest> ownJob = jobRegistry.get(ownTag);
     if (ownJob == null) {
       throw new InvalidRequestException("Missing 'Prefer: respond-async' header value.");
     }
