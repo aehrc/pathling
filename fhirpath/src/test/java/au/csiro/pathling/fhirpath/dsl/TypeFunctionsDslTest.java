@@ -21,7 +21,15 @@ import static au.csiro.pathling.test.yaml.FhirTypedLiteral.toQuantity;
 
 import au.csiro.pathling.test.dsl.FhirPathDslTestBase;
 import au.csiro.pathling.test.dsl.FhirPathTest;
+import java.math.BigDecimal;
 import java.util.stream.Stream;
+import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Observation;
+import org.hl7.fhir.r4.model.Observation.ObservationComponentComponent;
+import org.hl7.fhir.r4.model.Quantity;
+import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.DynamicTest;
 
 /**
@@ -200,6 +208,218 @@ public class TypeFunctionsDslTest extends FhirPathDslTestBase {
         .testTrue("stringValue.is(Integer).not() and stringValue.as(Integer).empty()",
             "is() returns false corresponds to as() returning empty")
 
+        .build();
+  }
+
+  @FhirPathTest
+  public Stream<DynamicTest> testTypeFunctionsOnFhirChoiceCollection() {
+    // Create an Observation with multiple components using different value types
+    final Observation observation = new Observation();
+    observation.setStatus(Observation.ObservationStatus.FINAL);
+    observation.setId("example-multi-component");
+
+    // Add CodeableConcept for observation code
+    observation.setCode(new CodeableConcept()
+        .addCoding(new Coding()
+            .setSystem("http://loinc.org")
+            .setCode("85354-9")
+            .setDisplay("Blood pressure panel")));
+
+    // Component 1: valueQuantity - Systolic blood pressure
+    final ObservationComponentComponent systolic = new ObservationComponentComponent();
+    systolic.setCode(new CodeableConcept()
+        .addCoding(new Coding()
+            .setSystem("http://loinc.org")
+            .setCode("8480-6")
+            .setDisplay("Systolic blood pressure")));
+    systolic.setValue(new Quantity()
+        .setValue(new BigDecimal("120"))
+        .setUnit("mm[Hg]")
+        .setSystem("http://unitsofmeasure.org")
+        .setCode("mm[Hg]"));
+    observation.addComponent(systolic);
+
+    // Component 2: valueQuantity - Diastolic blood pressure
+    final ObservationComponentComponent diastolic = new ObservationComponentComponent();
+    diastolic.setCode(new CodeableConcept()
+        .addCoding(new Coding()
+            .setSystem("http://loinc.org")
+            .setCode("8462-4")
+            .setDisplay("Diastolic blood pressure")));
+    diastolic.setValue(new Quantity()
+        .setValue(new BigDecimal("80"))
+        .setUnit("mm[Hg]")
+        .setSystem("http://unitsofmeasure.org")
+        .setCode("mm[Hg]"));
+    observation.addComponent(diastolic);
+
+    // Component 3: valueString - Clinical Assessment
+    final ObservationComponentComponent assessment = new ObservationComponentComponent();
+    assessment.setCode(new CodeableConcept()
+        .addCoding(new Coding()
+            .setSystem("http://example.org")
+            .setCode("assessment")
+            .setDisplay("Clinical Assessment")));
+    assessment.setValue(new StringType("Normal blood pressure reading"));
+    observation.addComponent(assessment);
+
+    // Component 4: valueCodeableConcept - Body Position
+    final ObservationComponentComponent position = new ObservationComponentComponent();
+    position.setCode(new CodeableConcept()
+        .addCoding(new Coding()
+            .setSystem("http://example.org")
+            .setCode("position")
+            .setDisplay("Body Position")));
+    position.setValue(new CodeableConcept()
+        .addCoding(new Coding()
+            .setSystem("http://snomed.info/sct")
+            .setCode("33586001")
+            .setDisplay("Sitting position")));
+    observation.addComponent(position);
+
+    // Component 5: valueBoolean - Measurement Verified
+    final ObservationComponentComponent verified = new ObservationComponentComponent();
+    verified.setCode(new CodeableConcept()
+        .addCoding(new Coding()
+            .setSystem("http://example.org")
+            .setCode("verified")
+            .setDisplay("Measurement Verified")));
+    verified.setValue(new BooleanType(true));
+    observation.addComponent(verified);
+
+    return builder()
+        .withResource(observation)
+        .group("ofType() function on component.value - filtering by type")
+        .testEquals("mm[Hg]", "component.value.ofType(Quantity).first().unit",
+            "ofType(Quantity) returns first Quantity value")
+        .testEquals(120, "component.value.ofType(Quantity).first().value",
+            "ofType(Quantity) allows access to first Quantity value")
+        .testEquals("mm[Hg]", "component.value.ofType(Quantity)[1].unit",
+            "ofType(Quantity) returns second Quantity value")
+        .testEquals(80, "component.value.ofType(Quantity)[1].value",
+            "ofType(Quantity) allows access to second Quantity value")
+        .testEquals("Normal blood pressure reading", "component.value.ofType(String)",
+            "ofType(String) returns the String value")
+        .testEquals("33586001", "component.value.ofType(CodeableConcept).coding.code",
+            "ofType(CodeableConcept) returns CodeableConcept and allows traversal")
+        .testTrue("component.value.ofType(Boolean)",
+            "ofType(Boolean) returns the Boolean value")
+        .testEmpty("component.value.ofType(Integer)",
+            "ofType(Integer) returns empty when no Integer values present")
+
+        .group("ofType() function - namespace variations")
+        .testEquals(120, "component.value.ofType(FHIR.Quantity).first().value",
+            "ofType(FHIR.Quantity) works with FHIR namespace")
+        .testEquals(80, "component.value.ofType(FHIR.Quantity)[1].value",
+            "ofType(FHIR.Quantity) returns both Quantity values")
+        .testEquals(120, "component.value.ofType(System.Quantity).first().value",
+            "ofType(System.Quantity) works with System namespace")
+        .testEquals(80, "component.value.ofType(System.Quantity)[1].value",
+            "ofType(System.Quantity) returns both Quantity values")
+        .testEquals("Normal blood pressure reading", "component.value.ofType(FHIR.string)",
+            "ofType(FHIR.string) works with FHIR namespace")
+        .testEquals("Normal blood pressure reading", "component.value.ofType(System.String)",
+            "ofType(System.String) works with System namespace")
+
+        .group("as() function on component.value - filtering individual elements")
+        .testEquals(120, "component[0].value.as(Quantity).value",
+            "as(Quantity) returns Quantity value when type matches")
+        .testEmpty("component[0].value.as(String)",
+            "as(String) returns empty when value is Quantity")
+        .testEquals("Normal blood pressure reading", "component[2].value.as(String)",
+            "as(String) returns String when value matches")
+        .testEmpty("component[2].value.as(Quantity)",
+            "as(Quantity) returns empty when value is String")
+        .testTrue("component[4].value.as(Boolean)",
+            "as(Boolean) returns Boolean when value matches")
+        .testEmpty("component[4].value.as(String)",
+            "as(String) returns empty when value is Boolean")
+
+        .group("as() function - type conversion and traversal")
+        .testEquals("mm[Hg]", "component[0].value.as(Quantity).unit",
+            "as(Quantity) allows traversal after conversion")
+        .testEquals(80, "component[1].value.as(Quantity).value",
+            "as(Quantity) allows access to value property")
+        .testEquals("33586001", "component[3].value.as(CodeableConcept).coding.code",
+            "as(CodeableConcept) allows traversal to nested properties")
+
+        .group("is() function on component.value - type checking")
+        .testTrue("component[0].value.is(Quantity)",
+            "is(Quantity) returns true for Quantity value")
+        .testFalse("component[0].value.is(String)",
+            "is(String) returns false for Quantity value")
+        .testTrue("component[2].value.is(String)",
+            "is(String) returns true for String value")
+        .testFalse("component[2].value.is(Quantity)",
+            "is(Quantity) returns false for String value")
+        .testTrue("component[3].value.is(CodeableConcept)",
+            "is(CodeableConcept) returns true for CodeableConcept value")
+        .testTrue("component[4].value.is(Boolean)",
+            "is(Boolean) returns true for Boolean value")
+        .testFalse("component[4].value.is(Integer)",
+            "is(Integer) returns false for Boolean value")
+
+        .group("is() function - namespace variations")
+        .testTrue("component[0].value.is(FHIR.Quantity)",
+            "is(FHIR.Quantity) works with FHIR namespace")
+        .testTrue("component[0].value.is(System.Quantity)",
+            "is(System.Quantity) works with System namespace")
+        .testTrue("component[2].value.is(FHIR.string)",
+            "is(FHIR.string) works with FHIR namespace")
+        .testTrue("component[2].value.is(System.String)",
+            "is(System.String) works with System namespace")
+
+        .group("Integration - combining type functions")
+        .testEquals(120, "component.where(value.is(Quantity)).first().value.as(Quantity).value",
+            "where() with is() filters first component by value type")
+        .testEquals(80, "component.where(value.is(Quantity))[1].value.as(Quantity).value",
+            "where() with is() filters second component by value type")
+        .testEquals("Normal blood pressure reading",
+            "component.where(value.is(String)).value.as(String)",
+            "where() with is() and as() extracts String values")
+        .testTrue("component.where(value.is(Boolean)).value.as(Boolean)",
+            "where() with is() and as() extracts Boolean values")
+
+        .group("Collection operations - ofType() works on collections")
+        .testEquals(120, "component.value.ofType(Quantity).first().value",
+            "ofType() works on entire component.value collection")
+        .testEquals(80, "component.value.ofType(Quantity)[1].value",
+            "ofType() filters entire collection and returns multiple values")
+        .testEquals("Normal blood pressure reading", "component.value.ofType(String)",
+            "ofType() extracts String from heterogeneous collection")
+        .testEquals("33586001", "component.value.ofType(CodeableConcept).coding.first().code",
+            "ofType() extracts CodeableConcept from heterogeneous collection")
+
+        .group("Collection operations - is() and as() require singletons")
+        .testError("component.value.is(Quantity)",
+            "is() throws error on multi-item collection")
+        .testError("component.value.as(Quantity)",
+            "as() throws error on multi-item collection")
+        .testError("component.value.is(String)",
+            "is() fails on heterogeneous collection regardless of target type")
+        .testError("component.value.as(Boolean)",
+            "as() fails on heterogeneous collection regardless of target type")
+
+        .group("ofType() is the recommended way to filter heterogeneous collections")
+        .testEquals(120, "component.value.ofType(Quantity).first().value",
+            "ofType() is preferred over where($this.is()) for heterogeneous collections")
+        .testEquals(80, "component.value.ofType(Quantity)[1].value",
+            "ofType() returns all matching values from heterogeneous collection")
+        .testEquals("Normal blood pressure reading", "component.value.ofType(String)",
+            "ofType() extracts typed values from heterogeneous collection")
+        .testTrue("component.value.ofType(Boolean)",
+            "ofType() works for all types in heterogeneous collection")
+        .testEmpty("component.value.ofType(Integer)",
+            "ofType() returns empty when type not present in collection")
+
+        .group("Using is() in where() on homogeneous collections (component level)")
+        .testEquals(120, "component.where(value.is(Quantity)).first().value.as(Quantity).value",
+            "where() with is() works at component level where each value is singular")
+        .testEquals(80, "component.where(value.is(Quantity))[1].value.as(Quantity).value",
+            "is() in where() filters components based on their singular value type")
+        .testEquals("Normal blood pressure reading",
+            "component.where(value.is(String)).value.as(String)",
+            "where() with is() extracts components with String values")
         .build();
   }
 
