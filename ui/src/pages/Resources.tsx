@@ -5,8 +5,8 @@
  */
 
 import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
-import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { deleteResource } from "../api";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { DeleteConfirmationDialog } from "../components/resources/DeleteConfirmationDialog";
@@ -15,9 +15,7 @@ import { ResourceSearchForm } from "../components/resources/ResourceSearchForm";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
-import { useResourceSearch } from "../hooks/useResourceSearch";
-import { useServerCapabilities } from "../hooks/useServerCapabilities";
-import { deleteResource } from "../services/search";
+import { useFhirPathSearch, useServerCapabilities, useUnauthorizedHandler } from "../hooks";
 import { UnauthorizedError } from "../types/errors";
 import type { SearchRequest } from "../types/search";
 
@@ -29,15 +27,14 @@ interface DeleteTarget {
 
 export function Resources() {
   const { fhirBaseUrl } = config;
-  const { client, isAuthenticated, clearSessionAndPromptLogin } = useAuth();
+  const { client, isAuthenticated } = useAuth();
   const { showToast } = useToast();
-  const queryClient = useQueryClient();
   const accessToken = client?.state.tokenResponse?.access_token;
+  const handleUnauthorizedError = useUnauthorizedHandler();
 
   const [searchRequest, setSearchRequest] = useState<SearchRequest | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const unauthorizedHandledRef = useRef(false);
 
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
@@ -50,23 +47,17 @@ export function Resources() {
   }, [capabilities]);
 
   // Execute the search query.
-  const { data: searchResult, isLoading: isSearching, error: searchError } = useResourceSearch(
-    searchRequest,
-  );
-
-  // Handle 401 errors by clearing session and prompting for re-authentication.
-  const handleUnauthorizedError = useCallback(() => {
-    if (unauthorizedHandledRef.current) return;
-    unauthorizedHandledRef.current = true;
-    clearSessionAndPromptLogin();
-  }, [clearSessionAndPromptLogin]);
-
-  // Reset the unauthorized flag when user becomes authenticated.
-  useEffect(() => {
-    if (isAuthenticated) {
-      unauthorizedHandledRef.current = false;
-    }
-  }, [isAuthenticated]);
+  const {
+    resources,
+    total,
+    isLoading: isSearching,
+    error: searchError,
+    refetch,
+  } = useFhirPathSearch({
+    resourceType: searchRequest?.resourceType ?? "",
+    filters: searchRequest?.filters ?? [],
+    enabled: !!searchRequest?.resourceType,
+  });
 
   // Handle search errors.
   useEffect(() => {
@@ -93,19 +84,18 @@ export function Resources() {
 
     setIsDeleting(true);
     try {
-      await deleteResource(
-        fhirBaseUrl,
+      await deleteResource(fhirBaseUrl!, {
+        resourceType: deleteTarget.resourceType,
+        id: deleteTarget.resourceId,
         accessToken,
-        deleteTarget.resourceType,
-        deleteTarget.resourceId,
-      );
+      });
       showToast(
         "Resource deleted",
         `${deleteTarget.resourceType}/${deleteTarget.resourceId}`,
       );
       setDeleteTarget(null);
-      // Invalidate the resource search cache to refresh the list.
-      await queryClient.invalidateQueries({ queryKey: ["resourceSearch"] });
+      // Refresh the search results.
+      await refetch();
     } catch (err) {
       if (err instanceof UnauthorizedError) {
         handleUnauthorizedError();
@@ -118,7 +108,7 @@ export function Resources() {
     } finally {
       setIsDeleting(false);
     }
-  }, [deleteTarget, fhirBaseUrl, accessToken, showToast, handleUnauthorizedError, queryClient]);
+  }, [deleteTarget, fhirBaseUrl, accessToken, showToast, handleUnauthorizedError, refetch]);
 
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
@@ -157,8 +147,8 @@ export function Resources() {
 
         <Box style={{ flex: 1 }}>
           <ResourceResultList
-            resources={searchResult?.resources}
-            total={searchResult?.total}
+            resources={resources}
+            total={total}
             isLoading={isSearching}
             error={displayError}
             hasSearched={searchRequest !== null}

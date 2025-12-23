@@ -1,14 +1,12 @@
 /**
  * Card component displaying a view export job with progress and download links.
+ * This is a pure presentational component - all state management happens in the parent.
  *
  * @author John Grimes
  */
 
 import { Cross2Icon, DownloadIcon, ReloadIcon } from "@radix-ui/react-icons";
 import { Badge, Box, Button, Card, Flex, Progress, Text } from "@radix-ui/themes";
-import { useJobs } from "../../contexts/JobContext";
-import { useJobPolling } from "../../hooks/useJobPolling";
-import { pollViewExportJobStatus } from "../../services/sqlOnFhir";
 import type { ViewExportJob } from "../../types/job";
 
 interface ViewExportCardProps {
@@ -42,21 +40,6 @@ function getFilenameFromUrl(url: string): string {
 }
 
 export function ViewExportCard({ job, onCancel, onDownload }: ViewExportCardProps) {
-  const { updateJobProgress, updateJobManifest, updateJobError, updateJobStatus } = useJobs();
-
-  // Poll job status while active.
-  useJobPolling({
-    jobId: job.id,
-    pollUrl: job.pollUrl!,
-    status: job.status,
-    queryKey: "viewExportJob",
-    pollFn: pollViewExportJobStatus,
-    onProgress: updateJobProgress,
-    onStatusChange: updateJobStatus,
-    onComplete: updateJobManifest,
-    onError: updateJobError,
-  });
-
   const isActive = job.status === "pending" || job.status === "in_progress";
   const showProgress = isActive && job.progress !== null;
 

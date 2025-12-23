@@ -45,6 +45,8 @@ export interface SearchOptions extends AuthOptions {
   resourceType: ResourceType;
   count?: number;
   filters?: string[];
+  /** Generic URL parameters for search queries. */
+  params?: Record<string, string | string[]>;
 }
 
 export type SearchResult = Bundle;
@@ -206,7 +208,8 @@ export interface BulkSubmitOptions extends AuthOptions {
   submitter: Identifier;
   submissionId: string;
   submissionStatus: SubmissionStatus;
-  manifestUrl: string;
+  /** Manifest URL. Required unless submissionStatus is "aborted". */
+  manifestUrl?: string;
   fhirBaseUrl?: string;
   replacesManifestUrl?: string;
   oauthMetadataUrl?: string;

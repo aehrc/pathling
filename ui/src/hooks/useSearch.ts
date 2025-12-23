@@ -22,37 +22,27 @@ import type { Bundle } from "fhir/r4";
 import { search } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import type { UseViewDefinitionsFn, ViewDefinitionSummary } from "../types/hooks";
+import type { UseSearchFn } from "../types/hooks";
 
 /**
- * Fetch available ViewDefinitions from the server.
+ * Search for FHIR resources.
  *
- * @param options - Optional query options.
- * @returns Query result with ViewDefinition summaries.
+ * @param options - Search options including resource type and parameters.
+ * @returns Query result with the Bundle response.
  */
-export const useViewDefinitions: UseViewDefinitionsFn = (options) => {
+export const useSearch: UseSearchFn = (options) => {
   const { fhirBaseUrl } = config;
   const { client } = useAuth();
   const accessToken = client?.state.tokenResponse?.access_token;
 
-  return useQuery<ViewDefinitionSummary[], Error>({
-    queryKey: ["viewDefinitions"],
-    queryFn: async () => {
-      const bundle: Bundle = await search(fhirBaseUrl!, {
-        resourceType: "ViewDefinition",
+  return useQuery<Bundle, Error>({
+    queryKey: ["search", options.resourceType, options.params],
+    queryFn: () =>
+      search(fhirBaseUrl!, {
+        resourceType: options.resourceType,
+        params: options.params,
         accessToken,
-      });
-      return (
-        bundle.entry?.map((e) => {
-          const resource = e.resource as { id: string; name?: string };
-          return {
-            id: resource.id,
-            name: resource.name || resource.id,
-            json: JSON.stringify(resource, null, 2),
-          };
-        }) ?? []
-      );
-    },
-    enabled: options?.enabled !== false && !!fhirBaseUrl,
+      }),
+    enabled: options.enabled !== false && !!fhirBaseUrl,
   });
-}
+};

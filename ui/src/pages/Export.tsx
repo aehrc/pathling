@@ -4,27 +4,52 @@
  * @author John Grimes
  */
 
-import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { Box, Button, Card, Flex, Progress, Spinner, Text } from "@radix-ui/themes";
+import { Cross2Icon, DownloadIcon, ReloadIcon } from "@radix-ui/react-icons";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { ExportForm } from "../components/export/ExportForm";
-import { ExportJobList } from "../components/export/ExportJobList";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import { useJobs } from "../contexts/JobContext";
-import { useServerCapabilities } from "../hooks/useServerCapabilities";
-import { cancelJob as cancelJobApi, kickOffExportWithFetch } from "../services/export";
-import { UnauthorizedError } from "../types/errors";
+import { useBulkExport, useServerCapabilities, useUnauthorizedHandler } from "../hooks";
 import type { ExportRequest } from "../types/export";
+
+type ExportType = "system" | "all-patients" | "patient" | "group";
+
+/**
+ * Maps form export level to hook export type.
+ */
+function mapExportLevel(level: ExportRequest["level"]): ExportType {
+  switch (level) {
+    case "system":
+      return "system";
+    case "patient-type":
+      return "all-patients";
+    case "patient-instance":
+      return "patient";
+    case "group":
+      return "group";
+  }
+}
+
+/**
+ * Extracts the filename from a result URL's query parameters.
+ */
+function getFilenameFromUrl(url: string): string {
+  const params = new URLSearchParams(new URL(url).search);
+  return params.get("file") ?? "unknown";
+}
 
 export function Export() {
   const { fhirBaseUrl } = config;
-  const { isAuthenticated, client, setError, clearSessionAndPromptLogin } = useAuth();
-  const { addJob, updateJobStatus, updateJobError, getExportJobs } = useJobs();
+  const { isAuthenticated, client, setError } = useAuth();
+  const accessToken = client?.state.tokenResponse?.access_token;
+  const handleUnauthorizedError = useUnauthorizedHandler();
 
-  const jobs = getExportJobs();
-  const unauthorizedHandledRef = useRef(false);
+  // Track the current export request and state.
+  const [exportRequest, setExportRequest] = useState<ExportRequest | null>(null);
+  const [progress, setProgress] = useState<string | undefined>(undefined);
 
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
@@ -36,78 +61,66 @@ export function Export() {
     return capabilities.resources.map((r) => r.type).sort();
   }, [capabilities]);
 
-  // Handle 401 errors by clearing session and prompting for re-authentication.
-  const handleUnauthorizedError = useCallback(() => {
-    if (unauthorizedHandledRef.current) return;
-    unauthorizedHandledRef.current = true;
-    clearSessionAndPromptLogin();
-  }, [clearSessionAndPromptLogin]);
+  const handleComplete = useCallback(() => {
+    setProgress(undefined);
+  }, []);
 
-  // Reset the unauthorized flag when user becomes authenticated.
-  useEffect(() => {
-    if (isAuthenticated) {
-      unauthorizedHandledRef.current = false;
-    }
-  }, [isAuthenticated]);
+  const handleError = useCallback(
+    (errorMessage: string) => {
+      setProgress(undefined);
+      // Hook checks if message looks like 401 and handles it.
+      handleUnauthorizedError(errorMessage);
+      // Set error for non-401 errors.
+      if (!errorMessage.includes("401") && !errorMessage.toLowerCase().includes("unauthorized")) {
+        setError(errorMessage);
+      }
+    },
+    [handleUnauthorizedError, setError],
+  );
+
+  const handleProgress = useCallback((progressValue: number) => {
+    setProgress(`${progressValue}%`);
+  }, []);
+
+  // Use the bulk export hook.
+  const { start, cancel, status, result, error } = useBulkExport({
+    type: exportRequest ? mapExportLevel(exportRequest.level) : "system",
+    resourceTypes: exportRequest?.resourceTypes,
+    since: exportRequest?.since,
+    patientId: exportRequest?.patientId,
+    groupId: exportRequest?.groupId,
+    onProgress: handleProgress,
+    onComplete: handleComplete,
+    onError: handleError,
+  });
+
+  // Derive isRunning from status.
+  const isRunning = status === "pending" || status === "in-progress";
 
   const handleExport = useCallback(
     async (request: ExportRequest) => {
-      if (!fhirBaseUrl) return;
-
-      try {
-        const accessToken = client?.state.tokenResponse?.access_token;
-
-        const { jobId, pollUrl } = await kickOffExportWithFetch(fhirBaseUrl, accessToken, request);
-
-        addJob({
-          id: jobId,
-          type: "export",
-          pollUrl,
-          status: "pending",
-          progress: null,
-          request,
-          manifest: null,
-          error: null,
-        });
-      } catch (err) {
-        if (err instanceof UnauthorizedError) {
-          handleUnauthorizedError();
-        } else {
-          setError(err instanceof Error ? err.message : "Failed to start export");
-        }
-      }
+      setExportRequest(request);
+      // Start will be triggered in effect when request changes.
     },
-    [client, fhirBaseUrl, addJob, setError, handleUnauthorizedError],
+    [],
   );
 
-  const handleCancel = useCallback(
-    async (jobId: string) => {
-      if (!fhirBaseUrl) return;
+  // Start export when request changes.
+  useEffect(() => {
+    if (exportRequest && !isRunning && !result) {
+      start();
+    }
+  }, [exportRequest, isRunning, result, start]);
 
-      const job = jobs.find((j) => j.id === jobId);
-      if (!job) return;
+  const handleCancel = useCallback(() => {
+    cancel();
+    setProgress(undefined);
+    setExportRequest(null);
+  }, [cancel]);
 
-      try {
-        const accessToken = client?.state.tokenResponse?.access_token;
-        // Export jobs always have a pollUrl.
-        await cancelJobApi(fhirBaseUrl, accessToken, job.pollUrl!);
-        updateJobStatus(jobId, "cancelled");
-      } catch (err) {
-        if (err instanceof UnauthorizedError) {
-          handleUnauthorizedError();
-        } else {
-          updateJobError(jobId, err instanceof Error ? err.message : "Failed to cancel job");
-        }
-      }
-    },
-    [client, fhirBaseUrl, jobs, updateJobStatus, updateJobError, handleUnauthorizedError],
-  );
-
-  const handleDownload = useCallback(
+  const handleDownloadFile = useCallback(
     async (url: string, filename: string) => {
       try {
-        const accessToken = client?.state.tokenResponse?.access_token;
-
         const headers: HeadersInit = {};
         if (accessToken) {
           headers.Authorization = `Bearer ${accessToken}`;
@@ -137,8 +150,12 @@ export function Export() {
         setError(err instanceof Error ? err.message : "Download failed");
       }
     },
-    [client, setError, handleUnauthorizedError],
+    [accessToken, setError, handleUnauthorizedError],
   );
+
+  const handleNewExport = useCallback(() => {
+    setExportRequest(null);
+  }, []);
 
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
@@ -158,21 +175,114 @@ export function Export() {
     return <LoginRequired />;
   }
 
-  // Show export form (either auth not required or user is authenticated).
+  // Parse progress percentage.
+  const progressValue = progress ? parseInt(progress.replace("%", ""), 10) : undefined;
+
+  // Show export form or job status.
   return (
     <>
       <Flex gap="6" direction={{ initial: "column", md: "row" }}>
         <Box style={{ flex: 1 }}>
           <ExportForm
             onSubmit={handleExport}
-            isSubmitting={false}
-            disabled={false}
+            isSubmitting={isRunning}
+            disabled={isRunning || !!result}
             resourceTypes={resourceTypes}
           />
         </Box>
 
         <Box style={{ flex: 1 }}>
-          <ExportJobList jobs={jobs} onCancel={handleCancel} onDownload={handleDownload} />
+          {(isRunning || result || error) && (
+            <Card>
+              <Flex direction="column" gap="3">
+                <Flex justify="between" align="start">
+                  <Box>
+                    <Text weight="medium">
+                      {exportRequest?.level === "system" && "System Export"}
+                      {exportRequest?.level === "patient-type" && "Patient Type Export"}
+                      {exportRequest?.level === "patient-instance" && "Patient Instance Export"}
+                      {exportRequest?.level === "group" && "Group Export"}
+                    </Text>
+                    {exportRequest?.resourceTypes && exportRequest.resourceTypes.length > 0 && (
+                      <Text size="1" color="gray" as="div">
+                        Types: {exportRequest.resourceTypes.join(", ")}
+                      </Text>
+                    )}
+                  </Box>
+                  {isRunning && (
+                    <Button size="1" variant="soft" color="red" onClick={handleCancel}>
+                      <Cross2Icon />
+                      Cancel
+                    </Button>
+                  )}
+                </Flex>
+
+                {isRunning && progressValue !== undefined && (
+                  <Box>
+                    <Flex justify="between" mb="1">
+                      <Text size="1" color="gray">
+                        Progress
+                      </Text>
+                      <Text size="1" color="gray">
+                        {progressValue}%
+                      </Text>
+                    </Flex>
+                    <Progress value={progressValue} />
+                  </Box>
+                )}
+
+                {isRunning && progressValue === undefined && (
+                  <Flex align="center" gap="2">
+                    <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
+                    <Text size="2" color="gray">
+                      Processing...
+                    </Text>
+                  </Flex>
+                )}
+
+                {error && (
+                  <Text size="2" color="red">
+                    Error: {error}
+                  </Text>
+                )}
+
+                {result?.output && (
+                  <Box>
+                    <Text size="2" weight="medium" mb="2">
+                      Output files ({result.output.length})
+                    </Text>
+                    <Flex direction="column" gap="1">
+                      {result.output.map((output, index) => (
+                        <Flex key={index} justify="between" align="center">
+                          <Text size="2">
+                            {getFilenameFromUrl(output.url)}
+                            {output.count !== undefined && (
+                              <Text color="gray"> ({output.count} resources)</Text>
+                            )}
+                          </Text>
+                          <Button
+                            size="1"
+                            variant="soft"
+                            onClick={() =>
+                              handleDownloadFile(output.url, getFilenameFromUrl(output.url))
+                            }
+                          >
+                            <DownloadIcon />
+                            Download
+                          </Button>
+                        </Flex>
+                      ))}
+                    </Flex>
+                    <Flex justify="end" mt="3">
+                      <Button variant="soft" onClick={handleNewExport}>
+                        New Export
+                      </Button>
+                    </Flex>
+                  </Box>
+                )}
+              </Flex>
+            </Card>
+          )}
         </Box>
       </Flex>
       <SessionExpiredDialog />

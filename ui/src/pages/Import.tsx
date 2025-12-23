@@ -4,30 +4,37 @@
  * @author John Grimes
  */
 
-import { Box, Flex, Spinner, Tabs, Text } from "@radix-ui/themes";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { Box, Button, Card, Flex, Progress, Spinner, Tabs, Text } from "@radix-ui/themes";
+import { Cross2Icon, ReloadIcon } from "@radix-ui/react-icons";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { ImportForm } from "../components/import/ImportForm";
-import { ImportJobList } from "../components/import/ImportJobList";
 import { ImportPnpForm } from "../components/import/ImportPnpForm";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import { useJobs } from "../contexts/JobContext";
-import { useServerCapabilities } from "../hooks/useServerCapabilities";
-import { cancelImport, kickOffImport, kickOffImportPnp } from "../services/import";
-import { UnauthorizedError } from "../types/errors";
+import { useImport, useImportPnp, useServerCapabilities, useUnauthorizedHandler } from "../hooks";
 import type { ImportRequest } from "../types/import";
 import type { ImportPnpRequest } from "../types/importPnp";
 
+type ImportType = "standard" | "pnp";
+
+interface ActiveImport {
+  type: ImportType;
+  description: string;
+}
+
 export function Import() {
   const { fhirBaseUrl } = config;
-  const { isAuthenticated, client, setError, clearSessionAndPromptLogin } = useAuth();
-  const { addJob, updateJobStatus, updateJobError, getImportJobs, getImportPnpJobs } = useJobs();
+  const { isAuthenticated, setError } = useAuth();
+  const handleUnauthorizedError = useUnauthorizedHandler();
 
-  const importJobs = getImportJobs();
-  const importPnpJobs = getImportPnpJobs();
-  const unauthorizedHandledRef = useRef(false);
+  // Track the current import request and state.
+  const [activeImport, setActiveImport] = useState<ActiveImport | null>(null);
+  const [importSources, setImportSources] = useState<string[]>([]);
+  const [importResourceTypes, setImportResourceTypes] = useState<string[]>([]);
+  const [pnpSources, setPnpSources] = useState<string[]>([]);
+  const [progress, setProgress] = useState<string | undefined>(undefined);
 
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
@@ -39,110 +46,107 @@ export function Import() {
     return capabilities.resources.map((r) => r.type).sort();
   }, [capabilities]);
 
-  // Handle 401 errors by clearing session and prompting for re-authentication.
-  const handleUnauthorizedError = useCallback(() => {
-    if (unauthorizedHandledRef.current) return;
-    unauthorizedHandledRef.current = true;
-    clearSessionAndPromptLogin();
-  }, [clearSessionAndPromptLogin]);
+  const handleComplete = useCallback(() => {
+    setProgress(undefined);
+  }, []);
 
-  // Reset the unauthorized flag when user becomes authenticated.
-  useEffect(() => {
-    if (isAuthenticated) {
-      unauthorizedHandledRef.current = false;
-    }
-  }, [isAuthenticated]);
+  const handleError = useCallback(
+    (errorMessage: string) => {
+      setProgress(undefined);
+      // Hook checks if message looks like 401 and handles it.
+      handleUnauthorizedError(errorMessage);
+      // Set error for non-401 errors.
+      if (!errorMessage.includes("401") && !errorMessage.toLowerCase().includes("unauthorized")) {
+        setError(errorMessage);
+      }
+    },
+    [handleUnauthorizedError, setError],
+  );
+
+  const handleProgress = useCallback((progressValue: number) => {
+    setProgress(`${progressValue}%`);
+  }, []);
+
+  // Use the import hooks.
+  const standardImport = useImport({
+    sources: importSources,
+    resourceTypes: importResourceTypes,
+    onProgress: handleProgress,
+    onComplete: handleComplete,
+    onError: handleError,
+  });
+
+  const pnpImport = useImportPnp({
+    sources: pnpSources,
+    onProgress: handleProgress,
+    onComplete: handleComplete,
+    onError: handleError,
+  });
 
   const handleImport = useCallback(
     async (request: ImportRequest) => {
-      if (!fhirBaseUrl) return;
-
-      try {
-        const accessToken = client?.state.tokenResponse?.access_token;
-
-        const { jobId, pollUrl } = await kickOffImport(fhirBaseUrl, accessToken, request);
-
-        addJob({
-          id: jobId,
-          type: "import",
-          pollUrl,
-          status: "pending",
-          progress: null,
-          request,
-          manifest: null,
-          error: null,
-        });
-      } catch (err) {
-        if (err instanceof UnauthorizedError) {
-          handleUnauthorizedError();
-        } else {
-          setError(err instanceof Error ? err.message : "Failed to start import");
-        }
-      }
+      setImportSources(request.input.map((i) => i.url));
+      setImportResourceTypes(request.input.map((i) => i.type));
+      setActiveImport({
+        type: "standard",
+        description: `Importing ${request.input.length} source(s)`,
+      });
     },
-    [client, fhirBaseUrl, addJob, setError, handleUnauthorizedError],
+    [],
   );
 
   const handleImportPnp = useCallback(
     async (request: ImportPnpRequest) => {
-      if (!fhirBaseUrl) return;
-
-      try {
-        const accessToken = client?.state.tokenResponse?.access_token;
-
-        const { jobId, pollUrl } = await kickOffImportPnp(fhirBaseUrl, accessToken, request);
-
-        addJob({
-          id: jobId,
-          type: "import-pnp",
-          pollUrl,
-          status: "pending",
-          progress: null,
-          request,
-          manifest: null,
-          error: null,
-        });
-      } catch (err) {
-        if (err instanceof UnauthorizedError) {
-          handleUnauthorizedError();
-        } else {
-          setError(err instanceof Error ? err.message : "Failed to start import");
-        }
-      }
+      setPnpSources([request.exportUrl]);
+      setActiveImport({
+        type: "pnp",
+        description: `Importing from ${request.exportUrl}`,
+      });
     },
-    [client, fhirBaseUrl, addJob, setError, handleUnauthorizedError],
+    [],
   );
 
-  const handleCancel = useCallback(
-    async (jobId: string) => {
-      if (!fhirBaseUrl) return;
+  // Derive running states from status.
+  const isStandardRunning = standardImport.status === "pending" || standardImport.status === "in-progress";
+  const isPnpRunning = pnpImport.status === "pending" || pnpImport.status === "in-progress";
 
-      const job = [...importJobs, ...importPnpJobs].find((j) => j.id === jobId);
-      if (!job) return;
+  // Start import when sources change.
+  useEffect(() => {
+    if (activeImport?.type === "standard" && importSources.length > 0 && !isStandardRunning) {
+      standardImport.start();
+    }
+  }, [activeImport, importSources, isStandardRunning, standardImport]);
 
-      try {
-        const accessToken = client?.state.tokenResponse?.access_token;
-        // Import jobs always have a pollUrl.
-        await cancelImport(fhirBaseUrl, accessToken, job.pollUrl!);
-        updateJobStatus(jobId, "cancelled");
-      } catch (err) {
-        if (err instanceof UnauthorizedError) {
-          handleUnauthorizedError();
-        } else {
-          updateJobError(jobId, err instanceof Error ? err.message : "Failed to cancel job");
-        }
-      }
-    },
-    [
-      client,
-      fhirBaseUrl,
-      importJobs,
-      importPnpJobs,
-      updateJobStatus,
-      updateJobError,
-      handleUnauthorizedError,
-    ],
-  );
+  useEffect(() => {
+    if (activeImport?.type === "pnp" && pnpSources.length > 0 && !isPnpRunning) {
+      pnpImport.start();
+    }
+  }, [activeImport, pnpSources, isPnpRunning, pnpImport]);
+
+  const handleCancel = useCallback(() => {
+    if (activeImport?.type === "standard") {
+      standardImport.cancel();
+    } else {
+      pnpImport.cancel();
+    }
+    setProgress(undefined);
+    setActiveImport(null);
+    setImportSources([]);
+    setPnpSources([]);
+  }, [activeImport, standardImport, pnpImport]);
+
+  const handleNewImport = useCallback(() => {
+    setActiveImport(null);
+    setImportSources([]);
+    setPnpSources([]);
+    setImportResourceTypes([]);
+  }, []);
+
+  // Determine current state.
+  const isRunning = isStandardRunning || isPnpRunning;
+  const error = standardImport.error || pnpImport.error;
+  const isComplete = (activeImport?.type === "standard" && !isStandardRunning && importSources.length > 0) ||
+    (activeImport?.type === "pnp" && !isPnpRunning && pnpSources.length > 0);
 
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
@@ -162,13 +166,16 @@ export function Import() {
     return <LoginRequired />;
   }
 
+  // Parse progress percentage.
+  const progressValue = progress ? parseInt(progress.replace("%", ""), 10) : undefined;
+
   // Show import form (either auth not required or user is authenticated).
   return (
     <>
       <Tabs.Root defaultValue="urls">
         <Tabs.List>
-          <Tabs.Trigger value="urls">Import from URLs</Tabs.Trigger>
-          <Tabs.Trigger value="fhir-server">Import from FHIR server</Tabs.Trigger>
+          <Tabs.Trigger value="urls" disabled={isRunning}>Import from URLs</Tabs.Trigger>
+          <Tabs.Trigger value="fhir-server" disabled={isRunning}>Import from FHIR server</Tabs.Trigger>
         </Tabs.List>
 
         <Box pt="4">
@@ -177,13 +184,64 @@ export function Import() {
               <Box style={{ flex: 1 }}>
                 <ImportForm
                   onSubmit={handleImport}
-                  isSubmitting={false}
-                  disabled={false}
+                  isSubmitting={isRunning && activeImport?.type === "standard"}
+                  disabled={isRunning}
                   resourceTypes={resourceTypes}
                 />
               </Box>
               <Box style={{ flex: 1 }}>
-                <ImportJobList jobs={importJobs} onCancel={handleCancel} />
+                {activeImport?.type === "standard" && (isRunning || isComplete || error) && (
+                  <Card>
+                    <Flex direction="column" gap="3">
+                      <Flex justify="between" align="start">
+                        <Box>
+                          <Text weight="medium">Standard Import</Text>
+                          <Text size="1" color="gray" as="div">
+                            {activeImport.description}
+                          </Text>
+                        </Box>
+                        {isRunning && (
+                          <Button size="1" variant="soft" color="red" onClick={handleCancel}>
+                            <Cross2Icon />
+                            Cancel
+                          </Button>
+                        )}
+                      </Flex>
+
+                      {isRunning && progressValue !== undefined && (
+                        <Box>
+                          <Flex justify="between" mb="1">
+                            <Text size="1" color="gray">Progress</Text>
+                            <Text size="1" color="gray">{progressValue}%</Text>
+                          </Flex>
+                          <Progress value={progressValue} />
+                        </Box>
+                      )}
+
+                      {isRunning && progressValue === undefined && (
+                        <Flex align="center" gap="2">
+                          <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
+                          <Text size="2" color="gray">Processing...</Text>
+                        </Flex>
+                      )}
+
+                      {error && (
+                        <Text size="2" color="red">Error: {error}</Text>
+                      )}
+
+                      {isComplete && !error && !isRunning && (
+                        <Box>
+                          <Text size="2" color="green" mb="2">Import completed successfully</Text>
+                          <Flex justify="end">
+                            <Button variant="soft" onClick={handleNewImport}>
+                              New Import
+                            </Button>
+                          </Flex>
+                        </Box>
+                      )}
+                    </Flex>
+                  </Card>
+                )}
               </Box>
             </Flex>
           </Tabs.Content>
@@ -191,10 +249,65 @@ export function Import() {
           <Tabs.Content value="fhir-server">
             <Flex gap="6" direction={{ initial: "column", md: "row" }}>
               <Box style={{ flex: 1 }}>
-                <ImportPnpForm onSubmit={handleImportPnp} isSubmitting={false} disabled={false} />
+                <ImportPnpForm
+                  onSubmit={handleImportPnp}
+                  isSubmitting={isRunning && activeImport?.type === "pnp"}
+                  disabled={isRunning}
+                />
               </Box>
               <Box style={{ flex: 1 }}>
-                <ImportJobList jobs={importPnpJobs} onCancel={handleCancel} />
+                {activeImport?.type === "pnp" && (isRunning || isComplete || error) && (
+                  <Card>
+                    <Flex direction="column" gap="3">
+                      <Flex justify="between" align="start">
+                        <Box>
+                          <Text weight="medium">FHIR Server Import</Text>
+                          <Text size="1" color="gray" as="div">
+                            {activeImport.description}
+                          </Text>
+                        </Box>
+                        {isRunning && (
+                          <Button size="1" variant="soft" color="red" onClick={handleCancel}>
+                            <Cross2Icon />
+                            Cancel
+                          </Button>
+                        )}
+                      </Flex>
+
+                      {isRunning && progressValue !== undefined && (
+                        <Box>
+                          <Flex justify="between" mb="1">
+                            <Text size="1" color="gray">Progress</Text>
+                            <Text size="1" color="gray">{progressValue}%</Text>
+                          </Flex>
+                          <Progress value={progressValue} />
+                        </Box>
+                      )}
+
+                      {isRunning && progressValue === undefined && (
+                        <Flex align="center" gap="2">
+                          <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
+                          <Text size="2" color="gray">Processing...</Text>
+                        </Flex>
+                      )}
+
+                      {error && (
+                        <Text size="2" color="red">Error: {error}</Text>
+                      )}
+
+                      {isComplete && !error && !isRunning && (
+                        <Box>
+                          <Text size="2" color="green" mb="2">Import completed successfully</Text>
+                          <Flex justify="end">
+                            <Button variant="soft" onClick={handleNewImport}>
+                              New Import
+                            </Button>
+                          </Flex>
+                        </Box>
+                      )}
+                    </Flex>
+                  </Card>
+                )}
               </Box>
             </Flex>
           </Tabs.Content>

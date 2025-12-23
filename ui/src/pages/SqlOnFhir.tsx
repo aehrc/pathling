@@ -5,92 +5,138 @@
  */
 
 import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { viewRun, viewRunStored, read } from "../api";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { SqlOnFhirForm } from "../components/sqlOnFhir/SqlOnFhirForm";
 import { SqlOnFhirResultTable } from "../components/sqlOnFhir/SqlOnFhirResultTable";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import { useJobs } from "../contexts/JobContext";
-import { useSaveViewDefinition } from "../hooks/useSaveViewDefinition";
-import { useServerCapabilities } from "../hooks/useServerCapabilities";
 import {
-  cancelViewExportJob,
-  executeInlineViewDefinition,
-  executeStoredViewDefinition,
-  kickOffViewExport,
-} from "../services/sqlOnFhir";
+  useSaveViewDefinition,
+  useServerCapabilities,
+  useUnauthorizedHandler,
+  useViewExport,
+} from "../hooks";
 import { UnauthorizedError } from "../types/errors";
-import type { ViewExportJob } from "../types/job";
 import type {
   ViewDefinitionExecuteRequest,
   ViewDefinitionResult,
 } from "../types/sqlOnFhir";
-import type { ViewExportFormat } from "../types/viewExport";
+import type { ViewDefinition } from "../types/hooks";
+import type { ViewExportFormat, ViewExportManifest } from "../types/viewExport";
+
+/**
+ * Parses an NDJSON response into an array of objects.
+ */
+function parseNdjsonResponse(ndjson: string): Record<string, unknown>[] {
+  return ndjson
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line) => JSON.parse(line));
+}
+
+/**
+ * Extracts column names from the first row of results.
+ */
+function extractColumns(rows: Record<string, unknown>[]): string[] {
+  if (rows.length === 0) return [];
+  return Object.keys(rows[0]);
+}
+
+/**
+ * Reads a stream to completion and returns the text content.
+ */
+async function streamToText(stream: ReadableStream): Promise<string> {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+
+  const decoder = new TextDecoder();
+  return chunks.map((chunk) => decoder.decode(chunk, { stream: true })).join("") +
+    decoder.decode();
+}
 
 export function SqlOnFhir() {
   const { fhirBaseUrl } = config;
-  const { isAuthenticated, client, clearSessionAndPromptLogin } = useAuth();
-  const { addJob, updateJobStatus, getJob } = useJobs();
+  const { isAuthenticated, client } = useAuth();
+  const accessToken = client?.state.tokenResponse?.access_token;
+  const handleUnauthorizedError = useUnauthorizedHandler();
 
   const [executionResult, setExecutionResult] = useState<ViewDefinitionResult | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionError, setExecutionError] = useState<Error | null>(null);
   const [hasExecuted, setHasExecuted] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportJobId, setExportJobId] = useState<string | null>(null);
   const [lastExecutedRequest, setLastExecutedRequest] = useState<ViewDefinitionExecuteRequest | null>(null);
-  const unauthorizedHandledRef = useRef(false);
+  const [exportProgress, setExportProgress] = useState<string | undefined>(undefined);
+  const [viewToExport, setViewToExport] = useState<{ viewDefinition?: object; name?: string } | null>(null);
+  const [exportFormat, setExportFormat] = useState<ViewExportFormat>("ndjson");
 
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
 
-  // Handle 401 errors by clearing session and prompting for re-authentication.
-  const handleUnauthorizedError = useCallback(() => {
-    if (unauthorizedHandledRef.current) return;
-    unauthorizedHandledRef.current = true;
-    clearSessionAndPromptLogin();
-  }, [clearSessionAndPromptLogin]);
+  // View export hook.
+  const viewExport = useViewExport({
+    views: viewToExport ? [viewToExport as { viewDefinition: ViewDefinition; name?: string }] : [],
+    format: exportFormat,
+    header: true,
+    onProgress: (progress) => setExportProgress(`${progress}%`),
+    onComplete: () => setExportProgress(undefined),
+    onError: (errorMessage) => {
+      setExportProgress(undefined);
+      // Check if it's an unauthorized error by message.
+      if (errorMessage.includes("401") || errorMessage.toLowerCase().includes("unauthorized")) {
+        handleUnauthorizedError();
+      } else {
+        setExecutionError(new Error(errorMessage));
+      }
+    },
+  });
 
-  // Reset the unauthorized flag when user becomes authenticated.
-  useEffect(() => {
-    if (isAuthenticated) {
-      unauthorizedHandledRef.current = false;
-    }
-  }, [isAuthenticated]);
+  // Derive isRunning from status.
+  const isExportRunning = viewExport.status === "pending" || viewExport.status === "in-progress";
 
   const handleExecute = useCallback(
     async (request: ViewDefinitionExecuteRequest) => {
+      if (!fhirBaseUrl) return;
+
       setIsExecuting(true);
       setExecutionError(null);
       setHasExecuted(true);
-      // Clear any previous export job when executing a new view.
-      setExportJobId(null);
+      setViewToExport(null);
 
       try {
-        const accessToken = client?.state.tokenResponse?.access_token;
-        let result: ViewDefinitionResult;
+        let stream: ReadableStream;
 
         if (request.mode === "stored" && request.viewDefinitionId) {
-          result = await executeStoredViewDefinition(
-            fhirBaseUrl,
+          stream = await viewRunStored(fhirBaseUrl, {
+            viewDefinitionId: request.viewDefinitionId,
+            limit: 10,
             accessToken,
-            request.viewDefinitionId,
-          );
+          });
         } else if (request.mode === "inline" && request.viewDefinitionJson) {
-          result = await executeInlineViewDefinition(
-            fhirBaseUrl,
+          const parsed = JSON.parse(request.viewDefinitionJson);
+          stream = await viewRun(fhirBaseUrl, {
+            viewDefinition: parsed,
+            limit: 10,
             accessToken,
-            request.viewDefinitionJson,
-          );
+          });
         } else {
           throw new Error("Invalid request: missing view definition ID or JSON");
         }
 
-        setExecutionResult(result);
-        // Store the request so we can export it later.
+        const ndjsonText = await streamToText(stream);
+        const rows = parseNdjsonResponse(ndjsonText);
+        const columns = extractColumns(rows);
+
+        setExecutionResult({ columns, rows });
         setLastExecutedRequest(request);
       } catch (err) {
         if (err instanceof UnauthorizedError) {
@@ -102,7 +148,7 @@ export function SqlOnFhir() {
         setIsExecuting(false);
       }
     },
-    [client, fhirBaseUrl, handleUnauthorizedError],
+    [fhirBaseUrl, accessToken, handleUnauthorizedError],
   );
 
   // Mutation for saving a ViewDefinition to the server.
@@ -121,50 +167,41 @@ export function SqlOnFhir() {
 
   const handleExport = useCallback(
     async (format: ViewExportFormat) => {
-      if (!lastExecutedRequest) return;
+      if (!lastExecutedRequest || !fhirBaseUrl) return;
 
-      setIsExporting(true);
-      try {
-        const accessToken = client?.state.tokenResponse?.access_token;
-        const request = {
-          viewDefinitionId: lastExecutedRequest.mode === "stored" ? lastExecutedRequest.viewDefinitionId : undefined,
-          viewDefinitionJson: lastExecutedRequest.mode === "inline" ? lastExecutedRequest.viewDefinitionJson : undefined,
-          format,
-        };
+      setExportFormat(format);
 
-        const { jobId, pollUrl } = await kickOffViewExport(fhirBaseUrl, accessToken, request);
-
-        // Add the job to the context.
-        addJob({
-          id: jobId,
-          type: "view-export",
-          pollUrl,
-          status: "pending",
-          progress: null,
-          error: null,
-          request,
-          manifest: null,
+      // Get or build the view definition.
+      let viewDefinition: object;
+      if (lastExecutedRequest.mode === "stored" && lastExecutedRequest.viewDefinitionId) {
+        // Fetch the stored view definition.
+        const resource = await read(fhirBaseUrl, {
+          resourceType: "ViewDefinition",
+          id: lastExecutedRequest.viewDefinitionId,
+          accessToken,
         });
-
-        setExportJobId(jobId);
-      } catch (err) {
-        if (err instanceof UnauthorizedError) {
-          handleUnauthorizedError();
-        } else {
-          // Display error in the result table area by setting execution error.
-          setExecutionError(err instanceof Error ? err : new Error("Export failed"));
-        }
-      } finally {
-        setIsExporting(false);
+        viewDefinition = resource;
+      } else if (lastExecutedRequest.mode === "inline" && lastExecutedRequest.viewDefinitionJson) {
+        viewDefinition = JSON.parse(lastExecutedRequest.viewDefinitionJson);
+      } else {
+        throw new Error("No view definition available");
       }
+
+      setViewToExport({ viewDefinition });
     },
-    [client, fhirBaseUrl, lastExecutedRequest, addJob, handleUnauthorizedError],
+    [lastExecutedRequest, fhirBaseUrl, accessToken],
   );
+
+  // Start export when viewToExport changes.
+  useEffect(() => {
+    if (viewToExport && !isExportRunning && !viewExport.result) {
+      viewExport.start();
+    }
+  }, [viewToExport, viewExport]);
 
   const handleDownload = useCallback(
     async (url: string, filename: string) => {
       try {
-        const accessToken = client?.state.tokenResponse?.access_token;
         const headers: HeadersInit = {};
         if (accessToken) {
           headers.Authorization = `Bearer ${accessToken}`;
@@ -190,30 +227,27 @@ export function SqlOnFhir() {
         setExecutionError(err instanceof Error ? err : new Error("Download failed"));
       }
     },
-    [client, handleUnauthorizedError],
+    [accessToken, handleUnauthorizedError],
   );
 
-  const handleCancelExport = useCallback(async () => {
-    if (!exportJobId) return;
+  const handleCancelExport = useCallback(() => {
+    viewExport.cancel();
+    setExportProgress(undefined);
+    setViewToExport(null);
+  }, [viewExport]);
 
-    const job = getJob(exportJobId) as ViewExportJob | undefined;
-    if (!job?.pollUrl) return;
-
-    try {
-      const accessToken = client?.state.tokenResponse?.access_token;
-      await cancelViewExportJob(fhirBaseUrl, accessToken, job.pollUrl);
-      updateJobStatus(exportJobId, "cancelled");
-    } catch (err) {
-      if (err instanceof UnauthorizedError) {
-        handleUnauthorizedError();
-      } else {
-        setExecutionError(err instanceof Error ? err : new Error("Cancel failed"));
-      }
-    }
-  }, [exportJobId, getJob, client, fhirBaseUrl, updateJobStatus, handleUnauthorizedError]);
-
-  // Get the current export job from context.
-  const currentExportJob = exportJobId ? (getJob(exportJobId) as ViewExportJob | undefined) : null;
+  // Build export job structure for the result table.
+  const exportJob = isExportRunning || viewExport.result ? {
+    id: "current-export",
+    type: "view-export" as const,
+    pollUrl: null,
+    status: isExportRunning ? "in_progress" as const : "completed" as const,
+    progress: exportProgress ? parseInt(exportProgress.replace("%", ""), 10) : null,
+    error: viewExport.error ?? null,
+    request: { format: exportFormat },
+    manifest: viewExport.result as ViewExportManifest | null,
+    createdAt: new Date(),
+  } : null;
 
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
@@ -258,10 +292,10 @@ export function SqlOnFhir() {
             error={displayError}
             hasExecuted={hasExecuted}
             onExport={handleExport}
-            exportJob={currentExportJob}
+            exportJob={exportJob}
             onDownload={handleDownload}
             onCancelExport={handleCancelExport}
-            isExporting={isExporting}
+            isExporting={isExportRunning}
           />
         </Box>
       </Flex>

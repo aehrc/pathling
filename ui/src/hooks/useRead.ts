@@ -18,41 +18,31 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import type { Bundle } from "fhir/r4";
-import { search } from "../api";
+import type { Resource } from "fhir/r4";
+import { read } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import type { UseViewDefinitionsFn, ViewDefinitionSummary } from "../types/hooks";
+import type { UseReadFn } from "../types/hooks";
 
 /**
- * Fetch available ViewDefinitions from the server.
+ * Read a single FHIR resource by type and ID.
  *
- * @param options - Optional query options.
- * @returns Query result with ViewDefinition summaries.
+ * @param options - Read options including resource type and ID.
+ * @returns Query result with the Resource.
  */
-export const useViewDefinitions: UseViewDefinitionsFn = (options) => {
+export const useRead: UseReadFn = (options) => {
   const { fhirBaseUrl } = config;
   const { client } = useAuth();
   const accessToken = client?.state.tokenResponse?.access_token;
 
-  return useQuery<ViewDefinitionSummary[], Error>({
-    queryKey: ["viewDefinitions"],
-    queryFn: async () => {
-      const bundle: Bundle = await search(fhirBaseUrl!, {
-        resourceType: "ViewDefinition",
+  return useQuery<Resource, Error>({
+    queryKey: ["read", options.resourceType, options.id],
+    queryFn: () =>
+      read(fhirBaseUrl!, {
+        resourceType: options.resourceType,
+        id: options.id,
         accessToken,
-      });
-      return (
-        bundle.entry?.map((e) => {
-          const resource = e.resource as { id: string; name?: string };
-          return {
-            id: resource.id,
-            name: resource.name || resource.id,
-            json: JSON.stringify(resource, null, 2),
-          };
-        }) ?? []
-      );
-    },
-    enabled: options?.enabled !== false && !!fhirBaseUrl,
+      }),
+    enabled: options.enabled !== false && !!fhirBaseUrl && !!options.id,
   });
 }
