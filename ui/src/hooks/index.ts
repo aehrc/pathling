@@ -38,6 +38,7 @@ export { useViewDefinitions } from "./useViewDefinitions";
 export { useSaveViewDefinition } from "./useSaveViewDefinition";
 
 // Other operations.
+export { useDownloadFile } from "./useDownloadFile";
 export { useFhirPathSearch } from "./useFhirPathSearch";
 export { useServerCapabilities } from "./useServerCapabilities";
 export { useUnauthorizedHandler } from "./useUnauthorizedHandler";

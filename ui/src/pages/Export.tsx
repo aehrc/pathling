@@ -12,7 +12,7 @@ import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { ExportForm } from "../components/export/ExportForm";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import { useBulkExport, useServerCapabilities, useUnauthorizedHandler } from "../hooks";
+import { useDownloadFile, useBulkExport, useServerCapabilities, useUnauthorizedHandler } from "../hooks";
 import type { ExportRequest } from "../types/export";
 import type { BulkExportType } from "../types/hooks";
 
@@ -58,9 +58,9 @@ function getFilenameFromUrl(url: string): string {
 
 export function Export() {
   const { fhirBaseUrl } = config;
-  const { isAuthenticated, client, setError } = useAuth();
-  const accessToken = client?.state.tokenResponse?.access_token;
+  const { isAuthenticated, setError } = useAuth();
   const handleUnauthorizedError = useUnauthorizedHandler();
+  const handleDownloadFile = useDownloadFile(setError);
 
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
@@ -95,41 +95,6 @@ export function Export() {
       groupId: formRequest.groupId,
     });
   };
-
-  const handleDownloadFile = useCallback(
-    async (url: string, filename: string) => {
-      try {
-        const headers: HeadersInit = {};
-        if (accessToken) {
-          headers.Authorization = `Bearer ${accessToken}`;
-        }
-
-        const response = await fetch(url, { headers });
-
-        if (response.status === 401) {
-          handleUnauthorizedError();
-          return;
-        }
-
-        if (!response.ok) {
-          throw new Error(`Download failed: ${response.status}`);
-        }
-
-        const blob = await response.blob();
-        const downloadUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(downloadUrl);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Download failed");
-      }
-    },
-    [accessToken, setError, handleUnauthorizedError],
-  );
 
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {

@@ -14,6 +14,7 @@ import { SqlOnFhirResultTable } from "../components/sqlOnFhir/SqlOnFhirResultTab
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import {
+  useDownloadFile,
   useSaveViewDefinition,
   useServerCapabilities,
   useUnauthorizedHandler,
@@ -72,6 +73,10 @@ export function SqlOnFhir() {
   const [executionResult, setExecutionResult] = useState<ViewDefinitionResult | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionError, setExecutionError] = useState<Error | null>(null);
+
+  const handleDownload = useDownloadFile((message) =>
+    setExecutionError(new Error(message)),
+  );
   const [hasExecuted, setHasExecuted] = useState(false);
   const [lastExecutedRequest, setLastExecutedRequest] =
     useState<ViewDefinitionExecuteRequest | null>(null);
@@ -194,37 +199,6 @@ export function SqlOnFhir() {
       });
     },
     [lastExecutedRequest, fhirBaseUrl, accessToken, viewExport],
-  );
-
-  const handleDownload = useCallback(
-    async (url: string, filename: string) => {
-      try {
-        const headers: HeadersInit = {};
-        if (accessToken) {
-          headers.Authorization = `Bearer ${accessToken}`;
-        }
-
-        const response = await fetch(url, { headers });
-
-        if (response.status === 401) {
-          handleUnauthorizedError();
-          return;
-        }
-
-        const blob = await response.blob();
-        const downloadUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(downloadUrl);
-      } catch (err) {
-        setExecutionError(err instanceof Error ? err : new Error("Download failed"));
-      }
-    },
-    [accessToken, handleUnauthorizedError],
   );
 
   const handleCancelExport = () => {
