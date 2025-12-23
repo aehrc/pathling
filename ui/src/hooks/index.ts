@@ -30,6 +30,7 @@ export { useBulkExport } from "./useBulkExport";
 export { useImport } from "./useImport";
 export { useImportPnp } from "./useImportPnp";
 export { useBulkSubmit } from "./useBulkSubmit";
+export { useBulkSubmitMonitor } from "./useBulkSubmitMonitor";
 export { useViewExport } from "./useViewExport";
 
 // View operations.

@@ -348,6 +348,30 @@ export interface UseBulkSubmitResult
   download: (fileName: string) => Promise<ReadableStream>;
 }
 
+/**
+ * Request parameters for monitoring an existing bulk submit operation.
+ */
+export interface BulkSubmitMonitorRequest {
+  /** Unique submission ID to monitor. */
+  submissionId: string;
+  /** Submitter identifier. */
+  submitter: SubmitterIdentifier;
+}
+
+/**
+ * Options for useBulkSubmitMonitor hook (callbacks only).
+ */
+export type UseBulkSubmitMonitorOptions = AsyncJobOptions;
+
+/**
+ * Result of useBulkSubmitMonitor hook.
+ */
+export interface UseBulkSubmitMonitorResult
+  extends AsyncJobResult<BulkSubmitMonitorRequest, BulkSubmitManifest> {
+  /** Function to download a file from the manifest. */
+  download: (fileName: string) => Promise<ReadableStream>;
+}
+
 // ============================================================================
 // View Definition Hooks
 // ============================================================================
@@ -614,6 +638,13 @@ export type UseImportPnpFn = (options?: UseImportPnpOptions) => UseImportPnpResu
  * Execute a bulk submit operation with polling.
  */
 export type UseBulkSubmitFn = (options?: UseBulkSubmitOptions) => UseBulkSubmitResult;
+
+/**
+ * Monitor an existing bulk submit operation with polling.
+ */
+export type UseBulkSubmitMonitorFn = (
+  options?: UseBulkSubmitMonitorOptions,
+) => UseBulkSubmitMonitorResult;
 
 /**
  * Run a ViewDefinition and return results as a stream.

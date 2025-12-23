@@ -4,141 +4,28 @@
  * @author John Grimes
  */
 
-import { Box, Button, Card, Flex, Progress, Spinner, Text } from "@radix-ui/themes";
 import { Cross2Icon, ReloadIcon } from "@radix-ui/react-icons";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { bulkSubmit, bulkSubmitStatus } from "../api";
+import { Box, Button, Card, Flex, Progress, Spinner, Text } from "@radix-ui/themes";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { BulkSubmitMonitorForm } from "../components/bulkSubmit/BulkSubmitMonitorForm";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
-import { useServerCapabilities, useUnauthorizedHandler } from "../hooks";
-import type { SubmitterIdentifier, StatusManifest } from "../types/bulkSubmit";
-import { UnauthorizedError } from "../types/errors";
-
-interface MonitoringState {
-  submissionId: string;
-  submitter: SubmitterIdentifier;
-  status: "pending" | "in-progress" | "completed" | "completed-with-errors" | "aborted" | "failed";
-  progress?: string;
-  manifest?: StatusManifest;
-  error?: string;
-}
+import { useBulkSubmitMonitor, useServerCapabilities } from "../hooks";
+import type { SubmitterIdentifier } from "../types/bulkSubmit";
 
 export function BulkSubmit() {
   const { fhirBaseUrl } = config;
-  const { isAuthenticated, client, setError } = useAuth();
-  const accessToken = client?.state.tokenResponse?.access_token;
-  const handleUnauthorizedError = useUnauthorizedHandler();
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
-
-  const [monitoring, setMonitoring] = useState<MonitoringState | null>(null);
+  const { isAuthenticated, setError } = useAuth();
 
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
 
-  // Poll for status updates.
-  const pollStatus = useCallback(async () => {
-    if (!monitoring || !fhirBaseUrl) return;
-
-    try {
-      const result = await bulkSubmitStatus(fhirBaseUrl, {
-        submitter: monitoring.submitter,
-        submissionId: monitoring.submissionId,
-        accessToken,
-      });
-
-      setMonitoring((prev) => {
-        if (!prev) return null;
-        if (result.status === "completed" || result.status === "completed-with-errors" || result.status === "aborted") {
-          // Stop polling when complete.
-          if (pollingRef.current) {
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
-          }
-          return {
-            ...prev,
-            status: result.status,
-            manifest: result.manifest,
-            progress: undefined,
-          };
-        }
-        return {
-          ...prev,
-          status: result.status,
-          progress: result.progress,
-        };
-      });
-    } catch (err) {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
-      if (err instanceof UnauthorizedError) {
-        handleUnauthorizedError();
-      } else {
-        setMonitoring((prev) =>
-          prev
-            ? {
-                ...prev,
-                status: "failed",
-                error: err instanceof Error ? err.message : "Failed to check status",
-              }
-            : null,
-        );
-      }
-    }
-  }, [monitoring, fhirBaseUrl, accessToken, handleUnauthorizedError]);
-
-  // Start polling when monitoring begins.
-  useEffect(() => {
-    if (monitoring && monitoring.status !== "completed" && monitoring.status !== "completed-with-errors" && monitoring.status !== "aborted" && monitoring.status !== "failed") {
-      // Initial poll.
-      pollStatus();
-      // Set up interval polling.
-      pollingRef.current = setInterval(pollStatus, 3000);
-    }
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
-    };
-  }, [monitoring?.submissionId, pollStatus]);
-
-  const handleMonitor = async (submissionId: string, submitter: SubmitterIdentifier) => {
-    setMonitoring({
-      submissionId,
-      submitter,
-      status: "pending",
-    });
-  };
-
-  const handleAbort = useCallback(async () => {
-    if (!monitoring || !fhirBaseUrl) return;
-
-    try {
-      await bulkSubmit(fhirBaseUrl, {
-        submitter: monitoring.submitter,
-        submissionId: monitoring.submissionId,
-        submissionStatus: "aborted",
-        accessToken,
-      });
-      setMonitoring((prev) => (prev ? { ...prev, status: "aborted" } : null));
-    } catch (err) {
-      if (err instanceof UnauthorizedError) {
-        handleUnauthorizedError();
-      } else {
-        setError(err instanceof Error ? err.message : "Failed to abort");
-      }
-    }
-  }, [monitoring, fhirBaseUrl, accessToken, handleUnauthorizedError, setError]);
-
-  const handleNewMonitor = () => {
-    setMonitoring(null);
-  };
+  // Monitor bulk submit operations.
+  const monitor = useBulkSubmitMonitor({
+    onError: (error) => setError(error),
+  });
 
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
@@ -158,8 +45,13 @@ export function BulkSubmit() {
     return <LoginRequired />;
   }
 
-  const isActive = monitoring && (monitoring.status === "pending" || monitoring.status === "in-progress");
-  const progressValue = monitoring?.progress ? parseInt(monitoring.progress.replace("%", ""), 10) : undefined;
+  // Derive display state from the hook.
+  const isMonitoring = monitor.status !== "idle";
+  const isActive = monitor.status === "pending" || monitor.status === "in-progress";
+  const isComplete = monitor.status === "complete";
+  const isCancelled = monitor.status === "cancelled";
+  const isError = monitor.status === "error";
+  const hasErrors = isComplete && monitor.result?.error && monitor.result.error.length > 0;
 
   // Show bulk submit form.
   return (
@@ -167,70 +59,84 @@ export function BulkSubmit() {
       <Flex gap="6" direction={{ initial: "column", md: "row" }}>
         <Box style={{ flex: 1 }}>
           <BulkSubmitMonitorForm
-            onMonitor={handleMonitor}
-            isSubmitting={!!isActive}
-            disabled={!!monitoring}
+            onMonitor={(submissionId: string, submitter: SubmitterIdentifier) => {
+              monitor.startWith({ submissionId, submitter });
+            }}
+            isSubmitting={isActive}
+            disabled={isMonitoring}
           />
         </Box>
         <Box style={{ flex: 1 }}>
-          {monitoring && (
+          {isMonitoring && (
             <Card>
               <Flex direction="column" gap="3">
                 <Flex justify="between" align="start">
                   <Box>
                     <Text weight="medium">Bulk Submit Monitor</Text>
                     <Text size="1" color="gray" as="div">
-                      Submission: {monitoring.submissionId}
+                      Submission: {monitor.request?.submissionId}
                     </Text>
                     <Text size="1" color="gray" as="div">
-                      Submitter: {monitoring.submitter.value}
+                      Submitter: {monitor.request?.submitter.value}
                     </Text>
                   </Box>
                   {isActive && (
-                    <Button size="1" variant="soft" color="red" onClick={handleAbort}>
+                    <Button size="1" variant="soft" color="red" onClick={monitor.cancel}>
                       <Cross2Icon />
                       Abort
                     </Button>
                   )}
                 </Flex>
 
-                {isActive && progressValue !== undefined && (
+                {isActive && monitor.progress !== undefined && (
                   <Box>
                     <Flex justify="between" mb="1">
-                      <Text size="1" color="gray">Progress</Text>
-                      <Text size="1" color="gray">{progressValue}%</Text>
+                      <Text size="1" color="gray">
+                        Progress
+                      </Text>
+                      <Text size="1" color="gray">
+                        {monitor.progress}%
+                      </Text>
                     </Flex>
-                    <Progress value={progressValue} />
+                    <Progress value={monitor.progress} />
                   </Box>
                 )}
 
-                {isActive && progressValue === undefined && (
+                {isActive && monitor.progress === undefined && (
                   <Flex align="center" gap="2">
                     <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
-                    <Text size="2" color="gray">Monitoring...</Text>
+                    <Text size="2" color="gray">
+                      Monitoring...
+                    </Text>
                   </Flex>
                 )}
 
-                {monitoring.status === "failed" && monitoring.error && (
-                  <Text size="2" color="red">Error: {monitoring.error}</Text>
+                {isError && monitor.error && (
+                  <Text size="2" color="red">
+                    Error: {monitor.error}
+                  </Text>
                 )}
 
-                {monitoring.status === "aborted" && (
-                  <Text size="2" color="orange">Submission was aborted</Text>
+                {isCancelled && (
+                  <Text size="2" color="orange">
+                    Submission was aborted
+                  </Text>
                 )}
 
-                {(monitoring.status === "completed" || monitoring.status === "completed-with-errors") && (
+                {isComplete && (
                   <Box>
-                    <Text size="2" color={monitoring.status === "completed" ? "green" : "orange"} mb="2">
-                      {monitoring.status === "completed" ? "Submission completed successfully" : "Submission completed with errors"}
+                    <Text size="2" color={hasErrors ? "orange" : "green"} mb="2">
+                      {hasErrors
+                        ? "Submission completed with errors"
+                        : "Submission completed successfully"}
                     </Text>
-                    {monitoring.manifest && (
+                    {monitor.result && (
                       <Text size="1" color="gray" as="div">
-                        Transaction time: {monitoring.manifest.transactionTime}
+                        Transaction time: {monitor.result.transactionTime}
                       </Text>
                     )}
                     <Flex justify="end" mt="3">
-                      <Button variant="soft" onClick={handleNewMonitor}>
+                      <Button variant="soft" onClick={monitor.reset}>
                         Monitor Another
                       </Button>
                     </Flex>
