@@ -47,9 +47,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => [...prev, { id, title, description }]);
   }, []);
 
-  const removeToast = useCallback((id: string) => {
+  const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+  };
 
   // Set up global reference for error handlers.
   useEffect(() => {

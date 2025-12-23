@@ -4,7 +4,7 @@
  * @author John Grimes
  */
 
-import { createContext, useContext, useReducer, useCallback, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useReducer, useMemo, type ReactNode } from "react";
 import type {
   Job,
   ExportJob,
@@ -83,68 +83,65 @@ function jobReducer(state: JobState, action: JobAction): JobState {
 export function JobProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(jobReducer, { jobs: [] });
 
-  const addJob = useCallback((job: Omit<Job, "createdAt">) => {
+  const addJob = (job: Omit<Job, "createdAt">) => {
     dispatch({
       type: "ADD_JOB",
       payload: { ...job, createdAt: new Date() } as Job,
     });
-  }, []);
+  };
 
-  const updateJobStatus = useCallback((id: string, status: JobStatus) => {
+  const updateJobStatus = (id: string, status: JobStatus) => {
     dispatch({
       type: "UPDATE_JOB",
       payload: { id, updates: { status } },
     });
-  }, []);
+  };
 
-  const updateJobProgress = useCallback((id: string, progress: number) => {
+  const updateJobProgress = (id: string, progress: number) => {
     dispatch({
       type: "UPDATE_JOB",
       payload: { id, updates: { progress } },
     });
-  }, []);
+  };
 
-  const updateJobPollUrl = useCallback((id: string, pollUrl: string) => {
+  const updateJobPollUrl = (id: string, pollUrl: string) => {
     dispatch({
       type: "UPDATE_JOB",
       payload: { id, updates: { pollUrl } },
     });
-  }, []);
+  };
 
-  const updateJobManifest = useCallback(
-    (id: string, manifest: ExportManifest | ImportManifest | StatusManifest | ViewExportManifest) => {
-      dispatch({
-        type: "UPDATE_JOB",
-        payload: {
-          id,
-          updates: { manifest, status: "completed" } as Partial<Job>,
-        },
-      });
-    },
-    [],
-  );
+  const updateJobManifest = (
+    id: string,
+    manifest: ExportManifest | ImportManifest | StatusManifest | ViewExportManifest,
+  ) => {
+    dispatch({
+      type: "UPDATE_JOB",
+      payload: {
+        id,
+        updates: { manifest, status: "completed" } as Partial<Job>,
+      },
+    });
+  };
 
-  const updateJobError = useCallback((id: string, error: string) => {
+  const updateJobError = (id: string, error: string) => {
     dispatch({
       type: "UPDATE_JOB",
       payload: { id, updates: { error, status: "failed" } },
     });
-  }, []);
+  };
 
-  const removeJob = useCallback((id: string) => {
+  const removeJob = (id: string) => {
     dispatch({ type: "REMOVE_JOB", payload: id });
-  }, []);
+  };
 
-  const clearJobs = useCallback(() => {
+  const clearJobs = () => {
     dispatch({ type: "CLEAR_JOBS" });
-  }, []);
+  };
 
-  const getJob = useCallback(
-    (id: string) => {
-      return state.jobs.find((job) => job.id === id);
-    },
-    [state.jobs],
-  );
+  const getJob = (id: string) => {
+    return state.jobs.find((job) => job.id === id);
+  };
 
   const getExportJobs = useMemo(
     () => () => state.jobs.filter((job): job is ExportJob => job.type === "export"),

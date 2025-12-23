@@ -5,7 +5,7 @@
  */
 
 import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { deleteResource } from "../api";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
@@ -60,20 +60,17 @@ export function Resources() {
     }
   }, [searchError, handleUnauthorizedError]);
 
-  const handleSearch = useCallback((request: SearchRequest) => {
+  const handleSearch = (request: SearchRequest) => {
     setSearchRequest(request);
-  }, []);
+  };
 
   // Handle delete button click - open confirmation dialog.
-  const handleDeleteClick = useCallback(
-    (resourceType: string, resourceId: string, summary: string | null) => {
-      setDeleteTarget({ resourceType, resourceId, summary });
-    },
-    [],
-  );
+  const handleDeleteClick = (resourceType: string, resourceId: string, summary: string | null) => {
+    setDeleteTarget({ resourceType, resourceId, summary });
+  };
 
   // Handle delete confirmation - perform the delete.
-  const handleDeleteConfirm = useCallback(async () => {
+  const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
 
     setIsDeleting(true);
@@ -102,7 +99,7 @@ export function Resources() {
     } finally {
       setIsDeleting(false);
     }
-  }, [deleteTarget, fhirBaseUrl, accessToken, showToast, handleUnauthorizedError, refetch]);
+  };
 
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {

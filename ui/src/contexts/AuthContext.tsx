@@ -4,7 +4,7 @@
  * @author John Grimes
  */
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import type Client from "fhirclient/lib/Client";
 
 interface AuthState {
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionExpired: false,
   });
 
-  const setClient = useCallback((client: Client) => {
+  const setClient = (client: Client) => {
     setState((prev) => ({
       ...prev,
       isAuthenticated: true,
@@ -46,39 +46,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       client,
       error: null,
     }));
-  }, []);
+  };
 
-  const setAuthRequired = useCallback((required: boolean) => {
+  const setAuthRequired = (required: boolean) => {
     setState((prev) => ({
       ...prev,
       authRequired: required,
     }));
-  }, []);
+  };
 
-  const setError = useCallback((error: string) => {
+  const setError = (error: string) => {
     setState((prev) => ({
       ...prev,
       isLoading: false,
       error,
     }));
-  }, []);
+  };
 
-  const setLoading = useCallback((loading: boolean) => {
+  const setLoading = (loading: boolean) => {
     setState((prev) => ({
       ...prev,
       isLoading: loading,
       error: loading ? null : prev.error,
     }));
-  }, []);
+  };
 
-  const setSessionExpired = useCallback((expired: boolean) => {
+  const setSessionExpired = (expired: boolean) => {
     setState((prev) => ({
       ...prev,
       sessionExpired: expired,
     }));
-  }, []);
+  };
 
-  const clearSessionAndPromptLogin = useCallback(() => {
+  const clearSessionAndPromptLogin = () => {
     setState((prev) => ({
       ...prev,
       isAuthenticated: false,
@@ -88,9 +88,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionExpired: true,
     }));
     sessionStorage.removeItem("SMART_KEY");
-  }, []);
+  };
 
-  const logout = useCallback(() => {
+  const logout = () => {
     setState((prev) => ({
       ...prev,
       isAuthenticated: false,
@@ -101,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }));
     // Clear any stored session data.
     sessionStorage.removeItem("SMART_KEY");
-  }, []);
+  };
 
   return (
     <AuthContext.Provider

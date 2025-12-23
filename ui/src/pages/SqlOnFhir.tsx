@@ -227,9 +227,9 @@ export function SqlOnFhir() {
     [accessToken, handleUnauthorizedError],
   );
 
-  const handleCancelExport = useCallback(() => {
+  const handleCancelExport = () => {
     viewExport.cancel();
-  }, [viewExport]);
+  };
 
   // Build export job structure for the result table.
   const exportJob =

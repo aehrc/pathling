@@ -108,16 +108,13 @@ export function BulkSubmit() {
     };
   }, [monitoring?.submissionId, pollStatus]);
 
-  const handleMonitor = useCallback(
-    async (submissionId: string, submitter: SubmitterIdentifier) => {
-      setMonitoring({
-        submissionId,
-        submitter,
-        status: "pending",
-      });
-    },
-    [],
-  );
+  const handleMonitor = async (submissionId: string, submitter: SubmitterIdentifier) => {
+    setMonitoring({
+      submissionId,
+      submitter,
+      status: "pending",
+    });
+  };
 
   const handleAbort = useCallback(async () => {
     if (!monitoring || !fhirBaseUrl) return;
@@ -139,9 +136,9 @@ export function BulkSubmit() {
     }
   }, [monitoring, fhirBaseUrl, accessToken, handleUnauthorizedError, setError]);
 
-  const handleNewMonitor = useCallback(() => {
+  const handleNewMonitor = () => {
     setMonitoring(null);
-  }, []);
+  };
 
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {

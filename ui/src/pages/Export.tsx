@@ -4,8 +4,8 @@
  * @author John Grimes
  */
 
-import { Box, Button, Card, Flex, Progress, Spinner, Text } from "@radix-ui/themes";
 import { Cross2Icon, DownloadIcon, ReloadIcon } from "@radix-ui/react-icons";
+import { Box, Button, Card, Flex, Progress, Spinner, Text } from "@radix-ui/themes";
 import { useCallback } from "react";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
@@ -86,22 +86,15 @@ export function Export() {
   // Derive isRunning from status.
   const isRunning = status === "pending" || status === "in-progress";
 
-  const handleExport = useCallback(
-    (formRequest: ExportRequest) => {
-      startWith({
-        type: mapExportLevel(formRequest.level),
-        resourceTypes: formRequest.resourceTypes,
-        since: formRequest.since,
-        patientId: formRequest.patientId,
-        groupId: formRequest.groupId,
-      });
-    },
-    [startWith],
-  );
-
-  const handleCancel = useCallback(() => {
-    cancel();
-  }, [cancel]);
+  const handleExport = (formRequest: ExportRequest) => {
+    startWith({
+      type: mapExportLevel(formRequest.level),
+      resourceTypes: formRequest.resourceTypes,
+      since: formRequest.since,
+      patientId: formRequest.patientId,
+      groupId: formRequest.groupId,
+    });
+  };
 
   const handleDownloadFile = useCallback(
     async (url: string, filename: string) => {
@@ -137,10 +130,6 @@ export function Export() {
     },
     [accessToken, setError, handleUnauthorizedError],
   );
-
-  const handleNewExport = useCallback(() => {
-    reset();
-  }, [reset]);
 
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
@@ -179,9 +168,7 @@ export function Export() {
               <Flex direction="column" gap="3">
                 <Flex justify="between" align="start">
                   <Box>
-                    <Text weight="medium">
-                      {request?.type && getExportTypeLabel(request.type)}
-                    </Text>
+                    <Text weight="medium">{request?.type && getExportTypeLabel(request.type)}</Text>
                     {request?.resourceTypes && request.resourceTypes.length > 0 && (
                       <Text size="1" color="gray" as="div">
                         Types: {request.resourceTypes.join(", ")}
@@ -189,7 +176,7 @@ export function Export() {
                     )}
                   </Box>
                   {isRunning && (
-                    <Button size="1" variant="soft" color="red" onClick={handleCancel}>
+                    <Button size="1" variant="soft" color="red" onClick={cancel}>
                       <Cross2Icon />
                       Cancel
                     </Button>
@@ -253,7 +240,7 @@ export function Export() {
                       ))}
                     </Flex>
                     <Flex justify="end" mt="3">
-                      <Button variant="soft" onClick={handleNewExport}>
+                      <Button variant="soft" onClick={reset}>
                         New Export
                       </Button>
                     </Flex>
