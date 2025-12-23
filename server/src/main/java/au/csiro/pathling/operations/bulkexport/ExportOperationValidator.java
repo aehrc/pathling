@@ -19,6 +19,7 @@ import jakarta.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -232,6 +233,8 @@ public class ExportOperationValidator {
         .filter(this::filterUnauthorizedResources)
         .toList();
 
+    checkForDuplicateResourceTypes(resourceFilter);
+
     final List<ExportRequest.FhirElement> fhirElements = elements.stream()
         .flatMap(string -> Arrays.stream(string.split(",")))
         .map(this::mapFhirElement)
@@ -297,6 +300,8 @@ public class ExportOperationValidator {
         .filter(this::filterUnauthorizedResources)
         .filter(this::filterNonCompartmentResources)
         .toList();
+
+    checkForDuplicateResourceTypes(resourceFilter);
 
     final List<ExportRequest.FhirElement> fhirElements = elements.stream()
         .flatMap(string -> Arrays.stream(string.split(",")))
@@ -400,6 +405,23 @@ public class ExportOperationValidator {
     } catch (final DataFormatException e) {
       throw new InvalidRequestException(
           "Failed to parse resource type '%s' in _elements.".formatted(resourceType));
+    }
+  }
+
+  /**
+   * Checks for duplicate resource types in the provided list and throws an exception if any are
+   * found.
+   *
+   * @param resourceTypes the list of resource types to check
+   * @throws InvalidRequestException if duplicate resource types are detected
+   */
+  private void checkForDuplicateResourceTypes(@Nonnull final List<String> resourceTypes) {
+    final Set<String> seen = new HashSet<>();
+    for (final String type : resourceTypes) {
+      if (!seen.add(type)) {
+        throw new InvalidRequestException(
+            "Duplicate resource type '%s' in _type parameter.".formatted(type));
+      }
     }
   }
 }

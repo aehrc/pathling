@@ -106,8 +106,9 @@ function parseCapabilities(capability: CapabilityStatement): ServerCapabilities 
     }
   }
 
-  // Sorted list of resource type names for use in dropdowns.
-  const resourceTypes = resources.map((r) => r.type).sort();
+  // Sorted, deduplicated list of resource type names for use in dropdowns.
+  // Using Set to ensure no duplicates even if CapabilityStatement has duplicate entries.
+  const resourceTypes = [...new Set(resources.map((r) => r.type))].sort();
 
   return {
     authRequired,

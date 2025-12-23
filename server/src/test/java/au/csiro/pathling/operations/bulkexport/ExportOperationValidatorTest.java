@@ -19,12 +19,15 @@ package au.csiro.pathling.operations.bulkexport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.FhirServer;
 import au.csiro.pathling.async.PreAsyncValidation.PreAsyncValidationResult;
+import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import au.csiro.pathling.operations.compartment.PatientCompartmentService;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
@@ -47,6 +50,10 @@ class ExportOperationValidatorTest {
   void setUp() {
     final FhirContext fhirContext = FhirContext.forR4();
     final ServerConfiguration serverConfiguration = new ServerConfiguration();
+    // Configure auth to be disabled to avoid NPE.
+    final AuthorizationConfiguration authConfig = new AuthorizationConfiguration();
+    authConfig.setEnabled(false);
+    serverConfiguration.setAuth(authConfig);
     final PatientCompartmentService patientCompartmentService =
         new PatientCompartmentService(fhirContext);
     validator = new ExportOperationValidator(fhirContext, serverConfiguration,
@@ -119,5 +126,45 @@ class ExportOperationValidatorTest {
       assertThat(exportRequest.includeResourceTypeFilters()).isEmpty();
       assertThat(exportRequest.elements()).isEmpty();
     });
+  }
+
+  @Test
+  @DisplayName("validateRequest should reject duplicate resource types in _type parameter")
+  void validateRequest_shouldRejectDuplicateResourceTypes() {
+    // When: Creating an export request with duplicate resource types.
+    final List<String> duplicateTypes = List.of("Patient", "Observation", "Patient");
+
+    // Then: Should throw InvalidRequestException.
+    assertThatThrownBy(() -> validator.validateRequest(
+        requestDetails,
+        null,
+        null,
+        null,
+        duplicateTypes,
+        null
+    ))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("Duplicate resource type")
+        .hasMessageContaining("Patient");
+  }
+
+  @Test
+  @DisplayName("validateRequest should reject duplicate types provided via comma-separated string")
+  void validateRequest_shouldRejectDuplicateTypesInCommaSeparatedString() {
+    // When: Creating an export request with duplicates in comma-separated format.
+    final List<String> duplicateTypes = List.of("Patient,Observation,Patient");
+
+    // Then: Should throw InvalidRequestException.
+    assertThatThrownBy(() -> validator.validateRequest(
+        requestDetails,
+        null,
+        null,
+        null,
+        duplicateTypes,
+        null
+    ))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("Duplicate resource type")
+        .hasMessageContaining("Patient");
   }
 }

@@ -302,6 +302,10 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
                                                      : EnumSet.copyOf(supported);
 
     for (final ResourceType resourceType : supportedResourceTypes) {
+      // Skip OperationDefinition as it's handled separately below with read-only interaction.
+      if (resourceType == ResourceType.OPERATIONDEFINITION) {
+        continue;
+      }
       final CapabilityStatementRestResourceComponent resource =
           new CapabilityStatementRestResourceComponent(new CodeType(resourceType.toCode()));
       resource.setProfile(FHIR_RESOURCE_BASE + resourceType.toCode());

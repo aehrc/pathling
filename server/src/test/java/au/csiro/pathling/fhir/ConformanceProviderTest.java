@@ -75,12 +75,16 @@ class ConformanceProviderTest {
     final CapabilityStatement capabilityStatement = conformanceProvider.getServerConformance(null,
         null);
 
-    // Then: All supported resource types should have CREATE interaction.
+    // Then: All supported resource types (except read-only ones) should have CREATE interaction.
     final Set<ResourceType> supportedResourceTypes = FhirServer.supportedResourceTypes();
     final List<CapabilityStatementRestResourceComponent> resources = capabilityStatement.getRest()
         .get(0).getResource();
 
     for (final ResourceType resourceType : supportedResourceTypes) {
+      // OperationDefinition is intentionally read-only.
+      if (resourceType == ResourceType.OPERATIONDEFINITION) {
+        continue;
+      }
       final Optional<CapabilityStatementRestResourceComponent> resourceComponent = resources
           .stream()
           .filter(r -> r.getType().equals(resourceType.toCode()))
@@ -129,12 +133,16 @@ class ConformanceProviderTest {
     final CapabilityStatement capabilityStatement = conformanceProvider.getServerConformance(null,
         null);
 
-    // Then: All supported resource types should have READ, SEARCH, UPDATE, and CREATE.
+    // Then: All supported resource types (except read-only ones) should have CRUD interactions.
     final Set<ResourceType> supportedResourceTypes = FhirServer.supportedResourceTypes();
     final List<CapabilityStatementRestResourceComponent> resources = capabilityStatement.getRest()
         .get(0).getResource();
 
     for (final ResourceType resourceType : supportedResourceTypes) {
+      // OperationDefinition is intentionally read-only.
+      if (resourceType == ResourceType.OPERATIONDEFINITION) {
+        continue;
+      }
       final Optional<CapabilityStatementRestResourceComponent> resourceComponent = resources
           .stream()
           .filter(r -> r.getType().equals(resourceType.toCode()))
@@ -175,6 +183,27 @@ class ConformanceProviderTest {
     assertThat(operationNames)
         .as("System-level operations should include viewdefinition-export")
         .contains("viewdefinition-export");
+  }
+
+  @Test
+  void capabilityStatementHasNoDuplicateResourceTypes() {
+    // When: Getting the capability statement.
+    final CapabilityStatement capabilityStatement = conformanceProvider.getServerConformance(null,
+        null);
+
+    // Then: There should be no duplicate resource types in the capability statement.
+    final List<CapabilityStatementRestResourceComponent> resources = capabilityStatement.getRest()
+        .get(0).getResource();
+
+    final List<String> resourceTypes = resources.stream()
+        .map(CapabilityStatementRestResourceComponent::getType)
+        .toList();
+
+    final Set<String> uniqueResourceTypes = Set.copyOf(resourceTypes);
+
+    assertThat(resourceTypes)
+        .as("CapabilityStatement should not contain duplicate resource types")
+        .hasSameSizeAs(uniqueResourceTypes);
   }
 
 }
