@@ -6,7 +6,7 @@
 
 import { Box, Button, Card, Flex, Progress, Spinner, Tabs, Text } from "@radix-ui/themes";
 import { Cross2Icon, ReloadIcon } from "@radix-ui/react-icons";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { ImportForm } from "../components/import/ImportForm";
@@ -17,23 +17,10 @@ import { useImport, useImportPnp, useServerCapabilities, useUnauthorizedHandler 
 import type { ImportRequest } from "../types/import";
 import type { ImportPnpRequest } from "../types/importPnp";
 
-type ImportType = "standard" | "pnp";
-
-interface ActiveImport {
-  type: ImportType;
-  description: string;
-}
-
 export function Import() {
   const { fhirBaseUrl } = config;
   const { isAuthenticated, setError } = useAuth();
   const handleUnauthorizedError = useUnauthorizedHandler();
-
-  // Track the current import request and state.
-  const [activeImport, setActiveImport] = useState<ActiveImport | null>(null);
-  const [importSources, setImportSources] = useState<string[]>([]);
-  const [importResourceTypes, setImportResourceTypes] = useState<string[]>([]);
-  const [pnpSources, setPnpSources] = useState<string[]>([]);
 
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
@@ -52,81 +39,58 @@ export function Import() {
   );
 
   // Use the import hooks.
-  const standardImport = useImport({
-    sources: importSources,
-    resourceTypes: importResourceTypes,
-    onError: handleError,
-  });
-
-  const pnpImport = useImportPnp({
-    sources: pnpSources,
-    onError: handleError,
-  });
+  const standardImport = useImport({ onError: handleError });
+  const pnpImport = useImportPnp({ onError: handleError });
 
   const handleImport = useCallback(
-    async (request: ImportRequest) => {
-      setImportSources(request.input.map((i) => i.url));
-      setImportResourceTypes(request.input.map((i) => i.type));
-      setActiveImport({
-        type: "standard",
-        description: `Importing ${request.input.length} source(s)`,
+    (request: ImportRequest) => {
+      standardImport.startWith({
+        sources: request.input.map((i) => i.url),
+        resourceTypes: request.input.map((i) => i.type),
       });
     },
-    [],
+    [standardImport],
   );
 
   const handleImportPnp = useCallback(
-    async (request: ImportPnpRequest) => {
-      setPnpSources([request.exportUrl]);
-      setActiveImport({
-        type: "pnp",
-        description: `Importing from ${request.exportUrl}`,
+    (request: ImportPnpRequest) => {
+      pnpImport.startWith({
+        exportUrl: request.exportUrl,
       });
     },
-    [],
+    [pnpImport],
   );
 
   // Derive running states from status.
-  const isStandardRunning = standardImport.status === "pending" || standardImport.status === "in-progress";
+  const isStandardRunning =
+    standardImport.status === "pending" || standardImport.status === "in-progress";
   const isPnpRunning = pnpImport.status === "pending" || pnpImport.status === "in-progress";
-
-  // Start import when sources change.
-  useEffect(() => {
-    if (activeImport?.type === "standard" && importSources.length > 0 && !isStandardRunning) {
-      standardImport.start();
-    }
-  }, [activeImport, importSources, isStandardRunning, standardImport]);
-
-  useEffect(() => {
-    if (activeImport?.type === "pnp" && pnpSources.length > 0 && !isPnpRunning) {
-      pnpImport.start();
-    }
-  }, [activeImport, pnpSources, isPnpRunning, pnpImport]);
-
-  const handleCancel = useCallback(() => {
-    if (activeImport?.type === "standard") {
-      standardImport.cancel();
-    } else {
-      pnpImport.cancel();
-    }
-    setActiveImport(null);
-    setImportSources([]);
-    setPnpSources([]);
-  }, [activeImport, standardImport, pnpImport]);
-
-  const handleNewImport = useCallback(() => {
-    setActiveImport(null);
-    setImportSources([]);
-    setPnpSources([]);
-    setImportResourceTypes([]);
-  }, []);
-
-  // Determine current state.
   const isRunning = isStandardRunning || isPnpRunning;
-  const error = standardImport.error || pnpImport.error;
-  const progress = activeImport?.type === "standard" ? standardImport.progress : pnpImport.progress;
-  const isComplete = (activeImport?.type === "standard" && !isStandardRunning && importSources.length > 0) ||
-    (activeImport?.type === "pnp" && !isPnpRunning && pnpSources.length > 0);
+
+  // Derive completion state from status.
+  const isStandardComplete = standardImport.status === "complete";
+  const isPnpComplete = pnpImport.status === "complete";
+
+  const handleCancelStandard = useCallback(() => {
+    standardImport.cancel();
+  }, [standardImport]);
+
+  const handleCancelPnp = useCallback(() => {
+    pnpImport.cancel();
+  }, [pnpImport]);
+
+  const handleNewStandardImport = useCallback(() => {
+    standardImport.reset();
+  }, [standardImport]);
+
+  const handleNewPnpImport = useCallback(() => {
+    pnpImport.reset();
+  }, [pnpImport]);
+
+  // Determine if we should show the status card for each import type.
+  const showStandardStatus =
+    isStandardRunning || isStandardComplete || standardImport.error;
+  const showPnpStatus = isPnpRunning || isPnpComplete || pnpImport.error;
 
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
@@ -161,56 +125,58 @@ export function Import() {
               <Box style={{ flex: 1 }}>
                 <ImportForm
                   onSubmit={handleImport}
-                  isSubmitting={isRunning && activeImport?.type === "standard"}
+                  isSubmitting={isStandardRunning}
                   disabled={isRunning}
                   resourceTypes={capabilities?.resourceTypes ?? []}
                 />
               </Box>
               <Box style={{ flex: 1 }}>
-                {activeImport?.type === "standard" && (isRunning || isComplete || error) && (
+                {showStandardStatus && (
                   <Card>
                     <Flex direction="column" gap="3">
                       <Flex justify="between" align="start">
                         <Box>
                           <Text weight="medium">Standard Import</Text>
-                          <Text size="1" color="gray" as="div">
-                            {activeImport.description}
-                          </Text>
+                          {standardImport.request && (
+                            <Text size="1" color="gray" as="div">
+                              Importing {standardImport.request.sources.length} source(s)
+                            </Text>
+                          )}
                         </Box>
-                        {isRunning && (
-                          <Button size="1" variant="soft" color="red" onClick={handleCancel}>
+                        {isStandardRunning && (
+                          <Button size="1" variant="soft" color="red" onClick={handleCancelStandard}>
                             <Cross2Icon />
                             Cancel
                           </Button>
                         )}
                       </Flex>
 
-                      {isRunning && progress !== undefined && (
+                      {isStandardRunning && standardImport.progress !== undefined && (
                         <Box>
                           <Flex justify="between" mb="1">
                             <Text size="1" color="gray">Progress</Text>
-                            <Text size="1" color="gray">{progress}%</Text>
+                            <Text size="1" color="gray">{standardImport.progress}%</Text>
                           </Flex>
-                          <Progress value={progress} />
+                          <Progress value={standardImport.progress} />
                         </Box>
                       )}
 
-                      {isRunning && progress === undefined && (
+                      {isStandardRunning && standardImport.progress === undefined && (
                         <Flex align="center" gap="2">
                           <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
                           <Text size="2" color="gray">Processing...</Text>
                         </Flex>
                       )}
 
-                      {error && (
-                        <Text size="2" color="red">Error: {error}</Text>
+                      {standardImport.error && (
+                        <Text size="2" color="red">Error: {standardImport.error}</Text>
                       )}
 
-                      {isComplete && !error && !isRunning && (
+                      {isStandardComplete && !standardImport.error && (
                         <Box>
                           <Text size="2" color="green" mb="2">Import completed successfully</Text>
                           <Flex justify="end">
-                            <Button variant="soft" onClick={handleNewImport}>
+                            <Button variant="soft" onClick={handleNewStandardImport}>
                               New Import
                             </Button>
                           </Flex>
@@ -228,55 +194,57 @@ export function Import() {
               <Box style={{ flex: 1 }}>
                 <ImportPnpForm
                   onSubmit={handleImportPnp}
-                  isSubmitting={isRunning && activeImport?.type === "pnp"}
+                  isSubmitting={isPnpRunning}
                   disabled={isRunning}
                 />
               </Box>
               <Box style={{ flex: 1 }}>
-                {activeImport?.type === "pnp" && (isRunning || isComplete || error) && (
+                {showPnpStatus && (
                   <Card>
                     <Flex direction="column" gap="3">
                       <Flex justify="between" align="start">
                         <Box>
                           <Text weight="medium">FHIR Server Import</Text>
-                          <Text size="1" color="gray" as="div">
-                            {activeImport.description}
-                          </Text>
+                          {pnpImport.request && (
+                            <Text size="1" color="gray" as="div">
+                              Importing from {pnpImport.request.exportUrl}
+                            </Text>
+                          )}
                         </Box>
-                        {isRunning && (
-                          <Button size="1" variant="soft" color="red" onClick={handleCancel}>
+                        {isPnpRunning && (
+                          <Button size="1" variant="soft" color="red" onClick={handleCancelPnp}>
                             <Cross2Icon />
                             Cancel
                           </Button>
                         )}
                       </Flex>
 
-                      {isRunning && progress !== undefined && (
+                      {isPnpRunning && pnpImport.progress !== undefined && (
                         <Box>
                           <Flex justify="between" mb="1">
                             <Text size="1" color="gray">Progress</Text>
-                            <Text size="1" color="gray">{progress}%</Text>
+                            <Text size="1" color="gray">{pnpImport.progress}%</Text>
                           </Flex>
-                          <Progress value={progress} />
+                          <Progress value={pnpImport.progress} />
                         </Box>
                       )}
 
-                      {isRunning && progress === undefined && (
+                      {isPnpRunning && pnpImport.progress === undefined && (
                         <Flex align="center" gap="2">
                           <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
                           <Text size="2" color="gray">Processing...</Text>
                         </Flex>
                       )}
 
-                      {error && (
-                        <Text size="2" color="red">Error: {error}</Text>
+                      {pnpImport.error && (
+                        <Text size="2" color="red">Error: {pnpImport.error}</Text>
                       )}
 
-                      {isComplete && !error && !isRunning && (
+                      {isPnpComplete && !pnpImport.error && (
                         <Box>
                           <Text size="2" color="green" mb="2">Import completed successfully</Text>
                           <Flex justify="end">
-                            <Button variant="soft" onClick={handleNewImport}>
+                            <Button variant="soft" onClick={handleNewPnpImport}>
                               New Import
                             </Button>
                           </Flex>

@@ -38,7 +38,7 @@ export type AsyncJobStatus =
 /**
  * Result of an async job hook.
  */
-export interface AsyncJobResult<TResult> {
+export interface AsyncJobResult<TRequest, TResult> {
   /** Current status of the job. */
   status: AsyncJobStatus;
   /** Progress percentage (0-100) when available. */
@@ -47,6 +47,12 @@ export interface AsyncJobResult<TResult> {
   result?: TResult;
   /** Error message when status is "error". */
   error?: string;
+  /** The request that produced the current result/error. */
+  request?: TRequest;
+  /** Start execution with the given request. If already running, cancels and restarts. */
+  startWith: (request: TRequest) => void;
+  /** Reset all state back to idle. */
+  reset: () => void;
   /** Function to cancel the job. */
   cancel: () => Promise<void>;
 }
@@ -182,9 +188,9 @@ export type UseDeleteResult = UseMutationResult<void, Error, UseDeleteVariables>
 export type BulkExportType = "system" | "all-patients" | "patient" | "group";
 
 /**
- * Options for useBulkExport hook.
+ * Request parameters for bulk export operations.
  */
-export interface UseBulkExportOptions extends AsyncJobOptions {
+export interface BulkExportRequest {
   /** Type of export operation. */
   type: BulkExportType;
   /** Patient ID (required for "patient" type). */
@@ -198,6 +204,11 @@ export interface UseBulkExportOptions extends AsyncJobOptions {
   /** Output format. */
   outputFormat?: string;
 }
+
+/**
+ * Options for useBulkExport hook (callbacks only).
+ */
+export type UseBulkExportOptions = AsyncJobOptions;
 
 /**
  * Manifest entry for a single exported file.
@@ -222,9 +233,8 @@ export interface ExportManifest {
 /**
  * Result of useBulkExport hook.
  */
-export interface UseBulkExportResult extends AsyncJobResult<ExportManifest> {
-  /** Function to start the export. */
-  start: () => void;
+export interface UseBulkExportResult
+  extends AsyncJobResult<BulkExportRequest, ExportManifest> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
@@ -234,40 +244,42 @@ export interface UseBulkExportResult extends AsyncJobResult<ExportManifest> {
 // ============================================================================
 
 /**
- * Options for useImport hook.
+ * Request parameters for standard import operations.
  */
-export interface UseImportOptions extends AsyncJobOptions {
+export interface ImportJobRequest {
   /** Source URLs to import from. */
   sources: string[];
   /** Resource types to import (optional filter). */
   resourceTypes?: string[];
 }
+
+/**
+ * Options for useImport hook (callbacks only).
+ */
+export type UseImportOptions = AsyncJobOptions;
 
 /**
  * Result of useImport hook.
  */
-export interface UseImportResult extends AsyncJobResult<void> {
-  /** Function to start the import. */
-  start: () => void;
+export type UseImportResult = AsyncJobResult<ImportJobRequest, void>;
+
+/**
+ * Request parameters for passthrough (PnP) import operations.
+ */
+export interface ImportPnpJobRequest {
+  /** Export URL to import from. */
+  exportUrl: string;
 }
 
 /**
- * Options for useImportPnp hook (passthrough import).
+ * Options for useImportPnp hook (callbacks only).
  */
-export interface UseImportPnpOptions extends AsyncJobOptions {
-  /** Source URLs to import from. */
-  sources: string[];
-  /** Resource types to import (optional filter). */
-  resourceTypes?: string[];
-}
+export type UseImportPnpOptions = AsyncJobOptions;
 
 /**
  * Result of useImportPnp hook.
  */
-export interface UseImportPnpResult extends AsyncJobResult<void> {
-  /** Function to start the passthrough import. */
-  start: () => void;
-}
+export type UseImportPnpResult = AsyncJobResult<ImportPnpJobRequest, void>;
 
 // ============================================================================
 // Bulk Submit Hooks
@@ -282,9 +294,9 @@ export interface SubmitterIdentifier {
 }
 
 /**
- * Options for useBulkSubmit hook.
+ * Request parameters for bulk submit operations.
  */
-export interface UseBulkSubmitOptions extends AsyncJobOptions {
+export interface BulkSubmitRequest {
   /** Unique submission ID. */
   submissionId: string;
   /** Submitter identifier. */
@@ -302,6 +314,11 @@ export interface UseBulkSubmitOptions extends AsyncJobOptions {
   /** Headers to include when fetching files. */
   fileRequestHeaders?: Record<string, string>;
 }
+
+/**
+ * Options for useBulkSubmit hook (callbacks only).
+ */
+export type UseBulkSubmitOptions = AsyncJobOptions;
 
 /**
  * Bulk submit manifest entry.
@@ -325,9 +342,8 @@ export interface BulkSubmitManifest {
 /**
  * Result of useBulkSubmit hook.
  */
-export interface UseBulkSubmitResult extends AsyncJobResult<BulkSubmitManifest> {
-  /** Function to start the submission. */
-  start: () => void;
+export interface UseBulkSubmitResult
+  extends AsyncJobResult<BulkSubmitRequest, BulkSubmitManifest> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
@@ -388,9 +404,9 @@ export interface UseViewRunOptions {
 export type UseViewRunResult = UseQueryResult<ReadableStream, Error>;
 
 /**
- * Options for useViewExport hook.
+ * Request parameters for view export operations.
  */
-export interface UseViewExportOptions extends AsyncJobOptions {
+export interface ViewExportRequest {
   /** Views to export. */
   views: Array<{
     viewDefinition: ViewDefinition;
@@ -401,6 +417,11 @@ export interface UseViewExportOptions extends AsyncJobOptions {
   /** Whether to include header row (CSV only). */
   header?: boolean;
 }
+
+/**
+ * Options for useViewExport hook (callbacks only).
+ */
+export type UseViewExportOptions = AsyncJobOptions;
 
 /**
  * View export manifest entry.
@@ -421,9 +442,8 @@ export interface ViewExportManifest {
 /**
  * Result of useViewExport hook.
  */
-export interface UseViewExportResult extends AsyncJobResult<ViewExportManifest> {
-  /** Function to start the export. */
-  start: () => void;
+export interface UseViewExportResult
+  extends AsyncJobResult<ViewExportRequest, ViewExportManifest> {
   /** Function to download a file from the manifest. */
   download: (fileName: string) => Promise<ReadableStream>;
 }
@@ -578,22 +598,22 @@ export type UseDeleteFn = (options?: UseDeleteOptions) => UseDeleteResult;
 /**
  * Execute a bulk export operation with polling.
  */
-export type UseBulkExportFn = (options: UseBulkExportOptions) => UseBulkExportResult;
+export type UseBulkExportFn = (options?: UseBulkExportOptions) => UseBulkExportResult;
 
 /**
  * Execute a standard import operation with polling.
  */
-export type UseImportFn = (options: UseImportOptions) => UseImportResult;
+export type UseImportFn = (options?: UseImportOptions) => UseImportResult;
 
 /**
  * Execute a passthrough (PnP) import operation with polling.
  */
-export type UseImportPnpFn = (options: UseImportPnpOptions) => UseImportPnpResult;
+export type UseImportPnpFn = (options?: UseImportPnpOptions) => UseImportPnpResult;
 
 /**
  * Execute a bulk submit operation with polling.
  */
-export type UseBulkSubmitFn = (options: UseBulkSubmitOptions) => UseBulkSubmitResult;
+export type UseBulkSubmitFn = (options?: UseBulkSubmitOptions) => UseBulkSubmitResult;
 
 /**
  * Run a ViewDefinition and return results as a stream.
@@ -603,7 +623,7 @@ export type UseViewRunFn = (options: UseViewRunOptions) => UseViewRunResult;
 /**
  * Execute a view export operation with polling.
  */
-export type UseViewExportFn = (options: UseViewExportOptions) => UseViewExportResult;
+export type UseViewExportFn = (options?: UseViewExportOptions) => UseViewExportResult;
 
 /**
  * Search for resources using FHIRPath filter expressions.

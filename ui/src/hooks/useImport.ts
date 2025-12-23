@@ -17,27 +17,40 @@
  * Author: John Grimes
  */
 
+import { useCallback, useMemo } from "react";
 import { importKickOff, jobStatus, jobCancel } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useAsyncJob } from "./useAsyncJob";
-import type { UseImportFn } from "../types/hooks";
+import type { UseImportFn, ImportJobRequest } from "../types/hooks";
 import type { ResourceType } from "../types/api";
 
 /**
  * Execute a standard import operation with polling.
+ *
+ * @param options - Optional callbacks for progress, completion, and error events.
+ * @returns Hook result with status, result, and control functions including startWith.
  */
 export const useImport: UseImportFn = (options) => {
   const { fhirBaseUrl } = config;
   const { client } = useAuth();
   const accessToken = client?.state.tokenResponse?.access_token;
 
-  return useAsyncJob(
+  const callbacks = useMemo(
     () => ({
+      onProgress: options?.onProgress,
+      onComplete: options?.onComplete,
+      onError: options?.onError,
+    }),
+    [options?.onProgress, options?.onComplete, options?.onError],
+  );
+
+  const buildOptions = useCallback(
+    (request: ImportJobRequest) => ({
       kickOff: () =>
         importKickOff(fhirBaseUrl!, {
-          input: options.sources.map((url, i) => ({
-            type: (options.resourceTypes?.[i] ?? "Bundle") as ResourceType,
+          input: request.sources.map((url, i) => ({
+            type: (request.resourceTypes?.[i] ?? "Bundle") as ResourceType,
             url,
           })),
           inputFormat: "application/fhir+ndjson",
@@ -45,17 +58,16 @@ export const useImport: UseImportFn = (options) => {
           inputSource: fhirBaseUrl!,
           accessToken,
         }),
-      getJobId: (result) => result.jobId,
-      checkStatus: (jobId) => jobStatus(fhirBaseUrl!, { jobId, accessToken }),
-      isComplete: (status) => status.status === "complete",
+      getJobId: (result: { jobId: string }) => result.jobId,
+      checkStatus: (jobId: string) =>
+        jobStatus(fhirBaseUrl!, { jobId, accessToken }),
+      isComplete: (status: { status: string }) => status.status === "complete",
       getResult: () => undefined,
-      cancel: (jobId) => jobCancel(fhirBaseUrl!, { jobId, accessToken }),
+      cancel: (jobId: string) => jobCancel(fhirBaseUrl!, { jobId, accessToken }),
       pollingInterval: 3000,
     }),
-    {
-      onProgress: options.onProgress,
-      onComplete: options.onComplete,
-      onError: options.onError,
-    },
+    [fhirBaseUrl, accessToken],
   );
-}
+
+  return useAsyncJob(buildOptions, callbacks);
+};

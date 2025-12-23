@@ -24,8 +24,8 @@ import type {
   ViewDefinitionExecuteRequest,
   ViewDefinitionResult,
 } from "../types/sqlOnFhir";
-import type { ViewDefinition } from "../types/hooks";
-import type { ViewExportFormat, ViewExportManifest } from "../types/viewExport";
+import type { ViewDefinition, ViewExportOutputFormat } from "../types/hooks";
+import type { ViewExportManifest } from "../types/viewExport";
 
 /**
  * Parses an NDJSON response into an array of objects.
@@ -73,9 +73,8 @@ export function SqlOnFhir() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionError, setExecutionError] = useState<Error | null>(null);
   const [hasExecuted, setHasExecuted] = useState(false);
-  const [lastExecutedRequest, setLastExecutedRequest] = useState<ViewDefinitionExecuteRequest | null>(null);
-  const [viewToExport, setViewToExport] = useState<{ viewDefinition?: object; name?: string } | null>(null);
-  const [exportFormat, setExportFormat] = useState<ViewExportFormat>("ndjson");
+  const [lastExecutedRequest, setLastExecutedRequest] =
+    useState<ViewDefinitionExecuteRequest | null>(null);
 
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
@@ -83,12 +82,12 @@ export function SqlOnFhir() {
 
   // View export hook.
   const viewExport = useViewExport({
-    views: viewToExport ? [viewToExport as { viewDefinition: ViewDefinition; name?: string }] : [],
-    format: exportFormat,
-    header: true,
     onError: (errorMessage) => {
       // Check if it's an unauthorized error by message.
-      if (errorMessage.includes("401") || errorMessage.toLowerCase().includes("unauthorized")) {
+      if (
+        errorMessage.includes("401") ||
+        errorMessage.toLowerCase().includes("unauthorized")
+      ) {
         handleUnauthorizedError();
       } else {
         setExecutionError(new Error(errorMessage));
@@ -97,7 +96,8 @@ export function SqlOnFhir() {
   });
 
   // Derive isRunning from status.
-  const isExportRunning = viewExport.status === "pending" || viewExport.status === "in-progress";
+  const isExportRunning =
+    viewExport.status === "pending" || viewExport.status === "in-progress";
 
   const handleExecute = useCallback(
     async (request: ViewDefinitionExecuteRequest) => {
@@ -106,7 +106,7 @@ export function SqlOnFhir() {
       setIsExecuting(true);
       setExecutionError(null);
       setHasExecuted(true);
-      setViewToExport(null);
+      viewExport.reset();
 
       try {
         let stream: ReadableStream;
@@ -144,7 +144,7 @@ export function SqlOnFhir() {
         setIsExecuting(false);
       }
     },
-    [fhirBaseUrl, accessToken, handleUnauthorizedError],
+    [fhirBaseUrl, accessToken, handleUnauthorizedError, viewExport],
   );
 
   // Mutation for saving a ViewDefinition to the server.
@@ -162,38 +162,39 @@ export function SqlOnFhir() {
   }, [saveError, handleUnauthorizedError]);
 
   const handleExport = useCallback(
-    async (format: ViewExportFormat) => {
+    async (format: ViewExportOutputFormat) => {
       if (!lastExecutedRequest || !fhirBaseUrl) return;
 
-      setExportFormat(format);
-
       // Get or build the view definition.
-      let viewDefinition: object;
-      if (lastExecutedRequest.mode === "stored" && lastExecutedRequest.viewDefinitionId) {
+      let viewDefinition: ViewDefinition;
+      if (
+        lastExecutedRequest.mode === "stored" &&
+        lastExecutedRequest.viewDefinitionId
+      ) {
         // Fetch the stored view definition.
         const resource = await read(fhirBaseUrl, {
           resourceType: "ViewDefinition",
           id: lastExecutedRequest.viewDefinitionId,
           accessToken,
         });
-        viewDefinition = resource;
-      } else if (lastExecutedRequest.mode === "inline" && lastExecutedRequest.viewDefinitionJson) {
+        viewDefinition = resource as ViewDefinition;
+      } else if (
+        lastExecutedRequest.mode === "inline" &&
+        lastExecutedRequest.viewDefinitionJson
+      ) {
         viewDefinition = JSON.parse(lastExecutedRequest.viewDefinitionJson);
       } else {
         throw new Error("No view definition available");
       }
 
-      setViewToExport({ viewDefinition });
+      viewExport.startWith({
+        views: [{ viewDefinition }],
+        format,
+        header: true,
+      });
     },
-    [lastExecutedRequest, fhirBaseUrl, accessToken],
+    [lastExecutedRequest, fhirBaseUrl, accessToken, viewExport],
   );
-
-  // Start export when viewToExport changes.
-  useEffect(() => {
-    if (viewToExport && !isExportRunning && !viewExport.result) {
-      viewExport.start();
-    }
-  }, [viewToExport, viewExport]);
 
   const handleDownload = useCallback(
     async (url: string, filename: string) => {
@@ -228,21 +229,25 @@ export function SqlOnFhir() {
 
   const handleCancelExport = useCallback(() => {
     viewExport.cancel();
-    setViewToExport(null);
   }, [viewExport]);
 
   // Build export job structure for the result table.
-  const exportJob = isExportRunning || viewExport.result ? {
-    id: "current-export",
-    type: "view-export" as const,
-    pollUrl: null,
-    status: isExportRunning ? "in_progress" as const : "completed" as const,
-    progress: viewExport.progress ?? null,
-    error: viewExport.error ?? null,
-    request: { format: exportFormat },
-    manifest: viewExport.result as ViewExportManifest | null,
-    createdAt: new Date(),
-  } : null;
+  const exportJob =
+    isExportRunning || viewExport.result
+      ? {
+          id: "current-export",
+          type: "view-export" as const,
+          pollUrl: null,
+          status: isExportRunning
+            ? ("in_progress" as const)
+            : ("completed" as const),
+          progress: viewExport.progress ?? null,
+          error: viewExport.error ?? null,
+          request: { format: viewExport.request?.format ?? "ndjson" },
+          manifest: viewExport.result as ViewExportManifest | null,
+          createdAt: new Date(),
+        }
+      : null;
 
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {

@@ -17,40 +17,52 @@
  * Author: John Grimes
  */
 
+import { useCallback, useMemo } from "react";
 import { importPnpKickOff, jobStatus, jobCancel } from "../api";
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useAsyncJob } from "./useAsyncJob";
-import type { UseImportPnpFn } from "../types/hooks";
+import type { UseImportPnpFn, ImportPnpJobRequest } from "../types/hooks";
 
 /**
  * Execute a passthrough (PnP) import operation with polling.
+ *
+ * @param options - Optional callbacks for progress, completion, and error events.
+ * @returns Hook result with status, result, and control functions including startWith.
  */
 export const useImportPnp: UseImportPnpFn = (options) => {
   const { fhirBaseUrl } = config;
   const { client } = useAuth();
   const accessToken = client?.state.tokenResponse?.access_token;
 
-  return useAsyncJob(
+  const callbacks = useMemo(
     () => ({
+      onProgress: options?.onProgress,
+      onComplete: options?.onComplete,
+      onError: options?.onError,
+    }),
+    [options?.onProgress, options?.onComplete, options?.onError],
+  );
+
+  const buildOptions = useCallback(
+    (request: ImportPnpJobRequest) => ({
       kickOff: () =>
         importPnpKickOff(fhirBaseUrl!, {
-          exportUrl: options.sources[0],
+          exportUrl: request.exportUrl,
           exportType: "dynamic",
           saveMode: "merge",
           accessToken,
         }),
-      getJobId: (result) => result.jobId,
-      checkStatus: (jobId) => jobStatus(fhirBaseUrl!, { jobId, accessToken }),
-      isComplete: (status) => status.status === "complete",
+      getJobId: (result: { jobId: string }) => result.jobId,
+      checkStatus: (jobId: string) =>
+        jobStatus(fhirBaseUrl!, { jobId, accessToken }),
+      isComplete: (status: { status: string }) => status.status === "complete",
       getResult: () => undefined,
-      cancel: (jobId) => jobCancel(fhirBaseUrl!, { jobId, accessToken }),
+      cancel: (jobId: string) => jobCancel(fhirBaseUrl!, { jobId, accessToken }),
       pollingInterval: 3000,
     }),
-    {
-      onProgress: options.onProgress,
-      onComplete: options.onComplete,
-      onError: options.onError,
-    },
+    [fhirBaseUrl, accessToken],
   );
-}
+
+  return useAsyncJob(buildOptions, callbacks);
+};

@@ -6,7 +6,7 @@
 
 import { Box, Button, Card, Flex, Progress, Spinner, Text } from "@radix-ui/themes";
 import { Cross2Icon, DownloadIcon, ReloadIcon } from "@radix-ui/react-icons";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { ExportForm } from "../components/export/ExportForm";
@@ -14,13 +14,12 @@ import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useBulkExport, useServerCapabilities, useUnauthorizedHandler } from "../hooks";
 import type { ExportRequest } from "../types/export";
-
-type ExportType = "system" | "all-patients" | "patient" | "group";
+import type { BulkExportType } from "../types/hooks";
 
 /**
  * Maps form export level to hook export type.
  */
-function mapExportLevel(level: ExportRequest["level"]): ExportType {
+function mapExportLevel(level: ExportRequest["level"]): BulkExportType {
   switch (level) {
     case "system":
       return "system";
@@ -30,6 +29,22 @@ function mapExportLevel(level: ExportRequest["level"]): ExportType {
       return "patient";
     case "group":
       return "group";
+  }
+}
+
+/**
+ * Maps hook export type to display label.
+ */
+function getExportTypeLabel(type: BulkExportType): string {
+  switch (type) {
+    case "system":
+      return "System Export";
+    case "all-patients":
+      return "Patient Type Export";
+    case "patient":
+      return "Patient Instance Export";
+    case "group":
+      return "Group Export";
   }
 }
 
@@ -47,13 +62,9 @@ export function Export() {
   const accessToken = client?.state.tokenResponse?.access_token;
   const handleUnauthorizedError = useUnauthorizedHandler();
 
-  // Track the current export request.
-  const [exportRequest, setExportRequest] = useState<ExportRequest | null>(null);
-
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
-
 
   const handleError = useCallback(
     (errorMessage: string) => {
@@ -68,12 +79,7 @@ export function Export() {
   );
 
   // Use the bulk export hook.
-  const { start, cancel, status, result, error, progress } = useBulkExport({
-    type: exportRequest ? mapExportLevel(exportRequest.level) : "system",
-    resourceTypes: exportRequest?.resourceTypes,
-    since: exportRequest?.since,
-    patientId: exportRequest?.patientId,
-    groupId: exportRequest?.groupId,
+  const { startWith, reset, cancel, status, result, error, progress, request } = useBulkExport({
     onError: handleError,
   });
 
@@ -81,23 +87,20 @@ export function Export() {
   const isRunning = status === "pending" || status === "in-progress";
 
   const handleExport = useCallback(
-    async (request: ExportRequest) => {
-      setExportRequest(request);
-      // Start will be triggered in effect when request changes.
+    (formRequest: ExportRequest) => {
+      startWith({
+        type: mapExportLevel(formRequest.level),
+        resourceTypes: formRequest.resourceTypes,
+        since: formRequest.since,
+        patientId: formRequest.patientId,
+        groupId: formRequest.groupId,
+      });
     },
-    [],
+    [startWith],
   );
-
-  // Start export when request changes.
-  useEffect(() => {
-    if (exportRequest && !isRunning && !result) {
-      start();
-    }
-  }, [exportRequest, isRunning, result, start]);
 
   const handleCancel = useCallback(() => {
     cancel();
-    setExportRequest(null);
   }, [cancel]);
 
   const handleDownloadFile = useCallback(
@@ -136,8 +139,8 @@ export function Export() {
   );
 
   const handleNewExport = useCallback(() => {
-    setExportRequest(null);
-  }, []);
+    reset();
+  }, [reset]);
 
   // Show loading state while checking server capabilities.
   if (isLoadingCapabilities) {
@@ -177,14 +180,11 @@ export function Export() {
                 <Flex justify="between" align="start">
                   <Box>
                     <Text weight="medium">
-                      {exportRequest?.level === "system" && "System Export"}
-                      {exportRequest?.level === "patient-type" && "Patient Type Export"}
-                      {exportRequest?.level === "patient-instance" && "Patient Instance Export"}
-                      {exportRequest?.level === "group" && "Group Export"}
+                      {request?.type && getExportTypeLabel(request.type)}
                     </Text>
-                    {exportRequest?.resourceTypes && exportRequest.resourceTypes.length > 0 && (
+                    {request?.resourceTypes && request.resourceTypes.length > 0 && (
                       <Text size="1" color="gray" as="div">
-                        Types: {exportRequest.resourceTypes.join(", ")}
+                        Types: {request.resourceTypes.join(", ")}
                       </Text>
                     )}
                   </Box>

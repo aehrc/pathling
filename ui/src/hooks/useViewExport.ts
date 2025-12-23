@@ -17,7 +17,7 @@
  * Author: John Grimes
  */
 
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import {
   viewExportKickOff,
   viewExportDownload,
@@ -27,10 +27,17 @@ import {
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useAsyncJob } from "./useAsyncJob";
-import type { UseViewExportFn, UseViewExportResult } from "../types/hooks";
+import type {
+  UseViewExportFn,
+  UseViewExportResult,
+  ViewExportRequest,
+} from "../types/hooks";
 
 /**
  * Execute a view export operation with polling.
+ *
+ * @param options - Optional callbacks for progress, completion, and error events.
+ * @returns Hook result with status, result, and control functions including startWith.
  */
 export const useViewExport: UseViewExportFn = (options) => {
   const { fhirBaseUrl } = config;
@@ -38,31 +45,40 @@ export const useViewExport: UseViewExportFn = (options) => {
   const accessToken = client?.state.tokenResponse?.access_token;
   const jobIdRef = useRef<string | undefined>(undefined);
 
-  const job = useAsyncJob(
+  const callbacks = useMemo(
     () => ({
+      onProgress: options?.onProgress,
+      onComplete: options?.onComplete,
+      onError: options?.onError,
+    }),
+    [options?.onProgress, options?.onComplete, options?.onError],
+  );
+
+  const buildOptions = useCallback(
+    (request: ViewExportRequest) => ({
       kickOff: () =>
         viewExportKickOff(fhirBaseUrl!, {
-          views: options.views,
-          format: options.format,
-          header: options.header,
+          views: request.views,
+          format: request.format,
+          header: request.header,
           accessToken,
         }),
-      getJobId: (result) => {
+      getJobId: (result: { jobId: string }) => {
         jobIdRef.current = result.jobId;
         return result.jobId;
       },
-      checkStatus: (jobId) => jobStatus(fhirBaseUrl!, { jobId, accessToken }),
-      isComplete: (status) => status.status === "complete",
-      getResult: (status) => status.result as UseViewExportResult["result"],
-      cancel: (jobId) => jobCancel(fhirBaseUrl!, { jobId, accessToken }),
+      checkStatus: (jobId: string) =>
+        jobStatus(fhirBaseUrl!, { jobId, accessToken }),
+      isComplete: (status: { status: string }) => status.status === "complete",
+      getResult: (status: { result?: unknown }) =>
+        status.result as UseViewExportResult["result"],
+      cancel: (jobId: string) => jobCancel(fhirBaseUrl!, { jobId, accessToken }),
       pollingInterval: 3000,
     }),
-    {
-      onProgress: options.onProgress,
-      onComplete: options.onComplete,
-      onError: options.onError,
-    },
+    [fhirBaseUrl, accessToken],
   );
+
+  const job = useAsyncJob(buildOptions, callbacks);
 
   const download = useCallback(
     async (fileName: string) => {
@@ -77,4 +93,4 @@ export const useViewExport: UseViewExportFn = (options) => {
   );
 
   return { ...job, download };
-}
+};

@@ -17,7 +17,7 @@
  * Author: John Grimes
  */
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import {
   systemExportKickOff,
   allPatientsExportKickOff,
@@ -29,70 +29,101 @@ import {
 import { config } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useAsyncJob } from "./useAsyncJob";
-import type { UseBulkExportFn } from "../types/hooks";
+import type {
+  UseBulkExportFn,
+  BulkExportRequest,
+  ExportManifest,
+} from "../types/hooks";
 import type { ResourceType } from "../types/api";
+
+interface KickOffResult {
+  pollingUrl: string;
+}
+
+interface StatusResult {
+  status: string;
+  manifest?: ExportManifest;
+}
 
 /**
  * Execute a bulk export operation with polling.
+ *
+ * @param options - Optional callbacks for progress, completion, and error events.
+ * @returns Hook result with status, result, and control functions including startWith.
  */
 export const useBulkExport: UseBulkExportFn = (options) => {
   const { fhirBaseUrl } = config;
   const { client } = useAuth();
   const accessToken = client?.state.tokenResponse?.access_token;
 
-  const job = useAsyncJob(
+  const callbacks = useMemo(
     () => ({
+      onProgress: options?.onProgress,
+      onComplete: options?.onComplete,
+      onError: options?.onError,
+    }),
+    [options?.onProgress, options?.onComplete, options?.onError],
+  );
+
+  const buildOptions = useCallback(
+    (request: BulkExportRequest) => ({
       kickOff: async () => {
         const baseOptions = {
-          types: options.resourceTypes as ResourceType[] | undefined,
-          since: options.since,
+          types: request.resourceTypes as ResourceType[] | undefined,
+          since: request.since,
           accessToken,
         };
 
-        switch (options.type) {
+        switch (request.type) {
           case "system":
             return systemExportKickOff(fhirBaseUrl!, baseOptions);
           case "all-patients":
             return allPatientsExportKickOff(fhirBaseUrl!, baseOptions);
           case "patient":
-            if (!options.patientId) throw new Error("Patient ID required");
+            if (!request.patientId) throw new Error("Patient ID required");
             return patientExportKickOff(fhirBaseUrl!, {
               ...baseOptions,
-              patientId: options.patientId,
+              patientId: request.patientId,
             });
           case "group":
-            if (!options.groupId) throw new Error("Group ID required");
+            if (!request.groupId) throw new Error("Group ID required");
             return groupExportKickOff(fhirBaseUrl!, {
               ...baseOptions,
-              groupId: options.groupId,
+              groupId: request.groupId,
             });
           default:
-            throw new Error(`Unknown export type: ${options.type}`);
+            throw new Error(`Unknown export type: ${request.type}`);
         }
       },
-      getJobId: (result) => result.pollingUrl,
-      checkStatus: (pollingUrl) =>
+      getJobId: (result: KickOffResult) => result.pollingUrl,
+      checkStatus: (pollingUrl: string) =>
         bulkExportStatus(fhirBaseUrl!, { pollingUrl, accessToken }),
-      isComplete: (status) => status.status === "complete",
-      getResult: (status) => status.manifest!,
+      isComplete: (status: StatusResult) => status.status === "complete",
+      getResult: (status: StatusResult) => status.manifest!,
       cancel: async () => {},
       pollingInterval: 3000,
     }),
-    {
-      onProgress: options.onProgress,
-      onComplete: options.onComplete,
-      onError: options.onError,
-    },
+    [fhirBaseUrl, accessToken],
   );
+
+  const job = useAsyncJob<
+    BulkExportRequest,
+    KickOffResult,
+    StatusResult,
+    ExportManifest
+  >(buildOptions, callbacks);
 
   const download = useCallback(
     async (fileName: string) => {
       const file = job.result?.output.find((f) => f.url.endsWith(fileName));
       if (!file) throw new Error(`File not found: ${fileName}`);
-      return bulkExportDownload(fhirBaseUrl!, { fileUrl: file.url, accessToken });
+      return bulkExportDownload(fhirBaseUrl!, {
+        fileUrl: file.url,
+        accessToken,
+      });
     },
     [fhirBaseUrl, accessToken, job.result],
   );
 
   return { ...job, download };
-}
+};

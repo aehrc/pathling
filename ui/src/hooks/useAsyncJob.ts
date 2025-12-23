@@ -22,20 +22,31 @@ import { executeAsyncJob, parseProgressHeader } from "../api";
 import type { AsyncJobStatus } from "../types/hooks";
 import type { AsyncJobExecutorOptions } from "../types/api";
 
-export interface UseAsyncJobResult<TResult> {
+export interface UseAsyncJobResult<TRequest, TResult> {
   status: AsyncJobStatus;
   progress?: number;
   result?: TResult;
   error?: string;
-  start: () => void;
+  /** The request that produced the current result/error. */
+  request?: TRequest;
+  /** Start execution with the given request. If already running, cancels and restarts. */
+  startWith: (request: TRequest) => void;
+  /** Reset all state back to idle. */
+  reset: () => void;
   cancel: () => Promise<void>;
 }
 
 /**
  * Base hook for async job operations. Wraps executeAsyncJob with React state.
+ *
+ * @param buildOptions - Function that builds executor options from a request object.
+ * @param callbacks - Optional callbacks for progress, completion, and error events.
+ * @returns Hook result with status, result, and control functions.
  */
-export function useAsyncJob<TKickOffResult, TStatusResult, TResult>(
-  getOptions: () => Omit<
+export function useAsyncJob<TRequest, TKickOffResult, TStatusResult, TResult>(
+  buildOptions: (
+    request: TRequest,
+  ) => Omit<
     AsyncJobExecutorOptions<TKickOffResult, TStatusResult, TResult>,
     "onProgress"
   >,
@@ -44,53 +55,78 @@ export function useAsyncJob<TKickOffResult, TStatusResult, TResult>(
     onComplete?: () => void;
     onError?: (error: string) => void;
   },
-): UseAsyncJobResult<TResult> {
+): UseAsyncJobResult<TRequest, TResult> {
   const [status, setStatus] = useState<AsyncJobStatus>("idle");
   const [progress, setProgress] = useState<number | undefined>(undefined);
   const [result, setResult] = useState<TResult | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
+  const [request, setRequest] = useState<TRequest | undefined>(undefined);
 
   const cancelRef = useRef<(() => Promise<void>) | null>(null);
 
-  const start = useCallback(() => {
-    setStatus("pending");
+  const startWith = useCallback(
+    (newRequest: TRequest) => {
+      // If already running, cancel the current job first.
+      if (cancelRef.current) {
+        cancelRef.current();
+      }
+
+      setRequest(newRequest);
+      setStatus("pending");
+      setProgress(undefined);
+      setResult(undefined);
+      setError(undefined);
+
+      const options = buildOptions(newRequest);
+
+      const handle = executeAsyncJob<TKickOffResult, TStatusResult, TResult>({
+        ...options,
+        onProgress: (statusResult) => {
+          setStatus("in-progress");
+          // Try to extract progress from the status result if it has a progress field.
+          const statusWithProgress = statusResult as { progress?: string };
+          if (statusWithProgress.progress) {
+            const progressValue = parseProgressHeader(
+              statusWithProgress.progress,
+            );
+            if (progressValue !== undefined) {
+              setProgress(progressValue);
+              callbacks?.onProgress?.(progressValue);
+            }
+          }
+        },
+      });
+
+      cancelRef.current = handle.cancel;
+
+      handle.result
+        .then((res) => {
+          setResult(res);
+          setStatus("complete");
+          callbacks?.onComplete?.();
+        })
+        .catch((err) => {
+          const message = err instanceof Error ? err.message : "Unknown error";
+          setError(message);
+          setStatus("error");
+          callbacks?.onError?.(message);
+        });
+    },
+    [buildOptions, callbacks],
+  );
+
+  const reset = useCallback(() => {
+    // Cancel any running job.
+    if (cancelRef.current) {
+      cancelRef.current();
+      cancelRef.current = null;
+    }
+    setStatus("idle");
     setProgress(undefined);
     setResult(undefined);
     setError(undefined);
-
-    const options = getOptions();
-
-    const handle = executeAsyncJob<TKickOffResult, TStatusResult, TResult>({
-      ...options,
-      onProgress: (statusResult) => {
-        setStatus("in-progress");
-        // Try to extract progress from the status result if it has a progress field.
-        const statusWithProgress = statusResult as { progress?: string };
-        if (statusWithProgress.progress) {
-          const progressValue = parseProgressHeader(statusWithProgress.progress);
-          if (progressValue !== undefined) {
-            setProgress(progressValue);
-            callbacks?.onProgress?.(progressValue);
-          }
-        }
-      },
-    });
-
-    cancelRef.current = handle.cancel;
-
-    handle.result
-      .then((res) => {
-        setResult(res);
-        setStatus("complete");
-        callbacks?.onComplete?.();
-      })
-      .catch((err) => {
-        const message = err instanceof Error ? err.message : "Unknown error";
-        setError(message);
-        setStatus("error");
-        callbacks?.onError?.(message);
-      });
-  }, [getOptions, callbacks]);
+    setRequest(undefined);
+  }, []);
 
   const cancel = useCallback(async () => {
     if (cancelRef.current) {
@@ -99,5 +135,5 @@ export function useAsyncJob<TKickOffResult, TStatusResult, TResult>(
     }
   }, []);
 
-  return { status, progress, result, error, start, cancel };
+  return { status, progress, result, error, request, startWith, reset, cancel };
 }
