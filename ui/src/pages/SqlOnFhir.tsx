@@ -74,7 +74,6 @@ export function SqlOnFhir() {
   const [executionError, setExecutionError] = useState<Error | null>(null);
   const [hasExecuted, setHasExecuted] = useState(false);
   const [lastExecutedRequest, setLastExecutedRequest] = useState<ViewDefinitionExecuteRequest | null>(null);
-  const [exportProgress, setExportProgress] = useState<string | undefined>(undefined);
   const [viewToExport, setViewToExport] = useState<{ viewDefinition?: object; name?: string } | null>(null);
   const [exportFormat, setExportFormat] = useState<ViewExportFormat>("ndjson");
 
@@ -87,10 +86,7 @@ export function SqlOnFhir() {
     views: viewToExport ? [viewToExport as { viewDefinition: ViewDefinition; name?: string }] : [],
     format: exportFormat,
     header: true,
-    onProgress: (progress) => setExportProgress(`${progress}%`),
-    onComplete: () => setExportProgress(undefined),
     onError: (errorMessage) => {
-      setExportProgress(undefined);
       // Check if it's an unauthorized error by message.
       if (errorMessage.includes("401") || errorMessage.toLowerCase().includes("unauthorized")) {
         handleUnauthorizedError();
@@ -232,7 +228,6 @@ export function SqlOnFhir() {
 
   const handleCancelExport = useCallback(() => {
     viewExport.cancel();
-    setExportProgress(undefined);
     setViewToExport(null);
   }, [viewExport]);
 
@@ -242,7 +237,7 @@ export function SqlOnFhir() {
     type: "view-export" as const,
     pollUrl: null,
     status: isExportRunning ? "in_progress" as const : "completed" as const,
-    progress: exportProgress ? parseInt(exportProgress.replace("%", ""), 10) : null,
+    progress: viewExport.progress ?? null,
     error: viewExport.error ?? null,
     request: { format: exportFormat },
     manifest: viewExport.result as ViewExportManifest | null,

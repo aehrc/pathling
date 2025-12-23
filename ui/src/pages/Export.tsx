@@ -47,21 +47,16 @@ export function Export() {
   const accessToken = client?.state.tokenResponse?.access_token;
   const handleUnauthorizedError = useUnauthorizedHandler();
 
-  // Track the current export request and state.
+  // Track the current export request.
   const [exportRequest, setExportRequest] = useState<ExportRequest | null>(null);
-  const [progress, setProgress] = useState<string | undefined>(undefined);
 
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
 
-  const handleComplete = useCallback(() => {
-    setProgress(undefined);
-  }, []);
 
   const handleError = useCallback(
     (errorMessage: string) => {
-      setProgress(undefined);
       // Hook checks if message looks like 401 and handles it.
       handleUnauthorizedError(errorMessage);
       // Set error for non-401 errors.
@@ -72,19 +67,13 @@ export function Export() {
     [handleUnauthorizedError, setError],
   );
 
-  const handleProgress = useCallback((progressValue: number) => {
-    setProgress(`${progressValue}%`);
-  }, []);
-
   // Use the bulk export hook.
-  const { start, cancel, status, result, error } = useBulkExport({
+  const { start, cancel, status, result, error, progress } = useBulkExport({
     type: exportRequest ? mapExportLevel(exportRequest.level) : "system",
     resourceTypes: exportRequest?.resourceTypes,
     since: exportRequest?.since,
     patientId: exportRequest?.patientId,
     groupId: exportRequest?.groupId,
-    onProgress: handleProgress,
-    onComplete: handleComplete,
     onError: handleError,
   });
 
@@ -108,7 +97,6 @@ export function Export() {
 
   const handleCancel = useCallback(() => {
     cancel();
-    setProgress(undefined);
     setExportRequest(null);
   }, [cancel]);
 
@@ -169,9 +157,6 @@ export function Export() {
     return <LoginRequired />;
   }
 
-  // Parse progress percentage.
-  const progressValue = progress ? parseInt(progress.replace("%", ""), 10) : undefined;
-
   // Show export form or job status.
   return (
     <>
@@ -211,21 +196,21 @@ export function Export() {
                   )}
                 </Flex>
 
-                {isRunning && progressValue !== undefined && (
+                {isRunning && progress !== undefined && (
                   <Box>
                     <Flex justify="between" mb="1">
                       <Text size="1" color="gray">
                         Progress
                       </Text>
                       <Text size="1" color="gray">
-                        {progressValue}%
+                        {progress}%
                       </Text>
                     </Flex>
-                    <Progress value={progressValue} />
+                    <Progress value={progress} />
                   </Box>
                 )}
 
-                {isRunning && progressValue === undefined && (
+                {isRunning && progress === undefined && (
                   <Flex align="center" gap="2">
                     <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
                     <Text size="2" color="gray">

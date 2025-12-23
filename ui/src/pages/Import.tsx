@@ -34,19 +34,13 @@ export function Import() {
   const [importSources, setImportSources] = useState<string[]>([]);
   const [importResourceTypes, setImportResourceTypes] = useState<string[]>([]);
   const [pnpSources, setPnpSources] = useState<string[]>([]);
-  const [progress, setProgress] = useState<string | undefined>(undefined);
 
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
 
-  const handleComplete = useCallback(() => {
-    setProgress(undefined);
-  }, []);
-
   const handleError = useCallback(
     (errorMessage: string) => {
-      setProgress(undefined);
       // Hook checks if message looks like 401 and handles it.
       handleUnauthorizedError(errorMessage);
       // Set error for non-401 errors.
@@ -57,23 +51,15 @@ export function Import() {
     [handleUnauthorizedError, setError],
   );
 
-  const handleProgress = useCallback((progressValue: number) => {
-    setProgress(`${progressValue}%`);
-  }, []);
-
   // Use the import hooks.
   const standardImport = useImport({
     sources: importSources,
     resourceTypes: importResourceTypes,
-    onProgress: handleProgress,
-    onComplete: handleComplete,
     onError: handleError,
   });
 
   const pnpImport = useImportPnp({
     sources: pnpSources,
-    onProgress: handleProgress,
-    onComplete: handleComplete,
     onError: handleError,
   });
 
@@ -123,7 +109,6 @@ export function Import() {
     } else {
       pnpImport.cancel();
     }
-    setProgress(undefined);
     setActiveImport(null);
     setImportSources([]);
     setPnpSources([]);
@@ -139,6 +124,7 @@ export function Import() {
   // Determine current state.
   const isRunning = isStandardRunning || isPnpRunning;
   const error = standardImport.error || pnpImport.error;
+  const progress = activeImport?.type === "standard" ? standardImport.progress : pnpImport.progress;
   const isComplete = (activeImport?.type === "standard" && !isStandardRunning && importSources.length > 0) ||
     (activeImport?.type === "pnp" && !isPnpRunning && pnpSources.length > 0);
 
@@ -159,9 +145,6 @@ export function Import() {
   if (capabilities?.authRequired && !isAuthenticated) {
     return <LoginRequired />;
   }
-
-  // Parse progress percentage.
-  const progressValue = progress ? parseInt(progress.replace("%", ""), 10) : undefined;
 
   // Show import form (either auth not required or user is authenticated).
   return (
@@ -202,17 +185,17 @@ export function Import() {
                         )}
                       </Flex>
 
-                      {isRunning && progressValue !== undefined && (
+                      {isRunning && progress !== undefined && (
                         <Box>
                           <Flex justify="between" mb="1">
                             <Text size="1" color="gray">Progress</Text>
-                            <Text size="1" color="gray">{progressValue}%</Text>
+                            <Text size="1" color="gray">{progress}%</Text>
                           </Flex>
-                          <Progress value={progressValue} />
+                          <Progress value={progress} />
                         </Box>
                       )}
 
-                      {isRunning && progressValue === undefined && (
+                      {isRunning && progress === undefined && (
                         <Flex align="center" gap="2">
                           <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
                           <Text size="2" color="gray">Processing...</Text>
@@ -268,17 +251,17 @@ export function Import() {
                         )}
                       </Flex>
 
-                      {isRunning && progressValue !== undefined && (
+                      {isRunning && progress !== undefined && (
                         <Box>
                           <Flex justify="between" mb="1">
                             <Text size="1" color="gray">Progress</Text>
-                            <Text size="1" color="gray">{progressValue}%</Text>
+                            <Text size="1" color="gray">{progress}%</Text>
                           </Flex>
-                          <Progress value={progressValue} />
+                          <Progress value={progress} />
                         </Box>
                       )}
 
-                      {isRunning && progressValue === undefined && (
+                      {isRunning && progress === undefined && (
                         <Flex align="center" gap="2">
                           <ReloadIcon style={{ animation: "spin 1s linear infinite" }} />
                           <Text size="2" color="gray">Processing...</Text>
