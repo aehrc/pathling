@@ -537,6 +537,7 @@ export interface ServerCapabilities {
   publisher?: string;
   description?: string;
   resources?: ResourceCapability[];
+  resourceTypes: string[];
   operations?: OperationCapability[];
 }
 

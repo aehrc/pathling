@@ -5,7 +5,7 @@
  */
 
 import { Box, Flex, Spinner, Text } from "@radix-ui/themes";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { deleteResource } from "../api";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
@@ -39,12 +39,6 @@ export function Resources() {
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
-
-  // Extract resource types from capabilities.
-  const resourceTypes = useMemo(() => {
-    if (!capabilities?.resources) return [];
-    return capabilities.resources.map((r) => r.type).sort();
-  }, [capabilities]);
 
   // Execute the search query.
   const {
@@ -141,7 +135,7 @@ export function Resources() {
             onSubmit={handleSearch}
             isLoading={isSearching}
             disabled={false}
-            resourceTypes={resourceTypes}
+            resourceTypes={capabilities?.resourceTypes ?? []}
           />
         </Box>
 

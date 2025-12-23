@@ -106,6 +106,9 @@ function parseCapabilities(capability: CapabilityStatement): ServerCapabilities 
     }
   }
 
+  // Sorted list of resource type names for use in dropdowns.
+  const resourceTypes = resources.map((r) => r.type).sort();
+
   return {
     authRequired,
     serverName,
@@ -114,6 +117,7 @@ function parseCapabilities(capability: CapabilityStatement): ServerCapabilities 
     publisher,
     description,
     resources,
+    resourceTypes,
     operations,
   };
 }

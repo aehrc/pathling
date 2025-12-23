@@ -6,7 +6,7 @@
 
 import { Box, Button, Card, Flex, Progress, Spinner, Tabs, Text } from "@radix-ui/themes";
 import { Cross2Icon, ReloadIcon } from "@radix-ui/react-icons";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { LoginRequired } from "../components/auth/LoginRequired";
 import { SessionExpiredDialog } from "../components/auth/SessionExpiredDialog";
 import { ImportForm } from "../components/import/ImportForm";
@@ -39,12 +39,6 @@ export function Import() {
   // Fetch server capabilities to determine if auth is required.
   const { data: capabilities, isLoading: isLoadingCapabilities } =
     useServerCapabilities(fhirBaseUrl);
-
-  // Extract resource types from capabilities.
-  const resourceTypes = useMemo(() => {
-    if (!capabilities?.resources) return [];
-    return capabilities.resources.map((r) => r.type).sort();
-  }, [capabilities]);
 
   const handleComplete = useCallback(() => {
     setProgress(undefined);
@@ -186,7 +180,7 @@ export function Import() {
                   onSubmit={handleImport}
                   isSubmitting={isRunning && activeImport?.type === "standard"}
                   disabled={isRunning}
-                  resourceTypes={resourceTypes}
+                  resourceTypes={capabilities?.resourceTypes ?? []}
                 />
               </Box>
               <Box style={{ flex: 1 }}>
