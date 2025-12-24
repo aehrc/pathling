@@ -24,10 +24,10 @@ function buildExportUrl(request: ExportRequest): string {
     case "system":
       basePath = "/$export";
       break;
-    case "patient-type":
+    case "all-patients":
       basePath = "/Patient/$export";
       break;
-    case "patient-instance":
+    case "patient":
       basePath = `/Patient/${request.patientId}/$export`;
       break;
     case "group":

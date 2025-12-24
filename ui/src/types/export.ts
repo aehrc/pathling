@@ -6,8 +6,8 @@
 
 export type ExportLevel =
   | "system"
-  | "patient-type"
-  | "patient-instance"
+  | "all-patients"
+  | "patient"
   | "group";
 
 export interface ExportRequest {

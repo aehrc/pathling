@@ -29,8 +29,8 @@ interface ExportFormProps {
 
 const EXPORT_LEVELS: { value: ExportLevel; label: string }[] = [
   { value: "system", label: "System (all resources)" },
-  { value: "patient-type", label: "Patient type (all patients)" },
-  { value: "patient-instance", label: "Patient instance (single patient)" },
+  { value: "all-patients", label: "Patient type (all patients)" },
+  { value: "patient", label: "Patient instance (single patient)" },
   { value: "group", label: "Group (group members)" },
 ];
 
@@ -50,7 +50,7 @@ export function ExportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
       since: since || undefined,
       until: until || undefined,
       elements: elements || undefined,
-      patientId: level === "patient-instance" ? patientId : undefined,
+      patientId: level === "patient" ? patientId : undefined,
       groupId: level === "group" ? groupId : undefined,
     };
     onSubmit(request);
@@ -85,7 +85,7 @@ export function ExportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
           </Select.Root>
         </Box>
 
-        {level === "patient-instance" && (
+        {level === "patient" && (
           <Box>
             <Text as="label" size="2" weight="medium" mb="1">
               Patient ID
@@ -205,7 +205,7 @@ export function ExportForm({ onSubmit, isSubmitting, disabled, resourceTypes }: 
           disabled={
             disabled ||
             isSubmitting ||
-            (level === "patient-instance" && !patientId) ||
+            (level === "patient" && !patientId) ||
             (level === "group" && !groupId)
           }
         >

@@ -17,22 +17,6 @@ import type { ExportRequest } from "../types/export";
 import type { BulkExportType } from "../types/hooks";
 
 /**
- * Maps form export level to hook export type.
- */
-function mapExportLevel(level: ExportRequest["level"]): BulkExportType {
-  switch (level) {
-    case "system":
-      return "system";
-    case "patient-type":
-      return "all-patients";
-    case "patient-instance":
-      return "patient";
-    case "group":
-      return "group";
-  }
-}
-
-/**
  * Maps hook export type to display label.
  */
 function getExportTypeLabel(type: BulkExportType): string {
@@ -88,7 +72,7 @@ export function Export() {
 
   const handleExport = (formRequest: ExportRequest) => {
     startWith({
-      type: mapExportLevel(formRequest.level),
+      type: formRequest.level,
       resourceTypes: formRequest.resourceTypes,
       since: formRequest.since,
       patientId: formRequest.patientId,
