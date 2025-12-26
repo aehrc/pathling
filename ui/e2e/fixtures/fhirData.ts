@@ -196,3 +196,92 @@ export const mockExportManifest = {
     },
   ],
 };
+
+// ============================================================================
+// SQL on FHIR / ViewDefinition Mocks
+// ============================================================================
+
+/**
+ * Mock ViewDefinition resource for patient demographics.
+ */
+export const mockViewDefinition1 = {
+  resourceType: "ViewDefinition",
+  id: "patient-demographics",
+  name: "Patient Demographics",
+  resource: "Patient",
+  status: "active",
+  select: [
+    {
+      column: [
+        { path: "id", name: "patient_id" },
+        { path: "name.first().family", name: "family_name" },
+      ],
+    },
+  ],
+};
+
+/**
+ * Mock ViewDefinition resource for observation vitals.
+ */
+export const mockViewDefinition2 = {
+  resourceType: "ViewDefinition",
+  id: "observation-vitals",
+  name: "Observation Vitals",
+  resource: "Observation",
+  status: "active",
+  select: [
+    {
+      column: [
+        { path: "id", name: "obs_id" },
+        { path: "code.coding.first().display", name: "observation_type" },
+      ],
+    },
+  ],
+};
+
+/**
+ * Mock Bundle containing ViewDefinition search results.
+ */
+export const mockViewDefinitionBundle: Bundle = {
+  resourceType: "Bundle",
+  type: "searchset",
+  total: 2,
+  entry: [
+    {
+      resource: mockViewDefinition1 as Bundle["entry"] extends (infer T)[]
+        ? T extends { resource?: infer R }
+          ? R
+          : never
+        : never,
+    },
+    {
+      resource: mockViewDefinition2 as Bundle["entry"] extends (infer T)[]
+        ? T extends { resource?: infer R }
+          ? R
+          : never
+        : never,
+    },
+  ],
+};
+
+/**
+ * Mock empty ViewDefinition Bundle for testing no definitions state.
+ */
+export const mockEmptyViewDefinitionBundle: Bundle = {
+  resourceType: "Bundle",
+  type: "searchset",
+  total: 0,
+  entry: [],
+};
+
+/**
+ * Mock NDJSON response for view run with results.
+ * Each line is a separate JSON object.
+ */
+export const mockViewRunNdjson =
+  '{"patient_id":"p1","family_name":"Smith"}\n{"patient_id":"p2","family_name":"Jones"}';
+
+/**
+ * Mock empty NDJSON response for view run with no results.
+ */
+export const mockEmptyViewRunNdjson = "";
