@@ -33,7 +33,7 @@ export function Resources() {
   const handleUnauthorizedError = useUnauthorizedHandler();
 
   const [searchRequest, setSearchRequest] = useState<SearchRequest | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState<DeleteTarget | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch server capabilities to determine if auth is required.
@@ -66,25 +66,25 @@ export function Resources() {
 
   // Handle delete button click - open confirmation dialog.
   const handleDeleteClick = (resourceType: string, resourceId: string, summary: string | null) => {
-    setDeleteTarget({ resourceType, resourceId, summary });
+    setShowDeleteDialog({ resourceType, resourceId, summary });
   };
 
   // Handle delete confirmation - perform the delete.
   const handleDeleteConfirm = async () => {
-    if (!deleteTarget) return;
+    if (!showDeleteDialog) return;
 
     setIsDeleting(true);
     try {
       await deleteResource(fhirBaseUrl!, {
-        resourceType: deleteTarget.resourceType,
-        id: deleteTarget.resourceId,
+        resourceType: showDeleteDialog.resourceType,
+        id: showDeleteDialog.resourceId,
         accessToken,
       });
       showToast(
         "Resource deleted",
-        `${deleteTarget.resourceType}/${deleteTarget.resourceId}`,
+        `${showDeleteDialog.resourceType}/${showDeleteDialog.resourceId}`,
       );
-      setDeleteTarget(null);
+      setShowDeleteDialog(null);
       // Refresh the search results.
       await refetch();
     } catch (err) {
@@ -149,15 +149,15 @@ export function Resources() {
         </Box>
       </Flex>
       <SessionExpiredDialog />
-      {deleteTarget && (
+      {showDeleteDialog && (
         <DeleteConfirmationDialog
-          open={!!deleteTarget}
+          open={!!showDeleteDialog}
           onOpenChange={(open) => {
-            if (!open) setDeleteTarget(null);
+            if (!open) setShowDeleteDialog(null);
           }}
-          resourceType={deleteTarget.resourceType}
-          resourceId={deleteTarget.resourceId}
-          resourceSummary={deleteTarget.summary}
+          resourceType={showDeleteDialog.resourceType}
+          resourceId={showDeleteDialog.resourceId}
+          resourceSummary={showDeleteDialog.summary}
           onConfirm={handleDeleteConfirm}
           isDeleting={isDeleting}
         />
