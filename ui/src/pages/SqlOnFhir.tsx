@@ -19,7 +19,7 @@ import {
   useServerCapabilities,
   useUnauthorizedHandler,
   useViewExport,
-  useViewRun,
+  useViewRun
 } from "../hooks";
 import { UnauthorizedError } from "../types/errors";
 import type { ViewDefinition, ViewExportOutputFormat, ViewRunRequest } from "../types/hooks";
@@ -46,18 +46,13 @@ export function SqlOnFhir() {
 
   // Track download errors separately since they're not from viewRun.
   const [downloadError, setDownloadError] = useState<Error | null>(null);
-  const handleDownload = useDownloadFile((message) =>
-    setDownloadError(new Error(message)),
-  );
+  const handleDownload = useDownloadFile((message) => setDownloadError(new Error(message)));
 
   // View export hook.
   const viewExport = useViewExport({
     onError: (errorMessage) => {
       // Check if it's an unauthorized error by message.
-      if (
-        errorMessage.includes("401") ||
-        errorMessage.toLowerCase().includes("unauthorized")
-      ) {
+      if (errorMessage.includes("401") || errorMessage.toLowerCase().includes("unauthorized")) {
         handleUnauthorizedError();
       } else {
         setDownloadError(new Error(errorMessage));
@@ -66,8 +61,7 @@ export function SqlOnFhir() {
   });
 
   // Derive isRunning from status.
-  const isExportRunning =
-    viewExport.status === "pending" || viewExport.status === "in-progress";
+  const isExportRunning = viewExport.status === "pending" || viewExport.status === "in-progress";
 
   const handleExecute = useCallback(
     (request: ViewRunRequest) => {
@@ -79,14 +73,13 @@ export function SqlOnFhir() {
   );
 
   // Mutation for saving a ViewDefinition to the server.
-  const { mutateAsync: saveViewDefinition, isPending: isSaving } =
-    useSaveViewDefinition({
-      onError: (error) => {
-        if (error instanceof UnauthorizedError) {
-          handleUnauthorizedError();
-        }
-      },
-    });
+  const { mutateAsync: saveViewDefinition, isPending: isSaving } = useSaveViewDefinition({
+    onError: (error) => {
+      if (error instanceof UnauthorizedError) {
+        handleUnauthorizedError();
+      }
+    },
+  });
 
   const handleExport = useCallback(
     async (format: ViewExportOutputFormat) => {
@@ -94,10 +87,7 @@ export function SqlOnFhir() {
 
       // Get or build the view definition.
       let viewDefinition: ViewDefinition;
-      if (
-        viewRun.lastRequest.mode === "stored" &&
-        viewRun.lastRequest.viewDefinitionId
-      ) {
+      if (viewRun.lastRequest.mode === "stored" && viewRun.lastRequest.viewDefinitionId) {
         // Fetch the stored view definition.
         const resource = await read(fhirBaseUrl, {
           resourceType: "ViewDefinition",
@@ -105,10 +95,7 @@ export function SqlOnFhir() {
           accessToken,
         });
         viewDefinition = resource as ViewDefinition;
-      } else if (
-        viewRun.lastRequest.mode === "inline" &&
-        viewRun.lastRequest.viewDefinitionJson
-      ) {
+      } else if (viewRun.lastRequest.mode === "inline" && viewRun.lastRequest.viewDefinitionJson) {
         viewDefinition = JSON.parse(viewRun.lastRequest.viewDefinitionJson);
       } else {
         throw new Error("No view definition available");
@@ -123,9 +110,7 @@ export function SqlOnFhir() {
     [viewRun.lastRequest, fhirBaseUrl, accessToken, viewExport],
   );
 
-  const handleCancelExport = () => {
-    viewExport.cancel();
-  };
+  const handleCancelExport = () => void viewExport.cancel();
 
   // Build export job structure for the result table.
   const exportJob =
@@ -134,9 +119,7 @@ export function SqlOnFhir() {
           id: "current-export",
           type: "view-export" as const,
           pollUrl: null,
-          status: isExportRunning
-            ? ("in_progress" as const)
-            : ("completed" as const),
+          status: isExportRunning ? ("in_progress" as const) : ("completed" as const),
           progress: viewExport.progress ?? null,
           error: viewExport.error ?? null,
           request: { format: viewExport.request?.format ?? "ndjson" },
@@ -176,7 +159,6 @@ export function SqlOnFhir() {
             onSaveToServer={saveViewDefinition}
             isExecuting={viewRun.isPending}
             isSaving={isSaving}
-            disabled={false}
           />
         </Box>
 

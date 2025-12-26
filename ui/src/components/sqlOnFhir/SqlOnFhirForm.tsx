@@ -28,7 +28,7 @@ interface SqlOnFhirFormProps {
   onSaveToServer: (json: string) => Promise<CreateViewDefinitionResult>;
   isExecuting: boolean;
   isSaving: boolean;
-  disabled: boolean;
+  disabled?: boolean;
 }
 
 const EXAMPLE_VIEW_DEFINITION = `{
@@ -50,7 +50,7 @@ export function SqlOnFhirForm({
   onSaveToServer,
   isExecuting,
   isSaving,
-  disabled,
+  disabled = false,
 }: SqlOnFhirFormProps) {
   const [activeTab, setActiveTab] = useState<"stored" | "custom">("stored");
   const [selectedViewDefinitionId, setSelectedViewDefinitionId] = useState<string>("");
